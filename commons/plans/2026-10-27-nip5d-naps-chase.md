@@ -70,6 +70,7 @@ Initial baseline Gradle invocation could not download Gradle 9.8.2 (connection t
 - Stored permission ledger coordinate/property names remain compatible. Current NIP-5D storage gets the new manifest-kind/artifact scope and does not reuse legacy namespaces.
 - Icons are fetched by signed hash from declared servers, hash checked again and actually decoded in the declared PNG/JPEG/WebP format. Cosmetic failures use generic artwork. Limits: 2 MiB encoded icon and 4096 pixels per dimension.
 - Resource policy continues to deny raw SVG rather than deliver active XML; no SVG rasterizer is exposed. Hashtree is not advertised and remains unsupported. Optional resource cache/sidecar prefetch stays off; HTTP cache is disabled for resource requests. BUD-10 hints never bypass existing HTTPS, private-address, size, and hash checks.
+- 2026-11-01: `resource.bytes` no longer limits types to a short image/audio allowlist, which refused glTF models and gzip files (the SeedHammer 3D viewer, kind 35129 `sh-viewer`). It refuses SVG, HTML and XML (by declared type, `<svg` in the first 8 KiB, or a WHATWG HTML opener or `<?xml` at the start) and delivers everything else under its sniffed type, a declared JSON/text type the bytes bear out, or `application/octet-stream`. BUD-10 references may omit the extension (`blossom:<sha256>?xs=…`), as `BlossomUri.parse` already allowed.
 - No shell/intent/INC negotiation or routing is newly advertised. Unknown message types are silent regardless of correlation id.
 
 ## Runtime coverage limits and handoff

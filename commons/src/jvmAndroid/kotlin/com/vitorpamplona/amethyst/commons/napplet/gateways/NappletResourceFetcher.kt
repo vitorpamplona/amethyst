@@ -339,33 +339,11 @@ class NappletResourceFetcher(
         bytes: ByteArray,
         declaredType: String? = null,
     ): NappletResourceResult {
-        if (looksLikeSvg(bytes)) return failure(ERROR_BLOCKED, "Raw SVG is not delivered by this runtime.")
-        val sniffed = sniffContentType(bytes)
         val type =
-            when {
-                sniffed in ALLOWED_SNIFFED_TYPES -> sniffed
-                declaredType == MIME_JSON && isJson(bytes) -> MIME_JSON
-                declaredType == MIME_PLAIN_TEXT && isPlainText(bytes) -> MIME_PLAIN_TEXT
-                else -> null
-            } ?: return failure(ERROR_DECODE_FAILED, "Resource MIME is not in the runtime allowlist.")
+            resourceType(bytes, declaredType)
+                ?: return failure(ERROR_BLOCKED, "SVG, HTML and XML are not delivered by this runtime.")
         return success(NappletResource(bytes, type))
     }
-
-    private fun looksLikeSvg(bytes: ByteArray): Boolean {
-        val prefix = bytes.copyOfRange(0, minOf(bytes.size, MIME_PREFIX_BYTES)).decodeToString().lowercase()
-        return prefix.contains("<svg")
-    }
-
-    private fun isJson(bytes: ByteArray): Boolean = runCatching { Json.parseToJsonElement(bytes.decodeToString()) }.isSuccess
-
-    private fun isPlainText(bytes: ByteArray): Boolean =
-        runCatching {
-            Charsets.UTF_8
-                .newDecoder()
-                .onMalformedInput(CodingErrorAction.REPORT)
-                .onUnmappableCharacter(CodingErrorAction.REPORT)
-                .decode(ByteBuffer.wrap(bytes))
-        }.isSuccess && bytes.none { it == 0.toByte() }
 
     private fun success(resource: NappletResource): NappletResourceResult = NappletResourceResult.Success(resource)
 
@@ -391,10 +369,66 @@ class NappletResourceFetcher(
     }
 
     companion object {
+        /**
+         * A BUD-10 `blossom:<sha256>[.<ext>][?…]` reference. The extension is optional, as in
+         * [BlossomUri.parse]: the blob is fetched by hash and verified against it, so the extension
+         * decides nothing here.
+         */
         internal fun parseBlossomResource(url: String): BlossomUri? {
-            if (!Regex("^blossom:[0-9a-fA-F]{64}\\.[a-zA-Z0-9]+(?:\\?[^#]*)?$").matches(url)) return null
+            if (!BLOSSOM_RESOURCE.matches(url)) return null
             return BlossomUri.parse(url)
         }
+
+        /**
+         * The MIME type a resource is delivered with, or null when it is refused.
+         *
+         * Refused: SVG, HTML and XML (which carries XHTML and SVG). Those are the formats a page
+         * renders by running what is inside them (`innerHTML`, `<object>`, a `blob:` frame), and a
+         * napplet runs under `script-src 'unsafe-inline'`, so an event handler in a fetched file
+         * would act with every grant the user gave the napplet. Anything else is data the napplet
+         * decodes itself (a glTF model, a gzip archive, a font): it gets the type its magic bytes
+         * show, a declared JSON or text type that the bytes bear out, or
+         * `application/octet-stream`, never a type that invites rendering.
+         */
+        internal fun resourceType(
+            bytes: ByteArray,
+            declaredType: String? = null,
+        ): String? {
+            if (declaredType in MARKUP_TYPES || looksLikeMarkup(bytes)) return null
+            sniffContentType(bytes)?.let { return it }
+            return when {
+                declaredType == MIME_JSON && isJson(bytes) -> MIME_JSON
+                declaredType == MIME_PLAIN_TEXT && isPlainText(bytes) -> MIME_PLAIN_TEXT
+                else -> MIME_OCTET_STREAM
+            }
+        }
+
+        /**
+         * SVG anywhere in the first [MIME_PREFIX_BYTES], or a document a browser would sniff as
+         * HTML or XML: after a UTF-8 BOM and whitespace, an XML declaration or one of the WHATWG
+         * MIME-sniffing HTML openers (`<!doctype html`, `<html`, `<script`, `<!--`, …) followed by
+         * a space or `>`.
+         */
+        internal fun looksLikeMarkup(bytes: ByteArray): Boolean {
+            val prefix = bytes.copyOfRange(0, minOf(bytes.size, MIME_PREFIX_BYTES)).decodeToString().lowercase()
+            if (prefix.contains("<svg")) return true
+            val start = prefix.removePrefix(UTF8_BOM).trimStart(' ', '\t', '\n', '\r', '\u000C')
+            if (start.startsWith("<?xml")) return true
+            return HTML_OPENERS.any { opener ->
+                start.startsWith(opener) && start.length > opener.length && (start[opener.length] == ' ' || start[opener.length] == '>')
+            }
+        }
+
+        private fun isJson(bytes: ByteArray): Boolean = runCatching { Json.parseToJsonElement(bytes.decodeToString()) }.isSuccess
+
+        private fun isPlainText(bytes: ByteArray): Boolean =
+            runCatching {
+                Charsets.UTF_8
+                    .newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(ByteBuffer.wrap(bytes))
+            }.isSuccess && bytes.none { it == 0.toByte() }
 
         /** data: percent escapes encode bytes, and '+' is literal (not HTML form encoding). */
         internal fun decodeDataPayload(data: String): ByteArray {
@@ -462,15 +496,38 @@ class NappletResourceFetcher(
         private const val ERROR_NETWORK = "network-error"
         private const val MIME_JSON = "application/json"
         private const val MIME_PLAIN_TEXT = "text/plain"
-        private val ALLOWED_SNIFFED_TYPES =
+        private const val MIME_OCTET_STREAM = "application/octet-stream"
+        private const val UTF8_BOM = "\uFEFF"
+        private val BLOSSOM_RESOURCE = Regex("^blossom:[0-9a-fA-F]{64}(?:\\.[a-zA-Z0-9]+)?(?:\\?[^#]*)?$")
+        private val MARKUP_TYPES =
             setOf(
-                "image/png",
-                "image/jpeg",
-                "image/gif",
-                "image/webp",
-                "image/bmp",
-                "audio/ogg",
-                "video/mp4",
+                "image/svg+xml",
+                "text/html",
+                "application/xhtml+xml",
+                "text/xml",
+                "application/xml",
+            )
+
+        // The WHATWG MIME Sniffing "HTML" patterns (section 7.1), lowercased.
+        private val HTML_OPENERS =
+            listOf(
+                "<!doctype html",
+                "<html",
+                "<head",
+                "<script",
+                "<iframe",
+                "<h1",
+                "<div",
+                "<font",
+                "<table",
+                "<a",
+                "<style",
+                "<title",
+                "<b",
+                "<body",
+                "<br",
+                "<p",
+                "<!--",
             )
     }
 
