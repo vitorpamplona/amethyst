@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.commons.napplet.protocol
 
 import com.vitorpamplona.amethyst.commons.napplet.OutboxEvent
 import com.vitorpamplona.amethyst.commons.napplet.OutboxRelayPlan
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsAccept
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsError
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsPickOptions
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -29,6 +32,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.booleanOrNull
@@ -296,6 +300,33 @@ object NappletProtocolJson {
                         }
                     },
                 )
+            "fs.info" -> NappletRequest.FsInfo
+            "fs.pickFile" -> NappletRequest.FsPick(NappletRequest.FsPickKind.FILE, o.fsPickOptions())
+            "fs.pickFiles" -> NappletRequest.FsPick(NappletRequest.FsPickKind.FILES, o.fsPickOptions())
+            "fs.pickDirectory" -> NappletRequest.FsPick(NappletRequest.FsPickKind.DIRECTORY, o.fsPickOptions())
+            "fs.pickSaveFile" -> NappletRequest.FsPick(NappletRequest.FsPickKind.SAVE_FILE, o.fsPickOptions())
+            "fs.stat" -> NappletRequest.FsStat(o.text("path"))
+            "fs.list" -> NappletRequest.FsList(o.text("path"))
+            "fs.read" -> {
+                val options = o.options()
+                NappletRequest.FsRead(o.text("path"), options?.integer("offset"), options?.integer("length"))
+            }
+            "fs.write" -> {
+                val options = o.options()
+                NappletRequest.FsWrite(
+                    path = o.text("path"),
+                    data = o.text("data"),
+                    mode = options?.optionalText("mode"),
+                    offset = options?.integer("offset"),
+                    ifRevision = options?.optionalText("ifRevision"),
+                    ifAbsent = options?.get("ifAbsent")?.let { (it as JsonPrimitive).booleanOrNull ?: throw IllegalArgumentException("ifAbsent") },
+                )
+            }
+            "fs.mkdir" -> NappletRequest.FsMkdir(o.text("path"))
+            "fs.remove" -> NappletRequest.FsRemove(o.text("path"))
+            "fs.move" -> NappletRequest.FsMove(o.text("fromPath"), o.text("toPath"))
+            "fs.watch" -> NappletRequest.FsWatch(o.text("path"))
+            "fs.unwatch" -> NappletRequest.FsUnwatch(o.text("watchId"))
             "upload.upload" -> {
                 // UploadUploadMessage: { type, id, request: { data, mimeType?, filename?, ... } }.
                 // The Blob in `request.data` is inlined as base64 `request.dataBase64` by shell.html.
@@ -325,6 +356,7 @@ object NappletProtocolJson {
         response: NappletResponse,
     ): String {
         if (requestType.startsWith("outbox.")) outboxFailure(requestType, response)?.let { return it }
+        if (requestType.startsWith(FS_PREFIX)) return encodeFsResponse(requestType, response)
         if (requestType in setOf("resource.info", "resource.bytes", "resource.bytesMany")) {
             val failure =
                 when (response) {
@@ -512,6 +544,11 @@ object NappletProtocolJson {
                         if (response.plan.missingAuthors.isNotEmpty()) putJsonArray("missingAuthors") { response.plan.missingAuthors.forEach { add(it) } }
                     }
                 }
+                // Only an fs.* request gets one, and those go out through encodeFsResponse.
+                is NappletResponse.Fs -> {
+                    put("ok", false)
+                    put("error", "unsupported")
+                }
                 is NappletResponse.Denied -> {
                     put("ok", false)
                     put("error", "denied")
@@ -563,6 +600,74 @@ object NappletProtocolJson {
         }.toString()
     }
 
+    /**
+     * A NAP-FS result: on success the operation's own field (`info`, `result`, `metadata`, …) and no
+     * `error`; on failure only `error`, one of [NappletFsError]'s codes. Refusals and failures the
+     * broker reports in its generic shapes are put in those terms.
+     */
+    private fun encodeFsResponse(
+        requestType: String,
+        response: NappletResponse,
+    ): String =
+        buildJsonObject {
+            put("type", "$requestType.result")
+            when (response) {
+                is NappletResponse.FsInfoResult ->
+                    putJsonObject("info") {
+                        putJsonArray("roots") {
+                            response.roots.forEach { root ->
+                                addJsonObject {
+                                    put("path", root.path)
+                                    put("name", root.name)
+                                    putJsonArray("permissions") { root.permissions.forEach { add(it) } }
+                                }
+                            }
+                        }
+                        putJsonObject("limits") {
+                            put("maxReadBytes", response.maxReadBytes)
+                            put("maxWriteBytes", response.maxWriteBytes)
+                        }
+                    }
+                is NappletResponse.FsPicked ->
+                    putJsonObject("result") {
+                        putJsonArray("entries") { response.entries.forEach { add(fsEntry(it)) } }
+                    }
+                is NappletResponse.FsMetadata -> put("metadata", fsEntry(response.entry, withName = false))
+                is NappletResponse.FsReadResult ->
+                    putJsonObject("result") {
+                        put("data", Base64.encode(response.bytes))
+                        put("offset", response.offset)
+                        put("bytesRead", response.bytes.size)
+                        put("eof", response.eof)
+                        response.size?.let { put("size", it) }
+                    }
+                is NappletResponse.FsWritten ->
+                    putJsonObject("result") {
+                        put("bytesWritten", response.bytesWritten)
+                        response.size?.let { put("size", it) }
+                    }
+                is NappletResponse.Done -> {}
+                is NappletResponse.FsFailure -> put("error", response.error)
+                is NappletResponse.Denied -> put("error", NappletFsError.PERMISSION_DENIED)
+                is NappletResponse.Unsupported -> put("error", NappletFsError.UNSUPPORTED)
+                else -> put("error", NappletFsError.IO_ERROR)
+            }
+        }.toString()
+
+    private fun fsEntry(
+        entry: NappletResponse.FsEntry,
+        withName: Boolean = true,
+    ) = buildJsonObject {
+        put("path", entry.path)
+        put("kind", entry.kind)
+        if (withName) put("name", entry.name)
+        putJsonArray("permissions") { entry.permissions.forEach { add(it) } }
+        entry.size?.let { put("size", it) }
+    }
+
+    /** The reply to an `fs.*` request too malformed to decode: NAP-FS's result shape, never a generic failure. */
+    fun encodeFsMalformed(requestType: String): String = encodeFsResponse(requestType, NappletResponse.FsFailure(NappletFsError.UNSUPPORTED))
+
     /** Parses every Nostr filter from a `filters` array (each entry) or a single `filter` object. */
     fun decodeFilterList(envelopeJson: String): List<Filter> = decodeFilterList(json.parseToJsonElement(envelopeJson).jsonObject)
 
@@ -606,6 +711,47 @@ object NappletProtocolJson {
 
     private fun JsonObject.str(key: String): String? = this[key]?.jsonPrimitive?.content
 
+    /** A required JSON string field; a number or object in its place is malformed, not coerced. */
+    private fun JsonObject.text(key: String): String = optionalText(key) ?: throw IllegalArgumentException("$key is missing")
+
+    private fun JsonObject.optionalText(key: String): String? {
+        val value = this[key] ?: return null
+        if (value is JsonNull) return null
+        val primitive = value as? JsonPrimitive
+        require(primitive != null && primitive.isString) { "$key is not a string" }
+        return primitive.content
+    }
+
+    /** An optional JSON integer; a fraction, a string or anything else is malformed. */
+    private fun JsonObject.integer(key: String): Long? {
+        val value = this[key] ?: return null
+        if (value is JsonNull) return null
+        val primitive = value as? JsonPrimitive
+        require(primitive != null && !primitive.isString) { "$key is not a number" }
+        return primitive.longOrNull ?: throw IllegalArgumentException("$key is not an integer")
+    }
+
+    private fun JsonObject.fsPickOptions(): NappletFsPickOptions {
+        val options = options() ?: return NappletFsPickOptions()
+        return NappletFsPickOptions(
+            permissions = options["permissions"]?.takeIf { it !is JsonNull }?.jsonArray?.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content },
+            accept =
+                options["accept"]
+                    ?.takeIf { it !is JsonNull }
+                    ?.jsonArray
+                    ?.mapNotNull { rule ->
+                        when (rule) {
+                            // A bare string is accepted as an extension (".png") or a MIME type ("image/png").
+                            is JsonPrimitive -> rule.takeIf { it.isString }?.content?.let { if (it.contains('/')) NappletFsAccept(mime = it) else NappletFsAccept(extension = it) }
+                            is JsonObject -> NappletFsAccept(rule.optionalText("mime"), rule.optionalText("extension")).takeIf { it.mime != null || it.extension != null }
+                            else -> null
+                        }
+                    }.orEmpty(),
+            suggestedName = options.optionalText("suggestedName"),
+            description = options.optionalText("description"),
+        )
+    }
+
     private fun JsonObject.long(key: String): Long? = this[key]?.jsonPrimitive?.longOrNull
 
     private fun JsonObject.options(): JsonObject? = this["options"] as? JsonObject
@@ -632,6 +778,8 @@ object NappletProtocolJson {
             "identity.getBadges" -> "badges"
             else -> "result"
         }
+
+    private const val FS_PREFIX = "fs."
 
     private val IDENTITY_READ_TYPES =
         setOf(

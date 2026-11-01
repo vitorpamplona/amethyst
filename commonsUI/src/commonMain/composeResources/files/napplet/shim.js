@@ -47,7 +47,7 @@
     install('sessionStorage');
   })();
 
-  var seq = 0, pending = {}, subs = {}, outboxSubs = {}, actions = {}, identityHandlers = [], themeHandlers = [];
+  var seq = 0, pending = {}, subs = {}, outboxSubs = {}, actions = {}, identityHandlers = [], themeHandlers = [], fsHandlers = [];
   // Transport. A napplet/nSite runs inside the trusted shell's iframe and talks to the shell via
   // postMessage (the shell relays to the native bridge). A top-level page opened in the in-app browser
   // has no shell parent, so it talks to the origin-scoped native bridge object (__nappletBridge,
@@ -109,6 +109,7 @@
     // identity.changed push: the active user's key changed (account switch / connect / disconnect).
     if (msg.type === 'identity.changed') { identityHandlers.slice().forEach(function(h){ try { h(msg.pubkey); } catch (_) {} }); return; }
     if (msg.type === 'theme.changed') { themeHandlers.slice().forEach(function(h){ try { h(msg.theme); } catch (_) {} }); return; }
+    if (msg.type === 'fs.changed') { fsHandlers.slice().forEach(function(h){ try { h(msg.change); } catch (_) {} }); return; }
     if (!msg.id) return;
     var p = pending[msg.id]; if (!p) return; delete pending[msg.id]; if (p.cleanup) p.cleanup();
     if (msg.ok !== false && !msg.error) p.resolve(msg);
@@ -263,6 +264,35 @@
       // Sends the SDK's upload.upload; we inline the bytes as base64 (shell.html does the same for
       // a Blob from a stock napplet). Resolves to the uploaded URL.
       blob: function(bytes, contentType){ return field(call('upload.upload', { request: { dataBase64: bytesToB64(bytes), mimeType: contentType } }), 'url'); }
+    },
+    // NAP-FS: the files the user picks for this napplet. File bytes cross as standard base64 text both
+    // ways, as the web binding carries them (a Uint8Array or ArrayBuffer given to write is encoded
+    // here). A failure rejects with the NAP-FS error code ('cancelled', 'not-found', ...) as its message.
+    fs: {
+      info: function(){ return field(call('fs.info'), 'info'); },
+      pickFile: function(options){ return field(call('fs.pickFile', { options: options }), 'result'); },
+      pickFiles: function(options){ return field(call('fs.pickFiles', { options: options }), 'result'); },
+      pickDirectory: function(options){ return field(call('fs.pickDirectory', { options: options }), 'result'); },
+      pickSaveFile: function(options){ return field(call('fs.pickSaveFile', { options: options }), 'result'); },
+      stat: function(path){ return field(call('fs.stat', { path: path }), 'metadata'); },
+      list: function(path){ return field(call('fs.list', { path: path }), 'entries'); },
+      read: function(path, options){ return field(call('fs.read', { path: path, options: options }), 'result'); },
+      write: function(path, data, options){
+        var encoded = typeof data === 'string' ? data : bytesToB64(data instanceof ArrayBuffer ? new Uint8Array(data) : data);
+        return field(call('fs.write', { path: path, data: encoded, options: options }), 'result');
+      },
+      mkdir: function(path, options){ return call('fs.mkdir', { path: path, options: options }).then(function(){}); },
+      remove: function(path, recursive){ return call('fs.remove', { path: path, recursive: recursive }).then(function(){}); },
+      move: function(fromPath, toPath){ return call('fs.move', { fromPath: fromPath, toPath: toPath }).then(function(){}); },
+      watch: function(path, options){ return field(call('fs.watch', { path: path, options: options }), 'watchId'); },
+      unwatch: function(watchId){ return call('fs.unwatch', { watchId: watchId }).then(function(){}); },
+      onChanged: function(handler){
+        if (typeof handler !== 'function') return { close: function(){} };
+        fsHandlers.push(handler);
+        return { close: function(){
+          var i = fsHandlers.indexOf(handler); if (i >= 0) fsHandlers.splice(i, 1);
+        } };
+      }
     },
     theme: {
       get: function(){ return field(call('theme.get'), 'theme'); },

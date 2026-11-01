@@ -28,6 +28,8 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConse
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsError
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.permissions.PermissionDecision
@@ -147,11 +149,15 @@ class NappletBroker(
      * manifest's `requires` resolved to; a request outside it is refused before any prompt.
      * Re-throws [CancellationException]; converts any other failure into [NappletResponse.Failed]
      * so host internals never cross back to the applet process.
+     *
+     * [files] is the calling surface's NAP-FS session: the picks it holds belong to that one running
+     * surface, not to the app, so the host passes its own and this shared broker keeps none.
      */
     suspend fun handle(
         identity: NappletIdentity,
         request: NappletRequest,
         declared: Set<NappletCapability>,
+        files: NappletFsSession? = null,
     ): NappletResponse {
         val capability = request.capability
 
@@ -178,9 +184,9 @@ class NappletBroker(
 
         val authorized =
             when {
-                // Keyboard/command action registration is a shell-mediated UI affordance, not key
-                // access — declared is enough; it never prompts.
-                request is NappletRequest.RegisterAction || request is NappletRequest.UnregisterAction -> true
+                // Grants nothing by itself (a keyboard action binding, an fs read or write of what a
+                // pick handed over): declared is enough; it never prompts.
+                !request.asksConsent -> true
                 // Cosmetic capabilities (theme) never prompt.
                 !capability.requiresConsent -> true
                 // A standing allow short-circuits, except for per-use capabilities (e.g. payments).
@@ -202,7 +208,7 @@ class NappletBroker(
         }
 
         return try {
-            execute(identity, request)
+            execute(identity, request, files)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -245,6 +251,24 @@ class NappletBroker(
         }
 
     /**
+     * Runs a NAP-FS request on the surface's [files]. An app running inside a note never opens a
+     * picker, even with the app's standing grant: a picker over the feed would come from something the
+     * user only scrolled past. The note offers to open the app instead, where it can ask again.
+     */
+    private suspend fun executeFiles(
+        identity: NappletIdentity,
+        request: NappletRequest.Fs,
+        files: NappletFsSession?,
+    ): NappletResponse {
+        val session = files ?: return NappletResponse.FsFailure(NappletFsError.UNSUPPORTED)
+        if (request.picks && identity.inline) {
+            inlineAsks.record(identity)
+            return NappletResponse.FsFailure(NappletFsError.POLICY_DENIED)
+        }
+        return session.execute(request)
+    }
+
+    /**
      * What a prompt shows for [this]: an outbox publish is shown as the event it signs, so the user
      * sees and decides it exactly as a relay publish.
      */
@@ -273,6 +297,7 @@ class NappletBroker(
     private suspend fun execute(
         identity: NappletIdentity,
         request: NappletRequest,
+        files: NappletFsSession?,
     ): NappletResponse =
         when (request) {
             is NappletRequest.GetPublicKey -> NappletResponse.PublicKey(signer.pubKey)
@@ -463,6 +488,8 @@ class NappletBroker(
                     },
                 )
             }
+
+            is NappletRequest.Fs -> executeFiles(identity, request, files)
 
             is NappletRequest.UploadBlob -> {
                 val gateway = upload ?: return NappletResponse.Unsupported("upload.upload")

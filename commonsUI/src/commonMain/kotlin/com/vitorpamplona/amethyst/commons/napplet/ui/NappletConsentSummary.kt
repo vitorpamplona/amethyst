@@ -48,6 +48,8 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_consent_diff_relays
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_diff_unfollow_one
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_diff_unmute_one
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_effect_deletes
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_fs_open
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_fs_save
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_get_pubkey
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_identity_read
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_nip44_decrypt
@@ -349,6 +351,10 @@ class NappletConsentSummary(
             NappletRequest.ResourceInfo, is NappletRequest.ResourceBytes, is NappletRequest.ResourceBytesMany ->
                 loadStringRes(Res.string.napplet_consent_resource)
             is NappletRequest.UploadBlob -> loadStringRes(Res.string.napplet_consent_upload)
+            is NappletRequest.FsPick ->
+                loadStringRes(if (request.kind == NappletRequest.FsPickKind.SAVE_FILE) Res.string.napplet_consent_fs_save else Res.string.napplet_consent_fs_open)
+            // Only picks ask: the rest act on what a pick already handed over.
+            is NappletRequest.Fs -> ""
             // Resolved in the broker before consent (negotiation / shell-mediated / cosmetic); never shown.
             is NappletRequest.RegisterAction, is NappletRequest.UnregisterAction, is NappletRequest.ThemeGet -> ""
         }

@@ -41,6 +41,11 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFilePort
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsChunk
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsPickOptions
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsWriteMode
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletPickedFile
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
@@ -80,6 +85,7 @@ import java.awt.Robot
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
+import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.DatagramPacket
@@ -114,7 +120,8 @@ import kotlin.test.assertTrue
  *   AMETHYST_CEF_TEST=1 xvfb-run -a ./gradlew :desktopApp:test --tests '*CefNappletSessionTest*'
  *
  * AMETHYST_CEF_DIR reuses an unpacked bundle; AMETHYST_DOOM_HTML adds the Doom napplet
- * (tools/napplet-doom/build/index.html).
+ * (tools/napplet-doom/build/index.html); AMETHYST_PHOTOHOP_HTML adds PhotoHop, the NAP-FS image
+ * editor (its blob, `16511c25…`, from any of its Blossom servers).
  */
 class CefNappletSessionTest {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -525,6 +532,123 @@ class CefNappletSessionTest {
             for (y in 0 until shot.height step 8) for (x in 0 until shot.width step 8) colors += shot.getRGB(x, y)
             System.getenv("AMETHYST_TEST_SHOT")?.let { ImageIO.write(shot, "png", File(it)) }
             assertTrue(colors.size > 8, "the napplet window shows more than a blank page (${colors.size} colors)")
+        }
+
+    /** NAP-FS with the system dialog scripted: what the user "picks", and every byte written. */
+    private class ScriptedFiles(
+        private val opened: ByteArray,
+    ) : NappletFilePort {
+        val picks = AtomicInteger()
+        val reads = AtomicInteger()
+        val saved = ConcurrentHashMap<String, ByteArray>()
+
+        override suspend fun pickOpen(
+            options: NappletFsPickOptions,
+            multiple: Boolean,
+        ): List<NappletPickedFile> {
+            picks.incrementAndGet()
+            return listOf(NappletPickedFile("open", "gradient.png", opened.size.toLong()))
+        }
+
+        override suspend fun pickSave(options: NappletFsPickOptions): NappletPickedFile {
+            picks.incrementAndGet()
+            return NappletPickedFile("save", options.suggestedName ?: "export.png", writable = true)
+        }
+
+        override suspend fun size(handle: String): Long? = (if (handle == "open") opened else saved[handle])?.size?.toLong()
+
+        override suspend fun read(
+            handle: String,
+            offset: Long,
+            length: Int,
+        ): NappletFsChunk {
+            reads.incrementAndGet()
+            val from = minOf(offset, opened.size.toLong()).toInt()
+            return NappletFsChunk(opened.copyOfRange(from, minOf(opened.size, from + length)), opened.size.toLong())
+        }
+
+        override suspend fun write(
+            handle: String,
+            data: ByteArray,
+            mode: NappletFsWriteMode,
+        ): Long? {
+            val next = if (mode == NappletFsWriteMode.Append) (saved[handle] ?: ByteArray(0)) + data else data
+            saved[handle] = next
+            return next.size.toLong()
+        }
+    }
+
+    /**
+     * The published PhotoHop ("Fotohop", which requires NAP-FS) opens a PNG and exports one through
+     * its own Open and Export PNG buttons, in Chromium, over the shell, shim, router, broker and
+     * NAP-FS session. Only the system dialog is scripted ([ScriptedFiles]).
+     */
+    @Test
+    fun photoHopOpensAndExportsThroughNapFs() =
+        runBlocking<Unit> {
+            val runtime = cefRuntime()
+            val photoHop = System.getenv("AMETHYST_PHOTOHOP_HTML")?.let(::File)
+            assumeTrue("Set AMETHYST_PHOTOHOP_HTML to PhotoHop's index.html (blob 16511c25…)", photoHop?.isFile == true)
+            // Clicks PhotoHop's own buttons once it is up, and reports what it shows.
+            val probe =
+                """
+                <script>
+                (function () {
+                  function report(k, v) { window.napplet.storage.setItem('probe.' + k, String(v)); }
+                  function text(id) { var e = document.getElementById(id); return e ? e.textContent : ''; }
+                  async function until(test, ms) { var end = Date.now() + ms; while (Date.now() < end) { if (test()) return true; await new Promise(function (r) { setTimeout(r, 200); }); } return false; }
+                  window.addEventListener('load', async function () {
+                    await until(function () { var b = document.getElementById('open-btn'); return b && !b.disabled; }, 30000);
+                    report('fs', !!window.napplet.fs);
+                    document.getElementById('open-btn').click();
+                    var opened = await until(function () { return text('document-tabs').indexOf('gradient') >= 0; }, 30000);
+                    report('opened', opened + '|' + text('status'));
+                    document.getElementById('save-btn').click();
+                    await until(function () { return /saved|exported|cancel|fail|error/i.test(text('status')); }, 30000);
+                    report('saved', text('status'));
+                  });
+                })();
+                </script>
+                """.trimIndent()
+            val html = photoHop!!.readBytes() + probe.encodeToByteArray()
+            val hash = sha256(html).toHexKey()
+            blobs[hash] = html
+            // The file the scripted Open dialog hands PhotoHop: a 64x48 gradient.
+            val image = BufferedImage(64, 48, BufferedImage.TYPE_INT_RGB)
+            for (y in 0 until 48) for (x in 0 until 64) image.setRGB(x, y, (x * 4 shl 16) or (y * 5 shl 8) or 200)
+            val gradient = ByteArrayOutputStream().also { ImageIO.write(image, "png", it) }.toByteArray()
+            val files = ScriptedFiles(gradient)
+            val storage = RecordingStorage()
+            val author = KeyPair()
+            val broker =
+                NappletBroker(
+                    signer = NostrSignerInternal(author),
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()) { "tester" },
+                    consentPrompt = NappletConsentPrompt { _, _, _ -> GrantState.ALLOW_ONCE },
+                    storage = storage,
+                )
+            val declared = setOf(NappletCapability.FS, NappletCapability.STORAGE)
+            val launch =
+                NappletLaunch(
+                    identity = NappletIdentity(author.pubKey.toHexKey(), "", hash),
+                    profile = HostProfile.NAPPLET,
+                    declared = declared,
+                    requires = listOf("fs", "storage"),
+                    title = "Fotohop",
+                    paths = listOf(PathTag("/index.html", hash)),
+                    servers = listOf(serverUrl),
+                )
+            show(CefNappletSession(launch, "tester", useTor = false, account = null, broker = broker, runtime = runtime, filePort = files).also { sessions += it })
+
+            withTimeout(120_000) { while (storage.values["probe.saved"] == null) delay(200) }
+            assertEquals("true", storage.values["probe.fs"], "window.napplet.fs is there")
+            assertTrue(storage.values["probe.opened"]!!.startsWith("true"), "the picked PNG opened: ${storage.values["probe.opened"]}")
+            assertTrue(files.reads.get() > 0, "PhotoHop read the file through fs.read")
+            val exported = files.saved.values.singleOrNull()
+            assertTrue(exported != null && exported.size > 8, "PhotoHop wrote an export: ${storage.values["probe.saved"]}")
+            assertTrue(exported.copyOfRange(0, 8).contentEquals(byteArrayOf(-119, 80, 78, 71, 13, 10, 26, 10)), "the export is a PNG")
+            assertEquals(2, files.picks.get(), "one open pick and one save pick")
+            System.getenv("AMETHYST_PHOTOHOP_EXPORT")?.let { File(it).writeBytes(exported) }
         }
 
     /** Counts the NIP-07 prompts a site raised; every prompt says yes. */

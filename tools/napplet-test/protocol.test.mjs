@@ -113,3 +113,39 @@ test('outbox results resolve as NAP-OUTBOX objects, failures included; subscript
     assert.deepEqual(await frame.evaluate(() => window.got), ['e1','closed:done']);
   }, ['outbox']);
 });
+
+test('fs moves base64 both ways and rejects with the NAP-FS error code', async () => {
+  await host(async ({page, frame, reply}) => {
+    // PhotoHop's open: info for the limits, a pick, then ranged reads.
+    await frame.evaluate(() => { window.picked = window.napplet.fs.pickFile({permissions:['read'],accept:[{extension:'.png'}]}); });
+    await page.waitForFunction(() => window.requests.length === 1);
+    const pick = await page.evaluate(() => window.requests[0]);
+    assert.equal(pick.type, 'fs.pickFile');
+    assert.deepEqual(pick.options, {permissions:['read'],accept:[{extension:'.png'}]});
+    const entries = [{path:'/picked/a.png',kind:'file',name:'a.png',permissions:['read'],size:5}];
+    await reply({type:'fs.pickFile.result',id:pick.id,result:{entries}});
+    assert.deepEqual(await frame.evaluate(() => window.picked), {entries});
+
+    await frame.evaluate(() => { window.read = window.napplet.fs.read('/picked/a.png', {offset:0,length:65536}); });
+    await page.waitForFunction(() => window.requests.length === 2);
+    const read = await page.evaluate(() => window.requests[1]);
+    assert.deepEqual([read.type, read.path, read.options], ['fs.read', '/picked/a.png', {offset:0,length:65536}]);
+    await reply({type:'fs.read.result',id:read.id,result:{data:'SGVsbG8=',offset:0,bytesRead:5,eof:true,size:5}});
+    assert.equal(await frame.evaluate(async () => atob((await window.read).data)), 'Hello');
+
+    // Bytes given to write are encoded; a string is sent as the base64 it already is.
+    await frame.evaluate(() => { window.wrote = window.napplet.fs.write('/picked/out.png', new Uint8Array([72,105]), {mode:'append'}); });
+    await page.waitForFunction(() => window.requests.length === 3);
+    const write = await page.evaluate(() => window.requests[2]);
+    assert.deepEqual([write.type, write.data, write.options], ['fs.write', 'SGk=', {mode:'append'}]);
+    await reply({type:'fs.write.result',id:write.id,result:{bytesWritten:2,size:2}});
+    assert.deepEqual(await frame.evaluate(() => window.wrote), {bytesWritten:2,size:2});
+
+    // A dismissed picker rejects with 'cancelled', which is how PhotoHop tells a cancel from a failure.
+    await frame.evaluate(() => { window.cancelled = window.napplet.fs.pickSaveFile({suggestedName:'x.png'}).then(() => 'resolved', e => e.message); });
+    await page.waitForFunction(() => window.requests.length === 4);
+    const save = await page.evaluate(() => window.requests[3]);
+    await reply({type:'fs.pickSaveFile.result',id:save.id,error:'cancelled'});
+    assert.equal(await frame.evaluate(() => window.cancelled), 'cancelled');
+  }, ['fs']);
+});
