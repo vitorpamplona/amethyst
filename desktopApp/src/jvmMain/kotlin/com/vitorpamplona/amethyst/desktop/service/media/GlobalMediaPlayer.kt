@@ -356,6 +356,19 @@ object GlobalMediaPlayer {
             return
         }
 
+        // A video whose picture the engine can't decode (AV1 on an M1 or M2) would play its sound
+        // under the poster: its card plays it in Chromium instead.
+        val undecodable = undecodableReason(url)
+        if (undecodable != null) {
+            Log.d(TAG) { "playVideo chromium url=$url ($undecodable)" }
+            val previous = synchronized(initLock) { videoPlayer.also { videoPlayer = null } }
+            if (previous != null) parkOrRetire(previous, current.url.takeIf { current.errorReason == null }, url)
+            startVideoSync(null, url)
+            _videoState.value =
+                MediaPlaybackState(url = url, type = MediaType.VIDEO, errorReason = undecodable, isChosen = chosen, owner = owner)
+            return
+        }
+
         // The card's own engine, or, without a card (full screen, the now-playing bar), the engine
         // of a card showing this video: the picture on screen is the one that plays. A card never
         // takes another card's engine, even on the same video.
@@ -630,6 +643,18 @@ object GlobalMediaPlayer {
             if (shutDown || engine in retired) return@launch
             prefetchIndex(url)
             if (shutDown || engine in retired) return@launch
+            val undecodable = undecodableReason(url)
+            if (undecodable != null) {
+                // Left unopened. Once its index is read playVideo sends it to Chromium; if its card
+                // played it before then, it is the playing engine now, and goes there from here.
+                if (engine === videoPlayer) {
+                    Log.d(TAG) { "playing chromium url=$url ($undecodable)" }
+                    // Its engine reports nothing more, and would clear the error if it did.
+                    startVideoSync(null, url)
+                    _videoState.update { if (it.url == url) it.copy(isBuffering = false, isPlaying = false, errorReason = undecodable) else it }
+                }
+                return@launch
+            }
             runCatching { engine.openUri(streaming, InitialPlayerState.PAUSE) }
                 .onSuccess {
                     // Paused on the frame where this video was the last time it played, so its card
@@ -687,6 +712,12 @@ object GlobalMediaPlayer {
     private suspend fun prefetchIndex(url: String) {
         withTimeoutOrNull(INDEX_PREFETCH_TIMEOUT_MS) { VideoIndexPrefetch.prefetch(url) }
     }
+
+    /**
+     * Why the native engine can't play [url]'s picture, as a codec error the card answers with
+     * Chromium; null when it can, or its index hasn't been read.
+     */
+    private fun undecodableReason(url: String): String? = VideoIndexPrefetch.videoCodecOf(url)?.takeUnless { MacVideoDecode.canDecode(it) }?.let { "Codec: $it, which this Mac can't decode" }
 
     /** Returns once [engine], a card's, has started opening its video: its paused open may be held back. */
     suspend fun awaitOpenStarted(engine: VideoPlayerState) {
@@ -1370,6 +1401,11 @@ object GlobalMediaPlayer {
             player.openFile(PlatformFile(source.file))
         } else {
             prefetchIndex(url)
+            undecodableReason(url)?.let { reason ->
+                // The card takes it to Chromium.
+                state.update { if (it.url == url) it.copy(isBuffering = false, errorReason = reason) else it }
+                return false
+            }
             player.openUri(source.uri)
         }
         return true

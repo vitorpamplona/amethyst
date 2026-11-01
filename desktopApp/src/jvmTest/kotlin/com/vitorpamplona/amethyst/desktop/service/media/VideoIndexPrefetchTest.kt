@@ -48,6 +48,9 @@ class VideoIndexPrefetchTest {
     private val file = mp4(box("ftyp", 24), box("moov", moovSize), box("mdat", 2 * 1024 * 1024))
     private val moovEnd = 24L + moovSize
 
+    // An MP4 with its index after the media, as phones record them: ftyp, mdat, moov.
+    private val tailFile by lazy { box("ftyp", 24) + box("mdat", 200 * 1024) + container("moov", trak("soun", "mp4a") + trak("vide", "av01")) }
+
     private lateinit var upstream: HttpServer
     private lateinit var base: String
     private val ranges = Collections.synchronizedList(mutableListOf<String?>())
@@ -63,7 +66,8 @@ class VideoIndexPrefetchTest {
     fun startUpstream() {
         upstream =
             HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0).apply {
-                createContext("/episode.mp4") { exchange ->
+                createContext("/") { exchange ->
+                    val file = if (exchange.requestURI.path == "/tail.mp4") tailFile else file
                     val range = exchange.requestHeaders.getFirst("Range")
                     ranges += range
                     exchange.responseHeaders.add("Content-Type", "video/mp4")
@@ -133,6 +137,23 @@ class VideoIndexPrefetchTest {
     }
 
     @Test
+    fun readsTheCodecFromAnIndexAfterTheMedia() {
+        val original = "$base/tail.mp4?run=${System.nanoTime()}"
+        assertEquals(24L + 200 * 1024, VideoIndexPrefetch.startOfTrailingIndex(tailFile.copyOf(64 * 1024)))
+        runBlocking { VideoIndexPrefetch.prefetch(original) }
+        assertEquals("av01", VideoIndexPrefetch.videoCodecOf(original))
+        // The probe, then the index alone: none of the media between them.
+        assertEquals(listOf("bytes=0-65535", "bytes=${24 + 200 * 1024}-${tailFile.size - 1}"), ranges.toList())
+    }
+
+    @Test
+    fun namesTheCodecOfTheVideoTrackNotTheSoundTrack() {
+        val file = box("ftyp", 24) + container("moov", container("mvhd", ByteArray(20)) + trak("soun", "mp4a") + trak("vide", "av01"))
+        assertEquals("av01", VideoIndexPrefetch.videoCodec(file))
+        assertNull(VideoIndexPrefetch.videoCodec(box("ftyp", 24) + container("moov", trak("soun", "mp4a"))))
+    }
+
+    @Test
     fun theEngineGetsTheIndexFromDiskAndOnlyTheMediaFromTheHost() {
         val original = "$base/episode.mp4?run=${System.nanoTime()}"
         runBlocking { VideoIndexPrefetch.prefetch(original) }
@@ -187,6 +208,24 @@ class VideoIndexPrefetchTest {
             type.toByteArray().copyInto(b, 4)
             for (i in 8 until size) b[i] = (i % 251).toByte()
         }
+
+    private fun trak(
+        handler: String,
+        codec: String,
+    ): ByteArray {
+        val hdlr = container("hdlr", ByteArray(8) + handler.toByteArray() + ByteArray(12))
+        val stsd = container("stsd", ByteArray(4) + byteArrayOf(0, 0, 0, 1) + container(codec, ByteArray(16)))
+        return container("trak", container("mdia", hdlr + container("minf", container("stbl", stsd))))
+    }
+
+    private fun container(
+        type: String,
+        body: ByteArray,
+    ): ByteArray =
+        ByteArray(8).also { b ->
+            put32(b, 0, 8L + body.size)
+            type.toByteArray().copyInto(b, 4)
+        } + body
 
     private fun mp4(vararg boxes: ByteArray): ByteArray = boxes.reduce { a, b -> a + b }
 
