@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip71Video.selectVideoTrack
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
@@ -50,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.commons.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.commons.ui.components.LocalShortVideo
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.collectContentWarningReasons
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -83,7 +85,7 @@ fun VideoCardCompose(
         VideoCardImage(baseNote, event, backgroundColor, accountViewModel)
 
         // Title and content
-        VideoCardCaption(event)
+        VideoCardCaption(baseNote, event, backgroundColor, accountViewModel, nav)
 
         // Reactions row
         ReactionsRow(
@@ -170,14 +172,27 @@ private fun VideoCardImage(
     }
 }
 
+/**
+ * The card's title and description. The description goes through [TranslatableRichTextViewer],
+ * like a note's body in [com.vitorpamplona.amethyst.commons.ui.note.types.VideoDisplay], so
+ * `nostr:` mentions, links, hashtags and custom emoji render, and it translates. Previews stay
+ * off: the video is the card's media, and a quoted note or link card under it would bury it.
+ */
 @Composable
-fun VideoCardCaption(videoEvent: VideoEvent) {
+fun VideoCardCaption(
+    note: Note,
+    videoEvent: VideoEvent,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val event = (videoEvent as? Event) ?: return
 
-    val title = videoEvent.title()
-    val content = event.content
+    val title = remember(videoEvent) { videoEvent.title() }
+    // A description that only repeats the title adds nothing.
+    val summary = remember(videoEvent, title) { event.content.ifBlank { null }?.takeIf { it != title } }
 
-    if (title != null || content.isNotBlank()) {
+    if (title != null || summary != null) {
         Column(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
         ) {
@@ -192,13 +207,21 @@ fun VideoCardCaption(videoEvent: VideoEvent) {
                 Spacer(modifier = Modifier.height(2.dp))
             }
 
-            if (content.isNotBlank()) {
-                Text(
-                    text = content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            if (summary != null) {
+                val tags = remember(note) { event.tags.toImmutableListOfLists() }
+                val callbackUri = remember(note) { note.toNostrUri() }
+
+                TranslatableRichTextViewer(
+                    content = summary,
+                    canPreview = false,
+                    quotesLeft = 0,
+                    modifier = Modifier.fillMaxWidth(),
+                    tags = tags,
+                    backgroundColor = backgroundColor,
+                    id = note.idHex,
+                    callbackUri = callbackUri,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
         }
