@@ -134,6 +134,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserS
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
+import com.vitorpamplona.amethyst.commons.ui.text.TransformedTextInputGuard
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.theme.CardSurfaces
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
@@ -498,33 +499,35 @@ private fun PollTextField(
             .drop(1)
             .collect { onEdited() }
     }
-    BasicTextField(
-        state = state,
-        textStyle = style,
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
-        onKeyboardAction = { onEnter() },
-        lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = maxLines),
-        inputTransformation = PollInputTransformation,
-        outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
-        // The field focus moves to (Enter, Tab, a tap) is the one the suggestions follow.
-        modifier =
-            modifier.onFocusChanged { if (it.isFocused) onEdited() }.onPreviewKeyEvent { event ->
-                // Tab moves on like Enter: typed, it would put a tab in one-line text MDK refuses.
-                if ((event.key == Key.Enter || event.key == Key.Tab) && event.type == KeyEventType.KeyDown && !event.isShiftPressed) {
-                    onEnter()
-                    true
-                } else {
-                    false
+    TransformedTextInputGuard {
+        BasicTextField(
+            state = state,
+            textStyle = style,
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
+            onKeyboardAction = { onEnter() },
+            lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = maxLines),
+            inputTransformation = PollInputTransformation,
+            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+            // The field focus moves to (Enter, Tab, a tap) is the one the suggestions follow.
+            modifier =
+                modifier.onFocusChanged { if (it.isFocused) onEdited() }.onPreviewKeyEvent { event ->
+                    // Tab moves on like Enter: typed, it would put a tab in one-line text MDK refuses.
+                    if ((event.key == Key.Enter || event.key == Key.Tab) && event.type == KeyEventType.KeyDown && !event.isShiftPressed) {
+                        onEnter()
+                        true
+                    } else {
+                        false
+                    }
+                },
+            decorator = { inner ->
+                Box {
+                    if (state.text.isEmpty()) Text(placeholder, style = style, color = MaterialTheme.colorScheme.placeholderText)
+                    inner()
                 }
             },
-        decorator = { inner ->
-            Box {
-                if (state.text.isEmpty()) Text(placeholder, style = style, color = MaterialTheme.colorScheme.placeholderText)
-                inner()
-            }
-        },
-    )
+        )
+    }
 }
 
 private val PollInputTransformation = MentionPreservingInputTransformation.then(NoLineBreaks)

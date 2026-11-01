@@ -133,6 +133,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.PollOptionDraf
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
+import com.vitorpamplona.amethyst.commons.ui.text.TransformedTextInputGuard
 import com.vitorpamplona.amethyst.commons.ui.theme.CardSurfaces
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
@@ -289,38 +290,40 @@ private fun PollOptionRow(
         leading = leading,
         below = imageUrl?.let { url -> { OptionImagePreview(url) } },
     ) {
-        BasicTextField(
-            state = state,
-            textStyle = style,
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
-            onKeyboardAction = { onNext() },
-            lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 3),
-            inputTransformation = OptionInputTransformation,
-            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .padding(vertical = 14.dp)
-                    // The field focus moves to (Enter, Tab, a tap) is the one the suggestions complete into.
-                    .onFocusChanged {
-                        focused = it.isFocused
-                        if (it.isFocused) onEdited(false)
-                    }.onPreviewKeyEvent { event ->
-                        if ((event.key == Key.Enter || event.key == Key.Tab) && event.type == KeyEventType.KeyDown && !event.isShiftPressed) {
-                            onNext()
-                            true
-                        } else {
-                            false
-                        }
-                    },
-            decorator = { inner ->
-                Box {
-                    if (state.text.isEmpty()) Text(placeholder, style = style, color = MaterialTheme.colorScheme.placeholderText)
-                    inner()
-                }
-            },
-        )
+        TransformedTextInputGuard {
+            BasicTextField(
+                state = state,
+                textStyle = style,
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
+                onKeyboardAction = { onNext() },
+                lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 3),
+                inputTransformation = OptionInputTransformation,
+                outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(vertical = 14.dp)
+                        // The field focus moves to (Enter, Tab, a tap) is the one the suggestions complete into.
+                        .onFocusChanged {
+                            focused = it.isFocused
+                            if (it.isFocused) onEdited(false)
+                        }.onPreviewKeyEvent { event ->
+                            if ((event.key == Key.Enter || event.key == Key.Tab) && event.type == KeyEventType.KeyDown && !event.isShiftPressed) {
+                                onNext()
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                decorator = { inner ->
+                    Box {
+                        if (state.text.isEmpty()) Text(placeholder, style = style, color = MaterialTheme.colorScheme.placeholderText)
+                        inner()
+                    }
+                },
+            )
+        }
     }
 }
 

@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.ui.spellcheck.SpellCheckContextMenu
 import com.vitorpamplona.amethyst.commons.ui.spellcheck.SpellCheckedInnerTextField
 import com.vitorpamplona.amethyst.commons.ui.spellcheck.VisualOffsetMapping
 import com.vitorpamplona.amethyst.commons.ui.spellcheck.rememberSpellCheckFieldState
+import com.vitorpamplona.amethyst.commons.ui.text.TransformedTextInputGuard
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import kotlinx.coroutines.flow.drop
 
@@ -152,61 +153,63 @@ fun OutlinedThinPaddingTextField(
 
     CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
         SpellCheckContextMenu(spellCheckable, spell) {
-            BasicTextField(
-                state = state,
-                modifier =
-                    modifier
-                        .defaultMinSize(
-                            minWidth = TextFieldDefaults.MinWidth,
-                            minHeight = 36.dp,
-                        ),
-                enabled = enabled,
-                readOnly = readOnly,
-                textStyle = mergedTextStyle,
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                keyboardOptions = keyboardOptions,
-                lineLimits = lineLimits,
-                interactionSource = interactionSource,
-                inputTransformation = inputTransformation,
-                outputTransformation = outputTransformation,
-                onKeyboardAction = onKeyboardAction,
-                onTextLayout = spell?.onTextLayout,
-                scrollState = scrollState,
-                decorator = { innerTextField ->
-                    OutlinedTextFieldDefaults.DecorationBox(
-                        value = state.text.toString(),
-                        visualTransformation = VisualTransformation.None,
-                        innerTextField =
-                            if (spellCheckable) {
-                                { SpellCheckedInnerTextField(spell, scrollState, singleLine, innerTextField) }
-                            } else {
-                                innerTextField
+            TransformedTextInputGuard {
+                BasicTextField(
+                    state = state,
+                    modifier =
+                        modifier
+                            .defaultMinSize(
+                                minWidth = TextFieldDefaults.MinWidth,
+                                minHeight = 36.dp,
+                            ),
+                    enabled = enabled,
+                    readOnly = readOnly,
+                    textStyle = mergedTextStyle,
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    keyboardOptions = keyboardOptions,
+                    lineLimits = lineLimits,
+                    interactionSource = interactionSource,
+                    inputTransformation = inputTransformation,
+                    outputTransformation = outputTransformation,
+                    onKeyboardAction = onKeyboardAction,
+                    onTextLayout = spell?.onTextLayout,
+                    scrollState = scrollState,
+                    decorator = { innerTextField ->
+                        OutlinedTextFieldDefaults.DecorationBox(
+                            value = state.text.toString(),
+                            visualTransformation = VisualTransformation.None,
+                            innerTextField =
+                                if (spellCheckable) {
+                                    { SpellCheckedInnerTextField(spell, scrollState, singleLine, innerTextField) }
+                                } else {
+                                    innerTextField
+                                },
+                            placeholder = placeholder,
+                            label = label,
+                            leadingIcon = leadingIcon,
+                            trailingIcon = trailingIcon,
+                            prefix = prefix,
+                            suffix = suffix,
+                            supportingText = supportingText,
+                            singleLine = singleLine,
+                            enabled = enabled,
+                            isError = isError,
+                            interactionSource = interactionSource,
+                            colors = colors,
+                            contentPadding = contentPadding,
+                            container = {
+                                OutlinedTextFieldDefaults.Container(
+                                    enabled = enabled,
+                                    isError = isError,
+                                    interactionSource = interactionSource,
+                                    colors = colors,
+                                    shape = shape,
+                                )
                             },
-                        placeholder = placeholder,
-                        label = label,
-                        leadingIcon = leadingIcon,
-                        trailingIcon = trailingIcon,
-                        prefix = prefix,
-                        suffix = suffix,
-                        supportingText = supportingText,
-                        singleLine = singleLine,
-                        enabled = enabled,
-                        isError = isError,
-                        interactionSource = interactionSource,
-                        colors = colors,
-                        contentPadding = contentPadding,
-                        container = {
-                            OutlinedTextFieldDefaults.Container(
-                                enabled = enabled,
-                                isError = isError,
-                                interactionSource = interactionSource,
-                                colors = colors,
-                                shape = shape,
-                            )
-                        },
-                    )
-                },
-            )
+                        )
+                    },
+                )
+            }
         }
     }
 }
