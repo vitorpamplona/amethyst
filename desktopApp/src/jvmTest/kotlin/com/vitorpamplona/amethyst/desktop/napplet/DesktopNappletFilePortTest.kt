@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsError
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsException
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsWriteMode
 import kotlinx.coroutines.runBlocking
+import org.junit.Assume.assumeTrue
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermissions
@@ -71,16 +72,28 @@ class DesktopNappletFilePortTest {
         }
 
     @Test
-    fun replaceKeepsASymlinkAndThePermissions() =
+    fun replaceKeepsASymlink() =
         runBlocking {
             val real = File(dir, "real.png").apply { writeText("old") }
-            Files.setPosixFilePermissions(real.toPath(), PosixFilePermissions.fromString("rw-r-----"))
             val link = File(dir, "latest.png").toPath()
-            Files.createSymbolicLink(link, real.toPath())
+            // Windows makes links only with Developer Mode or an elevated shell.
+            val linked = runCatching { Files.createSymbolicLink(link, real.toPath()) }.isSuccess
+            assumeTrue("This file system or user cannot make symbolic links", linked)
             port.write(link.toString(), "new".encodeToByteArray(), NappletFsWriteMode.Replace)
             assertTrue(Files.isSymbolicLink(link))
             assertEquals("new", real.readText())
-            assertEquals("rw-r-----", PosixFilePermissions.toString(Files.getPosixFilePermissions(real.toPath())))
+        }
+
+    @Test
+    fun replaceKeepsThePermissions() =
+        runBlocking {
+            // NTFS has no POSIX permissions to keep.
+            assumeTrue("No POSIX permissions on this file system", "posix" in dir.toPath().fileSystem.supportedFileAttributeViews())
+            val file = File(dir, "real.png").apply { writeText("old") }
+            Files.setPosixFilePermissions(file.toPath(), PosixFilePermissions.fromString("rw-r-----"))
+            port.write(file.absolutePath, "new".encodeToByteArray(), NappletFsWriteMode.Replace)
+            assertEquals("new", file.readText())
+            assertEquals("rw-r-----", PosixFilePermissions.toString(Files.getPosixFilePermissions(file.toPath())))
         }
 
     @Test
