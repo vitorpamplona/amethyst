@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.resignTemplate
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isDialableFromOthers
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
@@ -309,7 +310,12 @@ object ChessCommands {
     private suspend fun inboxOf(
         ctx: Context,
         pubkey: HexKey,
-    ): Set<NormalizedRelayUrl> = ctx.relaysOf(pubkey)?.readRelaysNorm()?.toSet() ?: emptySet()
+    ): Set<NormalizedRelayUrl> =
+        ctx
+            .relaysOf(pubkey)
+            ?.allReadRelaysNorm()
+            ?.filter { it.isDialableFromOthers() }
+            ?.toSet() ?: emptySet()
 
     private fun summary(game: ChessGameSnapshot): Map<String, Any?> {
         val status = game.state.gameStatus

@@ -77,7 +77,6 @@ actual object LocalClock {
         NSTimeZone
             .timeZoneWithName(zoneId.trim())
             ?.secondsFromGMTForDate(dateAt(unixSeconds))
-            ?.toLong()
 
     actual fun epochDayCounter(): EpochDayCounter = EpochDayCounter { ZoneMath.epochDayAt(it, localZone) }
 

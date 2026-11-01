@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -54,6 +55,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /** Regression tests for the napplet broker findings of the 2026-10-31 security review. */
+@OptIn(ExperimentalCoroutinesApi::class)
 class NappletBrokerSecurityTest {
     private val user = NostrSignerInternal(KeyPair("0000000000000000000000000000000000000000000000000000000000000007".hexToByteArray()))
     private val stranger = NostrSignerInternal(KeyPair("0000000000000000000000000000000000000000000000000000000000000009".hexToByteArray()))

@@ -154,6 +154,8 @@ val HomePostsNewThreadKinds3 =
         PodcastMetadataEvent.KIND,
     )
 
+// TorrentCommentEvent is spec-deprecated (replaced by NIP-22) but old torrent threads still use it.
+@Suppress("DEPRECATION")
 val HomePostsConversationKinds =
     listOf(
         LiveActivitiesChatMessageEvent.KIND,

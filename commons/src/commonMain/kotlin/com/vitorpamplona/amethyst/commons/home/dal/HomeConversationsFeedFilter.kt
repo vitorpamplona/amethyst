@@ -78,6 +78,8 @@ class HomeConversationsFeedFilter(
         }
     }
 
+    // TorrentCommentEvent is spec-deprecated (replaced by NIP-22) but old torrent threads still use it.
+    @Suppress("DEPRECATION")
     fun acceptableEvent(
         event: Event?,
         relays: List<NormalizedRelayUrl>,

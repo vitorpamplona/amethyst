@@ -24,6 +24,7 @@ import android.content.Context
 import android.os.Build
 import coil3.SingletonImageLoader
 import coil3.annotation.DelicateCoilApi
+import coil3.annotation.ExperimentalCoilApi
 import coil3.disk.DiskCache
 import coil3.gif.GifDecoder
 import coil3.memory.MemoryCache
@@ -52,7 +53,7 @@ class ImageLoaderSetup {
 
         val debugLogger = if (isDebug) MyDebugLogger() else null
 
-        @OptIn(DelicateCoilApi::class)
+        @OptIn(DelicateCoilApi::class, ExperimentalCoilApi::class)
         fun setup(
             app: Context,
             diskCache: () -> DiskCache,

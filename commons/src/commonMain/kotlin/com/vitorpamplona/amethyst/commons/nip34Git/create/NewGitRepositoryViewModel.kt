@@ -91,11 +91,11 @@ class NewGitRepositoryViewModel : ViewModel() {
         this.account = account
         npub = account.pubKey.hexToByteArray().toNpub()
         graspServers.clear()
-        graspServers.addAll(GraspServer.DEFAULT_SERVERS.map { GraspChoice(it, true) })
+        graspServers.addAll(DEFAULT_GRASP_SERVERS.map { GraspChoice(it, true) })
 
         // Fetched once up front, so a taken identifier shows while typing and Create needs no
         // round trip. GRASP servers serve repositories that already have code.
-        val graspRelays = GraspServer.DEFAULT_SERVERS.mapNotNull { GraspServer.relayUrl(it)?.let(RelayUrlNormalizer::normalizeOrNull) }.toSet()
+        val graspRelays = DEFAULT_GRASP_SERVERS.mapNotNull { GraspServer.relayUrl(it)?.let(RelayUrlNormalizer::normalizeOrNull) }.toSet()
         ownIdentifiersJob =
             viewModelScope.launch(Dispatchers.IO) {
                 val found = account.myGitRepositoryIdentifiers(graspRelays) ?: return@launch
@@ -242,5 +242,10 @@ class NewGitRepositoryViewModel : ViewModel() {
                 isCreating = false
             }
         }
+    }
+
+    companion object {
+        /** ngit's default GRASP servers, offered when the user has no kind:10317 list. */
+        val DEFAULT_GRASP_SERVERS = listOf("relay.ngit.dev", "gitnostr.com")
     }
 }

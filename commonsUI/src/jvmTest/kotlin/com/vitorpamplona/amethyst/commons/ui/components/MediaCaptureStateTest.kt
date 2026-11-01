@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.snapshots.Snapshot
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.currentTime
@@ -28,6 +29,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MediaCaptureStateTest {
     private fun MediaCaptureState.change(block: MediaCaptureState.() -> Unit) {
         block()

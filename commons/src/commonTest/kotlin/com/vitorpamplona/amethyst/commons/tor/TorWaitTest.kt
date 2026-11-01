@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.tor
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
@@ -31,6 +32,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class TorWaitTest {
     private val dmRelay = NormalizedRelayUrl("wss://nos.lol/")
     private val newRelay = NormalizedRelayUrl("wss://relay.example.com/")
