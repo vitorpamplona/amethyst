@@ -34,9 +34,18 @@ import androidx.compose.runtime.Composable
  * Keyboard sends exactly that batch. The bug is in foundation's `ImeEditCommand.setSelection`
  * (still present in 1.13.0-beta02).
  *
- * On Android this commits the commands queued so far before a `setSelection` that arrives inside a
- * batch, so the selection is mapped through the text it lands in. Other platforms don't batch IME
- * commands this way and render [content] as is.
+ * **This is a workaround for that Compose bug, not the intended design.** Using an
+ * OutputTransformation that changes the text's length is supported API; the missing clamp is
+ * Compose's (its sibling commands `commitText`, `setComposingRegion` and `deleteSurroundingText`
+ * all clamp). Remove this guard and its call sites once Compose fixes it:
+ * `TransformedTextInputGuardTest.unguardedField_crashesOnTheBatch` (amethyst androidTest) asserts
+ * the unguarded field still crashes, so it starts failing on the Compose release that fixes it.
+ *
+ * On Android this commits the commands queued so far before a `setSelection` (or select-all) that
+ * arrives inside a batch, so the selection is mapped through the text it lands in. The cost: the
+ * keyboard sees the batch's earlier edits applied before the batch ends, where stock Compose
+ * applies the whole batch at once. On desktop and iOS it renders [content] as is; their IME paths
+ * were not checked for the same bug.
  *
  * @param active false renders [content] as is: a field without an OutputTransformation has no
  *   offset mapping to go stale. Keep it constant for a field; flipping it recreates [content].
