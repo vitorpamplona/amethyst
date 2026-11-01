@@ -727,6 +727,26 @@ object GlobalMediaPlayer {
     }
 
     /**
+     * Opens [url] again on a fresh engine for the card [owner], whose engine failed to open it: the
+     * failed one is retired rather than kept as the card's, which would go on drawing it.
+     */
+    fun retryVideo(
+        url: String,
+        owner: Any,
+        chosen: Boolean,
+    ) {
+        val failed =
+            synchronized(initLock) {
+                cardEngines[owner]?.takeIf { it.url == url && it.engine.error != null }?.also {
+                    cardEngines.remove(owner)
+                    publishCards()
+                }
+            }
+        if (failed != null && failed.engine !== videoPlayer) retireVideoPlayer(failed.engine)
+        playVideo(url, owner = owner, chosen = chosen)
+    }
+
+    /**
      * Takes back the engine of the video card [owner], which left the screen. The playing one stays
      * for [releaseVideo] to decide: the now-playing bar keeps a video the user chose going.
      */
