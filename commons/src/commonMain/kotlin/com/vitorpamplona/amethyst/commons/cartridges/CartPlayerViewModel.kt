@@ -57,7 +57,7 @@ class CartPlayerViewModel(
 
             // On the game thread, inside a frame, so it only ever answers from memory: a download here
             // would race the hang watchdog. A name that is not listed stops the game with a message.
-            override fun loadCart(name: String): ByteArray? = carts[name]
+            override fun loadCart(name: String): ByteArray? = carts[name].also { Log.i(TAG) { "The game asked for $name: ${it?.let { bytes -> "${bytes.size} bytes" } ?: "not available"}" } }
         }
 
     // What the player's game keeps its saves under (see [CartSaveStore] and [CartLinks.saveKey]).
@@ -118,6 +118,7 @@ class CartPlayerViewModel(
         }
         carts = links?.fetchCarts(bytes) { httpClients.fetchMedia(it, MAX_CART_BYTES) }.orEmpty()
         saveKey = links?.saveKey(hash) ?: hash
+        Log.i(TAG) { "Playing $url with ${carts.size} named carts, saves under $saveKey" }
         return bytes
     }
 

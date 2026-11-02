@@ -111,9 +111,13 @@ class CartLinks(
                 runCatchingCancellable { fetch(url) }
                     .onFailure { Log.w(TAG, "Could not fetch the cart at $url", it) }
                     .getOrNull() ?: continue
-            if (sha256(bytes).toHexKey() == sha256) return bytes
+            if (sha256(bytes).toHexKey() == sha256) {
+                Log.i(TAG) { "Fetched ${names.first()} from $url, ${bytes.size} bytes" }
+                return bytes
+            }
             Log.w(TAG) { "The cart at $url does not match its hash, $sha256" }
         }
+        Log.w(TAG) { "Could not get ${names.first()} from any of its ${urls.size} URLs" }
         return null
     }
 
