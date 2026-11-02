@@ -46,7 +46,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding
-import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
@@ -95,9 +94,9 @@ private fun RenderBolt12ZapGallery(
     accountViewModel: AccountViewModel,
 ) {
     Row(Modifier.fillMaxWidth()) {
-        Box(modifier = WidthAuthorPictureModifier) {
+        GalleryIconColumn { iconAlignment ->
             ZappedIcon(
-                modifier = Modifier.size(Size25dp).align(Alignment.TopEnd),
+                modifier = Modifier.size(Size25dp).align(iconAlignment),
             )
         }
 

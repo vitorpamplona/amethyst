@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.ui.theme.FullWidthHeaderSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.NotificationIconModifierSmaller
@@ -114,7 +115,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding
-import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifierWithPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.overPictureBackground
@@ -240,20 +240,39 @@ fun MultiSetCompose(
             else -> {
                 Galeries(multiSetCard, backgroundColor, accountViewModel, nav)
 
-                Row(Modifier.fillMaxWidth()) {
-                    Spacer(modifier = WidthAuthorPictureModifierWithPadding)
+                if (LocalDisplaySettings.current.fullWidthNotes) {
+                    // Full width: the gallery rows are the card's header (icon in the picture
+                    // slot, faces where a name would be) and the note takes the whole width below,
+                    // as a full-width note's body does.
+                    ProvideNotificationBoostedNoteFrame {
+                        NoteCompose(
+                            baseNote = baseNote,
+                            modifier = FullWidthHeaderSpacer,
+                            routeForLastRead = null,
+                            isBoostedNote = true,
+                            isHiddenFeed = showHidden,
+                            quotesLeft = 1,
+                            parentBackgroundColor = backgroundColor,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+                } else {
+                    Row(Modifier.fillMaxWidth()) {
+                        Spacer(modifier = WidthAuthorPictureModifierWithPadding)
 
-                    NoteCompose(
-                        baseNote = baseNote,
-                        modifier = HalfTopPadding,
-                        routeForLastRead = null,
-                        isBoostedNote = true,
-                        isHiddenFeed = showHidden,
-                        quotesLeft = 1,
-                        parentBackgroundColor = backgroundColor,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                        NoteCompose(
+                            baseNote = baseNote,
+                            modifier = HalfTopPadding,
+                            routeForLastRead = null,
+                            isBoostedNote = true,
+                            isHiddenFeed = showHidden,
+                            quotesLeft = 1,
+                            parentBackgroundColor = backgroundColor,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 }
             }
         }
@@ -299,10 +318,8 @@ fun RenderLikeGallery(
 ) {
     if (likeEvents.isNotEmpty()) {
         Row(Modifier.fillMaxWidth()) {
-            Box(
-                modifier = NotificationIconModifier,
-            ) {
-                val modifier = remember { Modifier.align(Alignment.TopEnd) }
+            GalleryIconColumn(NotificationIconModifier) { iconAlignment ->
+                val modifier = remember(iconAlignment) { Modifier.align(iconAlignment) }
 
                 // A bare `:shortcode:` (its event had no emoji tag) has no image: it falls to the text branch.
                 val renderable =
@@ -429,11 +446,9 @@ fun RenderZapGallery(
     nav: INav,
 ) {
     Row(Modifier.fillMaxWidth()) {
-        Box(
-            modifier = WidthAuthorPictureModifier,
-        ) {
+        GalleryIconColumn { iconAlignment ->
             ZappedIcon(
-                modifier = Modifier.size(Size25dp).align(Alignment.TopEnd),
+                modifier = Modifier.size(Size25dp).align(iconAlignment),
             )
         }
 
@@ -469,16 +484,15 @@ fun RenderNutzapGallery(
         }
 
     Row(Modifier.fillMaxWidth()) {
-        Box(
-            // Reuse the reaction galleries' icon column (55dp wide with a 5dp end
-            // inset) so the cashu glyph lines up with the like/boost icons above
-            // it, instead of sitting flush-right like the lightning ZappedIcon.
-            modifier = NotificationIconModifier,
-        ) {
+        // Indented, reuse the reaction galleries' icon column (55dp wide with a
+        // 5dp end inset) so the cashu glyph lines up with the like/boost icons
+        // above it, instead of sitting flush-right like the lightning ZappedIcon.
+        // Full width centres every gallery's icon in the same 35dp slot.
+        GalleryIconColumn(NotificationIconModifier) { iconAlignment ->
             Icon(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(Res.string.nutzap),
-                modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
+                modifier = Modifier.size(Size20dp).align(iconAlignment),
                 // Tint the monochrome cashu outline brand orange so the nutzap
                 // gallery matches the lightning ZappedIcon in RenderZapGallery.
                 tint = BitcoinOrange,
@@ -498,11 +512,9 @@ fun RenderBoostGallery(
     Row(
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Box(
-            modifier = NotificationIconModifierSmaller,
-        ) {
+        GalleryIconColumn(NotificationIconModifierSmaller) { iconAlignment ->
             RepostedIcon(
-                modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
+                modifier = Modifier.size(Size20dp).align(iconAlignment),
             )
         }
 
@@ -519,11 +531,9 @@ fun RenderBoostGallery(
     Row(
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Box(
-            modifier = NotificationIconModifierSmaller,
-        ) {
+        GalleryIconColumn(NotificationIconModifierSmaller) { iconAlignment ->
             RepostedIcon(
-                modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
+                modifier = Modifier.size(Size20dp).align(iconAlignment),
             )
         }
 

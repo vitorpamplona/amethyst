@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -31,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -115,13 +113,14 @@ internal fun RenderAcceptedByRelaysGallery(
     accountViewModel: AccountViewModel,
 ) {
     Row(Modifier.fillMaxWidth()) {
-        // NotificationIconModifier (55dp wide, 5dp end padding) matches the category-icon
-        // column of the zap/like/nutzap gallery rows so the Dns icon lines up with them.
-        Box(modifier = NotificationIconModifier) {
+        // Indented, NotificationIconModifier (55dp wide, 5dp end padding) matches the
+        // category-icon column of the zap/like/nutzap gallery rows so the Dns icon lines up
+        // with them; full width centres it in their shared 35dp slot.
+        GalleryIconColumn(NotificationIconModifier) { iconAlignment ->
             Icon(
                 symbol = MaterialSymbols.Dns,
                 contentDescription = stringRes(id = Res.string.accepted_by_relays),
-                modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
+                modifier = Modifier.size(Size20dp).align(iconAlignment),
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
         }

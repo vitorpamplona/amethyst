@@ -162,6 +162,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.layouts.NoteHorizontalPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.CASHU_PREFERRED_BELOW_SATS
 import com.vitorpamplona.amethyst.commons.ui.note.ChangeReactionIcon
@@ -194,6 +195,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.RecordAudioBox
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.PaymentTargetsDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.paymentTargetStyleFor
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.OnchainZapSendDialog
@@ -602,9 +604,11 @@ private fun ReactionDetailGallery(
     // reaction line. Guarding here keeps the padded Row from rendering an empty strip
     // for a note that has neither.
     if (hasReactions || relays.isNotEmpty()) {
+        // Full width: the icon column lines up with the 35dp picture slot of the note's header.
+        val startPadding = if (LocalDisplaySettings.current.fullWidthNotes) NoteHorizontalPadding else 10.dp
         Row(
             verticalAlignment = CenterVertically,
-            modifier = Modifier.padding(start = 10.dp, top = 5.dp),
+            modifier = Modifier.padding(start = startPadding, top = 5.dp),
         ) {
             Column {
                 WatchZapAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
