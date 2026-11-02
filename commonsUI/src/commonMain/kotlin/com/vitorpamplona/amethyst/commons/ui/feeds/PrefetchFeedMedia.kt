@@ -34,6 +34,7 @@ import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import com.vitorpamplona.amethyst.commons.cartridges.CartLinks
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -413,6 +414,9 @@ private fun Note.collectWarmTargets(): WarmTargets? {
     // kinds whose typed accessors wrap imetas() — Picture, Video). Video imeta carries
     // its poster in the `image` field.
     ev.tags.imetas().forEach { meta ->
+        // The other carts of a game are fetched when it is played, not when it scrolls past. The
+        // cart in the note's text is still warmed from the body below.
+        if (CartLinks.CART_FIELD in meta.properties) return@forEach
         if (meta.isImage()) targets.image(meta.url)
         if (meta.isVideo()) targets.video(meta.url, meta.properties[MIME_TYPE_KEY]?.firstOrNull())
         meta.image()?.forEach { poster -> targets.videoPoster(poster, meta.videoUrlForPosterDims()) }

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.cartridges.CartLinks
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
@@ -82,6 +83,7 @@ class RichTextParser {
                 mimeType = contentType,
                 thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
                 authorPubKey = authorPubKey,
+                cartLinks = CartLinks.forEntry(fullUrl, eventTags),
             )
         } else if (kind == MediaContentKind.VIDEO) {
             MediaUrlVideo(
@@ -229,7 +231,7 @@ class RichTextParser {
                                 if (it is Base64Segment) {
                                     createMediaContent(it.segmentText, emptyMap(), content, callbackUri)
                                 } else if (it is BlossomUriSegment) {
-                                    createMediaContent(it.segmentText, emptyMap(), content, callbackUri)
+                                    createMediaContent(it.segmentText, imetas, content, callbackUri)
                                 } else {
                                     null
                                 }

@@ -39,13 +39,15 @@ import kotlin.concurrent.Volatile
  * Holds the [player] of one cart for the screen, so a rotation or a closed dialog keeps the game
  * where it was. The cart comes through the image HTTP client (Tor settings apply) and must match
  * the note's [expectedSha256] when it gives one; what the game saves (`cartdata`) goes to
- * [saveStore].
+ * [saveStore]. The other carts of a game its note lists in [links] come the same way when the game
+ * starts, each only if it matches its hash, ready for when the game asks for them.
  */
 class CartPlayerViewModel(
     private val url: String,
     private val expectedSha256: String?,
     private val httpClients: IRoleBasedHttpClientBuilder,
     private val saveStore: CartSaveStore?,
+    private val links: CartLinks? = null,
 ) : ViewModel() {
     private val host =
         object : KikoPlayerHost {
@@ -53,14 +55,18 @@ class CartPlayerViewModel(
 
             override fun utcOffsetSeconds(): Int = LocalClock.utcOffsetSeconds(TimeUtils.now()).toInt()
 
-            // Games in several carts load the next one by its id on the original's site, or by a
-            // file name. A post has no way to name its other carts yet, so those stop with a message.
-            override fun loadCart(name: String): ByteArray? = null
+            // On the game thread, inside a frame, so it only ever answers from memory: a download here
+            // would race the hang watchdog. A name that is not listed stops the game with a message.
+            override fun loadCart(name: String): ByteArray? = carts?.get(name)
         }
 
-    // The sha256 of the cart the player loaded: its saves are kept under it (see [CartSaveStore]).
+    // What the player's game keeps its saves under (see [CartSaveStore] and [CartLinks.saveKey]).
     @Volatile
-    private var cartHash: String? = null
+    private var saveKey: String? = null
+
+    // Every cart of the game by name, up to 16 MiB of them, until the game is let go.
+    @Volatile
+    private var carts: Map<String, ByteArray>? = null
 
     private var current: KikoPlayer? = null
 
@@ -83,7 +89,7 @@ class CartPlayerViewModel(
      * [LivePlayers]). Main thread only.
      */
     fun player(): KikoPlayer {
-        val player = current ?: KikoPlayer(source = ::download, saves = saveStore?.forCart { cartHash }, host = host).also { current = it }
+        val player = current ?: KikoPlayer(source = ::download, saves = saveStore?.forCart { saveKey }, host = host).also { current = it }
         live.touch(this)
         return player
     }
@@ -92,6 +98,7 @@ class CartPlayerViewModel(
     fun release() {
         current?.close()
         current = null
+        carts = null
     }
 
     private suspend fun download(): ByteArray? {
@@ -109,7 +116,8 @@ class CartPlayerViewModel(
                 return null
             }
         }
-        cartHash = hash
+        carts = links?.fetchCarts(bytes) { httpClients.fetchMedia(it, MAX_CART_BYTES) }
+        saveKey = links?.saveKey(hash) ?: hash
         return bytes
     }
 

@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import kotlinx.coroutines.runBlocking
 import okio.Path.Companion.toPath
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -60,6 +61,64 @@ class CartSaveIsolationTest {
 
             assertEquals(7, store.forCart { "aa".repeat(32) }.loadAll().getValue("s")[0])
         }
+
+    private val entry = "ee".repeat(32)
+
+    private fun extra(
+        name: String,
+        sha256: String,
+    ) = ExtraCart(listOf(name), listOf("https://example.com/$name.png"), sha256)
+
+    private fun linksTo(vararg extras: ExtraCart) = CartLinks(listOf("#game"), extras.toList())
+
+    // A stranger's note reuses a popular game's front cart and lists a hostile "second cart" under
+    // the name that game loads.
+    @Test
+    fun aHostileSecondCartCannotReachTheSavesOfTheGameItsFrontCartBelongsTo() =
+        runBlocking {
+            val store = store()
+            val game = linksTo(extra("#main", "aa".repeat(32)))
+            val hostile = linksTo(extra("#main", "bb".repeat(32)))
+            store.forCart { game.saveKey(entry) }.save(mapOf("s" to values(42)))
+
+            assertNull(store.forCart { hostile.saveKey(entry) }.loadAll()["s"])
+            store.forCart { hostile.saveKey(entry) }.save(mapOf("s" to values(0)))
+
+            assertEquals(42, store.forCart { game.saveKey(entry) }.loadAll().getValue("s")[0])
+        }
+
+    @Test
+    fun theSameFrontCartWithDifferentExtrasIsADifferentGame() {
+        val one = linksTo(extra("#main", "aa".repeat(32)))
+
+        assertNotEquals(one.saveKey(entry), linksTo(extra("#main", "bb".repeat(32))).saveKey(entry))
+        assertNotEquals(one.saveKey(entry), linksTo(extra("#other", "aa".repeat(32))).saveKey(entry))
+        assertNotEquals(one.saveKey(entry), one.saveKey("ff".repeat(32)))
+    }
+
+    @Test
+    fun theSameExtrasInAnotherOrderAreTheSameGame() {
+        val a = extra("#a", "aa".repeat(32))
+        val b = extra("#b", "bb".repeat(32))
+
+        assertEquals(linksTo(a, b).saveKey(entry), linksTo(b, a).saveKey(entry))
+    }
+
+    @Test
+    fun aSingleCartKeepsItsKeySoExistingSavesStayPut() {
+        assertEquals(entry, CartLinks(listOf("#game"), emptyList()).saveKey(entry))
+    }
+
+    // Names are a stranger's text: one with a line break must not read as two carts.
+    @Test
+    fun aNameCannotImitateTwoCarts() {
+        val a = "aa".repeat(32)
+        val b = "bb".repeat(32)
+        val honest = linksTo(extra("#a", a), extra("#b", b))
+        val forged = linksTo(extra("#a $a\n#b", b))
+
+        assertNotEquals(honest.saveKey(entry), forged.saveKey(entry))
+    }
 
     @Test
     fun nothingIsReadOrWrittenBeforeTheCartIsKnown() =

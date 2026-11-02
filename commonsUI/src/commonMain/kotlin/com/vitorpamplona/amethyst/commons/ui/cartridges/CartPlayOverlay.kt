@@ -82,6 +82,7 @@ fun CartPlayOverlay(
         CartPlayerDialog(
             url = httpUrl,
             sha256 = content.hash ?: blossom?.sha256,
+            links = content.cartLinks,
             accountViewModel = accountViewModel,
             onDismiss = { playing = false },
         )

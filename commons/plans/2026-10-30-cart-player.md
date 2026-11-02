@@ -49,9 +49,21 @@ Amethyst adds around them.
   killed app restarts the game from its title, like the original console.
 - **Lifecycle**: the game runs only while the app is started. Home, the app switcher or a
   minimized window pauses it and its sound and writes its saves.
-- **Multi-cart games**: there is no convention yet for a post to name its other carts, and
-  fetching them from the original's site would add a third-party server, so `loadCart` returns
-  null and the player shows "this game continues in another cartridge".
+- **Multi-cart games**: a note lists a game's carts in its `imeta` tags. The entry cart is the one
+  whose URL is in the text, and its `cart` field is optional: a game needs it to come back to its
+  first cart. An extra cart is an `imeta` with a `cart` field whose URL isn't that entry, and it needs
+  `x` (64 hex digits). `cart` is the exact string the cart passes to `load` or `reload`, `#` and
+  version included, and it repeats for a game that uses two spellings. At most 16 extra carts of
+  1 MiB each, and 3 URLs per cart counting `fallback`s; past that, entries are ignored. List the entry
+  cart first, because `firstContentImage` takes the note's first image for the share card.
+
+  `CartLinks` reads these. The player fetches the extras when Play is pressed, and each must match
+  its `x`. `loadCart` is a lookup in memory, because it runs on the game thread inside a frame, so a
+  game can only reach what its note lists; any other name shows "this game continues in another
+  cartridge", as does an extra that failed to download. Saves are kept under a hash of the entry cart
+  and every declared `name x` pair, so a stranger's note can't list a hostile cart beside a game's
+  front cart to reach its saves. Fetching from the original's site would add a third-party server,
+  so `#id` is never resolved there. Posting these notes from the composer isn't supported yet.
 - **Uploads**: Android's `MediaCompressor` uploads a PNG that loads as a cart unchanged instead of
   re-encoding it to JPEG. Desktop never re-encoded PNGs.
 
@@ -59,6 +71,4 @@ Amethyst adds around them.
 
 1. Try it on an Android phone (touch controls, sound latency, rotation keeping the game, frame
    time of the heaviest carts on a low-end device).
-2. Decide how a post names the other carts of a multi-cart game (e.g. more `imeta` entries), then
-   answer `ConsoleHost.loadCart` from it.
-3. iOS: an HTTP client for `CartBytes`, and an audio sink in kiko-player, both stubs there.
+2. iOS: an HTTP client for `CartBytes`, and an audio sink in kiko-player, both stubs there.

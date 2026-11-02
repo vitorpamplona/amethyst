@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.vitorpamplona.amethyst.commons.cartridges.CartLinks
 import com.vitorpamplona.amethyst.commons.cartridges.CartPlayerViewModel
 import com.vitorpamplona.amethyst.commons.cartridges.cartSaveStore
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -71,6 +72,7 @@ import com.vitorpamplona.kiko.compose.KikoLabels
 fun CartPlayerDialog(
     url: String,
     sha256: String?,
+    links: CartLinks?,
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
@@ -80,7 +82,7 @@ fun CartPlayerDialog(
         properties = edgeToEdgeDialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
     ) {
         SetDialogToEdgeToEdge()
-        CartPlayer(url, sha256, accountViewModel, onDismiss)
+        CartPlayer(url, sha256, links, accountViewModel, onDismiss)
     }
 }
 
@@ -94,13 +96,15 @@ fun CartPlayerDialog(
 fun CartPlayer(
     url: String,
     sha256: String?,
+    links: CartLinks?,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
 ) {
     val appStores = LocalAppServices.current.appStores
     val viewModel =
-        rememberViewModel(key = "cart:$url") {
-            CartPlayerViewModel(url, sha256, accountViewModel.httpClientBuilder, appStores.cartSaveStore())
+        // The links are part of the key: two notes of one front cart are different games.
+        rememberViewModel(key = "cart:$url:${links?.fingerprint}") {
+            CartPlayerViewModel(url, sha256, accountViewModel.httpClientBuilder, appStores.cartSaveStore(), links)
         }
     // Made again when it was let go to keep only the latest few games in memory.
     val player = remember(viewModel) { viewModel.player() }
