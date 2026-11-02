@@ -51,7 +51,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding
-import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.BigDecimal
@@ -95,11 +94,11 @@ private fun RenderNutzapGalleryRow(
     accountViewModel: AccountViewModel,
 ) {
     Row(Modifier.fillMaxWidth()) {
-        Box(modifier = WidthAuthorPictureModifier) {
+        GalleryIconColumn { iconAlignment ->
             Icon(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(Res.string.nutzap),
-                modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
+                modifier = Modifier.size(Size20dp).align(iconAlignment),
                 // Tint the monochrome cashu outline brand orange so it reads as
                 // a value transfer, matching the lightning ZappedIcon in the
                 // sibling zap gallery.

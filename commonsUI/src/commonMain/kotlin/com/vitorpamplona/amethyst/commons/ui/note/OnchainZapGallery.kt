@@ -52,7 +52,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.WatchUserMetadataAndFollowsAnd
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding
-import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.BigDecimal
@@ -146,9 +145,9 @@ private fun RenderOnchainZapGallery(
     accountViewModel: AccountViewModel,
 ) {
     Row(Modifier.fillMaxWidth()) {
-        Box(modifier = WidthAuthorPictureModifier) {
+        GalleryIconColumn { iconAlignment ->
             OnchainZappedIcon(
-                modifier = Modifier.size(Size25dp).align(Alignment.TopEnd),
+                modifier = Modifier.size(Size25dp).align(iconAlignment),
             )
         }
 
