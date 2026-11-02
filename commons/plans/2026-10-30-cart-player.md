@@ -73,6 +73,9 @@ Amethyst adds around them.
   no cart. The two share one save key, a hash of both hashes, whichever one was started. Notes of
   three or more carts can't be told apart, so they need `cart` fields. A game that loads a cart from
   outside its note, posted beside an unrelated cart, starts that cart instead of showing the message.
+  kiko doesn't say which cart is running, so a game that first asks for its own name, or for a cart
+  it can do without, gets the two swapped; `cart` fields avoid that. A game's second cart may also
+  need what the first leaves in memory, as Into Ruins' does, and then can't be started directly.
 - **Uploads**: Android's `MediaCompressor` uploads a PNG that loads as a cart unchanged instead of
   re-encoding it to JPEG. Desktop never re-encoded PNGs.
 

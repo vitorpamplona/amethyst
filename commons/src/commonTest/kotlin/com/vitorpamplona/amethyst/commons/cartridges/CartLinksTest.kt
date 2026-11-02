@@ -327,6 +327,36 @@ class CartLinksTest {
     }
 
     @Test
+    fun aPlainCartNeedsNoMimeType() {
+        val tags = imetas(imeta(front, "x $frontX", "dim 160x205"), imeta(main, "x $mainX", "dim 160x205"))
+
+        assertEquals(mainX, CartLinks.forEntry(front, tags)?.partner?.sha256)
+    }
+
+    // A tag's URLs become one entry each, so this reads as two carts with one hash and one more.
+    @Test
+    fun aCartListedAtTwoUrlsInOneTagTurnsThePairingOff() {
+        val mirrored = arrayOf("imeta", "url $front", "url https://mirror.example/front.png", "x $frontX", *plain)
+
+        assertNull(CartLinks.forEntry(front, imetas(mirrored, plainCart(main, mainX))))
+    }
+
+    @Test
+    fun oneUrlInTwoTagsIsOneCart() {
+        assertNull(CartLinks.forEntry(front, imetas(plainCart(front, frontX), plainCart(front, mainX))))
+    }
+
+    // A stranger posts a game's front cart beside a hostile image, through the real reading of the tags.
+    @Test
+    fun aPairNoteWithAnotherSecondCartIsAnotherGame() {
+        val game = CartLinks.forEntry(front, plainPair())!!.saveKey(frontX)
+        val hostile = CartLinks.forEntry(front, imetas(plainCart(front, frontX), plainCart(main, thirdX)))!!.saveKey(frontX)
+
+        assertNotEquals(game, hostile)
+        assertNotEquals(frontX, hostile)
+    }
+
+    @Test
     fun anUppercaseHashStillPairs() {
         val tags = imetas(plainCart(front, frontX), plainCart(main, mainX.uppercase()))
 

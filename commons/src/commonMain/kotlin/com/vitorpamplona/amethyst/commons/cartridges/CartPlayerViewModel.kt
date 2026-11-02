@@ -49,25 +49,6 @@ class CartPlayerViewModel(
     private val saveStore: CartSaveStore?,
     private val links: CartLinks?,
 ) : ViewModel() {
-    private val host =
-        object : KikoPlayerHost {
-            override fun log(message: String) = Log.d(TAG) { message }
-
-            override fun utcOffsetSeconds(): Int = LocalClock.utcOffsetSeconds(TimeUtils.now()).toInt()
-
-            // On the game thread, inside a frame, so it only ever answers from memory: a download here
-            // would race the hang watchdog. A name with no cart stops the game with a message.
-            override fun loadCart(name: String): ByteArray? = carts?.get(name).also { Log.i(TAG) { "The game asked for $name: ${it?.let { bytes -> "${bytes.size} bytes" } ?: "not available"}" } }
-        }
-
-    // What the player's game keeps its saves under (see [CartSaveStore] and [CartLinks.saveKey]).
-    @Volatile
-    private var saveKey: String? = null
-
-    // Every cart of the game by name, in memory until the game is let go.
-    @Volatile
-    private var carts: GameCarts? = null
-
     private var current: KikoPlayer? = null
 
     private val _differentFile = MutableStateFlow<DifferentFile?>(null)
@@ -89,7 +70,10 @@ class CartPlayerViewModel(
      * [LivePlayers]). Main thread only.
      */
     fun player(): KikoPlayer {
-        val player = current ?: KikoPlayer(source = ::download, saves = saveStore?.forCart { saveKey }, host = host).also { current = it }
+        val player =
+            current ?: Game().let { game ->
+                KikoPlayer(source = game::download, saves = saveStore?.forCart { game.saveKey }, host = game).also { current = it }
+            }
         live.touch(this)
         return player
     }
@@ -98,28 +82,51 @@ class CartPlayerViewModel(
     fun release() {
         current?.close()
         current = null
-        carts = null
     }
 
-    private suspend fun download(): ByteArray? {
-        val bytes = httpClients.fetchMedia(url, MAX_CART_BYTES) ?: return null
-        val hash = sha256(bytes).toHexKey()
-        when (CartIntegrity.of(hash, expectedSha256) { CartLoader.isCart(bytes) }) {
-            CartIntegrity.VERIFIED, CartIntegrity.UNRECORDED -> {}
-            CartIntegrity.DIFFERENT_CART -> {
-                Log.w(TAG) { "The cart at $url does not match its hash (expected $expectedSha256, got $hash, ${bytes.size} bytes); playing it with a warning" }
-                _differentFile.value = DifferentFile(hostOf(url), playable = true)
+    /**
+     * What one [KikoPlayer] needs and nothing else may touch: a frame of a closing player can outlive
+     * [release], and it must not use up the carts of the player made after it. Its memory goes with
+     * its player.
+     */
+    private inner class Game : KikoPlayerHost {
+        // What this game keeps its saves under (see [CartSaveStore] and [CartLinks.saveKey]).
+        @Volatile
+        var saveKey: String? = null
+            private set
+
+        // Every other cart of the game, in memory until the game is let go.
+        @Volatile
+        private var carts: GameCarts? = null
+
+        override fun log(message: String) = Log.d(TAG) { message }
+
+        override fun utcOffsetSeconds(): Int = LocalClock.utcOffsetSeconds(TimeUtils.now()).toInt()
+
+        // On the game thread, inside a frame, so it only ever answers from memory: a download here
+        // would race the hang watchdog. A name with no cart stops the game with a message.
+        override fun loadCart(name: String): ByteArray? = carts?.get(name).also { Log.i(TAG) { "The game asked for $name: ${it?.let { bytes -> "${bytes.size} bytes" } ?: "not available"}" } }
+
+        suspend fun download(): ByteArray? {
+            val bytes = httpClients.fetchMedia(url, MAX_CART_BYTES) ?: return null
+            val hash = sha256(bytes).toHexKey()
+            when (CartIntegrity.of(hash, expectedSha256) { CartLoader.isCart(bytes) }) {
+                CartIntegrity.VERIFIED, CartIntegrity.UNRECORDED -> {}
+                CartIntegrity.DIFFERENT_CART -> {
+                    Log.w(TAG) { "The cart at $url does not match its hash (expected $expectedSha256, got $hash, ${bytes.size} bytes); playing it with a warning" }
+                    _differentFile.value = DifferentFile(hostOf(url), playable = true)
+                }
+                CartIntegrity.DIFFERENT_FILE -> {
+                    Log.w(TAG) { "The file at $url does not match its hash (expected $expectedSha256, got $hash) and is not a cart" }
+                    _differentFile.value = DifferentFile(hostOf(url), playable = false)
+                    return null
+                }
             }
-            CartIntegrity.DIFFERENT_FILE -> {
-                Log.w(TAG) { "The file at $url does not match its hash (expected $expectedSha256, got $hash) and is not a cart" }
-                _differentFile.value = DifferentFile(hostOf(url), playable = false)
-                return null
-            }
+            carts = links?.fetchCarts(bytes) { httpClients.fetchMedia(it, MAX_CART_BYTES) }
+            saveKey = links?.saveKey(hash) ?: hash
+            Log.i(TAG) { "Playing $url, saves under $saveKey" }
+            return bytes
         }
-        carts = links?.fetchCarts(bytes) { httpClients.fetchMedia(it, MAX_CART_BYTES) }
-        saveKey = links?.saveKey(hash) ?: hash
-        Log.i(TAG) { "Playing $url, saves under $saveKey" }
-        return bytes
     }
 
     override fun onCleared() {
