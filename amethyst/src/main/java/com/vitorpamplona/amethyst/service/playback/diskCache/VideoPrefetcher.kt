@@ -26,9 +26,13 @@ import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.HttpUtil
+import androidx.media3.datasource.TransferListener
+import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.CacheWriter
 import androidx.media3.datasource.cache.ContentMetadata
+import androidx.media3.datasource.cache.ContentMetadataMutations
 import com.vitorpamplona.amethyst.service.playback.PLAYBACK_DIAG_TAG
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -155,11 +159,13 @@ class VideoPrefetcher(
         val head = if (length == C.LENGTH_UNSET.toLong()) PREFETCH_BYTES else minOf(PREFETCH_BYTES, length)
         if (cache.getCachedBytes(video.url, 0, head) >= head) return true
 
+        val server = upstream(video.useProxy)
+        val lengthRecorder = ContentLengthRecorder(cache, video.url)
         val source =
             CacheDataSource
                 .Factory()
                 .setCache(cache)
-                .setUpstreamDataSourceFactory(upstream(video.useProxy))
+                .setUpstreamDataSourceFactory { server.createDataSource().apply { addTransferListener(lengthRecorder) } }
                 .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
                 .createDataSource()
 
@@ -201,4 +207,64 @@ class VideoPrefetcher(
 
         private const val RETRY_FAILED_MS = 5 * 60 * 1000L
     }
+}
+
+/**
+ * Stores the video's full length in [cache] when its server answers, before any byte is cached.
+ *
+ * [CacheDataSource] only learns a length from a request with no end, and a head is a bounded one, so
+ * without this the player opens a prefetched video at an unknown length. Most mp4s play anyway, but
+ * one ending in an `mdat` box of size 0 ("to the end of the file") then fails media3's sniffing with
+ * `ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED`, and it keeps failing for as long as the head is cached.
+ */
+@OptIn(UnstableApi::class)
+private class ContentLengthRecorder(
+    private val cache: Cache,
+    private val key: String,
+) : TransferListener {
+    override fun onTransferStart(
+        source: DataSource,
+        dataSpec: DataSpec,
+        isNetwork: Boolean,
+    ) {
+        val length = fileLength(source.responseHeaders)
+        if (length == C.LENGTH_UNSET.toLong()) return
+        try {
+            cache.applyContentMetadataMutations(key, ContentMetadataMutations.setContentLength(ContentMetadataMutations(), length))
+        } catch (e: Cache.CacheException) {
+            Log.w(PLAYBACK_DIAG_TAG, "PREFETCH could not store the length of $key", e)
+        }
+    }
+
+    // OkHttp lower-cases the names, so a plain map lookup depends on the data source underneath.
+    private fun fileLength(headers: Map<String, List<String>>): Long {
+        fun header(name: String) =
+            headers.entries
+                .firstOrNull { it.key.equals(name, ignoreCase = true) }
+                ?.value
+                ?.firstOrNull()
+
+        // A server that ignored the range sends the whole file, and its Content-Length is the file's.
+        val contentRange = header("Content-Range")
+        return if (contentRange != null) HttpUtil.getDocumentSize(contentRange) else header("Content-Length")?.toLongOrNull() ?: C.LENGTH_UNSET.toLong()
+    }
+
+    override fun onTransferInitializing(
+        source: DataSource,
+        dataSpec: DataSpec,
+        isNetwork: Boolean,
+    ) = Unit
+
+    override fun onBytesTransferred(
+        source: DataSource,
+        dataSpec: DataSpec,
+        isNetwork: Boolean,
+        bytesTransferred: Int,
+    ) = Unit
+
+    override fun onTransferEnd(
+        source: DataSource,
+        dataSpec: DataSpec,
+        isNetwork: Boolean,
+    ) = Unit
 }
