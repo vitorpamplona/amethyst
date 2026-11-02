@@ -681,6 +681,29 @@ private fun NwcBackupSection(
 }
 
 @Composable
+private fun DefaultWalletIndicator(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Star,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = stringRes(Res.string.wallet_default),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
 private fun WalletCard(
     walletInfo: WalletInfo,
     nwcWallet: NwcWalletEntryNorm?,
@@ -770,27 +793,13 @@ private fun WalletCard(
                     Spacer(modifier = Modifier.width(12.dp))
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = walletInfo.alias ?: walletInfo.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            // Ellipsize inside the row so a long wallet-service
-                            // name can never run into the balance figures.
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        if (walletInfo.isDefault) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                symbol = MaterialSymbols.Star,
-                                contentDescription = stringRes(Res.string.wallet_default),
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
+                    Text(
+                        text = walletInfo.alias ?: walletInfo.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     if (subtitle != null) {
                         Text(
                             text = subtitle,
@@ -1282,7 +1291,9 @@ private fun WalletSettingsSheet(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (!walletInfo.isDefault) {
+            if (walletInfo.isDefault) {
+                DefaultWalletIndicator(modifier = Modifier.fillMaxWidth().height(40.dp))
+            } else {
                 OutlinedButton(
                     onClick = onSetDefault,
                     modifier = Modifier.fillMaxWidth(),
@@ -1292,8 +1303,8 @@ private fun WalletSettingsSheet(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(stringRes(Res.string.wallet_set_default), style = MaterialTheme.typography.bodySmall)
                 }
-                Spacer(modifier = Modifier.height(8.dp))
             }
+            Spacer(modifier = Modifier.height(8.dp))
 
             TextButton(
                 onClick = { showRemoveDialog = true },
