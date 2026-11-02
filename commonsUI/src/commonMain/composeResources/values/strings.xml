@@ -9061,6 +9061,8 @@
     <string name="cart_loading">Loading the game…</string>
     <string name="cart_not_a_cart">This image is not a game cartridge.</string>
     <string name="cart_could_not_load">The game could not be downloaded.</string>
+    <string name="cart_different_file_playing">%1$s sent a different file than the post recorded. It may not be the original game.</string>
+    <string name="cart_different_file_not_a_cart">%1$s sent a different file than the post recorded, and it is not a game.</string>
     <string name="cart_game_ended">The game ended.</string>
     <string name="cart_game_error">The game stopped with an error.</string>
     <string name="cart_dpad_description">Direction pad</string>

@@ -21,11 +21,14 @@
 package com.vitorpamplona.amethyst.commons.cartridges
 
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okio.BufferedSource
+
+private const val TAG = "CartBytes"
 
 actual suspend fun IRoleBasedHttpClientBuilder.fetchMediaPrefix(
     url: String,
@@ -41,9 +44,17 @@ actual suspend fun IRoleBasedHttpClientBuilder.fetchMedia(
     maxBytes: Int,
 ): ByteArray? =
     get(url, emptyMap()) { code, source ->
-        if (code != 200) return@get null
+        if (code != 200) {
+            Log.w(TAG) { "The cart at $url answered HTTP $code" }
+            return@get null
+        }
         val bytes = source.readAtMost(maxBytes + 1)
-        if (bytes.size > maxBytes) null else bytes
+        if (bytes.size > maxBytes) {
+            Log.w(TAG) { "The cart at $url is over $maxBytes bytes" }
+            null
+        } else {
+            bytes
+        }
     }
 
 private suspend fun IRoleBasedHttpClientBuilder.get(
@@ -64,6 +75,7 @@ private suspend fun IRoleBasedHttpClientBuilder.get(
             client.newCall(request).execute().use { response -> response.body.source().use { read(response.code, it) } }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
+            Log.w(TAG, "Could not download the cart at $url", e)
             null
         }
     }
