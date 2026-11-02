@@ -26,9 +26,13 @@ import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.HttpUtil
+import androidx.media3.datasource.TransferListener
+import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.CacheWriter
 import androidx.media3.datasource.cache.ContentMetadata
+import androidx.media3.datasource.cache.ContentMetadataMutations
 import com.vitorpamplona.amethyst.service.playback.PLAYBACK_DIAG_TAG
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -162,6 +166,7 @@ class VideoPrefetcher(
                 .setUpstreamDataSourceFactory(upstream(video.useProxy))
                 .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
                 .createDataSource()
+        source.addTransferListener(ContentLengthRecorder(cache, video.url))
 
         val spec =
             DataSpec
@@ -201,4 +206,65 @@ class VideoPrefetcher(
 
         private const val RETRY_FAILED_MS = 5 * 60 * 1000L
     }
+}
+
+/**
+ * Stores the video's full length in [cache] when its server answers, before any byte is cached.
+ *
+ * [CacheDataSource] only learns a length from a request with no end, and a head is a bounded one, so
+ * without this the player opens a prefetched video at an unknown length. Most mp4s play anyway, but
+ * one ending in an `mdat` box of size 0 ("to the end of the file") then fails media3's sniffing with
+ * `ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED`, and it keeps failing for as long as the head is cached.
+ */
+@OptIn(UnstableApi::class)
+private class ContentLengthRecorder(
+    private val cache: Cache,
+    private val key: String,
+) : TransferListener {
+    override fun onTransferStart(
+        source: DataSource,
+        dataSpec: DataSpec,
+        isNetwork: Boolean,
+    ) {
+        val length = fileLength(source.responseHeaders, dataSpec.length)
+        if (length == C.LENGTH_UNSET.toLong()) return
+        try {
+            cache.applyContentMetadataMutations(key, ContentMetadataMutations.setContentLength(ContentMetadataMutations(), length))
+        } catch (e: Cache.CacheException) {
+            Log.w(PLAYBACK_DIAG_TAG, "PREFETCH could not store the length of $key", e)
+        }
+    }
+
+    private fun fileLength(
+        headers: Map<String, List<String>>,
+        requested: Long,
+    ): Long {
+        val contentRange = headers["Content-Range"]?.firstOrNull()
+        if (contentRange != null) return HttpUtil.getDocumentSize(contentRange)
+
+        // More than was asked for can only be the whole file, from a server that ignored the range.
+        // Anything else may be a slice from one that left Content-Range out, and a slice stored as
+        // the length would end the video there, so it is better left unknown.
+        val contentLength = HttpUtil.getContentLength(headers["Content-Length"]?.firstOrNull(), null)
+        return if (contentLength > requested) contentLength else C.LENGTH_UNSET.toLong()
+    }
+
+    override fun onTransferInitializing(
+        source: DataSource,
+        dataSpec: DataSpec,
+        isNetwork: Boolean,
+    ) = Unit
+
+    override fun onBytesTransferred(
+        source: DataSource,
+        dataSpec: DataSpec,
+        isNetwork: Boolean,
+        bytesTransferred: Int,
+    ) = Unit
+
+    override fun onTransferEnd(
+        source: DataSource,
+        dataSpec: DataSpec,
+        isNetwork: Boolean,
+    ) = Unit
 }
