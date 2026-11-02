@@ -272,6 +272,136 @@ class CartLinksTest {
         assertEquals(links(first)?.fingerprint(), links(second)?.fingerprint())
     }
 
+    // Two carts uploaded with no `cart` field: the game's names can't say which file they mean, but
+    // with two carts they don't have to.
+
+    private val plain = arrayOf("m image/png", "dim 160x205")
+
+    private fun plainCart(
+        url: String,
+        x: String,
+    ) = imeta(url, "x $x", *plain)
+
+    private val frontX = "b".repeat(64)
+
+    private fun plainPair() = imetas(plainCart(front, frontX), plainCart(main, mainX))
+
+    @Test
+    fun twoPlainCartsAreEachOthersPartner() {
+        val tags = plainPair()
+
+        assertEquals(mainX, CartLinks.forEntry(front, tags)?.partner?.sha256)
+        assertEquals(frontX, CartLinks.forEntry(main, tags)?.partner?.sha256)
+        assertEquals(listOf(main), CartLinks.forEntry(front, tags)?.partner?.urls)
+    }
+
+    @Test
+    fun aParsedNoteKeepsTheTagsOfTwoPlainCartsButNotOfOne() {
+        assertNotNull(CartLinks.tagsToKeep(plainPair()))
+        assertNull(CartLinks.tagsToKeep(imetas(plainCart(front, frontX), imeta(main, "m image/png"))))
+    }
+
+    @Test
+    fun aPlainCartNeedsItsShapeAndAHash() {
+        assertNull(CartLinks.forEntry(front, imetas(plainCart(front, frontX), imeta(main, "x $mainX", "m image/png", "dim 100x100"))))
+        assertNull(CartLinks.forEntry(front, imetas(plainCart(front, frontX), imeta(main, "x $mainX", "m image/jpeg", "dim 160x205"))))
+        assertNull(CartLinks.forEntry(front, imetas(plainCart(front, frontX), imeta(main, *plain))))
+        assertNull(CartLinks.forEntry(front, imetas(plainCart(front, frontX), imeta(main, "x nope", *plain))))
+    }
+
+    @Test
+    fun threePlainCartsCannotBeToldApart() {
+        val tags = imetas(plainCart(front, frontX), plainCart(main, mainX), plainCart("https://example.com/third.png", "c".repeat(64)))
+
+        assertNull(CartLinks.forEntry(front, tags))
+    }
+
+    @Test
+    fun anImageBesideTwoPlainCartsIsNotPartOfThem() {
+        val tags = imetas(plainCart(front, frontX), plainCart(main, mainX))
+
+        assertNull(CartLinks.forEntry("https://example.com/photo.png", tags))
+    }
+
+    @Test
+    fun aPhotoInTheNoteDoesNotCountAsACart() {
+        val tags = imetas(plainCart(front, frontX), plainCart(main, mainX), imeta("https://example.com/photo.jpg", "x ${"c".repeat(64)}", "m image/jpeg", "dim 900x600"))
+
+        assertEquals(mainX, CartLinks.forEntry(front, tags)?.partner?.sha256)
+    }
+
+    @Test
+    fun oneFileFromTwoServersIsOneCart() {
+        assertNull(CartLinks.forEntry(front, imetas(plainCart(front, mainX), plainCart(main, mainX))))
+    }
+
+    @Test
+    fun aCartFieldAnywhereTurnsThePairingOff() {
+        val links = links(plainCart(front, frontX), plainCart(main, mainX), imeta("https://example.com/third.png", "x ${"c".repeat(64)}", "cart #third"))
+
+        assertNull(links?.partner)
+        assertEquals(listOf("#third"), links?.extras?.single()?.names)
+    }
+
+    @Test
+    fun aDifferentPartnerIsADifferentFingerprint() {
+        val one = CartLinks.forEntry(front, plainPair())!!
+        val other = CartLinks.forEntry(front, imetas(plainCart(front, frontX), plainCart(main, "c".repeat(64))))!!
+
+        assertNotEquals(one.fingerprint(), other.fingerprint())
+    }
+
+    private fun bytesPair() = imetas(plainCart(front, hash(entryBytes)), plainCart(main, hash(mainBytes)))
+
+    // Into Ruins: the jump asks from the front cart, and game over asks from the main cart.
+    @Test
+    fun aGameGoesToTheOtherCartAndComesBack() =
+        runTest {
+            val carts = CartLinks.forEntry(front, bytesPair())!!.fetchCarts(entryBytes) { mainBytes }
+
+            assertContentEquals(mainBytes, carts["#intoruins_main-7"])
+            assertContentEquals(entryBytes, carts["#intoruins"])
+        }
+
+    @Test
+    fun aNameKeepsItsCartForTheSecondRun() =
+        runTest {
+            val carts = CartLinks.forEntry(front, bytesPair())!!.fetchCarts(entryBytes) { mainBytes }
+
+            repeat(3) {
+                assertContentEquals(mainBytes, carts["#intoruins_main-7"])
+                assertContentEquals(entryBytes, carts["#intoruins"])
+            }
+        }
+
+    @Test
+    fun aGameStartedOnItsSecondCartAlsoFindsTheOther() =
+        runTest {
+            val carts = CartLinks.forEntry(main, bytesPair())!!.fetchCarts(mainBytes) { entryBytes }
+
+            assertContentEquals(entryBytes, carts["#intoruins"])
+            assertContentEquals(mainBytes, carts["#intoruins_main-7"])
+        }
+
+    @Test
+    fun aThirdNameHasNoCart() =
+        runTest {
+            val carts = CartLinks.forEntry(front, bytesPair())!!.fetchCarts(entryBytes) { mainBytes }
+            carts["#one"]
+            carts["#two"]
+
+            assertNull(carts["#three"])
+        }
+
+    @Test
+    fun aPartnerThatDoesNotMatchItsHashIsNotAvailable() =
+        runTest {
+            val carts = CartLinks.forEntry(front, bytesPair())!!.fetchCarts(entryBytes) { "hostile".encodeToByteArray() }
+
+            assertNull(carts["#intoruins_main-7"])
+            assertNull(carts["#intoruins"])
+        }
+
     // The download step: everything here runs with a fake fetch, so no test touches the network.
 
     private val entryBytes = "front".encodeToByteArray()

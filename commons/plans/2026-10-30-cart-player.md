@@ -63,7 +63,15 @@ Amethyst adds around them.
   cartridge", as does an extra that failed to download. Saves are kept under a hash of the entry cart
   and every declared `name x` pair, so a stranger's note can't list a hostile cart beside a game's
   front cart to reach its saves. Fetching from the original's site would add a third-party server,
-  so `#id` is never resolved there. Posting these notes from the composer isn't supported yet.
+  so `#id` is never resolved there. Posting `cart` fields from the composer isn't supported yet.
+
+  A note with no `cart` field at all and exactly two carts works without one, so uploading both carts
+  of a game is enough. A cart here is a 160x205 PNG `imeta` with a valid `x`. Each cart is the other's
+  partner: the first name the game asks for gets the other cart, and the second gets the entry cart,
+  because a game starts on the entry and the other cart's first ask is the way back. A third name has
+  no cart. The two share one save key, a hash of both hashes, whichever one was started. Notes of
+  three or more carts can't be told apart, so they need `cart` fields. A game that loads a cart from
+  outside its note, posted beside an unrelated cart, starts that cart instead of showing the message.
 - **Uploads**: Android's `MediaCompressor` uploads a PNG that loads as a cart unchanged instead of
   re-encoding it to JPEG. Desktop never re-encoded PNGs.
 

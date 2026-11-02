@@ -81,6 +81,15 @@ class RichTextParserCartLinksTest {
     }
 
     @Test
+    fun twoPlainCartsInANoteReachEachOther() {
+        val plain = arrayOf("m image/png", "dim 160x205")
+        val state = parse("Both carts $front $main", arrayOf("imeta", "url $front", "x ${"b".repeat(64)}", *plain), arrayOf("imeta", "url $main", "x $x", *plain))
+
+        assertEquals(x, state.linksOf(front).partner?.sha256)
+        assertEquals("b".repeat(64), state.linksOf(main).partner?.sha256)
+    }
+
+    @Test
     fun aBlossomEntryReachesItsCartsToo() {
         val state = parse("Into Ruins $blossom", arrayOf("imeta", "url $blossom", "m image/png", "cart #game"), mainTag)
 

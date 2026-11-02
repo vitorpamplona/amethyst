@@ -108,6 +108,25 @@ class CartSaveIsolationTest {
         assertEquals(entry, CartLinks(listOf("#game"), emptyList()).saveKey(entry))
     }
 
+    private fun partnerOf(sha256: String) = CartLinks(emptyList(), emptyList(), ExtraCart(emptyList(), listOf("https://example.com/other.png"), sha256))
+
+    @Test
+    fun twoPlainCartsShareOneKeyWhicheverWasStarted() {
+        val other = "aa".repeat(32)
+
+        assertEquals(partnerOf(other).saveKey(entry), partnerOf(entry).saveKey(other))
+    }
+
+    // The same attack with no names: a popular front cart posted beside a hostile image.
+    @Test
+    fun aHostilePartnerCannotReachTheSavesOfTheGameItsFrontCartBelongsTo() {
+        val game = partnerOf("aa".repeat(32)).saveKey(entry)
+        val hostile = partnerOf("bb".repeat(32)).saveKey(entry)
+
+        assertNotEquals(game, hostile)
+        assertNotEquals(entry, hostile)
+    }
+
     // Names are a stranger's text: one with a line break must not read as two carts.
     @Test
     fun aNameCannotImitateTwoCarts() {

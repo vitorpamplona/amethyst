@@ -66,7 +66,7 @@ class CartPlayerViewModel(
 
     // Every cart of the game by name, in memory until the game is let go.
     @Volatile
-    private var carts: Map<String, ByteArray> = emptyMap()
+    private var carts: GameCarts = GameCarts.NONE
 
     private var current: KikoPlayer? = null
 
@@ -98,7 +98,7 @@ class CartPlayerViewModel(
     fun release() {
         current?.close()
         current = null
-        carts = emptyMap()
+        carts = GameCarts.NONE
     }
 
     private suspend fun download(): ByteArray? {
@@ -116,9 +116,9 @@ class CartPlayerViewModel(
                 return null
             }
         }
-        carts = links?.fetchCarts(bytes) { httpClients.fetchMedia(it, MAX_CART_BYTES) }.orEmpty()
+        carts = links?.fetchCarts(bytes) { httpClients.fetchMedia(it, MAX_CART_BYTES) } ?: GameCarts.NONE
         saveKey = links?.saveKey(hash) ?: hash
-        Log.i(TAG) { "Playing $url with ${carts.size} named carts, saves under $saveKey" }
+        Log.i(TAG) { "Playing $url with ${carts.count} linked carts, saves under $saveKey" }
         return bytes
     }
 
