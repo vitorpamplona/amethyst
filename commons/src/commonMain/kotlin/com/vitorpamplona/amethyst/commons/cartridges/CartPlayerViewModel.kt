@@ -47,7 +47,7 @@ class CartPlayerViewModel(
     private val expectedSha256: String?,
     private val httpClients: IRoleBasedHttpClientBuilder,
     private val saveStore: CartSaveStore?,
-    private val links: CartLinks? = null,
+    private val links: CartLinks?,
 ) : ViewModel() {
     private val host =
         object : KikoPlayerHost {
@@ -57,16 +57,16 @@ class CartPlayerViewModel(
 
             // On the game thread, inside a frame, so it only ever answers from memory: a download here
             // would race the hang watchdog. A name that is not listed stops the game with a message.
-            override fun loadCart(name: String): ByteArray? = carts?.get(name)
+            override fun loadCart(name: String): ByteArray? = carts[name]
         }
 
     // What the player's game keeps its saves under (see [CartSaveStore] and [CartLinks.saveKey]).
     @Volatile
     private var saveKey: String? = null
 
-    // Every cart of the game by name, up to 16 MiB of them, until the game is let go.
+    // Every cart of the game by name, in memory until the game is let go.
     @Volatile
-    private var carts: Map<String, ByteArray>? = null
+    private var carts: Map<String, ByteArray> = emptyMap()
 
     private var current: KikoPlayer? = null
 
@@ -98,7 +98,7 @@ class CartPlayerViewModel(
     fun release() {
         current?.close()
         current = null
-        carts = null
+        carts = emptyMap()
     }
 
     private suspend fun download(): ByteArray? {
@@ -116,7 +116,7 @@ class CartPlayerViewModel(
                 return null
             }
         }
-        carts = links?.fetchCarts(bytes) { httpClients.fetchMedia(it, MAX_CART_BYTES) }
+        carts = links?.fetchCarts(bytes) { httpClients.fetchMedia(it, MAX_CART_BYTES) }.orEmpty()
         saveKey = links?.saveKey(hash) ?: hash
         return bytes
     }

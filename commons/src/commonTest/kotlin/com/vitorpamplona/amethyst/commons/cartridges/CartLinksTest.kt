@@ -23,15 +23,21 @@ package com.vitorpamplona.amethyst.commons.cartridges
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip92IMeta.imetasByUrl
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class CartLinksTest {
@@ -54,6 +60,16 @@ class CartLinksTest {
     fun anOrdinaryNoteHasNoLinks() {
         assertNull(links(imeta(front, "m image/png", "x $mainX"), imeta(main, "m image/png", "x $mainX")))
         assertNull(CartLinks.forEntry(front, emptyMap()))
+    }
+
+    @Test
+    fun aParsedNoteKeepsItsTagsOnlyWhenTheyNameACart() {
+        val ordinary = imetas(imeta(front, "m image/png"))
+        val game = imetas(imeta(front, "cart #game"))
+
+        assertNull(CartLinks.tagsToKeep(ordinary))
+        assertNull(CartLinks.tagsToKeep(emptyMap()))
+        assertSame(game, CartLinks.tagsToKeep(game))
     }
 
     @Test
@@ -226,17 +242,17 @@ class CartLinksTest {
         val otherName = links(imeta(front, "cart #game"), imeta(main, "x $mainX", "cart #other"))!!
         val otherOwnName = links(imeta(front, "cart #mine"), imeta(main, "x $mainX", "cart #main"))!!
 
-        assertNotEquals(one.fingerprint, otherCart.fingerprint)
-        assertNotEquals(one.fingerprint, otherName.fingerprint)
-        assertNotEquals(one.fingerprint, otherOwnName.fingerprint)
+        assertNotEquals(one.fingerprint(), otherCart.fingerprint())
+        assertNotEquals(one.fingerprint(), otherName.fingerprint())
+        assertNotEquals(one.fingerprint(), otherOwnName.fingerprint())
     }
 
     @Test
-    fun theOrderOfTheTagsDoesNotChangeTheFingerprint() {
-        val second = imeta("https://example.com/other.png", "x ${"b".repeat(64)}", "cart #other")
-        val first = imeta(main, "x $mainX", "cart #main")
+    fun theOrderOfItsOwnNamesDoesNotChangeTheFingerprint() {
+        val second = imeta(front, "cart #b", "cart #a")
+        val first = imeta(front, "cart #a", "cart #b")
 
-        assertEquals(links(first, second)?.fingerprint, links(second, first)?.fingerprint)
+        assertEquals(links(first)?.fingerprint(), links(second)?.fingerprint())
     }
 
     // The download step: everything here runs with a fake fetch, so no test touches the network.
@@ -354,10 +370,39 @@ class CartLinksTest {
         }
 
     @Test
-    fun aCancellationIsNotAFailedCart() =
+    fun aFetchThatTimesOutOnItsOwnTriesTheFallback() =
         runTest {
-            assertFailsWith<CancellationException> {
-                linksTo(mainBytes).fetchCarts(entryBytes) { throw CancellationException("the player closed") }
-            }
+            val fallback = "https://b.example/main.png"
+
+            val carts =
+                linksTo(mainBytes, "fallback $fallback").fetchCarts(entryBytes) { url ->
+                    if (url == fallback) mainBytes else withTimeout(1) { awaitCancellation() }
+                }
+
+            assertContentEquals(mainBytes, carts["#main"])
+        }
+
+    @Test
+    fun closingThePlayerStopsTheFetchInsteadOfTryingTheFallback() =
+        runTest {
+            val asked = ArrayList<String>()
+            val fetching = CompletableDeferred<Unit>()
+            var finished = false
+
+            val load =
+                launch {
+                    linksTo(mainBytes, "fallback https://b.example/main.png").fetchCarts(entryBytes) { url ->
+                        asked.add(url)
+                        fetching.complete(Unit)
+                        awaitCancellation()
+                    }
+                    finished = true
+                }
+            fetching.await()
+            load.cancelAndJoin()
+            runCurrent()
+
+            assertEquals(listOf(main), asked)
+            assertFalse(finished)
         }
 }

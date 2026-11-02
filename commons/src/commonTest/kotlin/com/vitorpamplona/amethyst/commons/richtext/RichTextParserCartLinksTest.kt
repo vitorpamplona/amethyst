@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
+import com.vitorpamplona.amethyst.commons.cartridges.CartLinks
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,58 +28,63 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import kotlin.test.assertSame
 
 /** A multi-cart note: the carts other than the one in the text are in its `imeta` tags only. */
 class RichTextParserCartLinksTest {
     private val front = "https://example.com/front.png"
     private val main = "https://example.com/main.png"
+    private val blossom = "blossom:${"b".repeat(64)}.png?xs=cdn.example.com"
     private val x = "a".repeat(64)
+
+    private val frontTag = arrayOf("imeta", "url $front", "m image/png", "cart #game")
+    private val mainTag = arrayOf("imeta", "url $main", "x $x", "m image/png", "dim 160x205", "cart #game_main-7")
 
     private fun parse(
         content: String,
         vararg imetas: Array<String>,
     ) = RichTextParser().parseText(content, ImmutableListOfLists(arrayOf(*imetas)), null)
 
-    private val mainTag = arrayOf("imeta", "url $main", "x $x", "m image/png", "dim 160x205", "cart #game_main-7")
+    private fun RichTextViewerState.image(url: String) = assertIs<MediaUrlImage>(mediaForPager[url])
+
+    private fun RichTextViewerState.linksOf(url: String) = assertNotNull(CartLinks.forEntry(url, assertNotNull(image(url).cartImetas)))
 
     @Test
     fun anExtraCartIsNotShownInTheNote() {
-        val state = parse("Into Ruins $front", arrayOf("imeta", "url $front", "m image/png", "cart #game"), mainTag)
+        val state = parse("Into Ruins $front", frontTag, mainTag)
 
         assertEquals(setOf(front), state.mediaForPager.keys)
         assertEquals(listOf(front), state.mediaList.map { it.url })
     }
 
     @Test
-    fun theEntryCarriesItsLinks() {
-        val state = parse("Into Ruins $front", arrayOf("imeta", "url $front", "m image/png", "cart #game"), mainTag)
+    fun theEntryReachesItsCarts() {
+        val links = parse("Into Ruins $front", frontTag, mainTag).linksOf(front)
 
-        val links = assertNotNull(assertIs<MediaUrlImage>(state.mediaForPager[front]).cartLinks)
         assertEquals(listOf("#game"), links.ownNames)
         assertEquals(listOf("#game_main-7"), links.extras.single().names)
     }
 
     @Test
-    fun anEntryWithoutAnImetaStillCarriesItsLinks() {
-        val state = parse("Into Ruins $front", mainTag)
-
-        assertEquals(1, assertIs<MediaUrlImage>(state.mediaForPager[front]).cartLinks?.extras?.size)
-    }
-
-    @Test
-    fun anOrdinaryImageHasNoLinks() {
+    fun anOrdinaryImageKeepsNoTags() {
         val state = parse("A photo $front", arrayOf("imeta", "url $front", "m image/png"))
 
-        assertNull(assertIs<MediaUrlImage>(state.mediaForPager[front]).cartLinks)
+        assertNull(state.image(front).cartImetas)
+    }
+
+    // Links built per image cost a stranger's note its tags times its images: 398 MB for a 290 KB note.
+    @Test
+    fun theImagesOfANoteShareOneReference() {
+        val state = parse("$front https://example.com/photo.png", frontTag, mainTag)
+
+        assertSame(state.image(front).cartImetas, state.image("https://example.com/photo.png").cartImetas)
     }
 
     @Test
-    fun aBlossomEntryCarriesItsLinksToo() {
-        val blossom = "blossom:${"b".repeat(64)}.png?xs=cdn.example.com"
+    fun aBlossomEntryReachesItsCartsToo() {
         val state = parse("Into Ruins $blossom", arrayOf("imeta", "url $blossom", "m image/png", "cart #game"), mainTag)
 
-        val links = assertNotNull(assertIs<MediaUrlImage>(state.mediaForPager[blossom]).cartLinks)
+        val links = state.linksOf(blossom)
         assertEquals(listOf("#game"), links.ownNames)
         assertEquals(1, links.extras.size)
         assertFalse(main in state.mediaForPager)
@@ -86,21 +92,17 @@ class RichTextParserCartLinksTest {
 
     @Test
     fun aBlossomImageWithNoImetaIsTheSameAsBefore() {
-        val blossom = "blossom:${"b".repeat(64)}.png?xs=cdn.example.com"
-        val image = assertIs<MediaUrlImage>(parse("A photo $blossom").mediaForPager[blossom])
+        val image = parse("A photo $blossom").image(blossom)
 
-        assertNull(image.cartLinks)
+        assertNull(image.cartImetas)
         assertNull(image.hash)
         assertNull(image.dim)
-        assertTrue(image.url == blossom)
     }
 
     @Test
     fun aBlossomImageSeesItsImeta() {
-        val blossom = "blossom:${"b".repeat(64)}.png?xs=cdn.example.com"
-        val state = parse("A photo $blossom", arrayOf("imeta", "url $blossom", "dim 100x200", "alt a cat", "x $x"))
+        val image = parse("A photo $blossom", arrayOf("imeta", "url $blossom", "dim 100x200", "alt a cat", "x $x")).image(blossom)
 
-        val image = assertIs<MediaUrlImage>(state.mediaForPager[blossom])
         assertEquals(100, image.dim?.width)
         assertEquals(x, image.hash)
     }

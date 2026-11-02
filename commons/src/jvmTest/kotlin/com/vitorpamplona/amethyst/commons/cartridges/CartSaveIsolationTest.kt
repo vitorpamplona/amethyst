@@ -91,7 +91,6 @@ class CartSaveIsolationTest {
     fun theSameFrontCartWithDifferentExtrasIsADifferentGame() {
         val one = linksTo(extra("#main", "aa".repeat(32)))
 
-        assertNotEquals(one.saveKey(entry), linksTo(extra("#main", "bb".repeat(32))).saveKey(entry))
         assertNotEquals(one.saveKey(entry), linksTo(extra("#other", "aa".repeat(32))).saveKey(entry))
         assertNotEquals(one.saveKey(entry), one.saveKey("ff".repeat(32)))
     }

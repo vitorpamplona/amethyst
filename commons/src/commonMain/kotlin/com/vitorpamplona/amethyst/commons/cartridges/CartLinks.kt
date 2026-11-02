@@ -23,15 +23,15 @@ package com.vitorpamplona.amethyst.commons.cartridges
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip68Picture.fallback
+import com.vitorpamplona.quartz.nip68Picture.hash
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Another cart of a game: the [names] the game's carts call it by, exactly as they pass them to `load`
@@ -64,15 +64,14 @@ class CartLinks(
 ) {
     // Length-prefixed, because a name is a stranger's text: a line break in one must not make it read
     // as two pairs. Sorted, so listing the same carts in another order is the same game.
-    private val extraPairs: String by lazy {
+    private fun extraPairs(): String =
         extras
             .flatMap { cart -> cart.names.map { name -> "${name.length}:$name ${cart.sha256}" } }
             .sorted()
             .joinToString("\n")
-    }
 
-    /** Sets this game apart from another note of the same entry cart, which has its own carts. */
-    val fingerprint: String by lazy { ownNames.sorted().joinToString("\n", postfix = "\n") + extraPairs }
+    /** Sets these links apart from another note's for the same entry cart, which may reach other carts. */
+    fun fingerprint(): String = ownNames.sorted().joinToString("\n", postfix = "\n") + extraPairs()
 
     /**
      * What the game's saves are kept under (see [CartSaveStore]), given the hash of the entry cart it
@@ -83,7 +82,7 @@ class CartLinks(
      * It covers the carts the note declares, not the ones that downloaded, so a failed download does
      * not move a game's saves.
      */
-    fun saveKey(entryHash: String): String = if (extras.isEmpty()) entryHash else sha256("$entryHash\n$extraPairs".encodeToByteArray()).toHexKey()
+    fun saveKey(entryHash: String): String = if (extras.isEmpty()) entryHash else sha256("$entryHash\n${extraPairs()}".encodeToByteArray()).toHexKey()
 
     /**
      * Every cart of the game by name: [ownNames] answering with [entry], and each extra cart that
@@ -95,11 +94,11 @@ class CartLinks(
         fetch: suspend (url: String) -> ByteArray?,
     ): Map<String, ByteArray> =
         coroutineScope {
-            val fetched = extras.map { cart -> async { cart.fetchFirstMatch(fetch) } }.awaitAll()
+            val fetched = extras.map { cart -> async { cart to cart.fetchFirstMatch(fetch) } }.awaitAll()
             buildMap {
                 ownNames.forEach { put(it, entry) }
-                extras.forEachIndexed { i, cart ->
-                    fetched[i]?.let { bytes -> cart.names.forEach { put(it, bytes) } }
+                for ((cart, bytes) in fetched) {
+                    if (bytes != null) cart.names.forEach { put(it, bytes) }
                 }
             }
         }
@@ -107,14 +106,9 @@ class CartLinks(
     private suspend fun ExtraCart.fetchFirstMatch(fetch: suspend (url: String) -> ByteArray?): ByteArray? {
         for (url in urls) {
             val bytes =
-                try {
-                    fetch(url)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.w(TAG, "Could not fetch the cart at $url", e)
-                    null
-                } ?: continue
+                runCatchingCancellable { fetch(url) }
+                    .onFailure { Log.w(TAG, "Could not fetch the cart at $url", it) }
+                    .getOrNull() ?: continue
             if (sha256(bytes).toHexKey() == sha256) return bytes
             Log.w(TAG) { "The cart at $url does not match its hash, $sha256" }
         }
@@ -125,28 +119,32 @@ class CartLinks(
         /** The `imeta` field with a name a cart goes by. Custom, like `webxdc`. */
         const val CART_FIELD = "cart"
 
-        /** Our own limit: enough for any real game, and 16 MiB is what one note can make us hold. */
+        /** Our own limit: enough for any real game, and 16 MiB of them is what one note can add. */
         const val MAX_EXTRA_CARTS = 16
 
-        /** The `url` and its `fallback`s: a note makes at most 48 requests. */
+        /** The `url` and its `fallback`s, so one note's extra carts make at most 48 requests. */
         const val MAX_URLS_PER_CART = 3
 
         private const val TAG = "CartLinks"
 
         /**
-         * What the cart at [entryUrl] can reach, from the `imeta` tags of its note; null when none of
-         * them has a [CART_FIELD], as for any ordinary image. Past the limits, entries are ignored.
-         * On a name clash the first entry wins, and the entry cart's own names beat the rest.
+         * [imetas] if any of them names a cart, else null. This is what a parsed note keeps for
+         * [forEntry]: one reference shared by its images, because building the links of every image
+         * of a stranger's note would make it cost its tags times its images, in time and in memory.
+         */
+        fun tagsToKeep(imetas: Map<String, IMetaTag>): Map<String, IMetaTag>? = imetas.takeIf { tags -> tags.values.any { CART_FIELD in it.properties } }
+
+        /**
+         * What the cart at [entryUrl] can reach, from the `imeta` tags of its note; null when they
+         * name no cart. Past the limits, entries are ignored. On a name clash the first entry wins,
+         * and the entry cart's own names beat the rest.
          */
         fun forEntry(
             entryUrl: String,
             imetas: Map<String, IMetaTag>,
         ): CartLinks? {
-            // This runs for every image of every note.
-            if (imetas.values.none { CART_FIELD in it.properties }) return null
-
-            val ownNames = imetas[entryUrl]?.names()?.distinct().orEmpty()
-            val taken = ownNames.toHashSet()
+            val taken = HashSet<String>()
+            val ownNames = imetas[entryUrl]?.names().orEmpty().filter(taken::add)
             val extras = ArrayList<ExtraCart>()
             for (imeta in imetas.values) {
                 if (extras.size == MAX_EXTRA_CARTS) break
@@ -154,7 +152,7 @@ class CartLinks(
                 val sha256 = imeta.sha256() ?: continue
                 val names = imeta.names().filter(taken::add)
                 if (names.isEmpty()) continue
-                val urls = (listOf(imeta.url) + imeta.properties[FallbackTag.TAG_NAME].orEmpty()).take(MAX_URLS_PER_CART)
+                val urls = (listOf(imeta.url) + imeta.fallback().orEmpty()).take(MAX_URLS_PER_CART)
                 extras.add(ExtraCart(names, urls, sha256))
             }
             return if (ownNames.isEmpty() && extras.isEmpty()) null else CartLinks(ownNames, extras)
@@ -163,9 +161,9 @@ class CartLinks(
         private fun IMetaTag.names() = properties[CART_FIELD].orEmpty().filter { it.isNotEmpty() }
 
         private fun IMetaTag.sha256(): String? =
-            properties[HashSha256Tag.TAG_NAME]
+            hash()
                 ?.firstOrNull()
-                ?.takeIf { it.length == 64 && Hex.isHex64(it) }
+                ?.takeIf(Hex::isHexKey)
                 ?.lowercase()
     }
 }

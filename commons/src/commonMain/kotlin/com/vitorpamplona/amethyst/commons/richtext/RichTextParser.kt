@@ -59,6 +59,7 @@ class RichTextParser {
         description: String?,
         callbackUri: String? = null,
         authorPubKey: String? = null,
+        cartImetas: Map<String, IMetaTag>? = CartLinks.tagsToKeep(eventTags),
     ): MediaUrlContent? {
         val frags = Nip54InlineMetadata().parse(fullUrl)
 
@@ -83,7 +84,7 @@ class RichTextParser {
                 mimeType = contentType,
                 thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
                 authorPubKey = authorPubKey,
-                cartLinks = CartLinks.forEntry(fullUrl, eventTags),
+                cartImetas = cartImetas,
             )
         } else if (kind == MediaContentKind.VIDEO) {
             MediaUrlVideo(
@@ -197,14 +198,15 @@ class RichTextParser {
         authorPubKey: String? = null,
     ): RichTextViewerState {
         val imetas = tags.lists.imetasByUrl()
+        val cartImetas = CartLinks.tagsToKeep(imetas)
         val urlSet = UrlParser().parseValidUrls(content)
 
         val mediaContents =
             urlSet.withScheme.mapNotNull { fullUrl ->
-                createMediaContent(fullUrl, imetas, content, callbackUri, authorPubKey)
+                createMediaContent(fullUrl, imetas, content, callbackUri, authorPubKey, cartImetas)
             } +
                 urlSet.withoutScheme.mapNotNull { fullUrl ->
-                    createMediaContent(fullUrl, imetas, content, callbackUri, authorPubKey)
+                    createMediaContent(fullUrl, imetas, content, callbackUri, authorPubKey, cartImetas)
                 }
 
         val mediaForPager = mediaContents.associateBy { it.url }
@@ -231,7 +233,7 @@ class RichTextParser {
                                 if (it is Base64Segment) {
                                     createMediaContent(it.segmentText, emptyMap(), content, callbackUri)
                                 } else if (it is BlossomUriSegment) {
-                                    createMediaContent(it.segmentText, imetas, content, callbackUri)
+                                    createMediaContent(it.segmentText, imetas, content, callbackUri, cartImetas = cartImetas)
                                 } else {
                                     null
                                 }

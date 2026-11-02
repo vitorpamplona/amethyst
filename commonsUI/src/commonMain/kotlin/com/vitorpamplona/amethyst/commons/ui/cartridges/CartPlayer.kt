@@ -102,8 +102,8 @@ fun CartPlayer(
 ) {
     val appStores = LocalAppServices.current.appStores
     val viewModel =
-        // The links are part of the key: two notes of one front cart are different games.
-        rememberViewModel(key = "cart:$url:${links?.fingerprint}") {
+        // The links are part of the key: another note of this front cart may reach other carts.
+        rememberViewModel(key = remember(url, links) { "cart:$url:${links?.fingerprint()}" }) {
             CartPlayerViewModel(url, sha256, accountViewModel.httpClientBuilder, appStores.cartSaveStore(), links)
         }
     // Made again when it was let go to keep only the latest few games in memory.

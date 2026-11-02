@@ -39,9 +39,9 @@ import okio.IOException
  * that is how a game's sequel reads its progress, but here carts come from strangers, and a joke cart
  * naming a popular game's id would wipe that game's high scores. So saves are kept per cart: a
  * [forCart] view sees only the ids its own cart (by the sha256 of its bytes) wrote. Two posts of the
- * same file share their saves; another cart never sees them. A game in several carts counts as one,
- * under a key that covers every cart its note lists ([CartLinks.saveKey]): otherwise a stranger's note
- * could list a hostile cart beside a game's front cart and reach that game's saves.
+ * same file share their saves; another cart never sees them. A game in several carts saves under a
+ * key that covers every cart its note lists ([CartLinks.saveKey]): otherwise a stranger's note could
+ * list a hostile cart beside a game's front cart and reach that game's saves.
  */
 class CartSaveStore(
     private val store: DataStore<Preferences>,

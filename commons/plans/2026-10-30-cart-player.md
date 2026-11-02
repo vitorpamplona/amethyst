@@ -58,7 +58,7 @@ Amethyst adds around them.
   cart first, because `firstContentImage` takes the note's first image for the share card.
 
   `CartLinks` reads these. The player fetches the extras when Play is pressed, and each must match
-  its `x`. `loadCart` is a lookup in memory, because it runs on the game thread inside a frame, so a
+  its `x`. Only `http(s)` URLs are fetched, so an extra cart can't be a `blossom:` URI. `loadCart` is a lookup in memory, because it runs on the game thread inside a frame, so a
   game can only reach what its note lists; any other name shows "this game continues in another
   cartridge", as does an extra that failed to download. Saves are kept under a hash of the entry cart
   and every declared `name x` pair, so a stranger's note can't list a hostile cart beside a game's
