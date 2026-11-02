@@ -1018,13 +1018,7 @@ class Account(
     val dmRelays = DmInboxRelayState(dmRelayList, nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val notificationRelays = NotificationInboxRelayState(nip65RelayList, localRelayList, scope)
 
-    /**
-     * Opt-in NWC relay backup (kind 30078 `amethyst-nwc-backup`). Reads the
-     * wallet list reactively and re-publishes while the toggle is on; see
-     * [NwcBackupState]. Sits after the relay states because it publishes to and
-     * restores from the outbox set.
-     */
-    val nwcBackup = NwcBackupState(signer, client, scope, settings, outboxRelays.flow)
+    val nwcBackup = NwcBackupState(signer, client, scope, settings, outboxRelays.flow, nip65RelayList.inboxFlowNoDefaults)
 
     // Account-level notification history paging cursors (one scope per account): how far back each
     // notification relay has been paged by until+limit. Held here so they share the account's lifetime;

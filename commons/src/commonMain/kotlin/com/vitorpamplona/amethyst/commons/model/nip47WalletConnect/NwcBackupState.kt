@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -60,6 +61,8 @@ class NwcBackupState(
     private val scope: CoroutineScope,
     private val settings: AccountSettings,
     private val outboxRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
+    /** Restore also reads these: other apps write their backups to read relays too. */
+    private val readRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
 ) {
     sealed interface Failure {
         data object CannotSign : Failure
@@ -216,30 +219,20 @@ class NwcBackupState(
         return DeleteOutcome.Failed(failure)
     }
 
-    /** A decrypted backup plus when the event was last published. */
-    data class FoundNwcBackup(
-        val payload: NwcBackupPayload,
-        val savedAt: Long?,
+    data class RestorableWallet(
+        val wallet: NwcWalletEntry,
+        val dTag: String,
+        val savedAt: Long,
     )
 
-    /**
-     * One-shot restore: fetches the newest kind 30078 backup this account
-     * authored on its outbox relays (ours or the Wisp / zap.cooking / Sidecar
-     * variants), decrypts it and parses the wallet list. Tombstoned or
-     * undecryptable events are skipped; tags are considered in
-     * [NwcBackupFormat.RESTORE_D_TAGS] priority order. Returns null when nothing
-     * usable is found.
-     *
-     * Scoped to NWC only: Wisp's Spark wallet backups live under
-     * `spark-wallet-backup:<id>` d-tags, which neither match the exact `#d`
-     * filter nor the post-fetch tag guard, and their seed payloads fail
-     * decode anyway.
-     *
-     * Merging into [AccountSettings.nwcWallets] is deliberately NOT done here:
-     * the UI shows the user what was found and merges only on confirmation.
-     */
+    data class FoundNwcBackup(
+        val wallets: List<RestorableWallet>,
+        val defaultId: String?,
+    )
+
+    /** Reads Wisp, Sidecar and zap.cooking backups too. Does not merge: the user confirms what to restore. */
     suspend fun fetchBackup(): FoundNwcBackup? {
-        val relays = awaitOutboxRelays(RELAY_READY_WAIT_MS)
+        val relays = awaitOutboxRelays(RELAY_READY_WAIT_MS) + readRelaysFlow.value
         if (relays.isEmpty()) {
             Log.w(TAG) { "Outbox relays unavailable; cannot look for a backup yet" }
             return null
@@ -250,51 +243,46 @@ class NwcBackupState(
         try {
             withTimeoutOrNull(RELAY_CONNECT_WAIT_MS) {
                 client.connectedRelaysFlow().first { connected -> relays.any { it in connected } }
-            } ?: Log.w(TAG) { "No outbox relay connected within ${RELAY_CONNECT_WAIT_MS}ms; asking anyway" }
+            } ?: Log.w(TAG) { "No relay connected within ${RELAY_CONNECT_WAIT_MS}ms; asking anyway" }
 
-            val filter =
-                Filter(
-                    kinds = listOf(AppSpecificDataEvent.KIND),
-                    authors = listOf(signer.pubKey),
-                    tags = mapOf("d" to NwcBackupFormat.RESTORE_D_TAGS),
-                    limit = NwcBackupFormat.RESTORE_D_TAGS.size,
-                )
+            // One filter per d-tag so limit = 1 yields the newest event for each app.
+            val filters =
+                NwcBackupFormat.RESTORE_D_TAGS.map { dTag ->
+                    Filter(
+                        kinds = listOf(AppSpecificDataEvent.KIND),
+                        authors = listOf(signer.pubKey),
+                        tags = mapOf("d" to listOf(dTag)),
+                        limit = 1,
+                    )
+                }
 
             val events =
                 runCatching {
                     client.fetchAll(
-                        filters = relays.associateWith { listOf(filter) },
+                        filters = relays.associateWith { filters },
                         idleTimeoutMs = RESTORE_IDLE_TIMEOUT_MS,
                     )
                 }.getOrNull()
                     .orEmpty()
-                    .sortedByDescending { it.createdAt }
+                    .filter { it.pubKey == signer.pubKey }
 
-            // Per d-tag the newest event wins, and a tombstone shadows anything
-            // older under the same tag (the user deleted the backup since).
-            // Created-at has second granularity, so a backup and its tombstone
-            // can tie and the stable sort falls back to insertion order: drop
-            // tombstoned tags after the loop so that never decides restorability.
-            val newestPerTag = LinkedHashMap<String, Event>()
-            val deletedTags = HashSet<String>()
-            for (event in events) {
-                val tag = NwcBackupFormat.dTagOf(event.tags) ?: continue
-                if (tag !in NwcBackupFormat.RESTORE_D_TAGS) continue
-                if (tag in deletedTags) continue
-                if (NwcBackupFormat.isTombstone(event.tags, event.content)) {
-                    deletedTags += tag
-                    continue
-                }
-                newestPerTag.putIfAbsent(tag, event)
-            }
-            deletedTags.forEach(newestPerTag::remove)
-
-            for (tag in NwcBackupFormat.RESTORE_D_TAGS) {
-                val event = newestPerTag[tag] ?: continue
+            val wallets = ArrayList<RestorableWallet>()
+            val seen = HashSet<Nip47WalletConnect.Nip47URINorm>()
+            var defaultId: String? = null
+            for (event in NwcBackupFormat.liveBackups(events)) {
                 val payload = decryptAndDecode(event) ?: continue
-                return FoundNwcBackup(payload = payload, savedAt = event.createdAt)
+                val dTag = NwcBackupFormat.dTagOf(event.tags) ?: continue
+                if (dTag == NwcBackupFormat.D_TAG) defaultId = payload.defaultId
+                payload.wallets.forEach { entry ->
+                    val key = entry.uri.normalize() ?: return@forEach
+                    if (seen.add(key)) wallets += RestorableWallet(entry, dTag, event.createdAt)
+                }
             }
-            return null
+            if (wallets.isEmpty()) return null
+            return FoundNwcBackup(
+                wallets = wallets,
+                defaultId = defaultId?.takeIf { id -> wallets.any { it.wallet.id == id } },
+            )
         } finally {
             relays.forEach { client.releaseConnection(it) }
         }

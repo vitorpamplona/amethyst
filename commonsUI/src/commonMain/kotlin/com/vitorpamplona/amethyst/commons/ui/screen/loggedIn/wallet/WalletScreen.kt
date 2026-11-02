@@ -53,6 +53,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -92,6 +93,7 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcBackupFormat
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcBackupState
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.toConnectionString
@@ -125,7 +127,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_backup_restore
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_restore_confirm
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_restore_found
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_restore_title
-import com.vitorpamplona.amethyst.commons.resources.wallet_backup_saved
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_saved_by
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_searching
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_status_off
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_status_on
@@ -409,7 +411,7 @@ private fun RestoreBackupHost(walletViewModel: WalletViewModel) {
         RestoreFoundDialog(
             backup = backup,
             onConfirm = {
-                walletViewModel.applyRestoredBackup(backup.payload)
+                walletViewModel.applyRestoredBackup(backup, it)
                 walletViewModel.clearRestoreCandidate()
             },
             onDismiss = { walletViewModel.clearRestoreCandidate() },
@@ -593,7 +595,7 @@ private fun NwcBackupSection(
         RestoreFoundDialog(
             backup = payload,
             onConfirm = {
-                walletViewModel.applyRestoredBackup(payload.payload)
+                walletViewModel.applyRestoredBackup(payload, it)
                 restoreCandidate = null
             },
             onDismiss = { restoreCandidate = null },
@@ -1029,7 +1031,7 @@ private fun WalletSettingsSheet(
         RestoreFoundDialog(
             backup = payload,
             onConfirm = {
-                walletViewModel.applyRestoredBackup(payload.payload)
+                walletViewModel.applyRestoredBackup(payload, it)
                 restoreCandidate = null
             },
             onDismiss = { restoreCandidate = null },
@@ -1339,38 +1341,67 @@ private fun BackupEnableDialog(
 @Composable
 internal fun RestoreFoundDialog(
     backup: NwcBackupState.FoundNwcBackup,
-    onConfirm: () -> Unit,
+    onConfirm: (List<NwcBackupState.RestorableWallet>) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    // An older backup may hold a revoked connection, so only the newest one's wallets start checked.
+    val newest = backup.wallets.first()
+    var selected by remember(backup) {
+        mutableStateOf(backup.wallets.filter { it.dTag == newest.dTag && it.savedAt == newest.savedAt }.toSet())
+    }
+    val choosable = backup.wallets.size > 1
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringRes(Res.string.wallet_backup_restore_title)) },
         text = {
-            Column {
-                Text(stringRes(Res.string.wallet_backup_restore_found, backup.payload.wallets.size))
-                // When the backup was saved matters more than generic names;
-                // only list names when there are several to tell apart.
-                backup.savedAt?.let { savedAt ->
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringRes(Res.string.wallet_backup_saved, formatDateTime(savedAt * 1000L, DateTimeStyle.MEDIUM, DateTimeStyle.NONE)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (backup.payload.wallets.size > 1) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    backup.payload.wallets.forEach { wallet ->
-                        Text(
-                            text = "• " + wallet.name,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(stringRes(Res.string.wallet_backup_restore_found, backup.wallets.size))
+                Spacer(modifier = Modifier.height(8.dp))
+                backup.wallets.forEach { candidate ->
+                    val checked = candidate in selected
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier =
+                            if (choosable) {
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selected = if (checked) selected - candidate else selected + candidate }
+                            } else {
+                                Modifier.fillMaxWidth()
+                            },
+                    ) {
+                        if (choosable) {
+                            Checkbox(
+                                checked = checked,
+                                onCheckedChange = { selected = if (it) selected + candidate else selected - candidate },
+                            )
+                        }
+                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                            Text(
+                                text = candidate.wallet.uri.lud16 ?: candidate.wallet.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Text(
+                                text =
+                                    stringRes(
+                                        Res.string.wallet_backup_saved_by,
+                                        NwcBackupFormat.appName(candidate.dTag),
+                                        formatDateTime(candidate.savedAt * 1000L, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT),
+                                    ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            TextButton(
+                onClick = { onConfirm(backup.wallets.filter { it in selected }) },
+                enabled = selected.isNotEmpty(),
+            ) {
                 Text(stringRes(Res.string.wallet_backup_restore_confirm))
             }
         },

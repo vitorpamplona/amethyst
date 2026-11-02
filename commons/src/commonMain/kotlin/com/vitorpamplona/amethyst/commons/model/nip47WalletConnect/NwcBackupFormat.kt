@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip47WalletConnect
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlinx.serialization.Serializable
@@ -52,6 +53,16 @@ object NwcBackupFormat {
 
     fun contentTag(): Array<String> = arrayOf(ENCRYPTION_TAG_NAME, ENCRYPTION_NIP44)
 
+    /** Dark Wisp shares Wisp's tag. */
+    fun appName(dTag: String): String =
+        when (dTag) {
+            D_TAG -> "Amethyst"
+            WISP_D_TAG -> "Wisp"
+            SIDECAR_D_TAG -> "Sidecar"
+            ZAPCOOKING_D_TAG -> "zap.cooking"
+            else -> dTag
+        }
+
     fun dTagOf(tags: Array<Array<String>>): String? = tags.firstOrNull { it.size >= 2 && it[0] == "d" }?.get(1)
 
     /** Empty content or Wisp's `deleted` tag, which NIP-09-unaware readers still understand. */
@@ -60,7 +71,28 @@ object NwcBackupFormat {
         content: String,
     ): Boolean = content.isBlank() || tags.any { it.size >= 2 && it[0] == "deleted" && it[1] == "true" }
 
-    /** Serializes the current wallet list into the plaintext to be encrypted. */
+    /** The newest event per d-tag decides, across relays; a tombstone wins a same-second tie. */
+    fun liveBackups(events: Iterable<Event>): List<Event> {
+        val newestPerTag = HashMap<String, Event>()
+        for (event in events) {
+            val tag = dTagOf(event.tags) ?: continue
+            if (tag !in RESTORE_D_TAGS) continue
+            val current = newestPerTag[tag]
+            if (current == null ||
+                event.createdAt > current.createdAt ||
+                (event.createdAt == current.createdAt && isTombstone(event.tags, event.content))
+            ) {
+                newestPerTag[tag] = event
+            }
+        }
+        return newestPerTag.values
+            .filterNot { isTombstone(it.tags, it.content) }
+            .sortedWith(
+                compareByDescending<Event> { it.createdAt }
+                    .thenBy { RESTORE_D_TAGS.indexOf(dTagOf(it.tags)) },
+            )
+    }
+
     fun encode(
         wallets: List<NwcWalletEntryNorm>,
         defaultId: String?,

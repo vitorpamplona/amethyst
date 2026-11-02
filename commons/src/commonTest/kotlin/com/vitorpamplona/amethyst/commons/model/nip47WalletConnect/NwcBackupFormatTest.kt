@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip47WalletConnect
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -162,5 +163,45 @@ class NwcBackupFormatTest {
         val withoutOptional = uri2.copy(secret = null, lud16 = null).toConnectionString()
 
         assertTrue(withoutOptional.endsWith("?relay=wss%3A%2F%2Frelay.getalby.com%2Fv1"))
+    }
+
+    private fun backupEvent(
+        dTag: String,
+        createdAt: Long,
+        content: String = "ciphertext",
+        deleted: Boolean = false,
+    ): Event {
+        val tags = if (deleted) arrayOf(arrayOf("d", dTag), arrayOf("deleted", "true")) else arrayOf(arrayOf("d", dTag))
+        return Event("id-$dTag-$createdAt-$deleted", "pub", createdAt, 30078, tags, content, "sig")
+    }
+
+    @Test
+    fun liveBackupsPutsTheNewestFirstAcrossApps() {
+        val wisp = backupEvent(NwcBackupFormat.WISP_D_TAG, createdAt = 100)
+        val sidecar = backupEvent(NwcBackupFormat.SIDECAR_D_TAG, createdAt = 200)
+
+        assertEquals(listOf(sidecar, wisp), NwcBackupFormat.liveBackups(listOf(wisp, sidecar)))
+    }
+
+    @Test
+    fun liveBackupsLetsOnlyANewerOrSameSecondTombstoneHideABackup() {
+        val live = backupEvent(NwcBackupFormat.WISP_D_TAG, createdAt = 200)
+
+        val olderTombstone = backupEvent(NwcBackupFormat.WISP_D_TAG, createdAt = 100, content = "", deleted = true)
+        assertEquals(listOf(live), NwcBackupFormat.liveBackups(listOf(olderTombstone, live)))
+
+        val sameSecondTombstone = backupEvent(NwcBackupFormat.WISP_D_TAG, createdAt = 200, content = "", deleted = true)
+        assertEquals(emptyList(), NwcBackupFormat.liveBackups(listOf(live, sameSecondTombstone)))
+        assertEquals(emptyList(), NwcBackupFormat.liveBackups(listOf(sameSecondTombstone, live)))
+
+        val newerTombstone = backupEvent(NwcBackupFormat.WISP_D_TAG, createdAt = 300, content = "")
+        assertEquals(emptyList(), NwcBackupFormat.liveBackups(listOf(live, newerTombstone)))
+    }
+
+    @Test
+    fun liveBackupsIgnoresOtherDTags() {
+        val spark = backupEvent("spark-wallet-backup:abc", createdAt = 500)
+
+        assertEquals(emptyList(), NwcBackupFormat.liveBackups(listOf(spark)))
     }
 }

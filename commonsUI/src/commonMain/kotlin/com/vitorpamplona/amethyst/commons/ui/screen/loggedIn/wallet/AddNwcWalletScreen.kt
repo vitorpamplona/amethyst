@@ -288,10 +288,10 @@ fun AddNwcWalletScreen(
             restoreCandidate?.let { backup ->
                 RestoreFoundDialog(
                     backup = backup,
-                    onConfirm = {
+                    onConfirm = { chosen ->
                         restoreCandidate = null
                         restoreScope.launch {
-                            val added = walletViewModel.applyRestoredBackup(backup.payload)
+                            val added = walletViewModel.applyRestoredBackup(backup, chosen)
                             shortNotice.show(
                                 if (added > 0) {
                                     loadPluralStringRes(Res.plurals.wallet_backup_restored_toast, added, added)

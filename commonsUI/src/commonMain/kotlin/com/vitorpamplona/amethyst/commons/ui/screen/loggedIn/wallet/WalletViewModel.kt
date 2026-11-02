@@ -464,9 +464,18 @@ class WalletViewModel : ViewModel() {
         _restoreCandidate.value = null
     }
 
-    /** Merges a confirmed restore into the wallet list; returns how many were new. */
-    fun applyRestoredBackup(payload: NwcBackupPayload): Int {
+    /** Returns how many wallets were new. */
+    fun applyRestoredBackup(
+        backup: NwcBackupState.FoundNwcBackup,
+        chosen: List<NwcBackupState.RestorableWallet>,
+    ): Int {
         val acc = account ?: return 0
+        val wallets = chosen.map { it.wallet }
+        val payload =
+            NwcBackupPayload(
+                wallets = wallets,
+                defaultId = backup.defaultId?.takeIf { id -> wallets.any { it.id == id } },
+            )
         val added = acc.settings.mergeRestoredNwcWallets(payload)
         refreshWalletList()
         viewModelScope.launch {

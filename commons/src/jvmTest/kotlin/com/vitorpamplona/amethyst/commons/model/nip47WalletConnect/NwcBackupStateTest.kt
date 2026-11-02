@@ -172,21 +172,43 @@ class NwcBackupStateTest {
         val settings: AccountSettings,
         val relays: FakeRelays,
         val backup: NwcBackupState,
-    )
+        val signer: NostrSignerInternal,
+    ) {
+        suspend fun plant(
+            relay: NormalizedRelayUrl,
+            dTag: String,
+            plaintext: String?,
+            createdAt: Long,
+        ): Event {
+            val content = plaintext?.let { signer.nip44Encrypt(it, signer.pubKey) } ?: ""
+            val event =
+                signer.sign(
+                    AppSpecificDataEvent.build(dTag = dTag, description = content, createdAt = createdAt) {
+                        if (plaintext == null) add(arrayOf("deleted", "true"))
+                    },
+                )
+            relays.stored.getOrPut(relay) { mutableListOf() } += event
+            return event
+        }
+    }
+
+    private fun bareUri(lud16: String) = "nostr+walletconnect://${KeyPair().pubKey.toHexKey()}?relay=wss://nwc.example.com&secret=${KeyPair().privKey!!.toHexKey()}&lud16=$lud16"
 
     private fun TestScope.world(
         outbox: Set<NormalizedRelayUrl>,
         verdicts: Map<NormalizedRelayUrl, Verdict>,
         keyPair: KeyPair = KeyPair(),
+        read: Set<NormalizedRelayUrl> = emptySet(),
     ): World {
         val settings = AccountSettings(keyPair)
         settings.nwcWallets.value = listOf(wallet)
         // publishBackup skips while the opt-in is off.
         settings.changeBackupNwcWallets(true)
         val relays = FakeRelays(backgroundScope, verdicts.toMutableMap())
-        relays.connected.value = outbox
-        val backup = NwcBackupState(NostrSignerInternal(keyPair), relays, backgroundScope, settings, MutableStateFlow(outbox))
-        return World(settings, relays, backup)
+        relays.connected.value = outbox + read
+        val signer = NostrSignerInternal(keyPair)
+        val backup = NwcBackupState(signer, relays, backgroundScope, settings, MutableStateFlow(outbox), MutableStateFlow(read))
+        return World(settings, relays, backup, signer)
     }
 
     @Test
@@ -343,7 +365,7 @@ class NwcBackupStateTest {
 
             val found = w.backup.fetchBackup()
             assertNotNull(found)
-            assertEquals(listOf(wallet.uri), found!!.payload.wallets.mapNotNull { it.normalize()?.uri })
+            assertEquals(listOf(wallet.uri), found!!.wallets.mapNotNull { it.wallet.normalize()?.uri })
 
             w.backup.deleteBackup()
             val stored = w.relays.stored[relayA].orEmpty()
@@ -365,5 +387,80 @@ class NwcBackupStateTest {
 
             val found = w.backup.fetchBackup()
             assertNotNull("the first restore attempt should wait out the handshake and find the backup", found)
+        }
+
+    @Test
+    fun aRestoreListsTheNewestBackupFirstWhicheverAppSavedIt() =
+        runTest {
+            val w = world(outbox = setOf(relayA), verdicts = emptyMap())
+            w.plant(relayA, NwcBackupFormat.WISP_D_TAG, bareUri("old@wisp.example"), createdAt = 1_000)
+            w.plant(relayA, NwcBackupFormat.SIDECAR_D_TAG, bareUri("new@sidecar.example"), createdAt = 2_000)
+
+            val found = w.backup.fetchBackup()!!
+
+            assertEquals(listOf("new@sidecar.example", "old@wisp.example"), found.wallets.map { it.wallet.uri.lud16 })
+            assertEquals(listOf(NwcBackupFormat.SIDECAR_D_TAG, NwcBackupFormat.WISP_D_TAG), found.wallets.map { it.dTag })
+        }
+
+    @Test
+    fun anOlderTombstoneOnAnotherRelayDoesNotHideANewerBackup() =
+        runTest {
+            val w = world(outbox = setOf(relayA, relayB), verdicts = emptyMap())
+            w.plant(relayB, NwcBackupFormat.WISP_D_TAG, plaintext = null, createdAt = 1_000)
+            w.plant(relayA, NwcBackupFormat.WISP_D_TAG, bareUri("back@wisp.example"), createdAt = 2_000)
+
+            val found = w.backup.fetchBackup()
+
+            assertEquals(listOf("back@wisp.example"), found?.wallets?.map { it.wallet.uri.lud16 })
+        }
+
+    @Test
+    fun aNewerTombstoneOnAnotherRelayHidesTheBackup() =
+        runTest {
+            val w = world(outbox = setOf(relayA, relayB), verdicts = emptyMap())
+            w.plant(relayA, NwcBackupFormat.ZAPCOOKING_D_TAG, bareUri("gone@zap.example"), createdAt = 1_000)
+            w.plant(relayB, NwcBackupFormat.ZAPCOOKING_D_TAG, plaintext = null, createdAt = 2_000)
+
+            assertNull(w.backup.fetchBackup())
+        }
+
+    @Test
+    fun aConnectionSeveralAppsBackedUpIsListedOnceFromTheNewest() =
+        runTest {
+            val w = world(outbox = setOf(relayA), verdicts = emptyMap())
+            val same = bareUri("same@example.com")
+            w.plant(relayA, NwcBackupFormat.WISP_D_TAG, same, createdAt = 1_000)
+            w.plant(relayA, NwcBackupFormat.ZAPCOOKING_D_TAG, same, createdAt = 3_000)
+
+            val found = w.backup.fetchBackup()!!
+
+            assertEquals(1, found.wallets.size)
+            assertEquals(NwcBackupFormat.ZAPCOOKING_D_TAG, found.wallets.single().dTag)
+            assertEquals(3_000L, found.wallets.single().savedAt)
+        }
+
+    @Test
+    fun aRestoreAlsoAsksTheReadRelays() =
+        runTest {
+            val w = world(outbox = setOf(relayA), verdicts = emptyMap(), read = setOf(relayB))
+            w.plant(relayB, NwcBackupFormat.SIDECAR_D_TAG, bareUri("read@sidecar.example"), createdAt = 1_000)
+
+            assertEquals(
+                listOf("read@sidecar.example"),
+                w.backup
+                    .fetchBackup()
+                    ?.wallets
+                    ?.map { it.wallet.uri.lud16 },
+            )
+        }
+
+    @Test
+    fun publishingStillSkipsTheReadRelays() =
+        runTest {
+            val w = world(outbox = setOf(relayA), verdicts = mapOf(relayA to Verdict.Accept, relayB to Verdict.Accept), read = setOf(relayB))
+
+            w.backup.publishNow()
+
+            assertEquals(listOf(setOf(relayA)), w.relays.sentTo)
         }
 }
