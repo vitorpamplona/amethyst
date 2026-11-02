@@ -22,11 +22,12 @@ package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
-import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifier
 
 /**
@@ -38,6 +39,10 @@ import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifier
  * header, with the icon centred on the first row of faces, so the faces start where a full-width
  * note's name does and the card's body can use the whole width below.
  *
+ * The full-width slot is a minimum, not a fixed size: a reaction drawn as text (a bare
+ * `:shortcode:`, a word, several emoji) widens it up to the indented column's 55dp and wraps
+ * there, instead of being clipped to 35dp.
+ *
  * [icon] receives the alignment to put on its modifier.
  */
 @Composable
@@ -46,8 +51,10 @@ fun GalleryIconColumn(
     icon: @Composable BoxScope.(iconAlignment: Alignment) -> Unit,
 ) {
     if (LocalDisplaySettings.current.fullWidthNotes) {
-        Box(Size35Modifier) { icon(Alignment.Center) }
+        Box(FullWidthGalleryIconModifier) { icon(Alignment.Center) }
     } else {
         Box(indentedModifier) { icon(Alignment.TopEnd) }
     }
 }
+
+private val FullWidthGalleryIconModifier = Modifier.sizeIn(minWidth = 35.dp, minHeight = 35.dp, maxWidth = 55.dp)

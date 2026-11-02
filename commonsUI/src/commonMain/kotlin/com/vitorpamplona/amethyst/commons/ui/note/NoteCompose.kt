@@ -1388,7 +1388,8 @@ fun ProvideNotificationBoostedNoteFrame(
     content: @Composable () -> Unit,
 ) {
     val bleed = if (LocalDisplaySettings.current.edgeToEdgeMedia) NoteHorizontalPadding else 0.dp
-    ProvideRepostFrame(BoostedNoteFrame(bleed, headerShown), content)
+    val frame = remember(bleed, headerShown) { BoostedNoteFrame(bleed, headerShown) }
+    ProvideRepostFrame(frame, content)
 }
 
 /** The note a repost boosts, as [RenderRepost] draws it. */
