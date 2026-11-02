@@ -72,8 +72,8 @@ modules:
       - install -Dm644 LICENSE -t /app/share/licenses/com.vitorpamplona.amethyst.Amethyst/
     sources:
       - type: archive
-        url: https://github.com/vitorpamplona/amethyst/archive/refs/tags/v1.19.0.tar.gz
-        sha256: 7c883b5d0bd775c05477b827c95fcda366a5f75e97dcc1429182fb3add872fd3
+        url: https://github.com/vitorpamplona/amethyst/archive/refs/tags/v1.21.0.tar.gz
+        sha256: 5aa686cb45b7ea3ce7b4e57932a8871fec65bef598a536ada20385db9bb1989c
 
       - type: file
         url: https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-21.0.11-linux-x64-b1163.116.tar.gz
@@ -89,8 +89,8 @@ modules:
           - aarch64
 
       - type: file
-        url: https://services.gradle.org/distributions/gradle-9.8.0-bin.zip
-        sha256: bafd5ce9cfaea0fbccfdc8439a1ac42fbd4cd9c89dc9a988228d8a2639a58e6c
+        url: https://services.gradle.org/distributions/gradle-9.8.2-bin.zip
+        sha256: 21bd5da2de49b642904077f38c0efdc7778e92b3ed0889392dca61b97e389607
         dest: gradle/wrapper
         dest-filename: gradle-bin.zip
 
