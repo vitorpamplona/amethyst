@@ -414,8 +414,8 @@ private fun Note.collectWarmTargets(): WarmTargets? {
     // kinds whose typed accessors wrap imetas() — Picture, Video). Video imeta carries
     // its poster in the `image` field.
     ev.tags.imetas().forEach { meta ->
-        // The other carts of a game are fetched when it is played, not when it scrolls past. The
-        // cart in the note's text is still warmed from the body below.
+        // The carts a note names are fetched when the game is played, not when it scrolls past. The
+        // cart in its text is still warmed from the body below.
         if (CartLinks.CART_FIELD in meta.properties) return@forEach
         if (meta.isImage()) targets.image(meta.url)
         if (meta.isVideo()) targets.video(meta.url, meta.properties[MIME_TYPE_KEY]?.firstOrNull())

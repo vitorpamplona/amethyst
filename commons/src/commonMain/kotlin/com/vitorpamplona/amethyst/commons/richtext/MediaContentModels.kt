@@ -72,7 +72,7 @@ open class MediaUrlImage(
     mimeType: String? = null,
     thumbhash: String? = null,
     authorPubKey: String? = null,
-    /** The note's `imeta` tags when they name game carts: see [CartLinks.forEntry]. */
+    /** The note's `imeta` tags when they may link game carts: see [CartLinks.forEntry]. */
     val cartImetas: Map<String, IMetaTag>? = null,
 ) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash, authorPubKey)
 

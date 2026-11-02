@@ -66,7 +66,8 @@ Amethyst adds around them.
   so `#id` is never resolved there. Posting `cart` fields from the composer isn't supported yet.
 
   A note with no `cart` field at all and exactly two carts works without one, so uploading both carts
-  of a game is enough. A cart here is a 160x205 PNG `imeta` with a valid `x`. Each cart is the other's
+  of a game is enough. A cart here is an `imeta` with a 160x205 `dim`, a valid `x` and no `m` other
+  than `image/png`. Each cart is the other's
   partner: the first name the game asks for gets the other cart, and the second gets the entry cart,
   because a game starts on the entry and the other cart's first ask is the way back. A third name has
   no cart. The two share one save key, a hash of both hashes, whichever one was started. Notes of

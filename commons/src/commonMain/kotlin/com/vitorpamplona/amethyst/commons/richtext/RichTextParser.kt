@@ -59,7 +59,7 @@ class RichTextParser {
         description: String?,
         callbackUri: String? = null,
         authorPubKey: String? = null,
-        cartImetas: Map<String, IMetaTag>? = CartLinks.tagsToKeep(eventTags),
+        cartImetas: Map<String, IMetaTag>? = null,
     ): MediaUrlContent? {
         val frags = Nip54InlineMetadata().parse(fullUrl)
 

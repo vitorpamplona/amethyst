@@ -22,13 +22,13 @@ package com.vitorpamplona.amethyst.commons.cartridges
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.crypto.sha2.sha256
-import com.vitorpamplona.kiko.cart.CartLoader
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip68Picture.dims
 import com.vitorpamplona.quartz.nip68Picture.fallback
 import com.vitorpamplona.quartz.nip68Picture.hash
 import com.vitorpamplona.quartz.nip68Picture.mimeType
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
@@ -48,24 +48,19 @@ class ExtraCart(
 )
 
 /**
- * The carts a running game reaches by the names it uses: the ones its note [named], and for two carts
- * posted with no names, [unnamed], which goes the other cart first and then the entry cart. A game
- * starts on the entry, so the first name it asks for must be the other cart, and that cart's first
- * ask must be the way back. A third name has no cart. Asked on the game thread only.
+ * The carts a running game reaches by the names it uses. A name the note gave is in [named]. Two carts
+ * posted with no names come as [unnamed], the other cart first and then the entry: kiko doesn't say
+ * which cart is running, but a game starts on the entry, so its first new name is taken to mean the
+ * other cart and the next to mean the way back. A third name has no cart. Asked on the game thread only.
  */
 class GameCarts(
-    private val named: Map<String, ByteArray>,
-    private val unnamed: List<ByteArray> = emptyList(),
+    named: Map<String, ByteArray>,
+    unnamed: List<ByteArray> = emptyList(),
 ) {
-    private val assigned = HashMap<String, ByteArray>()
+    private val byName = HashMap(named)
+    private val unclaimed = ArrayDeque(unnamed)
 
-    operator fun get(name: String): ByteArray? = named[name] ?: assigned[name] ?: unnamed.getOrNull(assigned.size)?.also { assigned[name] = it }
-
-    val count: Int get() = named.size + unnamed.size
-
-    companion object {
-        val NONE = GameCarts(emptyMap())
-    }
+    operator fun get(name: String): ByteArray? = byName[name] ?: unclaimed.removeFirstOrNull()?.also { byName[name] = it }
 }
 
 /**
@@ -83,7 +78,7 @@ class GameCarts(
  *
  * Someone who just uploads both carts of a game writes no `cart` field, and a game's names say nothing
  * about which file they mean. With exactly two carts that doesn't matter: [partner] is the only other
- * cart there is. Three or more can't be told apart, so those notes need the field.
+ * cart the note declares. Three or more can't be told apart, so those notes need the field.
  */
 @Immutable
 class CartLinks(
@@ -130,19 +125,20 @@ class CartLinks(
     suspend fun fetchCarts(
         entry: ByteArray,
         fetch: suspend (url: String) -> ByteArray?,
-    ): GameCarts =
-        coroutineScope {
-            val other = partner?.let { async { it.fetchFirstMatch(fetch) } }
-            val fetched = extras.map { cart -> async { cart to cart.fetchFirstMatch(fetch) } }.awaitAll()
-            val named =
+    ): GameCarts {
+        if (partner != null) return GameCarts(emptyMap(), partner.fetchFirstMatch(fetch)?.let { listOf(it, entry) }.orEmpty())
+        val named =
+            coroutineScope {
+                val fetched = extras.map { cart -> async { cart to cart.fetchFirstMatch(fetch) } }.awaitAll()
                 buildMap {
                     ownNames.forEach { put(it, entry) }
                     for ((cart, bytes) in fetched) {
                         if (bytes != null) cart.names.forEach { put(it, bytes) }
                     }
                 }
-            GameCarts(named, other?.await()?.let { listOf(it, entry) }.orEmpty())
-        }
+            }
+        return GameCarts(named)
+    }
 
     private suspend fun ExtraCart.fetchFirstMatch(fetch: suspend (url: String) -> ByteArray?): ByteArray? {
         for (url in urls) {
@@ -170,24 +166,15 @@ class CartLinks(
         /** The `url` and its `fallback`s, so one note's extra carts make at most 48 requests. */
         const val MAX_URLS_PER_CART = 3
 
-        private val CART_DIM = "${CartLoader.CART_WIDTH}x${CartLoader.CART_HEIGHT}"
-
         private const val TAG = "CartLinks"
 
         /**
-         * [imetas] if any of them names a cart or two of them look like carts, else null. This is what
-         * a parsed note keeps for [forEntry]: one reference shared by its images, because building the
-         * links of every image of a stranger's note would make it cost its tags times its images, in
-         * time and in memory.
+         * [imetas] if any of them names a cart or exactly two of them look like carts, else null. This
+         * is what a parsed note keeps for [forEntry]: one reference shared by its images, because
+         * building the links of every image of a stranger's note would make it cost its tags times its
+         * images, in time and in memory.
          */
-        fun tagsToKeep(imetas: Map<String, IMetaTag>): Map<String, IMetaTag>? {
-            var carts = 0
-            for (imeta in imetas.values) {
-                if (CART_FIELD in imeta.properties) return imetas
-                if (imeta.looksLikeACart() && ++carts == 2) return imetas
-            }
-            return null
-        }
+        fun tagsToKeep(imetas: Map<String, IMetaTag>): Map<String, IMetaTag>? = imetas.takeIf { tags -> tags.values.any { CART_FIELD in it.properties } || tags.values.count { it.looksLikeACart() } == 2 }
 
         /**
          * What the cart at [entryUrl] can reach, from the `imeta` tags of its note; null when there
@@ -220,19 +207,19 @@ class CartLinks(
             imetas: Map<String, IMetaTag>,
         ): CartLinks? {
             val carts = imetas.values.filter { it.looksLikeACart() }
-            if (carts.size != 2 || carts.none { it.url == entryUrl }) return null
-            val other = carts.first { it.url != entryUrl }
-            val sha256 = other.sha256() ?: return null
             // One file posted from two servers is one cart.
-            if (sha256 == imetas.getValue(entryUrl).sha256()) return null
-            return CartLinks(emptyList(), emptyList(), ExtraCart(emptyList(), other.urls(), sha256))
+            if (carts.size != 2 || carts[0].sha256() == carts[1].sha256()) return null
+            val other = carts.singleOrNull { it.url != entryUrl } ?: return null
+            return CartLinks(emptyList(), emptyList(), ExtraCart(emptyList(), other.urls(), other.sha256() ?: return null))
         }
 
         /** What a plain upload of a cart says about it: enough to fetch it on Play and check it. */
-        private fun IMetaTag.looksLikeACart() =
-            dims()?.firstOrNull() == CART_DIM &&
+        private fun IMetaTag.looksLikeACart(): Boolean {
+            val dim = dims()?.firstOrNull()?.let { DimensionTag.parse(it) } ?: return false
+            return CartDetector.isCartSize(dim) &&
                 mimeType()?.firstOrNull()?.equals("image/png", ignoreCase = true) != false &&
                 sha256() != null
+        }
 
         private fun IMetaTag.urls() = (listOf(url) + fallback().orEmpty()).take(MAX_URLS_PER_CART)
 
@@ -241,7 +228,9 @@ class CartLinks(
         private fun IMetaTag.sha256(): String? =
             hash()
                 ?.firstOrNull()
-                ?.takeIf(Hex::isHexKey)
+                // Not `isHexKey`: it reads past the lookup table on a non-Latin char and catches the
+                // exception, and this runs on every tag of a stranger's note.
+                ?.takeIf { it.length == 64 && Hex.isHex(it, 0, 64) }
                 ?.lowercase()
     }
 }

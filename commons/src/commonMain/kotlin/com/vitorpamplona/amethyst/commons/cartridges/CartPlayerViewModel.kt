@@ -56,8 +56,8 @@ class CartPlayerViewModel(
             override fun utcOffsetSeconds(): Int = LocalClock.utcOffsetSeconds(TimeUtils.now()).toInt()
 
             // On the game thread, inside a frame, so it only ever answers from memory: a download here
-            // would race the hang watchdog. A name that is not listed stops the game with a message.
-            override fun loadCart(name: String): ByteArray? = carts[name].also { Log.i(TAG) { "The game asked for $name: ${it?.let { bytes -> "${bytes.size} bytes" } ?: "not available"}" } }
+            // would race the hang watchdog. A name with no cart stops the game with a message.
+            override fun loadCart(name: String): ByteArray? = carts?.get(name).also { Log.i(TAG) { "The game asked for $name: ${it?.let { bytes -> "${bytes.size} bytes" } ?: "not available"}" } }
         }
 
     // What the player's game keeps its saves under (see [CartSaveStore] and [CartLinks.saveKey]).
@@ -66,7 +66,7 @@ class CartPlayerViewModel(
 
     // Every cart of the game by name, in memory until the game is let go.
     @Volatile
-    private var carts: GameCarts = GameCarts.NONE
+    private var carts: GameCarts? = null
 
     private var current: KikoPlayer? = null
 
@@ -98,7 +98,7 @@ class CartPlayerViewModel(
     fun release() {
         current?.close()
         current = null
-        carts = GameCarts.NONE
+        carts = null
     }
 
     private suspend fun download(): ByteArray? {
@@ -116,9 +116,9 @@ class CartPlayerViewModel(
                 return null
             }
         }
-        carts = links?.fetchCarts(bytes) { httpClients.fetchMedia(it, MAX_CART_BYTES) } ?: GameCarts.NONE
+        carts = links?.fetchCarts(bytes) { httpClients.fetchMedia(it, MAX_CART_BYTES) }
         saveKey = links?.saveKey(hash) ?: hash
-        Log.i(TAG) { "Playing $url with ${carts.count} linked carts, saves under $saveKey" }
+        Log.i(TAG) { "Playing $url, saves under $saveKey" }
         return bytes
     }
 

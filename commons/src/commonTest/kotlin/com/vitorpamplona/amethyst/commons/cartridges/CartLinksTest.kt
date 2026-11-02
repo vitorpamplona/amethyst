@@ -283,6 +283,7 @@ class CartLinksTest {
     ) = imeta(url, "x $x", *plain)
 
     private val frontX = "b".repeat(64)
+    private val thirdX = "c".repeat(64)
 
     private fun plainPair() = imetas(plainCart(front, frontX), plainCart(main, mainX))
 
@@ -296,9 +297,40 @@ class CartLinksTest {
     }
 
     @Test
-    fun aParsedNoteKeepsTheTagsOfTwoPlainCartsButNotOfOne() {
+    fun aParsedNoteKeepsTheTagsOfExactlyTwoPlainCarts() {
         assertNotNull(CartLinks.tagsToKeep(plainPair()))
         assertNull(CartLinks.tagsToKeep(imetas(plainCart(front, frontX), imeta(main, "m image/png"))))
+        assertNull(CartLinks.tagsToKeep(imetas(plainCart(front, frontX), plainCart(main, mainX), plainCart("https://example.com/third.png", thirdX))))
+    }
+
+    // Primal writes sizes as floats, and the Play button already reads them through DimensionTag.
+    @Test
+    fun aSizeWrittenAsFloatsIsStillACart() {
+        val float = arrayOf("m image/png", "dim 160.0x205.0")
+        val tags = imetas(imeta(front, "x $frontX", *float), imeta(main, "x $mainX", *float))
+
+        assertEquals(mainX, CartLinks.forEntry(front, tags)?.partner?.sha256)
+    }
+
+    @Test
+    fun aSizeThatIsNotOneIsNotACart() {
+        val tags = imetas(plainCart(front, frontX), imeta(main, "x $mainX", "dim nonsense"))
+
+        assertNull(CartLinks.tagsToKeep(tags))
+    }
+
+    @Test
+    fun aHashWithACharOutsideLatinIsNotAHash() {
+        val tags = imetas(plainCart(front, frontX), imeta(main, "x \u20ac${"a".repeat(63)}", *plain))
+
+        assertNull(CartLinks.forEntry(front, tags))
+    }
+
+    @Test
+    fun anUppercaseHashStillPairs() {
+        val tags = imetas(plainCart(front, frontX), plainCart(main, mainX.uppercase()))
+
+        assertEquals(mainX, CartLinks.forEntry(front, tags)?.partner?.sha256)
     }
 
     @Test
@@ -311,21 +343,19 @@ class CartLinksTest {
 
     @Test
     fun threePlainCartsCannotBeToldApart() {
-        val tags = imetas(plainCart(front, frontX), plainCart(main, mainX), plainCart("https://example.com/third.png", "c".repeat(64)))
+        val tags = imetas(plainCart(front, frontX), plainCart(main, mainX), plainCart("https://example.com/third.png", thirdX))
 
         assertNull(CartLinks.forEntry(front, tags))
     }
 
     @Test
     fun anImageBesideTwoPlainCartsIsNotPartOfThem() {
-        val tags = imetas(plainCart(front, frontX), plainCart(main, mainX))
-
-        assertNull(CartLinks.forEntry("https://example.com/photo.png", tags))
+        assertNull(CartLinks.forEntry("https://example.com/photo.png", plainPair()))
     }
 
     @Test
     fun aPhotoInTheNoteDoesNotCountAsACart() {
-        val tags = imetas(plainCart(front, frontX), plainCart(main, mainX), imeta("https://example.com/photo.jpg", "x ${"c".repeat(64)}", "m image/jpeg", "dim 900x600"))
+        val tags = imetas(plainCart(front, frontX), plainCart(main, mainX), imeta("https://example.com/photo.jpg", "x $thirdX", "m image/jpeg", "dim 900x600"))
 
         assertEquals(mainX, CartLinks.forEntry(front, tags)?.partner?.sha256)
     }
@@ -337,7 +367,7 @@ class CartLinksTest {
 
     @Test
     fun aCartFieldAnywhereTurnsThePairingOff() {
-        val links = links(plainCart(front, frontX), plainCart(main, mainX), imeta("https://example.com/third.png", "x ${"c".repeat(64)}", "cart #third"))
+        val links = links(plainCart(front, frontX), plainCart(main, mainX), imeta("https://example.com/third.png", "x $thirdX", "cart #third"))
 
         assertNull(links?.partner)
         assertEquals(listOf("#third"), links?.extras?.single()?.names)
@@ -346,27 +376,20 @@ class CartLinksTest {
     @Test
     fun aDifferentPartnerIsADifferentFingerprint() {
         val one = CartLinks.forEntry(front, plainPair())!!
-        val other = CartLinks.forEntry(front, imetas(plainCart(front, frontX), plainCart(main, "c".repeat(64))))!!
+        val other = CartLinks.forEntry(front, imetas(plainCart(front, frontX), plainCart(main, thirdX)))!!
 
         assertNotEquals(one.fingerprint(), other.fingerprint())
     }
 
     private fun bytesPair() = imetas(plainCart(front, hash(entryBytes)), plainCart(main, hash(mainBytes)))
 
+    private suspend fun frontCarts(fetched: ByteArray = mainBytes) = CartLinks.forEntry(front, bytesPair())!!.fetchCarts(entryBytes) { fetched }
+
     // Into Ruins: the jump asks from the front cart, and game over asks from the main cart.
     @Test
-    fun aGameGoesToTheOtherCartAndComesBack() =
+    fun aGameGoesToTheOtherCartAndComesBackForEveryRun() =
         runTest {
-            val carts = CartLinks.forEntry(front, bytesPair())!!.fetchCarts(entryBytes) { mainBytes }
-
-            assertContentEquals(mainBytes, carts["#intoruins_main-7"])
-            assertContentEquals(entryBytes, carts["#intoruins"])
-        }
-
-    @Test
-    fun aNameKeepsItsCartForTheSecondRun() =
-        runTest {
-            val carts = CartLinks.forEntry(front, bytesPair())!!.fetchCarts(entryBytes) { mainBytes }
+            val carts = frontCarts()
 
             repeat(3) {
                 assertContentEquals(mainBytes, carts["#intoruins_main-7"])
@@ -386,7 +409,7 @@ class CartLinksTest {
     @Test
     fun aThirdNameHasNoCart() =
         runTest {
-            val carts = CartLinks.forEntry(front, bytesPair())!!.fetchCarts(entryBytes) { mainBytes }
+            val carts = frontCarts()
             carts["#one"]
             carts["#two"]
 
@@ -396,7 +419,7 @@ class CartLinksTest {
     @Test
     fun aPartnerThatDoesNotMatchItsHashIsNotAvailable() =
         runTest {
-            val carts = CartLinks.forEntry(front, bytesPair())!!.fetchCarts(entryBytes) { "hostile".encodeToByteArray() }
+            val carts = frontCarts(fetched = "hostile".encodeToByteArray())
 
             assertNull(carts["#intoruins_main-7"])
             assertNull(carts["#intoruins"])

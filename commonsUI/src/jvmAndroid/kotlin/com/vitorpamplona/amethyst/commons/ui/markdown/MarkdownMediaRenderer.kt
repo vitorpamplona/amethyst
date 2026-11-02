@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.halilibo.richtext.ui.MediaRenderer
 import com.halilibo.richtext.ui.string.InlineContent
 import com.halilibo.richtext.ui.string.RichTextString
+import com.vitorpamplona.amethyst.commons.cartridges.CartLinks
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.fragmentHashtagOrNull
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
@@ -85,6 +86,8 @@ class MarkdownMediaRenderer(
 
     val parser = RichTextParser()
 
+    private val cartImetas by lazy { CartLinks.tagsToKeep(imetaByUrl) }
+
     override fun shouldRenderLinkPreview(
         title: String?,
         uri: String,
@@ -113,6 +116,7 @@ class MarkdownMediaRenderer(
                     fullUrl = uri,
                     eventTags = imetaByUrl,
                     description = title?.ifEmpty { null } ?: startOfText,
+                    cartImetas = cartImetas,
                 ) ?: MediaUrlImage(url = uri, description = title?.ifEmpty { null } ?: startOfText)
 
             renderInlineFullWidth(richTextStringBuilder) {
@@ -151,7 +155,7 @@ class MarkdownMediaRenderer(
             return
         }
 
-        val content = parser.createMediaContent(uri, imetaByUrl, startOfText, callbackUri)
+        val content = parser.createMediaContent(uri, imetaByUrl, startOfText, callbackUri, cartImetas = cartImetas)
 
         if (canPreview) {
             if (content != null) {
