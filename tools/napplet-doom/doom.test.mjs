@@ -125,7 +125,7 @@ test('the keyboard starts a game, and the view moves when the player turns', asy
   });
 });
 
-test('one finger slides around the pad: directions change without lifting, corners are diagonals', async () => {
+test('one finger slides around the pad: directions change without lifting, corners are diagonals, the middle is empty', async () => {
   await play(async ({ page, frame, start, newGame, pixels, consoleErrors }) => {
     await start();
     await newGame();
@@ -157,12 +157,29 @@ test('one finger slides around the pad: directions change without lifting, corne
     await page.waitForTimeout(150);
     assert.equal(await held(), '', 'lifting the finger lets go');
 
-    // A finger that lands on USE presses it.
+    // The pad's middle presses nothing, even for a finger that lands there: USE is beside FIRE.
     await page.mouse.move(...cell(1, 1));
     await page.mouse.down();
     await page.waitForTimeout(150);
-    assert.equal(await held(), 'USE');
+    assert.equal(await held(), '');
     await page.mouse.up();
+    const use = await frame.locator('.actions button', { hasText: 'USE' }).boundingBox();
+    await page.mouse.move(use.x + use.width / 2, use.y + use.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(150);
+    assert.equal(await frame.evaluate(() => [...document.querySelectorAll('.actions button.down')].map(b => b.textContent).join('')), 'USE');
+    await page.mouse.up();
+
+    // A touch on the controls has its default cancelled, so Android's WebView never sees a long
+    // press (it buzzes for one); the pointer events that drive the controls still fire.
+    const cancelled = await frame.evaluate(() => {
+      const target = document.querySelector('.pad button');
+      const touch = new Touch({ identifier: 1, target, clientX: 1, clientY: 1 });
+      const e = new TouchEvent('touchstart', { touches: [touch], targetTouches: [touch], changedTouches: [touch], bubbles: true, cancelable: true });
+      target.dispatchEvent(e);
+      return e.defaultPrevented;
+    });
+    assert.equal(cancelled, true, 'a touch on the controls starts no long press');
     assert.equal((await frame.evaluate(() => window.doomStatus.phase)), 'running');
     assert.deepEqual(consoleErrors, []);
   });

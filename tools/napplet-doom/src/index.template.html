@@ -29,7 +29,8 @@
   .pad, .actions { display: grid; grid-template-columns: repeat(3, var(--b)); grid-template-rows: repeat(3, var(--b)); gap: 4px; }
   .mid { display: flex; flex-direction: column; gap: 6px; }
   #touch button { font: 600 11px system-ui, sans-serif; color: var(--fg); background: rgba(255, 255, 255, .1);
-    border: 1px solid rgba(255, 255, 255, .18); border-radius: 10px; padding: 0; touch-action: none; }
+    border: 1px solid rgba(255, 255, 255, .18); border-radius: 10px; padding: 0; touch-action: none;
+    -webkit-touch-callout: none; }
   #touch .mid button { height: 34px; width: 56px; }
   /* Landscape: the game takes the full height and the controls float over its sides. */
   @media (orientation: landscape) {
@@ -68,7 +69,7 @@
 <div id="touch">
   <div class="pad">
     <span></span><button data-key="0xad">&#9650;</button><span></span>
-    <button data-key="0xac">&#9664;</button><button data-key="0xa2">USE</button><button data-key="0xae">&#9654;</button>
+    <button data-key="0xac">&#9664;</button><span></span><button data-key="0xae">&#9654;</button>
     <span></span><button data-key="0xaf">&#9660;</button><span></span>
   </div>
   <div class="mid">
@@ -76,9 +77,10 @@
     <button data-key="13">ENTER</button>
     <button data-key="121">YES</button>
     <button data-key="9">MAP</button>
+    <button data-key="0xb6" data-toggle>RUN</button>
   </div>
   <div class="actions">
-    <button data-key="91">&#9664;WPN</button><button data-key="93">WPN&#9654;</button><button data-key="0xb6" data-toggle>RUN</button>
+    <button data-key="91">&#9664;WPN</button><button data-key="93">WPN&#9654;</button><button data-key="0xa2">USE</button>
     <button data-key="0xa0">&#8656;</button><button class="fire" data-key="0xa3">FIRE</button>
     <button data-key="0xa1">&#8658;</button>
   </div>
@@ -772,11 +774,10 @@
     sendKey(false, key);
   });
 
-  // The pad is one control, not nine buttons: a finger held on it moves wherever it slides, with no
+  // The pad is one control, not four buttons: a finger held on it moves wherever it slides, with no
   // need to lift it between directions. Its row picks forward/back and its column the turn, so a
   // corner is both (run forward while turning); past the pad's edge it keeps the nearest direction.
-  // USE, in the middle, is pressed only by a finger that lands there; one sliding through the
-  // middle just stops moving.
+  // Its middle stops: USE lives with FIRE, where a sliding finger can't press it by passing through.
   const pad = document.querySelector('.pad');
   const padButton = {};
   for (const b of pad.querySelectorAll('button')) padButton[Number(b.dataset.key)] = b;
@@ -792,7 +793,6 @@
     const keys = [];
     if (row === 0) keys.push(KEY.UP); else if (row === 2) keys.push(KEY.DOWN);
     if (col === 0) keys.push(KEY.LEFT); else if (col === 2) keys.push(KEY.RIGHT);
-    if (!keys.length && finger.use) keys.push(KEY.USE);
     return keys;
   }
   function padSync() {
@@ -815,7 +815,7 @@
     e.preventDefault();
     pad.setPointerCapture && pad.setPointerCapture(e.pointerId);
     const cell = padCell(e);
-    padFingers.set(e.pointerId, { cell, use: cell.col === 1 && cell.row === 1 });
+    padFingers.set(e.pointerId, { cell });
     padSync();
   });
   pad.addEventListener('pointermove', e => {
@@ -825,8 +825,6 @@
     const cell = padCell(e);
     if (cell.col === finger.cell.col && cell.row === finger.cell.row) return;
     finger.cell = cell;
-    // Once it has moved off USE, the finger is a movement finger.
-    if (cell.col !== 1 || cell.row !== 1) finger.use = false;
     padSync();
   });
   const padLift = e => {
@@ -837,6 +835,13 @@
   pad.addEventListener('pointerup', padLift);
   pad.addEventListener('pointercancel', padLift);
   pad.addEventListener('lostpointercapture', padLift);
+
+  // A finger held still on a control is a long press to Android's WebView, which buzzes for it (and
+  // would open a menu). The controls run on pointer events, which still fire when the touch's own
+  // default is cancelled; cancelling it is what keeps the WebView from seeing a long press at all.
+  const touchControls = document.getElementById('touch');
+  touchControls.addEventListener('touchstart', e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+  touchControls.addEventListener('contextmenu', e => e.preventDefault());
 
   // The other controls: each button holds its key while a pointer is down on it; RUN latches.
   for (const button of document.querySelectorAll('#touch button:not(.pad button)')) {
