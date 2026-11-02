@@ -159,15 +159,14 @@ class VideoPrefetcher(
         val head = if (length == C.LENGTH_UNSET.toLong()) PREFETCH_BYTES else minOf(PREFETCH_BYTES, length)
         if (cache.getCachedBytes(video.url, 0, head) >= head) return true
 
-        val server = upstream(video.useProxy)
-        val lengthRecorder = ContentLengthRecorder(cache, video.url)
         val source =
             CacheDataSource
                 .Factory()
                 .setCache(cache)
-                .setUpstreamDataSourceFactory { server.createDataSource().apply { addTransferListener(lengthRecorder) } }
+                .setUpstreamDataSourceFactory(upstream(video.useProxy))
                 .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
                 .createDataSource()
+        source.addTransferListener(ContentLengthRecorder(cache, video.url))
 
         val spec =
             DataSpec
@@ -236,17 +235,10 @@ private class ContentLengthRecorder(
         }
     }
 
-    // OkHttp lower-cases the names, so a plain map lookup depends on the data source underneath.
     private fun fileLength(headers: Map<String, List<String>>): Long {
-        fun header(name: String) =
-            headers.entries
-                .firstOrNull { it.key.equals(name, ignoreCase = true) }
-                ?.value
-                ?.firstOrNull()
-
+        val contentRange = headers["Content-Range"]?.firstOrNull()
         // A server that ignored the range sends the whole file, and its Content-Length is the file's.
-        val contentRange = header("Content-Range")
-        return if (contentRange != null) HttpUtil.getDocumentSize(contentRange) else header("Content-Length")?.toLongOrNull() ?: C.LENGTH_UNSET.toLong()
+        return if (contentRange != null) HttpUtil.getDocumentSize(contentRange) else HttpUtil.getContentLength(headers["Content-Length"]?.firstOrNull(), null)
     }
 
     override fun onTransferInitializing(

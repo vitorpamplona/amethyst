@@ -25,7 +25,6 @@ import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
-import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.extractor.DefaultExtractorInput
 import androidx.media3.extractor.mp4.Mp4Extractor
@@ -39,17 +38,14 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
-import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -71,17 +67,9 @@ import java.util.UUID
 class VideoPrefetcherContentLengthTest {
     private val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
     private val video = openEndedMp4(1_000_000)
-
-    private lateinit var cacheDir: File
-    private lateinit var videoCache: VideoCache
-    private lateinit var scope: CoroutineScope
-
-    @Before
-    fun setUp() {
-        cacheDir = File(context.cacheDir, "prefetcher-test-${UUID.randomUUID()}")
-        videoCache = VideoCache().apply { initFileCache(context, cacheDir) }
-        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    }
+    private val cacheDir = File(context.cacheDir, "prefetcher-test-${UUID.randomUUID()}")
+    private val videoCache = VideoCache().apply { initFileCache(context, cacheDir) }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @After
     fun tearDown() {
@@ -91,26 +79,14 @@ class VideoPrefetcherContentLengthTest {
     }
 
     @Test
-    fun aPrefetchedHeadKeepsAnOpenEndedMp4Playable() {
-        val server = hostServing(video, honoursRange = true)
-
-        prefetchHead(server)
-
-        val opened = playerOpens(server)
-        assertEquals(video.size.toLong(), opened.length)
-        assertTrue("the mp4 extractor must accept the stream", opened.mp4ExtractorAccepts)
-    }
+    fun aPrefetchedHeadKeepsAnOpenEndedMp4Playable() = assertPlayableAfterPrefetch(hostServing(honoursRange = true))
 
     @Test
-    fun theLengthIsKnownWhenTheServerIgnoresTheRangeRequest() {
-        val server = hostServing(video, honoursRange = false)
+    fun theLengthIsKnownWhenTheServerIgnoresTheRangeRequest() = assertPlayableAfterPrefetch(hostServing(honoursRange = false))
 
-        prefetchHead(server)
-
-        assertEquals(video.size.toLong(), playerOpens(server).length)
-    }
-
-    private fun prefetchHead(server: DataSource.Factory) {
+    // Prefetches the head, then does what the player does with it: the player's cache route, an open
+    // with no length, then sniffing the stream at whatever length that open reported.
+    private fun assertPlayableAfterPrefetch(server: DataSource.Factory) {
         VideoPrefetcher({ videoCache }, { server }, scope).prefetch(this, listOf(VideoPrefetcher.Video(URL, useProxy = false)))
 
         runBlocking {
@@ -120,70 +96,46 @@ class VideoPrefetcherContentLengthTest {
                 }
             }
         }
-    }
 
-    private class Opened(
-        val length: Long,
-        val mp4ExtractorAccepts: Boolean,
-    )
-
-    // What the player does with the cached head: the same cache route, an open with no length, then
-    // sniffing the stream at whatever length that open reported.
-    private fun playerOpens(server: DataSource.Factory): Opened {
-        val source =
-            CacheDataSource
-                .Factory()
-                .setCache(videoCache.simpleCache)
-                .setUpstreamDataSourceFactory(server)
-                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-                .createDataSource()
-
+        val source = videoCache.get(server).createDataSource()
         try {
             val length = source.open(DataSpec.Builder().setUri(URL).build())
-            return Opened(length, Mp4Extractor(SubtitleParser.Factory.UNSUPPORTED).sniff(DefaultExtractorInput(source, 0, length)))
+            assertEquals(video.size.toLong(), length)
+            assertTrue(
+                "the mp4 extractor must accept the stream",
+                Mp4Extractor(SubtitleParser.Factory.UNSUPPORTED).sniff(DefaultExtractorInput(source, 0, length)),
+            )
         } finally {
             source.close()
         }
     }
 
-    private fun hostServing(
-        body: ByteArray,
-        honoursRange: Boolean,
-    ): DataSource.Factory {
-        val client: Call.Factory =
+    private fun hostServing(honoursRange: Boolean): DataSource.Factory =
+        OkHttpDataSource.Factory(
             OkHttpClient
                 .Builder()
                 .addInterceptor { chain ->
                     val range = if (honoursRange) RANGE.find(chain.request().header("Range").orEmpty()) else null
-                    if (range == null) {
-                        respond(chain.request(), 200, body)
-                    } else {
-                        val start = range.groupValues[1].toInt()
-                        val end = range.groupValues[2].toIntOrNull()?.coerceAtMost(body.lastIndex) ?: body.lastIndex
-                        respond(chain.request(), 206, body.copyOfRange(start, end + 1)) {
-                            header("Content-Range", "bytes $start-$end/${body.size}")
-                        }
-                    }
-                }.build()
-        return OkHttpDataSource.Factory(client)
-    }
-
-    private fun respond(
-        request: Request,
-        code: Int,
-        bytes: ByteArray,
-        extra: Response.Builder.() -> Unit = {},
-    ): Response =
-        Response
-            .Builder()
-            .request(request)
-            .protocol(Protocol.HTTP_2)
-            .code(code)
-            .message("")
-            .header("Content-Length", bytes.size.toString())
-            .apply(extra)
-            .body(bytes.toResponseBody("video/mp4".toMediaType()))
-            .build()
+                    val start = range?.groupValues?.get(1)?.toInt() ?: 0
+                    val end =
+                        range
+                            ?.groupValues
+                            ?.get(2)
+                            ?.toIntOrNull()
+                            ?.coerceAtMost(video.lastIndex) ?: video.lastIndex
+                    val bytes = video.copyOfRange(start, end + 1)
+                    Response
+                        .Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_2)
+                        .code(if (range != null) 206 else 200)
+                        .message("")
+                        .header("Content-Length", bytes.size.toString())
+                        .apply { if (range != null) header("Content-Range", "bytes $start-$end/${video.size}") }
+                        .body(bytes.toResponseBody("video/mp4".toMediaType()))
+                        .build()
+                }.build(),
+        )
 
     private companion object {
         const val URL = "https://media.example/4529b13894e51742e137dff7a4db703890cd0a487fa2bd2c25ecae1d99c61be4.mp4"
