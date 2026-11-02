@@ -113,8 +113,9 @@ internal fun RenderAcceptedByRelaysGallery(
     accountViewModel: AccountViewModel,
 ) {
     Row(Modifier.fillMaxWidth()) {
-        // NotificationIconModifier (55dp wide, 5dp end padding) matches the category-icon
-        // column of the zap/like/nutzap gallery rows so the Dns icon lines up with them.
+        // Indented, NotificationIconModifier (55dp wide, 5dp end padding) matches the
+        // category-icon column of the zap/like/nutzap gallery rows so the Dns icon lines up
+        // with them; full width centres it in their shared 35dp slot.
         GalleryIconColumn(NotificationIconModifier) { iconAlignment ->
             Icon(
                 symbol = MaterialSymbols.Dns,

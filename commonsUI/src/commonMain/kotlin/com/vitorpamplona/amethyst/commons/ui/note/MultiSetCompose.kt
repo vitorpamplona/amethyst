@@ -484,9 +484,10 @@ fun RenderNutzapGallery(
         }
 
     Row(Modifier.fillMaxWidth()) {
-        // Reuse the reaction galleries' icon column (55dp wide with a 5dp end
-        // inset) so the cashu glyph lines up with the like/boost icons above
-        // it, instead of sitting flush-right like the lightning ZappedIcon.
+        // Indented, reuse the reaction galleries' icon column (55dp wide with a
+        // 5dp end inset) so the cashu glyph lines up with the like/boost icons
+        // above it, instead of sitting flush-right like the lightning ZappedIcon.
+        // Full width centres every gallery's icon in the same 35dp slot.
         GalleryIconColumn(NotificationIconModifier) { iconAlignment ->
             Icon(
                 imageVector = CustomHashTagIcons.Cashu,
