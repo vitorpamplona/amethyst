@@ -63,6 +63,13 @@ class ExoPlayerBuilder(
                         .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
                         .setAudioProcessors(arrayOf(TeeAudioProcessor(sink)))
                         .build()
+            }.apply {
+                // Try the next decoder when the first one fails to start: the warm pool holds
+                // several players at once, the hardware has only so many decoder instances, and a
+                // hardware decoder can reject a stream it claimed to support. Without this an HEVC
+                // or H.264 video errors out even though Android's software decoder
+                // (c2.android.hevc.decoder, c2.android.avc.decoder) is next in the list.
+                setEnableDecoderFallback(true)
             }
 
         return ExoPlayer
