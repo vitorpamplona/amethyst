@@ -22,14 +22,22 @@ package com.vitorpamplona.amethyst.commons.ui.cartridges
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.cartridges.CartPlayerViewModel
 import com.vitorpamplona.amethyst.commons.cartridges.cartSaveStore
@@ -39,6 +47,8 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cart_button_o_description
 import com.vitorpamplona.amethyst.commons.resources.cart_button_x_description
 import com.vitorpamplona.amethyst.commons.resources.cart_could_not_load
+import com.vitorpamplona.amethyst.commons.resources.cart_different_file_not_a_cart
+import com.vitorpamplona.amethyst.commons.resources.cart_different_file_playing
 import com.vitorpamplona.amethyst.commons.resources.cart_dpad_description
 import com.vitorpamplona.amethyst.commons.resources.cart_game_ended
 import com.vitorpamplona.amethyst.commons.resources.cart_game_error
@@ -95,6 +105,7 @@ fun CartPlayer(
     // Made again when it was let go to keep only the latest few games in memory.
     val player = remember(viewModel) { viewModel.player() }
     PlatformBackHandler(onBack = { if (!player.openPauseMenu()) onClose() })
+    val differentFile by viewModel.differentFile.collectAsState()
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
         CartWindowMode(fullScreen = maxWidth > maxHeight)
@@ -102,7 +113,7 @@ fun CartPlayer(
         KikoGame(
             player = player,
             modifier = Modifier.fillMaxSize().safeDrawingPadding(),
-            labels = rememberCartLabels(),
+            labels = rememberCartLabels(differentFile?.takeIf { !it.playable }?.host),
             onExit = onClose,
         )
 
@@ -112,14 +123,52 @@ fun CartPlayer(
         IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd).safeDrawingPadding()) {
             Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.close), tint = Color.White)
         }
+
+        differentFile?.takeIf { it.playable }?.let {
+            DifferentFileWarning(
+                host = it.host,
+                onDismiss = viewModel::dismissDifferentFile,
+                // Under the pause and close buttons, clear of the touch controls at the bottom.
+                modifier = Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(start = 12.dp, end = 12.dp, top = 52.dp),
+            )
+        }
     }
 }
 
-/** The player's words in the app's language. */
+/** Says the server's file is not the one the post recorded, over the game it still plays. */
 @Composable
-private fun rememberCartLabels(): KikoLabels {
+private fun DifferentFileWarning(
+    host: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.background(Color.Black.copy(alpha = 0.8f), RoundedCornerShape(12.dp)).padding(start = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringRes(Res.string.cart_different_file_playing, host),
+            color = Color.White,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.weight(1f, fill = false).padding(vertical = 8.dp),
+        )
+        IconButton(onClick = onDismiss) {
+            Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.close), tint = Color.White)
+        }
+    }
+}
+
+/** The player's words in the app's language; [differentFileHost] explains a refused file. */
+@Composable
+private fun rememberCartLabels(differentFileHost: String?): KikoLabels {
     val loading = stringRes(Res.string.cart_loading)
-    val noCart = stringRes(Res.string.cart_could_not_load)
+    // The download worked, but the server's file is not the recorded one and is not a game.
+    val noCart =
+        if (differentFileHost != null) {
+            stringRes(Res.string.cart_different_file_not_a_cart, differentFileHost)
+        } else {
+            stringRes(Res.string.cart_could_not_load)
+        }
     val notACart = stringRes(Res.string.cart_not_a_cart)
     val ended = stringRes(Res.string.cart_game_ended)
     val error = stringRes(Res.string.cart_game_error)

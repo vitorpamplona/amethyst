@@ -24,11 +24,15 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.crypto.sha2.sha256
+import com.vitorpamplona.kiko.cart.CartLoader
 import com.vitorpamplona.kiko.player.KikoPlayer
 import com.vitorpamplona.kiko.player.KikoPlayerHost
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlin.concurrent.Volatile
 
 /**
@@ -60,6 +64,20 @@ class CartPlayerViewModel(
 
     private var current: KikoPlayer? = null
 
+    private val _differentFile = MutableStateFlow<DifferentFile?>(null)
+
+    /**
+     * Set when the server sent a file other than the one the note recorded (its sha256 differs):
+     * the screen names the server, over the game when it still loads as a cart, or in place of the
+     * download error when it does not.
+     */
+    val differentFile: StateFlow<DifferentFile?> = _differentFile.asStateFlow()
+
+    /** The user read the warning. */
+    fun dismissDifferentFile() {
+        _differentFile.value = null
+    }
+
     /**
      * The player of this cart, made again if it was let go while the dialog was closed (see
      * [LivePlayers]). Main thread only.
@@ -79,9 +97,17 @@ class CartPlayerViewModel(
     private suspend fun download(): ByteArray? {
         val bytes = httpClients.fetchMedia(url, MAX_CART_BYTES) ?: return null
         val hash = sha256(bytes).toHexKey()
-        if (expectedSha256 != null && !hash.equals(expectedSha256, ignoreCase = true)) {
-            Log.w(TAG) { "The cart at $url does not match its hash" }
-            return null
+        when (CartIntegrity.of(hash, expectedSha256) { CartLoader.isCart(bytes) }) {
+            CartIntegrity.VERIFIED, CartIntegrity.UNRECORDED -> {}
+            CartIntegrity.DIFFERENT_CART -> {
+                Log.w(TAG) { "The cart at $url does not match its hash (expected $expectedSha256, got $hash, ${bytes.size} bytes); playing it with a warning" }
+                _differentFile.value = DifferentFile(hostOf(url), playable = true)
+            }
+            CartIntegrity.DIFFERENT_FILE -> {
+                Log.w(TAG) { "The file at $url does not match its hash (expected $expectedSha256, got $hash) and is not a cart" }
+                _differentFile.value = DifferentFile(hostOf(url), playable = false)
+                return null
+            }
         }
         cartHash = hash
         return bytes
@@ -93,6 +119,14 @@ class CartPlayerViewModel(
     }
 
     companion object {
+        /** The host of [url], to name the server in the warning. */
+        fun hostOf(url: String): String =
+            url
+                .substringAfter("://")
+                .substringBefore('/')
+                .substringBefore('?')
+                .substringAfterLast('@')
+
         /** A cart PNG is tens of KiB; anything far past that is not one. */
         private const val MAX_CART_BYTES = 1 shl 20
 
@@ -108,6 +142,12 @@ class CartPlayerViewModel(
         private const val TAG = "CartPlayer"
     }
 }
+
+/** A file from [host] that is not the one the note recorded; [playable] when it still loads as a cart. */
+data class DifferentFile(
+    val host: String,
+    val playable: Boolean,
+)
 
 /**
  * The [max] most recently used of something that holds a lot, by use: [touch] marks one used and lets
