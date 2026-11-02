@@ -66,12 +66,14 @@ class CartLinks(
     // as two pairs. Sorted, so listing the same carts in another order is the same game.
     private fun extraPairs(): String =
         extras
-            .flatMap { cart -> cart.names.map { name -> "${name.length}:$name ${cart.sha256}" } }
+            .flatMap { cart -> cart.names.map { name -> "${lengthPrefixed(name)} ${cart.sha256}" } }
             .sorted()
             .joinToString("\n")
 
     /** Sets these links apart from another note's for the same entry cart, which may reach other carts. */
-    fun fingerprint(): String = ownNames.sorted().joinToString("\n", postfix = "\n") + extraPairs()
+    fun fingerprint(): String = ownNames.map(::lengthPrefixed).sorted().joinToString("\n", postfix = "\n") + extraPairs()
+
+    private fun lengthPrefixed(name: String) = "${name.length}:$name"
 
     /**
      * What the game's saves are kept under (see [CartSaveStore]), given the hash of the entry cart it

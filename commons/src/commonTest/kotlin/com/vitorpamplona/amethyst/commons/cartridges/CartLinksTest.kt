@@ -248,6 +248,23 @@ class CartLinksTest {
     }
 
     @Test
+    fun anOwnNameCannotImitateTwoOwnNames() {
+        val two = CartLinks(listOf("a", "b"), emptyList())
+        val one = CartLinks(listOf("a\nb"), emptyList())
+
+        assertNotEquals(two.fingerprint(), one.fingerprint())
+    }
+
+    @Test
+    fun anOwnNameCannotImitateAnExtraCart() {
+        val extra = ExtraCart(listOf("b"), listOf(main), mainX)
+        val honest = CartLinks(listOf("a"), listOf(extra))
+        val forged = CartLinks(listOf("a", "1:b $mainX"), emptyList())
+
+        assertNotEquals(honest.fingerprint(), forged.fingerprint())
+    }
+
+    @Test
     fun theOrderOfItsOwnNamesDoesNotChangeTheFingerprint() {
         val second = imeta(front, "cart #b", "cart #a")
         val first = imeta(front, "cart #a", "cart #b")

@@ -83,7 +83,8 @@ fun CartPlayOverlay(
         val links = remember(content) { content.cartImetas?.let { CartLinks.forEntry(content.url, it) } }
         CartPlayerDialog(
             url = httpUrl,
-            sha256 = content.hash ?: blossom?.sha256,
+            // A blossom URI is its file's address, so it beats whatever hash the imeta claims.
+            sha256 = blossom?.sha256 ?: content.hash,
             links = links,
             accountViewModel = accountViewModel,
             onDismiss = { playing = false },
