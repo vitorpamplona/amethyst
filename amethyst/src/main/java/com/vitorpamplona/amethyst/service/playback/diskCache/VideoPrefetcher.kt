@@ -226,7 +226,7 @@ private class ContentLengthRecorder(
         dataSpec: DataSpec,
         isNetwork: Boolean,
     ) {
-        val length = fileLength(source.responseHeaders)
+        val length = fileLength(source.responseHeaders, dataSpec.length)
         if (length == C.LENGTH_UNSET.toLong()) return
         try {
             cache.applyContentMetadataMutations(key, ContentMetadataMutations.setContentLength(ContentMetadataMutations(), length))
@@ -235,10 +235,18 @@ private class ContentLengthRecorder(
         }
     }
 
-    private fun fileLength(headers: Map<String, List<String>>): Long {
+    private fun fileLength(
+        headers: Map<String, List<String>>,
+        requested: Long,
+    ): Long {
         val contentRange = headers["Content-Range"]?.firstOrNull()
-        // A server that ignored the range sends the whole file, and its Content-Length is the file's.
-        return if (contentRange != null) HttpUtil.getDocumentSize(contentRange) else HttpUtil.getContentLength(headers["Content-Length"]?.firstOrNull(), null)
+        if (contentRange != null) return HttpUtil.getDocumentSize(contentRange)
+
+        // More than was asked for can only be the whole file, from a server that ignored the range.
+        // Anything else may be a slice from one that left Content-Range out, and a slice stored as
+        // the length would end the video there, so it is better left unknown.
+        val contentLength = HttpUtil.getContentLength(headers["Content-Length"]?.firstOrNull(), null)
+        return if (contentLength > requested) contentLength else C.LENGTH_UNSET.toLong()
     }
 
     override fun onTransferInitializing(

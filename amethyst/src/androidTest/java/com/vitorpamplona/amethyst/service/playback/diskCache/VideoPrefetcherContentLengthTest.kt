@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.playback.diskCache
 
 import android.content.Context
 import androidx.annotation.OptIn
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
@@ -84,9 +85,30 @@ class VideoPrefetcherContentLengthTest {
     @Test
     fun theLengthIsKnownWhenTheServerIgnoresTheRangeRequest() = assertPlayableAfterPrefetch(hostServing(honoursRange = false))
 
-    // Prefetches the head, then does what the player does with it: the player's cache route, an open
-    // with no length, then sniffing the stream at whatever length that open reported.
+    // A wrong length is worse than none: stored, it would end the video at the slice for as long as
+    // the head stays cached.
+    @Test
+    fun aSliceWithNoContentRangeIsNotTakenForTheWholeFile() {
+        val server = hostServing(honoursRange = true, sendsContentRange = false)
+
+        prefetchHead(server)
+
+        openLikeThePlayer(server) { _, length -> assertEquals(C.LENGTH_UNSET.toLong(), length) }
+    }
+
     private fun assertPlayableAfterPrefetch(server: DataSource.Factory) {
+        prefetchHead(server)
+
+        openLikeThePlayer(server) { source, length ->
+            assertEquals(video.size.toLong(), length)
+            assertTrue(
+                "the mp4 extractor must accept the stream",
+                Mp4Extractor(SubtitleParser.Factory.UNSUPPORTED).sniff(DefaultExtractorInput(source, 0, length)),
+            )
+        }
+    }
+
+    private fun prefetchHead(server: DataSource.Factory) {
         VideoPrefetcher({ videoCache }, { server }, scope).prefetch(this, listOf(VideoPrefetcher.Video(URL, useProxy = false)))
 
         runBlocking {
@@ -96,21 +118,25 @@ class VideoPrefetcherContentLengthTest {
                 }
             }
         }
+    }
 
+    // The player's cache route and an open with no length, which reports what the cache knows.
+    private fun openLikeThePlayer(
+        server: DataSource.Factory,
+        check: (DataSource, Long) -> Unit,
+    ) {
         val source = videoCache.get(server).createDataSource()
         try {
-            val length = source.open(DataSpec.Builder().setUri(URL).build())
-            assertEquals(video.size.toLong(), length)
-            assertTrue(
-                "the mp4 extractor must accept the stream",
-                Mp4Extractor(SubtitleParser.Factory.UNSUPPORTED).sniff(DefaultExtractorInput(source, 0, length)),
-            )
+            check(source, source.open(DataSpec.Builder().setUri(URL).build()))
         } finally {
             source.close()
         }
     }
 
-    private fun hostServing(honoursRange: Boolean): DataSource.Factory =
+    private fun hostServing(
+        honoursRange: Boolean,
+        sendsContentRange: Boolean = true,
+    ): DataSource.Factory =
         OkHttpDataSource.Factory(
             OkHttpClient
                 .Builder()
@@ -131,7 +157,7 @@ class VideoPrefetcherContentLengthTest {
                         .code(if (range != null) 206 else 200)
                         .message("")
                         .header("Content-Length", bytes.size.toString())
-                        .apply { if (range != null) header("Content-Range", "bytes $start-$end/${video.size}") }
+                        .apply { if (range != null && sendsContentRange) header("Content-Range", "bytes $start-$end/${video.size}") }
                         .body(bytes.toResponseBody("video/mp4".toMediaType()))
                         .build()
                 }.build(),
