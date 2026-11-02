@@ -255,8 +255,9 @@ open class BlossomClient(
      *
      * A refusal that names some other blob is not that: nostr.download refuses an image it finds
      * perceptually identical to one it holds (409 with `X-Identical-Media` naming that blob), which
-     * is different bytes under a different hash. That stays a failure, and the caller moves on to its
-     * next server.
+     * is different bytes under a different hash. That is not this upload: it fails as a
+     * [BlossomIdenticalMediaException], and the uploaders link to that copy when it checks out
+     * (it hashes to its name and has this picture's size), or move on to their next server.
      *
      * Only for an upload stored as sent (BUD-02 `/upload`): a BUD-05 `/media` upload may be
      * transformed, so the original hash says nothing about what the server would have kept.
@@ -409,6 +410,9 @@ open class BlossomClient(
         serverBaseUrl: String,
     ): BlossomUploadResult {
         check402(response, serverBaseUrl)
+        BlossomIdenticalMediaException.existingHashOf(response.code, response.headers[BlossomIdenticalMediaException.IDENTICAL_MEDIA_HEADER])?.let {
+            throw BlossomIdenticalMediaException(serverBaseUrl, it, response.headers[BlossomServerUrl.REASON_HEADER])
+        }
         if (!response.isSuccessful) {
             val reason = response.headers[BlossomServerUrl.REASON_HEADER] ?: response.code.toString()
             throw RuntimeException("Request failed ($serverBaseUrl): $reason")
@@ -449,6 +453,21 @@ open class BlossomClient(
             size: Long,
             contentType: String?,
             serverBaseUrl: String,
-        ) = BlossomUploadResult(url = BlossomServerUrl.blob(serverBaseUrl, hash), sha256 = hash, size = size, type = contentType)
+            extension: String = "",
+        ) = BlossomUploadResult(url = BlossomServerUrl.blob(serverBaseUrl, hash, extension), sha256 = hash, size = size, type = contentType)
+
+        /**
+         * The file extension a blob URL carries for [contentType] (`image/jpeg` -> `jpg`), or "" for
+         * other types. Clients that tell images from links by the URL's ending need one.
+         */
+        fun extensionFor(contentType: String?): String =
+            when (contentType?.substringBefore(';')?.trim()?.lowercase()) {
+                "image/jpeg", "image/jpg" -> "jpg"
+                "image/png" -> "png"
+                "image/gif" -> "gif"
+                "image/webp" -> "webp"
+                "image/avif" -> "avif"
+                else -> ""
+            }
     }
 }

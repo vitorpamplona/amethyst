@@ -35,4 +35,14 @@ sealed interface UploadNotice : UserNotice {
 
     /** The encode came out no smaller than the source, so the original (remuxed) is uploaded instead. */
     data object CompressionNotSmaller : UploadNotice
+
+    /**
+     * The chosen server ([chosenServer]) refused the upload, so it went to [usedServer], the next
+     * one in the list, and the note links there. [reason] is the chosen server's answer.
+     */
+    data class UploadedToAnotherServer(
+        val chosenServer: String,
+        val usedServer: String,
+        val reason: String?,
+    ) : UploadNotice
 }

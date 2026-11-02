@@ -231,7 +231,7 @@ private fun CordnGroupChat(
     // From the outside that is indistinguishable from a message that was sent
     // and simply never arrived.
     var sendError by remember { mutableStateOf<String?>(null) }
-    val uploader = accountViewModel.host.mediaUploader
+    val uploader = accountViewModel.mediaUploader
     val uploadFailed = stringRes(Res.string.cordn_media_upload_failed)
     val sendFailed = stringRes(Res.string.cordn_send_failed)
     val noSession = stringRes(Res.string.cordn_send_no_session)

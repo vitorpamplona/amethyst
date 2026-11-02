@@ -126,7 +126,7 @@ private fun EmojiPackMetadataScaffold(
 
     val onSubmit: () -> Unit = {
         viewModel.submit(
-            uploader = accountViewModel.host.mediaUploader,
+            uploader = accountViewModel.mediaUploader,
             onSuccess = { nav.popBack() },
             onError = accountViewModel.toastManager::toast,
         )

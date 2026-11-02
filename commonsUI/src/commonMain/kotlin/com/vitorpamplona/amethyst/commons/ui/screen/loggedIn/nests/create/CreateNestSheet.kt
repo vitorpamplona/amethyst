@@ -177,7 +177,7 @@ fun CreateNestSheet(
                     ) { media ->
                         viewModel.uploadForImage(
                             uri = media,
-                            uploader = accountViewModel.host.mediaUploader,
+                            uploader = accountViewModel.mediaUploader,
                             onError = accountViewModel.toastManager::toast,
                         )
                     }

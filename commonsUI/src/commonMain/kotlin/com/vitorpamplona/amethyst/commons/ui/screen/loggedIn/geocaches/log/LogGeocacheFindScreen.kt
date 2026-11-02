@@ -139,7 +139,7 @@ fun LogGeocacheFindScreen(
         GallerySelectSingle(imagesOnly = true) { media ->
             pickingPhoto = false
             if (media != null) {
-                scope.launch { model.uploadImage(media.uri, media.mimeType, accountViewModel.host.mediaUploader) }
+                scope.launch { model.uploadImage(media.uri, media.mimeType, accountViewModel.mediaUploader) }
             }
         }
     }

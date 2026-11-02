@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.resources.failed_to_delete_with_messag
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_to_server_with_message
 import com.vitorpamplona.amethyst.commons.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomIdenticalMediaException
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.commons.service.upload.ReopenableStreamBody
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
@@ -189,6 +190,8 @@ class BlossomUploader {
 
         return client.newCall(request).executeAsync().use { response ->
             withContext(Dispatchers.IO) {
+                // nostr.download refuses an image it finds identical to one it holds, naming that blob.
+                val identicalTo = BlossomIdenticalMediaException.existingHashOf(response.code, response.headers[BlossomIdenticalMediaException.IDENTICAL_MEDIA_HEADER])
                 if (response.isSuccessful) {
                     response.body.use { body ->
                         convertToMediaResult(parseResults(body.string()))
@@ -196,8 +199,11 @@ class BlossomUploader {
                 } else if (!useMediaEndpoint && BlossomClient(client).has(hash, serverBaseUrl)) {
                     // A server may refuse an upload of a blob it already holds instead of answering with
                     // its descriptor. A blob under this exact hash is these bytes, so it is uploaded. (A
-                    // refusal naming a perceptually identical, different blob is not; see uploadOrHeld.)
+                    // refusal naming a perceptually identical, different blob is not; see BlossomIdenticalMediaException.)
                     convertToMediaResult(BlossomClient.heldDescriptor(hash, length, contentType, serverBaseUrl))
+                } else if (identicalTo != null) {
+                    // A different blob under another hash: the caller decides whether to use that copy.
+                    throw BlossomIdenticalMediaException(serverBaseUrl, identicalTo, response.headers[BlossomServerUrl.REASON_HEADER])
                 } else if (response.code == 402) {
                     // BUD-07: paid server. Surface the payment challenge so the caller can
                     // tell the user (auto-settlement via the NIP-60 wallet is a follow-up).

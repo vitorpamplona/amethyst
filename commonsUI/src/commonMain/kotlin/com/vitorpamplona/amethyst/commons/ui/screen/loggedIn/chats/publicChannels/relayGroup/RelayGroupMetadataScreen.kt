@@ -245,7 +245,7 @@ private fun RelayGroupMetadataScaffold(
 
     val onSubmit: () -> Unit = {
         viewModel.submit(
-            uploader = accountViewModel.host.mediaUploader,
+            uploader = accountViewModel.mediaUploader,
             onSuccess = onSuccess,
             onError = accountViewModel.toastManager::toast,
         )

@@ -421,7 +421,7 @@ private fun MarmotGroupFileUploadDialog(
                             longNotice.show("$title: $message")
                         }
                     },
-                    uploader = accountViewModel.host.mediaUploader,
+                    uploader = accountViewModel.mediaUploader,
                     onceUploaded = { uploads ->
                         MarmotFileSender(nostrGroupId, key.epoch, accountViewModel).send(uploads)
                         onUpload()

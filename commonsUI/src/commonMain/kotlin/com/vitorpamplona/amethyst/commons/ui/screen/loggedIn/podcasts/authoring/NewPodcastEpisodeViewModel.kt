@@ -213,7 +213,7 @@ class NewPodcastEpisodeViewModel : ViewModel() {
                 server = server,
                 quality = CompressorQuality.fromSlider(mediaQualitySlider.value),
                 stripMetadata = stripMetadata.value,
-                uploader = accountViewModel.host.mediaUploader,
+                uploader = accountViewModel.mediaUploader,
             )
 
         isSending.value = true

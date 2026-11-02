@@ -1626,7 +1626,7 @@ open class ShortNotePostViewModel :
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val signer = if (wantsAnonymousPost) anonymousSigner() else null
-            uploadDrawingIntoText(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message, urlPreviews, signer)
+            uploadDrawingIntoText(drawing, alt, account, accountViewModel.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message, urlPreviews, signer)
         }
     }
 
@@ -1774,7 +1774,7 @@ open class ShortNotePostViewModel :
         val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
+            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
         emojiTarget.replaceCurrentWord(wordToInsert)
@@ -1890,7 +1890,7 @@ open class ShortNotePostViewModel :
                     compressionQuality = CompressorQuality.UNCOMPRESSED,
                     server = server,
                     account = account,
-                    uploader = accountViewModel.host.mediaUploader,
+                    uploader = accountViewModel.mediaUploader,
                     useH265 = false,
                     forcedSigner = if (wantsAnonymousPost) anonymousSigner() else null,
                 )

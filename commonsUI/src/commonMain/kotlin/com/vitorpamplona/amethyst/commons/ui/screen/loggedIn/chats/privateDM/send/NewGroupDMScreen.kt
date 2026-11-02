@@ -295,7 +295,7 @@ fun GroupDMScreenContent(
                             onAdd = { _, server, _, _, _, _, _ ->
                                 postViewModel.uploadAndHold(
                                     accountViewModel.toastManager::toast,
-                                    accountViewModel.host.mediaUploader,
+                                    accountViewModel.mediaUploader,
                                     onceUploaded = { },
                                 )
                                 accountViewModel.account.settings.changeDefaultFileServer(server)

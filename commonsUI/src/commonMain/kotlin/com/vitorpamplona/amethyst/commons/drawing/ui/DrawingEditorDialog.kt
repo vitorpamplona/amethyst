@@ -148,7 +148,7 @@ fun DrawingButton(
 ) {
     val pubKey = accountViewModel.account.pubKey
     DrawingButton(
-        readMedia = accountViewModel.host.mediaUploader::readBytes,
+        readMedia = accountViewModel.mediaUploader::readBytes,
         backgrounds = remember(pubKey) { accountViewModel.host.drawingBackgroundsDir?.let { DrawingBackgroundStore(it / pubKey) } },
         enabled = enabled,
         onDrawing = onDrawing,

@@ -120,7 +120,7 @@ fun NewMediaView(
                         onClose()
                     },
                     onPost = {
-                        postViewModel.upload(accountViewModel.host.mediaUploader, accountViewModel, onClose, accountViewModel.toastManager::toast)
+                        postViewModel.upload(accountViewModel.mediaUploader, accountViewModel, onClose, accountViewModel.toastManager::toast)
                         postViewModel.selectedServer?.let {
                             account.settings.changeDefaultFileServer(it)
                         }
@@ -250,11 +250,11 @@ fun ImageVideoPost(
         position = postViewModel.mediaQualitySlider,
         onPositionChange = { postViewModel.mediaQualitySlider = it },
         media = postViewModel.multiOrchestrator,
-        uploader = accountViewModel.host.mediaUploader,
+        uploader = accountViewModel.mediaUploader,
     )
 
     // The H.265 switch only where the platform will compress the video; a hint where it needs ffmpeg.
-    val controls = VideoUploadControls(postViewModel.multiOrchestrator, accountViewModel.host.mediaUploader.videoCompression, postViewModel.mediaQualitySlider)
+    val controls = VideoUploadControls(postViewModel.multiOrchestrator, accountViewModel.mediaUploader.videoCompression, postViewModel.mediaQualitySlider)
     VideoCompressionNeedsFfmpegHint(controls)
     if (controls.videoWillBeCompressed) {
         SettingSwitchItem(
@@ -267,7 +267,7 @@ fun ImageVideoPost(
             checked = postViewModel.useH265Codec,
             onCheckedChange = { postViewModel.useH265Codec = it },
         )
-        VideoHdrHint(postViewModel.multiOrchestrator, accountViewModel.host.mediaUploader, postViewModel.useH265Codec)
+        VideoHdrHint(postViewModel.multiOrchestrator, accountViewModel.mediaUploader, postViewModel.useH265Codec)
     }
 
     SettingSwitchItem(

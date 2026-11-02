@@ -680,7 +680,7 @@ private fun ConcordFileUploadDialog(
                     onEncryptedUploadError = { title, message ->
                         scope.launch(Dispatchers.Main) { longNotice.show("$title: $message") }
                     },
-                    uploader = accountViewModel.host.mediaUploader,
+                    uploader = accountViewModel.mediaUploader,
                     onceUploaded = { uploads ->
                         accountViewModel.reportSignerErrors {
                             val imetas = uploads.mapNotNull { it.toConcordImeta() }

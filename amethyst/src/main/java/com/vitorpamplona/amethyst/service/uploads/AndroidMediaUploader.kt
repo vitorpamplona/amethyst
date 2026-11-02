@@ -31,8 +31,10 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.mediaServers.blossomUploadOrder
+import com.vitorpamplona.amethyst.commons.notices.UploadNotice
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomIdenticalMediaException
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
@@ -66,6 +68,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import java.io.File
 import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
@@ -197,6 +201,41 @@ class AndroidMediaUploader(
             }
         }
 
+        /** The pixel size of the image at [url], read from its header only, or null when it can't be read. */
+        private suspend fun servedDimensions(
+            url: String,
+            okHttpClient: (String) -> OkHttpClient,
+        ): Pair<Int, Int>? =
+            try {
+                val request =
+                    Request
+                        .Builder()
+                        .url(url)
+                        .get()
+                        .build()
+                okHttpClient(url).newCall(request).executeAsync().use { response ->
+                    withContext(Dispatchers.IO) {
+                        if (!response.isSuccessful) return@withContext null
+                        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        response.body.byteStream().use { BitmapFactory.decodeStream(it, null, bounds) }
+                        if (bounds.outWidth > 0 && bounds.outHeight > 0) bounds.outWidth to bounds.outHeight else null
+                    }
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("UploadOrchestrator", "Could not read the size of $url", e)
+                null
+            }
+
+        /** [state] with [notice] added to its result, set as the progress state. */
+        private fun withNotice(
+            state: UploadingState.Finished,
+            notice: UploadNotice,
+        ): UploadingFinalState {
+            val result = state.result as? UploadOrchestrator.OrchestratorResult.ServerResult ?: return state
+            return finish(result.withNotice(notice))
+        }
+
         /**
          * Tries [selected], then the rest of the servers the picker offered (see
          * [blossomUploadOrder]) until one stores the blob. Every server gets the same blob, so they
@@ -216,7 +255,17 @@ class AndroidMediaUploader(
             var firstError: UploadingState.Error? = null
             for (server in order) {
                 when (val result = uploadTo(server.baseUrl, shared)) {
-                    is UploadingState.Finished -> return result
+                    is UploadingState.Finished -> {
+                        val refused = firstError ?: return result
+                        // Not the server the user picked: say where it went, and why.
+                        val notice =
+                            UploadNotice.UploadedToAnotherServer(
+                                chosenServer = BlossomServerUrl.domain(selected.baseUrl),
+                                usedServer = BlossomServerUrl.domain(server.baseUrl),
+                                reason = refused.params.firstOrNull()?.toString(),
+                            )
+                        return withNotice(result, notice)
+                    }
                     is UploadingState.Error -> {
                         if (firstError == null) firstError = result
                         if (shared.signerFailed) return result.also { updateState(0.0, it) }
@@ -300,48 +349,60 @@ class AndroidMediaUploader(
             val useMedia = !buzzWorkspace && forcedSigner == null && account.settings.optimizeMediaOnUpload.value
             return try {
                 val blob = shared.blob { BlossomUploader().prepare(fileUri, contentType, context) }
+                // Set when the server already held an identical image and refused this one.
+                var identicalCopy: BlossomIdenticalMediaException? = null
                 val result =
-                    BlossomUploader()
-                        .upload(
-                            uri = fileUri,
-                            contentType = contentType,
-                            alt = alt,
-                            sensitiveContent = contentWarningReason,
-                            serverBaseUrl = serverBaseUrl,
-                            okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                            // Use a t=media token when optimizing via /media, otherwise a plain
-                            // t=upload token. Tokens are intentionally NOT server-scoped on the
-                            // upload path: some servers reject an upload whose auth carries a
-                            // `server` tag, and upload-token replay is not the threat scoping
-                            // guards against (delete tokens are — those stay scoped).
-                            httpAuth = { hash, size, alt ->
-                                shared.get {
-                                    when {
-                                        // Buzz's strict mode demands exactly one `server` tag naming the
-                                        // workspace and a token that expires within 60s of signing.
-                                        buzzWorkspace -> {
-                                            val now = TimeUtils.now()
-                                            BlossomAuthorizationEvent.createUploadAuth(
-                                                hash = hash,
-                                                size = size,
-                                                alt = alt,
-                                                signer = forcedSigner ?: account.signer,
-                                                servers = listOf(serverBaseUrl),
-                                                createdAt = now,
-                                                expiration = now + BUZZ_UPLOAD_TOKEN_SECS,
-                                            )
+                    try {
+                        BlossomUploader()
+                            .upload(
+                                uri = fileUri,
+                                contentType = contentType,
+                                alt = alt,
+                                sensitiveContent = contentWarningReason,
+                                serverBaseUrl = serverBaseUrl,
+                                okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                                // Use a t=media token when optimizing via /media, otherwise a plain
+                                // t=upload token. Tokens are intentionally NOT server-scoped on the
+                                // upload path: some servers reject an upload whose auth carries a
+                                // `server` tag, and upload-token replay is not the threat scoping
+                                // guards against (delete tokens are — those stay scoped).
+                                httpAuth = { hash, size, alt ->
+                                    shared.get {
+                                        when {
+                                            // Buzz's strict mode demands exactly one `server` tag naming the
+                                            // workspace and a token that expires within 60s of signing.
+                                            buzzWorkspace -> {
+                                                val now = TimeUtils.now()
+                                                BlossomAuthorizationEvent.createUploadAuth(
+                                                    hash = hash,
+                                                    size = size,
+                                                    alt = alt,
+                                                    signer = forcedSigner ?: account.signer,
+                                                    servers = listOf(serverBaseUrl),
+                                                    createdAt = now,
+                                                    expiration = now + BUZZ_UPLOAD_TOKEN_SECS,
+                                                )
+                                            }
+                                            forcedSigner != null -> BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, forcedSigner)
+                                            useMedia -> account.createBlossomMediaAuth(hash, size, alt)
+                                            else -> account.createBlossomUploadAuth(hash, size, alt)
                                         }
-                                        forcedSigner != null -> BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, forcedSigner)
-                                        useMedia -> account.createBlossomMediaAuth(hash, size, alt)
-                                        else -> account.createBlossomUploadAuth(hash, size, alt)
                                     }
-                                }
-                            },
-                            context = context,
-                            useMediaEndpoint = useMedia,
-                            onProgress = uploadProgress(from = 0.2, to = 0.6),
-                            prepared = blob,
-                        )
+                                },
+                                context = context,
+                                useMediaEndpoint = useMedia,
+                                onProgress = uploadProgress(from = 0.2, to = 0.6),
+                                prepared = blob,
+                            )
+                    } catch (e: BlossomIdenticalMediaException) {
+                        // nostr.download keeps one copy of a picture: it refuses this file because it
+                        // holds one it finds identical, and names it. Link to that copy rather than
+                        // move to a server the user did not pick; verifyHeader downloads it and checks
+                        // it hashes to the name. A workspace or a /media upload never takes this path.
+                        if (buzzWorkspace || useMedia) throw e
+                        identicalCopy = e
+                        BlossomUploader().convertToMediaResult(BlossomClient.heldDescriptor(e.existingHash, blob.size, contentType, serverBaseUrl, BlossomClient.extensionFor(contentType))).mergeLocalMetadata(blob.localMetadata)
+                    }
 
                 val finalState =
                     if (buzzWorkspace) {
@@ -365,6 +426,19 @@ class AndroidMediaUploader(
                             sent = blob.takeIf { !useMedia && result.sha256.equals(it.hash, ignoreCase = true) },
                         )
                     }
+
+                // The server's word is all that makes its copy this picture: one of another size is not.
+                val copyDim = identicalCopy?.let { servedDimensions(BlossomServerUrl.blob(serverBaseUrl, it.existingHash), Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads) }
+                val localDim = blob.localMetadata?.dim
+                if (identicalCopy != null && finalState is UploadingState.Finished && copyDim != null && localDim != null && copyDim != localDim.width to localDim.height) {
+                    Log.w("UploadOrchestrator") { "$serverBaseUrl's identical copy is ${copyDim.first}x${copyDim.second}, not ${localDim.width}x${localDim.height}" }
+                    return UploadingState.Error(UploadError.FAILED_TO_UPLOAD_MEDIA, arrayOf(identicalCopy.message ?: serverBaseUrl))
+                }
+
+                // Nothing to tell the user: the picture they chose is on the server they chose.
+                if (identicalCopy != null && finalState is UploadingState.Finished) {
+                    Log.d("UploadOrchestrator") { "$serverBaseUrl refused the upload as identical to ${identicalCopy.existingHash}; using that copy" }
+                }
 
                 // BUD-04: replicate the blob to the user's other Blossom servers for redundancy.
                 // Fire-and-forget on the account scope AFTER the upload is finished: mirroring is

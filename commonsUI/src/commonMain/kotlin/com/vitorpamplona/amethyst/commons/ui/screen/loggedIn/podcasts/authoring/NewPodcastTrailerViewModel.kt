@@ -129,7 +129,7 @@ class NewPodcastTrailerViewModel : ViewModel() {
                             quality = quality,
                             stripMetadata = strip,
                             alt = titleSnap.ifBlank { null },
-                            uploader = accountViewModel.host.mediaUploader,
+                            uploader = accountViewModel.mediaUploader,
                             onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                         )
                     } else {

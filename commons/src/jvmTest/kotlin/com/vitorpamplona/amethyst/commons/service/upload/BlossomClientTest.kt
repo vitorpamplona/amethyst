@@ -306,6 +306,48 @@ class BlossomClientTest {
         }
 
     @Test
+    fun aRefusalNamingAnIdenticalImageSaysWhichBlobItHolds() =
+        runTest {
+            // nostr.download's answer to an image it finds identical to one it holds (measured
+            // 2026-11-02): 409, the blob's hash in X-Identical-Media, and an explanation.
+            val held = "fcc2aec695955038879372628905052cccf074142d61cc015a51027023400719"
+            val headers =
+                Headers.headersOf(
+                    "X-Identical-Media",
+                    held,
+                    "X-Reason",
+                    "An identical image already exists on this server. Use the hash above to mirror it to other servers.",
+                )
+            val client = BlossomClient(mockOkHttp(409, "", headers))
+
+            val file = File.createTempFile("test_", ".jpg")
+            file.deleteOnExit()
+            file.writeBytes(byteArrayOf(1, 2, 3))
+
+            try {
+                val ex =
+                    assertFailsWith<BlossomIdenticalMediaException> {
+                        client.upload(file = file, contentType = "image/jpeg", serverBaseUrl = "https://nostr.download", authHeader = null)
+                    }
+                assertEquals(held, ex.existingHash)
+                assertEquals("https://nostr.download", ex.server)
+                assertTrue(ex.reason!!.startsWith("An identical image"))
+            } finally {
+                file.delete()
+            }
+        }
+
+    @Test
+    fun onlyA409WithAHashIsAnIdenticalImageRefusal() {
+        val hash = "fcc2aec695955038879372628905052cccf074142d61cc015a51027023400719"
+        assertEquals(hash, BlossomIdenticalMediaException.existingHashOf(409, " ${hash.uppercase()} "))
+        assertEquals(null, BlossomIdenticalMediaException.existingHashOf(400, hash))
+        assertEquals(null, BlossomIdenticalMediaException.existingHashOf(409, null))
+        assertEquals(null, BlossomIdenticalMediaException.existingHashOf(409, "not-a-hash"))
+        assertEquals(null, BlossomIdenticalMediaException.existingHashOf(409, hash.drop(1)))
+    }
+
+    @Test
     fun uploadFailureThrowsException() =
         runTest {
             val headers = Headers.headersOf("X-Reason", "File too large")

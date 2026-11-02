@@ -287,7 +287,7 @@ fun ShareNoteAsImageScreen(
                             compressionQuality = CompressorQuality.UNCOMPRESSED,
                             server = server,
                             account = account,
-                            uploader = accountViewModel.host.mediaUploader,
+                            uploader = accountViewModel.mediaUploader,
                             stripMetadata = false,
                         )
                     }

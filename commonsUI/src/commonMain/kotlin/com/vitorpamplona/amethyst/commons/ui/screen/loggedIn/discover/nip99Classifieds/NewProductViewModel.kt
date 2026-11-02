@@ -406,7 +406,7 @@ open class NewProductViewModel :
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             // A listing's pictures have no `image` preview, so the drawing's still would be an orphan.
-            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, uploadStill = false, onError) ?: return@launch
+            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.mediaUploader, mediaUploadTracker, uploadStill = false, onError) ?: return@launch
             val header = uploaded.gif.fileHeader
             productImages = productImages +
                 ProductImageMeta(
@@ -610,7 +610,7 @@ open class NewProductViewModel :
         val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaDescription.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
+            iMetaDescription.downloadAndPrepare(item.link, accountViewModel.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
         message.replaceCurrentWord(wordToInsert)

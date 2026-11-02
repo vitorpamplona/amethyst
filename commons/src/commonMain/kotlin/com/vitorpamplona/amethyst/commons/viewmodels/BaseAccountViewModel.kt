@@ -88,6 +88,8 @@ import com.vitorpamplona.amethyst.commons.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.lnurl.LightningInvoiceResolver
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.NoticingMediaUploader
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.util.DebouncedPublisher
@@ -232,6 +234,12 @@ open class BaseAccountViewModel(
     val noticeResolver: UserNoticeResolver,
 ) : ViewModel(),
     Dao {
+    /**
+     * The platform's uploader ([AccountViewModelHost.mediaUploader]), telling this account's user
+     * when an upload went to another server than the one they picked. Screens upload through this.
+     */
+    val mediaUploader: MediaUploader by lazy { NoticingMediaUploader(host.mediaUploader, notices) }
+
     // A dead outbox relay would hold every post's banner until it times out, then flag it.
     val broadcastTracker =
         BroadcastTracker(

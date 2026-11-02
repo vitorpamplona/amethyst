@@ -248,7 +248,7 @@ private fun MarkdownPostScreenBody(
                     isUploading = postViewModel.isUploadingCoverImage,
                     accountViewModel = accountViewModel,
                     onImageSelected = {
-                        postViewModel.uploadCoverImage(it, accountViewModel.host.mediaUploader, onError = accountViewModel.toastManager::toast)
+                        postViewModel.uploadCoverImage(it, accountViewModel.mediaUploader, onError = accountViewModel.toastManager::toast)
                     },
                     onClear = {
                         postViewModel.coverImageUrl = ""
@@ -501,7 +501,7 @@ private fun MarkdownPostScreenBody(
                             accountViewModel.account.settings.defaultFileServer,
                             isUploading = postViewModel.mediaUploadTracker.isUploading,
                             onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata, convertGifToMp4 ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader, useH265, stripMetadata, convertGifToMp4)
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.mediaUploader, useH265, stripMetadata, convertGifToMp4)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,

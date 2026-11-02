@@ -119,7 +119,7 @@ fun CreateGroupScreen(
                     disappearing.seconds,
                     uploadIcon =
                         icon?.let { media ->
-                            { gid -> accountViewModel.uploadMarmotGroupIcon(gid, media.uri, media.mimeType, accountViewModel.host.mediaUploader) }
+                            { gid -> accountViewModel.uploadMarmotGroupIcon(gid, media.uri, media.mimeType, accountViewModel.mediaUploader) }
                         },
                 )
                 nav.popUpTo(Route.MarmotGroupChat(nostrGroupId), Route.CreateMarmotGroup::class)

@@ -89,7 +89,7 @@ fun PrepareLinkedImageMetadata(
     LaunchedEffect(state, attachments, accountViewModel) {
         val scope = this
         state.results.collect { urls ->
-            attachments.prepareLinkedImages(urls, scope, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder) { url ->
+            attachments.prepareLinkedImages(urls, scope, accountViewModel.mediaUploader, accountViewModel.httpClientBuilder) { url ->
                 notePlatform.previewMimeType(url, accountViewModel)
             }
         }

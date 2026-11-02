@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload
 
+import com.vitorpamplona.amethyst.commons.notices.UploadNotice
 import com.vitorpamplona.crypto.aes.AESGCM
+import com.vitorpamplona.crypto.sha2.sha256
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -299,6 +302,188 @@ class UploadOrchestratorClientTest {
                             )
                         }.exceptionOrNull()
                 assertEquals("refused by https://a.example", error?.message)
+            } finally {
+                file.delete()
+            }
+        }
+
+    private fun png(
+        size: Int,
+        rgb: Int,
+    ): ByteArray {
+        val img = java.awt.image.BufferedImage(size, size, java.awt.image.BufferedImage.TYPE_INT_RGB)
+        for (x in 0 until size) for (y in 0 until size) img.setRGB(x, y, rgb)
+        val out = java.io.ByteArrayOutputStream()
+        javax.imageio.ImageIO.write(img, "png", out)
+        return out.toByteArray()
+    }
+
+    private fun pngFile(bytes: ByteArray): File = File.createTempFile("test_", ".png").also { it.deleteOnExit() }.apply { writeBytes(bytes) }
+
+    @Test
+    fun anUploadThatFallsBackSaysWhereItWentAndWhy() =
+        runTest {
+            val mockClient = blossomMock()
+            coEvery {
+                mockClient.upload(file = any(), contentType = any(), serverBaseUrl = any(), authHeader = any())
+            } answers {
+                val server = arg<String>(2)
+                if (server.contains("a.example")) throw IllegalStateException("Payment required")
+                BlossomUploadResult(url = "$server/blob")
+            }
+            val file = pngFile(png(2, 0x112233))
+            val mockSigner = mockk<com.vitorpamplona.quartz.nip01Core.signers.NostrSigner>(relaxed = true)
+
+            try {
+                val result =
+                    UploadOrchestrator(mockClient).upload(
+                        file = file,
+                        alt = null,
+                        serverBaseUrl = "https://a.example",
+                        signer = mockSigner,
+                        stripExif = false,
+                        fallbackServerBaseUrls = listOf("https://b.example"),
+                    )
+                assertEquals("https://b.example/blob", result.blossom.url)
+                assertEquals(listOf<UploadNotice>(UploadNotice.UploadedToAnotherServer("a.example", "b.example", "Payment required")), result.notices)
+            } finally {
+                file.delete()
+            }
+        }
+
+    @Test
+    fun anUploadTheChosenServerTookSaysNothing() =
+        runTest {
+            val mockClient = blossomMock()
+            coEvery {
+                mockClient.upload(file = any(), contentType = any(), serverBaseUrl = any(), authHeader = any())
+            } answers { BlossomUploadResult(url = "${arg<String>(2)}/blob") }
+            val file = pngFile(png(2, 0x112233))
+            val mockSigner = mockk<com.vitorpamplona.quartz.nip01Core.signers.NostrSigner>(relaxed = true)
+
+            try {
+                val result =
+                    UploadOrchestrator(mockClient).upload(
+                        file = file,
+                        alt = null,
+                        serverBaseUrl = "https://a.example",
+                        signer = mockSigner,
+                        stripExif = false,
+                        fallbackServerBaseUrls = listOf("https://b.example"),
+                    )
+                assertEquals(emptyList(), result.notices)
+            } finally {
+                file.delete()
+            }
+        }
+
+    @Test
+    fun aServerHoldingAnIdenticalImageLinksToItsCopy() =
+        runTest {
+            // nostr.download refuses a picture it already holds as another file, and names it. The
+            // note links to that copy on the server the user picked, described by its own bytes.
+            val copy = png(2, 0x445566)
+            val copyHash = sha256(copy).toHexKey()
+            val mockClient = blossomMock()
+            val tried = mutableListOf<String>()
+            coEvery {
+                mockClient.upload(file = any(), contentType = any(), serverBaseUrl = any(), authHeader = any())
+            } answers {
+                val server = arg<String>(2)
+                tried += server
+                if (server.contains("nostr.download")) throw BlossomIdenticalMediaException(server, copyHash, "An identical image already exists on this server.")
+                BlossomUploadResult(url = "$server/blob")
+            }
+            coEvery { mockClient.download("https://nostr.download/$copyHash") } returns copy
+            val file = pngFile(png(2, 0x112233))
+            val mockSigner = mockk<com.vitorpamplona.quartz.nip01Core.signers.NostrSigner>(relaxed = true)
+
+            try {
+                val result =
+                    UploadOrchestrator(mockClient).upload(
+                        file = file,
+                        alt = null,
+                        serverBaseUrl = "https://nostr.download",
+                        signer = mockSigner,
+                        stripExif = false,
+                        fallbackServerBaseUrls = listOf("https://b.example"),
+                    )
+                assertEquals(listOf("https://nostr.download"), tried)
+                assertEquals("https://nostr.download/$copyHash.png", result.blossom.url)
+                assertEquals(copyHash, result.metadata.sha256)
+                assertEquals(copy.size.toLong(), result.metadata.size)
+                // The picture is on the server the user chose: nothing to tell them.
+                assertEquals(emptyList(), result.notices)
+            } finally {
+                file.delete()
+            }
+        }
+
+    @Test
+    fun anIdenticalCopyOfAnotherSizeIsNotUsed() =
+        runTest {
+            // The server's word is all that makes the copy "identical"; a copy of another size is
+            // not this picture, so the upload moves on to the next server and says so.
+            val copy = png(3, 0x445566)
+            val copyHash = sha256(copy).toHexKey()
+            val mockClient = blossomMock()
+            coEvery {
+                mockClient.upload(file = any(), contentType = any(), serverBaseUrl = any(), authHeader = any())
+            } answers {
+                val server = arg<String>(2)
+                if (server.contains("nostr.download")) throw BlossomIdenticalMediaException(server, copyHash, "identical")
+                BlossomUploadResult(url = "$server/blob")
+            }
+            coEvery { mockClient.download(any()) } returns copy
+            val file = pngFile(png(2, 0x112233))
+            val mockSigner = mockk<com.vitorpamplona.quartz.nip01Core.signers.NostrSigner>(relaxed = true)
+
+            try {
+                val result =
+                    UploadOrchestrator(mockClient).upload(
+                        file = file,
+                        alt = null,
+                        serverBaseUrl = "https://nostr.download",
+                        signer = mockSigner,
+                        stripExif = false,
+                        fallbackServerBaseUrls = listOf("https://b.example"),
+                    )
+                assertEquals("https://b.example/blob", result.blossom.url)
+                val notice = result.notices.single() as UploadNotice.UploadedToAnotherServer
+                assertEquals("nostr.download", notice.chosenServer)
+                assertEquals("b.example", notice.usedServer)
+            } finally {
+                file.delete()
+            }
+        }
+
+    @Test
+    fun anIdenticalCopyThatDoesNotHashToItsNameIsNotUsed() =
+        runTest {
+            val copy = png(2, 0x445566)
+            val mockClient = blossomMock()
+            coEvery {
+                mockClient.upload(file = any(), contentType = any(), serverBaseUrl = any(), authHeader = any())
+            } answers {
+                val server = arg<String>(2)
+                if (server.contains("nostr.download")) throw BlossomIdenticalMediaException(server, "ab".repeat(32), "identical")
+                BlossomUploadResult(url = "$server/blob")
+            }
+            coEvery { mockClient.download(any()) } returns copy
+            val file = pngFile(png(2, 0x112233))
+            val mockSigner = mockk<com.vitorpamplona.quartz.nip01Core.signers.NostrSigner>(relaxed = true)
+
+            try {
+                val result =
+                    UploadOrchestrator(mockClient).upload(
+                        file = file,
+                        alt = null,
+                        serverBaseUrl = "https://nostr.download",
+                        signer = mockSigner,
+                        stripExif = false,
+                        fallbackServerBaseUrls = listOf("https://b.example"),
+                    )
+                assertEquals("https://b.example/blob", result.blossom.url)
             } finally {
                 file.delete()
             }

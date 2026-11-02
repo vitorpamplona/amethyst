@@ -160,7 +160,7 @@ fun NewGeocacheScreen(
     if (pickingPhoto) {
         GallerySelectSingle(imagesOnly = true) { media ->
             pickingPhoto = false
-            if (media != null) scope.launch { model.uploadImage(media.uri, media.mimeType, accountViewModel.host.mediaUploader) }
+            if (media != null) scope.launch { model.uploadImage(media.uri, media.mimeType, accountViewModel.mediaUploader) }
         }
     }
 

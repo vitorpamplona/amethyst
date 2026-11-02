@@ -238,7 +238,7 @@ private fun ImageVideoPostChat(
         }
     }
 
-    val controls = VideoUploadControls(fileUploadState.multiOrchestrator, accountViewModel.host.mediaUploader.videoCompression, fileUploadState.mediaQualitySlider)
+    val controls = VideoUploadControls(fileUploadState.multiOrchestrator, accountViewModel.mediaUploader.videoCompression, fileUploadState.mediaQualitySlider)
     if (controls.showsSlider) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -262,13 +262,13 @@ private fun ImageVideoPostChat(
             position = fileUploadState.mediaQualitySlider,
             onPositionChange = { fileUploadState.mediaQualitySlider = it },
             media = fileUploadState.multiOrchestrator,
-            uploader = accountViewModel.host.mediaUploader,
+            uploader = accountViewModel.mediaUploader,
         )
     }
 
     VideoCompressionNeedsFfmpegHint(controls)
     if (controls.videoWillBeCompressed) {
-        VideoHdrHint(fileUploadState.multiOrchestrator, accountViewModel.host.mediaUploader, useH265 = false, offersH265 = false)
+        VideoHdrHint(fileUploadState.multiOrchestrator, accountViewModel.mediaUploader, useH265 = false, offersH265 = false)
     }
 
     SettingSwitchItem(
