@@ -80,19 +80,22 @@ object ImageReencoder {
     /**
      * Re-encode a file from disk.
      *
+     * @param tempFile makes the file the output goes to. Only tests pass this: every JVM on the
+     *   account shares [AmethystTempDir], so a test that looks at the folder needs its own.
      * @throws CompressionException on any failure that the caller
      *   should surface in a fail-loud dialog.
      */
     suspend fun reencode(
         source: File,
         quality: ImageCompressionTarget,
+        tempFile: () -> File = { AmethystTempDir.createTempFile("amethyst_compress_", ".jpg") },
     ): ReencodeResult {
         // withContext hands its result back cancellably: a cancellation that lands during the
         // (uncancellable) encode drops the finished file along with the result, so its path is
         // kept out here to delete it.
         var written: File? = null
         return try {
-            reencodeOnDispatcher(source, quality) { written = it }
+            reencodeOnDispatcher(source, quality, tempFile) { written = it }
         } catch (e: CancellationException) {
             written?.delete()
             throw e
@@ -102,6 +105,7 @@ object ImageReencoder {
     private suspend fun reencodeOnDispatcher(
         source: File,
         quality: ImageCompressionTarget,
+        tempFile: () -> File,
         onWritten: (File) -> Unit,
     ): ReencodeResult =
         withContext(compressionDispatcher) {
@@ -137,7 +141,7 @@ object ImageReencoder {
                 }
             // 4) Encode JPEG to a temp file, preserving ICC where possible.
             coroutineContext.ensureActive()
-            val temp = AmethystTempDir.createTempFile("amethyst_compress_", ".jpg")
+            val temp = tempFile()
             try {
                 encodeJpeg(finalImage, temp, quality.jpegQuality)
                 onWritten(temp)

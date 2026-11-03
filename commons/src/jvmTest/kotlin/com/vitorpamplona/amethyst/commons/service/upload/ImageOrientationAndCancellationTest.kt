@@ -21,9 +21,10 @@
 package com.vitorpamplona.amethyst.commons.service.upload
 
 import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder.ReencodeResult
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.apache.commons.imaging.Imaging
@@ -35,13 +36,14 @@ import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.util.Random
+import java.nio.file.Files
 import javax.imageio.ImageIO
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -152,25 +154,29 @@ class ImageOrientationAndCancellationTest {
     @Test
     fun cancellingDuringEncodeLeavesNoTempFile() =
         runBlocking {
-            val src = makeNoisyJpeg(5000, 4000)
-            val tempDir = AmethystTempDir.rootDir()
+            val src = makeJpegWithMarker(400, 200, orientation = 1)
+            // Its own folder: the other test fork writes to AmethystTempDir, and any file seen
+            // there would look like a leak.
+            val tempDir = Files.createTempDirectory("reencoder-cancel").toFile()
+            createdFiles.add(tempDir)
+            var temp: File? = null
 
-            fun compressTemps() = tempDir.listFiles { f -> f.name.startsWith("amethyst_compress_") }.orEmpty().toSet()
-            val before = compressTemps()
-
-            val job = async(Dispatchers.Default) { ImageReencoder.reencode(src, ImageSizeTarget(4000, 0.95f)) }
-            // The temp file is created just before the (uncancellable) JPEG encode starts.
-            var waited = 0
-            while ((compressTemps() - before).isEmpty() && waited < 20_000) {
-                delay(1)
-                waited++
-            }
-            job.cancel()
+            lateinit var job: Deferred<ReencodeResult>
+            // The temp file is made just before the (uncancellable) JPEG encode, so cancelling
+            // there lands during the encode on any machine. LAZY keeps the lambda from running
+            // before job is set.
+            job =
+                async(Dispatchers.Default, start = CoroutineStart.LAZY) {
+                    ImageReencoder.reencode(src, ImageSizeTarget(100, 0.9f)) {
+                        job.cancel()
+                        File.createTempFile("amethyst_compress_", ".jpg", tempDir).also { temp = it }
+                    }
+                }
             val outcome = runCatching { job.await() }
-            outcome.getOrNull()?.let { (it as? ReencodeResult.Reencoded)?.file?.let(createdFiles::add) }
-            assertTrue(outcome.isFailure, "the encode should still be running when cancelled; enlarge the image if not")
 
-            assertEquals(emptySet(), compressTemps() - before, "the cancelled re-encode's temp file is gone")
+            assertNotNull(temp, "the re-encode reached its temp file")
+            assertTrue(outcome.isFailure, "a cancelled re-encode doesn't return its file")
+            assertEquals(emptyList(), tempDir.listFiles().orEmpty().toList(), "the cancelled re-encode's temp file is gone")
         }
 
     // ---------- helpers ----------
@@ -242,18 +248,5 @@ class ImageOrientationAndCancellationTest {
             i += 2 + length
         }
         return found
-    }
-
-    private fun makeNoisyJpeg(
-        width: Int,
-        height: Int,
-    ): File {
-        val img = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
-        val rnd = Random(42)
-        for (y in 0 until height) for (x in 0 until width) img.setRGB(x, y, rnd.nextInt())
-        return File.createTempFile("cancel_src_", ".jpg").also {
-            ImageIO.write(img, "jpg", it)
-            createdFiles += it
-        }
     }
 }
