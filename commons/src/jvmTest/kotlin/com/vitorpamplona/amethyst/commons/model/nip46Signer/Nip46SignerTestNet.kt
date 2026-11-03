@@ -27,6 +27,9 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
 import com.vitorpamplona.quartz.nip01Core.relay.server.inprocess.InProcessWebSocket
@@ -40,6 +43,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * In-process relays (one server per url, anything else never connects) and the stores an account's
@@ -75,18 +80,41 @@ internal class Nip46SignerTestNet(
     val identity = NostrSignerInternal(KeyPair())
     val ledger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
 
-    fun signerState(inbox: Set<NormalizedRelayUrl>) =
-        Nip46SignerState(
-            signer = identity,
-            client = client,
-            ledger = ledger,
-            clientStore = clientStore,
-            inboxRelays = MutableStateFlow(inbox),
-            scope = scope,
-            settings = AccountSettings(identity.keyPair),
-            consent = Nip46ConsentPrompter.Unanswered,
-            relayAcceptsSignerTraffic = { acceptsSignerTraffic },
+    /** What the client sent each relay, in order. */
+    private val sent = ConcurrentHashMap<NormalizedRelayUrl, ConcurrentLinkedQueue<Command>>()
+
+    init {
+        client.addConnectionListener(
+            object : RelayConnectionListener {
+                override fun onSent(
+                    relay: IRelayClient,
+                    cmdStr: String,
+                    cmd: Command,
+                    success: Boolean,
+                ) {
+                    if (success) sent.getOrPut(relay.url) { ConcurrentLinkedQueue() }.add(cmd)
+                }
+            },
         )
+    }
+
+    /** Every command the client sent [relay] so far, in order; failed sends are left out. */
+    fun sentTo(relay: NormalizedRelayUrl): List<Command> = sent[relay]?.toList().orEmpty()
+
+    fun signerState(
+        inbox: Set<NormalizedRelayUrl>,
+        settings: AccountSettings = AccountSettings(identity.keyPair),
+    ) = Nip46SignerState(
+        signer = identity,
+        client = client,
+        ledger = ledger,
+        clientStore = clientStore,
+        inboxRelays = MutableStateFlow(inbox),
+        scope = scope,
+        settings = settings,
+        consent = Nip46ConsentPrompter.Unanswered,
+        relayAcceptsSignerTraffic = { acceptsSignerTraffic },
+    )
 
     fun close() {
         scope.cancel()
