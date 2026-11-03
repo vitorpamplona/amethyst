@@ -40,6 +40,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * In-process relays (one server per url, anything else never connects) and the stores an account's
@@ -60,6 +62,9 @@ internal class Nip46SignerTestNet(
         override fun send(msg: String) = false
     }
 
+    /** What the client sent each relay, in order. */
+    private val sent = ConcurrentHashMap<NormalizedRelayUrl, MutableList<String>>()
+
     val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     val servers = relays.associateWith { NostrServer(EventStore(null)) }
     val client =
@@ -68,25 +73,40 @@ internal class Nip46SignerTestNet(
                 override fun build(
                     url: NormalizedRelayUrl,
                     out: WebSocketListener,
-                ) = servers[url]?.let { InProcessWebSocket(it, out) } ?: NeverConnects
+                ) = servers[url]?.let { Recorded(InProcessWebSocket(it, out), sent.getOrPut(url) { Collections.synchronizedList(mutableListOf()) }) } ?: NeverConnects
             },
             scope,
         )
     val identity = NostrSignerInternal(KeyPair())
     val ledger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
 
-    fun signerState(inbox: Set<NormalizedRelayUrl>) =
-        Nip46SignerState(
-            signer = identity,
-            client = client,
-            ledger = ledger,
-            clientStore = clientStore,
-            inboxRelays = MutableStateFlow(inbox),
-            scope = scope,
-            settings = AccountSettings(identity.keyPair),
-            consent = Nip46ConsentPrompter.Unanswered,
-            relayAcceptsSignerTraffic = { acceptsSignerTraffic },
-        )
+    private class Recorded(
+        private val inner: WebSocket,
+        private val log: MutableList<String>,
+    ) : WebSocket by inner {
+        override fun send(msg: String): Boolean {
+            log.add(msg)
+            return inner.send(msg)
+        }
+    }
+
+    /** Every message the client sent [relay] so far, in order. */
+    fun sentTo(relay: NormalizedRelayUrl): List<String> = sent[relay]?.let { synchronized(it) { it.toList() } } ?: emptyList()
+
+    fun signerState(
+        inbox: Set<NormalizedRelayUrl>,
+        settings: AccountSettings = AccountSettings(identity.keyPair),
+    ) = Nip46SignerState(
+        signer = identity,
+        client = client,
+        ledger = ledger,
+        clientStore = clientStore,
+        inboxRelays = MutableStateFlow(inbox),
+        scope = scope,
+        settings = settings,
+        consent = Nip46ConsentPrompter.Unanswered,
+        relayAcceptsSignerTraffic = { acceptsSignerTraffic },
+    )
 
     fun close() {
         scope.cancel()

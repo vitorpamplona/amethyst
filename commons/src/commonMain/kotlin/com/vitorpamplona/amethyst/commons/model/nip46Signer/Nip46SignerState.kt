@@ -256,8 +256,12 @@ class Nip46SignerState(
         }
 
         scope.launch(Dispatchers.IO) {
-            combine(settings.nip46SignerEnabled, listeningRelays, settings.nip46TransportKey) { enabled, relays, transportKey ->
-                Triple(enabled, relays, transportKey)
+            // The key the listener runs under is read now, not taken from the emission: combine can
+            // hear setEnabled's flag before the key it set first, and a listener started then already
+            // reads the new key. Its late emission must then compare equal, or it restarts that
+            // listener after the pairing ack and the app's first request is lost.
+            combine(settings.nip46SignerEnabled, listeningRelays, settings.nip46TransportKey) { enabled, relays, _ ->
+                Triple(enabled, relays, settings.nip46TransportKey.value)
             }
                 // Inbox/relay/key StateFlows can re-emit an identical value; without this every duplicate
                 // would tear the subscription down and re-open it on every relay for no reason. Including
@@ -371,8 +375,9 @@ class Nip46SignerState(
 
     fun setEnabled(enabled: Boolean) {
         if (enabled) {
-            // Settle the secret and transport key BEFORE flipping the flag, so the service-restart
-            // trigger sees the final transport key on its first emission (no throwaway double-start).
+            // Settle the secret and transport key BEFORE flipping the flag, so the listener the flag
+            // starts runs under the final key. The trigger may still hear the key after the flag;
+            // it reads the key itself, so that late emission starts nothing.
             ensureSecret()
             ensureTransportKeyBytes()
         }
