@@ -269,7 +269,7 @@ private fun TransactionFilterRow(
 }
 
 @Composable
-private fun TransactionItem(
+internal fun TransactionItem(
     tx: NwcTransaction,
     accountViewModel: AccountViewModel,
     nav: INav,

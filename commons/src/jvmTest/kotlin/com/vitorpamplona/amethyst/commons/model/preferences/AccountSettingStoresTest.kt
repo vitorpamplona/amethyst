@@ -123,6 +123,45 @@ class AccountSettingStoresTest {
             assertEquals(value, store.load())
         }
 
+    @Test
+    fun nwcBackupPrefsDefaultToNoBackup() =
+        runTest {
+            val loaded = NwcBackupPrefsStore(raw()).load()
+
+            assertEquals(false, loaded.autoBackup)
+            assertEquals(false, loaded.cardDismissed)
+            assertTrue(loaded.relays.isEmpty())
+            assertTrue(loaded.walletIds.isEmpty())
+        }
+
+    @Test
+    fun nwcBackupPrefsRoundTrip() =
+        runTest {
+            val store = NwcBackupPrefsStore(raw())
+            val value =
+                NwcBackupPrefs(
+                    autoBackup = true,
+                    cardDismissed = true,
+                    relays = setOf("wss://nos.lol/", "wss://relay.damus.io/"),
+                    walletIds = setOf("wallet-1", "wallet-2"),
+                )
+
+            store.save(value)
+
+            assertEquals(value, store.load())
+        }
+
+    @Test
+    fun nwcBackupPrefsClearedSetsStayEmpty() =
+        runTest {
+            val store = NwcBackupPrefsStore(raw())
+            store.save(NwcBackupPrefs(relays = setOf("wss://nos.lol/"), walletIds = setOf("wallet-1")))
+
+            store.save(NwcBackupPrefs())
+
+            assertEquals(NwcBackupPrefs(), store.load())
+        }
+
     /** Three of these default to true — trusting by default — so a wrong default weakens AUTH behaviour. */
     @Test
     fun relayAuthDefaults() =

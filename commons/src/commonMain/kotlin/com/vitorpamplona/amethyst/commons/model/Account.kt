@@ -100,6 +100,7 @@ import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.Now
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46SignerState
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.acceptsSignerTraffic
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcBackupState
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcInfoCache
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
@@ -1017,6 +1018,8 @@ class Account(
     val dmRelays = DmInboxRelayState(dmRelayList, nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val notificationRelays = NotificationInboxRelayState(nip65RelayList, localRelayList, scope)
 
+    val nwcBackup = NwcBackupState(signer, client, scope, settings, outboxRelays.flow, nip65RelayList.inboxFlowNoDefaults)
+
     // Account-level notification history paging cursors (one scope per account): how far back each
     // notification relay has been paged by until+limit. Held here so they share the account's lifetime;
     // the history loader ([AccountNotificationsHistoryEoseManager]) binds its orchestrator to these.
@@ -1703,6 +1706,25 @@ class Account(
     }
 
     suspend fun sendNewAppSpecificData() = sendMyPublicAndPrivateOutbox(appSpecific.saveNewAppSpecificData())
+
+    /** Reverts the toggle when no relay accepted, so the setting never claims a missing backup. */
+    suspend fun enableNwcBackup(): Boolean {
+        settings.changeBackupNwcWallets(true)
+        val published = nwcBackup.publishNow()
+        if (!published) {
+            settings.changeBackupNwcWallets(false)
+        }
+        return published
+    }
+
+    suspend fun disableNwcBackup() {
+        settings.changeBackupNwcWallets(false)
+    }
+
+    suspend fun deleteNwcBackup(): NwcBackupState.DeleteOutcome {
+        settings.changeBackupNwcWallets(false)
+        return nwcBackup.deleteBackup()
+    }
 
     // ---
     // NIP-13 proof-of-work publishing
@@ -4318,6 +4340,8 @@ class Account(
                 runtime.restore()
             }
         }
+
+        nwcBackup.start()
 
         // Restore Marmot MLS group state on startup
         if (marmotManager != null) {

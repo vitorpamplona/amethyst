@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.FollowListSlot
 import com.vitorpamplona.amethyst.commons.model.preferences.LatestEventCacheStore
 import com.vitorpamplona.amethyst.commons.model.preferences.LegacyPreferenceSource
 import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPrefsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.NwcBackupPrefsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.RelayAuthStore
 import com.vitorpamplona.amethyst.commons.model.preferences.TopNavFollowListStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UploadSettingsStore
@@ -269,6 +270,8 @@ object LocalPreferences : AccountSessionStore {
 
     private fun notificationPrefsStore(npub: String) = NotificationPrefsStore(accountStores.getDataStore(npub))
 
+    private fun nwcBackupPrefsStore(npub: String) = NwcBackupPrefsStore(accountStores.getDataStore(npub))
+
     private fun identityStore(npub: String) = AccountIdentityStore(accountStores.getDataStore(npub))
 
     private fun legacySource(npub: String): LegacyPreferenceSource = LegacySharedPreferences(encryptedPreferences(npub))
@@ -427,6 +430,7 @@ object LocalPreferences : AccountSessionStore {
         relayAuth = relayAuthStore(npub).load(),
         feedVisibility = feedVisibilityStore(npub).load(),
         notificationPrefs = notificationPrefsStore(npub).load(),
+        nwcBackupPrefs = nwcBackupPrefsStore(npub).load(),
     )
 
     // NOT migrated to DataStore, and cannot be: DataStore is suspend-only, while

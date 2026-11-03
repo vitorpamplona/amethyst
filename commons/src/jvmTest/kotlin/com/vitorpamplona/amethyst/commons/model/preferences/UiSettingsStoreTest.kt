@@ -146,6 +146,7 @@ class UiSettingsStoreTest {
                     spellCheck = SpellCheckType.BUILT_IN,
                     noteLayout = NoteLayoutType.EDGE_TO_EDGE,
                     automaticallyDownloadTranslationModels = ConnectivityType.ALWAYS,
+                    hideWalletBalances = true,
                 )
 
             store.save(settings)

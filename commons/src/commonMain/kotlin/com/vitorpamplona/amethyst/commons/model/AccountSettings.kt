@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupRepository
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcBackupPayload
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
@@ -207,6 +208,11 @@ class AccountSettings(
     // The unified default spend rail (an NWC wallet OR a CLINK debit). Persisted under a
     // new key, migrated from the legacy NWC-only `defaultNwcWalletId`.
     val defaultPaymentSourceId: MutableStateFlow<String?> = MutableStateFlow(null),
+    // Local-only: synced to a device without the wallets, it could overwrite the good backup.
+    val backupNwcWallets: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val backupNwcCardDismissed: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val backedUpNwcWalletIds: MutableStateFlow<Set<String>> = MutableStateFlow(emptySet()),
+    val nwcBackupRelays: MutableStateFlow<List<String>> = MutableStateFlow(emptyList()),
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var hideNIP17WarningDialog: Boolean = false,
@@ -533,6 +539,7 @@ class AccountSettings(
         if (existing >= 0) {
             nwcWallets.tryEmit(nwcWallets.value.toMutableList().apply { set(existing, wallet) })
         } else {
+            if (nwcWallets.value.any { it.uri == wallet.uri }) return false
             nwcWallets.tryEmit(nwcWallets.value + wallet)
             // First configured source of any kind becomes the default; adding more never
             // silently changes an existing default.
@@ -547,9 +554,63 @@ class AccountSettings(
     fun removeNwcWallet(walletId: String): Boolean {
         val wallets = nwcWallets.value.filter { it.id != walletId }
         nwcWallets.tryEmit(wallets)
+        if (backedUpNwcWalletIds.value.contains(walletId)) {
+            backedUpNwcWalletIds.tryEmit(backedUpNwcWalletIds.value - walletId)
+        }
+        // With no NWC wallet left, a dismissed backup card would leave restore unreachable.
+        if (wallets.isEmpty() && backupNwcCardDismissed.value) {
+            backupNwcCardDismissed.tryEmit(false)
+        }
         reassignDefaultIfRemoved(walletId)
         saveAccountSettings()
         return true
+    }
+
+    fun changeBackupNwcWallets(enabled: Boolean) {
+        if (backupNwcWallets.value != enabled) {
+            backupNwcWallets.tryEmit(enabled)
+            saveAccountSettings()
+        }
+    }
+
+    fun updateNwcBackupRelays(relays: List<String>) {
+        if (nwcBackupRelays.value != relays) {
+            nwcBackupRelays.tryEmit(relays)
+            saveAccountSettings()
+        }
+    }
+
+    fun updateBackedUpNwcWalletIds(walletIds: Set<String>) {
+        if (backedUpNwcWalletIds.value != walletIds) {
+            backedUpNwcWalletIds.tryEmit(walletIds)
+            saveAccountSettings()
+        }
+    }
+
+    fun dismissBackupNwcCard() {
+        if (!backupNwcCardDismissed.value) {
+            backupNwcCardDismissed.tryEmit(true)
+            saveAccountSettings()
+        }
+    }
+
+    /** Dedupes by connection URI; returns how many wallets were new. */
+    fun mergeRestoredNwcWallets(payload: NwcBackupPayload): Int {
+        val existing = nwcWallets.value
+        val existingUris = existing.mapTo(HashSet()) { it.uri }
+        val restored = payload.wallets.mapNotNull { it.normalize() }
+        val restoredUris = restored.mapTo(HashSet()) { it.uri }
+        val newWallets = restored.filter { it.uri !in existingUris }
+        val inBackup = (existing.filter { it.uri in restoredUris } + newWallets).mapTo(HashSet()) { it.id }
+        if (newWallets.isNotEmpty()) {
+            nwcWallets.tryEmit(existing + newWallets)
+            if (defaultPaymentSourceId.value == null) {
+                defaultPaymentSourceId.tryEmit(payload.defaultId ?: newWallets.first().id)
+            }
+        }
+        backedUpNwcWalletIds.tryEmit(backedUpNwcWalletIds.value + inBackup)
+        saveAccountSettings()
+        return newWallets.size
     }
 
     fun addClinkDebitWallet(wallet: ClinkDebitWalletEntryNorm): Boolean {
@@ -651,7 +712,7 @@ class AccountSettings(
                     NwcWalletEntryNorm(
                         id =
                             Uuid.random().toString(),
-                        name = "Wallet",
+                        name = "Lightning Wallet",
                         uri = newServer,
                     )
                 addNwcWallet(entry)
