@@ -123,10 +123,18 @@ class MultiSetCard(
     override fun id() = note.idHex + "X" + maxCreatedAt + "X" + minCreatedAt
 }
 
+/**
+ * The direct messages one chat sent the user in a day, newest first. [note] is the newest; the card
+ * shows it and counts the rest.
+ */
 @Immutable
 class MessageSetCard(
-    val note: Note,
+    val messages: ImmutableList<Note>,
 ) : Card {
+    constructor(note: Note) : this(persistentListOf(note))
+
+    val note: Note = messages.first()
+
     override fun createdAt(): Long = note.createdAt() ?: 0L
 
     override fun id() = note.idHex
@@ -178,7 +186,7 @@ fun Card.containsEventId(eventId: String): Boolean =
         }
 
         is MessageSetCard -> {
-            note.idHex == eventId
+            messages.any { it.idHex == eventId }
         }
 
         is ChannelInviteCard -> {

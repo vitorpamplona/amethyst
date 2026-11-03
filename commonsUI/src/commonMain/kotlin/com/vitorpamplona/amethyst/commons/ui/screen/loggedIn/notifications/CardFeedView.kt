@@ -43,6 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.notifications.containsEventId
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.notification_feed_is_empty
 import com.vitorpamplona.amethyst.commons.resources.refresh
+import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
@@ -86,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.NutzapUserSetCompose
 import com.vitorpamplona.amethyst.commons.ui.note.ZapUserSetCompose
+import com.vitorpamplona.amethyst.commons.ui.note.notificationInlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.notifications.OpenPollsSectionHeader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordDirectInviteCard
@@ -380,7 +383,6 @@ private fun RenderCardItem(
         is ZapUserSetCard -> {
             ZapUserSetCompose(
                 item,
-                isInnerNote = false,
                 accountViewModel = accountViewModel,
                 nav = nav,
                 routeForLastRead = routeForLastRead,
@@ -390,7 +392,6 @@ private fun RenderCardItem(
         is NutzapUserSetCard -> {
             NutzapUserSetCompose(
                 item,
-                isInnerNote = false,
                 accountViewModel = accountViewModel,
                 nav = nav,
                 routeForLastRead = routeForLastRead,
@@ -401,7 +402,6 @@ private fun RenderCardItem(
             MultiSetCompose(
                 item,
                 accountViewModel = accountViewModel,
-                showHidden = showHidden,
                 nav = nav,
                 routeForLastRead = routeForLastRead,
             )
@@ -445,7 +445,6 @@ private fun RenderCardItem(
             MessageSetCompose(
                 messageSetCard = item,
                 routeForLastRead = routeForLastRead,
-                showHidden = showHidden,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -460,25 +459,32 @@ fun NoteCardCompose(
     routeForLastRead: String? = null,
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
-    unPackReply: ReplyRenderType = ReplyRenderType.FULL,
+    unPackReply: ReplyRenderType = ReplyRenderType.EXCERPT,
     makeItShort: Boolean = false,
     showHidden: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    NoteCompose(
-        baseNote = baseNote.note,
-        modifier = modifier.fillMaxWidth(),
-        routeForLastRead = routeForLastRead,
-        isBoostedNote = isBoostedNote,
-        isQuotedNote = isQuotedNote,
-        unPackReply = unPackReply,
-        makeItShort = makeItShort,
-        isHiddenFeed = showHidden,
-        quotesLeft = 3,
-        parentBackgroundColor = parentBackgroundColor,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
+    // A reply or quote of the user's own note shrinks that note to one line (EXCERPT and the quote
+    // renderer below): the user wrote it, and the other person's words are what they came to read.
+    val quoteRenderer = LocalInlineQuoteRenderer.current
+    val notificationQuotes = remember(quoteRenderer) { notificationInlineQuoteRenderer(quoteRenderer) }
+
+    CompositionLocalProvider(LocalInlineQuoteRenderer provides notificationQuotes) {
+        NoteCompose(
+            baseNote = baseNote.note,
+            modifier = modifier.fillMaxWidth(),
+            routeForLastRead = routeForLastRead,
+            isBoostedNote = isBoostedNote,
+            isQuotedNote = isQuotedNote,
+            unPackReply = unPackReply,
+            makeItShort = makeItShort,
+            isHiddenFeed = showHidden,
+            quotesLeft = 3,
+            parentBackgroundColor = parentBackgroundColor,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
 }

@@ -1365,13 +1365,27 @@ private fun RowScope.LastMessagePreview(
     lastMessage: Note,
     accountViewModel: AccountViewModel,
 ) {
-    LoadDecryptedContentOrNull(lastMessage, accountViewModel) { content ->
+    ChatMessagePreviewText(lastMessage, accountViewModel) { PreviewLine(it) }
+}
+
+/**
+ * [message] as a one-line preview says it, tidied: its decrypted body ("You: " first when the user
+ * sent it), a rename, or why there is no body yet. The Messages list and the notifications feed
+ * both preview a chat's newest message with it.
+ */
+@Composable
+fun ChatMessagePreviewText(
+    message: Note,
+    accountViewModel: AccountViewModel,
+    content: @Composable (String) -> Unit,
+) {
+    LoadDecryptedContentOrNull(message, accountViewModel) { decrypted ->
         // Keyed so a scrolling list doesn't re-scan the DM's `p` tags on every recomposition.
         val preview =
-            remember(lastMessage.event, content) {
+            remember(message.event, decrypted) {
                 chatPreviewOf(
-                    event = lastMessage.event,
-                    decrypted = content,
+                    event = message.event,
+                    decrypted = decrypted,
                     myPubKey = accountViewModel.account.signer.pubKey,
                     canDecrypt = accountViewModel.account.isWriteable(),
                 )
@@ -1382,12 +1396,12 @@ private fun RowScope.LastMessagePreview(
                 is ChatPreview.Body -> {
                     // Mark my own newest message with a "You:" prefix (like other messengers) so a
                     // 1:1 room's preview shows who spoke last instead of reading like the counterpart.
-                    val sentByMe = lastMessage.author?.pubkeyHex == accountViewModel.account.signer.pubKey
+                    val sentByMe = message.author?.pubkeyHex == accountViewModel.account.signer.pubKey
                     if (sentByMe) stringRes(Res.string.chat_preview_you_prefix, preview.text) else preview.text
                 }
                 is ChatPreview.SubjectChange -> {
                     // A rename with no text has no body to quote; say what it did instead of "You: ".
-                    val authorHex = lastMessage.event?.pubKey
+                    val authorHex = message.event?.pubKey
                     if (authorHex == accountViewModel.account.signer.pubKey) {
                         stringRes(Res.string.chat_system_renamed_conversation_to_you, preview.subject)
                     } else {
@@ -1399,7 +1413,7 @@ private fun RowScope.LastMessagePreview(
                 ChatPreview.Missing -> stringRes(Res.string.referenced_event_not_found)
             }
 
-        PreviewLine(rememberTidyPreview(text))
+        content(rememberTidyPreview(text))
     }
 }
 

@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -368,10 +369,28 @@ class CardFeedContentState(
                     }
                 }.flatten()
 
+        // Direct messages from one chat in one day share a card: a burst of five messages is one
+        // conversation to answer, not five notifications. Keyed by the chatroom (the other side of a
+        // NIP-04/NIP-17 room, or the Marmot group), so two people writing never merge.
+        val me = (localFilter as? NotificationFeedFilter)?.account?.signer?.pubKey
+        val messageCards =
+            notes
+                .filter { it.isDirectMessage() && it !is ConcordDirectInviteNote }
+                .groupBy { Pair(it.chatKey(me), epochDay(it.createdAt())) }
+                .values
+                .map { group ->
+                    MessageSetCard(
+                        group
+                            .sortedWith(compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex })
+                            .toImmutableList(),
+                    )
+                }
+
         val textNoteCards =
             notes
                 .filter {
-                    it.event !is ReactionEvent &&
+                    !(it.isDirectMessage() && it !is ConcordDirectInviteNote) &&
+                        it.event !is ReactionEvent &&
                         it.event !is RepostEvent &&
                         it.event !is GenericRepostEvent &&
                         it.event !is ZapReceiptEvent &&
@@ -387,8 +406,6 @@ class CardFeedContentState(
                         ConcordDirectInviteNotificationCard(it)
                     } else if (pendingInvite != null) {
                         ChannelInviteCard(it, pendingInvite)
-                    } else if (it.event is EncryptedDmEvent || it.event is NIP17Group || it.isInMarmotGroup()) {
-                        MessageSetCard(it)
                     } else if (it.event is BadgeAwardEvent) {
                         BadgeCard(it)
                     } else {
@@ -396,7 +413,7 @@ class CardFeedContentState(
                     }
                 }
 
-        return (multiCards + textNoteCards + userZaps + userNutzaps)
+        return (multiCards + messageCards + textNoteCards + userZaps + userNutzaps)
             .sortedWith(NotificationFeedOrderCard)
     }
 
@@ -594,3 +611,11 @@ class CardFeedContentState(
 }
 
 private fun Note.isInMarmotGroup(): Boolean = inGatherers?.any { it is MarmotGroupChatroom } == true
+
+private fun Note.isDirectMessage(): Boolean = event is EncryptedDmEvent || event is NIP17Group || isInMarmotGroup()
+
+/** The chat this message belongs to, for grouping: its room key, its Marmot group, else itself. */
+private fun Note.chatKey(me: HexKey?): Any =
+    (event as? ChatroomKeyable)?.let { if (me != null) it.chatroomKey(me) else null }
+        ?: inGatherers?.firstOrNull { it is MarmotGroupChatroom }
+        ?: idHex

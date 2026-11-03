@@ -20,42 +20,25 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.drawBehind
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.notifications.ZapUserSetCard
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.AboutDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.AuthorGalleryZaps
-import com.vitorpamplona.amethyst.commons.ui.note.MapZaps
-import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
-import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
-import com.vitorpamplona.amethyst.commons.ui.note.calculateBackgroundColor
-import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
-import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.collections.immutable.toImmutableList
 
+/**
+ * Zaps on the user's profile rather than on a note, as a [NotificationActivityCard] whose second line
+ * says so. [ZapUserSetCard.user] is the zapped profile (the user), not a zapper.
+ */
 @Composable
 fun ZapUserSetCompose(
     zapSetCard: ZapUserSetCard,
-    isInnerNote: Boolean = false,
     routeForLastRead: String,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -67,69 +50,32 @@ fun ZapUserSetCompose(
             accountViewModel = accountViewModel,
         )
 
-    // Full width: the kind icon heads the gallery row in the picture slot, and the zapped user's
-    // row is a full-width header (35dp picture, name beside it) instead of sitting in the column.
-    val fullWidth = !isInnerNote && LocalDisplaySettings.current.fullWidthNotes
+    MapZaps(zapSetCard.zapEvents, accountViewModel) { zaps ->
+        val actors =
+            remember(zaps) {
+                val seen = HashSet<String>()
+                zaps
+                    .filter { zap -> zap.user?.let { seen.add(it.pubkeyHex) } ?: true }
+                    .map { ActivityActor(it.user, ActivityKind.ZAP) }
+                    .toImmutableList()
+            }
+        val total = remember(zapSetCard) { zapTotal(zapSetCard.zapEvents, emptyList()) }
+        val comment = remember(zaps) { latestZapComment(zaps, emptyList()) }
 
-    Column(
-        modifier =
-            Modifier.background(backgroundColor.value).clickable {
-                nav.nav(routeFor(zapSetCard.user))
-            },
-    ) {
-        Row(
+        NotificationActivityCard(
+            actors = actors,
+            createdAt = zapSetCard.createdAt,
+            zapTotal = total,
+            comment = comment,
+            backgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
             modifier =
-                Modifier.padding(
-                    start = if (!isInnerNote) 12.dp else 0.dp,
-                    end = if (!isInnerNote) 12.dp else 0.dp,
-                    top = 10.dp,
-                ),
+                Modifier
+                    .drawBehind { drawRect(backgroundColor.value) }
+                    .clickable { nav.nav(routeFor(zapSetCard.user)) },
+            kindIcon = { ZappedIcon(it) },
         ) {
-            // Draws the like picture outside the boosted card.
-            if (!isInnerNote && !fullWidth) {
-                Box(
-                    modifier = Size55Modifier,
-                ) {
-                    ZappedIcon(
-                        Modifier.size(Size25dp).align(Alignment.TopEnd),
-                    )
-                }
-            }
-
-            Column(modifier = Modifier) {
-                Row(Modifier.fillMaxWidth()) {
-                    if (fullWidth) {
-                        GalleryIconColumn { iconAlignment ->
-                            ZappedIcon(Modifier.size(Size25dp).align(iconAlignment))
-                        }
-                    }
-                    MapZaps(zapSetCard.zapEvents, accountViewModel) {
-                        AuthorGalleryZaps(it, backgroundColor, nav, accountViewModel)
-                    }
-                }
-
-                Spacer(DoubleVertSpacer)
-
-                Row(
-                    Modifier.padding(start = if (!isInnerNote && !fullWidth) 10.dp else 0.dp).fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    UserPicture(
-                        zapSetCard.user,
-                        if (fullWidth) Size35dp else Size55dp,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-
-                    Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(zapSetCard.user, accountViewModel = accountViewModel) }
-
-                        AboutDisplay(zapSetCard.user, accountViewModel)
-                    }
-                }
-
-                Spacer(DoubleVertSpacer)
-            }
+            NotificationProfileLine()
         }
     }
 }

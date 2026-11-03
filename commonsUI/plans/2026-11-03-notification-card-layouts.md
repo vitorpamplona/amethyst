@@ -1,6 +1,6 @@
 # Notification card layouts
 
-Status: design, round 2. Mockups: https://claude.ai/artifact/Jk5Zpe8Ay1devpbxF6uvyF
+Status: implemented (round 2 design). Mockups: https://claude.ai/artifact/Jk5Zpe8Ay1devpbxF6uvyF
 
 ## Problem
 
@@ -34,12 +34,19 @@ muted line:
 Full Width drops the column. Borderless is Full Width with conversation media to the edges; activity
 cards never bleed.
 
-## Code map
+## Code map (as built)
 
-- `MultiSetCompose`: replace the inner `NoteCompose` and the `singleZap`/`singleNutzap` branch with
-  the two-line card. New facepile with badges replaces the per-kind gallery rows.
-- New `NotificationNoteLine` (one line of a note + optional thumbnail), reused by replies, quotes and
-  profile zaps (`ZapUserSetCompose`).
-- `NoteCardCompose`: `ReplyRenderType.EXCERPT` (new) for replies; a CompositionLocal to shrink quotes
-  of the user's own notes to the one line.
-- `MessageSetCard`: hold the notes of one chat per day; `convertToCard` groups them like reactions.
+- `ui/note/NotificationActivityCard.kt`: the two-line card, `NotificationFacePile` (a custom
+  `Layout` that fits as many 28dp faces as the width allows and draws "+N" itself, no subcomposition),
+  per-face badges (`ActivityGlyph`, `ReactionGlyph`), `NotificationNoteLine` (title/subject or the
+  text tidied by `ChatPreviewText`, media links dropped when there are words) and the 44dp thumbnail
+  (skipped for sensitive notes or with image loading off).
+- `MultiSetCompose`, `ZapUserSetCompose`, `NutzapUserSetCompose`: now just build the actors, total and
+  newest comment and hand them to the card. The single-zap "large card" branch is gone.
+- `ReplyRenderType.EXCERPT` (`ui/note/types/Text.kt`): a reply to the user's own note shows it as one
+  line under a reply arrow; a reply to anyone else keeps "replying to @name". `NoteCardCompose` uses
+  it and wraps `LocalInlineQuoteRenderer` with `notificationInlineQuoteRenderer`, which turns a quote
+  of the user's note into one line under a quote mark (`NotificationConversationLines.kt`).
+- `MessageSetCard` holds a chat's messages per day (`CardFeedContentState.convertToCard` groups them
+  by chatroom key or Marmot group). `MessageSetCompose` is a Messages-list row with an unread count;
+  its preview comes from `ChatMessagePreviewText`, extracted from `ChatroomHeaderCompose`.

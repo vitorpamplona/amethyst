@@ -20,62 +20,33 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.drawBehind
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
-import com.vitorpamplona.amethyst.commons.model.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.notifications.NutzapUserSetCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nutzap
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.AboutDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.AuthorGalleryZaps
-import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
-import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.calculateBackgroundColor
-import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
-import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
-import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.claimedSatsTotal
-import com.vitorpamplona.quartz.utils.BigDecimal
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
- * Per-sender NIP-61 nutzap aggregate card — mirrors [ZapUserSetCompose] but
- * renders the cashu icon instead of the lightning bolt so the user sees the
- * rail at a glance. Built from the kind:9321 events directly: amount comes
- * from each event's parsed proof total, sender from the event's pubkey.
- * No NIP-44 decryption needed — nutzap is plaintext over the wire.
+ * NIP-61 nutzaps that name no note, from one sender, as a [NotificationActivityCard]: the sender's
+ * face with the cashu badge, the total, the newest comment, and "Your profile" as the target.
+ * Plaintext over the wire, so nothing to decrypt.
  */
 @Composable
 fun NutzapUserSetCompose(
     nutzapSetCard: NutzapUserSetCard,
-    isInnerNote: Boolean = false,
     routeForLastRead: String,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -87,94 +58,30 @@ fun NutzapUserSetCompose(
             accountViewModel = accountViewModel,
         )
 
-    val authorComments: ImmutableList<ZapAmountCommentNotification> =
-        remember(nutzapSetCard.nutzapEvents) {
-            nutzapSetCard.nutzapEvents
-                .map { note ->
-                    val event = note.event as? NutzapEvent
-                    val sats = event?.claimedSatsTotal() ?: 0L
-                    ZapAmountCommentNotification(
-                        user = note.author,
-                        comment = event?.content?.ifBlank { null },
-                        amount = showAmount(BigDecimal(sats)),
-                        zapNote = note,
-                    )
-                }.toImmutableList()
-        }
+    val actors = remember(nutzapSetCard) { persistentListOf(ActivityActor(nutzapSetCard.user, ActivityKind.NUTZAP)) }
+    val total = remember(nutzapSetCard) { zapTotal(emptyList(), nutzapSetCard.nutzapEvents) }
+    val comment = remember(nutzapSetCard) { latestZapComment(emptyList(), nutzapSetCard.nutzapEvents) }
 
-    // Full width: the kind icon heads the gallery row in the picture slot, and the zapped user's
-    // row is a full-width header (35dp picture, name beside it) instead of sitting in the column.
-    val fullWidth = !isInnerNote && LocalDisplaySettings.current.fullWidthNotes
-
-    Column(
+    NotificationActivityCard(
+        actors = actors,
+        createdAt = nutzapSetCard.createdAt,
+        zapTotal = total,
+        comment = comment,
+        backgroundColor = backgroundColor,
+        accountViewModel = accountViewModel,
         modifier =
             Modifier
-                .background(backgroundColor.value)
-                .clickable {
-                    nav.nav(routeFor(nutzapSetCard.user))
-                },
+                .drawBehind { drawRect(backgroundColor.value) }
+                .clickable { nav.nav(routeFor(nutzapSetCard.user)) },
+        kindIcon = {
+            Icon(
+                imageVector = CustomHashTagIcons.Cashu,
+                contentDescription = stringRes(Res.string.nutzap),
+                modifier = it,
+                tint = BitcoinOrange,
+            )
+        },
     ) {
-        Row(
-            modifier =
-                Modifier.padding(
-                    start = if (!isInnerNote) 12.dp else 0.dp,
-                    end = if (!isInnerNote) 12.dp else 0.dp,
-                    top = 10.dp,
-                ),
-        ) {
-            if (!isInnerNote && !fullWidth) {
-                Box(
-                    modifier = Size55Modifier,
-                ) {
-                    Icon(
-                        imageVector = CustomHashTagIcons.Cashu,
-                        contentDescription = stringRes(Res.string.nutzap),
-                        modifier = Modifier.size(Size25dp).align(Alignment.TopEnd),
-                        // Tint the monochrome cashu outline brand orange so it
-                        // matches the lightning ZappedIcon in the zap set card.
-                        tint = BitcoinOrange,
-                    )
-                }
-            }
-
-            Column(modifier = Modifier) {
-                Row(Modifier.fillMaxWidth()) {
-                    if (fullWidth) {
-                        GalleryIconColumn { iconAlignment ->
-                            Icon(
-                                imageVector = CustomHashTagIcons.Cashu,
-                                contentDescription = stringRes(Res.string.nutzap),
-                                modifier = Modifier.size(Size25dp).align(iconAlignment),
-                                tint = BitcoinOrange,
-                            )
-                        }
-                    }
-                    AuthorGalleryZaps(authorComments, backgroundColor, nav, accountViewModel)
-                }
-
-                Spacer(DoubleVertSpacer)
-
-                Row(
-                    Modifier.padding(start = if (!isInnerNote && !fullWidth) 10.dp else 0.dp).fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    UserPicture(
-                        nutzapSetCard.user,
-                        if (fullWidth) Size35dp else Size55dp,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-
-                    Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            UsernameDisplay(nutzapSetCard.user, accountViewModel = accountViewModel)
-                        }
-                        AboutDisplay(nutzapSetCard.user, accountViewModel)
-                    }
-                }
-
-                Spacer(DoubleVertSpacer)
-            }
-        }
+        NotificationProfileLine()
     }
 }

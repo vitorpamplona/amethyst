@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadDecryptedContent
+import com.vitorpamplona.amethyst.commons.ui.note.NotificationReplyLine
 import com.vitorpamplona.amethyst.commons.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.commons.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
@@ -74,6 +75,12 @@ import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 enum class ReplyRenderType {
     FULL,
     LINE,
+
+    /**
+     * The notifications feed: a parent the user wrote shows as one muted line of its own text (they
+     * know it, the reply is what they need to read); anyone else's parent falls back to [LINE].
+     */
+    EXCERPT,
     NONE,
 }
 
@@ -141,23 +148,19 @@ fun RenderTextEvent(
                 }
 
                 ReplyRenderType.LINE -> {
-                    // Zap receipts are signed by the recipient's lightning provider;
-                    // label the reply with the zap sender instead of the service key.
-                    val zapSender =
-                        if (parentNote.event is ZapReceiptEvent) {
-                            observeZapSender(parentNote, accountViewModel).value
-                        } else {
-                            null
-                        }
-                    val parentAuthor = zapSender ?: parentNote.author
-                    if (parentAuthor != null) {
-                        ReplyToLabel(
-                            parentAuthorDisplay = parentAuthor.toBestDisplayName(),
-                            onClick = { nav.nav(routeFor(parentAuthor)) },
-                        )
+                    ReplyToAuthorLine(parentNote, accountViewModel, nav)
+                }
+
+                ReplyRenderType.EXCERPT -> {
+                    if (parentNote.author?.pubkeyHex == accountViewModel.account.signer.pubKey) {
+                        NotificationReplyLine(parentNote, accountViewModel, nav)
                         Spacer(modifier = HalfVertSpacer)
+                    } else {
+                        ReplyToAuthorLine(parentNote, accountViewModel, nav)
                     }
                 }
+
+                ReplyRenderType.NONE -> {}
             }
         } else if (!makeItShort && noteEvent is CommentEvent) {
             // No in-cache parent note: this comment answers a scope rather than a note.
@@ -259,3 +262,28 @@ fun observeChatMessageEdit(note: Note): Note? {
 }
 
 private fun Note.latestChatEdit(): Note? = latestConcordEdit() ?: latestBuzzEdit() ?: latestMarmotEdit()
+
+/** "Replying to @name" for [parentNote], naming the zap sender when the parent is a zap receipt. */
+@Composable
+private fun ReplyToAuthorLine(
+    parentNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    // Zap receipts are signed by the recipient's lightning provider;
+    // label the reply with the zap sender instead of the service key.
+    val zapSender =
+        if (parentNote.event is ZapReceiptEvent) {
+            observeZapSender(parentNote, accountViewModel).value
+        } else {
+            null
+        }
+    val parentAuthor = zapSender ?: parentNote.author
+    if (parentAuthor != null) {
+        ReplyToLabel(
+            parentAuthorDisplay = parentAuthor.toBestDisplayName(),
+            onClick = { nav.nav(routeFor(parentAuthor)) },
+        )
+        Spacer(modifier = HalfVertSpacer)
+    }
+}

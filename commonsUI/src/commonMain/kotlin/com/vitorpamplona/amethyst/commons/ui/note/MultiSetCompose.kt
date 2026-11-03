@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -52,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -104,8 +104,6 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.commons.ui.theme.FullWidthHeaderSpacer
-import com.vitorpamplona.amethyst.commons.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.NotificationIconModifierSmaller
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10Modifier
@@ -115,7 +113,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding
-import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifierWithPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.commons.ui.theme.profile35dpModifier
@@ -132,55 +129,23 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
-import kotlin.time.ExperimentalTime
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
+/**
+ * Reactions, boosts, zaps and nutzaps on one of the user's notes, as a [NotificationActivityCard]:
+ * the faces lead, the note shrinks to one line and a thumbnail. One reaction and fifty use the same
+ * card, so a freshly arrived single and the grouped card a rebuild makes look alike.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MultiSetCompose(
     multiSetCard: MultiSetCard,
     routeForLastRead: String,
-    showHidden: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val baseNote = remember { multiSetCard.note }
-
+    val baseNote = multiSetCard.note
     val popupExpanded = remember { mutableStateOf(false) }
-
     val scope = rememberCoroutineScope()
-
-    // A MultiSetCard that carries a single zap or nutzap — the common case for a
-    // freshly-arrived notification appended at the top of the feed — is rendered
-    // as a large activity card, the same big display used for onchain zaps and the
-    // thread view, instead of a one-icon gallery. Once a full rebuild groups
-    // several reactions/zaps on the same post into one card (size > 1), it falls
-    // back to the compact gallery below. This is purely a rendering decision: the
-    // card-building logic is unchanged, so the additive path naturally produces the
-    // single-item (large) cards and a rebuild naturally produces the grouped
-    // (gallery) ones.
-    val singleZap =
-        remember(multiSetCard) {
-            multiSetCard.zapEvents
-                .singleOrNull()
-                ?.takeIf {
-                    multiSetCard.nutzapEvents.isEmpty() &&
-                        multiSetCard.likeEvents.isEmpty() &&
-                        multiSetCard.boostEvents.isEmpty()
-                }
-        }
-
-    val singleNutzap =
-        remember(multiSetCard) {
-            multiSetCard.nutzapEvents
-                .singleOrNull()
-                ?.takeIf {
-                    multiSetCard.zapEvents.isEmpty() &&
-                        multiSetCard.likeEvents.isEmpty() &&
-                        multiSetCard.boostEvents.isEmpty()
-                }
-        }
-
-    val isLargeCard = singleZap != null || singleNutzap != null
 
     val backgroundColor =
         calculateBackgroundColor(
@@ -189,123 +154,34 @@ fun MultiSetCompose(
             accountViewModel = accountViewModel,
         )
 
-    val columnModifier =
-        remember(backgroundColor.value, isLargeCard) {
-            Modifier
-                .fillMaxWidth()
-                .background(backgroundColor.value)
-                .combinedClickable(
-                    onClick = {
-                        scope.launch { routeFor(baseNote, accountViewModel.account)?.let { nav.nav(it) } }
-                    },
-                    onLongClick = { popupExpanded.value = true },
-                ).padding(
-                    // The large-card branch renders through NoteCompose, which applies
-                    // its own 12dp/10dp note padding; let it own the inset there so we
-                    // don't double it up. The gallery branch keeps the card's padding.
-                    start = if (isLargeCard) 0.dp else 12.dp,
-                    end = if (isLargeCard) 0.dp else 12.dp,
-                    top = if (isLargeCard) 0.dp else 10.dp,
-                    bottom = 0.dp,
-                )
-        }
+    MapZaps(multiSetCard.zapEvents, accountViewModel) { zaps ->
+        val actors = remember(multiSetCard, zaps) { multiSetCard.activityActors(zaps) }
+        val total = remember(multiSetCard) { zapTotal(multiSetCard.zapEvents, multiSetCard.nutzapEvents) }
+        val comment = remember(multiSetCard, zaps) { latestZapComment(zaps, multiSetCard.nutzapEvents) }
 
-    Column(modifier = columnModifier) {
-        when {
-            // Render the lone zap/nutzap as a full note (author picture on the left,
-            // the zap card as its body) by reusing NoteCompose on the receipt note,
-            // instead of dropping the bare activity card into the feed.
-            singleZap != null ->
-                NoteCompose(
-                    baseNote = singleZap.response,
-                    routeForLastRead = null,
-                    isHiddenFeed = showHidden,
-                    quotesLeft = 1,
-                    parentBackgroundColor = backgroundColor,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-
-            singleNutzap != null ->
-                NoteCompose(
-                    baseNote = singleNutzap,
-                    routeForLastRead = null,
-                    isHiddenFeed = showHidden,
-                    quotesLeft = 1,
-                    parentBackgroundColor = backgroundColor,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-
-            else -> {
-                Galeries(multiSetCard, backgroundColor, accountViewModel, nav)
-
-                if (LocalDisplaySettings.current.fullWidthNotes) {
-                    // Full width: the gallery rows are the card's header (icon in the picture
-                    // slot, faces where a name would be) and the note takes the whole width below,
-                    // as a full-width note's body does.
-                    ProvideNotificationBoostedNoteFrame {
-                        NoteCompose(
-                            baseNote = baseNote,
-                            modifier = FullWidthHeaderSpacer,
-                            routeForLastRead = null,
-                            isBoostedNote = true,
-                            isHiddenFeed = showHidden,
-                            quotesLeft = 1,
-                            parentBackgroundColor = backgroundColor,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
-                } else {
-                    Row(Modifier.fillMaxWidth()) {
-                        Spacer(modifier = WidthAuthorPictureModifierWithPadding)
-
-                        NoteCompose(
-                            baseNote = baseNote,
-                            modifier = HalfTopPadding,
-                            routeForLastRead = null,
-                            isBoostedNote = true,
-                            isHiddenFeed = showHidden,
-                            quotesLeft = 1,
-                            parentBackgroundColor = backgroundColor,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
-                }
-            }
-        }
-
-        if (popupExpanded.value) {
-            NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
+        NotificationActivityCard(
+            actors = actors,
+            createdAt = multiSetCard.maxCreatedAt,
+            zapTotal = total,
+            comment = comment,
+            backgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
+            modifier =
+                Modifier
+                    .drawBehind { drawRect(backgroundColor.value) }
+                    .combinedClickable(
+                        onClick = { scope.launch { routeFor(baseNote, accountViewModel.account)?.let { nav.nav(it) } } },
+                        onLongClick = { popupExpanded.value = true },
+                    ),
+            kindIcon = { MultiSetKindIcon(multiSetCard, it) },
+            thumbnail = rememberNotificationThumbnail(baseNote, accountViewModel),
+        ) {
+            NotificationNoteLine(baseNote, accountViewModel)
         }
     }
-}
 
-@Composable
-private fun Galeries(
-    multiSetCard: MultiSetCard,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    if (multiSetCard.zapEvents.isNotEmpty()) {
-        DecryptAndRenderZapGallery(multiSetCard, backgroundColor, accountViewModel, nav)
-    }
-
-    if (multiSetCard.nutzapEvents.isNotEmpty()) {
-        RenderNutzapGallery(multiSetCard.nutzapEvents, backgroundColor, accountViewModel, nav)
-    }
-
-    if (multiSetCard.boostEvents.isNotEmpty()) {
-        RenderBoostGallery(multiSetCard.boostEvents, nav, accountViewModel)
-    }
-
-    if (multiSetCard.likeEvents.isNotEmpty()) {
-        multiSetCard.likeEventsByType.forEach {
-            RenderLikeGallery(it.key, it.value, nav, accountViewModel)
-        }
+    if (popupExpanded.value) {
+        NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
     }
 }
 

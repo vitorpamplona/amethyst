@@ -26,49 +26,56 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.notifications.MessageSetCard
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.ic_dm
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.commons.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteDropDownMenu
-import com.vitorpamplona.amethyst.commons.ui.painterRes
+import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
-import com.vitorpamplona.amethyst.commons.ui.theme.FullWidthHeaderSpacer
-import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.ChatMessagePreviewText
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
 
+/**
+ * The direct messages one chat sent the user, as a Messages-list row: the sender, a lock, the time,
+ * how many arrived, and the newest one in two lines. Tapping opens the chat, where they are answered.
+ * Indented keeps the picture in the author column; the full-width layouts put it in the header and
+ * give the message the whole width.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageSetCompose(
     messageSetCard: MessageSetCard,
     routeForLastRead: String,
-    showHidden: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val baseNote = messageSetCard.note
-
     val popupExpanded = remember { mutableStateOf(false) }
-    val enablePopup = remember { { popupExpanded.value = true } }
-
     val scope = rememberCoroutineScope()
 
     val backgroundColor =
@@ -78,95 +85,94 @@ fun MessageSetCompose(
             accountViewModel = accountViewModel,
         )
 
-    val columnModifier =
-        remember(backgroundColor.value) {
+    val fullWidth = LocalDisplaySettings.current.fullWidthNotes
+
+    Row(
+        modifier =
             Modifier
                 .fillMaxWidth()
-                .background(backgroundColor.value)
+                .drawBehind { drawRect(backgroundColor.value) }
                 .combinedClickable(
-                    onClick = {
-                        scope.launch {
-                            routeFor(
-                                baseNote,
-                                accountViewModel.account,
-                            )?.let { nav.nav(it) }
-                        }
-                    },
-                    onLongClick = enablePopup,
-                ).padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 10.dp,
-                )
+                    onClick = { scope.launch { routeFor(baseNote, accountViewModel.account)?.let { nav.nav(it) } } },
+                    onLongClick = { popupExpanded.value = true },
+                ).padding(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        if (!fullWidth) {
+            SenderPicture(messageSetCard, 55.dp, accountViewModel, nav)
+            Spacer(Modifier.width(10.dp))
         }
 
-    Column(columnModifier) {
-        if (LocalDisplaySettings.current.fullWidthNotes) {
-            // Full width: a full-width note's header with the DM icon in the picture slot and the
-            // sender's row beside it, then the message across the whole width. The message skips
-            // its own author row because the header already shows it.
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                MessageIconBox()
-
-                Box(StdStartPadding.weight(1f)) {
-                    val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
-                    FirstUserInfoRow(
-                        baseNote = baseNote,
-                        showAuthorPicture = false,
-                        isPinned = false,
-                        editState = editState,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+        Column(Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.heightIn(min = if (fullWidth) 35.dp else 0.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (fullWidth) {
+                    SenderPicture(messageSetCard, 35.dp, accountViewModel, nav)
+                    Spacer(Modifier.width(10.dp))
+                }
+                baseNote.author?.let { UsernameDisplay(it, Modifier.weight(1f, fill = false), accountViewModel = accountViewModel) }
+                Icon(
+                    symbol = MaterialSymbols.Lock,
+                    contentDescription = null,
+                    modifier = Modifier.padding(start = 4.dp).size(14.dp),
+                    tint = MaterialTheme.colorScheme.placeholderText,
+                )
+                TimeAgo(baseNote)
+                Spacer(Modifier.weight(1f))
+                if (messageSetCard.messages.size > 1) {
+                    CountPill(messageSetCard.messages.size)
                 }
             }
 
-            ProvideNotificationBoostedNoteFrame(headerShown = true) {
-                NoteCompose(
-                    baseNote = baseNote,
-                    modifier = FullWidthHeaderSpacer,
-                    routeForLastRead = null,
-                    isBoostedNote = true,
-                    isHiddenFeed = showHidden,
-                    quotesLeft = 1,
-                    parentBackgroundColor = backgroundColor,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
+            Spacer(Modifier.size(if (fullWidth) 6.dp else 2.dp))
+
+            ChatMessagePreviewText(baseNote, accountViewModel) { text ->
+                Text(
+                    text = text,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-        } else {
-            Row(Modifier.fillMaxWidth()) {
-                MessageIconBox()
-
-                Column(modifier = StdStartPadding) {
-                    NoteCompose(
-                        baseNote = baseNote,
-                        routeForLastRead = null,
-                        isBoostedNote = true,
-                        isHiddenFeed = showHidden,
-                        quotesLeft = 1,
-                        parentBackgroundColor = backgroundColor,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
-            }
         }
+    }
 
-        if (popupExpanded.value) {
-            NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
-        }
+    if (popupExpanded.value) {
+        NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
     }
 }
 
 @Composable
-fun MessageIconBox() {
-    GalleryIconColumn(Modifier.width(55.dp).padding(top = 5.dp, end = 5.dp)) { iconAlignment ->
-        Icon(
-            painter = painterRes(Res.drawable.ic_dm, 4),
-            null,
-            modifier = Modifier.size(16.dp).align(iconAlignment),
-            tint = MaterialTheme.colorScheme.primary,
+private fun SenderPicture(
+    card: MessageSetCard,
+    size: Dp,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val author = card.note.author
+    if (author != null) {
+        UserPicture(author, size, accountViewModel = accountViewModel, nav = nav)
+    } else {
+        DisplayBlankAuthor(size, accountViewModel = accountViewModel)
+    }
+}
+
+@Composable
+private fun CountPill(count: Int) {
+    Box(
+        modifier =
+            Modifier
+                .padding(start = 8.dp)
+                .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp)
+                .background(MaterialTheme.colorScheme.primary, CircleShape)
+                .padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = count.toString(),
+            color = MaterialTheme.colorScheme.onPrimary,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelMedium,
         )
     }
 }
