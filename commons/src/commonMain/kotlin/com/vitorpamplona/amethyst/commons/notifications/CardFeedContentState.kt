@@ -373,24 +373,23 @@ class CardFeedContentState(
         // conversation to answer, not five notifications. Keyed by the chatroom (the other side of a
         // NIP-04/NIP-17 room, or the Marmot group), so two people writing never merge.
         val me = (localFilter as? NotificationFeedFilter)?.account?.signer?.pubKey
+        val (directMessages, otherNotes) = notes.partition { it.isDirectMessage() && it !is ConcordDirectInviteNote }
         val messageCards =
-            notes
-                .filter { it.isDirectMessage() && it !is ConcordDirectInviteNote }
+            directMessages
                 .groupBy { Pair(it.chatKey(me), epochDay(it.createdAt())) }
-                .values
-                .map { group ->
+                .map { (key, group) ->
                     MessageSetCard(
                         group
                             .sortedWith(compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex })
                             .toImmutableList(),
+                        key,
                     )
                 }
 
         val textNoteCards =
-            notes
+            otherNotes
                 .filter {
-                    !(it.isDirectMessage() && it !is ConcordDirectInviteNote) &&
-                        it.event !is ReactionEvent &&
+                    it.event !is ReactionEvent &&
                         it.event !is RepostEvent &&
                         it.event !is GenericRepostEvent &&
                         it.event !is ZapReceiptEvent &&
@@ -522,7 +521,7 @@ class CardFeedContentState(
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
 
                 val updatedCards =
-                    (oldNotesState.feed.value.list + newCards)
+                    mergeMessageSets(oldNotesState.feed.value.list, newCards)
                         .distinctBy { it.id() }
                         .sortedWith(NotificationFeedOrderCard)
                         .take(localFilter.limit())
@@ -611,6 +610,40 @@ class CardFeedContentState(
 }
 
 private fun Note.isInMarmotGroup(): Boolean = inGatherers?.any { it is MarmotGroupChatroom } == true
+
+/**
+ * [old] plus [new], with each new [MessageSetCard] folded into the old card of the same chat and
+ * day. The additive path converts only the new notes, so without this a message arriving while the
+ * feed is open would get a card of its own beside its chat's existing one.
+ */
+internal fun mergeMessageSets(
+    old: List<Card>,
+    new: List<Card>,
+): List<Card> {
+    val fresh = new.filterIsInstance<MessageSetCard>().filter { it.groupKey != null }.associateBy { it.groupKey }
+    if (fresh.isEmpty()) return old + new
+
+    val absorbed = HashSet<Any>()
+    val merged =
+        old.map { card ->
+            val key = (card as? MessageSetCard)?.groupKey
+            val incoming = key?.let { fresh[it] }
+            if (card is MessageSetCard && key != null && incoming != null) {
+                absorbed.add(key)
+                MessageSetCard(
+                    (incoming.messages + card.messages)
+                        .distinct()
+                        .sortedWith(compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex })
+                        .toImmutableList(),
+                    key,
+                )
+            } else {
+                card
+            }
+        }
+
+    return merged + new.filterNot { it is MessageSetCard && it.groupKey in absorbed }
+}
 
 private fun Note.isDirectMessage(): Boolean = event is EncryptedDmEvent || event is NIP17Group || isInMarmotGroup()
 

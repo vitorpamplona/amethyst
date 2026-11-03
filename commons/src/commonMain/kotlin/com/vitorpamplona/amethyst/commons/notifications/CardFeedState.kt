@@ -130,6 +130,9 @@ class MultiSetCard(
 @Immutable
 class MessageSetCard(
     val messages: ImmutableList<Note>,
+    // The chat and day the messages were grouped by; a message arriving later folds into the card
+    // with the same key instead of starting its own.
+    val groupKey: Any? = null,
 ) : Card {
     constructor(note: Note) : this(persistentListOf(note))
 

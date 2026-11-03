@@ -56,10 +56,13 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.notifications.MessageSetCard
+import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.ChatMessagePreviewText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -76,6 +79,31 @@ import kotlinx.coroutines.launch
 @Composable
 fun MessageSetCompose(
     messageSetCard: MessageSetCard,
+    routeForLastRead: String,
+    showHidden: Boolean = false,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val baseNote = messageSetCard.note
+
+    // The same block, mute and report gate every feed note goes through: a message from someone
+    // the user muted, or one carrying a muted word, leaves the feed rather than showing here.
+    CheckHiddenFeedWatchBlockAndReport(
+        note = baseNote,
+        showHiddenWarning = false,
+        ignoreAllBlocksAndReports = showHidden,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    ) { canPreview ->
+        MessageSetRow(messageSetCard, canPreview, routeForLastRead, accountViewModel, nav)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MessageSetRow(
+    messageSetCard: MessageSetCard,
+    canPreview: Boolean,
     routeForLastRead: String,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -109,6 +137,7 @@ fun MessageSetCompose(
         }
 
         Column(Modifier.weight(1f)) {
+            // Ends like a note's header (count, time, ⋮), so its time lines up with every other card's.
             Row(
                 modifier = Modifier.heightIn(min = if (fullWidth) 35.dp else 0.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -117,23 +146,25 @@ fun MessageSetCompose(
                     SenderPicture(messageSetCard, 35.dp, accountViewModel, nav)
                     Spacer(Modifier.width(10.dp))
                 }
-                baseNote.author?.let { UsernameDisplay(it, Modifier.weight(1f, fill = false), accountViewModel = accountViewModel) }
-                Icon(
-                    symbol = MaterialSymbols.Lock,
-                    contentDescription = null,
-                    modifier = Modifier.padding(start = 4.dp).size(14.dp),
-                    tint = MaterialTheme.colorScheme.placeholderText,
-                )
-                TimeAgo(baseNote)
-                Spacer(Modifier.weight(1f))
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    baseNote.author?.let { UsernameDisplay(it, Modifier.weight(1f, fill = false), accountViewModel = accountViewModel) }
+                    Icon(
+                        symbol = MaterialSymbols.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.padding(start = 4.dp).size(14.dp),
+                        tint = MaterialTheme.colorScheme.placeholderText,
+                    )
+                }
                 if (messageSetCard.messages.size > 1) {
                     CountPill(messageSetCard.messages.size)
                 }
+                Box(Modifier.padding(start = 8.dp)) { TimeAgo(baseNote, TimeAgoStyle.DottedTight) }
+                MoreOptionsButton(baseNote, accountViewModel = accountViewModel, nav = nav)
             }
 
             Spacer(Modifier.size(if (fullWidth) 6.dp else 2.dp))
 
-            MessageBody(baseNote, backgroundColor, accountViewModel, nav)
+            MessageBody(baseNote, canPreview, backgroundColor, accountViewModel, nav)
         }
     }
 
@@ -149,6 +180,7 @@ fun MessageSetCompose(
 @Composable
 private fun MessageBody(
     message: Note,
+    canPreview: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -156,18 +188,21 @@ private fun MessageBody(
     LoadDecryptedContentOrNull(message, accountViewModel) { body ->
         if (!body.isNullOrBlank()) {
             val tags = remember(message) { message.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
-            TranslatableRichTextViewer(
-                content = body,
-                canPreview = true,
-                quotesLeft = 1,
-                modifier = Modifier.fillMaxWidth(),
-                tags = tags,
-                backgroundColor = backgroundColor,
-                id = message.idHex,
-                callbackUri = remember(message) { message.toNostrUri() },
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+            // A message marked sensitive blurs behind the same warning a feed note shows.
+            SensitivityWarning(note = message, accountViewModel = accountViewModel) {
+                TranslatableRichTextViewer(
+                    content = body,
+                    canPreview = canPreview,
+                    quotesLeft = 1,
+                    modifier = Modifier.fillMaxWidth(),
+                    tags = tags,
+                    backgroundColor = backgroundColor,
+                    id = message.idHex,
+                    callbackUri = remember(message) { message.toNostrUri() },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
         } else {
             ChatMessagePreviewText(message, accountViewModel) { text ->
                 Text(

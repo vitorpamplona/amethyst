@@ -41,7 +41,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,8 +52,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
@@ -72,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.nip71Video.selectVideoTrack
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatPreviewLabels
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatPreviewText
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
@@ -107,6 +109,7 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.claimedSatsTotal
+import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.plus
 import kotlinx.collections.immutable.ImmutableList
@@ -365,7 +368,7 @@ private fun ActivityCommentLine(
 }
 
 /**
- * As many faces of [actors] as fit the width, then "+N" for the rest. The count is measured and
+ * As many faces of [actors] as fit the width, then "+N" for the rest. The count is worked out and
  * drawn by the layout itself, so the pile adapts to a phone, a deck column or a wide window without
  * subcomposing.
  */
@@ -379,56 +382,64 @@ fun NotificationFacePile(
     val composed = minOf(actors.size, MAX_COMPOSED_FACES)
     val measurer = rememberTextMeasurer()
     val labelStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.placeholderText)
-    val overflowLabel = remember { mutableStateOf<TextLayoutResult?>(null) }
-    val overflowX = remember { mutableFloatStateOf(0f) }
     val badgeBase = MaterialTheme.colorScheme.background
+    // Read once for the whole pile rather than once per face; animated avatars follow the setting.
+    val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
+
+    // What the draw pass puts after the faces. Int and Float states skip equal writes, so a
+    // re-measure that changes nothing doesn't invalidate the drawing.
+    val hiddenCount = remember { mutableIntStateOf(0) }
+    val labelX = remember { mutableFloatStateOf(0f) }
 
     Layout(
         content = {
             for (i in 0 until composed) {
-                NotificationFace(actors[i], backgroundColor, badgeBase, accountViewModel)
+                NotificationFace(actors[i], backgroundColor, badgeBase, autoPlayGif, accountViewModel)
             }
         },
         modifier =
             modifier.drawBehind {
-                overflowLabel.value?.let {
-                    drawText(it, topLeft = Offset(overflowX.floatValue, (size.height - it.size.height) / 2f))
+                val hidden = hiddenCount.intValue
+                if (hidden > 0) {
+                    // The measurer caches the layout, so this is a lookup on every frame but the first.
+                    val label = measurer.measure("+$hidden", labelStyle)
+                    drawText(label, topLeft = Offset(labelX.floatValue, (size.height - label.size.height) / 2f))
                 }
             },
     ) { measurables, constraints ->
         val face = FaceSize.roundToPx()
         val gap = FaceGap.roundToPx()
+        val total = actors.size
 
-        fun labelFor(hidden: Int) = if (hidden > 0) measurer.measure("+$hidden", labelStyle) else null
+        fun facesWidth(count: Int) = count * face + (count - 1).coerceAtLeast(0) * gap
 
-        fun widthFor(
-            shown: Int,
-            label: TextLayoutResult?,
-        ) = shown * face + (shown - 1).coerceAtLeast(0) * gap + (label?.let { gap + it.size.width } ?: 0)
-
+        // Faces that fit with no label, else as many as fit beside the widest label the count can
+        // need ("+total"): one text measurement per pass instead of one per face dropped.
         var shown = composed
-        var label = labelFor(actors.size - shown)
-        while (shown > 1 && widthFor(shown, label) > constraints.maxWidth) {
-            shown--
-            label = labelFor(actors.size - shown)
+        var labelWidth = 0
+        if (composed < total || facesWidth(composed) > constraints.maxWidth) {
+            labelWidth = measurer.measure("+$total", labelStyle).size.width
+            shown = ((constraints.maxWidth - labelWidth) / (face + gap)).coerceIn(minOf(1, composed), composed)
         }
 
-        val placeables = measurables.take(shown).map { it.measure(Constraints.fixed(face, face)) }
-        val width = widthFor(shown, label).coerceAtMost(constraints.maxWidth)
-        val facesEnd = shown * face + (shown - 1).coerceAtLeast(0) * gap
+        val hidden = total - shown
+        val labelFits = hidden > 0 && facesWidth(shown) + gap + labelWidth <= constraints.maxWidth
+        val width = (facesWidth(shown) + if (labelFits) gap + labelWidth else 0).coerceAtMost(constraints.maxWidth)
 
-        overflowLabel.value = label
-        overflowX.floatValue =
-            if (label == null) {
-                0f
-            } else if (layoutDirection == LayoutDirection.Rtl) {
-                (width - facesEnd - gap - label.size.width).toFloat()
+        val placeables = arrayOfNulls<Placeable>(shown)
+        for (i in 0 until shown) placeables[i] = measurables[i].measure(Constraints.fixed(face, face))
+
+        // Too narrow for even one face and a count: show the face alone rather than overlap the time.
+        hiddenCount.intValue = if (labelFits) hidden else 0
+        labelX.floatValue =
+            if (layoutDirection == LayoutDirection.Rtl) {
+                (width - facesWidth(shown) - gap - measurer.measure("+$hidden", labelStyle).size.width).toFloat()
             } else {
-                (facesEnd + gap).toFloat()
+                (facesWidth(shown) + gap).toFloat()
             }
 
         layout(width, face) {
-            placeables.forEachIndexed { index, placeable -> placeable.placeRelative(index * (face + gap), 0) }
+            for (i in 0 until shown) placeables[i]?.placeRelative(i * (face + gap), 0)
         }
     }
 }
@@ -441,6 +452,7 @@ private fun NotificationFace(
     actor: ActivityActor,
     backgroundColor: MutableState<Color>,
     badgeBase: Color,
+    autoPlayGif: Boolean,
     accountViewModel: AccountViewModel,
 ) {
     Box(Modifier.size(FaceSize)) {
@@ -455,6 +467,7 @@ private fun NotificationFace(
                 contentScale = ContentScale.Crop,
                 loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
                 loadRobohash = LocalDisplaySettings.current.loadRobohash,
+                autoPlayGif = autoPlayGif,
             )
         } else {
             DisplayBlankAuthor(FaceSize, accountViewModel = accountViewModel)
@@ -595,9 +608,11 @@ fun NotificationNoteLine(
             video = stringRes(Res.string.chat_preview_video),
             note = stringRes(Res.string.chat_preview_note),
         )
-    val text = remember(event, labels) { event?.let { notificationLineText(it, labels) } ?: "" }
-
-    NotificationMutedLine(text, modifier, leadingIcon)
+    // The decrypted body, so a reaction to one of the user's DMs names the message, not its ciphertext.
+    LoadDecryptedContentOrNull(note, accountViewModel) { body ->
+        val text = remember(event, body, labels) { event?.let { notificationLineText(it, body, labels) } ?: "" }
+        NotificationMutedLine(text, modifier, leadingIcon)
+    }
 }
 
 /** The second line of a profile-zap card. */
@@ -629,13 +644,15 @@ private fun NotificationMutedLine(
 
 private fun notificationLineText(
     event: Event,
+    decrypted: String?,
     labels: ChatPreviewLabels,
 ): String {
     val title =
         event.tags
             .fastFirstOrNull { it.size > 1 && (it[0] == "title" || it[0] == "subject") && it[1].isNotBlank() }
             ?.get(1)
-    val body = title ?: event.content
+    // Until an encrypted body decrypts (or when it can't), show nothing rather than the ciphertext.
+    val body = title ?: decrypted ?: ""
     val nameOf = { hex: HexKey -> LocalCache.getUserIfExists(hex)?.toBestDisplayName() }
     // Media links drop out when there are words to show: "Nostr is dead they say", not "... Photo".
     // A post that is only a picture or a video still gets named.
@@ -659,7 +676,10 @@ fun rememberNotificationThumbnail(
                 if (it.isSensitiveOrNSFW()) {
                     null
                 } else {
-                    NotificationContent.mediaImageUrl(it) ?: NotificationContent.firstImageUrl(it.content)
+                    // A video only has a picture when it declares a poster frame; mediaImageUrl
+                    // would fall back to the video file itself, which an image loader can't draw.
+                    val picture = if (it is VideoEvent) it.selectVideoTrack()?.image?.firstOrNull() else NotificationContent.mediaImageUrl(it)
+                    picture ?: NotificationContent.firstImageUrl(it.content)
                 }
             }
         }

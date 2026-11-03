@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,10 +39,8 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.commons.ui.note.ZapPollNote
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
-import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -67,15 +64,14 @@ fun RenderZapPoll(
     val showReply by
         remember(note) {
             derivedStateOf {
-                !makeItShort && unPackReply == ReplyRenderType.FULL && (note.replyTo != null || noteEvent.mentionKeys().isNotEmpty())
+                !makeItShort && (unPackReply == ReplyRenderType.FULL || unPackReply == ReplyRenderType.EXCERPT) && (note.replyTo != null || noteEvent.mentionKeys().isNotEmpty())
             }
         }
 
     if (showReply) {
         val parentNote = remember(note) { replyingDirectlyTo(note, LocalCache) }
         if (parentNote != null) {
-            ReplyNoteComposition(parentNote, backgroundColor, accountViewModel, nav)
-            Spacer(modifier = StdVertSpacer)
+            RenderReplyContext(parentNote, unPackReply, backgroundColor, accountViewModel, nav)
         }
     }
 

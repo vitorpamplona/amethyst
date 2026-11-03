@@ -171,7 +171,8 @@ fun RenderTorrentComment(
     Column {
         val noteEvent = note.event
 
-        if (unPackReply == ReplyRenderType.FULL) {
+        // The torrent is the comment's subject, not the user's note: notifications keep it too.
+        if (unPackReply == ReplyRenderType.FULL || unPackReply == ReplyRenderType.EXCERPT) {
             val torrentInfo =
                 remember(noteEvent) {
                     if (noteEvent is TorrentCommentEvent) {

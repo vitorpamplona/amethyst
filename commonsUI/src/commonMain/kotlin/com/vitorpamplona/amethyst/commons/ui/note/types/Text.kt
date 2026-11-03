@@ -141,27 +141,7 @@ fun RenderTextEvent(
         val parentNote = remember(note) { replyingDirectlyTo(note, LocalCache) }
 
         if (parentNote != null && canShowReply) {
-            when (unPackReply) {
-                ReplyRenderType.FULL -> {
-                    ReplyNoteComposition(parentNote, backgroundColor, accountViewModel, nav)
-                    Spacer(modifier = StdVertSpacer)
-                }
-
-                ReplyRenderType.LINE -> {
-                    ReplyToAuthorLine(parentNote, accountViewModel, nav)
-                }
-
-                ReplyRenderType.EXCERPT -> {
-                    if (parentNote.author?.pubkeyHex == accountViewModel.account.signer.pubKey) {
-                        NotificationReplyLine(parentNote, accountViewModel, nav)
-                        Spacer(modifier = HalfVertSpacer)
-                    } else {
-                        ReplyToAuthorLine(parentNote, accountViewModel, nav)
-                    }
-                }
-
-                ReplyRenderType.NONE -> {}
-            }
+            RenderReplyContext(parentNote, unPackReply, backgroundColor, accountViewModel, nav)
         } else if (!makeItShort && noteEvent is CommentEvent) {
             // No in-cache parent note: this comment answers a scope rather than a note.
             // What a comment answers is context, like a quote: its card keeps the margin.
@@ -262,6 +242,43 @@ fun observeChatMessageEdit(note: Note): Note? {
 }
 
 private fun Note.latestChatEdit(): Note? = latestConcordEdit() ?: latestBuzzEdit() ?: latestMarmotEdit()
+
+/**
+ * What a reply answers, drawn above it as [unPackReply] asks: the whole parent ([ReplyRenderType.FULL]),
+ * "replying to @name" ([ReplyRenderType.LINE]), or in the notifications feed one line of the
+ * parent when the user wrote it and "replying to @name" otherwise ([ReplyRenderType.EXCERPT]).
+ * Every kind that previews its parent goes through here, so a new mode reaches all of them.
+ */
+@Composable
+internal fun RenderReplyContext(
+    parentNote: Note,
+    unPackReply: ReplyRenderType,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    when (unPackReply) {
+        ReplyRenderType.FULL -> {
+            ReplyNoteComposition(parentNote, backgroundColor, accountViewModel, nav)
+            Spacer(modifier = StdVertSpacer)
+        }
+
+        ReplyRenderType.LINE -> {
+            ReplyToAuthorLine(parentNote, accountViewModel, nav)
+        }
+
+        ReplyRenderType.EXCERPT -> {
+            if (accountViewModel.isLoggedUser(parentNote.author)) {
+                NotificationReplyLine(parentNote, accountViewModel, nav)
+                Spacer(modifier = HalfVertSpacer)
+            } else {
+                ReplyToAuthorLine(parentNote, accountViewModel, nav)
+            }
+        }
+
+        ReplyRenderType.NONE -> {}
+    }
+}
 
 /** "Replying to @name" for [parentNote], naming the zap sender when the parent is a zap receipt. */
 @Composable

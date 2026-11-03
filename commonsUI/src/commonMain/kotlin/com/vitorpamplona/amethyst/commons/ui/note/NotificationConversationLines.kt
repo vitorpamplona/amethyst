@@ -90,7 +90,7 @@ private fun NotificationReferenceLine(
  */
 fun notificationInlineQuoteRenderer(fallback: InlineQuoteRenderer) =
     InlineQuoteRenderer { note, quotesLeft, backgroundColor, accountViewModel, nav ->
-        if (note.author?.pubkeyHex == accountViewModel.account.signer.pubKey) {
+        if (accountViewModel.isLoggedUser(note.author)) {
             NotificationQuoteLine(note, accountViewModel, nav)
         } else {
             fallback.Render(note, quotesLeft, backgroundColor, accountViewModel, nav)

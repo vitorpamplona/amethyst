@@ -445,6 +445,7 @@ private fun RenderCardItem(
             MessageSetCompose(
                 messageSetCard = item,
                 routeForLastRead = routeForLastRead,
+                showHidden = showHidden,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

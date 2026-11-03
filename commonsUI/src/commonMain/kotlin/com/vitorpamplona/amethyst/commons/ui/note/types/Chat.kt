@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,9 +36,7 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
-import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
@@ -86,7 +83,7 @@ fun RenderChat(
         // reply-to preview never fires for it. Render the quoted parent here so a Concord/MLS
         // chat reply shows what it's replying to wherever NoteCompose draws it (Notifications
         // tab, feed, threads) — the chat feed has its own reply-row and passes NONE.
-        if (unPackReply == ReplyRenderType.FULL && !makeItShort) {
+        if ((unPackReply == ReplyRenderType.FULL || unPackReply == ReplyRenderType.EXCERPT) && !makeItShort) {
             val replyingDirectlyTo =
                 remember(note) {
                     // Skip the preview when the parent is already cited inline (`nostr:...`) in the
@@ -97,8 +94,7 @@ fun RenderChat(
                     }
                 }
             if (replyingDirectlyTo != null) {
-                ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
-                Spacer(modifier = StdVertSpacer)
+                RenderReplyContext(replyingDirectlyTo, unPackReply, backgroundColor, accountViewModel, nav)
             }
         }
 
