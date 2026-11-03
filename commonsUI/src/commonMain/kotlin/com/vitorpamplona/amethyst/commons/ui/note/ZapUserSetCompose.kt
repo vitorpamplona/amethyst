@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.notifications.ZapUserSetCard
+import com.vitorpamplona.amethyst.commons.ui.layouts.FullWidthCardTopPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.AuthorGalleryZaps
@@ -82,7 +83,7 @@ fun ZapUserSetCompose(
                 Modifier.padding(
                     start = if (!isInnerNote) 12.dp else 0.dp,
                     end = if (!isInnerNote) 12.dp else 0.dp,
-                    top = 10.dp,
+                    top = if (fullWidth) FullWidthCardTopPadding else 10.dp,
                 ),
         ) {
             // Draws the like picture outside the boosted card.

@@ -44,6 +44,8 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.notifications.MessageSetCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.ic_dm
+import com.vitorpamplona.amethyst.commons.ui.layouts.FullWidthCardBottomPadding
+import com.vitorpamplona.amethyst.commons.ui.layouts.FullWidthCardTopPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.calculateBackgroundColor
@@ -78,8 +80,12 @@ fun MessageSetCompose(
             accountViewModel = accountViewModel,
         )
 
+    // Full width: more room above the header and below the reactions, as NoteComposeLayout gives
+    // a full-width note, so the cards of the feed read apart from each other.
+    val fullWidth = LocalDisplaySettings.current.fullWidthNotes
+
     val columnModifier =
-        remember(backgroundColor.value) {
+        remember(backgroundColor.value, fullWidth) {
             Modifier
                 .fillMaxWidth()
                 .background(backgroundColor.value)
@@ -96,12 +102,13 @@ fun MessageSetCompose(
                 ).padding(
                     start = 12.dp,
                     end = 12.dp,
-                    top = 10.dp,
+                    top = if (fullWidth) FullWidthCardTopPadding else 10.dp,
+                    bottom = if (fullWidth) FullWidthCardBottomPadding else 0.dp,
                 )
         }
 
     Column(columnModifier) {
-        if (LocalDisplaySettings.current.fullWidthNotes) {
+        if (fullWidth) {
             // Full width: a full-width note's header with the DM icon in the picture slot and the
             // sender's row beside it, then the message across the whole width. The message skips
             // its own author row because the header already shows it.

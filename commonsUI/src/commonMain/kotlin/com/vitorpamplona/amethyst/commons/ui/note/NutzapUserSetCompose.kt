@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.notifications.NutzapUserSetCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nutzap
+import com.vitorpamplona.amethyst.commons.ui.layouts.FullWidthCardTopPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.AuthorGalleryZaps
@@ -119,7 +120,7 @@ fun NutzapUserSetCompose(
                 Modifier.padding(
                     start = if (!isInnerNote) 12.dp else 0.dp,
                     end = if (!isInnerNote) 12.dp else 0.dp,
-                    top = 10.dp,
+                    top = if (fullWidth) FullWidthCardTopPadding else 10.dp,
                 ),
         ) {
             if (!isInnerNote && !fullWidth) {

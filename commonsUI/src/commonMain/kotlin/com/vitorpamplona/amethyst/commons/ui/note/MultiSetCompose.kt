@@ -88,6 +88,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCorner
 import com.vitorpamplona.amethyst.commons.ui.components.ExpandableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.layouts.FullWidthCardBottomPadding
+import com.vitorpamplona.amethyst.commons.ui.layouts.FullWidthCardTopPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.DisplayBlankAuthor
 import com.vitorpamplona.amethyst.commons.ui.note.FollowingIcon
@@ -189,8 +191,12 @@ fun MultiSetCompose(
             accountViewModel = accountViewModel,
         )
 
+    // Full width: more room above the header and below the reactions, as NoteComposeLayout gives
+    // a full-width note, so the cards of the feed read apart from each other.
+    val fullWidth = LocalDisplaySettings.current.fullWidthNotes
+
     val columnModifier =
-        remember(backgroundColor.value, isLargeCard) {
+        remember(backgroundColor.value, isLargeCard, fullWidth) {
             Modifier
                 .fillMaxWidth()
                 .background(backgroundColor.value)
@@ -205,8 +211,13 @@ fun MultiSetCompose(
                     // don't double it up. The gallery branch keeps the card's padding.
                     start = if (isLargeCard) 0.dp else 12.dp,
                     end = if (isLargeCard) 0.dp else 12.dp,
-                    top = if (isLargeCard) 0.dp else 10.dp,
-                    bottom = 0.dp,
+                    top =
+                        when {
+                            isLargeCard -> 0.dp
+                            fullWidth -> FullWidthCardTopPadding
+                            else -> 10.dp
+                        },
+                    bottom = if (!isLargeCard && fullWidth) FullWidthCardBottomPadding else 0.dp,
                 )
         }
 
@@ -240,7 +251,7 @@ fun MultiSetCompose(
             else -> {
                 Galeries(multiSetCard, backgroundColor, accountViewModel, nav)
 
-                if (LocalDisplaySettings.current.fullWidthNotes) {
+                if (fullWidth) {
                     // Full width: the gallery rows are the card's header (icon in the picture
                     // slot, faces where a name would be) and the note takes the whole width below,
                     // as a full-width note's body does.

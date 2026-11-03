@@ -48,6 +48,16 @@ import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 val NoteHorizontalPadding = 12.dp
 
 /**
+ * The space above a full-width card's header (picture + first row). Taller than the indented
+ * layout's 10dp: with a 35dp picture instead of a 55dp column, the header would otherwise sit
+ * right under the previous card's divider and the cards of a feed would run together.
+ */
+val FullWidthCardTopPadding = 16.dp
+
+/** The space a full-width card adds below its reactions row, before the feed's divider. */
+val FullWidthCardBottomPadding = 4.dp
+
+/**
  * Pre-computed pixel dimensions for [NoteComposeLayout], cached via [remember]
  * so dp-to-px conversion only runs once per density change.
  */
@@ -67,6 +77,10 @@ private data class NoteLayoutPx(
     val padEnd: Int,
     /** Top padding for the content area: 10dp */
     val padTop: Int,
+    /** Top padding for the content area under a full-width header: [FullWidthCardTopPadding] */
+    val padTopFullWidth: Int,
+    /** Bottom padding below the reactions row of a full-width card: [FullWidthCardBottomPadding] */
+    val padBottomFullWidth: Int,
 )
 
 @Composable
@@ -176,7 +190,7 @@ private fun NoteComposeLayoutBoostedPreview() {
  * Picture feed cards):
  * ```
  * ┌───────────────────────────────────────────────┐
- * │ padding (start=12, end=12, top=10)            │
+ * │ padding (start=12, end=12, top=16)            │
  * │ ┌──────┐ 10dp ┌─────────────────────────────┐ │
  * │ │author│  gap  │ firstRow                    │ │
  * │ │      │       │ secondRow (optional)        │ │
@@ -185,6 +199,7 @@ private fun NoteComposeLayoutBoostedPreview() {
  * │ noteContent (full inner width)                │
  * ├───────────────────────────────────────────────┤
  * │ reactionsRow (full width, no side padding)    │
+ * │ 4dp bottom padding                            │
  * └───────────────────────────────────────────────┘
  * ```
  * The author picture and the header rows are centered on each other, and [authorGutter]
@@ -245,8 +260,8 @@ private fun NoteComposeLayoutBoostedPreview() {
  *
  * @param modifier Applied to the Layout root. Typically includes combinedClickable
  *   for note navigation, drawBehind for background color, and fillMaxWidth.
- * @param addPadding Whether to add standard note padding (12dp sides, 10dp top)
- *   to the author + content area. False for boosted notes.
+ * @param addPadding Whether to add standard note padding (12dp sides, 10dp top; 16dp top and
+ *   4dp bottom for a [fullWidth] card) to the author + content area. False for boosted notes.
  * @param showAuthorColumn Whether to reserve 55dp for the author picture column
  *   with a 10dp gap. False for boosted/quoted notes.
  * @param fullWidth Whether the author picture heads the note beside the header rows and the
@@ -297,6 +312,8 @@ fun NoteComposeLayout(
                     padStart = NoteHorizontalPadding.roundToPx(),
                     padEnd = NoteHorizontalPadding.roundToPx(),
                     padTop = 10.dp.roundToPx(),
+                    padTopFullWidth = FullWidthCardTopPadding.roundToPx(),
+                    padBottomFullWidth = FullWidthCardBottomPadding.roundToPx(),
                 )
             }
         }
@@ -318,14 +335,22 @@ fun NoteComposeLayout(
 
         // Padding is applied in the measure policy (not via Modifier.padding) because
         // the reactions row needs full width while the content area is inset.
+        val authorOnTop = showAuthorColumn && fullWidth
         val padStart = if (addPadding) px.padStart else 0
         val padEnd = if (addPadding) px.padEnd else 0
-        val padTop = if (addPadding) px.padTop else 0
+        // A full-width card gets more room above its header and below its reactions, so the
+        // cards of a feed read apart from each other across the divider.
+        val padTop =
+            when {
+                !addPadding -> 0
+                authorOnTop -> px.padTopFullWidth
+                else -> px.padTop
+            }
+        val padBottom = if (addPadding && authorOnTop) px.padBottomFullWidth else 0
 
         // Column widths are computed from known fixed dimensions, eliminating
         // the Row's two-pass measurement (measure author → compute remaining → measure content).
         val innerWidth = (maxWidth - padStart - padEnd).coerceAtLeast(0)
-        val authorOnTop = showAuthorColumn && fullWidth
         val authorW = if (showAuthorColumn && !authorOnTop) px.authorWidth else 0
         val gap = if (showAuthorColumn && !authorOnTop) px.authorContentGap else 0
         val contentWidth = (innerWidth - authorW - gap).coerceAtLeast(0)
@@ -404,7 +429,7 @@ fun NoteComposeLayout(
                 val height = (mainAreaHeight - gutterTop).coerceAtLeast(0)
                 it.measure(Constraints.fitPrioritizingWidth(px.authorWidth, px.authorWidth, height, height))
             }
-        val totalHeight = padTop + mainAreaHeight + reactionsHeight
+        val totalHeight = padTop + mainAreaHeight + reactionsHeight + padBottom
 
         // placeRelative handles RTL by mirroring x coordinates automatically.
         layout(maxWidth, totalHeight.coerceAtLeast(constraints.minHeight)) {
