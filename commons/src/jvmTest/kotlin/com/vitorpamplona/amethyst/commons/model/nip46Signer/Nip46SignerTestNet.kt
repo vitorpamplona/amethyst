@@ -27,6 +27,9 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
 import com.vitorpamplona.quartz.nip01Core.relay.server.inprocess.InProcessWebSocket
@@ -40,8 +43,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * In-process relays (one server per url, anything else never connects) and the stores an account's
@@ -62,9 +65,6 @@ internal class Nip46SignerTestNet(
         override fun send(msg: String) = false
     }
 
-    /** What the client sent each relay, in order. */
-    private val sent = ConcurrentHashMap<NormalizedRelayUrl, MutableList<String>>()
-
     val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     val servers = relays.associateWith { NostrServer(EventStore(null)) }
     val client =
@@ -73,25 +73,33 @@ internal class Nip46SignerTestNet(
                 override fun build(
                     url: NormalizedRelayUrl,
                     out: WebSocketListener,
-                ) = servers[url]?.let { Recorded(InProcessWebSocket(it, out), sent.getOrPut(url) { Collections.synchronizedList(mutableListOf()) }) } ?: NeverConnects
+                ) = servers[url]?.let { InProcessWebSocket(it, out) } ?: NeverConnects
             },
             scope,
         )
     val identity = NostrSignerInternal(KeyPair())
     val ledger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
 
-    private class Recorded(
-        private val inner: WebSocket,
-        private val log: MutableList<String>,
-    ) : WebSocket by inner {
-        override fun send(msg: String): Boolean {
-            log.add(msg)
-            return inner.send(msg)
-        }
+    /** What the client sent each relay, in order. */
+    private val sent = ConcurrentHashMap<NormalizedRelayUrl, ConcurrentLinkedQueue<Command>>()
+
+    init {
+        client.addConnectionListener(
+            object : RelayConnectionListener {
+                override fun onSent(
+                    relay: IRelayClient,
+                    cmdStr: String,
+                    cmd: Command,
+                    success: Boolean,
+                ) {
+                    sent.getOrPut(relay.url) { ConcurrentLinkedQueue() }.add(cmd)
+                }
+            },
+        )
     }
 
-    /** Every message the client sent [relay] so far, in order. */
-    fun sentTo(relay: NormalizedRelayUrl): List<String> = sent[relay]?.let { synchronized(it) { it.toList() } } ?: emptyList()
+    /** Every command the client sent [relay] so far, in order. */
+    fun sentTo(relay: NormalizedRelayUrl): List<Command> = sent[relay]?.toList().orEmpty()
 
     fun signerState(
         inbox: Set<NormalizedRelayUrl>,

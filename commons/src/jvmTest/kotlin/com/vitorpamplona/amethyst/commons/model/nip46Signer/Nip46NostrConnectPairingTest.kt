@@ -30,6 +30,8 @@ import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import kotlinx.coroutines.CompletableDeferred
@@ -67,12 +69,7 @@ class Nip46NostrConnectPairingTest {
     ) = runBlocking(Dispatchers.Default) {
         val net = Nip46SignerTestNet(listOf(appRelay, inboxRelay))
         try {
-            val transportKey = MutableStateFlow("")
-            val settings =
-                AccountSettings(
-                    net.identity.keyPair,
-                    nip46TransportKey = if (keyHeardLateMs > 0) HeardLate(transportKey, keyHeardLateMs) else transportKey,
-                )
+            val settings = AccountSettings(net.identity.keyPair, nip46TransportKey = HeardLate(MutableStateFlow(""), keyHeardLateMs))
             val state = net.signerState(setOf(inboxRelay), settings)
             if (signerAlreadyOn) {
                 state.setEnabled(true)
@@ -81,9 +78,8 @@ class Nip46NostrConnectPairingTest {
 
             val code = NostrConnectLoginUseCase.generateUri(KeyPair(), listOf(appRelay.url), BunkerClientMetadata(name = "App"))
             val coordinate = Nip46PermissionAuthorizer.coordinateFor(net.identity.pubKey, code.ephemeralKeyPair.pubKey.toHexKey())
-            // Already trusted, so pairing skips the consent dialog; used just now, so the idle prune keeps it.
-            // Stamped before trusted: the launch's prune runs meanwhile, and a trusted app it finds with
-            // no last-used time it forgets.
+            // Used just now, then trusted: pairing skips the consent dialog, and the launch's idle prune,
+            // running meanwhile, keeps it (a trusted app it finds with no last-used time it forgets).
             net.ledger.updateLastUsed(coordinate)
             net.ledger.setPolicy(coordinate, AppSignerPolicy.FULL_TRUST)
 
@@ -98,14 +94,15 @@ class Nip46NostrConnectPairingTest {
 
             // Kind 24133 is ephemeral, so the listener must not resubscribe once the ack is out: a
             // request that reaches the relay between its CLOSE and its new REQ is lost. On a fast
-            // machine the request usually beats the restart, so the check is on the wire.
+            // machine the request usually beats the restart, so the check is on the wire, once a
+            // late key and any restart it causes have had time to land.
             delay(keyHeardLateMs * 2)
-            val transport = KeyPair(transportKey.value.hexToByteArray()).pubKey.toHexKey()
+            val transport = KeyPair(settings.nip46TransportKey.value.hexToByteArray()).pubKey.toHexKey()
             val onAppRelay = net.sentTo(appRelay)
-            val ack = onAppRelay.indexOfFirst { it.startsWith("[\"EVENT\"") && "\"pubkey\":\"$transport\"" in it }
+            val ack = onAppRelay.indexOfFirst { it is EventCmd && it.event.pubKey == transport }
             assertTrue(ack >= 0, "the pairing ack went out on the app's relay")
-            val resubscribed = onAppRelay.drop(ack + 1).filter { it.startsWith("[\"REQ\"") && "\"#p\":[\"$transport\"]" in it }
-            assertEquals(emptyList(), resubscribed, "the listener is not resubscribed after the ack")
+            val resubscribed = onAppRelay.drop(ack + 1).filter { cmd -> cmd is ReqCmd && cmd.filters.any { transport in it.tags?.get("p").orEmpty() } }
+            assertEquals(0, resubscribed.size, "the listener is not resubscribed after the ack")
             app.signer.closeSubscription()
         } finally {
             net.close()
@@ -119,7 +116,7 @@ class Nip46NostrConnectPairingTest {
     /**
      * Turning the signer on mints its transport key and then sets the flag, but the listener's
      * trigger can hear the flag first, as a busy machine schedules it. The key arriving after that
-     * must not restart a listener that already runs under it.
+     * must start the listener, not restart one that already answered the pairing.
      */
     @Test
     fun aTransportKeyHeardLateDoesNotRestartTheListener() = pairsWithoutARetry(signerAlreadyOn = false, keyHeardLateMs = 500)
@@ -143,7 +140,7 @@ class Nip46NostrConnectPairingTest {
 
                 val code = NostrConnectLoginUseCase.generateUri(KeyPair(), listOf(appRelay.url), BunkerClientMetadata(name = "App"))
                 val coordinate = Nip46PermissionAuthorizer.coordinateFor(net.identity.pubKey, code.ephemeralKeyPair.pubKey.toHexKey())
-                // Stamped before trusted, as above.
+                // Used just now, then trusted, as above.
                 net.ledger.updateLastUsed(coordinate)
                 net.ledger.setPolicy(coordinate, AppSignerPolicy.FULL_TRUST)
 

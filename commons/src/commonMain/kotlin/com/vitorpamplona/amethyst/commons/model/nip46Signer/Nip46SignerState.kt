@@ -256,24 +256,31 @@ class Nip46SignerState(
         }
 
         scope.launch(Dispatchers.IO) {
-            // The key the listener runs under is read now, not taken from the emission: combine can
-            // hear setEnabled's flag before the key it set first, and a listener started then already
-            // reads the new key. Its late emission must then compare equal, or it restarts that
-            // listener after the pairing ack and the app's first request is lost.
-            combine(settings.nip46SignerEnabled, listeningRelays, settings.nip46TransportKey) { enabled, relays, _ ->
-                Triple(enabled, relays, settings.nip46TransportKey.value)
+            combine(settings.nip46SignerEnabled, listeningRelays, settings.nip46TransportKey) { enabled, relays, transportKey ->
+                Triple(enabled, relays, transportKey)
             }
                 // Inbox/relay/key StateFlows can re-emit an identical value; without this every duplicate
                 // would tear the subscription down and re-open it on every relay for no reason. Including
                 // the transport key here makes rotateAddress() re-subscribe under the fresh key.
                 .distinctUntilChanged()
-                .collectLatest { (enabled, relays, _) ->
+                .collectLatest { (enabled, relays, transportKey) ->
                     if (!enabled) return@collectLatest
                     if (!signer.isWriteable()) {
                         Log.w("NIP46Signer") { "signer not writeable; cannot host a bunker" }
                         return@collectLatest
                     }
                     if (relays.isEmpty()) return@collectLatest
+
+                    // Run under the key that triggered this run, never one read later: combine can hear
+                    // setEnabled's flag before the key it set first, and a listener started under the
+                    // new key would then be restarted by that key's late emission, after the pairing
+                    // ack, losing the app's first request. With no usable key yet, mint one if needed
+                    // and let its emission start the listener.
+                    val transportKeyBytes = parseTransportKey(transportKey)
+                    if (transportKeyBytes == null) {
+                        ensureTransportKeyBytes()
+                        return@collectLatest
+                    }
 
                     // Envelope wrapped with the local transport key; the actual work (and get_public_key)
                     // uses the account's identity signer inside the processor.
@@ -282,7 +289,7 @@ class Nip46SignerState(
                         NostrConnectSignerService(
                             // The bunker REQ is built inside Quartz, so it is tagged at the client.
                             client = client.taggedAs(SubPurpose.SIGNER),
-                            transportSigner = transportSigner(),
+                            transportSigner = NostrSignerInternal(KeyPair(transportKeyBytes)),
                             processor = processor,
                             relays = relays,
                             onServiced = { request, clientPubKey, error ->
@@ -375,9 +382,8 @@ class Nip46SignerState(
 
     fun setEnabled(enabled: Boolean) {
         if (enabled) {
-            // Settle the secret and transport key BEFORE flipping the flag, so the listener the flag
-            // starts runs under the final key. The trigger may still hear the key after the flag;
-            // it reads the key itself, so that late emission starts nothing.
+            // Settle the secret and transport key BEFORE flipping the flag, so the listener starts
+            // under the final key (the trigger may still hear the flag first; see the listener in init).
             ensureSecret()
             ensureTransportKeyBytes()
         }
@@ -442,10 +448,12 @@ class Nip46SignerState(
         return fresh
     }
 
+    /** A stored transport private key's bytes, or null if it is unset or corrupt. */
+    private fun parseTransportKey(stored: String): ByteArray? = stored.takeIf { it.length == 64 }?.let { runCatching { it.hexToByteArray() }.getOrNull() }
+
     /** The transport private key bytes, generating and persisting a fresh keypair the first time (or if corrupt). */
     private fun ensureTransportKeyBytes(): ByteArray {
-        val stored = settings.nip46TransportKey.value
-        val existing = stored.takeIf { it.length == 64 }?.let { runCatching { it.hexToByteArray() }.getOrNull() }
+        val existing = parseTransportKey(settings.nip46TransportKey.value)
         if (existing != null) return existing
         val fresh = KeyPair()
         settings.changeNip46TransportKey(fresh.privKey!!.toHexKey())
