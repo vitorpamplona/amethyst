@@ -40,10 +40,13 @@ object CartDetector {
         mimeType: String?,
         dim: DimensionTag?,
     ): Boolean {
-        if (dim != null) return dim.width == CartLoader.CART_WIDTH && dim.height == CartLoader.CART_HEIGHT
+        if (dim != null) return isCartSize(dim)
         if (mimeType != null) return mimeType.equals("image/png", ignoreCase = true)
         return url.substringBefore('?').substringBefore('#').endsWith(".png", ignoreCase = true)
     }
+
+    /** Whether an image of [dim] has a cart's size. */
+    fun isCartSize(dim: DimensionTag): Boolean = dim.width == CartLoader.CART_WIDTH && dim.height == CartLoader.CART_HEIGHT
 
     /** The answer for [url] if one is known already. */
     fun known(url: String): Boolean? = results[url]
@@ -60,7 +63,7 @@ object CartDetector {
         results[url]?.let { return it }
         val answer =
             if (dim != null) {
-                dim.width == CartLoader.CART_WIDTH && dim.height == CartLoader.CART_HEIGHT
+                isCartSize(dim)
             } else {
                 val header = httpClients.fetchMediaPrefix(url, CartLoader.SHAPE_PREFIX_BYTES) ?: return false
                 CartLoader.hasCartShape(header)

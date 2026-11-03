@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.cartridges.CartLinks
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
@@ -58,6 +59,7 @@ class RichTextParser {
         description: String?,
         callbackUri: String? = null,
         authorPubKey: String? = null,
+        cartImetas: Map<String, IMetaTag>? = null,
     ): MediaUrlContent? {
         val frags = Nip54InlineMetadata().parse(fullUrl)
 
@@ -82,6 +84,7 @@ class RichTextParser {
                 mimeType = contentType,
                 thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
                 authorPubKey = authorPubKey,
+                cartImetas = cartImetas,
             )
         } else if (kind == MediaContentKind.VIDEO) {
             MediaUrlVideo(
@@ -195,14 +198,15 @@ class RichTextParser {
         authorPubKey: String? = null,
     ): RichTextViewerState {
         val imetas = tags.lists.imetasByUrl()
+        val cartImetas = CartLinks.tagsToKeep(imetas)
         val urlSet = UrlParser().parseValidUrls(content)
 
         val mediaContents =
             urlSet.withScheme.mapNotNull { fullUrl ->
-                createMediaContent(fullUrl, imetas, content, callbackUri, authorPubKey)
+                createMediaContent(fullUrl, imetas, content, callbackUri, authorPubKey, cartImetas)
             } +
                 urlSet.withoutScheme.mapNotNull { fullUrl ->
-                    createMediaContent(fullUrl, imetas, content, callbackUri, authorPubKey)
+                    createMediaContent(fullUrl, imetas, content, callbackUri, authorPubKey, cartImetas)
                 }
 
         val mediaForPager = mediaContents.associateBy { it.url }
@@ -229,7 +233,7 @@ class RichTextParser {
                                 if (it is Base64Segment) {
                                     createMediaContent(it.segmentText, emptyMap(), content, callbackUri)
                                 } else if (it is BlossomUriSegment) {
-                                    createMediaContent(it.segmentText, emptyMap(), content, callbackUri)
+                                    createMediaContent(it.segmentText, imetas, content, callbackUri, cartImetas = cartImetas)
                                 } else {
                                     null
                                 }

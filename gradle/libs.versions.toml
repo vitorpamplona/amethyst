@@ -93,7 +93,7 @@ cordnKmp = "1.2.1"
 cryptoKmp = "2.1.0"
 # The fantasy-console cart runtime behind the note cart player (vitorpamplona/kiko-kmp): kiko runs a
 # cart, kiko-player plays it in real time (commons), kiko-compose shows it (commonsUI).
-kikoKmp = "0.2.3"
+kikoKmp = "0.2.4"
 mlsKmp = "1.3.0"
 # Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport, split out of this repo into vitorpamplona/quic-kmp.
 quicKmp = "1.2.0"

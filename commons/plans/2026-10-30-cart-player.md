@@ -49,9 +49,33 @@ Amethyst adds around them.
   killed app restarts the game from its title, like the original console.
 - **Lifecycle**: the game runs only while the app is started. Home, the app switcher or a
   minimized window pauses it and its sound and writes its saves.
-- **Multi-cart games**: there is no convention yet for a post to name its other carts, and
-  fetching them from the original's site would add a third-party server, so `loadCart` returns
-  null and the player shows "this game continues in another cartridge".
+- **Multi-cart games**: a note lists a game's carts in its `imeta` tags. The entry cart is the one
+  whose URL is in the text, and its `cart` field is optional: a game needs it to come back to its
+  first cart. An extra cart is an `imeta` with a `cart` field whose URL isn't that entry, and it needs
+  `x` (64 hex digits). `cart` is the exact string the cart passes to `load` or `reload`, `#` and
+  version included, and it repeats for a game that uses two spellings. At most 16 extra carts of
+  1 MiB each, and 3 URLs per cart counting `fallback`s; past that, entries are ignored. List the entry
+  cart first, because `firstContentImage` takes the note's first image for the share card.
+
+  `CartLinks` reads these. The player fetches the extras when Play is pressed, and each must match
+  its `x`. Only `http(s)` URLs are fetched, so an extra cart can't be a `blossom:` URI. `loadCart` is a lookup in memory, because it runs on the game thread inside a frame, so a
+  game can only reach what its note lists; any other name shows "this game continues in another
+  cartridge", as does an extra that failed to download. Saves are kept under a hash of the entry cart
+  and every declared `name x` pair, so a stranger's note can't list a hostile cart beside a game's
+  front cart to reach its saves. Fetching from the original's site would add a third-party server,
+  so `#id` is never resolved there. Posting `cart` fields from the composer isn't supported yet.
+
+  A note with no `cart` field at all and exactly two carts works without one, so uploading both carts
+  of a game is enough. A cart here is an `imeta` with a 160x205 `dim`, a valid `x` and no `m` other
+  than `image/png`. Each cart is the other's
+  partner: the first name the game asks for gets the other cart, and the second gets the entry cart,
+  because a game starts on the entry and the other cart's first ask is the way back. A third name has
+  no cart. The two share one save key, a hash of both hashes, whichever one was started. Notes of
+  three or more carts can't be told apart, so they need `cart` fields. A game that loads a cart from
+  outside its note, posted beside an unrelated cart, starts that cart instead of showing the message.
+  kiko doesn't say which cart is running, so a game that first asks for its own name, or for a cart
+  it can do without, gets the two swapped; `cart` fields avoid that. A game's second cart may also
+  need what the first leaves in memory, as Into Ruins' does, and then can't be started directly.
 - **Uploads**: Android's `MediaCompressor` uploads a PNG that loads as a cart unchanged instead of
   re-encoding it to JPEG. Desktop never re-encoded PNGs.
 
@@ -59,6 +83,4 @@ Amethyst adds around them.
 
 1. Try it on an Android phone (touch controls, sound latency, rotation keeping the game, frame
    time of the heaviest carts on a low-end device).
-2. Decide how a post names the other carts of a multi-cart game (e.g. more `imeta` entries), then
-   answer `ConsoleHost.loadCart` from it.
-3. iOS: an HTTP client for `CartBytes`, and an audio sink in kiko-player, both stubs there.
+2. iOS: an HTTP client for `CartBytes`, and an audio sink in kiko-player, both stubs there.

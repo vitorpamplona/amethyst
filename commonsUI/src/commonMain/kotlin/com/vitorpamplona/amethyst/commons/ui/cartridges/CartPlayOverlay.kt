@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.cartridges.CartDetector
+import com.vitorpamplona.amethyst.commons.cartridges.CartLinks
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -79,9 +80,12 @@ fun CartPlayOverlay(
         PlayButton { playing = true }
     }
     if (playing) {
+        val links = remember(content) { content.cartImetas?.let { CartLinks.forEntry(content.url, it) } }
         CartPlayerDialog(
             url = httpUrl,
-            sha256 = content.hash ?: blossom?.sha256,
+            // A blossom URI is its file's address, so it beats whatever hash the imeta claims.
+            sha256 = blossom?.sha256 ?: content.hash,
+            links = links,
             accountViewModel = accountViewModel,
             onDismiss = { playing = false },
         )
