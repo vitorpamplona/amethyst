@@ -82,8 +82,10 @@ class Nip46NostrConnectPairingTest {
             val code = NostrConnectLoginUseCase.generateUri(KeyPair(), listOf(appRelay.url), BunkerClientMetadata(name = "App"))
             val coordinate = Nip46PermissionAuthorizer.coordinateFor(net.identity.pubKey, code.ephemeralKeyPair.pubKey.toHexKey())
             // Already trusted, so pairing skips the consent dialog; used just now, so the idle prune keeps it.
-            net.ledger.setPolicy(coordinate, AppSignerPolicy.FULL_TRUST)
+            // Stamped before trusted: the launch's prune runs meanwhile, and a trusted app it finds with
+            // no last-used time it forgets.
             net.ledger.updateLastUsed(coordinate)
+            net.ledger.setPolicy(coordinate, AppSignerPolicy.FULL_TRUST)
 
             val login = net.scope.async { NostrConnectLoginUseCase.awaitAndLogin(code, net.client) }
             // The code's subscription is open before the signer answers.
@@ -141,8 +143,9 @@ class Nip46NostrConnectPairingTest {
 
                 val code = NostrConnectLoginUseCase.generateUri(KeyPair(), listOf(appRelay.url), BunkerClientMetadata(name = "App"))
                 val coordinate = Nip46PermissionAuthorizer.coordinateFor(net.identity.pubKey, code.ephemeralKeyPair.pubKey.toHexKey())
-                net.ledger.setPolicy(coordinate, AppSignerPolicy.FULL_TRUST)
+                // Stamped before trusted, as above.
                 net.ledger.updateLastUsed(coordinate)
+                net.ledger.setPolicy(coordinate, AppSignerPolicy.FULL_TRUST)
 
                 val login = net.scope.async { NostrConnectLoginUseCase.awaitAndLogin(code, net.client) }
                 delay(1_000)
