@@ -24,6 +24,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,7 +41,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -68,10 +68,11 @@ import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevision
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCiStatusBadge
-import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCoverNoteBanner
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusPill
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitVersionedSummary
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitPullRequestPushText
-import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeDisplayedCoverNote
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemLabels
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemTitle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observePreviousRevision
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.shortCommit
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
@@ -80,7 +81,6 @@ import com.vitorpamplona.amethyst.commons.resources.git_branch
 import com.vitorpamplona.amethyst.commons.resources.git_clone_address
 import com.vitorpamplona.amethyst.commons.resources.git_commit
 import com.vitorpamplona.amethyst.commons.resources.git_merge_base
-import com.vitorpamplona.amethyst.commons.resources.git_original_description
 import com.vitorpamplona.amethyst.commons.resources.git_pr_revised
 import com.vitorpamplona.amethyst.commons.resources.git_pr_update_description
 import com.vitorpamplona.amethyst.commons.resources.git_repo_personal_fork
@@ -118,8 +118,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -275,6 +273,53 @@ private fun GitMetaRow(
     }
 }
 
+/** The labels an issue, patch or PR shows, as small chips under its title. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GitLabelsRow(labels: List<String>) {
+    if (labels.isEmpty()) return
+    FlowRow(
+        modifier = Modifier.padding(top = Size5dp),
+        horizontalArrangement = Arrangement.spacedBy(Size5dp),
+        verticalArrangement = Arrangement.spacedBy(Size5dp),
+    ) {
+        labels.forEach { label ->
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier =
+                    Modifier
+                        .clip(ChipShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(horizontal = 6.dp, vertical = 1.dp),
+            )
+        }
+    }
+}
+
+/**
+ * A `git format-patch` message without its mail headers: the `From <sha>` line, `From:`, `Date:`
+ * and the (possibly folded) `Subject:`, which the card already shows as the title.
+ */
+private fun formatPatchBody(message: String): String {
+    val lines = message.lines()
+    var index = 0
+    var inSubject = false
+    while (index < lines.size) {
+        val line = lines[index]
+        val isHeader =
+            line.startsWith("From ") || line.startsWith("From:") || line.startsWith("Date:") || line.startsWith("Subject:")
+        if (isHeader) {
+            inSubject = line.startsWith("Subject:")
+        } else if (!(inSubject && (line.startsWith(" ") || line.startsWith("\t")))) {
+            break
+        }
+        index++
+    }
+    return lines.drop(index).joinToString("\n").trim()
+}
+
 /**
  * Some NIP-34 clients duplicate the subject tag as a leading markdown heading of the
  * content ("# Title\n\n…"). The card already renders the subject as its own title, so
@@ -374,15 +419,12 @@ private fun revisedValue(
     }
 
 /**
- * The cover note of an issue or PR and its own description. Once the author or a maintainer has
- * set a cover note, that note is the current summary and the description is what it replaced, so
- * the description folds under "Original description" instead of repeating (or contradicting) it.
+ * The summary of an issue or PR: its current cover note, with the edit pencil stepping back
+ * through older ones to the item's own description ([GitVersionedSummary]).
  */
 @Composable
 private fun GitCoverNoteAndDescription(
     note: Note,
-    rootAuthor: HexKey,
-    repository: Address?,
     makeItShort: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
@@ -391,41 +433,7 @@ private fun GitCoverNoteAndDescription(
     nav: INav,
     renderedSubject: String?,
 ) {
-    val cover = observeDisplayedCoverNote(note.idHex, rootAuthor, repository, accountViewModel)
-    if (cover == null) {
-        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject)
-        return
-    }
-
-    GitCoverNoteBanner(cover, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, CoverNoteSpacing)
-
-    val hasDescription = remember(note.event) { stripDuplicatedSubject(note.event?.content.orEmpty(), renderedSubject).isNotBlank() }
-    if (!hasDescription) return
-
-    var expanded by remember(note) { mutableStateOf(false) }
-    Row(
-        modifier =
-            Modifier
-                .clip(ChipShape)
-                .clickable { expanded = !expanded }
-                .padding(vertical = Size5dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Size5dp),
-    ) {
-        Icon(
-            symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-            contentDescription = null,
-            modifier = Modifier.size(Size16dp),
-            tint = MaterialTheme.colorScheme.grayText,
-        )
-        Text(
-            text = stringRes(id = Res.string.git_original_description),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.grayText,
-        )
-    }
-
-    if (expanded) {
+    GitVersionedSummary(note, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, CoverNoteSpacing) {
         GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject)
     }
 }
@@ -542,6 +550,12 @@ private fun RenderGitPatchEvent(
             }
         }
 
+        val title = observeGitItemTitle(noteEvent)
+        if (title != null) {
+            GitSubjectTitle(title)
+        }
+        GitLabelsRow(observeGitItemLabels(noteEvent))
+
         val commit = remember(noteEvent) { noteEvent.commit()?.takeIf { it.isNotBlank() } }
         if (commit != null) {
             Spacer(modifier = StdVertSpacer)
@@ -554,33 +568,26 @@ private fun RenderGitPatchEvent(
 
         Spacer(modifier = HalfDoubleVertSpacer)
 
-        GitCoverNoteBanner(
-            rootIdHex = note.idHex,
-            rootAuthor = noteEvent.pubKey,
-            repositoryAddress = repository,
-            canPreview = canPreview,
-            quotesLeft = quotesLeft,
-            backgroundColor = backgroundColor,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            modifier = CoverNoteSpacing,
-        )
-
-        // In a collapsed feed preview keep the lightweight markdown body; in the
-        // full (thread) view parse the patch into a proper file-by-file diff.
-        val parsed = if (makeItShort) null else remember(noteEvent) { UnifiedDiffParser.parse(noteEvent.content) }
-        if (parsed != null && parsed.hasDiff) {
-            if (parsed.message.isNotBlank()) {
-                Text(
-                    text = parsed.message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(modifier = HalfDoubleVertSpacer)
+        // A patch's body is its commit message and diff: a cover note sits above it, never in place of it.
+        GitVersionedSummary(note, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, CoverNoteSpacing, descriptionIsSummary = false) {
+            // In a collapsed feed preview keep the lightweight markdown body; in the
+            // full (thread) view parse the patch into a proper file-by-file diff.
+            val parsed = if (makeItShort) null else remember(noteEvent) { UnifiedDiffParser.parse(noteEvent.content) }
+            if (parsed != null && parsed.hasDiff) {
+                // The title is drawn above; the message keeps only the body under git's headers.
+                val body = remember(parsed) { formatPatchBody(parsed.message) }
+                if (body.isNotBlank()) {
+                    Text(
+                        text = body,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = HalfDoubleVertSpacer)
+                }
+                GitDiffView(parsed, Modifier.fillMaxWidth())
+            } else {
+                GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
-            GitDiffView(parsed, Modifier.fillMaxWidth())
-        } else {
-            GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         if (!makeItShort) {
@@ -639,9 +646,12 @@ private fun RenderGitIssueEvent(
         }
 
         val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
-        if (subject != null) {
-            GitSubjectTitle(subject)
+        // A maintainer may have renamed it since (NIP-32 `#subject`): show the current title.
+        val title = observeGitItemTitle(noteEvent)
+        if (title != null) {
+            GitSubjectTitle(title)
         }
+        GitLabelsRow(observeGitItemLabels(noteEvent))
 
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
         if (repository != null) {
@@ -655,7 +665,7 @@ private fun RenderGitIssueEvent(
 
         Spacer(modifier = HalfDoubleVertSpacer)
 
-        GitCoverNoteAndDescription(note, noteEvent.pubKey, repository, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
+        GitCoverNoteAndDescription(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
         if (!makeItShort) {
             GitStatusActions(note, accountViewModel)
@@ -745,11 +755,24 @@ private fun RenderGitPullRequestEvent(
         }
 
         val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
-        if (subject != null) {
-            GitSubjectTitle(subject)
+        // A maintainer may have renamed it since (NIP-32 `#subject`): show the current title.
+        val title = observeGitItemTitle(noteEvent)
+        if (title != null) {
+            GitSubjectTitle(title)
         }
+        GitLabelsRow(observeGitItemLabels(noteEvent))
 
-        val branch = remember(noteEvent) { noteEvent.branchName()?.takeIf { it.isNotBlank() } }
+        // Where it comes from, and where it goes when it isn't the default branch (`b`).
+        val branch =
+            remember(noteEvent) {
+                val source = noteEvent.branchName()?.takeIf { it.isNotBlank() }
+                val target = noteEvent.targetBranch()
+                when {
+                    target == null -> source
+                    source == null -> "→ $target"
+                    else -> "$source → $target"
+                }
+            }
         val currentCommit =
             remember(noteEvent, update) {
                 (update?.currentCommit() ?: noteEvent.currentCommit())?.takeIf { it.isNotBlank() }
@@ -760,7 +783,8 @@ private fun RenderGitPullRequestEvent(
             }
         val cloneUrls =
             remember(noteEvent, update) {
-                (update?.cloneUrls()?.filter { it.isNotBlank() }?.ifEmpty { null } ?: noteEvent.cloneUrls().filter { it.isNotBlank() })
+                // The update's servers carry its new tip; the PR's own may still serve it too.
+                (update?.cloneUrls().orEmpty() + noteEvent.cloneUrls()).filter { it.isNotBlank() }.distinct()
             }
 
         if (branch != null || currentCommit != null || mergeBase != null) {
@@ -795,7 +819,7 @@ private fun RenderGitPullRequestEvent(
 
         Spacer(modifier = HalfDoubleVertSpacer)
 
-        GitCoverNoteAndDescription(note, noteEvent.pubKey, repository, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
+        GitCoverNoteAndDescription(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
         if (!makeItShort) {
             GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel)

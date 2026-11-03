@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.nip34Git
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.nip34Git.state.GitSignedState
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
 import com.vitorpamplona.quartz.nip34Git.git.GitHttpClient
 import com.vitorpamplona.quartz.nip34Git.git.GitHttpException
@@ -39,8 +40,13 @@ import kotlin.coroutines.cancellation.CancellationException
 sealed interface GitBrowseState {
     object Loading : GitBrowseState
 
+    /**
+     * [mismatch] is set when no clone URL served the commit the maintainers signed for this branch
+     * (kind 30618): the snapshot comes from a server that may be stale, or not theirs.
+     */
     class Loaded(
         val snapshot: GitRepoSnapshot,
+        val mismatch: GitStateMismatch? = null,
     ) : GitBrowseState
 
     /**
@@ -54,6 +60,13 @@ sealed interface GitBrowseState {
         val isEmptyRepository: Boolean = false,
     ) : GitBrowseState
 }
+
+/** The maintainers signed [signedCommit] as the tip of [branch]; the server shown serves [servedCommit]. */
+class GitStateMismatch(
+    val branch: String,
+    val signedCommit: String,
+    val servedCommit: String,
+)
 
 /**
  * Loads a shallow snapshot of a NIP-34 repository over git smart-HTTP and serves
@@ -71,6 +84,13 @@ class GitRepositoryBrowserViewModel(
     private var cloneUrls: List<String> = emptyList()
     private var started = false
     private var cacheKey: String? = null
+
+    /**
+     * The tips the repository's maintainers signed (kind 30618). With it, the default branch is the
+     * one their HEAD names, and a server that serves their commit is preferred over one that
+     * answers first; set it before [loadOnce].
+     */
+    var signedState: GitSignedState? = null
 
     /** The branch/tag currently displayed (null = the server's default branch). */
     var currentRef: String? = null
@@ -119,13 +139,23 @@ class GitRepositoryBrowserViewModel(
             val errors = StringBuilder()
             var sawEmpty = false
             var sawOtherFailure = false
+            val signed = signedState
+            val ref = currentRef ?: signed?.headBranch
+            var fallback: Pair<GitRepoSnapshot, GitStateMismatch>? = null
             for (url in candidates) {
                 try {
-                    val snapshot = client.open(url, currentRef)
-                    // Only the default branch is cached; named refs are transient selections.
-                    if (currentRef == null) GitRepoSnapshotCache.put(cacheKey, snapshot)
-                    _state.value = GitBrowseState.Loaded(snapshot)
-                    return@launch
+                    val snapshot = client.open(url, ref)
+                    val branch = snapshot.branch ?: ref
+                    val signedCommit = signed?.commitFor(branch)
+                    if (signedCommit == null || signedCommit == snapshot.headCommit) {
+                        // Only the default branch is cached; named refs are transient selections.
+                        if (currentRef == null) GitRepoSnapshotCache.put(cacheKey, snapshot)
+                        _state.value = GitBrowseState.Loaded(snapshot)
+                        return@launch
+                    }
+                    // This server disagrees with what the maintainers signed: keep looking for one
+                    // that serves their commit, and show this one only if none does.
+                    if (fallback == null) fallback = snapshot to GitStateMismatch(branch ?: "", signedCommit, snapshot.headCommit)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -136,6 +166,10 @@ class GitRepositoryBrowserViewModel(
                         .append(e.message ?: e.toString())
                         .append('\n')
                 }
+            }
+            fallback?.let { (snapshot, mismatch) ->
+                _state.value = GitBrowseState.Loaded(snapshot, mismatch)
+                return@launch
             }
             _state.value = GitBrowseState.Error(errors.toString().trim(), isEmptyRepository = sawEmpty && !sawOtherFailure)
         }

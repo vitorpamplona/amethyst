@@ -44,12 +44,11 @@ data class GitPullRequestRevision(
 
 /**
  * How a pull request's tip moved over time. A PR (kind 1618) names its first tip; each PR update
- * (kind 1619) names a newer one. Updates are ordered by `created_at`, ties broken by event id, the
- * same order [com.vitorpamplona.amethyst.commons.model.GitPullRequestUpdateIndex] uses to pick the
- * latest.
+ * (kind 1619) names a newer one. Updates are ordered by `created_at`; at equal timestamps the lower
+ * event id counts as the later one, as gitworkshop picks it. The last in [order] is the current tip.
  */
 object GitPullRequestRevisions {
-    val order: Comparator<GitPullRequestUpdateEvent> = compareBy<GitPullRequestUpdateEvent> { it.createdAt }.thenBy { it.id }
+    val order: Comparator<GitPullRequestUpdateEvent> = compareBy<GitPullRequestUpdateEvent> { it.createdAt }.thenByDescending { it.id }
 
     /**
      * The revision [update] replaced: the update of the same PR just before it, or the PR's own tip

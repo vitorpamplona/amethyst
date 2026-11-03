@@ -81,12 +81,13 @@ class GitPullRequestRevisionsTest {
     }
 
     @Test
-    fun updatesAtTheSameSecondAreOrderedById() {
+    fun updatesAtTheSameSecondCountTheLowerIdAsLater() {
+        // gitworkshop's tie-break: at equal created_at the lower id wins, so it is the later tip.
         val low = update("1".repeat(64), 200, "1111111", "bca8dc9")
         val high = update("f".repeat(64), 200, "fffffff", "bca8dc9")
 
-        assertEquals("1111111", GitPullRequestRevisions.previous(high, listOf(high, low), pullRequest)?.commit)
-        assertEquals("70d31ba", GitPullRequestRevisions.previous(low, listOf(high, low), pullRequest)?.commit)
+        assertEquals("fffffff", GitPullRequestRevisions.previous(low, listOf(high, low), pullRequest)?.commit)
+        assertEquals("70d31ba", GitPullRequestRevisions.previous(high, listOf(high, low), pullRequest)?.commit)
     }
 
     @Test

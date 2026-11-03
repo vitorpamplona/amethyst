@@ -35,29 +35,35 @@ class RepositoryPatchesFeedFilter(
     val account: Account,
     val showClosed: Boolean,
 ) : AdditiveFeedFilter<Note>() {
-    private val repositoryAddressId = repositoryNote.address.toValue()
-
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-patches-" + (if (showClosed) "closed-" else "open-") + repositoryNote.idHex
 
     override fun feed(): List<Note> {
+        val coordinates = repositoryCoordinateSet(repositoryNote.address)
         val result =
             LocalCache.notes.mapNotNullIntoSet { _, note ->
-                if (matches(note)) note else null
+                if (matches(note, coordinates)) note else null
             }
         return sort(result)
     }
 
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { matches(it) }
+    override fun applyFilter(newItems: Set<Note>): Set<Note> {
+        val coordinates = repositoryCoordinateSet(repositoryNote.address)
+        return newItems.filterTo(HashSet()) { matches(it, coordinates) }
+    }
 
-    private fun matches(note: Note): Boolean {
+    private fun matches(
+        note: Note,
+        coordinates: Set<String>,
+    ): Boolean {
         val event = note.event ?: return false
-        val belongsToRepo =
+        val listed =
             when (event) {
-                is GitPatchEvent -> event.repositoryAddress()?.toValue() == repositoryAddressId
-                is GitPullRequestEvent -> event.repositoryAddress()?.toValue() == repositoryAddressId
+                // Only the first patch of a series gets a row; the rest are in its thread.
+                is GitPatchEvent -> event.isSeriesRoot() && isFiledUnder(event, coordinates)
+                is GitPullRequestEvent -> isFiledUnder(event, coordinates)
                 else -> false
             }
-        if (!belongsToRepo) return false
+        if (!listed) return false
         return GitStatusIndex.isClosedOrResolved(note.idHex) == showClosed
     }
 

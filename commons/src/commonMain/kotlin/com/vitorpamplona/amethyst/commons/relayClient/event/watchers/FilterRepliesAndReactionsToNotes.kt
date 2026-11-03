@@ -41,9 +41,11 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
 import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
 import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
@@ -118,6 +120,11 @@ val RepliesAndReactionsKinds2 =
         GitStatusDraftEvent.KIND,
         // NIP-34 cover notes (1624) point at their issue / patch / PR with a lowercase root `e`.
         GitCoverNoteEvent.KIND,
+        // NIP-32 labels (1985) rename (`#subject`) and label (`#t`) an issue / patch / PR after the
+        // fact; they name it with `e`.
+        LabelEvent.KIND,
+        // The rest of a NIP-34 patch series and its revisions name the root patch with `e`.
+        GitPatchEvent.KIND,
         PollResponseEvent.KIND,
         ZapPollEvent.KIND,
         // NIP-15 bids and the merchant's confirmations name the auction VERSION by its id (`e`),

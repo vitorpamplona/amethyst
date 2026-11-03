@@ -26,27 +26,26 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusButtons
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.statusKind
+import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 
-private enum class StatusTarget { OPEN, CLOSED, APPLIED }
-
 /**
- * NIP-34 status controls for an issue, patch or pull request. Visible only to the
- * people allowed to moderate the thread — the item's author and the repository
- * owner / maintainers. Patches and PRs additionally offer "Mark merged"
- * ([GitStatusAppliedEvent]); everything can be closed/reopened. [GitStatusIndex]
- * reflects the published status everywhere.
+ * NIP-34 status controls for an issue, patch or pull request. Visible only to the people whose
+ * status counts ([GitAuthority.memberActorsOf]): the item's author and the repository's confirmed
+ * members. "Mark merged" is for confirmed maintainers only, as gitworkshop offers it.
+ * [GitStatusIndex] reflects the published status everywhere.
  */
 @Composable
 fun GitStatusActions(
@@ -54,60 +53,45 @@ fun GitStatusActions(
     accountViewModel: AccountViewModel,
 ) {
     val event = note.event ?: return
-    val repoAddress = repositoryAddressOf(event) ?: return
+    if (GitAuthority.repositoriesOf(event).isEmpty()) return
     val isPatchOrPr = event is GitPatchEvent || event is GitPullRequestEvent
 
-    val canModerate = remember(event, note) { canModerate(repoAddress, note, accountViewModel) }
-    if (!canModerate) return
+    val authority = observeGitAuthority()
+    val me = accountViewModel.account.signer.pubKey
+    val canSetStatus = remember(event, authority, me) { me in authority.memberActorsOf(event) }
+    if (!canSetStatus) return
+    val canMerge = remember(event, authority, me) { authority.isRepositoryMaintainer(me, event) }
 
     val index by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
     if (index == null) return
-    val current = index?.get(note.idHex)
-    val closedOrApplied = current is GitStatusClosedEvent || current is GitStatusAppliedEvent
+    val current = index?.get(note.idHex)?.statusKind() ?: StatusKind.OPEN
 
     GitStatusButtons(
-        closedOrApplied = closedOrApplied,
+        current = current,
         isPatchOrPr = isPatchOrPr,
-        onReopen = { sendStatus(accountViewModel, note, StatusTarget.OPEN) },
-        onMarkMerged = { sendStatus(accountViewModel, note, StatusTarget.APPLIED) },
-        onClose = { sendStatus(accountViewModel, note, StatusTarget.CLOSED) },
+        canMerge = canMerge,
+        onSetStatus = { sendStatus(accountViewModel, note, it) },
     )
-}
-
-internal fun repositoryAddressOf(event: Event): Address? =
-    when (event) {
-        is GitIssueEvent -> event.repositoryAddress()
-        is GitPatchEvent -> event.repositoryAddress()
-        is GitPullRequestEvent -> event.repositoryAddress()
-        else -> null
-    }
-
-private fun canModerate(
-    repoAddress: Address,
-    note: Note,
-    accountViewModel: AccountViewModel,
-): Boolean {
-    val myHex = accountViewModel.account.signer.pubKey
-    if (accountViewModel.isLoggedUser(note.author)) return true
-    if (myHex == repoAddress.pubKeyHex) return true
-    val repoEvent = LocalCache.getAddressableNoteIfExists(repoAddress)?.event as? GitRepositoryEvent
-    return repoEvent?.maintainers()?.contains(myHex) == true
 }
 
 private fun sendStatus(
     accountViewModel: AccountViewModel,
     note: Note,
-    target: StatusTarget,
+    target: StatusKind,
 ) {
     val hint = note.toEventHint<Event>() ?: return
     accountViewModel.launchSigner {
         val template =
             when (target) {
-                StatusTarget.OPEN -> GitStatusOpenEvent.build("", hint)
-                StatusTarget.CLOSED -> GitStatusClosedEvent.build("", hint)
-                StatusTarget.APPLIED -> GitStatusAppliedEvent.build("", hint)
+                StatusKind.OPEN -> GitStatusOpenEvent.build("", hint)
+                StatusKind.CLOSED -> GitStatusClosedEvent.build("", hint)
+                StatusKind.APPLIED -> GitStatusAppliedEvent.build("", hint)
+                StatusKind.DRAFT -> GitStatusDraftEvent.build("", hint)
             }
         val signed = accountViewModel.account.signer.sign(template)
         accountViewModel.account.sendAutomatic(signed)
     }
 }
+
+/** The repository coordinate an issue, patch or PR is filed against (its first). */
+internal fun repositoryAddressOf(event: Event): Address? = GitAuthority.repositoriesOf(event).firstOrNull()

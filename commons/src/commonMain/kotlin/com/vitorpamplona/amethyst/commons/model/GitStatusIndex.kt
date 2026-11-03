@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache.observeEvents
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
@@ -33,8 +35,8 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /**
@@ -63,18 +65,34 @@ object GitStatusIndex {
         )
 
     val latestByTarget: StateFlow<Map<HexKey, GitStatusEvent>?> =
-        LocalCache
-            .observeEvents<GitStatusEvent>(Filter(kinds = statusKinds))
-            .map { reduceLatestByTarget(it) }
-            .flowOn(Dispatchers.IO)
+        combine(
+            LocalCache.observeEvents<GitStatusEvent>(Filter(kinds = statusKinds)),
+            LocalCache.observeEvents<Event>(Filter(kinds = GitAuthority.ITEM_KINDS)),
+            GitAuthorityIndex.authority,
+        ) { statuses, items, authority ->
+            reduceLatestByTarget(statuses, items.associateBy { it.id }, authority ?: GitAuthority.EMPTY)
+        }.flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, null)
 
-    private fun reduceLatestByTarget(events: List<GitStatusEvent>): Map<HexKey, GitStatusEvent> {
+    /**
+     * The latest status per item among those its author or a confirmed repository member signed
+     * ([GitAuthority]); anyone else's is a proposal and doesn't change the item. An item that hasn't
+     * loaded has no known author, so its statuses wait for it. Ties go to the lower event id.
+     */
+    fun reduceLatestByTarget(
+        events: List<GitStatusEvent>,
+        itemsById: Map<HexKey, Event>,
+        authority: GitAuthority,
+    ): Map<HexKey, GitStatusEvent> {
         val latest = HashMap<HexKey, GitStatusEvent>()
+        val actorsByItem = HashMap<HexKey, Set<HexKey>>()
         for (event in events) {
             val target = event.rootEventId() ?: continue
+            val item = itemsById[target] ?: continue
+            val actors = actorsByItem.getOrPut(target) { authority.memberActorsOf(item) }
+            if (event.pubKey !in actors) continue
             val current = latest[target]
-            if (current == null || event.createdAt > current.createdAt) {
+            if (current == null || event.createdAt > current.createdAt || (event.createdAt == current.createdAt && event.id < current.id)) {
                 latest[target] = event
             }
         }

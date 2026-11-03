@@ -30,6 +30,8 @@ import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
@@ -216,8 +218,21 @@ class GitNewIssueViewModel : ViewModel() {
 
         val usedIMetas = iMetaAttachments.filterIsIn(findURLs(body).toSet())
 
+        // File it under every confirmed co-maintainer's coordinate too (one `a` each, and a `p` so
+        // each is notified), as gitworkshop does: whichever announcement a client opens finds it.
+        val coMaintainers =
+            (GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY)
+                .membership(repoNote.address)
+                ?.confirmedCoordinates()
+                .orEmpty()
+                .filter { it != repoNote.address }
+
         val template =
             GitIssueEvent.build(subject.trim(), body, repositoryHint, emptyList(), parseLabels(labels)) {
+                coMaintainers.forEach {
+                    addUniqueValueIfNew(arrayOf("a", it.toValue()))
+                    addUniqueValueIfNew(arrayOf("p", it.pubKeyHex))
+                }
                 if (usedIMetas.isNotEmpty()) imetas(usedIMetas)
             }
         val signed = account.signer.sign(template)

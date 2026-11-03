@@ -35,11 +35,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_status_close
+import com.vitorpamplona.amethyst.commons.resources.git_status_mark_draft
 import com.vitorpamplona.amethyst.commons.resources.git_status_mark_merged
+import com.vitorpamplona.amethyst.commons.resources.git_status_ready
 import com.vitorpamplona.amethyst.commons.resources.git_status_reopen
+import com.vitorpamplona.amethyst.commons.resources.git_status_resolve
+import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /** Compact sizing shared by the small action buttons on git cards. */
@@ -47,52 +52,68 @@ val GitCardButtonHeight = Modifier.height(32.dp)
 val GitCardButtonPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
 
 /**
- * NIP-34 status buttons for an issue, patch or pull request: "Reopen" when it is
- * [closedOrApplied], otherwise "Mark merged" (patches and PRs only, [isPatchOrPr]) and "Close".
+ * NIP-34 status buttons for an issue, patch or pull request, by its [current] status:
+ * - closed, merged or resolved: "Reopen";
+ * - a draft patch or PR: "Ready for review"; an open one: "Mark as draft";
+ * - an open patch or PR, to a repository maintainer ([canMerge]): "Mark merged";
+ * - an open issue: "Resolve";
+ * - anything open: "Close".
  * The host decides who may see them and publishes the status event.
  */
 @Composable
 fun GitStatusButtons(
-    closedOrApplied: Boolean,
+    current: StatusKind,
     isPatchOrPr: Boolean,
-    onReopen: () -> Unit,
-    onMarkMerged: () -> Unit,
-    onClose: () -> Unit,
+    canMerge: Boolean,
+    onSetStatus: (StatusKind) -> Unit,
 ) {
     FlowRow(
         modifier = Modifier.padding(top = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (closedOrApplied) {
-            FilledTonalButton(
-                onClick = onReopen,
-                modifier = GitCardButtonHeight,
-                contentPadding = GitCardButtonPadding,
-            ) {
-                Icon(MaterialSymbols.RadioButtonChecked, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(stringRes(Res.string.git_status_reopen), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
+        if (current == StatusKind.CLOSED || current == StatusKind.APPLIED) {
+            StatusButton(MaterialSymbols.RadioButtonChecked, stringRes(Res.string.git_status_reopen)) { onSetStatus(StatusKind.OPEN) }
+            return@FlowRow
+        }
+
+        if (isPatchOrPr) {
+            if (current == StatusKind.DRAFT) {
+                StatusButton(MaterialSymbols.RadioButtonChecked, stringRes(Res.string.git_status_ready)) { onSetStatus(StatusKind.OPEN) }
+            } else {
+                StatusButton(MaterialSymbols.EditNote, stringRes(Res.string.git_status_mark_draft)) { onSetStatus(StatusKind.DRAFT) }
+            }
+            if (canMerge) {
+                StatusButton(MaterialSymbols.Check, stringRes(Res.string.git_status_mark_merged)) { onSetStatus(StatusKind.APPLIED) }
             }
         } else {
-            if (isPatchOrPr) {
-                FilledTonalButton(
-                    onClick = onMarkMerged,
-                    modifier = GitCardButtonHeight,
-                    contentPadding = GitCardButtonPadding,
-                ) {
-                    Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text(stringRes(Res.string.git_status_mark_merged), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
-                }
-            }
-            OutlinedButton(
-                onClick = onClose,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                modifier = GitCardButtonHeight,
-                contentPadding = GitCardButtonPadding,
-            ) {
-                Icon(MaterialSymbols.Cancel, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(stringRes(Res.string.git_status_close), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
-            }
+            StatusButton(MaterialSymbols.Check, stringRes(Res.string.git_status_resolve)) { onSetStatus(StatusKind.APPLIED) }
         }
+
+        OutlinedButton(
+            onClick = { onSetStatus(StatusKind.CLOSED) },
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            modifier = GitCardButtonHeight,
+            contentPadding = GitCardButtonPadding,
+        ) {
+            Icon(MaterialSymbols.Cancel, contentDescription = null, modifier = Modifier.size(16.dp))
+            Text(stringRes(Res.string.git_status_close), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
+        }
+    }
+}
+
+@Composable
+private fun StatusButton(
+    symbol: MaterialSymbol,
+    label: String,
+    onClick: () -> Unit,
+) {
+    FilledTonalButton(
+        onClick = onClick,
+        modifier = GitCardButtonHeight,
+        contentPadding = GitCardButtonPadding,
+    ) {
+        Icon(symbol, contentDescription = null, modifier = Modifier.size(16.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
     }
 }

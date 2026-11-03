@@ -33,6 +33,8 @@ import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
 import com.vitorpamplona.amethyst.commons.wot.curatedHidesByTrust
 import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
@@ -286,9 +288,16 @@ class NotificationFeedFilter(
                 return true
             }
 
+            if (event is GitStatusEvent || event is GitPullRequestUpdateEvent) {
+                // Anyone can publish a status or a PR update that p-tags the user. Only one by the
+                // item's author or a confirmed repository member changes the item, so only those
+                // notify (gitworkshop drops the rest from its notifications the same way).
+                val authority = GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY
+                return authority.isAuthorisedChange(event, note.replyTo?.lastOrNull()?.event)
+            }
+
             if (event is GitIssueEvent || event is GitPatchEvent ||
-                event is GitPullRequestEvent || event is GitPullRequestUpdateEvent ||
-                event is GitReplyEvent || event is GitStatusEvent
+                event is GitPullRequestEvent || event is GitReplyEvent
             ) {
                 // NIP-34 events reach the notifications tab only via the p-tag
                 // relay filter, which already selected them because the current

@@ -21,10 +21,12 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache.observeEvents
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevisions
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +34,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -58,10 +61,13 @@ object GitPullRequestUpdateIndex {
      * thread timeline and the update card read it to say which commit an update replaced.
      */
     val byPullRequest: StateFlow<Map<HexKey, List<GitPullRequestUpdateEvent>>?> =
-        LocalCache
-            .observeEvents<GitPullRequestUpdateEvent>(Filter(kinds = listOf(GitPullRequestUpdateEvent.KIND)))
-            .map { groupByParent(it) }
-            .flowOn(Dispatchers.IO)
+        combine(
+            LocalCache.observeEvents<GitPullRequestUpdateEvent>(Filter(kinds = listOf(GitPullRequestUpdateEvent.KIND))),
+            LocalCache.observeEvents<GitPullRequestEvent>(Filter(kinds = listOf(GitPullRequestEvent.KIND))),
+            GitAuthorityIndex.authority,
+        ) { updates, pullRequests, authority ->
+            groupByParent(updates, pullRequests.associateBy { it.id }, authority ?: GitAuthority.EMPTY)
+        }.flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, null)
 
     val latestByPullRequest: StateFlow<Map<HexKey, GitPullRequestUpdateEvent>?> =
@@ -70,10 +76,24 @@ object GitPullRequestUpdateIndex {
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, null)
 
-    private fun groupByParent(events: List<GitPullRequestUpdateEvent>): Map<HexKey, List<GitPullRequestUpdateEvent>> {
+    /**
+     * The updates per PR, oldest first, keeping only those the PR's author or a confirmed repository
+     * maintainer signed ([GitAuthority.maintainerActorsOf]): anyone else's would let a stranger move
+     * the tip, and the clone URL "View changes" fetches from. Updates of a PR that hasn't loaded wait
+     * for it.
+     */
+    fun groupByParent(
+        events: List<GitPullRequestUpdateEvent>,
+        pullRequestsById: Map<HexKey, GitPullRequestEvent>,
+        authority: GitAuthority,
+    ): Map<HexKey, List<GitPullRequestUpdateEvent>> {
         val byParent = HashMap<HexKey, MutableList<GitPullRequestUpdateEvent>>()
+        val actorsByParent = HashMap<HexKey, Set<HexKey>>()
         for (event in events) {
             val target = event.parentPullRequestId() ?: continue
+            val pullRequest = pullRequestsById[target] ?: continue
+            val actors = actorsByParent.getOrPut(target) { authority.maintainerActorsOf(pullRequest) }
+            if (event.pubKey !in actors) continue
             byParent.getOrPut(target) { ArrayList() }.add(event)
         }
         return byParent.mapValues { it.value.sortedWith(GitPullRequestRevisions.order) }

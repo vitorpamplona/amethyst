@@ -34,23 +34,28 @@ class RepositoryIssuesFeedFilter(
     val account: Account,
     val showClosed: Boolean,
 ) : AdditiveFeedFilter<Note>() {
-    private val repositoryAddressId = repositoryNote.address.toValue()
-
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-issues-" + (if (showClosed) "closed-" else "open-") + repositoryNote.idHex
 
     override fun feed(): List<Note> {
+        val coordinates = repositoryCoordinateSet(repositoryNote.address)
         val result =
             LocalCache.notes.mapNotNullIntoSet { _, note ->
-                if (matches(note)) note else null
+                if (matches(note, coordinates)) note else null
             }
         return sort(result)
     }
 
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { matches(it) }
+    override fun applyFilter(newItems: Set<Note>): Set<Note> {
+        val coordinates = repositoryCoordinateSet(repositoryNote.address)
+        return newItems.filterTo(HashSet()) { matches(it, coordinates) }
+    }
 
-    private fun matches(note: Note): Boolean {
+    private fun matches(
+        note: Note,
+        coordinates: Set<String>,
+    ): Boolean {
         val event = note.event as? GitIssueEvent ?: return false
-        if (event.repositoryHex() != repositoryAddressId) return false
+        if (!isFiledUnder(event, coordinates)) return false
         return GitStatusIndex.isClosedOrResolved(note.idHex) == showClosed
     }
 

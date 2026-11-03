@@ -20,19 +20,29 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.rememberIsAuthorisedChange
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.statusKind
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_proposed_explanation
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.GitStatusPill
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 
 /**
@@ -51,8 +61,20 @@ fun RenderGitStatusEvent(
 ) {
     val event = note.event as? GitStatusEvent ?: return
     val kind = remember(event) { event.statusKind() }
+    val target = note.replyTo?.lastOrNull()?.event
+    val authorised = rememberIsAuthorisedChange(event, target)
 
-    GitStatusPill(kind)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        GitStatusPill(kind, forIssue = target is GitIssueEvent)
+        if (!authorised) {
+            // Anyone can publish a status; this one doesn't change the item.
+            Text(
+                text = stringRes(Res.string.git_proposed_explanation),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
+    }
 
     if (event.content.isNotBlank()) {
         Spacer(modifier = StdVertSpacer)

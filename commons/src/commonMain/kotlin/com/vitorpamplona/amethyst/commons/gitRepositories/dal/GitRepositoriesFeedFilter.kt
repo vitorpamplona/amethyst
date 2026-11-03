@@ -28,6 +28,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
 class GitRepositoriesFeedFilter(
@@ -75,5 +77,30 @@ class GitRepositoriesFeedFilter(
         }
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
+    override fun sort(items: Set<Note>): List<Note> = oneCardPerRepository(items).sortedByDefaultFeedOrder()
+
+    /**
+     * Co-maintainers each publish an announcement under the same identifier; once they confirm each
+     * other (GitRepositoryMembership) they are one repository, so it gets one card: the newest of
+     * their announcements, whose name and description are the repository's current ones. A
+     * same-identifier announcement nobody confirmed stays a card of its own.
+     */
+    private fun oneCardPerRepository(items: Set<Note>): Set<Note> {
+        val authority = GitAuthorityIndex.authority.value ?: return items
+        val result = HashSet<Note>()
+        val byRepository = HashMap<String, Note>()
+        for (note in items) {
+            val event = note.event as? GitRepositoryEvent
+            val maintainers = event?.let { authority.membership(Address(GitRepositoryEvent.KIND, it.pubKey, it.dTag()))?.confirmedMaintainers }
+            if (event == null || maintainers == null || maintainers.size < 2 || event.pubKey !in maintainers) {
+                result.add(note)
+                continue
+            }
+            val key = event.dTag() + ":" + maintainers.sorted().joinToString(",")
+            val kept = byRepository[key]
+            if (kept == null || (note.createdAt() ?: 0) > (kept.createdAt() ?: 0)) byRepository[key] = note
+        }
+        result.addAll(byRepository.values)
+        return result
+    }
 }

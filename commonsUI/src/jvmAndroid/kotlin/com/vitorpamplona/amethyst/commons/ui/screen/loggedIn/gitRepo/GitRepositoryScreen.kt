@@ -71,6 +71,9 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
+import com.vitorpamplona.amethyst.commons.nip34Git.state.GitSignedState
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.RepositoryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -236,7 +239,10 @@ private fun GitRepositoryHome(
 
     // Start the smart-HTTP browser as soon as the announcement arrives, so the README renders.
     LaunchedEffect(event) {
-        event?.let { browserViewModel.loadOnce(it.clones(), cacheKey) }
+        event?.let {
+            browserViewModel.signedState = GitSignedState.latestFor(note.address, GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY)
+            browserViewModel.loadOnce(it.clones(), cacheKey)
+        }
     }
     val browserState by browserViewModel.state.collectAsStateWithLifecycle()
 
@@ -394,7 +400,10 @@ private fun GitRepositoryCode(
     val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
     val cacheKey = remember(note) { note.address.toValue() }
     LaunchedEffect(event) {
-        event?.let { browserViewModel.loadOnce(it.clones(), cacheKey) }
+        event?.let {
+            browserViewModel.signedState = GitSignedState.latestFor(note.address, GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY)
+            browserViewModel.loadOnce(it.clones(), cacheKey)
+        }
     }
     val browserState by browserViewModel.state.collectAsStateWithLifecycle()
     RepoContentSubscription(note, event, accountViewModel)

@@ -1500,6 +1500,19 @@ open class EventCache :
                 listOfNotNull(event.threadRoot(), event.replyTo()).distinct().mapNotNull { checkGetOrCreateNote(it) }
             }
 
+            is GitPatchEvent -> {
+                // The rest of a patch series threads onto the patch before it, and a revision onto
+                // the original root: link them so the series and its revisions show in the root's
+                // thread. The repository `a` is not a reply target.
+                event.threadEventIds().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is LabelEvent -> {
+                // Only a NIP-34 rename (`#subject`) is part of the renamed item's history; other
+                // labels (hashtags, moderation) stay out of threads.
+                if (event.subjectEdit() != null) event.labeledEvents().mapNotNull { checkGetOrCreateNote(it) } else emptyList()
+            }
+
             is GitCoverNoteEvent -> {
                 // A cover note threads alongside the NIP-34 replies of the issue / patch / PR it
                 // covers (its root `e`), so the item's history shows each edit and the card can quote

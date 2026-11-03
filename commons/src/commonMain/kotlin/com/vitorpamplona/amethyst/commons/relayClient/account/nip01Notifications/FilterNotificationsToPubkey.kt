@@ -134,6 +134,9 @@ val NotificationsPerKeyKinds2 =
         LiveChessMoveEvent.KIND,
     )
 
+/** The `K` (root kind) values of comments on issues, patches and pull requests. */
+val GitRootKindTags = listOf(GitIssueEvent.KIND.toString(), GitPatchEvent.KIND.toString(), GitPullRequestEvent.KIND.toString())
+
 val NotificationsPerKeyKinds3 =
     listOf(
         AttestationRequestEvent.KIND,
@@ -260,6 +263,20 @@ fun filterNotificationsToPubkeys(
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to pubkeys),
                     limit = 200,
+                    since = since,
+                ),
+        ),
+        // NIP-22 comments anywhere under my issue, patch or PR. A reply to someone else's comment
+        // names me only as the root author (uppercase `P`), so the `#p` filters above never see it.
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                ExplainedFilter(
+                    purpose = SubPurpose.NOTIFICATIONS,
+                    accountPubKeys = pubkeys,
+                    kinds = listOf(CommentEvent.KIND),
+                    tags = mapOf("P" to pubkeys, "K" to GitRootKindTags),
+                    limit = 100,
                     since = since,
                 ),
         ),

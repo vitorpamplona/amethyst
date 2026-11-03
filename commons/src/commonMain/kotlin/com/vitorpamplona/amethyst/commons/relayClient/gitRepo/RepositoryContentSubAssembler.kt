@@ -67,6 +67,7 @@ class RepositoryContentSubAssembler(
                 listOf(
                     filterRepositoryContent(relay, repoEvent, relaySince),
                     filterRepositoryCi(relay, repoEvent, relaySince),
+                    filterRepositoryAnnouncements(relay, repoEvent),
                 )
             }
         }

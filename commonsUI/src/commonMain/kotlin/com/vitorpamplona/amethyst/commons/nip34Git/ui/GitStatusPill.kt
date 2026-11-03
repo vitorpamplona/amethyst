@@ -22,11 +22,14 @@ package com.vitorpamplona.amethyst.commons.nip34Git.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.ui.note.GitStatusPill
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
@@ -56,6 +59,7 @@ fun GitStatusPill(
     val index by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
     val map = index ?: return // hide pill until the initial scan completes — avoids a default-then-real flicker
     val kind = map[targetIdHex]?.statusKind() ?: defaultIfMissing ?: return
+    val forIssue = remember(targetIdHex) { LocalCache.getNoteIfExists(targetIdHex)?.event is GitIssueEvent }
 
-    GitStatusPill(kind, modifier)
+    GitStatusPill(kind, modifier, forIssue)
 }

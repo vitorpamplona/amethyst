@@ -22,11 +22,9 @@ package com.vitorpamplona.amethyst.commons.nip34Git.coverNote
 
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache.observeEvents
-import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -39,30 +37,11 @@ import kotlinx.coroutines.flow.stateIn
 
 /**
  * Cover notes (kind 1624) on NIP-34 issues, patches and PRs, resolved by gitworkshop's rule: only a
- * note by the root item's author or a repository maintainer counts, and the latest of those by
+ * note by the root item's author or a confirmed repository member counts
+ * ([com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority.memberActorsOf]), and the latest of those by
  * `created_at` (ties broken by event id, descending) is the one displayed above the description.
  */
 object GitCoverNotes {
-    /**
-     * Who may set an item's cover note: its author, the repository owner (the announcement's
-     * pubkey) and the maintainers the announcement lists. While the announcement has not loaded
-     * ([repository] null) the author and owner still count, so the author's own note shows without
-     * a flash of nothing.
-     */
-    fun authorisedAuthors(
-        rootAuthor: HexKey,
-        repositoryAddress: Address?,
-        repository: GitRepositoryEvent?,
-    ): Set<HexKey> =
-        buildSet {
-            add(rootAuthor)
-            repositoryAddress?.let { add(it.pubKeyHex) }
-            repository?.let {
-                add(it.pubKey)
-                addAll(it.maintainers())
-            }
-        }
-
     /** The cover note to display on [rootId], or null when no authorised author has set one. */
     fun latestAuthorised(
         notes: Collection<GitCoverNoteEvent>,

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.gitRepo
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
@@ -32,6 +33,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
@@ -59,7 +61,7 @@ fun filterRepositoryContent(
         filter =
             ExplainedFilter(
                 purpose = SubPurpose.TOPIC_FEED,
-                tags = mapOf("a" to listOf(repository.addressTag())),
+                tags = mapOf("a" to repositoryCoordinates(repository)),
                 kinds = RepositoryContentKinds,
                 limit = 500,
                 since = since,
@@ -80,10 +82,38 @@ val RepositoryCiKinds =
     )
 
 /**
- * Every coordinate a CI event may tag the repository with: CI events carry one `a` per maintainer
- * announcement, so the owner's coordinate alone would miss runs tagged under a maintainer's.
+ * Who this announcement names as maintainers or moderators, author first: whose announcements to
+ * fetch to resolve the repository's membership, and whose coordinates to query. Discovery only:
+ * who actually counts is [com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryMembership].
  */
-fun repositoryCoordinates(repository: GitRepositoryEvent): List<String> = (listOf(repository.pubKey) + repository.maintainers()).distinct().map { Address.assemble(GitRepositoryEvent.KIND, it, repository.dTag()) }
+fun repositoryDiscoveryPubKeys(repository: GitRepositoryEvent): List<HexKey> = (listOf(repository.pubKey) + repository.activeMaintainerAssignments() + repository.activeModeratorAssignments() + repository.maintainers()).distinct()
+
+/**
+ * Every coordinate an issue, PR, patch or CI event may tag the repository with: they carry one `a`
+ * per maintainer announcement, so the owner's coordinate alone would miss items filed under a
+ * co-maintainer's. Display then keeps only confirmed members' coordinates.
+ */
+fun repositoryCoordinates(repository: GitRepositoryEvent): List<String> = repositoryDiscoveryPubKeys(repository).map { Address.assemble(GitRepositoryEvent.KIND, it, repository.dTag()) }
+
+/**
+ * The announcements of everyone [repository] names, under its identifier: a co-maintainer is
+ * confirmed only once their own announcement lists a maintainer back.
+ */
+fun filterRepositoryAnnouncements(
+    relay: NormalizedRelayUrl,
+    repository: GitRepositoryEvent,
+): RelayBasedFilter =
+    RelayBasedFilter(
+        relay = relay,
+        filter =
+            ExplainedFilter(
+                purpose = SubPurpose.TOPIC_FEED,
+                // Their announcements (30617), and the branch tips they signed (30618).
+                kinds = listOf(GitRepositoryEvent.KIND, GitRepositoryStateEvent.KIND),
+                authors = repositoryDiscoveryPubKeys(repository),
+                tags = mapOf("d" to listOf(repository.dTag())),
+            ),
+    )
 
 fun filterRepositoryCi(
     relay: NormalizedRelayUrl,

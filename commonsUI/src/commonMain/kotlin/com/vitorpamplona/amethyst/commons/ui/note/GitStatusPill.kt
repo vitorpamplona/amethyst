@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_status_closed
 import com.vitorpamplona.amethyst.commons.resources.git_status_draft
 import com.vitorpamplona.amethyst.commons.resources.git_status_merged
 import com.vitorpamplona.amethyst.commons.resources.git_status_open
+import com.vitorpamplona.amethyst.commons.resources.git_status_resolved
 import org.jetbrains.compose.resources.stringResource
 
 private val PillShape = RoundedCornerShape(8.dp)
@@ -64,18 +65,23 @@ enum class StatusKind {
 fun GitStatusPill(
     kind: StatusKind,
     modifier: Modifier = Modifier,
+    forIssue: Boolean = false,
 ) {
-    val (label, symbol, container, content) = gitStatusStyle(kind)
+    val (label, symbol, container, content) = gitStatusStyle(kind, forIssue)
 
     StatusPill(label, symbol, container, content, modifier)
 }
 
 /**
  * The label, icon and colors [GitStatusPill] uses for [kind], shared with the thread timeline's
- * status rows so a status change is drawn in the same colors as the badge it sets.
+ * status rows so a status change is drawn in the same colors as the badge it sets. Kind 1631 means
+ * "merged" on a patch or PR and "resolved" on an issue ([forIssue]).
  */
 @Composable
-internal fun gitStatusStyle(kind: StatusKind): StatusStyle =
+internal fun gitStatusStyle(
+    kind: StatusKind,
+    forIssue: Boolean = false,
+): StatusStyle =
     when (kind) {
         StatusKind.OPEN -> {
             StatusStyle(
@@ -88,7 +94,7 @@ internal fun gitStatusStyle(kind: StatusKind): StatusStyle =
 
         StatusKind.APPLIED -> {
             StatusStyle(
-                label = stringResource(Res.string.git_status_merged),
+                label = stringResource(if (forIssue) Res.string.git_status_resolved else Res.string.git_status_merged),
                 symbol = MaterialSymbols.Check,
                 container = Color(0xFF8250DF),
                 content = Color.White,

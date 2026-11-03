@@ -21,11 +21,8 @@
 package com.vitorpamplona.amethyst.commons.nip34Git
 
 import com.vitorpamplona.amethyst.commons.nip34Git.coverNote.GitCoverNotes
-import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 
@@ -90,23 +87,5 @@ class GitCoverNotesTest {
         val unmarked = note("1".repeat(64), author, 100, marker = false)
 
         assertSame(unmarked, GitCoverNotes.latestAuthorised(listOf(unmarked), root, authorised))
-    }
-
-    @Test
-    fun authorisedAuthorsAreTheItemAuthorTheOwnerAndTheMaintainers() {
-        val address = Address(GitRepositoryEvent.KIND, owner, "repo")
-        val repo =
-            GitRepositoryEvent(
-                "9".repeat(64),
-                owner,
-                1,
-                arrayOf(arrayOf("d", "repo"), arrayOf("maintainers", maintainer)),
-                "",
-                sig,
-            )
-
-        assertEquals(setOf(author, owner), GitCoverNotes.authorisedAuthors(author, address, null))
-        assertEquals(setOf(author, owner, maintainer), GitCoverNotes.authorisedAuthors(author, address, repo))
-        assertEquals(setOf(author), GitCoverNotes.authorisedAuthors(author, null, null))
     }
 }

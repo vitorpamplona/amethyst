@@ -26,8 +26,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -39,13 +40,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,42 +54,42 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.GitPullRequestUpdateIndex
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevision
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevisions
+import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemLabelIndex
+import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.git_cover_note_current
-import com.vitorpamplona.amethyst.commons.resources.git_cover_note_not_applied
-import com.vitorpamplona.amethyst.commons.resources.git_cover_note_superseded
 import com.vitorpamplona.amethyst.commons.resources.git_pr_pushed
 import com.vitorpamplona.amethyst.commons.resources.git_pr_pushed_from
 import com.vitorpamplona.amethyst.commons.resources.git_pr_pushed_rebased
 import com.vitorpamplona.amethyst.commons.resources.git_pr_update_description
-import com.vitorpamplona.amethyst.commons.resources.git_timeline_cover_note
+import com.vitorpamplona.amethyst.commons.resources.git_proposed
+import com.vitorpamplona.amethyst.commons.resources.git_proposed_explanation
+import com.vitorpamplona.amethyst.commons.resources.git_timeline_patch_added
+import com.vitorpamplona.amethyst.commons.resources.git_timeline_patch_revision
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_pushed
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_pushed_from
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_pushed_rebased
-import com.vitorpamplona.amethyst.commons.resources.git_timeline_status_closed
-import com.vitorpamplona.amethyst.commons.resources.git_timeline_status_draft
-import com.vitorpamplona.amethyst.commons.resources.git_timeline_status_merged
-import com.vitorpamplona.amethyst.commons.resources.git_timeline_status_open
-import com.vitorpamplona.amethyst.commons.resources.git_timeline_status_resolved
-import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.resources.git_timeline_renamed
+import com.vitorpamplona.amethyst.commons.resources.git_timeline_renamed_was
+import com.vitorpamplona.amethyst.commons.resources.git_timeline_set_status
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.GitStatusPill
 import com.vitorpamplona.amethyst.commons.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.commons.ui.note.NoteUsernameDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.gitStatusStyle
-import com.vitorpamplona.amethyst.commons.ui.note.types.repositoryAddressOf
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
@@ -98,12 +98,24 @@ private val LabelShape = RoundedCornerShape(6.dp)
 
 /**
  * The NIP-34 events a thread draws as one-line timeline entries instead of posts: status changes
- * (1630-1633), cover notes (1624) and PR updates (1619). They record something that happened to
- * the issue, patch or PR rather than saying something about it, the way a forge's timeline lists
- * "closed this" or "pushed abc1234" between comments. The full cards (with the item they act on
- * quoted below) stay for the feed, the notifications and quotes, where the item isn't on screen.
+ * (1630-1633) and PR updates (1619). They record something that happened to the issue, patch or
+ * PR rather than saying something about it, the way a forge's timeline lists "set status to
+ * Closed" or "pushed abc1234" between comments. The full cards (with the item they act on quoted
+ * below) stay for the feed, the notifications and quotes, where the item isn't on screen.
  */
-fun isGitTimelineEvent(event: Event?): Boolean = event is GitStatusEvent || event is GitCoverNoteEvent || event is GitPullRequestUpdateEvent
+fun isGitTimelineEvent(event: Event?): Boolean =
+    event is GitStatusEvent ||
+        event is GitPullRequestUpdateEvent ||
+        // The rest of a patch series and its revisions: pushes, not posts.
+        event is GitPatchEvent ||
+        // A NIP-34 rename (`#subject`); other labels never link into a thread.
+        (event is LabelEvent && event.subjectEdit() != null)
+
+/**
+ * Cover notes (1624) are versions of the item's summary: the item shows the current one and its
+ * edit pencil steps through the rest, as kind-1 edits do, so the thread lists none of them.
+ */
+fun isHiddenInGitThread(event: Event?): Boolean = event is GitCoverNoteEvent
 
 /** A git object id shortened to its 7-character prefix for display. */
 fun String.shortCommit(): String = if (length > 7) take(7) else this
@@ -122,8 +134,9 @@ fun GitThreadTimelineRow(
 ) {
     when (val event = baseNote.event) {
         is GitStatusEvent -> StatusRow(event, baseNote, modifier, background, accountViewModel, nav)
-        is GitCoverNoteEvent -> CoverNoteRow(event, baseNote, modifier, background, accountViewModel, nav)
         is GitPullRequestUpdateEvent -> UpdateRow(event, baseNote, modifier, background, accountViewModel, nav)
+        is GitPatchEvent -> PatchRow(event, baseNote, modifier, background, accountViewModel, nav)
+        is LabelEvent -> RenameRow(event, baseNote, modifier, background, accountViewModel, nav)
         else -> {}
     }
 }
@@ -138,100 +151,39 @@ private fun StatusRow(
     nav: INav,
 ) {
     val kind = remember(event) { event.statusKind() }
-    val style = gitStatusStyle(kind)
-    val isIssue = baseNote.replyTo?.lastOrNull()?.event is GitIssueEvent
-    val action =
-        when (kind) {
-            StatusKind.OPEN -> stringRes(Res.string.git_timeline_status_open)
-            StatusKind.APPLIED -> stringRes(if (isIssue) Res.string.git_timeline_status_resolved else Res.string.git_timeline_status_merged)
-            StatusKind.CLOSED -> stringRes(Res.string.git_timeline_status_closed)
-            StatusKind.DRAFT -> stringRes(Res.string.git_timeline_status_draft)
-        }
-
-    TimelineRowLayout(baseNote, modifier, background, style.symbol, style.container, style.content, action, accountViewModel, nav) {
-        if (event.content.isNotBlank()) {
-            Text(
-                text = event.content,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 2.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun CoverNoteRow(
-    event: GitCoverNoteEvent,
-    baseNote: Note,
-    modifier: Modifier,
-    background: Color,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
     val target = baseNote.replyTo?.lastOrNull()?.event
-    val rootId = remember(event) { event.rootEventId() }
-    val state =
-        if (target == null || rootId == null) {
-            null
-        } else {
-            val repository = remember(target) { repositoryAddressOf(target) }
-            val authorised = observeCoverNoteAuthors(target.pubKey, repository, accountViewModel)
-            val displayed = observeDisplayedCoverNote(rootId, target.pubKey, repository, accountViewModel)
-            when {
-                displayed?.id == event.id -> Res.string.git_cover_note_current
-                event.pubKey in authorised -> Res.string.git_cover_note_superseded
-                else -> Res.string.git_cover_note_not_applied
-            }
-        }
-
-    var expanded by remember(baseNote) { mutableStateOf(false) }
+    val isIssue = target is GitIssueEvent
+    val style = gitStatusStyle(kind, isIssue)
+    // Anyone may publish a status; only the author's or a member's changes the item.
+    val authorised = rememberIsAuthorisedChange(event, target)
 
     TimelineRowLayout(
         baseNote = baseNote,
         modifier = modifier,
         background = background,
-        symbol = MaterialSymbols.PushPin,
-        container = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-        content = MaterialTheme.colorScheme.primary,
-        action = stringRes(Res.string.git_timeline_cover_note),
+        symbol = style.symbol,
+        container = if (authorised) style.container else MaterialTheme.colorScheme.surfaceVariant,
+        content = if (authorised) style.content else MaterialTheme.colorScheme.onSurfaceVariant,
+        action = stringRes(Res.string.git_timeline_set_status),
         accountViewModel = accountViewModel,
         nav = nav,
-        onClick = { expanded = !expanded },
-        trailing = {
-            if (state != null) TimelineLabel(stringRes(state))
-            Icon(
-                symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-                contentDescription = null,
-                modifier = Modifier.padding(start = 4.dp).size(18.dp),
-                tint = MaterialTheme.colorScheme.placeholderText,
-            )
+        inline = {
+            GitStatusPill(kind, forIssue = isIssue)
+            if (!authorised) TimelineLabel(stringRes(Res.string.git_proposed))
         },
     ) {
-        if (expanded) {
-            val backgroundColor = remember { mutableStateOf(background) }
-            val tags = remember(event) { event.tags.toImmutableListOfLists() }
-            Spacer(Modifier.size(4.dp))
-            TranslatableRichTextViewer(
-                content = event.content,
-                canPreview = true,
-                quotesLeft = 1,
-                modifier = Modifier.fillMaxWidth(),
-                tags = tags,
-                backgroundColor = backgroundColor,
-                id = baseNote.idHex,
-                callbackUri = baseNote.toNostrUri(),
-                authorPubKey = event.pubKey,
-                accountViewModel = accountViewModel,
-                nav = nav,
+        if (!authorised) {
+            Text(
+                text = stringRes(Res.string.git_proposed_explanation),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.placeholderText,
             )
-        } else if (state != Res.string.git_cover_note_current) {
-            // The current note is the banner on the item above: a preview would repeat it.
+        }
+        if (event.content.isNotBlank()) {
             Text(
                 text = event.content,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.placeholderText,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp),
             )
         }
     }
@@ -281,6 +233,99 @@ private fun UpdateRow(
     }
 }
 
+/**
+ * A later patch of the series, or the first patch of a new revision, pushed onto the root patch
+ * the thread is about. Tapping it opens the patch with its diff.
+ */
+@Composable
+private fun PatchRow(
+    event: GitPatchEvent,
+    baseNote: Note,
+    modifier: Modifier,
+    background: Color,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val title = remember(event) { event.title() }
+    TimelineRowLayout(
+        baseNote = baseNote,
+        modifier = modifier.clickable { nav.nav(Route.Note(baseNote.idHex)) },
+        background = background,
+        symbol = MaterialSymbols.Commit,
+        container = MaterialTheme.colorScheme.surfaceVariant,
+        content = MaterialTheme.colorScheme.onSurfaceVariant,
+        action = stringRes(if (event.isRootRevision()) Res.string.git_timeline_patch_revision else Res.string.git_timeline_patch_added),
+        accountViewModel = accountViewModel,
+        nav = nav,
+    ) {
+        if (title != null) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** A rename (NIP-32 `#subject` label) of the item the thread is about: "changed the title to …". */
+@Composable
+private fun RenameRow(
+    event: LabelEvent,
+    baseNote: Note,
+    modifier: Modifier,
+    background: Color,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val item = baseNote.replyTo?.lastOrNull()?.event
+    val actors = if (item != null) rememberGitMemberActors(item) else emptySet()
+    val authorised = event.pubKey in actors
+    val labels by GitItemLabelIndex.byItem.collectAsStateWithLifecycle()
+    val authority = observeGitAuthority()
+    val previous =
+        remember(event, item, labels, authority) {
+            item?.let { GitItemTitles.renamesOf(it, labels?.get(it.id).orEmpty(), authority).firstOrNull { rename -> rename.event.id == event.id }?.from }
+        }
+
+    TimelineRowLayout(
+        baseNote = baseNote,
+        modifier = modifier,
+        background = background,
+        symbol = MaterialSymbols.Edit,
+        container = MaterialTheme.colorScheme.surfaceVariant,
+        content = MaterialTheme.colorScheme.onSurfaceVariant,
+        action = stringRes(Res.string.git_timeline_renamed),
+        accountViewModel = accountViewModel,
+        nav = nav,
+        inline = {
+            if (!authorised) TimelineLabel(stringRes(Res.string.git_proposed))
+        },
+    ) {
+        Text(
+            text = event.subjectEdit().orEmpty(),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        if (previous != null) {
+            Text(
+                text = stringRes(Res.string.git_timeline_renamed_was, previous),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
+        if (!authorised) {
+            Text(
+                text = stringRes(Res.string.git_proposed_explanation),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
+    }
+}
+
 /** The revision [update] replaced, from the other updates of its PR or the PR itself. */
 @Composable
 fun observePreviousRevision(
@@ -318,8 +363,10 @@ fun gitPullRequestPushText(
 
 /**
  * The shared shape of a timeline entry: a colored icon for the kind of change, then the author's
- * picture, name and time on one line and the change itself under it, with [body] for its detail.
+ * picture, name and time on one line and the change itself under it ([action] and [inline]
+ * flowing together), with [body] for its detail.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TimelineRowLayout(
     baseNote: Note,
@@ -331,8 +378,7 @@ private fun TimelineRowLayout(
     action: String,
     accountViewModel: AccountViewModel,
     nav: INav,
-    onClick: (() -> Unit)? = null,
-    trailing: @Composable RowScope.() -> Unit = {},
+    inline: @Composable () -> Unit = {},
     body: @Composable ColumnScope.() -> Unit = {},
 ) {
     Row(
@@ -340,7 +386,6 @@ private fun TimelineRowLayout(
             modifier
                 .fillMaxWidth()
                 .background(background)
-                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
                 // Match NoteComposeLayout's 12dp gutters so the icon lines up with reply avatars.
                 .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.Top,
@@ -362,17 +407,17 @@ private fun TimelineRowLayout(
                 TimeAgo(baseNote)
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = action,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.grayText,
-                    modifier = Modifier.weight(1f),
                 )
-                trailing()
+                inline()
             }
 
             body()

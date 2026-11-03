@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
+import com.vitorpamplona.amethyst.commons.nip34Git.GitStateMismatch
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitLoadingBox
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitMessageBox
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.RepoInfoBar
@@ -72,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_no_clone_url
 import com.vitorpamplona.amethyst.commons.resources.git_repo_no_search_results
 import com.vitorpamplona.amethyst.commons.resources.git_repo_root
 import com.vitorpamplona.amethyst.commons.resources.git_repo_search_files
+import com.vitorpamplona.amethyst.commons.resources.git_repo_state_mismatch
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
@@ -105,7 +107,7 @@ fun GitCodeTab(
         }
 
         is GitBrowseState.Loaded ->
-            CodeBrowser(state.snapshot, viewModel, accountViewModel, nav, scaffoldPaddingTop = scaffoldPadding)
+            CodeBrowser(state.snapshot, viewModel, accountViewModel, nav, scaffoldPaddingTop = scaffoldPadding, mismatch = state.mismatch)
     }
 }
 
@@ -116,6 +118,7 @@ private fun CodeBrowser(
     accountViewModel: AccountViewModel,
     nav: INav,
     scaffoldPaddingTop: PaddingValues,
+    mismatch: GitStateMismatch? = null,
 ) {
     var pathString by rememberSaveable(snapshot.headCommit) { mutableStateOf("") }
     var openFilePath by rememberSaveable(snapshot.headCommit) { mutableStateOf<String?>(null) }
@@ -176,6 +179,9 @@ private fun CodeBrowser(
     val results = remember(snapshot, query) { if (searching) snapshot.searchFiles(query.trim()) else emptyList() }
 
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = scaffoldPaddingTop) {
+        if (mismatch != null) {
+            item(key = "signed-state-mismatch") { SignedStateMismatchBanner(mismatch) }
+        }
         item(key = "repo-info-bar") {
             RepoInfoBar(
                 branch = snapshot.branch,
@@ -434,6 +440,32 @@ private fun FileHeader(
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * No clone URL served the commit the maintainers signed for this branch (kind 30618): the code shown
+ * comes from a server that may be behind, or not serve their repository at all.
+ */
+@Composable
+private fun SignedStateMismatchBanner(mismatch: GitStateMismatch) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.errorContainer)
+                .padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(MaterialSymbols.Warning, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onErrorContainer)
+        Text(
+            text = stringRes(Res.string.git_repo_state_mismatch, mismatch.branch, mismatch.signedCommit.take(7), mismatch.servedCommit.take(7)),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onErrorContainer,
         )
     }
 }

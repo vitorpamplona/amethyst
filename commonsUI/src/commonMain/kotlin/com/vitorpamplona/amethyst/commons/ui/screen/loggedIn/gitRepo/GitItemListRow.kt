@@ -51,8 +51,11 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.GitPullRequestUpdateIndex
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCiStatusBadge
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusPill
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemLabels
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemTitle
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_pr_revised
 import com.vitorpamplona.amethyst.commons.resources.git_untitled
@@ -75,7 +78,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 
@@ -203,7 +205,7 @@ private fun GitItemRowContent(
 
             ObserveDisplayNip05Status(note, accountViewModel, nav)
 
-            val subject = remember(note.event) { gitSubjectOf(note.event) }
+            val subject = note.event?.let { observeGitItemTitle(it) }
             Text(
                 text = subject ?: stringRes(Res.string.git_untitled),
                 style = MaterialTheme.typography.bodyLarge,
@@ -212,7 +214,7 @@ private fun GitItemRowContent(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            val labels = remember(note.event) { gitLabelsOf(note.event) }
+            val labels = note.event?.let { observeGitItemLabels(it) }.orEmpty()
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -276,17 +278,6 @@ private fun GitRevisedChip(prIdHex: String) {
     }
 }
 
-internal fun gitSubjectOf(event: Event?): String? =
-    when (event) {
-        is GitIssueEvent -> event.subject()?.takeIf { it.isNotBlank() }
-        is GitPullRequestEvent -> event.subject()?.takeIf { it.isNotBlank() }
-        is GitPatchEvent -> event.subject()?.takeIf { it.isNotBlank() }
-        else -> null
-    }
+internal fun gitSubjectOf(event: Event?): String? = event?.let { GitItemTitles.titleOf(it) }
 
-internal fun gitLabelsOf(event: Event?): List<String> =
-    when (event) {
-        is GitIssueEvent -> event.topics()
-        is GitPullRequestEvent -> event.labels()
-        else -> emptyList()
-    }.filter { it.isNotBlank() }.distinct()
+internal fun gitLabelsOf(event: Event?): List<String> = event?.let { GitItemTitles.labelsOf(it) }.orEmpty()
