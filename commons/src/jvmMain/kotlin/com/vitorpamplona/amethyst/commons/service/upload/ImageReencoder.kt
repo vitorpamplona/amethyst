@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.service.upload
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionException.EncodeFailed
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionException.InputTooLarge
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionException.UnsupportedFormat
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -52,6 +53,7 @@ import kotlin.coroutines.coroutineContext
  * keeps the peak heap footprint to a single in-flight BufferedImage.
  */
 object ImageReencoder {
+    private const val TAG = "ImageReencoder"
     private const val DEFAULT_MAX_INPUT_PIXELS = 50L * 1_000_000L
 
     /**
@@ -97,7 +99,7 @@ object ImageReencoder {
         return try {
             reencodeOnDispatcher(source, quality, tempFile) { written = it }
         } catch (e: CancellationException) {
-            written?.delete()
+            written?.deleteOrWarn(TAG, "cancelled re-encode")
             throw e
         }
     }
@@ -147,7 +149,7 @@ object ImageReencoder {
                 onWritten(temp)
                 ReencodeResult.Reencoded(temp)
             } catch (t: Throwable) {
-                withContext(NonCancellable) { temp.delete() }
+                withContext(NonCancellable) { temp.deleteOrWarn(TAG, "failed re-encode") }
                 throw if (t is CompressionException) t else EncodeFailed(t)
             }
         }
