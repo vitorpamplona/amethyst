@@ -65,47 +65,54 @@ fun GitStatusPill(
     kind: StatusKind,
     modifier: Modifier = Modifier,
 ) {
-    val (label, symbol, container, content) =
-        when (kind) {
-            StatusKind.OPEN -> {
-                StatusStyle(
-                    label = stringResource(Res.string.git_status_open),
-                    symbol = MaterialSymbols.RadioButtonChecked,
-                    container = Color(0xFF1F883D),
-                    content = Color.White,
-                )
-            }
-
-            StatusKind.APPLIED -> {
-                StatusStyle(
-                    label = stringResource(Res.string.git_status_merged),
-                    symbol = MaterialSymbols.Check,
-                    container = Color(0xFF8250DF),
-                    content = Color.White,
-                )
-            }
-
-            StatusKind.CLOSED -> {
-                StatusStyle(
-                    label = stringResource(Res.string.git_status_closed),
-                    symbol = MaterialSymbols.Cancel,
-                    container = Color(0xFFCF222E),
-                    content = Color.White,
-                )
-            }
-
-            StatusKind.DRAFT -> {
-                StatusStyle(
-                    label = stringResource(Res.string.git_status_draft),
-                    symbol = MaterialSymbols.EditNote,
-                    container = MaterialTheme.colorScheme.surfaceVariant,
-                    content = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+    val (label, symbol, container, content) = gitStatusStyle(kind)
 
     StatusPill(label, symbol, container, content, modifier)
 }
+
+/**
+ * The label, icon and colors [GitStatusPill] uses for [kind], shared with the thread timeline's
+ * status rows so a status change is drawn in the same colors as the badge it sets.
+ */
+@Composable
+internal fun gitStatusStyle(kind: StatusKind): StatusStyle =
+    when (kind) {
+        StatusKind.OPEN -> {
+            StatusStyle(
+                label = stringResource(Res.string.git_status_open),
+                symbol = MaterialSymbols.RadioButtonChecked,
+                container = Color(0xFF1F883D),
+                content = Color.White,
+            )
+        }
+
+        StatusKind.APPLIED -> {
+            StatusStyle(
+                label = stringResource(Res.string.git_status_merged),
+                symbol = MaterialSymbols.Check,
+                container = Color(0xFF8250DF),
+                content = Color.White,
+            )
+        }
+
+        StatusKind.CLOSED -> {
+            StatusStyle(
+                label = stringResource(Res.string.git_status_closed),
+                symbol = MaterialSymbols.Cancel,
+                container = Color(0xFFCF222E),
+                content = Color.White,
+            )
+        }
+
+        StatusKind.DRAFT -> {
+            StatusStyle(
+                label = stringResource(Res.string.git_status_draft),
+                symbol = MaterialSymbols.EditNote,
+                container = MaterialTheme.colorScheme.surfaceVariant,
+                content = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 
 /**
  * The filled, GitHub-style state badge behind [GitStatusPill]: an icon and a short label in
@@ -145,7 +152,7 @@ fun StatusPill(
     }
 }
 
-private data class StatusStyle(
+internal data class StatusStyle(
     val label: String,
     val symbol: MaterialSymbol,
     val container: Color,

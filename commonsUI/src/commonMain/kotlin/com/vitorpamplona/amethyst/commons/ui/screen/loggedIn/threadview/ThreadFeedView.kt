@@ -82,6 +82,8 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitThreadTimelineRow
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.isGitTimelineEvent
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.listingStatus
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ClassifiedsOpenMarketsDetails
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ListingStatusBadge
@@ -305,6 +307,11 @@ fun RenderThreadFeed(
     val visibleItems = visible.items
     val position = visibleItems.indexOfFirst { it.idHex == noteId }
 
+    // A NIP-34 status, cover note or PR update whose issue / patch / PR is in this thread draws as
+    // a timeline row: the item it acts on is already on screen, so its feed card (which quotes
+    // that item) would only repeat it.
+    val threadIds = remember(items) { items.list.mapTo(HashSet()) { it.idHex } }
+
     LaunchedEffect(noteId, position) {
         // hack to allow multiple scrolls to Item while posts on the screen load.
         // This is important when clicking on a reply of an older thread in Notifications
@@ -382,6 +389,14 @@ fun RenderThreadFeed(
                     hiddenReplyCount = visible.hiddenCounts[item.idHex] ?: 0,
                     outsideNetwork = item.idHex in outsideNetwork,
                     onExpand = { viewModel.toggleCollapsed(item.idHex, outsideNetwork) },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            } else if (isGitTimelineEvent(item.event) && item.replyTo?.lastOrNull()?.idHex in threadIds) {
+                GitThreadTimelineRow(
+                    baseNote = item,
+                    modifier = modifier,
+                    background = if (item.idHex == noteId) MaterialTheme.colorScheme.selectedNote else Color.Transparent,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
