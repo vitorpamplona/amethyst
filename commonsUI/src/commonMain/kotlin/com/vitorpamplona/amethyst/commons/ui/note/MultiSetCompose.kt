@@ -166,6 +166,7 @@ fun MultiSetCompose(
             comment = comment,
             backgroundColor = backgroundColor,
             accountViewModel = accountViewModel,
+            nav = nav,
             modifier =
                 Modifier
                     .drawBehind { drawRect(backgroundColor.value) }

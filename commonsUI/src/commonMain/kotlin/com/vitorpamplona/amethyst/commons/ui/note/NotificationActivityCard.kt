@@ -66,12 +66,15 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.model.CombinedZap
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatPreviewLabels
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatPreviewText
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.notifications.MultiSetCard
 import com.vitorpamplona.amethyst.commons.notifications.NotificationContent
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
@@ -85,6 +88,8 @@ import com.vitorpamplona.amethyst.commons.resources.notification_your_profile
 import com.vitorpamplona.amethyst.commons.resources.nutzap
 import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -135,11 +140,16 @@ class ActivityActor(
     val reaction: String? = null,
 )
 
-/** A comment that came with a zap or nutzap, and who sent it. */
+/**
+ * A comment that came with a zap or nutzap, who sent it, and the event it came in ([id] keys its
+ * translation and expanded state; [tags] resolve its custom emoji and mentions).
+ */
 @Immutable
 class ActivityComment(
     val user: User?,
     val text: String,
+    val id: String,
+    val tags: ImmutableListOfLists<String>,
 )
 
 private val FaceSize = 28.dp
@@ -214,8 +224,15 @@ fun latestZapComment(
     val nutzapTime = nutzap?.createdAt() ?: -1L
 
     return when {
-        zapText != null && (nutzapText == null || zapTime >= nutzapTime) -> ActivityComment(zap.user, zapText)
-        nutzapText != null -> ActivityComment(nutzap.author, nutzapText)
+        // A zap's comment sits in its (possibly private, decrypted) request, whose tags the
+        // receipt doesn't carry: like the zap galleries before, it renders without them.
+        zapText != null && (nutzapText == null || zapTime >= nutzapTime) -> {
+            ActivityComment(zap.user, zapText, zap.zapNote?.idHex ?: zapText, EmptyTagList)
+        }
+
+        nutzapText != null -> {
+            ActivityComment(nutzap.author, nutzapText, nutzap.idHex, nutzap.event?.tags?.toImmutableListOfLists() ?: EmptyTagList)
+        }
         else -> null
     }
 }
@@ -233,6 +250,7 @@ fun NotificationActivityCard(
     comment: ActivityComment?,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
+    nav: INav,
     modifier: Modifier = Modifier,
     kindIcon: @Composable (Modifier) -> Unit,
     thumbnail: (@Composable () -> Unit)? = null,
@@ -281,7 +299,7 @@ fun NotificationActivityCard(
             }
 
             if (comment != null) {
-                ActivityCommentLine(comment, showName = actors.size > 1, accountViewModel)
+                ActivityCommentLine(comment, showName = actors.size > 1, backgroundColor, accountViewModel, nav)
             }
 
             target()
@@ -294,11 +312,17 @@ fun NotificationActivityCard(
     }
 }
 
+/**
+ * The zap comment is someone else's words, so it renders like a note's text: translated when it is
+ * in another language, rich (emoji, mentions, links) and expandable when long.
+ */
 @Composable
 private fun ActivityCommentLine(
     comment: ActivityComment,
     showName: Boolean,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     Row {
         if (showName && comment.user != null) {
@@ -306,17 +330,21 @@ private fun ActivityCommentLine(
             Text(
                 text = name,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(end = 6.dp).weight(1f, fill = false),
             )
         }
-        Text(
-            text = comment.text,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
+        TranslatableRichTextViewer(
+            content = comment.text,
+            canPreview = false,
+            quotesLeft = 1,
+            modifier = Modifier.weight(1f),
+            tags = comment.tags,
+            backgroundColor = backgroundColor,
+            id = comment.id,
+            accountViewModel = accountViewModel,
+            nav = nav,
         )
     }
 }

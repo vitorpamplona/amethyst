@@ -37,20 +37,26 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.notifications.MessageSetCard
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
@@ -127,18 +133,51 @@ fun MessageSetCompose(
 
             Spacer(Modifier.size(if (fullWidth) 6.dp else 2.dp))
 
-            ChatMessagePreviewText(baseNote, accountViewModel) { text ->
-                Text(
-                    text = text,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+            MessageBody(baseNote, backgroundColor, accountViewModel, nav)
         }
     }
 
     if (popupExpanded.value) {
         NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
+    }
+}
+
+/**
+ * The newest message, written by someone else, so it renders like a note's text: translated,
+ * rich and expandable. Until it decrypts (or when it can't) the Messages-list status line stands in.
+ */
+@Composable
+private fun MessageBody(
+    message: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadDecryptedContentOrNull(message, accountViewModel) { body ->
+        if (!body.isNullOrBlank()) {
+            val tags = remember(message) { message.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+            TranslatableRichTextViewer(
+                content = body,
+                canPreview = true,
+                quotesLeft = 1,
+                modifier = Modifier.fillMaxWidth(),
+                tags = tags,
+                backgroundColor = backgroundColor,
+                id = message.idHex,
+                callbackUri = remember(message) { message.toNostrUri() },
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        } else {
+            ChatMessagePreviewText(message, accountViewModel) { text ->
+                Text(
+                    text = text,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
     }
 }
 
