@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -200,9 +201,10 @@ fun FontFamilyType.toFontFamily(): FontFamily? =
 
 /**
  * Material's ripple, with a lighter hover layer in light mode. A note card is a whole clickable
- * card, and Material's 8% black wash over it reads as a heavy gray block under a mouse; 4% still
- * marks the card. Press, focus and drag keep Material's values (touch feedback is unchanged), and
- * dark mode keeps its hover: a white wash over a dark card is already faint.
+ * card, and Material's 8% black wash over it reads as a heavy gray block under a mouse; 2.2% takes
+ * the #FDFDFD background to 248 gray and still marks the card. Press, focus and drag keep
+ * Material's values (touch feedback is unchanged), and dark mode keeps its hover: a white wash over
+ * a dark card is already faint. Notes inside a note take a stronger hover, see [ProvideNestedNoteHover].
  *
  * RippleAlpha is deprecated in Material3 1.12, but its replacements (RippleThemeConfiguration,
  * RippleConfiguration.Focus) only cover focus: the hover layer has no public setting yet.
@@ -229,4 +231,44 @@ fun amethystRippleConfiguration(
     )
 }
 
-private const val LIGHT_HOVER_ALPHA = 0.04f
+private const val LIGHT_HOVER_ALPHA = 0.022f
+
+// Over a hovered root note (248 gray), this takes a hovered inner note to 240.
+private const val LIGHT_NESTED_HOVER_ALPHA = 0.036f
+
+/** Whether the composition is already inside a note, so the next note down is a nested one. */
+private val LocalInsideNote = staticCompositionLocalOf { false }
+
+/**
+ * Hover for a note drawn inside another note (a quote, a boost). Hover layers stack, so the inner
+ * card's wash paints over its parent's: with the root's alpha again it would only reach 243 gray,
+ * so a nested note takes [LIGHT_NESTED_HOVER_ALPHA] (248 to 240). The first note marks the
+ * composition below it; every note under that one, at any depth, uses the nested hover. Dark mode
+ * and a hidden hover layer keep their configuration.
+ */
+@Composable
+fun ProvideNestedNoteHover(content: @Composable () -> Unit) {
+    if (LocalInsideNote.current) {
+        val ripple = LocalRippleConfiguration.current
+        val nested = remember(ripple) { ripple?.forNestedNote() }
+        CompositionLocalProvider(LocalRippleConfiguration provides nested, content = content)
+    } else {
+        CompositionLocalProvider(LocalInsideNote provides true, content = content)
+    }
+}
+
+@Suppress("DEPRECATION")
+private fun RippleConfiguration.forNestedNote(): RippleConfiguration {
+    val alpha = rippleAlpha ?: return this
+    if (alpha.hoveredAlpha != LIGHT_HOVER_ALPHA) return this
+    return RippleConfiguration(
+        color = color,
+        rippleAlpha =
+            RippleAlpha(
+                draggedAlpha = alpha.draggedAlpha,
+                focusedAlpha = alpha.focusedAlpha,
+                hoveredAlpha = LIGHT_NESTED_HOVER_ALPHA,
+                pressedAlpha = alpha.pressedAlpha,
+            ),
+    )
+}
