@@ -156,13 +156,13 @@ object HighlightSourceLabels {
         // Only a segment with a page under it is a section; a single segment is the page itself.
         if (segments.size < 2) return host
 
-        val first = segments.first()
+        // Segments come back raw; decode the one shown (`%40user` is `@user`).
+        val first = percentDecode(segments.first())
         val isPublication =
             SECTION_SEGMENT.matches(first) &&
                 !first.all { it.isDigit() } &&
                 !LOCALE_SEGMENT.matches(first) &&
-                first.lowercase() !in GENERIC_SECTIONS &&
-                first != segments.last()
+                first.lowercase() !in GENERIC_SECTIONS
 
         return if (isPublication) "$host/$first" else host
     }
@@ -201,7 +201,11 @@ object HighlightSourceLabels {
     // Mostly letters: `web3` is a word, `1a2b` is not.
     private fun isWord(token: String): Boolean = token.count { it.isLetter() } * 4 >= token.length * 3
 
-    /** The decoded, non-empty path segments of [url], without its query or fragment. */
+    /**
+     * The raw (still percent-encoded) non-empty path segments of [url], without its query or
+     * fragment. Left encoded so a segment is decoded exactly once: decoding here and again in
+     * [titleFromSlug] would turn a literal `%2541` into `A`.
+     */
     private fun pathSegments(url: String): List<String> {
         val schemeEnd = url.indexOf("://")
         if (schemeEnd < 0) return emptyList()
@@ -215,7 +219,6 @@ object HighlightSourceLabels {
             .substring(afterAuthority, end)
             .split('/')
             .filter { it.isNotEmpty() }
-            .map(::percentDecode)
     }
 
     /** Decodes `%XX` escapes as UTF-8, or returns [text] unchanged when they are malformed. */
@@ -228,8 +231,11 @@ object HighlightSourceLabels {
         while (i < text.length) {
             if (text[i] == '%') {
                 if (i + 2 > text.lastIndex) return text
-                val byte = text.substring(i + 1, i + 3).toIntOrNull(16) ?: return text
-                pending.add(byte.toByte())
+                // toIntOrNull(16) also takes a sign (`%-1`, `%+5`), which is not an escape.
+                val high = hexValue(text[i + 1])
+                val low = hexValue(text[i + 2])
+                if (high < 0 || low < 0) return text
+                pending.add(((high shl 4) or low).toByte())
                 i += 3
             } else {
                 if (pending.isNotEmpty()) {
@@ -243,4 +249,12 @@ object HighlightSourceLabels {
         if (pending.isNotEmpty()) out.append(pending.toByteArray().decodeToString())
         return out.toString()
     }
+
+    private fun hexValue(c: Char): Int =
+        when (c) {
+            in '0'..'9' -> c - '0'
+            in 'a'..'f' -> c - 'a' + 10
+            in 'A'..'F' -> c - 'A' + 10
+            else -> -1
+        }
 }

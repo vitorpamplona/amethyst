@@ -140,24 +140,36 @@ class OpenGraphParser {
          * than no preview, so such a title is dropped and the page counts as having none.
          */
         private val INTERSTITIAL_TITLES =
-            listOf(
+            setOf(
                 "just a moment",
-                "attention required",
+                "attention required!",
                 "please wait",
                 "checking your browser",
+                "checking your browser before accessing",
                 "security check",
                 "access denied",
-                "are you a robot",
+                "are you a robot?",
                 "ddos-guard",
                 "403 forbidden",
                 "404 not found",
+                "429 too many requests",
                 "too many requests",
             )
 
-        /** Whether [title] is a bot-check or error page's title rather than the page's own. */
+        /**
+         * Whether [title] is a bot-check or error page's title rather than the page's own.
+         *
+         * Matched whole -- after dropping a trailing ellipsis and a " | Cloudflare" -- never as a
+         * prefix: an essay titled "Access denied: how DRM failed" is a real title.
+         */
         fun isInterstitialTitle(title: String): Boolean {
-            val normalized = title.trim().lowercase()
-            return INTERSTITIAL_TITLES.any { normalized.startsWith(it) }
+            val normalized =
+                title
+                    .trim()
+                    .lowercase()
+                    .removeSuffix(" | cloudflare")
+                    .trimEnd('.', '\u2026', ' ')
+            return normalized in INTERSTITIAL_TITLES
         }
 
         private val CONTENT = "content"

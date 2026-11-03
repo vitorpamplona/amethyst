@@ -48,6 +48,20 @@ class HighlightSourceLabelsTest {
     }
 
     @Test
+    fun segmentsAreDecodedOnce() {
+        // A literal "%41" in the slug is spelled %2541; decoding twice would make it "A".
+        assertEquals("Save %41 now", HighlightSourceLabels.titleFromUrl("https://example.com/save-%2541-now"))
+        assertEquals("medium.com/@tudor", HighlightSourceLabels.siteFromUrl("https://medium.com/%40tudor/some-post-slug-1234abcd5678"))
+    }
+
+    @Test
+    fun signedEscapesAreNotDecoded() {
+        // `%-1` is not an escape. Read as one it became byte 0xFF, i.e. "Odd \uFFFD slug";
+        // left as text, `%` and `1` aren't words and the slug is (rightly) not a title.
+        assertNull(HighlightSourceLabels.titleFromUrl("https://example.com/odd-%-1-slug"))
+    }
+
+    @Test
     fun opaquePathsGiveNoTitle() {
         assertNull(HighlightSourceLabels.titleFromUrl("https://medium.com/"))
         assertNull(HighlightSourceLabels.titleFromUrl("https://medium.com"))

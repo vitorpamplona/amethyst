@@ -40,6 +40,10 @@ class UrlFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     val normalizedUrl = UrlId.toScopeOrNull(url).orEmpty()
 
+    // The host a highlight's `r` must mention, lowercased once: a substring test that rejects
+    // nearly every other highlight before any URL is parsed.
+    private val normalizedHost = hostOf(normalizedUrl)
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + normalizedUrl
 
     override fun feed(): List<Note> {
@@ -57,21 +61,37 @@ class UrlFeedFilter(
         it: Note,
         url: String,
     ): Boolean =
-        acceptableViaScope(it.event, url) &&
+        url.isNotEmpty() &&
+            acceptableViaScope(it.event, url) &&
             !it.isHiddenFor(account.hiddenUsers.flow.value) &&
             account.isAcceptable(it)
 
+    /**
+     * [scope] is already normalized ([normalizedUrl]). It used to be normalized again here, once
+     * per note, and [feed] runs this over every note in the cache: about a microsecond of URL
+     * parsing each, so ~100 ms per refresh on a 100k-note cache before any event was looked at.
+     * Type checks come first so the other kinds cost nothing.
+     */
     fun acceptableViaScope(
         event: Event?,
-        url: String,
-    ): Boolean {
-        val scope = UrlId.toScopeOrNull(url) ?: return false
-        return when (event) {
-            is CommentEvent -> event.isTaggedScope(scope, UrlId::match)
-            is HighlightEvent -> event.inUrl()?.let { isSamePage(it, scope) } ?: false
-            else -> false
+        scope: String,
+    ): Boolean =
+        when (event) {
+            is CommentEvent -> {
+                event.isTaggedScope(scope, UrlId::match)
+            }
+
+            is HighlightEvent -> {
+                val reference = event.inUrl()
+                reference != null &&
+                    (normalizedHost == null || reference.contains(normalizedHost, ignoreCase = true)) &&
+                    isSamePage(reference, scope)
+            }
+
+            else -> {
+                false
+            }
         }
-    }
 
     companion object {
         /**
@@ -83,8 +103,19 @@ class UrlFeedFilter(
             reference: String,
             scope: String,
         ): Boolean {
-            val normalized = UrlId.toScopeOrNull(UrlTrackerCleaner.clean(reference)) ?: return false
-            return normalized.trimEnd('/') == scope.trimEnd('/')
+            val target = scope.trimEnd('/')
+            val normalized = UrlId.toScopeOrNull(reference) ?: return false
+            if (normalized.trimEnd('/') == target) return true
+            // Only parse twice when there is a query to strip trackers from.
+            if ('?' !in reference) return false
+            val cleaned = UrlId.toScopeOrNull(UrlTrackerCleaner.clean(reference)) ?: return false
+            return cleaned.trimEnd('/') == target
+        }
+
+        private fun hostOf(scope: String): String? {
+            val start = scope.indexOf("://").takeIf { it >= 0 }?.plus(3) ?: return null
+            val end = scope.indexOfAny(charArrayOf('/', '?', '#', ':'), start).let { if (it < 0) scope.length else it }
+            return scope.substring(start, end).removePrefix("www.").ifEmpty { null }
         }
     }
 

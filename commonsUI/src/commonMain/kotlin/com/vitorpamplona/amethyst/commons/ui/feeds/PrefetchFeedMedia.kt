@@ -51,12 +51,14 @@ import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip71Video.image
 import com.vitorpamplona.quartz.nip73ExternalIds.scope
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
@@ -432,6 +434,14 @@ private fun Note.collectWarmTargets(): WarmTargets? {
     // the renderer uses — so we only warm a URL that will actually be shown.
     if (ev is CommentEvent) {
         (ev.scope() as? UrlId)?.let { targets.link(it.url) }
+    }
+
+    // A web highlight's source row titles itself from the page's preview. Warming it here, with
+    // the URL exactly as the row asks for it, keeps the title from swapping once on screen.
+    // A nostr source (`a`/`e`) wins over the URL in the row, so its URL is never shown.
+    if (ev is HighlightEvent && ev.inPostAddress() == null && ev.inPostVersion() == null) {
+        val source = ev.inUrl() ?: (ev.inExternalIds().firstOrNull() as? UrlId)?.url
+        source?.let { targets.link(HttpUrlFormatter.addSchemeIfNeeded(it)) }
     }
 
     // Free-text body. The reproducible-key kinds parse through the shared cache

@@ -313,6 +313,13 @@ class OpenGraphParserTest {
     }
 
     @Test
+    fun keepsRealTitlesThatStartLikeAnErrorPage() {
+        val info = extract("""<head><meta property="og:title" content="Access denied: how DRM failed"></head>""")
+
+        assertEquals("Access denied: how DRM failed", info.title)
+    }
+
+    @Test
     fun keepsTitlesThatMerelyMentionWaiting() {
         val info = OpenGraphParser().extractUrlInfo(MetaTagsParser.parse("<head><title>Why we wait: a short essay</title></head>", includeTitleAndIcons = true))
 

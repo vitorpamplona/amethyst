@@ -132,6 +132,7 @@ import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip84Highlights.parse.TextFragmentParser
+import com.vitorpamplona.quartz.nip84Highlights.parse.UrlTrackerCleaner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -497,6 +498,9 @@ private fun HighlightSourceFromUrl(
         remember(absoluteUrl, highlightQuote, textFragmentPrefix, textFragmentSuffix) {
             TextFragmentParser.buildUrl(absoluteUrl, highlightQuote, textFragmentPrefix, textFragmentSuffix)
         }
+    // The URL page gathers notes by the page's address: without the `utm_`/`fbclid` noise a
+    // highlighter's copy-paste often carries, which comments on the same page don't share.
+    val pageRoute = remember(absoluteUrl) { Route.Url(UrlTrackerCleaner.clean(absoluteUrl).substringBefore('#')) }
     val site = remember(absoluteUrl) { HighlightSourceLabels.siteFromUrl(absoluteUrl) }
     val slugTitle = remember(absoluteUrl) { HighlightSourceLabels.titleFromUrl(absoluteUrl) }
 
@@ -543,7 +547,7 @@ private fun HighlightSourceFromUrl(
                             modifier =
                                 Modifier
                                     .semantics { contentDescription = description }
-                                    .clickable { nav.nav(Route.Url(absoluteUrl)) },
+                                    .clickable { nav.nav(pageRoute) },
                         )
                     }
 
