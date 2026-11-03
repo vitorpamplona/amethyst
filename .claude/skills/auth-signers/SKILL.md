@@ -1,6 +1,6 @@
 ---
 name: auth-signers
-description: NostrSigner in Amethyst: NostrSignerInternal (local key), NostrSignerRemote (NIP-46 bunker), NostrSignerExternal (NIP-55 Android app). Use when signing/encrypting, adding a signer kind, login flows, or debugging sign timeouts.
+description: NostrSigner in Amethyst: NostrSignerInternal (local key), NostrSignerRemote (NIP-46 bunker), NostrSignerExternal (NIP-55 Android app), Nip46SignerState (Amethyst as bunker). Use when signing/encrypting, adding a signer kind, login flows, testing a signer on an emulator, or debugging sign timeouts.
 ---
 
 # Signers
@@ -100,5 +100,7 @@ implemented in `amethyst/.../ui/platform/AndroidAppPlatform.kt`).
 
 - `references/nip46-remote-signer.md` — bunker request/response taxonomy, connection flow.
 - `references/nip55-android-signer.md` — foreground/background transports, command types.
+- `references/nip46-signer-testing.md` — testing Amethyst as the bunker (`Nip46SignerState`):
+  reproducing races in the JVM tests, and an emulator rig with `amy` as the app.
 - Related skills: quartz's `nostr-expert` (crypto under the signers), `account-state` (`Account`),
   `android-expert` (activity/intent plumbing).
