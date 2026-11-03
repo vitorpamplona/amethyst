@@ -260,7 +260,7 @@ fun MinichatScreen(
                                 onEncryptedUploadError = { title, message ->
                                     launch(Dispatchers.Main) { longNotice.show("$title: $message") }
                                 },
-                                uploader = accountViewModel.host.mediaUploader,
+                                uploader = accountViewModel.mediaUploader,
                                 onceUploaded = { uploads ->
                                     accountViewModel.reportSignerErrors {
                                         val caption = uploadState.caption

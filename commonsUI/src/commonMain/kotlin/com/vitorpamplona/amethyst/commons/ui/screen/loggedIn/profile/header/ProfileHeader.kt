@@ -197,7 +197,7 @@ private fun ProfilePictureUploadButton(
             onImageUri = { media ->
                 showGallerySelect = false
                 if (media != null) {
-                    postViewModel.uploadPictureAndSave(media, accountViewModel.host.mediaUploader, accountViewModel.toastManager::toast)
+                    postViewModel.uploadPictureAndSave(media, accountViewModel.mediaUploader, accountViewModel.toastManager::toast)
                 }
             },
         )

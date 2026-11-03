@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.service.uploads
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.notices.UploadNotice
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -137,6 +138,10 @@ class UploadOrchestrator {
             val uploadedHash: String?,
             val mimeTypeBeforeEncryption: String?,
             val hashBeforeEncryption: String?,
-        ) : OrchestratorResult()
+            /** What the user should know about where this upload went (see [UploadNotice]). */
+            val notices: List<UploadNotice> = emptyList(),
+        ) : OrchestratorResult() {
+            fun withNotice(notice: UploadNotice) = ServerResult(fileHeader, url, magnet, uploadedHash, mimeTypeBeforeEncryption, hashBeforeEncryption, notices + notice)
+        }
     }
 }

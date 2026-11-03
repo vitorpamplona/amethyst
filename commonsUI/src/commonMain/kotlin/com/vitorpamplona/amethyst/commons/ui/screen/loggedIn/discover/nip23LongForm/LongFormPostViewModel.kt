@@ -496,7 +496,7 @@ class LongFormPostViewModel :
         onError: (title: String, message: String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            uploadDrawingIntoText(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message) { markdownImage(alt, it) }
+            uploadDrawingIntoText(drawing, alt, account, accountViewModel.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message) { markdownImage(alt, it) }
         }
     }
 
@@ -686,7 +686,7 @@ class LongFormPostViewModel :
         val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
+            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
         message.replaceCurrentWord(wordToInsert)

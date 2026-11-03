@@ -509,7 +509,7 @@ class ChatNewMessageViewModel :
                     drawing,
                     alt,
                     account,
-                    accountViewModel.host.mediaUploader,
+                    accountViewModel.mediaUploader,
                     uploadState.mediaUploadTracker,
                     uploadStill = false,
                     onError,
@@ -911,7 +911,7 @@ class ChatNewMessageViewModel :
         val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
+            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
         message.replaceCurrentWord(wordToInsert)

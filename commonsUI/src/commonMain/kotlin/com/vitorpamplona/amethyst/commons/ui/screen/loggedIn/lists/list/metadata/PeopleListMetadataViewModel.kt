@@ -125,7 +125,7 @@ class PeopleListMetadataViewModel : ViewModel() {
         onError: (String, String) -> Unit,
     ) {
         onUploading(true)
-        val url = uploadToDefaultServer(galleryUri, account, accountViewModel.host.mediaUploader, onError)
+        val url = uploadToDefaultServer(galleryUri, account, accountViewModel.mediaUploader, onError)
         onUploading(false)
         if (url != null) onUploaded(url)
     }

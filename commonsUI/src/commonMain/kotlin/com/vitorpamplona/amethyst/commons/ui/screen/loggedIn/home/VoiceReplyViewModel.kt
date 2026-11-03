@@ -207,7 +207,7 @@ class VoiceReplyViewModel : ViewModel() {
                                 compressionQuality = CompressorQuality.UNCOMPRESSED,
                                 server = serverToUse,
                                 account = accountViewModel.account,
-                                uploader = accountViewModel.host.mediaUploader,
+                                uploader = accountViewModel.mediaUploader,
                                 useH265 = false,
                             )
                         }

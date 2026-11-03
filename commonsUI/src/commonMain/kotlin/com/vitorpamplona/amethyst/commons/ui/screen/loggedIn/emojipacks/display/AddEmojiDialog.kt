@@ -125,7 +125,7 @@ fun AddEmojiDialog(
                         ) { selected ->
                             viewModel.uploadEmojiImage(
                                 uri = selected,
-                                uploader = accountViewModel.host.mediaUploader,
+                                uploader = accountViewModel.mediaUploader,
                                 onUploaded = { uploadedUrl -> url = uploadedUrl },
                                 onError = accountViewModel.toastManager::toast,
                             )

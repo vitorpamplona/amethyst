@@ -220,7 +220,7 @@ fun NewUserMetadataScreen(
                             tint = MaterialTheme.colorScheme.placeholderText,
                             modifier = Modifier.padding(start = 5.dp),
                         ) {
-                            postViewModel.uploadForPicture(it, accountViewModel.host.mediaUploader, onError = accountViewModel.toastManager::toast)
+                            postViewModel.uploadForPicture(it, accountViewModel.mediaUploader, onError = accountViewModel.toastManager::toast)
                         }
                     },
                     singleLine = true,
@@ -245,7 +245,7 @@ fun NewUserMetadataScreen(
                             tint = MaterialTheme.colorScheme.placeholderText,
                             modifier = Modifier.padding(start = 5.dp),
                         ) {
-                            postViewModel.uploadForBanner(it, accountViewModel.host.mediaUploader, onError = accountViewModel.toastManager::toast)
+                            postViewModel.uploadForBanner(it, accountViewModel.mediaUploader, onError = accountViewModel.toastManager::toast)
                         }
                     },
                     singleLine = true,

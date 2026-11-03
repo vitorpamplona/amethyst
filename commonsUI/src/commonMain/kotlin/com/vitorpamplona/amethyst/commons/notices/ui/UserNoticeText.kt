@@ -125,6 +125,9 @@ import com.vitorpamplona.amethyst.commons.resources.unable_to_create_a_lightning
 import com.vitorpamplona.amethyst.commons.resources.unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user
 import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception
 import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception_description
+import com.vitorpamplona.amethyst.commons.resources.upload_other_server_message
+import com.vitorpamplona.amethyst.commons.resources.upload_other_server_message_with_reason
+import com.vitorpamplona.amethyst.commons.resources.upload_other_server_title
 import com.vitorpamplona.amethyst.commons.resources.user_does_not_have_a_lightning_address_setup_to_receive_sats
 import com.vitorpamplona.amethyst.commons.resources.user_x_does_not_have_a_lightning_address_setup_to_receive_sats
 import com.vitorpamplona.amethyst.commons.resources.video_compression_failed_message
@@ -229,6 +232,12 @@ fun UserNotice.text(): NoticeText =
         UploadNotice.HevcUnavailable -> text(Res.string.video_compression_hevc_unavailable_title, Res.string.video_compression_hevc_unavailable_message)
         UploadNotice.HdrSource -> text(Res.string.video_compression_hdr_title, Res.string.video_compression_hdr_message)
         UploadNotice.CompressionNotSmaller -> text(Res.string.video_compression_not_smaller_title, Res.string.video_compression_not_smaller_message)
+        is UploadNotice.UploadedToAnotherServer ->
+            NoticeText(
+                Res.string.upload_other_server_title,
+                reason?.let { str(Res.string.upload_other_server_message_with_reason, raw(chosenServer), raw(usedServer), raw(it)) }
+                    ?: str(Res.string.upload_other_server_message, raw(chosenServer), raw(usedServer)),
+            )
 
         is PowPublishFailed -> {
             val kindLabel = str(powKindLabelRes(kind))

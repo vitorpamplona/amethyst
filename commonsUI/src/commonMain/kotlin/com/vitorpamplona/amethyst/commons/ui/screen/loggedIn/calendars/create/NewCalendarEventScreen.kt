@@ -274,7 +274,7 @@ private fun ImageRow(
             pickImage = false
             if (media == null) return@GallerySelectSingle
             scope.launch {
-                val ok = vm.uploadAndSetImage(media.uri, media.mimeType, accountViewModel.host.mediaUploader)
+                val ok = vm.uploadAndSetImage(media.uri, media.mimeType, accountViewModel.mediaUploader)
                 if (!ok) {
                     accountViewModel.toastManager.toast(
                         Res.string.calendar_event_image_upload_failed,

@@ -184,7 +184,7 @@ private fun CommunityFormScreen(
                     },
                     onPost = {
                         model.publish(
-                            uploader = accountViewModel.host.mediaUploader,
+                            uploader = accountViewModel.mediaUploader,
                             onSuccess = { nav.popBack() },
                             onError = accountViewModel.toastManager::toast,
                         )
@@ -200,7 +200,7 @@ private fun CommunityFormScreen(
                     },
                     onPost = {
                         model.publish(
-                            uploader = accountViewModel.host.mediaUploader,
+                            uploader = accountViewModel.mediaUploader,
                             onSuccess = { nav.popBack() },
                             onError = accountViewModel.toastManager::toast,
                         )

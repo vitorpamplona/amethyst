@@ -145,7 +145,7 @@ open class EditPostViewModel : ViewModel() {
         onError: (title: String, message: String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, uploadStill = false, onError) ?: return@launch
+            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.mediaUploader, mediaUploadTracker, uploadStill = false, onError) ?: return@launch
             onUiThread { message.insertUrlAtCursor(uploaded.link) }
             urlPreview = findUrlInMessage()
         }

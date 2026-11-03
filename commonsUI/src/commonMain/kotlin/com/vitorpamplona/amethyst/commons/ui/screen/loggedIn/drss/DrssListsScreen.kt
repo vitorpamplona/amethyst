@@ -506,7 +506,7 @@ private fun DrssPictureDialog(
                         ) { media ->
                             scope.launch(Dispatchers.IO) {
                                 isUploading = true
-                                val uploaded = uploadToDefaultServer(media, accountViewModel.account, accountViewModel.host.mediaUploader, accountViewModel.toastManager::toast)
+                                val uploaded = uploadToDefaultServer(media, accountViewModel.account, accountViewModel.mediaUploader, accountViewModel.toastManager::toast)
                                 isUploading = false
                                 if (uploaded != null) url = uploaded
                             }

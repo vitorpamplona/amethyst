@@ -162,7 +162,7 @@ fun ImportEmojisDialog(
             picking = false
             if (files.isNotEmpty()) {
                 accountViewModel.launchSigner {
-                    viewModel.importFiles(files, accountViewModel.host.mediaUploader, isPrivate)
+                    viewModel.importFiles(files, accountViewModel.mediaUploader, isPrivate)
                 }
             }
         }

@@ -2177,6 +2177,9 @@
     <string name="video_compression_hdr_message">Compressed HDR video looks flat. Choose Uncompressed to keep the original colours.</string>
     <string name="video_compression_not_smaller_title">Original video kept</string>
     <string name="video_compression_not_smaller_message">Compressing did not make the video smaller, so the original is uploaded with its metadata removed. It is already compact for its size.</string>
+    <string name="upload_other_server_title">Uploaded to a different server</string>
+    <string name="upload_other_server_message">%1$s refused the file, so it went to %2$s instead.</string>
+    <string name="upload_other_server_message_with_reason">%1$s refused the file, so it went to %2$s instead. The reason given: %3$s</string>
     <string name="metadata_strip_failed_body">This file format does not support metadata stripping. Private information such as location and device info may be included. Upload anyway?</string>
     <string name="metadata_strip_failed_upload">Upload anyway</string>
     <string name="edit_draft">Edit draft</string>

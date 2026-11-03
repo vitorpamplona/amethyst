@@ -149,7 +149,7 @@ private fun GitNewIssueForm(
                     viewModel.selectMedia(it)
                 }
                 DrawingButton(accountViewModel, enabled = !viewModel.mediaUploadTracker.isUploading) { drawing, alt ->
-                    viewModel.uploadDrawing(drawing, alt, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader)
+                    viewModel.uploadDrawing(drawing, alt, accountViewModel.toastManager::toast, accountViewModel.mediaUploader)
                 }
             }
             viewModel.multiOrchestrator?.let {
@@ -158,7 +158,7 @@ private fun GitNewIssueForm(
                     accountViewModel.account.settings.defaultFileServer,
                     isUploading = viewModel.mediaUploadTracker.isUploading,
                     onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata, convertGifToMp4 ->
-                        viewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader, useH265, stripMetadata, convertGifToMp4)
+                        viewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.mediaUploader, useH265, stripMetadata, convertGifToMp4)
                         accountViewModel.account.settings.changeDefaultFileServer(server)
                     },
                     onDelete = viewModel::deleteMediaToUpload,

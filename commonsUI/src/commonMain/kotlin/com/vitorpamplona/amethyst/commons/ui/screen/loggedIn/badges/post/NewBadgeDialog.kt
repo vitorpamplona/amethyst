@@ -142,7 +142,7 @@ fun NewBadgeDialog(
                     },
                     onPost = {
                         postViewModel.upload(
-                            accountViewModel.host.mediaUploader,
+                            accountViewModel.mediaUploader,
                             onSuccess = onClose,
                             onError = accountViewModel.toastManager::toast,
                         )
@@ -343,7 +343,7 @@ private fun BadgeFormFields(
         position = postViewModel.mediaQualitySlider,
         onPositionChange = { postViewModel.mediaQualitySlider = it },
         media = postViewModel.multiOrchestrator,
-        uploader = accountViewModel.host.mediaUploader,
+        uploader = accountViewModel.mediaUploader,
     )
 
     SettingSwitchItem(

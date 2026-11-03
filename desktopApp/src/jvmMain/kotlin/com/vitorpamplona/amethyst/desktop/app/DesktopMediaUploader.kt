@@ -192,6 +192,7 @@ class DesktopMediaUploader(
                         uploadedHash = result.blossom.sha256 ?: result.metadata.sha256,
                         mimeTypeBeforeEncryption = null,
                         hashBeforeEncryption = null,
+                        notices = result.notices,
                     ),
                 )
             }
@@ -244,6 +245,7 @@ class DesktopMediaUploader(
                         uploadedHash = result.encryptedHash,
                         mimeTypeBeforeEncryption = result.metadata.mimeType,
                         hashBeforeEncryption = result.metadata.sha256,
+                        notices = result.notices,
                     ),
                 )
             }

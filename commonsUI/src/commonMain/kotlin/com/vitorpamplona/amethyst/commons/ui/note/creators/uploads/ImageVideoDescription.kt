@@ -356,7 +356,7 @@ fun ImageVideoDescription(
 
             // Hide the privacy toggle only when a selected video will really be compressed on this
             // platform (compression strips metadata); without ffmpeg the toggle is the only strip.
-            val controls = VideoUploadControls(uris, accountViewModel.host.mediaUploader.videoCompression, mediaQualitySlider)
+            val controls = VideoUploadControls(uris, accountViewModel.mediaUploader.videoCompression, mediaQualitySlider)
             val isVideoWithCompression = controls.videoWillBeCompressed
 
             if (!isVideoWithCompression) {
@@ -403,7 +403,7 @@ fun ImageVideoDescription(
                     position = mediaQualitySlider,
                     onPositionChange = { mediaQualitySlider = it },
                     media = uris,
-                    uploader = accountViewModel.host.mediaUploader,
+                    uploader = accountViewModel.mediaUploader,
                 )
             }
 
@@ -420,7 +420,7 @@ fun ImageVideoDescription(
                     checked = useH265Codec,
                     onCheckedChange = { useH265Codec = it },
                 )
-                VideoHdrHint(uris, accountViewModel.host.mediaUploader, useH265Codec)
+                VideoHdrHint(uris, accountViewModel.mediaUploader, useH265Codec)
             }
 
             if (controls.showsGifSwitch) {

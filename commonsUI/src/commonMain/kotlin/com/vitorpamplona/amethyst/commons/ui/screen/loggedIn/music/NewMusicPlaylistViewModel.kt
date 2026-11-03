@@ -218,7 +218,7 @@ class NewMusicPlaylistViewModel : ViewModel() {
                 quality = CompressorQuality.fromSlider(mediaQualitySlider.value),
                 stripMetadata = stripMetadata.value,
                 loadedEvent = loadedEvent,
-                uploader = accountViewModel.host.mediaUploader,
+                uploader = accountViewModel.mediaUploader,
             )
 
         isSending.value = true

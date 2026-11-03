@@ -766,7 +766,7 @@ open class CommentPostViewModel :
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val signer = if (wantsAnonymousPost) anonymousSigner() else null
-            uploadDrawingIntoText(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message, urlPreviews, signer)
+            uploadDrawingIntoText(drawing, alt, account, accountViewModel.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message, urlPreviews, signer)
         }
     }
 
@@ -983,7 +983,7 @@ open class CommentPostViewModel :
         val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
+            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
         message.replaceCurrentWord(wordToInsert)
