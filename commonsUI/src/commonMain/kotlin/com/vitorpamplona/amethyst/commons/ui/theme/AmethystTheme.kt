@@ -200,8 +200,9 @@ fun FontFamilyType.toFontFamily(): FontFamily? =
 
 /**
  * Material's ripple, with a lighter hover layer in light mode. A note card is a whole clickable
- * card, and Material's 8% black wash over it reads as a heavy gray block under a mouse; 4% still
- * marks the card. Press, focus and drag keep Material's values (touch feedback is unchanged), and
+ * card, and Material's 8% black wash over it reads as a heavy gray block under a mouse; 2.2% takes
+ * the #FDFDFD background to 248 gray (243 for a note inside a hovered note, as hovers stack) and
+ * still marks the card. Press, focus and drag keep Material's values (touch feedback is unchanged), and
  * dark mode keeps its hover: a white wash over a dark card is already faint.
  *
  * RippleAlpha is deprecated in Material3 1.12, but its replacements (RippleThemeConfiguration,
@@ -229,4 +230,4 @@ fun amethystRippleConfiguration(
     )
 }
 
-private const val LIGHT_HOVER_ALPHA = 0.04f
+private const val LIGHT_HOVER_ALPHA = 0.022f
