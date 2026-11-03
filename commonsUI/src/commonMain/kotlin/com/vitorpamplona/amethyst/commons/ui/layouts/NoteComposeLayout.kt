@@ -256,6 +256,10 @@ private fun NoteComposeLayoutBoostedPreview() {
  *   (NIP-05 status, location, PoW). Requires complete UI mode.
  * @param showContentSpacer Whether to add a spacer between header rows and
  *   note content (4dp, or 8dp under a [fullWidth] header). False for repost events.
+ * @param headerIntoEndPadding Whether the header rows run into the end padding. A quoted note
+ *   sets it: its box sits flush with the quoting note's content edge, so letting the header reach
+ *   the box's edge puts the quote's time and ⋮ right under the quoting note's, while the text below
+ *   keeps its margin. The ⋮ button's own slack keeps its dots off the border.
  * @param authorPicture Slot for the author's profile picture (55x55dp area).
  *   Should emit nothing when [showAuthorColumn] is false to skip composition.
  * @param firstRow Slot for the primary header: author name, time, more options.
@@ -278,6 +282,7 @@ fun NoteComposeLayout(
     fullWidth: Boolean = false,
     showSecondRow: Boolean = false,
     showContentSpacer: Boolean = true,
+    headerIntoEndPadding: Boolean = false,
     authorPicture: @Composable () -> Unit,
     firstRow: @Composable () -> Unit,
     secondRow: @Composable () -> Unit,
@@ -341,8 +346,15 @@ fun NoteComposeLayout(
 
         // With the author on top, the header rows sit beside the picture and the content below both.
         val headerX = if (authorOnTop && authorPlaceable != null) authorPlaceable.width + px.authorContentGap else 0
+        val headerExtra = if (headerIntoEndPadding) padEnd else 0
         val headerConstraints =
-            if (authorOnTop) Constraints(maxWidth = (innerWidth - headerX).coerceAtLeast(0)) else contentConstraints
+            if (authorOnTop) {
+                Constraints(maxWidth = (innerWidth - headerX + headerExtra).coerceAtLeast(0))
+            } else if (headerExtra > 0) {
+                Constraints(maxWidth = contentWidth + headerExtra)
+            } else {
+                contentConstraints
+            }
 
         val firstRowPlaceable = allMeasurables[1].firstOrNull()?.measure(headerConstraints)
         val secondRowPlaceable =

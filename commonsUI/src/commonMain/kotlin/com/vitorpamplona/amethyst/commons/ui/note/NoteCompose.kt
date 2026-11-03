@@ -1465,6 +1465,8 @@ fun InnerNoteWithReactions(
             showSecondRow = showSecondRow,
             // Under a repost's header the boosted body takes the header's spacer, not one of its own.
             showContentSpacer = (isNotRepost && !boostedFrame.headerShown) || repostedNote != null,
+            // A quote's time and ⋮ line up with the quoting note's, not 12dp inside its box.
+            headerIntoEndPadding = isQuotedNote,
             authorPicture = {
                 if (repostedNote != null) {
                     // FullWidthRepostHeader draws both authors' pictures beside their rows.
