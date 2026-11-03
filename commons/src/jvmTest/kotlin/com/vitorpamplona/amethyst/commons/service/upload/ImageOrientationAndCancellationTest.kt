@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.service.upload
 
 import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder.ReencodeResult
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
@@ -36,12 +35,12 @@ import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.nio.file.Files
 import javax.imageio.ImageIO
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
@@ -58,7 +57,7 @@ class ImageOrientationAndCancellationTest {
 
     @AfterTest
     fun cleanup() {
-        createdFiles.forEach { it.deleteRecursively() }
+        createdFiles.forEach { it.delete() }
     }
 
     @Test
@@ -155,24 +154,22 @@ class ImageOrientationAndCancellationTest {
     fun cancellingDuringEncodeLeavesNoTempFile() =
         runBlocking {
             val src = makeJpegWithMarker(400, 200, orientation = 1)
-            // Its own folder: the other test fork writes to AmethystTempDir, and any file seen
-            // there would look like a leak.
-            val tempDir = Files.createTempDirectory("reencoder-cancel").toFile()
-            createdFiles.add(tempDir)
+            // Check this one file, never list AmethystTempDir: the other test fork writes there.
+            val out = File.createTempFile("reencoder_cancel_", ".jpg").also(createdFiles::add)
 
             // The temp file is made just before the (uncancellable) JPEG encode, so cancelling
             // there lands during the encode on any machine. Nothing else cancels this job, so the
             // exception also proves the re-encode got that far.
             val job =
-                async(Dispatchers.Default) {
+                async {
                     ImageReencoder.reencode(src, ImageSizeTarget(100, 0.9f)) {
                         cancel()
-                        File(tempDir, "out.jpg")
+                        out
                     }
                 }
             assertFailsWith<CancellationException> { job.await() }
 
-            assertEquals(emptyList(), tempDir.listFiles().orEmpty().toList(), "the cancelled re-encode's temp file is gone")
+            assertFalse(out.exists(), "the cancelled re-encode's temp file is gone")
         }
 
     // ---------- helpers ----------

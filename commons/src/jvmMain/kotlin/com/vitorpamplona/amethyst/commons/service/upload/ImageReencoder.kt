@@ -82,8 +82,7 @@ object ImageReencoder {
     /**
      * Re-encode a file from disk.
      *
-     * @param tempFile makes the file the output goes to. Only tests pass this: every JVM on the
-     *   account shares [AmethystTempDir], so a test that looks at the folder needs its own.
+     * @param tempFile makes the file the output is written to, in [AmethystTempDir] by default.
      * @throws CompressionException on any failure that the caller
      *   should surface in a fail-loud dialog.
      */
