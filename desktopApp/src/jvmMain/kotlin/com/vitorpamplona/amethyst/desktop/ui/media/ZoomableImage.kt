@@ -42,6 +42,9 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import coil3.size.Size
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -85,13 +88,20 @@ fun ZoomableImage(
                         while (true) {
                             val event = awaitPointerEvent()
                             if (event.type == PointerEventType.Scroll) {
-                                val scrollDelta =
-                                    event.changes
-                                        .firstOrNull()
-                                        ?.scrollDelta
-                                        ?.y ?: 0f
+                                val change = event.changes.firstOrNull()
+                                val scrollDelta = change?.scrollDelta?.y ?: 0f
                                 val zoomFactor = if (scrollDelta > 0) 0.9f else 1.1f
-                                scale = (scale * zoomFactor).coerceIn(0.5f, 10f)
+                                val newScale = (scale * zoomFactor).coerceIn(0.5f, 10f)
+                                if (newScale <= 1f || change == null) {
+                                    // At or below the fitted size the image stays centered.
+                                    offsetX = 0f
+                                    offsetY = 0f
+                                } else {
+                                    // Zoom toward the cursor: the image point under it stays under it.
+                                    offsetX = offsetKeepingPoint(change.position.x - size.width / 2f, offsetX, scale, newScale)
+                                    offsetY = offsetKeepingPoint(change.position.y - size.height / 2f, offsetY, scale, newScale)
+                                }
+                                scale = newScale
                                 event.changes.forEach { it.consume() }
                             }
                         }
@@ -129,8 +139,20 @@ fun ZoomableImage(
                 contentScale = ContentScale.Fit,
             )
         } else {
+            // The picture's own pixels, not the window's: without a size Coil decodes to the box
+            // the image fills, about the window, and zooming in only enlarges that. The phone's
+            // viewer asks for the same (ZoomableContentView's fullResolution).
+            val context = LocalPlatformContext.current
+            val request =
+                remember(url, context) {
+                    ImageRequest
+                        .Builder(context)
+                        .data(url)
+                        .size(Size.ORIGINAL)
+                        .build()
+                }
             AsyncImage(
-                model = url,
+                model = request,
                 contentDescription = null,
                 modifier = imageModifier,
                 contentScale = ContentScale.Fit,
@@ -153,3 +175,16 @@ fun ZoomableImage(
         }
     }
 }
+
+/**
+ * The layer offset that keeps the image point under the cursor in place when the scale goes from
+ * [scale] to [newScale], along one axis. A graphics layer scales about its center and then
+ * translates by the offset, so a point [fromCenter] away from the center shows image content
+ * `(fromCenter - offset) / scale` from the image's center.
+ */
+internal fun offsetKeepingPoint(
+    fromCenter: Float,
+    offset: Float,
+    scale: Float,
+    newScale: Float,
+): Float = fromCenter - (fromCenter - offset) * (newScale / scale)
