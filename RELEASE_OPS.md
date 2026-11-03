@@ -295,9 +295,11 @@ OCI images, which `orchard-publish` pushed to `ghcr.io/vitorpamplona/amethyst-fl
 the 1.19.0 events still point there, so leave that package until a later release is out, then it
 can be deleted.
 
-The bundle is built on the Flatpak branch `master`; the 1.19.0 image was `stable`. Someone who
-installed 1.19.0 from Orchard gets the bundle as a second branch beside the image's on the next
-update; `flatpak uninstall com.vitorpamplona.amethyst.Amethyst//stable` removes the old one.
+The bundle is built on the Flatpak branch `stable`, the branch Flathub uses. Orchard 0.3.0 and
+later refuse any bundle whose ref is not `app/<id>/<arch>/stable`, so the 1.20.0 and 1.21.0
+bundles, which were built on `master`, can't be installed from it. Someone who installed one of
+those keeps `master` beside the new `stable` branch after updating;
+`flatpak uninstall com.vitorpamplona.amethyst.Amethyst//master` removes the old one.
 
 **One-time setup.** `orchard.txt` at the repo root names Amethyst's npub. Orchard reads it from the
 default branch to show the repository link as verified. Update it if the signing key ever changes.

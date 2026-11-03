@@ -80,12 +80,14 @@ To produce the distributable single-file bundle instead (what CI ships):
 
 ```bash
 flatpak-builder --user --install-deps-from=flathub --force-clean \
-  --repo=repo build-dir com.vitorpamplona.amethyst.Amethyst.yml
-flatpak build-bundle repo amethyst.flatpak com.vitorpamplona.amethyst.Amethyst \
+  --default-branch=stable --repo=repo build-dir com.vitorpamplona.amethyst.Amethyst.yml
+flatpak build-bundle repo amethyst.flatpak com.vitorpamplona.amethyst.Amethyst stable \
   --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
 ```
 
-Installing the bundle: `flatpak install --user ./amethyst.flatpak`. The
+The bundle is on the Flatpak branch `stable`, the branch Flathub uses; Orchard
+refuses a bundle on any other branch. Installing the bundle:
+`flatpak install --user ./amethyst.flatpak`. The
 `--runtime-repo` baked in above lets flatpak fetch the freedesktop runtime
 from Flathub automatically on the user's machine.
 

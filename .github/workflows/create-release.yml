@@ -344,14 +344,17 @@ jobs:
               "${PKG}/${APP_ID}.metainfo.xml"
           fi
           mkdir -p "$OUT"
+          # Branch `stable`, as on Flathub: flatpak's default is `master`, and Orchard
+          # 0.3.0+ refuses any bundle whose ref is not app/<id>/<arch>/stable.
           flatpak-builder --user --force-clean --disable-rofiles-fuse \
+            --default-branch=stable \
             --state-dir="${OUT}/.flatpak-builder" \
             --repo="${OUT}/repo" \
             "${OUT}/build-dir" \
             "${PKG}/${APP_ID}.yml"
           flatpak build-bundle "${OUT}/repo" \
             "${OUT}/Amethyst-${VER}-${BUNDLE_ARCH}.flatpak" \
-            "$APP_ID" \
+            "$APP_ID" stable \
             --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
           ls -la "$OUT"
 
