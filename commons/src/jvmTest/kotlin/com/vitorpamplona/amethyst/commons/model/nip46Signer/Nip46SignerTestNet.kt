@@ -92,13 +92,13 @@ internal class Nip46SignerTestNet(
                     cmd: Command,
                     success: Boolean,
                 ) {
-                    sent.getOrPut(relay.url) { ConcurrentLinkedQueue() }.add(cmd)
+                    if (success) sent.getOrPut(relay.url) { ConcurrentLinkedQueue() }.add(cmd)
                 }
             },
         )
     }
 
-    /** Every command the client sent [relay] so far, in order. */
+    /** Every command the client sent [relay] so far, in order; failed sends are left out. */
     fun sentTo(relay: NormalizedRelayUrl): List<Command> = sent[relay]?.toList().orEmpty()
 
     fun signerState(

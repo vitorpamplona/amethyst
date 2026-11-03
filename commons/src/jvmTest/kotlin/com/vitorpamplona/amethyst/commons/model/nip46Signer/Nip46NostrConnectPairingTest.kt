@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
@@ -99,7 +100,7 @@ class Nip46NostrConnectPairingTest {
             delay(keyHeardLateMs * 2)
             val transport = KeyPair(settings.nip46TransportKey.value.hexToByteArray()).pubKey.toHexKey()
             val onAppRelay = net.sentTo(appRelay)
-            val ack = onAppRelay.indexOfFirst { it is EventCmd && it.event.pubKey == transport }
+            val ack = onAppRelay.indexOfFirst { it is EventCmd && it.event.kind == NostrConnectEvent.KIND && it.event.pubKey == transport }
             assertTrue(ack >= 0, "the pairing ack went out on the app's relay")
             val resubscribed = onAppRelay.drop(ack + 1).filter { cmd -> cmd is ReqCmd && cmd.filters.any { transport in it.tags?.get("p").orEmpty() } }
             assertEquals(0, resubscribed.size, "the listener is not resubscribed after the ack")
