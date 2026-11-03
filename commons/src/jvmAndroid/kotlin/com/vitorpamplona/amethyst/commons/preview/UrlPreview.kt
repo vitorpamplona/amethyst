@@ -80,6 +80,8 @@ class UrlPreview {
                                     data.videoType,
                                     data.type,
                                     data.icon,
+                                    data.siteName,
+                                    data.author,
                                 )
                             }
 

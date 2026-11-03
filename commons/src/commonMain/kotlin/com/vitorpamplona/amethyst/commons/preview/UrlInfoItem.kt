@@ -45,6 +45,10 @@ class UrlInfoItem(
     val type: String = "",
     /** The page's best declared icon `<link>` (favicon / apple-touch-icon). Empty when none. */
     val icon: String = "",
+    /** `og:site_name` — the publication, e.g. `Medium`. Empty when not declared. */
+    val siteName: String = "",
+    /** The page author's name, never a profile URL. Empty when not declared. */
+    val author: String = "",
 ) {
     /** The page's host, or null when [url] is not an absolute URL. */
     val verifiedHost = absoluteUrlHost(url)

@@ -25,9 +25,12 @@ import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip84Highlights.parse.UrlTrackerCleaner
 
 class UrlFeedFilter(
     url: String,
@@ -59,9 +62,31 @@ class UrlFeedFilter(
             account.isAcceptable(it)
 
     fun acceptableViaScope(
-        event: com.vitorpamplona.quartz.nip01Core.core.Event?,
+        event: Event?,
         url: String,
-    ): Boolean = UrlId.toScopeOrNull(url)?.let { event is CommentEvent && event.isTaggedScope(it, UrlId::match) } ?: false
+    ): Boolean {
+        val scope = UrlId.toScopeOrNull(url) ?: return false
+        return when (event) {
+            is CommentEvent -> event.isTaggedScope(scope, UrlId::match)
+            is HighlightEvent -> event.inUrl()?.let { isSamePage(it, scope) } ?: false
+            else -> false
+        }
+    }
+
+    companion object {
+        /**
+         * Whether a highlight's `r` address names the page [scope] is about. The address is the
+         * author's spelling, so it is compared after the same normalization the scope went
+         * through, without tracking parameters, and ignoring a trailing slash.
+         */
+        fun isSamePage(
+            reference: String,
+            scope: String,
+        ): Boolean {
+            val normalized = UrlId.toScopeOrNull(UrlTrackerCleaner.clean(reference)) ?: return false
+            return normalized.trimEnd('/') == scope.trimEnd('/')
+        }
+    }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
 }

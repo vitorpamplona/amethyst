@@ -38,6 +38,10 @@ class OpenGraphParser {
         val type: String = "",
         /** The best icon `<link>` the page declares, verbatim (may be relative). Empty when none. */
         val icon: String = "",
+        /** `og:site_name` — the publication the page belongs to, e.g. `Medium`. Empty when none. */
+        val siteName: String = "",
+        /** The page author's name (`author`, `article:author`...), never a profile URL. Empty when none. */
+        val author: String = "",
     )
 
     companion object {
@@ -114,6 +118,48 @@ class OpenGraphParser {
                 "og:type",
             )
 
+        // The publication a page belongs to: a byline for sources that carry no nostr author.
+        private val META_X_SITE_NAME =
+            arrayOf(
+                "og:site_name",
+                "application-name",
+            )
+
+        // Who wrote the page. `article:author` is often a profile URL rather than a name; those
+        // are skipped where the value is read, so a later name-valued key can still fill it.
+        private val META_X_AUTHOR =
+            arrayOf(
+                "author",
+                "article:author",
+                "citation_author",
+            )
+
+        /**
+         * Titles of the pages a bot-protection layer or an error serves in place of the real one.
+         * A preview built from one would caption a highlight "Just a moment...", which is worse
+         * than no preview, so such a title is dropped and the page counts as having none.
+         */
+        private val INTERSTITIAL_TITLES =
+            listOf(
+                "just a moment",
+                "attention required",
+                "please wait",
+                "checking your browser",
+                "security check",
+                "access denied",
+                "are you a robot",
+                "ddos-guard",
+                "403 forbidden",
+                "404 not found",
+                "too many requests",
+            )
+
+        /** Whether [title] is a bot-check or error page's title rather than the page's own. */
+        fun isInterstitialTitle(title: String): Boolean {
+            val normalized = title.trim().lowercase()
+            return INTERSTITIAL_TITLES.any { normalized.startsWith(it) }
+        }
+
         private val CONTENT = "content"
         private val HREF = "href"
         private val REL = "rel"
@@ -138,6 +184,8 @@ class OpenGraphParser {
         VIDEO,
         VIDEO_TYPE,
         TYPE,
+        SITE_NAME,
+        AUTHOR,
     }
 
     private fun fieldFor(key: String): Field? =
@@ -150,6 +198,8 @@ class OpenGraphParser {
             in META_X_VIDEO -> Field.VIDEO
             in META_X_VIDEO_TYPE -> Field.VIDEO_TYPE
             in META_X_TYPE -> Field.TYPE
+            in META_X_SITE_NAME -> Field.SITE_NAME
+            in META_X_AUTHOR -> Field.AUTHOR
             else -> null
         }
 
@@ -173,6 +223,8 @@ class OpenGraphParser {
         var documentTitle = ""
         var icon = ""
         var iconSize = -1
+        var siteName = ""
+        var author = ""
 
         metaTags.forEach {
             when (it.element) {
@@ -215,11 +267,26 @@ class OpenGraphParser {
                 Field.VIDEO -> if (video.isEmpty()) video = it.attr(CONTENT)
                 Field.VIDEO_TYPE -> if (videoType.isEmpty()) videoType = it.attr(CONTENT)
                 Field.TYPE -> if (type.isEmpty()) type = it.attr(CONTENT)
+                Field.SITE_NAME -> if (siteName.isEmpty()) siteName = it.attr(CONTENT).trim()
+                Field.AUTHOR ->
+                    if (author.isEmpty()) {
+                        author =
+                            it
+                                .attr(CONTENT)
+                                .trim()
+                                .takeUnless(::isUrl)
+                                .orEmpty()
+                    }
                 null -> Unit
             }
         }
-        return Result(title.ifEmpty { documentTitle }, description, image, audio, audioType, video, videoType, type, icon)
+
+        val bestTitle = title.ifEmpty { documentTitle }.takeUnless(::isInterstitialTitle).orEmpty()
+
+        return Result(bestTitle, description, image, audio, audioType, video, videoType, type, icon, siteName, author)
     }
+
+    private fun isUrl(value: String): Boolean = value.startsWith("http://", ignoreCase = true) || value.startsWith("https://", ignoreCase = true)
 
     /** The pixel size an icon `<link>` is ranked by: its largest declared size, or a default. */
     private fun iconSize(link: MetaTag): Int {
