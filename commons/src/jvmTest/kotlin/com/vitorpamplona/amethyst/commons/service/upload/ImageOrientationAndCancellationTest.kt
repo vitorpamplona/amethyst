@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.commons.service.upload
 
 import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder.ReencodeResult
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.apache.commons.imaging.Imaging
@@ -35,11 +35,12 @@ import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.util.Random
 import javax.imageio.ImageIO
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
@@ -152,25 +153,23 @@ class ImageOrientationAndCancellationTest {
     @Test
     fun cancellingDuringEncodeLeavesNoTempFile() =
         runBlocking {
-            val src = makeNoisyJpeg(5000, 4000)
-            val tempDir = AmethystTempDir.rootDir()
+            val src = makeJpegWithMarker(400, 200, orientation = 1)
+            // Check this one file, never list AmethystTempDir: the other test fork writes there.
+            val out = File.createTempFile("reencoder_cancel_", ".jpg").also(createdFiles::add)
 
-            fun compressTemps() = tempDir.listFiles { f -> f.name.startsWith("amethyst_compress_") }.orEmpty().toSet()
-            val before = compressTemps()
+            // The temp file is made just before the (uncancellable) JPEG encode, so cancelling
+            // there lands during the encode on any machine. Nothing else cancels this job, so the
+            // exception also proves the re-encode got that far.
+            val job =
+                async {
+                    ImageReencoder.reencode(src, ImageSizeTarget(100, 0.9f)) {
+                        cancel()
+                        out
+                    }
+                }
+            assertFailsWith<CancellationException> { job.await() }
 
-            val job = async(Dispatchers.Default) { ImageReencoder.reencode(src, ImageSizeTarget(4000, 0.95f)) }
-            // The temp file is created just before the (uncancellable) JPEG encode starts.
-            var waited = 0
-            while ((compressTemps() - before).isEmpty() && waited < 20_000) {
-                delay(1)
-                waited++
-            }
-            job.cancel()
-            val outcome = runCatching { job.await() }
-            outcome.getOrNull()?.let { (it as? ReencodeResult.Reencoded)?.file?.let(createdFiles::add) }
-            assertTrue(outcome.isFailure, "the encode should still be running when cancelled; enlarge the image if not")
-
-            assertEquals(emptySet(), compressTemps() - before, "the cancelled re-encode's temp file is gone")
+            assertFalse(out.exists(), "the cancelled re-encode's temp file is gone")
         }
 
     // ---------- helpers ----------
@@ -242,18 +241,5 @@ class ImageOrientationAndCancellationTest {
             i += 2 + length
         }
         return found
-    }
-
-    private fun makeNoisyJpeg(
-        width: Int,
-        height: Int,
-    ): File {
-        val img = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
-        val rnd = Random(42)
-        for (y in 0 until height) for (x in 0 until width) img.setRGB(x, y, rnd.nextInt())
-        return File.createTempFile("cancel_src_", ".jpg").also {
-            ImageIO.write(img, "jpg", it)
-            createdFiles += it
-        }
     }
 }

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.service.upload
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionException.EncodeFailed
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionException.InputTooLarge
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionException.UnsupportedFormat
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -52,6 +53,7 @@ import kotlin.coroutines.coroutineContext
  * keeps the peak heap footprint to a single in-flight BufferedImage.
  */
 object ImageReencoder {
+    private const val TAG = "ImageReencoder"
     private const val DEFAULT_MAX_INPUT_PIXELS = 50L * 1_000_000L
 
     /**
@@ -80,21 +82,23 @@ object ImageReencoder {
     /**
      * Re-encode a file from disk.
      *
+     * @param tempFile makes the file the output is written to, in [AmethystTempDir] by default.
      * @throws CompressionException on any failure that the caller
      *   should surface in a fail-loud dialog.
      */
     suspend fun reencode(
         source: File,
         quality: ImageCompressionTarget,
+        tempFile: () -> File = { AmethystTempDir.createTempFile("amethyst_compress_", ".jpg") },
     ): ReencodeResult {
         // withContext hands its result back cancellably: a cancellation that lands during the
         // (uncancellable) encode drops the finished file along with the result, so its path is
         // kept out here to delete it.
         var written: File? = null
         return try {
-            reencodeOnDispatcher(source, quality) { written = it }
+            reencodeOnDispatcher(source, quality, tempFile) { written = it }
         } catch (e: CancellationException) {
-            written?.delete()
+            written?.deleteOrWarn(TAG, "cancelled re-encode")
             throw e
         }
     }
@@ -102,6 +106,7 @@ object ImageReencoder {
     private suspend fun reencodeOnDispatcher(
         source: File,
         quality: ImageCompressionTarget,
+        tempFile: () -> File,
         onWritten: (File) -> Unit,
     ): ReencodeResult =
         withContext(compressionDispatcher) {
@@ -137,13 +142,13 @@ object ImageReencoder {
                 }
             // 4) Encode JPEG to a temp file, preserving ICC where possible.
             coroutineContext.ensureActive()
-            val temp = AmethystTempDir.createTempFile("amethyst_compress_", ".jpg")
+            val temp = tempFile()
             try {
                 encodeJpeg(finalImage, temp, quality.jpegQuality)
                 onWritten(temp)
                 ReencodeResult.Reencoded(temp)
             } catch (t: Throwable) {
-                withContext(NonCancellable) { temp.delete() }
+                withContext(NonCancellable) { temp.deleteOrWarn(TAG, "failed re-encode") }
                 throw if (t is CompressionException) t else EncodeFailed(t)
             }
         }

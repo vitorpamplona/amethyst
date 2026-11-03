@@ -247,8 +247,10 @@ tasks.withType<Test>().configureEach {
         jvmArgs("-Djava.awt.headless=true")
         // ~550 test classes in one JVM made this suite the critical path of a pre-push run after
         // any :commons edit (165 s). Two forks: 116-129 s, peaking at 1.2 GB for both, green on
-        // every run. The tests bind port 0 and write uniquely named temp files, so forks don't
-        // collide. One fork on a 2-core machine, where a second would only contend.
+        // every run. The tests bind port 0, so forks don't collide on ports. They do share
+        // ~/.amethyst/tmp, so a test must not list that folder: unique file names don't help, it
+        // sees the other fork's files. One fork on a 2-core machine, where a second would only
+        // contend.
         maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 2)
     }
 }
