@@ -496,7 +496,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpModifier
-import com.vitorpamplona.amethyst.commons.ui.theme.ProvideNestedNoteHover
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
@@ -996,40 +995,38 @@ fun NoteCompose(
     // A note never draws with its parent's bleed: a quote or boost that renders as a card (a
     // community, a channel, a hidden-note warning) keeps its media inside. A boosted note's own
     // body gets its bleed from LocalBoostedNoteFrame instead.
-    ProvideNestedNoteHover {
-        ProvideMediaBleed(0.dp) {
-            WatchNoteEvent(
-                baseNote = baseNote,
+    ProvideMediaBleed(0.dp) {
+        WatchNoteEvent(
+            baseNote = baseNote,
+            accountViewModel = accountViewModel,
+            nav,
+            modifier,
+        ) {
+            CheckHiddenFeedWatchBlockAndReport(
+                note = baseNote,
+                modifier = modifier,
+                ignoreAllBlocksAndReports = isHiddenFeed,
+                showHiddenWarning = isQuotedNote || isBoostedNote,
                 accountViewModel = accountViewModel,
-                nav,
-                modifier,
-            ) {
-                CheckHiddenFeedWatchBlockAndReport(
-                    note = baseNote,
+                nav = nav,
+            ) { canPreview ->
+                AcceptableNote(
+                    baseNote = baseNote,
                     modifier = modifier,
-                    ignoreAllBlocksAndReports = isHiddenFeed,
-                    showHiddenWarning = isQuotedNote || isBoostedNote,
+                    routeForLastRead = routeForLastRead,
+                    isBoostedNote = isBoostedNote,
+                    isQuotedNote = isQuotedNote,
+                    unPackReply = unPackReply,
+                    makeItShort = makeItShort,
+                    canPreview = canPreview,
+                    isPinned = isPinned,
+                    quotesLeft = quotesLeft,
+                    parentBackgroundColor = parentBackgroundColor,
                     accountViewModel = accountViewModel,
                     nav = nav,
-                ) { canPreview ->
-                    AcceptableNote(
-                        baseNote = baseNote,
-                        modifier = modifier,
-                        routeForLastRead = routeForLastRead,
-                        isBoostedNote = isBoostedNote,
-                        isQuotedNote = isQuotedNote,
-                        unPackReply = unPackReply,
-                        makeItShort = makeItShort,
-                        canPreview = canPreview,
-                        isPinned = isPinned,
-                        quotesLeft = quotesLeft,
-                        parentBackgroundColor = parentBackgroundColor,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        onClick = onClick,
-                        moreOptions = moreOptions,
-                    )
-                }
+                    onClick = onClick,
+                    moreOptions = moreOptions,
+                )
             }
         }
     }
