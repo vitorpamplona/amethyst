@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncIma
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
@@ -160,6 +161,10 @@ private val ThumbnailSize = 44.dp
 private val ThumbnailShape = RoundedCornerShape(6.dp)
 private val ColumnWidth = 55.dp
 private val KindIconSize = 20.dp
+private val ZapTotalIconSize = 15.dp
+
+// The width of a note header's ⋮ button, so a card without one keeps its time aligned.
+private val MenuWidth = 24.dp
 
 /**
  * The faces of [card], one per person: zappers first, then boosters, then reactions, newest first
@@ -238,9 +243,14 @@ fun latestZapComment(
 }
 
 /**
- * The card. [target] is the second line (usually [NotificationNoteLine]); [thumbnail] the picture
- * at the end, when the target has one. [kindIcon] fills the author column of the Indented layout;
- * the full-width layouts have no column, and the badges on the faces carry the same information.
+ * The card. [target] is the last line (usually [NotificationNoteLine]); [thumbnail] the picture
+ * beside the text, when the target has one. [kindIcon] fills the author column of the Indented
+ * layout; the full-width layouts have no column, and the badges on the faces carry the same
+ * information.
+ *
+ * The first row ends like a note's header, with the time and then [moreOptions] (the ⋮ menu), so
+ * the times of activity cards and of the replies between them line up on the right edge. A card
+ * without a note to act on passes nothing and keeps the menu's width empty for the same alignment.
  */
 @Composable
 fun NotificationActivityCard(
@@ -253,18 +263,16 @@ fun NotificationActivityCard(
     nav: INav,
     modifier: Modifier = Modifier,
     kindIcon: @Composable (Modifier) -> Unit,
+    moreOptions: @Composable () -> Unit = { Spacer(Modifier.width(MenuWidth)) },
     thumbnail: (@Composable () -> Unit)? = null,
     target: @Composable () -> Unit,
 ) {
     val fullWidth = LocalDisplaySettings.current.fullWidthNotes
 
-    Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Row(modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
         if (!fullWidth) {
             Box(
-                modifier = Modifier.width(ColumnWidth).align(Alignment.Top).padding(top = 4.dp),
+                modifier = Modifier.width(ColumnWidth).padding(top = 4.dp),
                 contentAlignment = Alignment.TopEnd,
             ) {
                 kindIcon(Modifier.size(KindIconSize))
@@ -284,30 +292,37 @@ fun NotificationActivityCard(
                         accountViewModel = accountViewModel,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    TimeAgo(createdAt)
+                    if (zapTotal != null) {
+                        ZappedIcon(Modifier.padding(start = 10.dp).size(ZapTotalIconSize))
+                        Text(
+                            text = zapTotal,
+                            color = MaterialTheme.colorScheme.bitcoinColor,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                        )
+                    }
                 }
-                if (zapTotal != null) {
-                    Text(
-                        text = zapTotal,
-                        color = MaterialTheme.colorScheme.bitcoinColor,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        modifier = Modifier.padding(start = 8.dp),
-                    )
-                }
+                Box(Modifier.padding(start = 8.dp)) { TimeAgo(createdAt, TimeAgoStyle.DottedTight) }
+                moreOptions()
             }
 
-            if (comment != null) {
-                ActivityCommentLine(comment, showName = actors.size > 1, backgroundColor, accountViewModel, nav)
+            Row {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (comment != null) {
+                        ActivityCommentLine(comment, showName = actors.size > 1, backgroundColor, accountViewModel, nav)
+                    }
+                    target()
+                }
+
+                if (thumbnail != null) {
+                    Spacer(Modifier.width(12.dp))
+                    thumbnail()
+                }
             }
-
-            target()
-        }
-
-        if (thumbnail != null) {
-            Spacer(Modifier.width(12.dp))
-            thumbnail()
         }
     }
 }

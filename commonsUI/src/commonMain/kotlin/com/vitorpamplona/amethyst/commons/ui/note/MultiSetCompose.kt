@@ -97,6 +97,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ScoreTagSmall
 import com.vitorpamplona.amethyst.commons.ui.note.WatchAuthorWithBlank
 import com.vitorpamplona.amethyst.commons.ui.note.WatchUserFollows
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.commons.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.commons.ui.note.hovercard.UserHoverCardAnchor
 import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
@@ -175,6 +176,7 @@ fun MultiSetCompose(
                         onLongClick = { popupExpanded.value = true },
                     ),
             kindIcon = { MultiSetKindIcon(multiSetCard, it) },
+            moreOptions = { MoreOptionsButton(baseNote, accountViewModel = accountViewModel, nav = nav) },
             thumbnail = rememberNotificationThumbnail(baseNote, accountViewModel),
         ) {
             NotificationNoteLine(baseNote, accountViewModel)
