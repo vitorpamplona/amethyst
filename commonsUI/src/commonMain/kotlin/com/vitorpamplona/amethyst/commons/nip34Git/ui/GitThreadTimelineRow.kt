@@ -224,7 +224,8 @@ private fun CoverNoteRow(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
-        } else {
+        } else if (state != Res.string.git_cover_note_current) {
+            // The current note is the banner on the item above: a preview would repeat it.
             Text(
                 text = event.content,
                 style = MaterialTheme.typography.bodyMedium,
