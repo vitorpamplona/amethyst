@@ -43,6 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -56,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.Card
 import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
+import com.vitorpamplona.amethyst.commons.model.NoteLayoutType
 import com.vitorpamplona.amethyst.commons.model.chats.formatHistoryReachDate
 import com.vitorpamplona.amethyst.commons.notifications.BadgeCard
 import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
@@ -88,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.NutzapUserSetCompose
 import com.vitorpamplona.amethyst.commons.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.notifications.OpenPollsSectionHeader
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordDirectInviteCard
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.donations.ShowDonationCard
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -113,6 +116,38 @@ fun RenderCardFeed(
     // Whether THIS feed drives the shared account history pager. False for an off-screen split tab / second
     // pane, so only the feed the user is actually looking at pages the pager (see #2 in the audit).
     drivesPaging: Boolean = true,
+) {
+    // Notifications always use the Indented post layout, whatever the user picked for the other
+    // feeds: the activity cards (likes, zaps, boosts, DMs, badges) are built around the author
+    // column, and replies laid out full width beside them made the feed look like two designs.
+    val displaySettings = LocalDisplaySettings.current
+    val indented = remember(displaySettings) { displaySettings.copy(noteLayout = NoteLayoutType.AUTHOR_COLUMN) }
+    CompositionLocalProvider(LocalDisplaySettings provides indented) {
+        RenderCardFeedContent(
+            feedContent = feedContent,
+            pollContent = pollContent,
+            accountViewModel = accountViewModel,
+            listState = listState,
+            nav = nav,
+            routeForLastRead = routeForLastRead,
+            scrollToEventId = scrollToEventId,
+            headerContent = headerContent,
+            drivesPaging = drivesPaging,
+        )
+    }
+}
+
+@Composable
+private fun RenderCardFeedContent(
+    feedContent: CardFeedContentState,
+    pollContent: OpenPollsState,
+    accountViewModel: AccountViewModel,
+    listState: LazyListState,
+    nav: INav,
+    routeForLastRead: String,
+    scrollToEventId: String?,
+    headerContent: (@Composable () -> Unit)?,
+    drivesPaging: Boolean,
 ) {
     val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
 

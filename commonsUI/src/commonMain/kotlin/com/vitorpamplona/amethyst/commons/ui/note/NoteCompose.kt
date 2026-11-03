@@ -1376,22 +1376,6 @@ private fun ProvideRepostFrame(
     }
 }
 
-/**
- * Frames a boosted [NoteCompose] that a full-width notification card draws below its own header,
- * the way a repost frames the note it boosts: in the Borderless layout its media runs out over the
- * card's [NoteHorizontalPadding] to the screen edges, and with [headerShown] it skips its own
- * author row because the card's header already shows it.
- */
-@Composable
-fun ProvideNotificationBoostedNoteFrame(
-    headerShown: Boolean = false,
-    content: @Composable () -> Unit,
-) {
-    val bleed = if (LocalDisplaySettings.current.edgeToEdgeMedia) NoteHorizontalPadding else 0.dp
-    val frame = remember(bleed, headerShown) { BoostedNoteFrame(bleed, headerShown) }
-    ProvideRepostFrame(frame, content)
-}
-
 /** The note a repost boosts, as [RenderRepost] draws it. */
 private fun Note.repostedNote(): Note? = replyTo?.lastOrNull { !it.isCommunityDefinition() }
 

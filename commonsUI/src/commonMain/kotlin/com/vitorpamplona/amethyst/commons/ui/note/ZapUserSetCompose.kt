@@ -44,10 +44,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.calculateBackgroundColor
-import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -67,10 +65,6 @@ fun ZapUserSetCompose(
             accountViewModel = accountViewModel,
         )
 
-    // Full width: the kind icon heads the gallery row in the picture slot, and the zapped user's
-    // row is a full-width header (35dp picture, name beside it) instead of sitting in the column.
-    val fullWidth = !isInnerNote && LocalDisplaySettings.current.fullWidthNotes
-
     Column(
         modifier =
             Modifier.background(backgroundColor.value).clickable {
@@ -86,7 +80,7 @@ fun ZapUserSetCompose(
                 ),
         ) {
             // Draws the like picture outside the boosted card.
-            if (!isInnerNote && !fullWidth) {
+            if (!isInnerNote) {
                 Box(
                     modifier = Size55Modifier,
                 ) {
@@ -98,11 +92,6 @@ fun ZapUserSetCompose(
 
             Column(modifier = Modifier) {
                 Row(Modifier.fillMaxWidth()) {
-                    if (fullWidth) {
-                        GalleryIconColumn { iconAlignment ->
-                            ZappedIcon(Modifier.size(Size25dp).align(iconAlignment))
-                        }
-                    }
                     MapZaps(zapSetCard.zapEvents, accountViewModel) {
                         AuthorGalleryZaps(it, backgroundColor, nav, accountViewModel)
                     }
@@ -111,12 +100,12 @@ fun ZapUserSetCompose(
                 Spacer(DoubleVertSpacer)
 
                 Row(
-                    Modifier.padding(start = if (!isInnerNote && !fullWidth) 10.dp else 0.dp).fillMaxWidth(),
+                    Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp).fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     UserPicture(
                         zapSetCard.user,
-                        if (fullWidth) Size35dp else Size55dp,
+                        Size55dp,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

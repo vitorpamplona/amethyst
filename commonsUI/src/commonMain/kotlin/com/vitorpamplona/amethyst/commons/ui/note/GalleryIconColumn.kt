@@ -37,7 +37,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifier
  * Indented, it is the author column: [indentedModifier] (55dp wide) with the icon at its top end,
  * next to the faces. In the full-width layouts it is the 35dp picture slot of a full-width note's
  * header, with the icon centred on the first row of faces, so the faces start where a full-width
- * note's name does and the card's body can use the whole width below.
+ * note's name does. Only the expanded reactions under a note reach the full-width slot: the
+ * Notifications feed always draws its cards Indented (see `RenderCardFeed`).
  *
  * The full-width slot is a minimum, not a fixed size: a reaction drawn as text (a bare
  * `:shortcode:`, a word, several emoji) widens it up to the indented column's 55dp and wraps

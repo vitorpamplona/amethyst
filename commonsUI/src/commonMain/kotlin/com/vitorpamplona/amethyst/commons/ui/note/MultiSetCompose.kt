@@ -104,7 +104,6 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.commons.ui.theme.FullWidthHeaderSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.NotificationIconModifierSmaller
@@ -240,39 +239,20 @@ fun MultiSetCompose(
             else -> {
                 Galeries(multiSetCard, backgroundColor, accountViewModel, nav)
 
-                if (LocalDisplaySettings.current.fullWidthNotes) {
-                    // Full width: the gallery rows are the card's header (icon in the picture
-                    // slot, faces where a name would be) and the note takes the whole width below,
-                    // as a full-width note's body does.
-                    ProvideNotificationBoostedNoteFrame {
-                        NoteCompose(
-                            baseNote = baseNote,
-                            modifier = FullWidthHeaderSpacer,
-                            routeForLastRead = null,
-                            isBoostedNote = true,
-                            isHiddenFeed = showHidden,
-                            quotesLeft = 1,
-                            parentBackgroundColor = backgroundColor,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
-                } else {
-                    Row(Modifier.fillMaxWidth()) {
-                        Spacer(modifier = WidthAuthorPictureModifierWithPadding)
+                Row(Modifier.fillMaxWidth()) {
+                    Spacer(modifier = WidthAuthorPictureModifierWithPadding)
 
-                        NoteCompose(
-                            baseNote = baseNote,
-                            modifier = HalfTopPadding,
-                            routeForLastRead = null,
-                            isBoostedNote = true,
-                            isHiddenFeed = showHidden,
-                            quotesLeft = 1,
-                            parentBackgroundColor = backgroundColor,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
+                    NoteCompose(
+                        baseNote = baseNote,
+                        modifier = HalfTopPadding,
+                        routeForLastRead = null,
+                        isBoostedNote = true,
+                        isHiddenFeed = showHidden,
+                        quotesLeft = 1,
+                        parentBackgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
                 }
             }
         }
