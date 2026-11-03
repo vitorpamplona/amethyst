@@ -74,7 +74,7 @@ fun GitStatusActions(
     )
 }
 
-private fun repositoryAddressOf(event: Event): Address? =
+internal fun repositoryAddressOf(event: Event): Address? =
     when (event) {
         is GitIssueEvent -> event.repositoryAddress()
         is GitPatchEvent -> event.repositoryAddress()

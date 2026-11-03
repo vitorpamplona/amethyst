@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache.observeEvents
+import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevisions
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
@@ -52,22 +53,29 @@ import kotlinx.coroutines.flow.stateIn
 object GitPullRequestUpdateIndex {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    val latestByPullRequest: StateFlow<Map<HexKey, GitPullRequestUpdateEvent>?> =
+    /**
+     * Every update per parent pull-request id, oldest first ([GitPullRequestRevisions.order]). The
+     * thread timeline and the update card read it to say which commit an update replaced.
+     */
+    val byPullRequest: StateFlow<Map<HexKey, List<GitPullRequestUpdateEvent>>?> =
         LocalCache
             .observeEvents<GitPullRequestUpdateEvent>(Filter(kinds = listOf(GitPullRequestUpdateEvent.KIND)))
-            .map { latestByParent(it) }
+            .map { groupByParent(it) }
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, null)
 
-    private fun latestByParent(events: List<GitPullRequestUpdateEvent>): Map<HexKey, GitPullRequestUpdateEvent> {
-        val latest = HashMap<HexKey, GitPullRequestUpdateEvent>()
+    val latestByPullRequest: StateFlow<Map<HexKey, GitPullRequestUpdateEvent>?> =
+        byPullRequest
+            .map { byParent -> byParent?.mapValues { it.value.last() } }
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, null)
+
+    private fun groupByParent(events: List<GitPullRequestUpdateEvent>): Map<HexKey, List<GitPullRequestUpdateEvent>> {
+        val byParent = HashMap<HexKey, MutableList<GitPullRequestUpdateEvent>>()
         for (event in events) {
             val target = event.parentPullRequestId() ?: continue
-            val current = latest[target]
-            if (current == null || event.createdAt > current.createdAt) {
-                latest[target] = event
-            }
+            byParent.getOrPut(target) { ArrayList() }.add(event)
         }
-        return latest
+        return byParent.mapValues { it.value.sortedWith(GitPullRequestRevisions.order) }
     }
 }

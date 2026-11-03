@@ -40,7 +40,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,18 +66,25 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
+import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevision
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCiStatusBadge
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCoverNoteBanner
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusPill
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitPullRequestPushText
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeDisplayedCoverNote
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observePreviousRevision
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.shortCommit
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_branch
 import com.vitorpamplona.amethyst.commons.resources.git_clone_address
 import com.vitorpamplona.amethyst.commons.resources.git_commit
 import com.vitorpamplona.amethyst.commons.resources.git_merge_base
+import com.vitorpamplona.amethyst.commons.resources.git_original_description
 import com.vitorpamplona.amethyst.commons.resources.git_pr_revised
 import com.vitorpamplona.amethyst.commons.resources.git_pr_update_description
 import com.vitorpamplona.amethyst.commons.resources.git_repo_personal_fork
+import com.vitorpamplona.amethyst.commons.resources.git_was
 import com.vitorpamplona.amethyst.commons.resources.kind_git_issue
 import com.vitorpamplona.amethyst.commons.resources.kind_git_patch
 import com.vitorpamplona.amethyst.commons.resources.kind_git_pr
@@ -109,6 +118,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -264,9 +275,6 @@ private fun GitMetaRow(
     }
 }
 
-/** Shortens a 40-char git object id to its 7-char prefix for display. */
-private fun String.shortCommit(): String = if (length > 7) take(7) else this
-
 /**
  * Some NIP-34 clients duplicate the subject tag as a leading markdown heading of the
  * content ("# Title\n\n…"). The card already renders the subject as its own title, so
@@ -350,6 +358,75 @@ private fun GitMarkdownBody(
                 )
             }
         }
+    }
+}
+
+/** [current] shortened, followed by "(was …)" when a later update moved it off [original]. */
+@Composable
+private fun revisedValue(
+    current: String,
+    original: String?,
+): String =
+    if (original.isNullOrBlank() || original == current) {
+        current.shortCommit()
+    } else {
+        stringRes(id = Res.string.git_was, current.shortCommit(), original.shortCommit())
+    }
+
+/**
+ * The cover note of an issue or PR and its own description. Once the author or a maintainer has
+ * set a cover note, that note is the current summary and the description is what it replaced, so
+ * the description folds under "Original description" instead of repeating (or contradicting) it.
+ */
+@Composable
+private fun GitCoverNoteAndDescription(
+    note: Note,
+    rootAuthor: HexKey,
+    repository: Address?,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    renderedSubject: String?,
+) {
+    val cover = observeDisplayedCoverNote(note.idHex, rootAuthor, repository, accountViewModel)
+    if (cover == null) {
+        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject)
+        return
+    }
+
+    GitCoverNoteBanner(cover, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, CoverNoteSpacing)
+
+    val hasDescription = remember(note.event) { stripDuplicatedSubject(note.event?.content.orEmpty(), renderedSubject).isNotBlank() }
+    if (!hasDescription) return
+
+    var expanded by remember(note) { mutableStateOf(false) }
+    Row(
+        modifier =
+            Modifier
+                .clip(ChipShape)
+                .clickable { expanded = !expanded }
+                .padding(vertical = Size5dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Size5dp),
+    ) {
+        Icon(
+            symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
+            contentDescription = null,
+            modifier = Modifier.size(Size16dp),
+            tint = MaterialTheme.colorScheme.grayText,
+        )
+        Text(
+            text = stringRes(id = Res.string.git_original_description),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.grayText,
+        )
+    }
+
+    if (expanded) {
+        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject)
     }
 }
 
@@ -578,19 +655,7 @@ private fun RenderGitIssueEvent(
 
         Spacer(modifier = HalfDoubleVertSpacer)
 
-        GitCoverNoteBanner(
-            rootIdHex = note.idHex,
-            rootAuthor = noteEvent.pubKey,
-            repositoryAddress = repository,
-            canPreview = canPreview,
-            quotesLeft = quotesLeft,
-            backgroundColor = backgroundColor,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            modifier = CoverNoteSpacing,
-        )
-
-        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
+        GitCoverNoteAndDescription(note, noteEvent.pubKey, repository, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
         if (!makeItShort) {
             GitStatusActions(note, accountViewModel)
@@ -704,11 +769,12 @@ private fun RenderGitPullRequestEvent(
                 branch?.let {
                     GitMetaRow(MaterialSymbols.AltRoute, stringRes(id = Res.string.git_branch), it)
                 }
+                // A later update moved the tip: say what it was so the original isn't lost.
                 currentCommit?.let {
-                    GitMetaRow(MaterialSymbols.Commit, stringRes(id = Res.string.git_commit), it.shortCommit())
+                    GitMetaRow(MaterialSymbols.Commit, stringRes(id = Res.string.git_commit), revisedValue(it, noteEvent.currentCommit()))
                 }
                 mergeBase?.let {
-                    GitMetaRow(MaterialSymbols.CallMerge, stringRes(id = Res.string.git_merge_base), it.shortCommit())
+                    GitMetaRow(MaterialSymbols.CallMerge, stringRes(id = Res.string.git_merge_base), revisedValue(it, noteEvent.mergeBase()))
                 }
             }
         }
@@ -729,19 +795,7 @@ private fun RenderGitPullRequestEvent(
 
         Spacer(modifier = HalfDoubleVertSpacer)
 
-        GitCoverNoteBanner(
-            rootIdHex = note.idHex,
-            rootAuthor = noteEvent.pubKey,
-            repositoryAddress = repository,
-            canPreview = canPreview,
-            quotesLeft = quotesLeft,
-            backgroundColor = backgroundColor,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            modifier = CoverNoteSpacing,
-        )
-
-        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
+        GitCoverNoteAndDescription(note, noteEvent.pubKey, repository, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
         if (!makeItShort) {
             GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel)
@@ -774,6 +828,12 @@ fun RenderGitPullRequestUpdateEvent(
     )
 }
 
+/**
+ * A PR update (kind 1619) on its own, in a feed, a notification or a quote. Says what moved
+ * ("Pushed 4246e71 (was 70d31ba), rebased onto bca8dc9") and quotes the PR it updates, since
+ * nothing else on screen names it. In the PR's own thread it is a timeline row instead
+ * (GitThreadTimelineRow).
+ */
 @Composable
 private fun RenderGitPullRequestUpdateEvent(
     noteEvent: GitPullRequestUpdateEvent,
@@ -785,6 +845,12 @@ private fun RenderGitPullRequestUpdateEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val targetNote = note.replyTo?.lastOrNull()
+    val pullRequest = targetNote?.let { observeNoteEvent<GitPullRequestEvent>(it, accountViewModel).value }
+    // The quoted PR carries the repository header and its clone URLs; draw them here only
+    // when there is no PR to quote.
+    val quotesPullRequest = pullRequest != null && !makeItShort && quotesLeft > 0
+
     GitCardContainer {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -799,7 +865,7 @@ private fun RenderGitPullRequestUpdateEvent(
         }
 
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
-        if (repository != null) {
+        if (repository != null && !quotesPullRequest) {
             Spacer(modifier = StdVertSpacer)
             LoadAddressableNote(repository) {
                 if (it != null) {
@@ -808,28 +874,35 @@ private fun RenderGitPullRequestUpdateEvent(
             }
         }
 
+        val current = remember(noteEvent) { GitPullRequestRevision.of(noteEvent) }
+        val previous = observePreviousRevision(noteEvent, pullRequest)
+        val summary = gitPullRequestPushText(current, previous, sentence = true)
+
         Spacer(modifier = HalfDoubleVertSpacer)
         Text(
-            text = stringRes(id = Res.string.git_pr_update_description),
+            text = summary ?: stringRes(id = Res.string.git_pr_update_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.grayText,
         )
 
-        val currentCommit = remember(noteEvent) { noteEvent.currentCommit()?.takeIf { it.isNotBlank() } }
-        val mergeBase = remember(noteEvent) { noteEvent.mergeBase()?.takeIf { it.isNotBlank() } }
-        val cloneUrls = remember(noteEvent) { noteEvent.cloneUrls().filter { it.isNotBlank() } }
-
-        if (currentCommit != null || mergeBase != null) {
+        // Without an earlier revision to compare with, the summary can't name the commits.
+        if (previous == null && (current.commit != null || current.mergeBase != null)) {
             Spacer(modifier = StdVertSpacer)
             Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
-                currentCommit?.let {
+                current.commit?.let {
                     GitMetaRow(MaterialSymbols.Commit, stringRes(id = Res.string.git_commit), it.shortCommit())
                 }
-                mergeBase?.let {
+                current.mergeBase?.let {
                     GitMetaRow(MaterialSymbols.CallMerge, stringRes(id = Res.string.git_merge_base), it.shortCommit())
                 }
             }
         }
+
+        val cloneUrls =
+            remember(noteEvent, pullRequest, quotesPullRequest) {
+                val shown = if (quotesPullRequest) pullRequest.cloneUrls().toSet() else emptySet()
+                noteEvent.cloneUrls().filter { it.isNotBlank() && it !in shown }
+            }
 
         if (cloneUrls.isNotEmpty()) {
             Spacer(modifier = StdVertSpacer)
@@ -843,6 +916,11 @@ private fun RenderGitPullRequestUpdateEvent(
                     )
                 }
             }
+        }
+
+        if (quotesPullRequest) {
+            Spacer(modifier = StdVertSpacer)
+            RenderTargetNote(note, quotesLeft, backgroundColor, accountViewModel, nav)
         }
     }
 }
