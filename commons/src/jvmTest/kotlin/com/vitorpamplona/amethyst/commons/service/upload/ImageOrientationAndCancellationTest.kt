@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.commons.service.upload
 
 import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder.ReencodeResult
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.apache.commons.imaging.Imaging
@@ -41,9 +41,9 @@ import javax.imageio.ImageIO
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -58,7 +58,7 @@ class ImageOrientationAndCancellationTest {
 
     @AfterTest
     fun cleanup() {
-        createdFiles.forEach { it.delete() }
+        createdFiles.forEach { it.deleteRecursively() }
     }
 
     @Test
@@ -159,23 +159,19 @@ class ImageOrientationAndCancellationTest {
             // there would look like a leak.
             val tempDir = Files.createTempDirectory("reencoder-cancel").toFile()
             createdFiles.add(tempDir)
-            var temp: File? = null
 
-            lateinit var job: Deferred<ReencodeResult>
             // The temp file is made just before the (uncancellable) JPEG encode, so cancelling
-            // there lands during the encode on any machine. LAZY keeps the lambda from running
-            // before job is set.
-            job =
-                async(Dispatchers.Default, start = CoroutineStart.LAZY) {
+            // there lands during the encode on any machine. Nothing else cancels this job, so the
+            // exception also proves the re-encode got that far.
+            val job =
+                async(Dispatchers.Default) {
                     ImageReencoder.reencode(src, ImageSizeTarget(100, 0.9f)) {
-                        job.cancel()
-                        File.createTempFile("amethyst_compress_", ".jpg", tempDir).also { temp = it }
+                        cancel()
+                        File(tempDir, "out.jpg")
                     }
                 }
-            val outcome = runCatching { job.await() }
+            assertFailsWith<CancellationException> { job.await() }
 
-            assertNotNull(temp, "the re-encode reached its temp file")
-            assertTrue(outcome.isFailure, "a cancelled re-encode doesn't return its file")
             assertEquals(emptyList(), tempDir.listFiles().orEmpty().toList(), "the cancelled re-encode's temp file is gone")
         }
 
