@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.commons.service.http.EncryptedBlobInterceptor
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.http.SingleRoleBasedHttpClientBuilder
 import com.vitorpamplona.crypto.aes.AESGCM
+import com.vitorpamplona.crypto.sha2.sha256
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import java.awt.image.BufferedImage
@@ -92,6 +94,20 @@ class EncryptedCartDownloadTest {
 
             assertTrue(CartDetector.hasCartShape(url, dim = null, httpClients = clients))
             assertContentEquals(plaintext, clients.fetchMedia(url, maxBytes = 1 shl 20))
+        }
+
+    // A `blossom:` attachment is downloaded from the server it resolves to, and its hash names the
+    // ciphertext; the key cached under the URI must still decrypt it.
+    @Test
+    fun blossomAttachmentIsDecryptedFromTheResolvedServer() =
+        runBlocking {
+            val blobHash = sha256(ciphertext).toHexKey()
+            val keys = EncryptionKeyCache().apply { add("blossom:$blobHash.png", cipher, "image/png") }
+            val clients = clients(keys)
+            val serverUrl = url("$blobHash.png")
+
+            assertTrue(CartDetector.hasCartShape(serverUrl, dim = null, httpClients = clients))
+            assertContentEquals(plaintext, clients.fetchMedia(serverUrl, maxBytes = 1 shl 20))
         }
 
     @Test

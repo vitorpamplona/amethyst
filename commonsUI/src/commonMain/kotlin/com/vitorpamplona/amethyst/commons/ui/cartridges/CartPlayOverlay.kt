@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cart_play
 import com.vitorpamplona.amethyst.commons.resources.cart_play_description
+import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -83,8 +84,10 @@ fun CartPlayOverlay(
         val links = remember(content) { content.cartImetas?.let { CartLinks.forEntry(content.url, it) } }
         CartPlayerDialog(
             url = httpUrl,
-            // A blossom URI is its file's address, so it beats whatever hash the imeta claims.
-            sha256 = blossom?.sha256 ?: content.hash,
+            // A blossom URI is its file's address, so it beats whatever hash the imeta claims. Not
+            // for an encrypted attachment: its URI names the ciphertext, and the player checks the
+            // decrypted bytes against the plaintext hash the message records.
+            sha256 = if (content is EncryptedMediaUrlImage) content.hash else blossom?.sha256 ?: content.hash,
             links = links,
             accountViewModel = accountViewModel,
             onDismiss = { playing = false },

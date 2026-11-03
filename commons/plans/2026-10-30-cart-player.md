@@ -28,9 +28,11 @@ Amethyst adds around them.
   image client decrypts the download, so the probe and the player read plaintext and check the
   plaintext hash the message records (`EncryptedCartDownloadTest`). The interceptor drops the
   probe's Range header, so an encrypted PNG of unknown size is downloaded whole to answer it. An
-  encrypted `blossom:` URI is not offered, since its key is cached under the URI rather than the
-  server URL it resolves to. An encrypted attachment carries one file and no cart links, so it
-  plays as a single cart.
+  encrypted `blossom:` attachment works too: `EncryptionKeyCache` files a key registered under a
+  `blossom:` URI by the blob's sha256 as well, and finds it again for any server URL whose last
+  path segment is `<sha256>[.ext]` (`EncryptionKeyCacheTest`). The player then checks the
+  plaintext hash, not the URI's, which names the ciphertext. An encrypted attachment carries one
+  file and no cart links, so it plays as a single cart.
 - **Player** (`commonsUI/.../ui/cartridges/CartPlayer.kt`, `CartPlayerViewModel` in commons): the
   app holds one `KikoPlayer` per cart in `CartPlayerViewModel` (so a rotation keeps the game) and
   shows it with `KikoGame` in a full-screen dialog, adding the pause and close buttons, its
