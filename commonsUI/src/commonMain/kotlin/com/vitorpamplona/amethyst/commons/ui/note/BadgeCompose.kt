@@ -103,7 +103,7 @@ fun BadgeCompose(
                     end = if (!isInnerNote) 12.dp else 0.dp,
                     top = if (fullWidth) FullWidthCardTopPadding else 10.dp,
                     // Its accept controls end the card; leave the room a reactions row would.
-                    bottom = if (fullWidth) 10.dp else 0.dp,
+                    bottom = if (fullWidth) 5.dp else 0.dp,
                 ),
         ) {
             // Draws the like picture outside the boosted card.

@@ -52,10 +52,10 @@ val NoteHorizontalPadding = 12.dp
  * layout's 10dp: with a 35dp picture instead of a 55dp column, the header would otherwise sit
  * right under the previous card's divider and the cards of a feed would run together.
  */
-val FullWidthCardTopPadding = 16.dp
+val FullWidthCardTopPadding = 13.dp
 
 /** The space a full-width card adds below its reactions row, before the feed's divider. */
-val FullWidthCardBottomPadding = 4.dp
+val FullWidthCardBottomPadding = 2.dp
 
 /**
  * Pre-computed pixel dimensions for [NoteComposeLayout], cached via [remember]
@@ -190,7 +190,7 @@ private fun NoteComposeLayoutBoostedPreview() {
  * Picture feed cards):
  * ```
  * ┌───────────────────────────────────────────────┐
- * │ padding (start=12, end=12, top=16)            │
+ * │ padding (start=12, end=12, top=13)            │
  * │ ┌──────┐ 10dp ┌─────────────────────────────┐ │
  * │ │author│  gap  │ firstRow                    │ │
  * │ │      │       │ secondRow (optional)        │ │
@@ -199,7 +199,7 @@ private fun NoteComposeLayoutBoostedPreview() {
  * │ noteContent (full inner width)                │
  * ├───────────────────────────────────────────────┤
  * │ reactionsRow (full width, no side padding)    │
- * │ 4dp bottom padding                            │
+ * │ 2dp bottom padding                            │
  * └───────────────────────────────────────────────┘
  * ```
  * The author picture and the header rows are centered on each other, and [authorGutter]
@@ -260,8 +260,8 @@ private fun NoteComposeLayoutBoostedPreview() {
  *
  * @param modifier Applied to the Layout root. Typically includes combinedClickable
  *   for note navigation, drawBehind for background color, and fillMaxWidth.
- * @param addPadding Whether to add standard note padding (12dp sides, 10dp top; 16dp top and
- *   4dp bottom for a [fullWidth] card) to the author + content area. False for boosted notes.
+ * @param addPadding Whether to add standard note padding (12dp sides, 10dp top; 13dp top and
+ *   2dp bottom for a [fullWidth] card) to the author + content area. False for boosted notes.
  * @param showAuthorColumn Whether to reserve 55dp for the author picture column
  *   with a 10dp gap. False for boosted/quoted notes.
  * @param fullWidth Whether the author picture heads the note beside the header rows and the
