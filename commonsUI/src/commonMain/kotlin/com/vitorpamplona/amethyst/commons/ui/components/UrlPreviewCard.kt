@@ -341,6 +341,34 @@ private fun UrlPreviewIcon(
     }
 }
 
+/**
+ * A site's favicon at text size, for one-line attributions. [fallback] shows until the icon
+ * loads, and stays when it never does. Shares the refused-icon memory with the preview cards.
+ */
+@Composable
+fun SiteIcon(
+    iconUrl: String?,
+    modifier: Modifier,
+    fallback: @Composable () -> Unit,
+) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        var loaded by remember(iconUrl) { mutableStateOf(false) }
+
+        if (!loaded) fallback()
+
+        if (iconUrl != null && failedIconUrls[iconUrl] == null) {
+            AsyncImage(
+                model = iconUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
+                onSuccess = { loaded = true },
+                onError = { if (it.result.throwable is HttpException) failedIconUrls.put(iconUrl, Unit) },
+            )
+        }
+    }
+}
+
 @Composable
 private fun OpenInBrowserButton(onClick: () -> Unit) {
     IconButton(onClick = onClick) {

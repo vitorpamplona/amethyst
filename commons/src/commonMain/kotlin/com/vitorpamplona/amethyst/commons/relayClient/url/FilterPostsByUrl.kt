@@ -27,7 +27,13 @@ import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 
+/**
+ * Everything written about one web page: NIP-22 comments scoped to it (`I`) and NIP-84
+ * highlights taken from it (`r`). Highlights carry the page's address as their author wrote it,
+ * and relays match tags exactly, so the `r` query also asks for the trailing-slash twin.
+ */
 fun filterPostsByUrl(
     url: String,
     relays: Set<NormalizedRelayUrl>,
@@ -35,19 +41,42 @@ fun filterPostsByUrl(
 ): List<RelayBasedFilter> {
     val normalizedUrl = UrlId.toScopeOrNull(url) ?: return emptyList()
     val urlScopeMap = mapOf("I" to listOf(normalizedUrl))
+    val highlightSourceMap = mapOf("r" to highlightReferenceVariants(normalizedUrl))
 
-    return relays.map { relay ->
+    return relays.flatMap { relay ->
         val since = since?.get(relay)?.time
-        RelayBasedFilter(
-            relay = relay,
-            filter =
-                ExplainedFilter(
-                    purpose = SubPurpose.OTHER,
-                    tags = urlScopeMap,
-                    kinds = CommentKinds,
-                    limit = 100,
-                    since = since,
-                ),
+        listOf(
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    ExplainedFilter(
+                        purpose = SubPurpose.OTHER,
+                        tags = urlScopeMap,
+                        kinds = CommentKinds,
+                        limit = 100,
+                        since = since,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    ExplainedFilter(
+                        purpose = SubPurpose.OTHER,
+                        tags = highlightSourceMap,
+                        kinds = HighlightKinds,
+                        limit = 100,
+                        since = since,
+                    ),
+            ),
         )
     }
+}
+
+val HighlightKinds = listOf(HighlightEvent.KIND)
+
+/** [normalizedUrl] as a highlight's `r` tag may spell it: with and without a trailing slash. */
+fun highlightReferenceVariants(normalizedUrl: String): List<String> {
+    if (normalizedUrl.contains('?')) return listOf(normalizedUrl)
+    val bare = normalizedUrl.trimEnd('/')
+    return listOf(normalizedUrl, if (normalizedUrl.endsWith('/')) bare else "$bare/").distinct()
 }

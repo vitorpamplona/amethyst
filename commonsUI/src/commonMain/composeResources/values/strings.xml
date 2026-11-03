@@ -9191,4 +9191,19 @@
     <string name="wot_sheet_note">Your signer approves the sign-in. Nothing is posted to your feed.</string>
     <string name="wot_sheet_continue_with">Continue with %1$s</string>
     <string name="wot_sheet_continue">Continue</string>
+    <string name="highlight_source_note">Note</string>
+    <string name="highlight_source_article">Article</string>
+    <string name="highlight_source_wiki">Wiki page</string>
+    <string name="highlight_source_picture">Picture</string>
+    <string name="highlight_source_video">Video</string>
+    <string name="highlight_source_comment">Comment</string>
+    <string name="highlight_source_book">Book</string>
+    <string name="highlight_source_paper">Paper</string>
+    <string name="highlight_source_podcast">Podcast</string>
+    <string name="highlight_source_podcast_episode">Podcast episode</string>
+    <string name="highlight_source_movie">Movie</string>
+    <string name="highlight_source_isbn">ISBN %1$s</string>
+    <string name="highlight_source_doi">DOI %1$s</string>
+    <string name="highlight_source_isan">ISAN %1$s</string>
+    <string name="highlight_source_more_from">Notes and highlights about %1$s</string>
 </resources>

@@ -278,4 +278,51 @@ class OpenGraphParserTest {
         assertEquals("https://example.com/a.mp3", info.audio)
         assertEquals("https://example.com/v.mp4", info.video)
     }
+
+    @Test
+    fun readsSiteNameAndAuthor() {
+        val info =
+            extract(
+                """
+                |<head>
+                |  <meta property="og:title" content="Rewilding Software Engineering">
+                |  <meta property="og:site_name" content="Medium">
+                |  <meta property="article:author" content="https://medium.com/@tudor">
+                |  <meta name="author" content="Tudor Girba">
+                |</head>
+                """.trimMargin(),
+            )
+
+        assertEquals("Medium", info.siteName)
+        // The profile URL in article:author is skipped, so the name-valued key fills it.
+        assertEquals("Tudor Girba", info.author)
+    }
+
+    @Test
+    fun dropsBotCheckOpenGraphTitles() {
+        val info = extract("""<head><meta property="og:title" content="Attention Required! | Cloudflare"></head>""")
+
+        assertEquals("", info.title)
+    }
+
+    @Test
+    fun dropsBotCheckTitles() {
+        val info = OpenGraphParser().extractUrlInfo(MetaTagsParser.parse("<head><title>Just a moment...</title></head>", includeTitleAndIcons = true))
+
+        assertEquals("", info.title)
+    }
+
+    @Test
+    fun keepsRealTitlesThatStartLikeAnErrorPage() {
+        val info = extract("""<head><meta property="og:title" content="Access denied: how DRM failed"></head>""")
+
+        assertEquals("Access denied: how DRM failed", info.title)
+    }
+
+    @Test
+    fun keepsTitlesThatMerelyMentionWaiting() {
+        val info = OpenGraphParser().extractUrlInfo(MetaTagsParser.parse("<head><title>Why we wait: a short essay</title></head>", includeTitleAndIcons = true))
+
+        assertEquals("Why we wait: a short essay", info.title)
+    }
 }

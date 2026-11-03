@@ -32,11 +32,30 @@ class FilterPostsByUrlTest {
         val relay = NormalizedRelayUrl("wss://relay.example/")
         val filters = filterPostsByUrl("HTTPS://Example.com/path?b=2&a=1#section", setOf(relay), null)
 
-        assertEquals(1, filters.size)
+        assertEquals(2, filters.size)
         assertEquals(relay, filters[0].relay)
         assertEquals(CommentKinds, filters[0].filter.kinds)
         assertEquals(mapOf("I" to listOf("https://example.com/path?b=2&a=1")), filters[0].filter.tags)
         assertEquals(100, filters[0].filter.limit)
+    }
+
+    @Test
+    fun alsoQueriesHighlightsTakenFromThePage() {
+        val relay = NormalizedRelayUrl("wss://relay.example/")
+        val filters = filterPostsByUrl("https://medium.com/feenk/rewilding-software-engineering-083b86c81c43", setOf(relay), null)
+
+        val highlights = filters.single { it.filter.kinds == HighlightKinds }
+        assertEquals(relay, highlights.relay)
+        assertEquals(
+            mapOf(
+                "r" to
+                    listOf(
+                        "https://medium.com/feenk/rewilding-software-engineering-083b86c81c43",
+                        "https://medium.com/feenk/rewilding-software-engineering-083b86c81c43/",
+                    ),
+            ),
+            highlights.filter.tags,
+        )
     }
 
     @Test
