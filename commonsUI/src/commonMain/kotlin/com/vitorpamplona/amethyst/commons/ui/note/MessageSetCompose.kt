@@ -49,8 +49,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.commons.ui.painterRes
-import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
-import com.vitorpamplona.amethyst.commons.ui.theme.FullWidthHeaderSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
@@ -101,30 +99,12 @@ fun MessageSetCompose(
         }
 
     Column(columnModifier) {
-        if (LocalDisplaySettings.current.fullWidthNotes) {
-            // Full width: a full-width note's header with the DM icon in the picture slot and the
-            // sender's row beside it, then the message across the whole width. The message skips
-            // its own author row because the header already shows it.
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                MessageIconBox()
+        Row(Modifier.fillMaxWidth()) {
+            MessageIconBox()
 
-                Box(StdStartPadding.weight(1f)) {
-                    val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
-                    FirstUserInfoRow(
-                        baseNote = baseNote,
-                        showAuthorPicture = false,
-                        isPinned = false,
-                        editState = editState,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
-            }
-
-            ProvideNotificationBoostedNoteFrame(headerShown = true) {
+            Column(modifier = StdStartPadding) {
                 NoteCompose(
                     baseNote = baseNote,
-                    modifier = FullWidthHeaderSpacer,
                     routeForLastRead = null,
                     isBoostedNote = true,
                     isHiddenFeed = showHidden,
@@ -133,39 +113,22 @@ fun MessageSetCompose(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
-            }
-        } else {
-            Row(Modifier.fillMaxWidth()) {
-                MessageIconBox()
 
-                Column(modifier = StdStartPadding) {
-                    NoteCompose(
-                        baseNote = baseNote,
-                        routeForLastRead = null,
-                        isBoostedNote = true,
-                        isHiddenFeed = showHidden,
-                        quotesLeft = 1,
-                        parentBackgroundColor = backgroundColor,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                if (popupExpanded.value) {
+                    NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
                 }
             }
-        }
-
-        if (popupExpanded.value) {
-            NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
         }
     }
 }
 
 @Composable
 fun MessageIconBox() {
-    GalleryIconColumn(Modifier.width(55.dp).padding(top = 5.dp, end = 5.dp)) { iconAlignment ->
+    Box(Modifier.width(55.dp).padding(top = 5.dp, end = 5.dp)) {
         Icon(
             painter = painterRes(Res.drawable.ic_dm, 4),
             null,
-            modifier = Modifier.size(16.dp).align(iconAlignment),
+            modifier = Modifier.size(16.dp).align(Alignment.TopEnd),
             tint = MaterialTheme.colorScheme.primary,
         )
     }

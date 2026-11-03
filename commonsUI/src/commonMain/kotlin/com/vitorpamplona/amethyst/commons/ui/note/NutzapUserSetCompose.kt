@@ -49,12 +49,10 @@ import com.vitorpamplona.amethyst.commons.ui.note.AuthorGalleryZaps
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.calculateBackgroundColor
-import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.util.showAmount
@@ -102,10 +100,6 @@ fun NutzapUserSetCompose(
                 }.toImmutableList()
         }
 
-    // Full width: the kind icon heads the gallery row in the picture slot, and the zapped user's
-    // row is a full-width header (35dp picture, name beside it) instead of sitting in the column.
-    val fullWidth = !isInnerNote && LocalDisplaySettings.current.fullWidthNotes
-
     Column(
         modifier =
             Modifier
@@ -122,7 +116,7 @@ fun NutzapUserSetCompose(
                     top = 10.dp,
                 ),
         ) {
-            if (!isInnerNote && !fullWidth) {
+            if (!isInnerNote) {
                 Box(
                     modifier = Size55Modifier,
                 ) {
@@ -139,28 +133,18 @@ fun NutzapUserSetCompose(
 
             Column(modifier = Modifier) {
                 Row(Modifier.fillMaxWidth()) {
-                    if (fullWidth) {
-                        GalleryIconColumn { iconAlignment ->
-                            Icon(
-                                imageVector = CustomHashTagIcons.Cashu,
-                                contentDescription = stringRes(Res.string.nutzap),
-                                modifier = Modifier.size(Size25dp).align(iconAlignment),
-                                tint = BitcoinOrange,
-                            )
-                        }
-                    }
                     AuthorGalleryZaps(authorComments, backgroundColor, nav, accountViewModel)
                 }
 
                 Spacer(DoubleVertSpacer)
 
                 Row(
-                    Modifier.padding(start = if (!isInnerNote && !fullWidth) 10.dp else 0.dp).fillMaxWidth(),
+                    Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp).fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     UserPicture(
                         nutzapSetCard.user,
-                        if (fullWidth) Size35dp else Size55dp,
+                        Size55dp,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

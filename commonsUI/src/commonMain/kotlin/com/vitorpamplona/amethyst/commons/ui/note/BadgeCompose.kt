@@ -26,7 +26,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -52,9 +51,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.types.AcceptBadgeControls
 import com.vitorpamplona.amethyst.commons.ui.note.types.BadgeDisplay
-import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
@@ -78,10 +75,6 @@ fun BadgeCompose(
             accountViewModel = accountViewModel,
         )
 
-    // Full width: the badge icon takes the picture slot of a full-width header, beside the title,
-    // and the badge and its controls use the whole width below.
-    val fullWidth = !isInnerNote && LocalDisplaySettings.current.fullWidthNotes
-
     Column(
         modifier =
             Modifier
@@ -104,7 +97,7 @@ fun BadgeCompose(
                 ),
         ) {
             // Draws the like picture outside the boosted card.
-            if (!isInnerNote && !fullWidth) {
+            if (!isInnerNote) {
                 Box(
                     modifier = Modifier.width(55.dp).padding(0.dp),
                 ) {
@@ -117,27 +110,12 @@ fun BadgeCompose(
                 }
             }
 
-            Column(modifier = Modifier.padding(start = if (!isInnerNote && !fullWidth) 10.dp else 0.dp)) {
-                Row(
-                    modifier = if (fullWidth) Modifier.padding(bottom = 8.dp) else Modifier,
-                    verticalAlignment = if (fullWidth) Alignment.CenterVertically else Alignment.Top,
-                ) {
-                    if (fullWidth) {
-                        GalleryIconColumn { iconAlignment ->
-                            Icon(
-                                symbol = MaterialSymbols.MilitaryTech,
-                                null,
-                                modifier = Modifier.size(25.dp).align(iconAlignment),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        Spacer(DoubleHorzSpacer)
-                    }
-
+            Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
+                Row {
                     Text(
                         stringRes(Res.string.new_badge_award_notif),
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = if (fullWidth) 0.dp else 5.dp).weight(1f),
+                        modifier = Modifier.padding(bottom = 5.dp).weight(1f),
                     )
 
                     Text(
