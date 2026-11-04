@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastMsg
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastSeverity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import org.jetbrains.compose.resources.StringResource
@@ -30,7 +31,7 @@ import org.jetbrains.compose.resources.StringResource
 @Immutable
 class MultiErrorToastMsg(
     val titleResId: StringResource,
-) : ToastMsg() {
+) : ToastMsg(ToastSeverity.ERROR) {
     val errors = MutableStateFlow<List<UserBasedErrorMessage>>(emptyList())
 
     fun add(

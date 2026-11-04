@@ -58,19 +58,24 @@ import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
+import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
+import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
+import com.vitorpamplona.amethyst.commons.napplet.WebxdcLaunch
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
 import com.vitorpamplona.amethyst.commons.util.withString
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.serialization.json.JsonObject
+import kotlin.concurrent.thread
 
 /**
  * Provider for an **embedded** nsite/napplet tab — the in-app-tab counterpart of [NappletHostActivity].
@@ -110,6 +115,8 @@ class NappletHostService : Service() {
         // Opaque per-account WebView storage-profile name (see NappletWebViewProfile).
         val webViewProfile: String?,
         val declaredDomains: List<String>,
+        // Set for a webxdc app: its archive and who runs it.
+        val webxdc: WebxdcLaunch? = null,
     ) {
         // Read on the WebView worker thread in shouldInterceptRequest; written on the main thread in
         // createHostWebView — @Volatile gives the happens-before so the worker never sees a stale null.
@@ -164,8 +171,8 @@ class NappletHostService : Service() {
     private val tabs = mutableMapOf<String, NappletTab>()
 
     // The shell HTML and shim never change; read+decode them once instead of per tab on the main thread.
-    private val shellHtml: ByteArray by lazy { readContractAsset(NappletWebContract.SHELL_HTML_PATH) }
-    private val shimJs: String by lazy { readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString() }
+    private val shellHtml: ByteArray by lazy { readContractAsset(NappletWebResources.SHELL_HTML_PATH) }
+    private val shimJs: String by lazy { readContractAsset(NappletWebResources.SHIM_JS_PATH).decodeToString() }
 
     // ---- broker bridge: ONE binding shared by all tabs; per-message replyTo scopes the routing ----
     private var brokerMessenger: Messenger? = null
@@ -303,7 +310,9 @@ class NappletHostService : Service() {
         val sessionId = data.getString(NappletEmbedContract.KEY_SESSION_ID) ?: return null
         val pathList = data.getStringArrayList(NappletHostContract.EXTRA_PATHS) ?: return null
         val hashList = data.getStringArrayList(NappletHostContract.EXTRA_HASHES) ?: return null
-        if (pathList.size != hashList.size || pathList.isEmpty()) return null
+        val webxdc = NappletHostContract.webxdcOf(data)
+        // A webxdc app's one file is its archive, which comes as its own extra.
+        if (pathList.size != hashList.size || (pathList.isEmpty() && webxdc == null)) return null
         val author = data.getString(NappletHostContract.EXTRA_AUTHOR).orEmpty()
         val launchToken = data.getString(NappletHostContract.EXTRA_LAUNCH_TOKEN).orEmpty()
         if (author.isEmpty() || launchToken.isEmpty()) return null
@@ -328,6 +337,7 @@ class NappletHostService : Service() {
                 themeType = data.getString(NappletHostContract.EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" },
                 webViewProfile = data.getString(NappletHostContract.EXTRA_WEBVIEW_PROFILE),
                 declaredDomains = declaredDomains,
+                webxdc = webxdc,
             )
         return tab
     }
@@ -407,7 +417,9 @@ class NappletHostService : Service() {
         // Fail closed: Tor is wanted but has no port yet. Nothing may be fetched — not the applet's blobs (the
         // content server would fetch them directly) and not its own traffic — so leave a blank placeholder and
         // tell the client, whose Retry sends the port once Tor is up.
-        if (tab.useTor && tab.proxyPort <= 0) {
+        // The same when WebRTC must be taken away and this WebView can't: its UDP would be a network the
+        // app must not have (a napplet, a webxdc app) or go around Tor.
+        if ((tab.useTor && tab.proxyPort <= 0) || (NappletWebRtcGuard.isNeeded(tab.profile, tab.useTor) && !NappletWebRtcGuard.isSupported())) {
             val blank = WebView(nightThemedContext(context, tab.themeType)).apply { setBackgroundColor(tab.bgColor) }
             tab.webView = blank
             reportRouteBlocked(tab)
@@ -419,7 +431,7 @@ class NappletHostService : Service() {
         // profile has otherwise been used), so the storage partition must be chosen before the
         // hardening/bridge setup and the loadUrl below.
         NappletWebViewProfile.apply(context, wv, tab.webViewProfile)
-        val appOrigin = NappletWebContract.appOrigin(deriveAppId(tab.author, tab.identifier))
+        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(tab.author, tab.identifier, profile = tab.profile), tab.profile)
         val effectiveProxy = if (tab.useTor) tab.proxyPort else -1
         tab.contentServer =
             NappletContentServer(
@@ -427,12 +439,14 @@ class NappletHostService : Service() {
                 tab.servers,
                 effectiveProxy,
                 cacheDir,
+                NappletBlobCache.partitionOf(tab.webViewProfile.orEmpty(), tab.author, tab.identifier),
                 shellHtml,
                 shimJs,
                 appOrigin,
                 tab.profile,
                 tab.declaredDomains,
                 imeProxy = true,
+                webxdc = tab.webxdc,
             )
 
         hardenWebView(wv, tab)
@@ -457,6 +471,35 @@ class NappletHostService : Service() {
                 torPort = effectiveProxy,
                 onFailed = { reportRouteBlocked(tab) },
             ) { if (tab.webView === wv) wv.loadUrl(NappletWebContract.SHELL_URL) }
+        } else if (tab.webxdc != null) {
+            // A webxdc archive downloads on first use, inside the page's own request, where a failure
+            // is only a 404 in an empty frame. Fetch it first, as the activity does, so a miss shows
+            // the retry instead.
+            val server = tab.contentServer
+            pushLoadState(tab, isLoading = true)
+            thread(name = "webxdc-probe", isDaemon = true) {
+                val available =
+                    server?.isAvailable(NappletSiteServer.INDEX_PATH) { download ->
+                        // This probe's WebView only: a rebuilt tab's newer probe owns the bar now.
+                        probeResults.post { if (tabs[tab.sessionId] === tab && tab.webView === wv) pushDownload(tab, download) }
+                    } == true
+                probeResults.post {
+                    if (tabs[tab.sessionId] !== tab || tab.webView !== wv) return@post
+                    // The watch stops with the probe and may miss the download's end.
+                    pushDownload(tab, null)
+                    if (available) {
+                        wv.loadUrl(NappletWebContract.SHELL_URL)
+                    } else {
+                        // Dropped, so the client's retry builds the tab again, with a new download.
+                        (wv.parent as? ViewGroup)?.removeView(wv)
+                        wv.destroy()
+                        tab.webView = null
+                        tab.bridgeReplyProxy = null
+                        tab.loadFailed = true
+                        pushLoadState(tab, isLoading = false)
+                    }
+                }
+            }
         } else {
             wv.loadUrl(NappletWebContract.SHELL_URL)
         }
@@ -518,6 +561,8 @@ class NappletHostService : Service() {
         }
         wv.overScrollMode = View.OVER_SCROLL_NEVER
         WebView.setWebContentsDebuggingEnabled(false)
+        if (NappletWebRtcGuard.isNeeded(tab.profile, tab.useTor)) NappletWebRtcGuard.install(wv)
+        NappletWebRtcGuard.installCookieGuard(wv)
         wv.webViewClient = HostClient(tab)
         wv.webChromeClient = HostChromeClient(tab)
     }
@@ -692,7 +737,7 @@ class NappletHostService : Service() {
         ): Boolean {
             val uri = request.url
             if (NappletWebContract.isInternalHost(uri.host)) return false
-            if (request.hasGesture() && (uri.scheme == "https" || uri.scheme == "http")) {
+            if (tab.profile.opensLinks && request.hasGesture() && (uri.scheme == "https" || uri.scheme == "http")) {
                 runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             }
             return true
@@ -761,6 +806,24 @@ class NappletHostService : Service() {
                         putBoolean(NappletEmbedContract.KEY_LOAD_FAILED, tab.loadFailed)
                         putBoolean(NappletEmbedContract.KEY_RENDERER_GONE, rendererGone)
                         putBoolean(NappletEmbedContract.KEY_ROUTE_BLOCKED, routeBlocked)
+                    }
+            }
+        tab.toClient(message)
+    }
+
+    /** Tells the client how far the tab's download has come, or (null) that it ended, for its loading bar. */
+    private fun pushDownload(
+        tab: NappletTab,
+        download: NappletDownloadProgress?,
+    ) {
+        val message =
+            Message.obtain(null, NappletEmbedContract.MSG_DOWNLOAD).apply {
+                data =
+                    Bundle().apply {
+                        if (download != null) {
+                            putLong(NappletEmbedContract.KEY_DOWNLOAD_BYTES, download.bytes)
+                            putLong(NappletEmbedContract.KEY_DOWNLOAD_TOTAL, download.total ?: -1)
+                        }
                     }
             }
         tab.toClient(message)
@@ -837,12 +900,19 @@ class NappletHostService : Service() {
 
     private val heldExpiry = Handler(Looper.getMainLooper())
 
+    // Where a webxdc tab's availability probe hands its answer back to the main thread.
+    private val probeResults = Handler(Looper.getMainLooper())
+
     /** Tells the broker whether [tab] is being looked at, which gates decrypting its relay reads. */
     private fun reportAttended(tab: NappletTab) {
         val msg =
             Message.obtain(null, NappletIpc.MSG_SET_ATTENDED).apply {
                 replyTo = tab.replyMessenger
-                data = Bundle().apply { putBoolean(NappletIpc.KEY_ATTENDED, tab.attended) }
+                data =
+                    Bundle().apply {
+                        putBoolean(NappletIpc.KEY_ATTENDED, tab.attended)
+                        putString(NappletIpc.KEY_LAUNCH_TOKEN, tab.launchToken)
+                    }
             }
         if (brokerMessenger == null) pendingBrokerRequests.add(msg) else sendToBroker(msg)
     }
@@ -919,12 +989,7 @@ class NappletHostService : Service() {
         tab.toClient(message)
     }
 
-    private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
-
-    private fun deriveAppId(
-        author: String,
-        identifier: String,
-    ): String = "n" + sha256("$author:$identifier".encodeToByteArray()).toHexKey().take(31)
+    private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebResources.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
 
     private companion object {
         private const val TAG = "NappletHostService"

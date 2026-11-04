@@ -27,6 +27,8 @@ import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.ui.layouts.WidthClass
 import com.vitorpamplona.amethyst.commons.ui.layouts.widthClassOf
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberDetailPaneSelection
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.CollapseOpenChatToFullScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.singlepane.MessagesSinglePane
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.twopane.MessagesTwoPane
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -41,10 +43,14 @@ fun MessagesScreen(
     // drawer / notification panel, so window-level size classes would overestimate.
     // widthClassOf keeps the Compact/Medium/Expanded breakpoints in one place (the shell's)
     // instead of restating 600/840 here.
+    // Above the size switch, so the open chat outlives a collapse to Compact (handed over below).
+    val selection = rememberDetailPaneSelection()
+
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val paneWidthClass = widthClassOf(maxWidth)
 
         if (paneWidthClass == WidthClass.Compact) {
+            CollapseOpenChatToFullScreen(selection, nav)
             MessagesSinglePane(
                 knownFeedContentState = accountViewModel.feedStates.dmKnown,
                 newFeedContentState = accountViewModel.feedStates.dmNew,
@@ -56,6 +62,8 @@ fun MessagesScreen(
                 knownFeedContentState = accountViewModel.feedStates.dmKnown,
                 newFeedContentState = accountViewModel.feedStates.dmNew,
                 widthSizeClass = paneWidthClass,
+                selection = selection,
+                paneWidth = maxWidth.value,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

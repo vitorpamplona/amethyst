@@ -1,0 +1,14 @@
+// Flathub builds without network: every repository settings.gradle.kts
+// declares is replaced by the Maven repository the manifest lays out from
+// gradle-sources-*.json, so nothing can reach the network even by accident.
+def offlineRepo = new File(System.getenv('AMETHYST_OFFLINE_REPO') ?: 'offline-repository').absoluteFile
+if (!offlineRepo.isDirectory()) {
+    throw new GradleException("No offline Maven repository at ${offlineRepo}")
+}
+
+settingsEvaluated { settings ->
+    [settings.pluginManagement.repositories, settings.dependencyResolutionManagement.repositories].each { repos ->
+        repos.clear()
+        repos.maven { url = offlineRepo.toURI() }
+    }
+}

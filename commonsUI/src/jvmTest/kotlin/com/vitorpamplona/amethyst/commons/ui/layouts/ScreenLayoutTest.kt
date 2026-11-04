@@ -106,4 +106,39 @@ class ScreenLayoutTest {
         assertStyle(NavigationStyle.NAV_RAIL, 1200, 599)
         assertTrue(hasRoomForNotificationPanel(1200))
     }
+
+    // ---- Folded notification strip in the pane fit ----
+
+    @Test
+    fun foldedStripReservesItsWidthSoTheCenterKeepsItsMinimum() {
+        // Window 1000, drawer dragged to 480, panel folded to its 48dp strip: counting the strip,
+        // the drawer must give up the 8dp the strip takes past the center's 480dp minimum.
+        val fitted =
+            fitPaneWidths(
+                windowWidth = 1_000f,
+                drawer = 480f,
+                notifications = null,
+                showDrawer = true,
+                showNotifications = false,
+                notificationStripWidth = NotificationPanelCollapsedWidth.value,
+            )
+        assertEquals(472f, fitted.drawer)
+        // 1000 - 472 (drawer) - 48 (strip) = 480: the center pane keeps exactly its minimum.
+        assertEquals(MIN_CENTER_PANE_DP, 1_000f - fitted.drawer - NotificationPanelCollapsedWidth.value)
+    }
+
+    @Test
+    fun withoutTheStripTheSameFitNarrowsNothing() {
+        // The strip is the only difference from the case above: uncounted, the drawer keeps the
+        // full dragged width and the center would silently drop to 432dp.
+        val fitted =
+            fitPaneWidths(
+                windowWidth = 1_000f,
+                drawer = 480f,
+                notifications = null,
+                showDrawer = true,
+                showNotifications = false,
+            )
+        assertEquals(480f, fitted.drawer)
+    }
 }

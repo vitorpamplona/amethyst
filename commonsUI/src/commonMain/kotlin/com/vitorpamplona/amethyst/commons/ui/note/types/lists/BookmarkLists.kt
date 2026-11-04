@@ -20,26 +20,44 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types.lists
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.kind_article_curation_set
 import com.vitorpamplona.amethyst.commons.resources.kind_bookmark_list
 import com.vitorpamplona.amethyst.commons.resources.kind_bookmark_set
 import com.vitorpamplona.amethyst.commons.resources.kind_picture_curation_set
+import com.vitorpamplona.amethyst.commons.resources.nip51_bookmark_count_hashtags
+import com.vitorpamplona.amethyst.commons.resources.nip51_bookmark_count_links
+import com.vitorpamplona.amethyst.commons.resources.nip51_bookmark_count_notes
+import com.vitorpamplona.amethyst.commons.resources.nip51_bookmark_count_people
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.types.TopicChipFlow
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.pictureCurationSet.PictureCurationSetEvent
+import kotlinx.collections.immutable.toImmutableList
+
+/** How many hashtag chips a bookmark card shows before a "+N more" chip. */
+private const val COLLAPSED_HASHTAGS = 12
 
 /** NIP-51 kind 10003: the user's bookmarks — notes, articles, hashtags and links. */
 @Composable
@@ -52,8 +70,8 @@ fun RenderBookmarkList(
 ) {
     val noteEvent = baseNote.event as? BookmarkListEvent ?: return
 
-    val public = remember(noteEvent) { noteEvent.publicBookmarks() }
-    val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateBookmarks(it) }
+    val public = remember(noteEvent) { noteEvent.tags.bookmarkItems() }
+    val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateTags(it)?.bookmarkItems() }
 
     BookmarkCard(
         title = listTitle(noteEvent.title(), null, Res.string.kind_bookmark_list),
@@ -83,8 +101,8 @@ fun RenderOldBookmarkList(
 ) {
     val noteEvent = baseNote.event as? OldBookmarkListEvent ?: return
 
-    val public = remember(noteEvent) { noteEvent.publicBookmarks() }
-    val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateBookmarks(it) }
+    val public = remember(noteEvent) { noteEvent.tags.bookmarkItems() }
+    val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateTags(it)?.bookmarkItems() }
 
     BookmarkCard(
         title = listTitle(noteEvent.title(), noteEvent.dTag(), Res.string.kind_bookmark_list),
@@ -110,8 +128,8 @@ fun RenderBookmarkSet(
 ) {
     val noteEvent = baseNote.event as? BookmarkSetEvent ?: return
 
-    val public = remember(noteEvent) { noteEvent.publicBookmarks() }
-    val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateBookmarks(it) }
+    val public = remember(noteEvent) { noteEvent.tags.bookmarkItems() }
+    val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateTags(it)?.bookmarkItems() }
 
     BookmarkCard(
         title = listTitle(noteEvent.titleOrName(), noteEvent.dTag(), Res.string.kind_bookmark_set),
@@ -137,8 +155,8 @@ fun RenderArticleCurationSet(
 ) {
     val noteEvent = baseNote.event as? ArticleCurationSetEvent ?: return
 
-    val public = remember(noteEvent) { noteEvent.publicItems() }
-    val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateItems(it) }
+    val public = remember(noteEvent) { noteEvent.tags.bookmarkItems() }
+    val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateTags(it)?.bookmarkItems() }
 
     BookmarkCard(
         title = listTitle(noteEvent.title(), noteEvent.dTag(), Res.string.kind_article_curation_set),
@@ -164,8 +182,8 @@ fun RenderPictureCurationSet(
 ) {
     val noteEvent = baseNote.event as? PictureCurationSetEvent ?: return
 
-    val public = remember(noteEvent) { noteEvent.publicItems() }
-    val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateItems(it) }
+    val public = remember(noteEvent) { noteEvent.tags.bookmarkItems() }
+    val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateTags(it)?.bookmarkItems() }
 
     BookmarkCard(
         title = listTitle(noteEvent.title(), noteEvent.dTag(), Res.string.kind_picture_curation_set),
@@ -182,29 +200,74 @@ fun RenderPictureCurationSet(
 
 /**
  * The five bookmark-shaped kinds differ only in where their name comes from; what they hold is the
- * same `e`/`a` reference, so the body they draw is the same one.
+ * same mix of notes, addressables, hashtags, links and people, so the body they draw is the same one.
+ *
+ * Hashtags are short, so they go in the header as a row of chips that open their feeds; the rest
+ * are rows under it, collapsed like any other list card.
  */
 @Composable
 private fun BookmarkCard(
     title: String,
     description: String?,
-    public: List<BookmarkIdTag>,
-    private: List<BookmarkIdTag>?,
+    public: List<BookmarkItem>,
+    private: List<BookmarkItem>?,
     hidesPrivate: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val all = remember(public, private) { distinctBookmarkMembers(public, private) }
+    val counts = remember(all) { BookmarkCounts.of(all) }
+    val hashtags = remember(all) { all.mapNotNull { (it as? BookmarkItem.Hashtag)?.hashtag }.toImmutableList() }
+    val rows = remember(all) { all.filter { it !is BookmarkItem.Hashtag } }
+
     ListCard(
         title = title,
         description = description,
-        items = rememberAllMembers(public, private),
-        hasUnreadablePrivateItems = hidesPrivate,
+        items = rows,
+        hasUnreadablePrivateItems = hidesPrivate && hashtags.isEmpty(),
         backgroundColor = backgroundColor,
+        subtitle = {
+            BookmarkCountsLine(counts)
+            if (hashtags.isNotEmpty()) {
+                Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp)) {
+                    // The chips sit above the member rows, outside their collapse, so a list of
+                    // hundreds of hashtags would otherwise be hundreds of chips in a feed row.
+                    TopicChipFlow(hashtags, nav, maxShown = COLLAPSED_HASHTAGS)
+                }
+            }
+        },
     ) { item ->
-        key(item.toTagIdOnly().joinToString(":")) {
-            BookmarkMemberRow(item, quotesLeft, backgroundColor, accountViewModel, nav)
+        key(item.key) {
+            when (item) {
+                is BookmarkItem.NoteRef -> BookmarkMemberRow(item.tag, quotesLeft, backgroundColor, accountViewModel, nav)
+                is BookmarkItem.Link -> LinkMemberRow(item.url, accountViewModel, nav)
+                is BookmarkItem.Person -> UserMemberRow(item.pubKey, accountViewModel, nav)
+                is BookmarkItem.Hashtag -> HashtagMemberRow(item.hashtag, nav)
+            }
         }
     }
+}
+
+/** "3 notes · 2 hashtags · 1 link", skipping the kinds the list does not hold. */
+@Composable
+private fun BookmarkCountsLine(counts: BookmarkCounts) {
+    val notes = if (counts.notes > 0) pluralStringRes(Res.plurals.nip51_bookmark_count_notes, counts.notes, counts.notes) else null
+    val hashtags = if (counts.hashtags > 0) pluralStringRes(Res.plurals.nip51_bookmark_count_hashtags, counts.hashtags, counts.hashtags) else null
+    val links = if (counts.links > 0) pluralStringRes(Res.plurals.nip51_bookmark_count_links, counts.links, counts.links) else null
+    val people = if (counts.people > 0) pluralStringRes(Res.plurals.nip51_bookmark_count_people, counts.people, counts.people) else null
+
+    val line = remember(notes, hashtags, links, people) { listOfNotNull(notes, hashtags, links, people).joinToString(" · ") }
+    if (line.isEmpty()) return
+
+    Text(
+        text = line,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 2.dp),
+    )
 }

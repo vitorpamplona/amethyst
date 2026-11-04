@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
 import java.nio.file.Files
 
@@ -88,8 +88,10 @@ class StaticSitePublisher(
                 val hash = sha256(bytes).toHexKey()
                 val mime = runCatching { Files.probeContentType(file.toPath()) }.getOrNull() ?: "application/octet-stream"
                 val auth = BlossomAuth.createUploadAuth(hash, file.length(), "Upload ${file.name}", signer)
-                val result = client.upload(file, mime, server, auth)
-                UploadedFile(webPath, result.sha256 ?: hash, result.size ?: file.length(), result.url)
+                // A republish sends unchanged files again; a server that already holds one may refuse it.
+                val result = client.uploadOrHeld(hash, file.length(), mime, server) { client.upload(file, mime, server, auth) }
+                require(result.sha256 == null || result.sha256.equals(hash, ignoreCase = true)) { "Upload server returned a different artifact hash" }
+                UploadedFile(webPath, hash, file.length(), result.url)
             }
         return Result(uploaded)
     }

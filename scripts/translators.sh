@@ -36,6 +36,10 @@
 #   sinceLastTag  A rolling snapshot of who has translated since the last release
 #                 tag — each entry is { user, languages } — refreshed on every
 #                 --seed run. The offline credit block is generated from this.
+#                 Members with no languages in the window are left out.
+# and one hand-kept list:
+#   ignore        Crowdin usernames never credited, such as the maintainer account
+#                 that uploads machine translations and key removals.
 #
 # Requires: bash, jq (always); curl, git (only for --seed/--raw).
 #
@@ -63,7 +67,7 @@ while [ $# -gt 0 ]; do
     --mapping) MAPPING="${2:?--mapping needs a value}"; shift 2 ;;
     --raw)     RAW=1; shift ;;
     --seed)    SEED=1; shift ;;
-    -h|--help) sed -n '2,45p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,49p' "$0"; exit 0 ;;
     *)         die "unknown argument: $1" ;;
   esac
 done
@@ -71,40 +75,46 @@ done
 command -v jq >/dev/null || die "jq not found"
 [ -f "$MAPPING" ] || die "mapping file not found: $MAPPING"
 
-# Render the "## Translations" block from a {langs, unmapped} accumulator. Shared
-# by the offline and online paths so they produce byte-identical output.
-RENDER_BLOCK='
-  "## Translations\n"
-  + ( [ .langs | to_entries[] | "- \(.key) by " + (.value | sort | join(" and ")) ] | sort | join("\n") )
-  + ( if (.unmapped|length) > 0
-      then "\n\n# UNMAPPED (no npub in translators.json — add it under mappings):\n"
-           + ( [ .unmapped | unique[] | "#   - " + . ] | join("\n") )
-      else "" end )'
+# Crowdin's report names some languages "<Language>, <Variant>"; the changelogs
+# write them the way people say them.
+LANGUAGE_NAMES='{ "Portuguese, Brazilian": "Brazilian Portuguese" }'
 
 # ---------------------------------------------------------------------------
 # Default (offline): generate the credits straight from the committed file.
 # This is the release-time command — no token, no network. It reads the
 # sinceLastTag snapshot (which CI keeps fresh, with each translator's languages)
 # and resolves npubs via the forever-growing mappings registry.
+#
+# One line per translator, with all their languages ("Czech, German, and
+# Swedish by @npub"); translators with the same languages share a line. Entries
+# with no languages (Crowdin lists every project member, active or not) and
+# users under `ignore` (whoever uploads machine translations) are left out.
 # ---------------------------------------------------------------------------
 if [ "$SEED" = "0" ] && [ "$RAW" = "0" ]; then
-  jq -r "
-    (.mappings // {}) as \$map
-    | ( \$map | with_entries(.key |= ascii_downcase) ) as \$byname
-    | ( (.sinceLastTag.translators // [])
-        | map(if type == \"object\" then . else { user: ., languages: [] } end) ) as \$list
-    | reduce \$list[] as \$t ({ langs: {}, unmapped: [] };
-        (\$t.user) as \$u
-        | ( \$byname[\$u | ascii_downcase] // \$map[\$u] ) as \$npub
-        | ( if (\$t.languages | length) > 0 then \$t.languages else [\"(unknown language)\"] end ) as \$langs
-        | if (\$npub | type) == \"string\" and (\$npub | length) > 0 then
-            reduce \$langs[] as \$l (.; .langs[\$l] = ((.langs[\$l] // []) + [\"@\(\$npub)\"] | unique))
-          else
-            .unmapped += [\$u]
-          end
-      )
-    | $RENDER_BLOCK
-  " "$MAPPING"
+  jq -r --argjson names "$LANGUAGE_NAMES" '
+    def oxford: if length <= 2 then join(" and ") else (.[:-1] | join(", ")) + ", and " + .[-1] end;
+    (.mappings // {}) as $map
+    | ( $map | with_entries(.key |= ascii_downcase) ) as $byname
+    | ( (.ignore // []) | map(ascii_downcase) ) as $ignore
+    | [ (.sinceLastTag.translators // [])[]
+        | if type == "object" then . else { user: ., languages: [] } end
+        | select((.languages // []) | length > 0)
+        | select((.user | ascii_downcase) as $u | $ignore | index($u) | not)
+        | . + { npub: ($byname[.user | ascii_downcase] // $map[.user]) } ] as $active
+    | ( [ $active[] | select((.npub | type) == "string" and (.npub | length) > 0) ]
+        | group_by(.npub)
+        | map({ npub: .[0].npub, langs: ([ .[].languages[] | $names[.] // . ] | unique) })
+        | group_by(.langs)
+        | map("- \(.[0].langs | oxford) by \([ .[] | "@\(.npub)" ] | join(" and "))")
+        | sort ) as $lines
+    | ( [ $active[] | select((.npub | type) != "string" or (.npub | length) == 0)
+          | "\(.user) (\(.languages | join(", ")))" ] | unique ) as $unmapped
+    | "## Translations\n\n" + ($lines | join("\n"))
+      + ( if ($unmapped | length) > 0
+          then "\n\n# UNMAPPED (no npub in translators.json — add it under mappings):\n"
+               + ( [ $unmapped[] | "#   - " + . ] | join("\n") )
+          else "" end )
+  ' "$MAPPING"
   exit 0
 fi
 
@@ -191,6 +201,9 @@ if [ "$SEED" = "1" ]; then
           user: (.user.username // (.user.id|tostring)),
           languages: ([ (.languages // [])[] | .name ] | unique)
         } ] as $contribs
+    | ( ($file.ignore // []) | map(ascii_downcase) ) as $ignore
+    | [ $contribs[] | select(.languages | length > 0)
+        | select((.user | ascii_downcase) as $u | $ignore | index($u) | not) ] as $active
     | ( $contribs | map(.user) ) as $names
     | ( reduce $names[] as $u (($file.mappings // {});
           if ( [keys_unsorted[] | ascii_downcase] | index($u | ascii_downcase) )
@@ -198,7 +211,7 @@ if [ "$SEED" = "1" ]; then
     | $file
       + { mappings: $mappings }
       + { sinceLastTag: { tag: $tag, since: $since,
-                          translators: $contribs } }
+                          translators: $active } }
   ')"
   echo "$merged" > "$MAPPING"
   after="$(jq '(.mappings // {}) | length' "$MAPPING")"

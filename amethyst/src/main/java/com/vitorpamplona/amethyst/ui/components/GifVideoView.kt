@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.asDrawable
@@ -52,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayUrlWithLoadingSymbol
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -92,6 +94,7 @@ fun GifVideoView(
     val autoPlay = accountViewModel.settings.autoPlayVideos()
     val borderModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     // Share the static-image sizing policy so animated media obeys it too: in Crop
     // contexts (e.g. the multi-image gallery grid) the cell has a fixed width AND height,
@@ -115,7 +118,7 @@ fun GifVideoView(
             val state by painter.state.collectAsState()
 
             val successState = state as? AsyncImagePainter.State.Success
-            val drawable = successState?.result?.image?.asDrawable(context.resources)
+            val drawable = successState?.result?.image?.asDrawable(resources)
 
             LaunchedEffect(autoPlay, drawable) {
                 if (drawable is Animatable) {
@@ -125,6 +128,7 @@ fun GifVideoView(
 
             when (state) {
                 is AsyncImagePainter.State.Loading -> {
+                    ReportCaptureLoading()
                     // When the height is unbounded (see [heightIsBounded]) this branch MUST
                     // emit something with an intrinsic height, or the box wraps nothing and the
                     // whole note collapses to zero -- no picture, no URL, no spinner, just a gap

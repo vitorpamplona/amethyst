@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.navigation
 
-import com.vitorpamplona.amethyst.ui.navigation.ShareIntentRouting
-import com.vitorpamplona.amethyst.ui.navigation.ShareTarget
+import com.vitorpamplona.amethyst.commons.ui.navigation.ShareIntentRouting
+import com.vitorpamplona.amethyst.commons.ui.navigation.ShareTarget
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

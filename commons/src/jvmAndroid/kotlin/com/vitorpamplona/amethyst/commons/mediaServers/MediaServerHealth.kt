@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit
  * actually matters for a media upload target.
  *
  * Mirrors the timeout/short-circuit shape of
- * [com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe],
+ * [com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.LocalBlossomCacheProbe],
  * but runs per-server and returns latency-classified status rather than a boolean.
  */
 object MediaServerHealthProbe {
@@ -53,7 +53,7 @@ object MediaServerHealthProbe {
     /**
      * How long a probe result is reused before the server is re-checked. The cache is
      * process-wide (this is a singleton) so results survive the screen's ViewModel being
-     * recreated on each open, mirroring [com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe].
+     * recreated on each open, mirroring [com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.LocalBlossomCacheProbe].
      */
     private const val CACHE_TTL_MS: Long = 60_000L
 

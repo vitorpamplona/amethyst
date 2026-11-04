@@ -41,7 +41,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -94,6 +93,7 @@ import com.vitorpamplona.amethyst.commons.resources.new_music_playlist
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -182,7 +182,7 @@ fun NewMusicPlaylistScreen(
                 hintRes = Res.string.music_playlist_cover_upload_hint,
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.title.value,
                 onValueChange = { vm.title.value = it },
                 label = { Text(stringRes(Res.string.music_playlist_title_label)) },
@@ -193,7 +193,7 @@ fun NewMusicPlaylistScreen(
                 isError = vm.title.value.isBlank(),
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.description.value,
                 onValueChange = { vm.description.value = it },
                 label = { Text(stringRes(Res.string.music_playlist_description_label)) },
@@ -202,7 +202,7 @@ fun NewMusicPlaylistScreen(
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.notes.value,
                 onValueChange = { vm.notes.value = it },
                 label = { Text(stringRes(Res.string.music_playlist_notes_label)) },

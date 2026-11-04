@@ -22,73 +22,56 @@ package com.vitorpamplona.amethyst.ui.note.platform
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
+import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
-import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
+import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
-import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonCallbacks
-import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonConfig
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
+import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
-import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
+import com.vitorpamplona.amethyst.service.playback.diskCache.VideoPrefetcher
 import com.vitorpamplona.amethyst.ui.note.creators.location.DEFAULT_MAP_ZOOM
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.urlPreview
+import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWaveformPlayer
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
 import okio.Path
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent as AppRenderMeetingRoomEvent
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomPresence as AppRenderMeetingRoomPresence
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent as AppRenderMeetingSpaceEvent
+import com.vitorpamplona.amethyst.commons.ui.components.LoadUrlPreview as AppLoadUrlPreview
+import com.vitorpamplona.amethyst.commons.ui.components.rememberUrlPreviewState as AppRememberUrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitIssueEvent as AppRenderGitIssueEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPatchEvent as AppRenderGitPatchEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestEvent as AppRenderGitPullRequestEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestUpdateEvent as AppRenderGitPullRequestUpdateEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitRepositoryEvent as AppRenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView as AppVideoView
-import com.vitorpamplona.amethyst.ui.actions.EditPostView as AppEditPostView
+import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox as AppRecordAudioBox
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton as AppRecordVoiceButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview as AppVoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.components.GifVideoView as AppGifVideoView
-import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview as AppLoadUrlPreview
-import com.vitorpamplona.amethyst.ui.components.ReusableZapButton as AppReusableZapButton
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView as AppZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog as AppZoomableImageDialog
-import com.vitorpamplona.amethyst.ui.components.rememberUrlPreviewState as AppRememberUrlPreviewState
-import com.vitorpamplona.amethyst.ui.note.LikeReaction as AppLikeReaction
-import com.vitorpamplona.amethyst.ui.note.ReactionsRow as AppReactionsRow
-import com.vitorpamplona.amethyst.ui.note.ZapReaction as AppZapReaction
+import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog as AppPdfViewerDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName as AppLoadCityName
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap as AppLocationPreviewMap
+import com.vitorpamplona.amethyst.ui.note.types.EpisodeAudioPlayer as AppEpisodeAudioPlayer
+import com.vitorpamplona.amethyst.ui.note.types.MusicTrackAudioPlayer as AppMusicTrackAudioPlayer
+import com.vitorpamplona.amethyst.ui.note.types.NoteMediaView as AppNoteMediaView
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer as AppPodcastEpisodeAudioPlayer
-import com.vitorpamplona.amethyst.ui.note.types.RenderAudioFromIMeta as AppRenderAudioFromIMeta
-import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader as AppRenderAudioHeader
-import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack as AppRenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWithWaveform as AppRenderAudioWithWaveform
-import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarRSVPEvent as AppRenderCalendarRSVPEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderChessGame as AppRenderChessGame
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent as AppRenderGitIssueEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent as AppRenderGitPatchEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestEvent as AppRenderGitPullRequestEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestUpdateEvent as AppRenderGitPullRequestUpdateEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent as AppRenderGitRepositoryEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessChallenge as AppRenderLiveChessChallenge
-import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessGameEnd as AppRenderLiveChessGameEnd
-import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack as AppRenderMusicTrack
-import com.vitorpamplona.amethyst.ui.note.types.RenderNamedNappletEvent as AppRenderNamedNappletEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent as AppRenderNamedSiteEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderRootNappletEvent as AppRenderRootNappletEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent as AppRenderRootSiteEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack as AppRenderVoiceTrack
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.QuickZapAmountRow as AppQuickZapAmountRow
 
 /** Android's [NotePlatform]: the app's own media, map, audio, chess, git, napplet and zap composables. */
 object AndroidNotePlatform : NotePlatform {
@@ -97,6 +80,25 @@ object AndroidNotePlatform : NotePlatform {
         accountViewModel: AccountViewModel,
     ) {
         if (UrlCachedPreviewer.cache.get(url) == null) accountViewModel.urlPreview(url) {}
+    }
+
+    /**
+     * Every video card here prepares its own player as soon as it is composed, which is only about
+     * one card before it is on screen. The videos further down get their first bytes cached ahead,
+     * unless videos load only on a tap.
+     */
+    override fun prefetchVideos(
+        owner: Any,
+        urls: List<String>,
+        accountViewModel: AccountViewModel,
+    ) {
+        val videos =
+            if (accountViewModel.settings.startVideoPlayback()) {
+                urls.map { VideoPrefetcher.Video(it, useProxy = (accountViewModel.httpClientBuilder.proxyPortForVideo(it) ?: 0) > 0) }
+            } else {
+                emptyList()
+            }
+        Amethyst.instance.videoPrefetcher.prefetch(owner, videos)
     }
 
     override fun loadUrlPreview(
@@ -110,14 +112,6 @@ object AndroidNotePlatform : NotePlatform {
         url: String,
         accountViewModel: AccountViewModel,
     ): UrlPreviewState = AppRememberUrlPreviewState(url, accountViewModel)
-
-    @Composable
-    override fun RenderAudioHeader(
-        note: Note,
-        contentScale: ContentScale,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderAudioHeader(note, contentScale, accountViewModel, nav)
 
     @Composable
     override fun ZoomableContentView(
@@ -135,16 +129,23 @@ object AndroidNotePlatform : NotePlatform {
     )
 
     @Composable
+    override fun PdfViewerDialog(
+        content: MediaUrlPdf,
+        onDismiss: () -> Unit,
+        accountViewModel: AccountViewModel,
+    ) = AppPdfViewerDialog(content, accountViewModel, onDismiss)
+
+    @Composable
     override fun ZoomableImageDialog(
         imageUrl: BaseMediaContent,
         allImages: ImmutableList<BaseMediaContent>,
-        sourceBounds: Rect?,
+        source: ZoomSourceAnchor?,
         onDismiss: () -> Unit,
         accountViewModel: AccountViewModel,
     ) = AppZoomableImageDialog(
         imageUrl = imageUrl,
         allImages = allImages,
-        sourceBounds = sourceBounds,
+        source = source,
         onDismiss = onDismiss,
         accountViewModel = accountViewModel,
     )
@@ -170,6 +171,22 @@ object AndroidNotePlatform : NotePlatform {
         onDialog = onDialog,
         accountViewModel = accountViewModel,
         thumbhash = thumbhash,
+    )
+
+    // Coil's animated decoder plays GIFs through the plain image loader on Android.
+    @Composable
+    override fun AnimatedImage(
+        url: String,
+        contentDescription: String?,
+        contentScale: ContentScale,
+        modifier: Modifier,
+        onError: () -> Unit,
+    ) = AsyncImage(
+        model = url,
+        contentDescription = contentDescription,
+        contentScale = contentScale,
+        modifier = modifier,
+        onError = { onError() },
     )
 
     @Composable
@@ -245,33 +262,40 @@ object AndroidNotePlatform : NotePlatform {
     )
 
     @Composable
-    override fun RenderAudioTrack(
-        note: Note,
+    override fun NoteMediaView(
+        mediaUri: String,
+        isAudio: Boolean?,
+        title: String?,
+        coverUri: String?,
+        waveform: WaveformData?,
         contentScale: ContentScale,
+        note: Note,
         accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderAudioTrack(
-        note = note,
+    ) = AppNoteMediaView(
+        mediaUri = mediaUri,
+        title = title,
+        coverUri = coverUri,
+        waveform = waveform,
         contentScale = contentScale,
+        note = note,
         accountViewModel = accountViewModel,
-        nav = nav,
     )
 
     @Composable
-    override fun RenderMusicTrack(
+    override fun MusicTrackAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
         note: Note,
-        makeItShort: Boolean,
-        canPreview: Boolean,
-        backgroundColor: MutableState<Color>,
+        borderModifier: Modifier,
         accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderMusicTrack(
+    ) = AppMusicTrackAudioPlayer(
+        audioUrl = audioUrl,
+        mimeType = mimeType,
+        title = title,
         note = note,
-        makeItShort = makeItShort,
-        canPreview = canPreview,
-        backgroundColor = backgroundColor,
+        borderModifier = borderModifier,
         accountViewModel = accountViewModel,
-        nav = nav,
     )
 
     @Composable
@@ -292,25 +316,34 @@ object AndroidNotePlatform : NotePlatform {
     )
 
     @Composable
-    override fun RenderVoiceTrack(
+    override fun EpisodeAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
+        image: String?,
         note: Note,
+        startAtSeconds: Long?,
+        speed: Float,
+        control: EpisodeControl,
+        onPlayhead: (EpisodePlayhead) -> Unit,
         accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderVoiceTrack(
-        note = note,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
+    ) = AppEpisodeAudioPlayer(audioUrl, mimeType, title, image, note, startAtSeconds, speed, control, onPlayhead, accountViewModel)
 
     @Composable
-    override fun RenderAudioFromIMeta(
-        note: Note,
+    override fun RenderAudioPlayer(
+        mediaUrl: String,
+        title: String?,
+        mimeType: String?,
+        waveform: WaveformData?,
         accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderAudioFromIMeta(
-        note = note,
+    ) = RenderAudioWaveformPlayer(
+        mediaUrl = mediaUrl,
+        title = title,
+        mimeType = mimeType,
+        waveform = waveform,
+        authorName = null,
+        callbackUri = null,
         accountViewModel = accountViewModel,
-        nav = nav,
     )
 
     @Composable
@@ -328,45 +361,6 @@ object AndroidNotePlatform : NotePlatform {
         mimeType = mimeType,
         waveform = waveform,
         note = note,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderChessGame(
-        note: Note,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderChessGame(
-        note = note,
-        backgroundColor = backgroundColor,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderLiveChessChallenge(
-        note: Note,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderLiveChessChallenge(
-        note = note,
-        backgroundColor = backgroundColor,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderLiveChessGameEnd(
-        note: Note,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderLiveChessGameEnd(
-        note = note,
-        backgroundColor = backgroundColor,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -459,162 +453,6 @@ object AndroidNotePlatform : NotePlatform {
     )
 
     @Composable
-    override fun RenderCalendarRSVPEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderCalendarRSVPEvent(
-        note = baseNote,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderMeetingSpaceEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderMeetingSpaceEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderMeetingRoomEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderMeetingRoomEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderMeetingRoomPresence(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderMeetingRoomPresence(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderRootNappletEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderRootNappletEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderNamedNappletEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderNamedNappletEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderRootSiteEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderRootSiteEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderNamedSiteEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderNamedSiteEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun ReactionsRow(
-        baseNote: Note,
-        showReactionDetail: Boolean,
-        addPadding: Boolean,
-        editState: State<GenericLoadable<EditState>>?,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppReactionsRow(
-        baseNote = baseNote,
-        showReactionDetail = showReactionDetail,
-        addPadding = addPadding,
-        editState = editState,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun LikeReaction(
-        baseNote: Note,
-        grayTint: Color,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-        iconSize: Dp,
-        heartSizeModifier: Modifier,
-        iconFontSize: TextUnit,
-        showCounter: Boolean,
-    ) = AppLikeReaction(
-        baseNote = baseNote,
-        grayTint = grayTint,
-        accountViewModel = accountViewModel,
-        nav = nav,
-        iconSize = iconSize,
-        heartSizeModifier = heartSizeModifier,
-        iconFontSize = iconFontSize,
-        showCounter = showCounter,
-    )
-
-    @Composable
-    override fun ZapReaction(
-        baseNote: Note,
-        grayTint: Color,
-        accountViewModel: AccountViewModel,
-        iconSize: Dp,
-        iconSizeModifier: Modifier,
-        animationModifier: Modifier,
-        showCounter: Boolean,
-        nav: INav,
-    ) = AppZapReaction(
-        baseNote = baseNote,
-        grayTint = grayTint,
-        accountViewModel = accountViewModel,
-        iconSize = iconSize,
-        iconSizeModifier = iconSizeModifier,
-        animationModifier = animationModifier,
-        showCounter = showCounter,
-        nav = nav,
-    )
-
-    @Composable
-    override fun ReusableZapButton(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-        config: ZapButtonConfig,
-        callbacks: ZapButtonCallbacks,
-    ) = AppReusableZapButton(baseNote, accountViewModel, nav, config, callbacks)
-
-    @Composable
     override fun FullscreenVideoView(
         videoUri: String,
         mimeType: String?,
@@ -639,6 +477,16 @@ object AndroidNotePlatform : NotePlatform {
         maxDurationSeconds: Int?,
     ) = AppRecordVoiceButton(onVoiceTaken, maxDurationSeconds)
 
+    override val canRecordAudio: Boolean get() = true
+
+    @Composable
+    override fun RecordAudioBox(
+        modifier: Modifier,
+        onRecordTaken: (RecordingResult) -> Unit,
+        maxDurationSeconds: Int?,
+        content: @Composable (isRecording: Boolean, elapsedSeconds: Int, onStop: () -> Unit) -> Unit,
+    ) = AppRecordAudioBox(modifier, onRecordTaken, maxDurationSeconds, content)
+
     @Composable
     override fun VoiceMessagePreview(
         voiceMetadata: AudioMeta,
@@ -648,28 +496,4 @@ object AndroidNotePlatform : NotePlatform {
         isUploading: Boolean,
         modifier: Modifier,
     ) = AppVoiceMessagePreview(voiceMetadata, localFile, onRemove, onReRecord, isUploading, modifier)
-
-    @Composable
-    override fun QuickZapAmountRow(
-        note: Note,
-        onDismiss: () -> Unit,
-        onOnchainRequest: (Long?) -> Unit,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppQuickZapAmountRow(note, onDismiss, onOnchainRequest, accountViewModel, nav)
-
-    @Composable
-    override fun EditPostView(
-        onClose: () -> Unit,
-        edit: Note,
-        versionLookingAt: Note?,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppEditPostView(
-        onClose = onClose,
-        edit = edit,
-        versionLookingAt = versionLookingAt,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
 }

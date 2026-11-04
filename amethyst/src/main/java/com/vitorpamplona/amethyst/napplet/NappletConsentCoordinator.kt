@@ -22,94 +22,56 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import android.content.Intent
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.ConsentQueue
+import com.vitorpamplona.amethyst.commons.napplet.NappletConsentInfo
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
-import kotlinx.coroutines.CompletableDeferred
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
-
-/** Everything the consent dialog needs to describe what an applet is asking permission to do. */
-data class NappletConsentInfo(
-    val appletTitle: String,
-    val coordinate: String,
-    val capabilityLabel: String,
-    val operationSummary: String,
-    /** Whether a persistent "Always allow" choice may be offered (false for per-use caps like payments). */
-    val allowAlways: Boolean,
-    val iconUrl: String? = null,
-    /**
-     * The full unsigned event the applet asked us to sign, pretty-printed, shown behind a
-     * "Show Event" toggle. Blank for requests that sign nothing. [operationSummary] is a lossy
-     * rendering — it truncates content and cannot spell out every tag — so this is the only place
-     * the user can see exactly what a signature would cover.
-     */
-    val rawData: String = "",
-    /**
-     * The one account a follow/mute change is about, when the change names exactly one. Rendered as
-     * an avatar + name so the user can recognize *who* at a glance instead of reading a bare count.
-     * Null for multi-account edits and every other request.
-     */
-    val subject: ConsentSubject? = null,
-)
-
-/** A single account a consent dialog is about: enough to draw an avatar and a name. */
-data class ConsentSubject(
-    val pubKey: String,
-    val name: String,
-    val pictureUrl: String?,
-)
+import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Bridges the main-process broker to the consent UI. The broker suspends in
- * [requestConsent]; this launches [NappletConsentActivity], holds the pending decision keyed
- * by a one-time token, and resolves it when the activity reports the user's choice.
+ * Bridges the main-process broker to the consent UI. The broker suspends in [requestConsent], which
+ * queues the question and brings up [NappletConsentActivity]; the activity shows the oldest question
+ * waiting and reports the user's choice back here.
  *
  * A dismissed dialog resolves to [GrantState.ASK] — i.e. "not authorized, ask again next
  * time" — so closing the prompt never silently grants nor permanently blocks.
  */
 object NappletConsentCoordinator {
-    private class Pending(
-        val info: NappletConsentInfo,
-        val deferred: CompletableDeferred<GrantState>,
-    )
+    private val queue = ConsentQueue<NappletConsentInfo, GrantState>(unanswered = GrantState.ASK)
 
-    private val pending = ConcurrentHashMap<String, Pending>()
+    /** The questions waiting, oldest first; the activity shows the first. */
+    val pending: StateFlow<List<ConsentQueue.Request<NappletConsentInfo, GrantState>>> = queue.pending
 
     suspend fun requestConsent(
         context: Context,
         info: NappletConsentInfo,
-    ): GrantState {
-        val token = UUID.randomUUID().toString()
-        val deferred = CompletableDeferred<GrantState>()
-        pending[token] = Pending(info, deferred)
+    ): GrantState = queue.ask(info, onQueued = { show(context) })
 
-        val intent =
-            Intent(context, NappletConsentActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .putExtra(EXTRA_TOKEN, token)
-        context.startActivity(intent)
-
-        return try {
-            deferred.await()
-        } finally {
-            pending.remove(token)
-        }
+    /**
+     * Brings the dialog back when questions still wait on it. Called when Amethyst returns to the
+     * foreground: its task is excluded from Recents, so after a trip to the launcher nothing else
+     * would show it again.
+     */
+    fun resurfacePending(context: Context) {
+        if (queue.pending.value.isNotEmpty()) show(context)
     }
 
-    /** Called by [NappletConsentActivity] to render the prompt. */
-    fun infoFor(token: String): NappletConsentInfo? = pending[token]?.info
+    // A launch the system refuses (from the background) is no failure of the request: it waits, and the
+    // dialog comes back with the app.
+    private fun show(context: Context) {
+        runCatching {
+            context.startActivity(
+                Intent(context, NappletConsentActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            )
+        }
+    }
 
     /** Called by [NappletConsentActivity] with the user's decision. */
     fun complete(
         token: String,
         grant: GrantState,
-    ) {
-        pending[token]?.deferred?.complete(grant)
-    }
+    ) = queue.answer(token, grant)
 
     /** Called when the dialog is dismissed without a choice — fails closed (no grant). */
-    fun cancel(token: String) {
-        pending[token]?.deferred?.complete(GrantState.ASK)
-    }
-
-    const val EXTRA_TOKEN = "napplet_consent_token"
+    fun cancel(token: String) = queue.dismiss(token)
 }

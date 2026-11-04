@@ -34,10 +34,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.upload_image
+import com.vitorpamplona.amethyst.commons.resources.upload_media
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun SelectFromGallery(
@@ -59,7 +62,7 @@ fun SelectFromGallery(
         )
     }
 
-    GallerySelectButton(isUploading, enabled, tint, modifier) { showGallerySelect = true }
+    GallerySelectButton(isUploading, enabled, tint, Res.string.upload_media, modifier) { showGallerySelect = true }
 }
 
 @Composable
@@ -81,7 +84,7 @@ fun SelectSingleFromGallery(
         )
     }
 
-    GallerySelectButton(isUploading, true, tint, modifier) { showGallerySelect = true }
+    GallerySelectButton(isUploading, true, tint, Res.string.upload_image, modifier) { showGallerySelect = true }
 }
 
 @Composable
@@ -89,23 +92,26 @@ private fun GallerySelectButton(
     isUploading: Boolean,
     enabled: Boolean,
     tint: Color,
+    label: StringResource,
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        modifier = modifier,
-        enabled = enabled && !isUploading,
-        onClick = { onClick() },
-    ) {
-        if (!isUploading) {
-            Icon(
-                symbol = MaterialSymbols.AddPhotoAlternate,
-                contentDescription = stringRes(id = Res.string.upload_image),
-                modifier = Modifier.height(25.dp),
-                tint = tint,
-            )
-        } else {
-            LoadingAnimation()
+    HoverTooltip(stringRes(id = label)) {
+        IconButton(
+            modifier = modifier,
+            enabled = enabled && !isUploading,
+            onClick = { onClick() },
+        ) {
+            if (!isUploading) {
+                Icon(
+                    symbol = MaterialSymbols.AddPhotoAlternate,
+                    contentDescription = stringRes(id = label),
+                    modifier = Modifier.height(25.dp),
+                    tint = tint,
+                )
+            } else {
+                LoadingAnimation()
+            }
         }
     }
 }

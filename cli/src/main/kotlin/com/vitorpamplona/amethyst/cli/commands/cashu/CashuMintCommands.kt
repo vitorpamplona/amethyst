@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.commands.route
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpClient
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import okhttp3.OkHttpClient
 
 /**
@@ -74,6 +76,7 @@ object CashuMintCommands {
         } catch (e: MintHttpException) {
             Output.error("mint_http_${e.code}", e.message)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Output.error("mint_unreachable", e.message)
         }
     }
@@ -89,6 +92,7 @@ object CashuMintCommands {
         } catch (e: MintHttpException) {
             Output.error("mint_http_${e.code}", e.message)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Output.error("mint_unreachable", e.message)
         }
     }

@@ -29,8 +29,10 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.video.nip01Core.filterPictureAndVideoByGeohash
 import com.vitorpamplona.amethyst.commons.relayClient.video.nip01Core.filterPictureAndVideoByHashtag
+import com.vitorpamplona.amethyst.commons.relayClient.video.nip01Core.filterPictureAndVideoByRelay
 import com.vitorpamplona.amethyst.commons.relayClient.video.nip01Core.filterPictureAndVideoGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.video.nip65Follows.filterPictureAndVideoByAuthors
 import com.vitorpamplona.amethyst.commons.relayClient.video.nip65Follows.filterPictureAndVideoByFollows
@@ -55,6 +57,7 @@ fun makePictureAndVideoFilter(
         is AllFollowsTopNavPerRelayFilterSet -> filterPictureAndVideoByFollows(feedSettings, since, defaultSince)
         is AuthorsTopNavPerRelayFilterSet -> filterPictureAndVideoByAuthors(feedSettings, since, defaultSince)
         is GlobalTopNavPerRelayFilterSet -> filterPictureAndVideoGlobal(feedSettings, since, defaultSince ?: TimeUtils.oneWeekAgo())
+        is RelayTopNavPerRelayFilterSet -> filterPictureAndVideoByRelay(feedSettings, since, defaultSince)
         is HashtagTopNavPerRelayFilterSet -> filterPictureAndVideoByHashtag(feedSettings, since, defaultSince ?: TimeUtils.oneMonthAgo())
         is LocationTopNavPerRelayFilterSet -> filterPictureAndVideoByGeohash(feedSettings, since, defaultSince)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterPictureAndVideoByAuthors(feedSettings, since, defaultSince)

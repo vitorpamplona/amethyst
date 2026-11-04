@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_zapraiser
 import com.vitorpamplona.amethyst.commons.resources.cancel_zapraiser
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 
@@ -43,52 +44,54 @@ fun AddZapraiserButton(
     isLnInvoiceActive: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        onClick = { onClick() },
-    ) {
-        Box(
-            Modifier
-                .height(20.dp)
-                .width(25.dp),
+    HoverTooltip(stringRes(if (isLnInvoiceActive) Res.string.cancel_zapraiser else Res.string.add_zapraiser)) {
+        IconButton(
+            onClick = { onClick() },
         ) {
-            if (!isLnInvoiceActive) {
-                Icon(
-                    symbol = MaterialSymbols.AutoMirrored.ShowChart,
-                    null,
-                    modifier =
-                        Modifier
-                            .size(20.dp)
-                            .align(Alignment.TopStart),
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
-                Icon(
-                    symbol = MaterialSymbols.Bolt,
-                    contentDescription = stringRes(Res.string.add_zapraiser),
-                    modifier =
-                        Modifier
-                            .size(13.dp)
-                            .align(Alignment.BottomEnd),
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
-            } else {
-                Icon(
-                    symbol = MaterialSymbols.AutoMirrored.ShowChart,
-                    null,
-                    modifier =
-                        Modifier
-                            .size(20.dp)
-                            .align(Alignment.TopStart),
-                    tint = BitcoinOrange,
-                )
-                Icon(
-                    symbol = MaterialSymbols.Bolt,
-                    contentDescription = stringRes(Res.string.cancel_zapraiser),
-                    modifier =
-                        Modifier
-                            .size(13.dp)
-                            .align(Alignment.BottomEnd),
-                    tint = BitcoinOrange,
-                )
+            Box(
+                Modifier
+                    .height(20.dp)
+                    .width(25.dp),
+            ) {
+                if (!isLnInvoiceActive) {
+                    Icon(
+                        symbol = MaterialSymbols.AutoMirrored.ShowChart,
+                        null,
+                        modifier =
+                            Modifier
+                                .size(20.dp)
+                                .align(Alignment.TopStart),
+                        tint = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Icon(
+                        symbol = MaterialSymbols.Bolt,
+                        contentDescription = stringRes(Res.string.add_zapraiser),
+                        modifier =
+                            Modifier
+                                .size(13.dp)
+                                .align(Alignment.BottomEnd),
+                        tint = MaterialTheme.colorScheme.onBackground,
+                    )
+                } else {
+                    Icon(
+                        symbol = MaterialSymbols.AutoMirrored.ShowChart,
+                        null,
+                        modifier =
+                            Modifier
+                                .size(20.dp)
+                                .align(Alignment.TopStart),
+                        tint = BitcoinOrange,
+                    )
+                    Icon(
+                        symbol = MaterialSymbols.Bolt,
+                        contentDescription = stringRes(Res.string.cancel_zapraiser),
+                        modifier =
+                            Modifier
+                                .size(13.dp)
+                                .align(Alignment.BottomEnd),
+                        tint = BitcoinOrange,
+                    )
+                }
             }
         }
     }

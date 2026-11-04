@@ -39,7 +39,10 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_time_in_zone
+import com.vitorpamplona.amethyst.commons.resources.calendar_time_zone
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -47,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
+import com.vitorpamplona.amethyst.commons.ui.note.formatDateTimeInZone
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
@@ -78,12 +82,15 @@ fun RenderCalendarTimeSlotEvent(
             formatTimestampRange(start, end)
         }
 
+    val timeZoneLine = calendarTimeZoneLine(noteEvent.start(), noteEvent.startTzId())
+
     CalendarHeader(
         title = title,
         image = image,
         summary = summary,
         location = location,
         dateRange = dateRange,
+        timeZoneLine = timeZoneLine,
         note = note,
         accountViewModel = accountViewModel,
         rsvpRow = {
@@ -149,6 +156,7 @@ private fun CalendarHeader(
     dateRange: String?,
     note: Note,
     accountViewModel: AccountViewModel,
+    timeZoneLine: String? = null,
     rsvpRow: @Composable () -> Unit = {},
 ) {
     Column(MaterialTheme.colorScheme.replyModifier) {
@@ -196,6 +204,20 @@ private fun CalendarHeader(
             }
         }
 
+        timeZoneLine?.let {
+            Row(
+                modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 2.dp),
+            ) {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
         location?.let {
             Row(
                 modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 2.dp),
@@ -230,6 +252,35 @@ private fun CalendarHeader(
         }
 
         rsvpRow()
+    }
+}
+
+/**
+ * The event's own time zone (NIP-52 `start_tzid`), for the line under its times, which are shown on
+ * the reader's clock. When the reader is elsewhere it carries the start on the event's clock too,
+ * "Mar 3, 2026, 7:00 PM (Europe/Oslo)", so a meetup in another city reads in both. Null when the
+ * event names no zone.
+ */
+@Composable
+fun calendarTimeZoneLine(
+    start: Long?,
+    tzId: String?,
+): String? {
+    val zone = tzId?.trim()?.ifBlank { null } ?: return null
+    val atEventClock =
+        remember(start, zone) {
+            // Compare clocks, not names: "Etc/UTC" for a reader on "UTC", or a Paris event read in
+            // Berlin, would otherwise repeat the very time already shown above.
+            if (start == null || zone == LocalClock.zoneId() || LocalClock.utcOffsetSeconds(zone, start) == LocalClock.utcOffsetSeconds(start)) {
+                null
+            } else {
+                formatDateTimeInZone(start * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT, zone)
+            }
+        }
+    return if (atEventClock != null) {
+        stringRes(Res.string.calendar_time_in_zone, atEventClock, zone)
+    } else {
+        stringRes(Res.string.calendar_time_zone, zone)
     }
 }
 

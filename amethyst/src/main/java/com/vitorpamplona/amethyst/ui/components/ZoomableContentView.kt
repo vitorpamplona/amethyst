@@ -47,13 +47,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImagePainter
@@ -63,6 +61,7 @@ import coil3.request.ImageRequest
 import coil3.size.Size
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.audio.MediaTracks
 import com.vitorpamplona.amethyst.commons.audio.PlayableLayout
 import com.vitorpamplona.amethyst.commons.audio.playableLayout
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -97,6 +96,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedMediaUrl
 import com.vitorpamplona.amethyst.commons.richtext.localJavaFile
+import com.vitorpamplona.amethyst.commons.service.image.BlossomFetcher
 import com.vitorpamplona.amethyst.commons.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.ContentWarningGate
@@ -106,17 +106,24 @@ import com.vitorpamplona.amethyst.commons.ui.components.DisplayUrlWithLoadingSym
 import com.vitorpamplona.amethyst.commons.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.commons.ui.components.InformationDialog
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
+import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
+import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.BlankNote
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
+import com.vitorpamplona.amethyst.commons.ui.note.types.rememberMediaTracks
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.ImageCornerRadius
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size6dp
@@ -124,23 +131,19 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.commons.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.images.BlossomFetcher
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
-import com.vitorpamplona.amethyst.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.saveMediaToGallery
+import com.vitorpamplona.crypto.sha2.sha256StreamWithCount
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.sha256.sha256StreamWithCount
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -189,11 +192,9 @@ fun ZoomableContentView(
     accountViewModel: AccountViewModel,
 ) {
     var dialogOpen by remember(content) { mutableStateOf(false) }
-    var sourceBounds by remember(content) { mutableStateOf<Rect?>(null) }
-    val boundsTrackingModifier =
-        Modifier.onGloballyPositioned { coordinates ->
-            sourceBounds = coordinates.boundsInWindow()
-        }
+    // Keyed by the media, so a viewer opened from a sibling thumbnail can close into this one.
+    val source = rememberZoomSourceAnchor(content)
+    val boundsTrackingModifier = Modifier.zoomSourceAnchor(source)
 
     when (content) {
         is MediaUrlImage -> {
@@ -207,17 +208,20 @@ fun ZoomableContentView(
                 backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
             ) {
                 if (content.isAnimatedMedia()) {
-                    GifVideoView(
-                        videoUri = content.url,
-                        contentDescription = content.description,
-                        dimensions = content.dim,
-                        blurhash = content.blurhash,
-                        roundedCorner = roundedCorner,
-                        contentScale = contentScale,
-                        onDialog = { dialogOpen = true },
-                        accountViewModel = accountViewModel,
-                        thumbhash = content.thumbhash,
-                    )
+                    // The anchor lets the viewer grow out of, and shrink back into, the gif.
+                    Box(modifier = boundsTrackingModifier) {
+                        GifVideoView(
+                            videoUri = content.url,
+                            contentDescription = content.description,
+                            dimensions = content.dim,
+                            blurhash = content.blurhash,
+                            roundedCorner = roundedCorner,
+                            contentScale = contentScale,
+                            onDialog = { dialogOpen = true },
+                            accountViewModel = accountViewModel,
+                            thumbhash = content.thumbhash,
+                        )
+                    }
                 } else {
                     TwoSecondController(content) { controllerVisible ->
                         val mainImageModifier =
@@ -237,13 +241,22 @@ fun ZoomableContentView(
             // declaration says audio, A while it can't tell. The player's probe, once in, overrides the
             // declaration — undecided files find their real card, mislabelled videos come back here.
             var probedAudioOnly by remember(content.url) { mutableStateOf(PlayableMediaProbeCache.get(content.url)) }
+            // An `.mp4` / `video/mp4` that doesn't say whether it holds video has its track list read
+            // before playback: Blossom serves AAC uploads that way, and they belong in the audio card.
+            val tracks = if (content.isLiveStream) MediaTracks.UNKNOWN else rememberMediaTracks(content.url, content.mimeType, accountViewModel)
+            val audioOnly =
+                probedAudioOnly ?: when (tracks) {
+                    MediaTracks.AUDIO_ONLY -> true
+                    MediaTracks.HAS_VIDEO -> false
+                    else -> null
+                }
             val layout =
-                remember(content.url, content.mimeType, content.artworkUri, content.isLiveStream, probedAudioOnly) {
+                remember(content.url, content.mimeType, content.artworkUri, content.isLiveStream, audioOnly) {
                     // A live stream is the one stream we know is video-first; it keeps the video player.
                     if (content.isLiveStream) {
                         PlayableLayout.VIDEO
                     } else {
-                        playableLayout(content.mimeType, content.url, hasArtwork = content.artworkUri != null, probedAudioOnly = probedAudioOnly)
+                        playableLayout(content.mimeType, content.url, hasArtwork = content.artworkUri != null, probedAudioOnly = audioOnly)
                     }
                 }
 
@@ -271,9 +284,10 @@ fun ZoomableContentView(
                     remember(content.url, content.mimeType) {
                         unknownMediaAspectRatio(content.mimeType, content.url)
                     }
+                // What the player measured beats the event's `dim`, which can be the stored size of
+                // an anamorphic video or ignore rotation.
                 val ratio =
-                    content.dim?.aspectRatioOrNull()
-                        ?: MediaAspectRatioCache.get(content.url)
+                    MediaAspectRatioCache.videoRatio(content.url, content.dim?.aspectRatioOrNull())
                         ?: fallbackRatio
                 ContentWarningGate(
                     isSensitive = content.contentWarning != null,
@@ -319,17 +333,19 @@ fun ZoomableContentView(
         is MediaLocalImage -> {
             if (content.isAnimatedMedia()) {
                 content.localJavaFile?.let {
-                    GifVideoView(
-                        videoUri = it.toUri().toString(),
-                        contentDescription = content.description,
-                        dimensions = content.dim,
-                        blurhash = content.blurhash,
-                        roundedCorner = roundedCorner,
-                        contentScale = contentScale,
-                        onDialog = { dialogOpen = true },
-                        accountViewModel = accountViewModel,
-                        thumbhash = content.thumbhash,
-                    )
+                    Box(modifier = boundsTrackingModifier) {
+                        GifVideoView(
+                            videoUri = it.toUri().toString(),
+                            contentDescription = content.description,
+                            dimensions = content.dim,
+                            blurhash = content.blurhash,
+                            roundedCorner = roundedCorner,
+                            contentScale = contentScale,
+                            onDialog = { dialogOpen = true },
+                            accountViewModel = accountViewModel,
+                            thumbhash = content.thumbhash,
+                        )
+                    }
                 }
             } else {
                 TwoSecondController(content) { controllerVisible ->
@@ -369,10 +385,18 @@ fun ZoomableContentView(
 
         is MediaUrlPdf -> {
             Box(modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier)) {
+                val sharePopupExpanded = remember { mutableStateOf(false) }
+                ShareMediaAction(
+                    accountViewModel = accountViewModel,
+                    popupExpanded = sharePopupExpanded,
+                    content = content,
+                    onDismiss = { sharePopupExpanded.value = false },
+                )
                 PdfPreviewCard(
                     content = content,
                     accountViewModel = accountViewModel,
                     onOpen = { dialogOpen = true },
+                    onLongPress = { sharePopupExpanded.value = true },
                 )
             }
         }
@@ -389,11 +413,14 @@ fun ZoomableContentView(
             ZoomableImageDialog(
                 imageUrl = content,
                 allImages = images,
-                sourceBounds = sourceBounds,
+                source = source,
                 onDismiss = {
                     dialogOpen = false
                 },
                 accountViewModel = accountViewModel,
+                // The thumbnail's corners (imageModifier clips to QuoteBorder): the grow animation
+                // squares them off as it opens instead of snapping them square.
+                sourceCornerRadius = if (roundedCorner) ImageCornerRadius else 0.dp,
             )
         }
     }
@@ -421,10 +448,11 @@ fun LocalImageView(
     fullResolution: Boolean = false,
 ) {
     if (content.localFileExists()) {
+        val capture = LocalMediaCapture.current
         val showImage =
             remember {
                 mutableStateOf(
-                    if (alwayShowImage) true else accountViewModel.settings.showImages(),
+                    alwayShowImage || capture != null || accountViewModel.settings.showImages(),
                 )
             }
 
@@ -454,6 +482,7 @@ fun LocalImageView(
                     when (state) {
                         is AsyncImagePainter.State.Loading,
                         -> {
+                            ReportCaptureLoading()
                             if (content.blurhash != null || content.thumbhash != null) {
                                 if (ratio != null) {
                                     DisplayBlurHash(
@@ -556,10 +585,11 @@ fun UrlImageView(
 ) {
     val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(content.url)
 
+    val capture = LocalMediaCapture.current
     val showImage =
         remember {
             mutableStateOf(
-                if (alwayShowImage) true else accountViewModel.settings.showImages(),
+                alwayShowImage || capture != null || accountViewModel.settings.showImages(),
             )
         }
 
@@ -589,6 +619,7 @@ fun UrlImageView(
                 when (state) {
                     is AsyncImagePainter.State.Loading,
                     -> {
+                        ReportCaptureLoading()
                         if (content.blurhash != null || content.thumbhash != null) {
                             if (ratio != null) {
                                 val modifier =
@@ -938,7 +969,6 @@ private suspend fun shareImageFile(
     }
 }
 
-@OptIn(DelicateCoroutinesApi::class)
 private suspend fun shareVideoFile(
     context: Context,
     videoUrl: String,
@@ -994,8 +1024,8 @@ private suspend fun shareVideoFile(
         }
 
         // Schedule cleanup to allow the receiving app time to copy the file.
-        // GlobalScope is intentional: cleanup must survive after share UI is dismissed.
-        GlobalScope.launch(Dispatchers.IO) {
+        // The application scope, not this one: cleanup must survive after the share UI is dismissed.
+        Amethyst.instance.applicationIOScope.launch {
             delay(SHARED_VIDEO_CLEANUP_DELAY_MS)
             sharedFile?.let { file ->
                 if (!file.delete()) {

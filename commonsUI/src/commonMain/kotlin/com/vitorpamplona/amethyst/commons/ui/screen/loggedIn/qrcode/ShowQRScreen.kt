@@ -189,11 +189,10 @@ fun ShowQRBody(
         }
     } else {
         NIP19QrCodeScanner(accountViewModel) {
-            if (it == null) {
-                presenting = true
-            } else {
-                nav.nav(it)
-            }
+            // Either way the scanner closes; it used to be closed for us by a second, null call
+            // that followed every successful scan.
+            presenting = true
+            if (it != null) nav.nav(it)
         }
     }
 }

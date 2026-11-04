@@ -42,19 +42,27 @@ class ScannedPayloadTest {
     }
 
     @Test
-    fun `a bare hex pubkey is re-encoded rather than rejected`() {
+    fun `a bare hex key is re-encoded rather than rejected`() {
         val payload = classifyScannedPayload(pubkeyHex)
 
-        assertTrue(payload is ScannedPayload.HexPubKey)
-        assertEquals(npub, (payload as ScannedPayload.HexPubKey).npub)
+        assertTrue(payload is ScannedPayload.HexKey)
+        assertEquals(npub, (payload as ScannedPayload.HexKey).npub)
+    }
+
+    @Test
+    fun `a bare hex key is treated as possibly secret`() {
+        // A raw private key is the same 64 hex characters as a raw public key. Echoing it, or
+        // routing it to a profile (which sends it to relays as an author), must wait for the
+        // user to say which one it is.
+        assertTrue(classifyScannedPayload(pubkeyHex).containsSecret)
     }
 
     @Test
     fun `uppercase hex is accepted and normalises to the same npub`() {
         val payload = classifyScannedPayload(pubkeyHex.uppercase())
 
-        assertTrue(payload is ScannedPayload.HexPubKey)
-        assertEquals(npub, (payload as ScannedPayload.HexPubKey).npub)
+        assertTrue(payload is ScannedPayload.HexKey)
+        assertEquals(npub, (payload as ScannedPayload.HexKey).npub)
     }
 
     @Test
@@ -90,6 +98,23 @@ class ScannedPayloadTest {
 
         assertTrue(payload is ScannedPayload.Web)
         assertEquals("https://example.com/some/page", (payload as ScannedPayload.Web).url)
+    }
+
+    @Test
+    fun `an uppercase link from alphanumeric mode gets a lowercase scheme and host`() {
+        val payload = classifyScannedPayload("HTTPS://EXAMPLE.COM/ABC?Q=1#Frag")
+
+        assertTrue(payload is ScannedPayload.Web)
+        // Only the case-insensitive parts change: the path, query and fragment are the server's.
+        assertEquals("https://example.com/ABC?Q=1#Frag", (payload as ScannedPayload.Web).url)
+        assertEquals("HTTPS://EXAMPLE.COM/ABC?Q=1#Frag", payload.raw)
+    }
+
+    @Test
+    fun `userinfo keeps its case`() {
+        val payload = classifyScannedPayload("HTTPS://User:Pass@Example.com") as ScannedPayload.Web
+
+        assertEquals("https://User:Pass@Example.com", payload.url)
     }
 
     @Test
@@ -140,7 +165,6 @@ class ScannedPayloadTest {
     @Test
     fun `public payloads are not marked secret`() {
         assertFalse(classifyScannedPayload(npub).containsSecret)
-        assertFalse(classifyScannedPayload(pubkeyHex).containsSecret)
         assertFalse(classifyScannedPayload("https://example.com").containsSecret)
         assertFalse(classifyScannedPayload("lnbc1u1pjxyz").containsSecret)
         assertFalse(classifyScannedPayload("just some text").containsSecret)

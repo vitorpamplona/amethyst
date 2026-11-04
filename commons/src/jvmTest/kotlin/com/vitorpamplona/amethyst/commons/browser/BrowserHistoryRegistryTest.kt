@@ -24,6 +24,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.TestScope
@@ -43,6 +44,7 @@ import java.io.File
  * [BrowserHistoryEntry.lastVisitedAt], so a bump that does not bump is a silently wrong suggestion
  * order rather than a crash.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class BrowserHistoryRegistryTest {
     @get:Rule
     val folder = TemporaryFolder()

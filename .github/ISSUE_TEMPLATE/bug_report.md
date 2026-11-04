@@ -30,7 +30,7 @@ If applicable, add a video and/or screenshots to help explain your problem.
  - App Flavour [e.g. Google Play or FDroid]: 
  - Amber Version (if using it to sign):
 
-**Bounty (in Bitcoin sats) offered for a solution**
+**Bounty (in Bitcoin sats, non-binding) offered for a solution**
 The size of the bounty is proportional to how much this matters to you. If no bounty is offered,
 not even a small one, this bug will not be worked on because it doesn't matter to you. We prioritize
 bug fixing to issues that have bounties, even small ones.

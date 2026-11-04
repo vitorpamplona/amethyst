@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
+import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex

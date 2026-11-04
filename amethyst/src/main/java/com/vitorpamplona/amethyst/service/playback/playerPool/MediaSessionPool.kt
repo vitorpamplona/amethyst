@@ -130,6 +130,8 @@ class MediaSessionPool(
 
     // getIdentifier() is a by-name lookup, so it is resolved once; the dimension itself is re-read
     // per load because it is a dp value and the app survives display-size changes without a restart.
+    // The dimension is internal to the framework, so there is no R id to use instead.
+    @Suppress("DiscouragedApi")
     private val metadataBitmapMaxSizeResId by lazy {
         appContext.resources.getIdentifier("config_mediaMetadataBitmapMaxSize", "dimen", "android")
     }

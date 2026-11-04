@@ -58,13 +58,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
-import com.vitorpamplona.amethyst.commons.cordn.DiscoveredCoordinator
-import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.cordn.CordnCoverage
 import com.vitorpamplona.amethyst.commons.model.cordn.CordnGroupCreation
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -119,6 +115,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_detail
 import com.vitorpamplona.amethyst.commons.resources.cordn_member_count
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
@@ -128,12 +125,16 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.Coor
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
+import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.client.CordnCoverage
+import com.vitorpamplona.cordn.client.GroupExposure
+import com.vitorpamplona.cordn.spec00Coordinator.DiscoveredCoordinator
+import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /**
@@ -283,7 +284,7 @@ fun CordnCreateGroupScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = draft.description,
                 onValueChange = { draft.description = it },
                 label = { Text(stringRes(Res.string.cordn_create_description)) },
@@ -441,6 +442,7 @@ fun CordnCreateGroupScreen(
                             try {
                                 draft.discovered = runtime.discover(accountViewModel.account.outboxRelays.flow.value)
                             } catch (e: Exception) {
+                                currentCoroutineContext().ensureActive()
                                 error = e.message ?: discoverFailed
                             } finally {
                                 discovering = false
@@ -597,6 +599,7 @@ fun CordnCreateGroupScreen(
                                 creation = result
                             }
                         } catch (e: Exception) {
+                            currentCoroutineContext().ensureActive()
                             error = e.message ?: failureFallback
                         } finally {
                             busy = false
@@ -785,15 +788,7 @@ private fun resolve(
     relaysInput: String,
 ): CoordinatorConfig? {
     if (selected != null) return known.firstOrNull { it.pubKey == selected }
-
-    // npub as well as hex: a coordinator pubkey is shared the same ways any
-    // other Nostr pubkey is, and refusing the bech32 form would just move the
-    // conversion to the user.
-    val pubKey = decodePublicKeyAsHexOrNull(pubKeyInput.trim()) ?: return null
-    val relays = relaysInput.lines().mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
-    if (relays.isEmpty()) return null
-
-    return CoordinatorConfig(pubKey, relays, CoordinatorConfig.Origin.MANUAL)
+    return CoordinatorConfig.fromInput(pubKeyInput, relaysInput)
 }
 
 /** A numbered step label, so the form reads as an order rather than a pile. */
@@ -976,7 +971,6 @@ private fun CordnCreationOutcome(
     val open: () -> Unit = {
         onDismiss()
         coordinatorPubKey?.let { nav.nav(Route.CordnGroupChat(it, creation.gid)) }
-        Unit
     }
 
     AlertDialog(

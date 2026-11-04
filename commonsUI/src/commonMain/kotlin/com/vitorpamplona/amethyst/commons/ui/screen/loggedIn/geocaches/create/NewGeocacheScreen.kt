@@ -68,6 +68,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.geocaches.create.NewGeocacheViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -84,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_new_mission
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_modifiers
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_name
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_pick_location
+import com.vitorpamplona.amethyst.commons.resources.geocache_new_precision_warning
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_proof_ready
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_publish
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_require_proof
@@ -98,6 +100,7 @@ import com.vitorpamplona.amethyst.commons.resources.route_edit_geocache
 import com.vitorpamplona.amethyst.commons.resources.route_new_geocache
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -142,7 +145,7 @@ fun NewGeocacheScreen(
     val scope = rememberCoroutineScope()
 
     remember(editKind, editPubKeyHex, editDTag, prefillGeohash) {
-        model.init(accountViewModel)
+        model.init(accountViewModel.account)
         if (editKind != null && editPubKeyHex != null && editDTag != null) {
             model.loadForEdit(editKind, editPubKeyHex, editDTag)
         } else {
@@ -157,7 +160,7 @@ fun NewGeocacheScreen(
     if (pickingPhoto) {
         GallerySelectSingle(imagesOnly = true) { media ->
             pickingPhoto = false
-            if (media != null) scope.launch { model.uploadImage(media.uri, media.mimeType, accountViewModel.host.mediaUploader) }
+            if (media != null) scope.launch { model.uploadImage(media.uri, media.mimeType, accountViewModel.mediaUploader) }
         }
     }
 
@@ -236,7 +239,7 @@ fun NewGeocacheScreen(
                     Text(
                         // NIP-CC asks for 8 characters, 9 for a micro. Below that a finder is
                         // searching a block rather than a hiding place.
-                        text = "⚠️  ${GeocacheGeohash.minPublishPrecision(model.size.value)} characters or finer is what a finder needs.",
+                        text = stringRes(Res.string.geocache_new_precision_warning, GeocacheGeohash.minPublishPrecision(model.size.value)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -253,7 +256,7 @@ fun NewGeocacheScreen(
                 singleLine = true,
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = model.description.value,
                 onValueChange = { model.description.value = it },
                 label = { Text(stringRes(Res.string.geocache_new_description)) },
@@ -337,7 +340,7 @@ fun NewGeocacheScreen(
 
             ComposerSection(stringRes(Res.string.geocache_new_section_extras), 3)
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = model.hint.value,
                 onValueChange = { model.hint.value = it },
                 label = { Text(stringRes(Res.string.geocache_new_hint)) },
@@ -366,7 +369,7 @@ fun NewGeocacheScreen(
                 )
             }
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = model.mission.value,
                 onValueChange = { model.mission.value = it },
                 label = { Text(stringRes(Res.string.geocache_new_mission)) },

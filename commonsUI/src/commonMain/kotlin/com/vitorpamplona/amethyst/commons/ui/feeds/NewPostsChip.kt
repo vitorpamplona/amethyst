@@ -47,6 +47,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_posts_available_description
+import com.vitorpamplona.amethyst.commons.resources.new_posts_chip
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.launch
 
 /**
@@ -82,6 +86,7 @@ fun NewPostsChip(
                 targetOffsetY = { fullHeight -> -fullHeight - 16 },
             ) + fadeOut(animationSpec = tween(durationMillis = 180)),
     ) {
+        val newPostsDescription = stringRes(Res.string.new_posts_available_description)
         Surface(
             onClick = { scope.launch { state.dismissAndScrollToTop() } },
             shape = RoundedCornerShape(999.dp),
@@ -92,7 +97,7 @@ fun NewPostsChip(
                 Modifier
                     .height(36.dp)
                     .semantics {
-                        contentDescription = "New posts available, tap to scroll to top"
+                        contentDescription = newPostsDescription
                     },
         ) {
             Row(
@@ -107,7 +112,7 @@ fun NewPostsChip(
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "New posts",
+                    text = stringRes(Res.string.new_posts_chip),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                 )

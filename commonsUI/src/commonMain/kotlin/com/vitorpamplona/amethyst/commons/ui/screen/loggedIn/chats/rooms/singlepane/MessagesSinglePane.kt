@@ -23,23 +23,25 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.single
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.commons.chats.ui.ChannelFabColumn
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.known
 import com.vitorpamplona.amethyst.commons.resources.new_requests
+import com.vitorpamplona.amethyst.commons.resources.route_messages
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.AmethystClickableIcon
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.WarmJoinedRelayGroupNip11
@@ -47,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.datasou
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed.MessagesPager
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed.MessagesTabHeader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed.MessagesTabItem
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.collections.immutable.persistentListOf
 
@@ -80,7 +83,9 @@ fun MessagesSinglePane(
             Column {
                 // No seed: NIP-17 messages are encrypted, so no relay can search them and no
                 // kind window would return anything the reader could read.
-                UserDrawerSearchTopBar(accountViewModel, nav, null) { AmethystClickableIcon() }
+                UserDrawerSearchTopBar(accountViewModel, nav, null) {
+                    Text(stringRes(Res.string.route_messages), fontWeight = FontWeight.Bold)
+                }
                 MessagesTabHeader(
                     pagerState,
                     tabs,

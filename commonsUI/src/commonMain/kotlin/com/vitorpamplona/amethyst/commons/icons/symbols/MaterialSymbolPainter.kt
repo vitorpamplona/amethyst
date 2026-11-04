@@ -36,6 +36,7 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontSynthesis
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 
@@ -75,10 +76,13 @@ private class MaterialSymbolPainter(
         // Bake the tint into the measured style. drawText(color = ...) override is unreliable
         // across Compose versions when the measured style has Color.Unspecified — falls back to
         // Color.Black and produces black-on-black icons.
+        // FontSynthesis.None: Android's "Bold text" setting raises every requested weight (by 300),
+        // and Compose would fake-bold the glyph to reach it. Icons keep the font's own weight; the
+        // same setting's shift of the variable font's wght axis is undone in symbolFont.
         val layout =
             textMeasurer.measure(
                 text = symbol.glyph,
-                style = TextStyle(fontFamily = fontFamily, fontSize = fontSize, color = tint),
+                style = TextStyle(fontFamily = fontFamily, fontSize = fontSize, color = tint, fontSynthesis = FontSynthesis.None),
             )
         val tx = (size.width - layout.size.width) / 2f
         val ty = (size.height - layout.size.height) / 2f

@@ -33,7 +33,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -67,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_save_failed
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_title
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -318,7 +318,7 @@ private fun CanvasEditor(
         },
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = text,
                 onValueChange = {
                     text = it

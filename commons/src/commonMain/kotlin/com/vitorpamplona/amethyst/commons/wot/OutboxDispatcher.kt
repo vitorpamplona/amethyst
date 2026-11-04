@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.wot
 
+import com.vitorpamplona.amethyst.commons.relays.dialableWriteRelays
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -209,7 +210,7 @@ class OutboxDispatcher(
             val write =
                 gateway
                     .cachedOutbox(author)
-                    ?.writeRelaysNorm()
+                    ?.dialableWriteRelays()
                     .orEmpty()
                     .toSet()
             if (write.isNotEmpty()) cachedOutbox[author] = write else toDiscover.add(author)
@@ -232,7 +233,7 @@ class OutboxDispatcher(
                 gateway.onOutboxDiscovered(newest.first, newest.second)
                 val write =
                     newest.first
-                        .writeRelaysNorm()
+                        .dialableWriteRelays()
                         .orEmpty()
                         .toSet()
                 if (write.isNotEmpty()) discovered[pubkey] = write

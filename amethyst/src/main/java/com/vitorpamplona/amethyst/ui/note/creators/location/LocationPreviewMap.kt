@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.graphics.drawable.toDrawable
 import androidx.lifecycle.Lifecycle
@@ -152,14 +153,15 @@ fun LocationPreviewMap(
     pinAlpha: Float = 1f,
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val darkTheme = !MaterialTheme.colorScheme.isLight
 
     val markerIcon =
-        remember(pinColor, pinEmoji) {
+        remember(pinColor, pinEmoji, resources) {
             if (pinColor != null && pinEmoji != null) {
-                val bitmap = roadEventPinBitmap(pinEmoji, pinColor.toArgb(), context.resources.displayMetrics.density)
-                bitmap.toDrawable(context.resources)
+                val bitmap = roadEventPinBitmap(pinEmoji, pinColor.toArgb(), resources.displayMetrics.density)
+                bitmap.toDrawable(resources)
             } else {
                 null
             }

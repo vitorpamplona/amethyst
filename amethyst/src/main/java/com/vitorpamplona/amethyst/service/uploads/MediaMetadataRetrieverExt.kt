@@ -52,9 +52,14 @@ fun MediaMetadataRetriever.getThumbnail(): Bitmap? {
     }
 }
 
-fun MediaMetadataRetriever.prepareDimFromVideo(): DimensionTag? {
+/**
+ * The size the video displays at. The retriever reports the stored frame, so the stored width is
+ * widened or narrowed by the [pixelAspectRatio] of an anamorphic video (see videoPixelAspectRatio)
+ * before the rotation swaps the sides.
+ */
+fun MediaMetadataRetriever.prepareDimFromVideo(pixelAspectRatio: Float? = null): DimensionTag? {
     val rotation = prepareRotation()
-    val width = prepareVideoWidth() ?: return null
+    val width = displayWidth(prepareVideoWidth() ?: return null, pixelAspectRatio)
     val height = prepareVideoHeight() ?: return null
 
     return if (width > 0 && height > 0) {

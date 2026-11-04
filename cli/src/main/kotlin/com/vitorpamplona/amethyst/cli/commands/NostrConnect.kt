@@ -25,24 +25,18 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Identity
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.amethyst.commons.domain.nip46.NostrConnectLoginUseCase
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketFactory
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
-import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
-import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * NIP-46 NostrConnect (client-initiated) flow helpers.
@@ -67,21 +61,14 @@ object NostrConnect {
         return Offer(parsed.clientPubKey, parsed.relays, parsed.secret, parsed.name, parsed.perms)
     }
 
-    private fun buildOffer(
-        clientPubkey: String,
-        relays: Set<NormalizedRelayUrl>,
-        secret: String,
-        name: String?,
-        perms: String?,
-    ): String = NostrConnectURI.buildNostrConnect(clientPubkey, relays, secret, perms = perms, name = name)
-
     /**
      * `amy login --nostrconnect [--relay URL[,URL…]] [--name N] [--timeout SECS]`
      *
      * Mint a local transport keypair, print a `nostrconnect://` offer for the
-     * user to paste into a signer, then wait for the signer's connect ACK
-     * (a kind:24133 whose decrypted result echoes our secret). The ACK's author
-     * is the remote signer; persist a bunker account that acts as that key.
+     * user to paste into a signer, then wait for the signer that answers with
+     * the offer's secret and ask it (`get_public_key`) which account it signs
+     * for. Persist a bunker account for THAT key: the answering key is the
+     * signer's transport key, which for most signers is not the user's.
      */
     suspend fun login(
         dataDir: DataDir,
@@ -103,51 +90,50 @@ object NostrConnect {
         args.rejectUnknown()
 
         val clientKey = KeyPair()
-        val clientSigner = NostrSignerInternal(clientKey)
-        val clientPub = clientKey.pubKey.toHexKey()
-        val secret = KeyPair().privKey!!.toHexKey().take(32)
-        val offer = buildOffer(clientPub, relays, secret, name, perms)
+        val code =
+            NostrConnectLoginUseCase.generateUri(
+                ephemeralKeyPair = clientKey,
+                relays = relays.map { it.url },
+                clientMetadata = name?.let { BunkerClientMetadata(name = it) },
+                perms = perms,
+            )
 
         // Surface the offer immediately so the human/harness can paste it.
         System.err.println("[nostrconnect] paste this into your signer within ${timeoutMs / 1000}s:")
-        System.err.println(offer)
+        System.err.println(code.uri)
 
         val okhttp = OkHttpClient.Builder().socketFactory(TcpNoDelaySocketFactory).build()
         val client = NostrClient(websocketBuilder = BasicOkHttpWebSocket.Builder { okhttp })
-        val incoming = Channel<NostrConnectEvent>(UNLIMITED)
-        val subId = newSubId()
-        val listener =
-            object : SubscriptionListener {
-                override suspend fun onEvent(
-                    event: Event,
-                    isLive: Boolean,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    if (event is NostrConnectEvent) incoming.trySend(event)
-                }
-            }
-
         try {
             client.connect()
-            val filter = Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(clientPub)))
-            client.subscribe(subId, relays.associateWith { listOf(filter) }, listener)
-
-            val signerPub =
-                withTimeoutOrNull(timeoutMs) {
-                    // Drain kind:24133 until one decrypts to a BunkerResponse echoing our secret.
-                    var found: String? = null
-                    while (found == null) {
-                        found = verifyAck(incoming.receive(), clientSigner, secret)
-                    }
-                    found
+            // The shared flow: wait for the signer that proves the code's secret, then ask it which
+            // account it signs for. The signer's own key is only its transport key, so the account
+            // is what get_public_key answers, not the key that answered the code.
+            val login =
+                try {
+                    NostrConnectLoginUseCase.awaitAndLogin(
+                        uriData = code,
+                        client = client,
+                        connectTimeoutMs = timeoutMs,
+                        onAuthUrl = { url -> System.err.println("[nip46] authorize this request in a browser, then it will continue:\n  $url") },
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: SignerExceptions) {
+                    return Output.error("signer_error", "the signer connected but did not say which account it signs for: ${e.message}")
+                } catch (e: Exception) {
+                    return Output.error("timeout", "no signer connected within ${timeoutMs / 1000}s")
                 }
+            login.signer.closeSubscription()
 
-            if (signerPub == null) {
-                return Output.error("timeout", "no signer connected within ${timeoutMs / 1000}s")
-            }
-
-            val identity = Identity.bunkerIdentity(signerPub, relays.map { it.url }, secret, clientKey.privKey!!.toHexKey())
+            val identity =
+                Identity.bunkerIdentity(
+                    signerPubkey = login.signer.remotePubkey,
+                    relays = code.relays.map { it.url },
+                    connectSecret = code.secret,
+                    clientPrivKeyHex = clientKey.privKey!!.toHexKey(),
+                    userPubkey = login.pubKeyHex,
+                )
             dataDir.saveIdentity(identity)
             Output.emit(
                 mapOf(
@@ -155,28 +141,13 @@ object NostrConnect {
                     "hex" to identity.pubKeyHex,
                     "read_only" to false,
                     "signer" to "bunker",
-                    "bunker_relays" to relays.map { it.url },
+                    "bunker_relays" to identity.bunker?.relays,
                     "data_dir" to dataDir.root.absolutePath,
                 ),
             )
             return 0
         } finally {
-            client.unsubscribe(subId)
-            incoming.close()
             client.close()
         }
     }
-
-    /** Returns the signer pubkey if [event] is the connect ACK echoing [secret], else null. */
-    private suspend fun verifyAck(
-        event: NostrConnectEvent,
-        clientSigner: NostrSignerInternal,
-        secret: String,
-    ): String? =
-        try {
-            val msg = event.decryptMessage(clientSigner)
-            if (msg is BunkerResponse && msg.result == secret) event.pubKey else null
-        } catch (e: Exception) {
-            null
-        }
 }

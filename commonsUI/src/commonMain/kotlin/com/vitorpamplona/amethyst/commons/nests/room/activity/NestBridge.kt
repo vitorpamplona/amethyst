@@ -45,4 +45,9 @@ object NestBridge {
     fun clear() {
         accountViewModel = null
     }
+
+    /** Drops [viewModel] if it is still the one held; a newer account's ViewModel may have replaced it. */
+    fun clear(viewModel: AccountViewModel) {
+        if (accountViewModel === viewModel) accountViewModel = null
+    }
 }

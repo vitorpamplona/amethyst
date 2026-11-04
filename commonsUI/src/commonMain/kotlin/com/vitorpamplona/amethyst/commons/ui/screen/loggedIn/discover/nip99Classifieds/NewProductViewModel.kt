@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -69,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -357,6 +359,7 @@ open class NewProductViewModel :
 
         val emojis = account.emoji.findEmojiTags(tagger.message)
         val urls = findURLs(tagger.message)
+        iMetaDescription.awaitLinkedImages()
         val usedAttachments = iMetaDescription.filterIsIn(urls.toSet()) + productImages.map { it.toIMeta() }
 
         val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationResult.Success)?.geoHash?.toString()) else null
@@ -395,6 +398,30 @@ open class NewProductViewModel :
         return template
     }
 
+    /** Uploads a hand drawing ([uploadDrawing]) and adds its GIF to the product's pictures. */
+    fun uploadDrawing(
+        drawing: RenderedDrawing,
+        alt: String?,
+        onError: (title: String, message: String) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // A listing's pictures have no `image` preview, so the drawing's still would be an orphan.
+            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.mediaUploader, mediaUploadTracker, uploadStill = false, onError) ?: return@launch
+            val header = uploaded.gif.fileHeader
+            productImages = productImages +
+                ProductImageMeta(
+                    url = uploaded.link,
+                    mimeType = header.mimeType,
+                    blurhash = header.blurHash?.blurhash,
+                    dimension = header.dim,
+                    alt = alt,
+                    hash = header.hash,
+                    size = header.size,
+                    thumbhash = header.thumbHash?.thumbhash,
+                )
+        }
+    }
+
     fun upload(
         alt: String?,
         contentWarningReason: String?,
@@ -402,7 +429,9 @@ open class NewProductViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         uploader: MediaUploader,
-        stripMetadata: Boolean = true,
+        useH265: Boolean,
+        stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myAccount = account
@@ -418,8 +447,10 @@ open class NewProductViewModel :
                     server,
                     myAccount,
                     uploader,
+                    useH265 = useH265,
                     stripMetadata = stripMetadata,
                     onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                    convertGifToMp4 = convertGifToMp4,
                 )
 
             if (results.allGood) {
@@ -579,7 +610,7 @@ open class NewProductViewModel :
         val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaDescription.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
+            iMetaDescription.downloadAndPrepare(item.link, accountViewModel.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
         message.replaceCurrentWord(wordToInsert)

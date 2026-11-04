@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.edits.PrivateStorageRelayListSta
 import com.vitorpamplona.amethyst.commons.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.commons.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.broadcastRelays.BroadcastRelayListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteRelays.FavoriteRelayListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.indexerRelays.IndexerRelayListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.proxyRelays.ProxyRelayListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.searchRelays.SearchRelayListState
@@ -50,6 +51,10 @@ class TrustedRelayListsState(
     val proxyRelayList: ProxyRelayListState,
     val trustedRelayList: TrustedRelayListState,
     val broadcastRelayList: BroadcastRelayListState,
+    /** The relays the user favorited to browse as feeds: picked on purpose, so trusted like the rest. */
+    val favoriteRelayList: FavoriteRelayListState,
+    /** The relays of the user's kind 10040 trust providers. */
+    val trustProviderRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val scope: CoroutineScope,
 ) {
     fun mergeLists(lists: Array<Set<NormalizedRelayUrl>>): Set<NormalizedRelayUrl> = lists.reduce { acc, set -> acc + set }
@@ -66,6 +71,8 @@ class TrustedRelayListsState(
                 proxyRelayList.flow,
                 trustedRelayList.flow,
                 broadcastRelayList.flow,
+                favoriteRelayList.flowNoDefaults,
+                trustProviderRelays,
             ),
             ::mergeLists,
         ).onStart {
@@ -81,6 +88,8 @@ class TrustedRelayListsState(
                         proxyRelayList.flow.value,
                         trustedRelayList.flow.value,
                         broadcastRelayList.flow.value,
+                        favoriteRelayList.flowNoDefaults.value,
+                        trustProviderRelays.value,
                     ),
                 ),
             )
@@ -99,6 +108,8 @@ class TrustedRelayListsState(
                         proxyRelayList.flow.value,
                         trustedRelayList.flow.value,
                         broadcastRelayList.flow.value,
+                        favoriteRelayList.flowNoDefaults.value,
+                        trustProviderRelays.value,
                     ),
                 ),
             )

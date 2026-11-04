@@ -38,8 +38,8 @@
 class GeodeRelay < Formula
   desc "Standalone Nostr relay from the Amethyst project"
   homepage "https://github.com/vitorpamplona/amethyst"
-  url "https://github.com/vitorpamplona/amethyst/releases/download/v1.17.0/geode-1.17.0-jvm.tar.gz"
-  sha256 "9f720c4e0742dfcdd40b3b7bfa7666ba1c3e7e34dffc111935aadb8b02abdf47"
+  url "https://github.com/vitorpamplona/amethyst/releases/download/v1.21.0/geode-1.21.0-jvm.tar.gz"
+  sha256 "dc6c397d30d5477cdae2e0c59ae9116b17514f94c02c0c04fa701699e7896c83"
   license "MIT"
 
   # Lets homebrew-core's BrewTestBot auto-open version-bump PRs when a new

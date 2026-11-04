@@ -63,6 +63,9 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_create_show_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_create_your_show
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_count
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_subtitle_episode
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_subtitle_season
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_subtitle_season_episode
 import com.vitorpamplona.amethyst.commons.resources.podcast_new_episode
 import com.vitorpamplona.amethyst.commons.resources.podcast_new_trailer
 import com.vitorpamplona.amethyst.commons.resources.podcast_no_episodes_yet
@@ -317,13 +320,14 @@ private fun EpisodeRow(
     }
 }
 
+@Composable
 private fun episodeSubtitle(ep: Podcasting20EpisodeEvent): String? {
     val season = ep.season()
     val number = ep.number()
     return when {
-        season != null && number != null -> "S$season · E$number"
-        number != null -> "Ep $number"
-        season != null -> "Season $season"
+        season != null && number != null -> stringRes(Res.string.podcast_episode_subtitle_season_episode, season, number)
+        number != null -> stringRes(Res.string.podcast_episode_subtitle_episode, number)
+        season != null -> stringRes(Res.string.podcast_episode_subtitle_season, season)
         else -> null
     }
 }

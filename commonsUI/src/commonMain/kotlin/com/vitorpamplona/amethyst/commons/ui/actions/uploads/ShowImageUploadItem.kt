@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.close
+import com.vitorpamplona.amethyst.commons.resources.image_upload_video_thumbnail_description
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.resources.upload_error_title
 import com.vitorpamplona.amethyst.commons.resources.uploading_state_compressing
@@ -134,7 +135,7 @@ fun ShowImageGallery(
             if (thumbnail != null) {
                 Image(
                     bitmap = thumbnail,
-                    contentDescription = "some useful description",
+                    contentDescription = stringRes(Res.string.image_upload_video_thumbnail_description),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxWidth(),
                 )

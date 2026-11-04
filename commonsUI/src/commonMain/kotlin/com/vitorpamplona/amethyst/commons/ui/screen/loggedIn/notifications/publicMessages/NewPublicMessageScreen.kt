@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -59,7 +60,7 @@ import com.vitorpamplona.amethyst.commons.resources.public_message
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePictureButton
@@ -228,7 +229,7 @@ fun PublicMessageScreenContent(
                     },
                 )
 
-                DisplayPreviews(postViewModel.urlPreviews, accountViewModel, nav)
+                DisplayPreviews(postViewModel.urlPreviews, postViewModel.iMetaAttachments, accountViewModel, nav)
 
                 if (postViewModel.wantsToMarkAsSensitive) {
                     ContentSensitivityExplainer(
@@ -263,8 +264,8 @@ fun PublicMessageScreenContent(
                             it,
                             accountViewModel.account.settings.defaultFileServer,
                             isUploading = postViewModel.mediaUploadTracker.isUploading,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, _, stripMetadata, _ ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader, stripMetadata)
+                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata, convertGifToMp4 ->
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.mediaUploader, useH265, stripMetadata, convertGifToMp4)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,
@@ -366,6 +367,10 @@ private fun BottomRowActions(
             },
         )
 
+        DrawingButton(postViewModel.accountViewModel, enabled = !postViewModel.isUploadingImage && !postViewModel.isUploadingFile) { drawing, alt ->
+            postViewModel.uploadDrawing(drawing, alt, postViewModel.accountViewModel.toastManager::toast)
+        }
+
         ForwardZapToButton(postViewModel.wantsForwardZapTo) {
             postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
         }
@@ -447,10 +452,9 @@ fun SendDirectMessageTo(
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
+                spellCheck = true,
                 outputTransformation =
-                    UrlUserTagOutputTransformation(
-                        MaterialTheme.colorScheme.primary,
-                    ),
+                    rememberUrlUserTagOutputTransformation(),
                 colors =
                     OutlinedTextFieldDefaults.colors(
                         unfocusedBorderColor = Color.Transparent,

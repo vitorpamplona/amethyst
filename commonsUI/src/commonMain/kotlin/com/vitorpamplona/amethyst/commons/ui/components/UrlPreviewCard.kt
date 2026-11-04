@@ -23,12 +23,14 @@ package com.vitorpamplona.amethyst.commons.ui.components
 import androidx.collection.LruCache
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.IconButton
@@ -43,11 +45,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.network.HttpException
@@ -64,11 +69,13 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthWithHorzPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.RichTextBlockSpacing
 import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
-import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.previewCardImageModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -115,8 +122,37 @@ fun UrlPreviewCard(
         }
     }
 
+    // In a borderless post the card runs edge to edge like the post's media: square, framed only
+    // above and below, with its text on the post text's edge.
+    val bleed = LocalMediaBleed.current
+    val borderColor = MaterialTheme.colorScheme.subtleBorder
+    val frame =
+        if (bleed == 0.dp) {
+            remember(borderColor) {
+                Modifier
+                    .padding(vertical = RichTextBlockSpacing)
+                    .fillMaxWidth()
+                    .clip(QuoteBorder)
+                    .border(1.dp, borderColor, QuoteBorder)
+            }
+        } else {
+            Modifier
+                .padding(vertical = RichTextBlockSpacing)
+                .bleedHorizontally(bleed)
+                .fillMaxWidth()
+                .drawWithContent {
+                    drawContent()
+                    // Over the content: the card's image starts at its top edge and would hide the line.
+                    val stroke = 1.dp.toPx()
+                    drawLine(borderColor, Offset(0f, stroke / 2), Offset(size.width, stroke / 2), stroke)
+                    drawLine(borderColor, Offset(0f, size.height - stroke / 2), Offset(size.width, size.height - stroke / 2), stroke)
+                }
+        }
+    val textPadding = if (bleed == 0.dp) MaxWidthWithHorzPadding else Modifier.fillMaxWidth().padding(horizontal = bleed)
+    val compactPadding = if (bleed == 0.dp) 10.dp else bleed
+
     val cardModifier =
-        MaterialTheme.colorScheme.innerPostModifier
+        frame
             .combinedClickable(
                 onClick = {
                     if (onCardClick != null) {
@@ -146,9 +182,9 @@ fun UrlPreviewCard(
     // from its `<title>`, meta description and favicon -- gets the short, wide card. Painting the
     // big layout without its image would leave a text block that only looks broken.
     if (previewInfo.imageUrlFullPath.isBlank() && previewInfo.hasTextPreview) {
-        CompactUrlPreviewCard(previewInfo, cardModifier, onOpenInBrowser)
+        CompactUrlPreviewCard(previewInfo, cardModifier, compactPadding, onOpenInBrowser)
     } else {
-        LargeUrlPreviewCard(previewInfo, cardModifier, onOpenInBrowser)
+        LargeUrlPreviewCard(previewInfo, cardModifier, textPadding, onOpenInBrowser)
     }
 }
 
@@ -156,6 +192,7 @@ fun UrlPreviewCard(
 private fun LargeUrlPreviewCard(
     previewInfo: UrlInfoItem,
     modifier: Modifier,
+    textPadding: Modifier,
     onOpenInBrowser: (() -> Unit)?,
 ) {
     Column(modifier = modifier) {
@@ -167,11 +204,12 @@ private fun LargeUrlPreviewCard(
                 contentDescription = previewInfo.title,
                 contentScale = ContentScale.FillWidth,
                 modifier = previewCardImageModifier,
+                onState = rememberCaptureLoadingTracker(previewInfo.imageUrlFullPath),
             )
         }
 
         Row(
-            modifier = MaxWidthWithHorzPadding,
+            modifier = textPadding,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -189,7 +227,7 @@ private fun LargeUrlPreviewCard(
         Text(
             text = previewInfo.title,
             style = MaterialTheme.typography.bodyMedium,
-            modifier = MaxWidthWithHorzPadding,
+            modifier = textPadding,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -197,7 +235,7 @@ private fun LargeUrlPreviewCard(
         Text(
             text = previewInfo.description,
             style = MaterialTheme.typography.bodySmall,
-            modifier = MaxWidthWithHorzPadding,
+            modifier = textPadding,
             color = Color.Gray,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
@@ -215,12 +253,13 @@ private fun LargeUrlPreviewCard(
 private fun CompactUrlPreviewCard(
     previewInfo: UrlInfoItem,
     modifier: Modifier,
+    horizontalPadding: Dp,
     onOpenInBrowser: (() -> Unit)?,
 ) {
     val host = previewInfo.verifiedHost ?: previewInfo.url
 
     Row(
-        modifier = modifier.padding(10.dp),
+        modifier = modifier.padding(horizontal = horizontalPadding, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         UrlPreviewIcon(previewInfo.iconUrlFullPath, host)
@@ -304,6 +343,34 @@ private fun UrlPreviewIcon(
                 onSuccess = { loaded = true },
                 // Only a server's answer is remembered. A network error (offline, a timeout) says
                 // nothing about the icon and must be retried once the connection is back.
+                onError = { if (it.result.throwable is HttpException) failedIconUrls.put(iconUrl, Unit) },
+            )
+        }
+    }
+}
+
+/**
+ * A site's favicon at text size, for one-line attributions. [fallback] shows until the icon
+ * loads, and stays when it never does. Shares the refused-icon memory with the preview cards.
+ */
+@Composable
+fun SiteIcon(
+    iconUrl: String?,
+    modifier: Modifier,
+    fallback: @Composable () -> Unit,
+) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        var loaded by remember(iconUrl) { mutableStateOf(false) }
+
+        if (!loaded) fallback()
+
+        if (iconUrl != null && failedIconUrls[iconUrl] == null) {
+            AsyncImage(
+                model = iconUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
+                onSuccess = { loaded = true },
                 onError = { if (it.result.throwable is HttpException) failedIconUrls.put(iconUrl, Unit) },
             )
         }

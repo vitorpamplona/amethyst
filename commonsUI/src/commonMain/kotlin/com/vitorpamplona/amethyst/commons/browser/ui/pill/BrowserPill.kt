@@ -64,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -85,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_left_site
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_other_browser_named
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_permission_state
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_privacy
+import com.vitorpamplona.amethyst.commons.resources.browser_pill_site_data_desc
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_site_settings_none
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_text_larger
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_text_reset
@@ -116,6 +118,8 @@ fun BrowserPill(
     initiallyEditing: Boolean = false,
     initiallyTextSizeOpen: Boolean = false,
     onPasteAndGo: (() -> Unit)? = null,
+    handleTapToOpen: Boolean = true,
+    handleModifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         AnimatedVisibility(
@@ -138,7 +142,7 @@ fun BrowserPill(
                 onPasteAndGo = onPasteAndGo,
             )
         }
-        PillHandle(ui, expanded, onExpandedChange)
+        PillHandle(ui, expanded, onExpandedChange, handleModifier, tapToOpen = handleTapToOpen)
     }
 }
 
@@ -153,6 +157,10 @@ fun BrowserPill(
  * that is always lit is one nobody reads — it just makes the handle loud on every page. Tor keeps its
  * badge inside the pill, where the address and "Onion-routed" say it in words for anyone who opens it.
  * What is left in the handle is plain HTTP, which is a warning, and a dot for console errors.
+ *
+ * With [tapToOpen] off the handle takes no touches at all, so a tap on it reaches the page beneath (a
+ * game's buttons can sit right there); the host then opens the pill on a downward swipe that starts on
+ * it, and accessibility services still get a click action.
  */
 @Composable
 fun PillHandle(
@@ -160,6 +168,7 @@ fun PillHandle(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    tapToOpen: Boolean = true,
 ) {
     val barColor =
         when (ui.security) {
@@ -170,18 +179,30 @@ fun PillHandle(
         modifier
             .clip(RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp))
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
-            .clickable { onExpandedChange(!expanded) }
-            .draggable(
-                orientation = Orientation.Vertical,
-                state =
-                    rememberDraggableState { delta ->
-                        if (delta > 1f) {
-                            onExpandedChange(true)
-                        } else if (delta < -1f) {
-                            onExpandedChange(false)
+            .then(
+                if (tapToOpen) {
+                    Modifier
+                        .clickable { onExpandedChange(!expanded) }
+                        .draggable(
+                            orientation = Orientation.Vertical,
+                            state =
+                                rememberDraggableState { delta ->
+                                    if (delta > 1f) {
+                                        onExpandedChange(true)
+                                    } else if (delta < -1f) {
+                                        onExpandedChange(false)
+                                    }
+                                },
+                        )
+                } else {
+                    Modifier.semantics {
+                        onClick {
+                            onExpandedChange(!expanded)
+                            true
                         }
-                    },
-            ).padding(horizontal = 18.dp, vertical = 8.dp),
+                    }
+                },
+            ).padding(horizontal = 12.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -291,7 +312,8 @@ fun BrowserPillSheet(
                     TextSizeControl(ui.textZoom) { onEvent(BrowserPillEvent.TextZoom(it)) }
                 }
                 if (privacy.isNotEmpty()) {
-                    PrivacyCard(ui, privacy) { onEvent(BrowserPillEvent.Action(it)) }
+                    // The cookies row opens page info, where the site's data (or every site's) is cleared.
+                    PrivacyCard(ui, privacy) { onEvent(if (it == Action.SITE_DATA) BrowserPillEvent.PageInfo else BrowserPillEvent.Action(it)) }
                 }
                 if (Action.CONSOLE in developer) {
                     ConsoleRow(ui) { onEvent(BrowserPillEvent.Action(Action.CONSOLE)) }
@@ -470,7 +492,8 @@ fun TextSizeControl(
 
 /**
  * Privacy: Tor with what it means for the site, site settings with a summary of what the site may use,
- * and, for sandboxed apps, what they can access.
+ * cookies and site data (opens page info, where they are cleared), and, for sandboxed apps, what they
+ * can access.
  */
 @Composable
 private fun PrivacyCard(
@@ -506,6 +529,14 @@ private fun PrivacyCard(
                         title = stringRes(pillLabelFor(Action.SITE_SETTINGS)),
                         supporting = permissionSummary(ui.sitePermissions),
                         onClick = { onAction(Action.SITE_SETTINGS) },
+                    ) { Icon(MaterialSymbols.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                Action.SITE_DATA ->
+                    GroupRow(
+                        icon = { PillActionIcon(Action.SITE_DATA, tint = MaterialTheme.colorScheme.onSurfaceVariant, size = 22.dp) },
+                        iconContainer = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        title = stringRes(pillLabelFor(Action.SITE_DATA)),
+                        supporting = stringRes(Res.string.browser_pill_site_data_desc),
+                        onClick = { onAction(Action.SITE_DATA) },
                     ) { Icon(MaterialSymbols.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
                 Action.ACCESS_INFO ->
                     GroupRow(

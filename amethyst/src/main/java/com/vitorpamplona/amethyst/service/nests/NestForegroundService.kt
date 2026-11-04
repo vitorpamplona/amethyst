@@ -343,7 +343,11 @@ class NestForegroundService : Service() {
                 return START_NOT_STICKY
             }
 
-        if (intent?.action == ACTION_STOP) {
+        // A null intent is the OS restarting the service after the process died. The room it served
+        // (its ViewModel, the composable that stops this service) died with that process, so there is
+        // nothing to keep alive: running on would hold audio focus and a wake lock for a room that no
+        // longer exists, with nothing left to stop it.
+        if (intent?.action == ACTION_STOP || intent == null) {
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
@@ -352,7 +356,8 @@ class NestForegroundService : Service() {
         if (wakeLock?.isHeld != true) {
             wakeLock?.acquire(WAKE_LOCK_TIMEOUT_MS)
         }
-        return START_STICKY
+        // Not sticky for the same reason: only a live room can restart it.
+        return START_NOT_STICKY
     }
 
     private fun startForegroundWithType(includeMic: Boolean) {

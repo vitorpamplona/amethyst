@@ -7,7 +7,7 @@
 # The reference coordinator (`ghcr.io/cordn-msg/cordn`, and the
 # `packages/coordinator` / `packages/server` sources it is built from) ships
 # with NO LICENSE — default copyright, all rights reserved. See §7 of
-# quartz/plans/2026-09-17-cordn-interop.md.
+# cordn-kmp's cordn/plans/2026-09-17-cordn-interop.md.
 #
 # Nothing here is wired into a build: no Gradle task, no CI job, and nothing
 # pulls the image for you. You pull it by hand having decided that is

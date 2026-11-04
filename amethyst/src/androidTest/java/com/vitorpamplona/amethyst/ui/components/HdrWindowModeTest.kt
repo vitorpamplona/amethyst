@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.pm.ActivityInfo
 import android.graphics.Gainmap
 import android.os.Build
+import android.os.Looper
 import android.view.Window
 import android.view.WindowManager
 import androidx.compose.runtime.getValue
@@ -31,6 +32,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.window.Dialog
 import androidx.core.graphics.createBitmap
+import androidx.media3.common.C
+import androidx.media3.common.ColorInfo
+import androidx.media3.common.Format
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.Player
+import androidx.media3.common.SimpleBasePlayer
+import androidx.media3.common.TrackGroup
+import androidx.media3.common.Tracks
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import coil3.asImage
 import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
@@ -55,6 +64,89 @@ class HdrWindowModeTest {
     private fun hdrImage() = createBitmap(8, 8).apply { gainmap = Gainmap(createBitmap(2, 2)) }.asImage()
 
     private fun sdrImage() = createBitmap(8, 8).asImage()
+
+    private fun videoTracks(colorTransfer: Int): Tracks {
+        val format =
+            Format
+                .Builder()
+                .setSampleMimeType(MimeTypes.VIDEO_H265)
+                .setColorInfo(ColorInfo.Builder().setColorTransfer(colorTransfer).build())
+                .build()
+        return Tracks(listOf(Tracks.Group(TrackGroup(format), false, intArrayOf(C.FORMAT_HANDLED), booleanArrayOf(true))))
+    }
+
+    /** A real [Player] whose rendered tracks the test sets, as a quality switch or next item would. */
+    private class TracksPlayer(
+        private var tracks: Tracks,
+    ) : SimpleBasePlayer(Looper.getMainLooper()) {
+        override fun getState(): State =
+            State
+                .Builder()
+                .setAvailableCommands(
+                    Player.Commands
+                        .Builder()
+                        .add(Player.COMMAND_GET_TRACKS)
+                        .build(),
+                ).setPlaylist(listOf(MediaItemData.Builder("item").setTracks(tracks).build()))
+                .build()
+
+        fun render(newTracks: Tracks) {
+            tracks = newTracks
+            invalidateState()
+        }
+    }
+
+    @Test
+    fun theWindowFollowsThePlayersVideoTrack() {
+        var window: Window? = null
+        val player = TracksPlayer(videoTracks(C.COLOR_TRANSFER_HLG))
+
+        rule.setContent {
+            window = getActivityWindow()
+            RequestHdrFor(player)
+        }
+        rule.waitForIdle()
+        assertEquals(ActivityInfo.COLOR_MODE_HDR, window!!.colorMode)
+
+        rule.runOnUiThread { player.render(videoTracks(C.COLOR_TRANSFER_SDR)) }
+        rule.waitForIdle()
+        assertEquals("the stream switched to an SDR rendition", ActivityInfo.COLOR_MODE_DEFAULT, window!!.colorMode)
+
+        rule.runOnUiThread { player.render(videoTracks(C.COLOR_TRANSFER_ST2084)) }
+        rule.waitForIdle()
+        assertEquals("and back to HDR", ActivityInfo.COLOR_MODE_HDR, window!!.colorMode)
+    }
+
+    @Test
+    fun anSdrPlayerLeavesTheWindowAlone() {
+        var window: Window? = null
+        val player = TracksPlayer(videoTracks(C.COLOR_TRANSFER_SDR))
+
+        rule.setContent {
+            window = getActivityWindow()
+            RequestHdrFor(player)
+        }
+        rule.waitForIdle()
+        assertEquals(ActivityInfo.COLOR_MODE_DEFAULT, window!!.colorMode)
+    }
+
+    @Test
+    fun theWindowRevertsWhenTheHdrPlayerLeavesComposition() {
+        var window: Window? = null
+        var show by mutableStateOf(true)
+        val player = TracksPlayer(videoTracks(C.COLOR_TRANSFER_HLG))
+
+        rule.setContent {
+            window = getActivityWindow()
+            if (show) RequestHdrFor(player)
+        }
+        rule.waitForIdle()
+        assertEquals(ActivityInfo.COLOR_MODE_HDR, window!!.colorMode)
+
+        show = false
+        rule.waitForIdle()
+        assertEquals(ActivityInfo.COLOR_MODE_DEFAULT, window!!.colorMode)
+    }
 
     @Test
     fun theWindowIsHdrOnlyWhileAGainmapImageIsShown() {

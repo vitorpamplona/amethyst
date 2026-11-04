@@ -22,9 +22,10 @@ package com.vitorpamplona.amethyst.commons.service.uploads
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.notices.UploadNotice
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
+import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
@@ -59,6 +60,24 @@ class UploadOrchestrator {
         progressState.value = newState
     }
 
+    /**
+     * Maps the bytes an upload body has sent onto [from]..[to] of the progress bar, reporting
+     * only whole-percent changes. A retried request starts again from zero, and so does the bar.
+     */
+    fun uploadProgress(
+        from: Double,
+        to: Double,
+    ): (bytesWritten: Long, totalBytes: Long) -> Unit {
+        var lastPercent = -1L
+        return { written, total ->
+            val percent = if (total > 0) written * 100 / total else 0
+            if (percent != lastPercent) {
+                lastPercent = percent
+                updateState(from + (to - from) * percent / 100, UploadingState.Uploading)
+            }
+        }
+    }
+
     suspend fun compressIfNeeded(
         uri: MediaUri,
         mimeType: String?,
@@ -82,7 +101,7 @@ class UploadOrchestrator {
         onStrippingFailed: suspend () -> Boolean = { true },
         convertGifToMp4: Boolean = false,
         forcedSigner: NostrSigner? = null,
-    ): UploadingState.UploadingFinalState = uploader.upload(this, uri, mimeType, alt, contentWarningReason, compressionQuality, server, account, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner)
+    ): UploadingState.UploadingFinalState = settle(uploader.upload(this, uri, mimeType, alt, contentWarningReason, compressionQuality, server, account, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner))
 
     suspend fun uploadEncrypted(
         uri: MediaUri,
@@ -90,7 +109,7 @@ class UploadOrchestrator {
         alt: String?,
         contentWarningReason: String?,
         compressionQuality: CompressorQuality,
-        encrypt: NostrCipher,
+        encrypt: SymmetricCipher,
         server: ServerName,
         account: Account,
         uploader: MediaUploader,
@@ -99,16 +118,19 @@ class UploadOrchestrator {
         onStrippingFailed: suspend () -> Boolean = { true },
         convertGifToMp4: Boolean = false,
         forcedSigner: NostrSigner? = null,
-    ): UploadingState.UploadingFinalState = uploader.uploadEncrypted(this, uri, mimeType, alt, contentWarningReason, compressionQuality, encrypt, server, account, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner)
+    ): UploadingState.UploadingFinalState = settle(uploader.uploadEncrypted(this, uri, mimeType, alt, contentWarningReason, compressionQuality, encrypt, server, account, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner))
+
+    /**
+     * Shows [state] in [progressState] when the uploader returned it without reporting it (Android's
+     * Blossom path does, for a failure it catches), so the bar does not stay on Uploading and
+     * [MultiOrchestrator] sees the error.
+     */
+    private fun settle(state: UploadingState.UploadingFinalState): UploadingState.UploadingFinalState {
+        if (progressState.value !== state) updateState(if (state is UploadingState.Finished) 1.0 else 0.0, state)
+        return state
+    }
 
     sealed class OrchestratorResult {
-        class NIP95Result(
-            val fileHeader: FileHeader,
-            val bytes: ByteArray,
-            val mimeTypeBeforeEncryption: String?,
-            val hashBeforeEncryption: String?,
-        ) : OrchestratorResult()
-
         class ServerResult(
             val fileHeader: FileHeader,
             val url: String,
@@ -116,6 +138,10 @@ class UploadOrchestrator {
             val uploadedHash: String?,
             val mimeTypeBeforeEncryption: String?,
             val hashBeforeEncryption: String?,
-        ) : OrchestratorResult()
+            /** What the user should know about where this upload went (see [UploadNotice]). */
+            val notices: List<UploadNotice> = emptyList(),
+        ) : OrchestratorResult() {
+            fun withNotice(notice: UploadNotice) = ServerResult(fileHeader, url, magnet, uploadedHash, mimeTypeBeforeEncryption, hashBeforeEncryption, notices + notice)
+        }
     }
 }

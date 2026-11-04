@@ -28,7 +28,7 @@ import kotlin.test.assertFalse
 /**
  * The shell page's own contents, asserted where the resource can actually be read.
  *
- * This lives in `jvmTest` rather than `commonTest` because [NappletWebContract.shellHtml] goes
+ * This lives in `jvmTest` rather than `commonTest` because [NappletWebResources.shellHtml] goes
  * through Compose Resources, and that reader needs an initialised Android `Context` on the
  * android target. A host unit test has none, so running this in `commonTest` failed
  * `:commons:testAndroidHostTest` with `MissingResourceException` while passing `:commons:jvmTest`
@@ -46,7 +46,7 @@ class NappletShellResourceTest {
     @Test
     fun shellTemplateKeepsTheOpaqueIframeAndSourceChecks() =
         runTest {
-            val shell = NappletWebContract.shellHtml().decodeToString()
+            val shell = NappletWebResources.shellHtml().decodeToString()
 
             assertContains(shell, "sandbox=\"${NappletWebContract.APP_SANDBOX_PLACEHOLDER}\"")
             assertContains(shell, NappletWebContract.APP_BOOTSTRAP_PLACEHOLDER)

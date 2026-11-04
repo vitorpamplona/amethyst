@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.actions.Bolt12ZapActions
+import com.vitorpamplona.amethyst.commons.relays.dialableReadRelays
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -121,7 +122,7 @@ object Bolt12SendCommands {
                     val recipientInbox: Set<NormalizedRelayUrl> =
                         ctx
                             .relaysOf(result.recipient)
-                            ?.readRelaysNorm()
+                            ?.dialableReadRelays()
                             ?.toSet()
                             .orEmpty()
                     val relays = ctx.outboxRelays() + recipientInbox

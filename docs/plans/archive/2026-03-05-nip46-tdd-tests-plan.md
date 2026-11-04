@@ -64,7 +64,7 @@ fun nip46ClientIsNotTheGeneralClient() = runTest {
     // Setup: bunker URI + ephemeral key in storage
     val validHex = "a".repeat(64)
     val ephemeralKeyPair = KeyPair()
-    File(amethystDir, "bunker_uri.txt").writeText("bunker://$validHex?relay=wss://relay.nsec.app")
+    File(amethystDir, "bunker_uri.txt").writeText("bunker://$validHex?relay=wss://relay.signer.example")
     File(amethystDir, "last_account.txt").writeText(ephemeralKeyPair.pubKey.toNpub())
     coEvery { storage.getPrivateKey(BUNKER_EPHEMERAL_KEY_ALIAS) } returns ephemeralKeyPair.privKey!!.toHexKey()
 
@@ -97,7 +97,7 @@ fun loginWithBunkerDoesNotRequireExternalClient() = runTest {
     // loginWithBunker() should compile and work with just a bunkerUri
     // This test verifies the API — no client param needed
     try {
-        manager.loginWithBunker("bunker://${"a".repeat(64)}?relay=wss://relay.nsec.app")
+        manager.loginWithBunker("bunker://${"a".repeat(64)}?relay=wss://relay.signer.example")
     } catch (e: Exception) {
         // Expected — no real relay to connect to. But it should NOT throw
         // a compile error or "client required" error.
@@ -162,7 +162,7 @@ fun logoutThenLoginCreatesNewNip46Client() = runTest {
     // First bunker load
     val validHex = "a".repeat(64)
     val ephemeralKeyPair = KeyPair()
-    File(amethystDir, "bunker_uri.txt").writeText("bunker://$validHex?relay=wss://relay.nsec.app")
+    File(amethystDir, "bunker_uri.txt").writeText("bunker://$validHex?relay=wss://relay.signer.example")
     File(amethystDir, "last_account.txt").writeText(ephemeralKeyPair.pubKey.toNpub())
     coEvery { storage.getPrivateKey(BUNKER_EPHEMERAL_KEY_ALIAS) } returns ephemeralKeyPair.privKey!!.toHexKey()
 
@@ -175,7 +175,7 @@ fun logoutThenLoginCreatesNewNip46Client() = runTest {
     assertIs<AccountState.LoggedOut>(manager.accountState.value)
 
     // Re-load — should create a NEW NIP-46 client
-    File(amethystDir, "bunker_uri.txt").writeText("bunker://$validHex?relay=wss://relay.nsec.app")
+    File(amethystDir, "bunker_uri.txt").writeText("bunker://$validHex?relay=wss://relay.signer.example")
     File(amethystDir, "last_account.txt").writeText(ephemeralKeyPair.pubKey.toNpub())
     manager.loadSavedAccount()
     val secondState = manager.currentAccount()
@@ -258,7 +258,7 @@ fun loadSavedAccountBunkerNoEphemeralReturnsFailure() = runTest {
 ```kotlin
 @Test
 fun subscriptionFilterTargetsOnlyBunkerRelays() {
-    val bunkerRelay = NormalizedRelayUrl("wss://relay.nsec.app/")
+    val bunkerRelay = NormalizedRelayUrl("wss://relay.signer.example/")
     val generalRelay = NormalizedRelayUrl("wss://relay.damus.io/")
 
     val capturedFilters = mutableListOf<Map<NormalizedRelayUrl, List<Filter>>>()
@@ -297,7 +297,7 @@ fun subscriptionFilterContainsCorrectKindAndPTag() {
     val remoteSigner = NostrSignerRemote(
         signer = ephemeralSigner,
         remotePubkey = "b".repeat(64),
-        relays = setOf(NormalizedRelayUrl("wss://relay.nsec.app/")),
+        relays = setOf(NormalizedRelayUrl("wss://relay.signer.example/")),
         client = mockClient,
     )
     remoteSigner.openSubscription()
@@ -333,7 +333,7 @@ fun subscriptionFilterHasSinceTimestamp() {
     val remoteSigner = NostrSignerRemote(
         signer = NostrSignerInternal(KeyPair()),
         remotePubkey = "c".repeat(64),
-        relays = setOf(NormalizedRelayUrl("wss://relay.nsec.app/")),
+        relays = setOf(NormalizedRelayUrl("wss://relay.signer.example/")),
         client = mockClient,
     )
     remoteSigner.openSubscription()

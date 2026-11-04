@@ -39,6 +39,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.lists.list.FollowPackViewModel
+import com.vitorpamplona.amethyst.commons.lists.list.PeopleListViewModel
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip51Lists.ui.PeopleListItem
 import com.vitorpamplona.amethyst.commons.resources.Res

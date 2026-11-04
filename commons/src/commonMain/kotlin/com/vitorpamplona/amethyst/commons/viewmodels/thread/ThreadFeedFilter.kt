@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.LevelSignature
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
 import com.vitorpamplona.amethyst.commons.model.ThreadLevelCalculator
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableSet
@@ -49,39 +50,53 @@ class ThreadFeedFilter(
 ) : FeedFilter<Note>() {
     override fun feedKey(): String = noteId
 
-    override fun feed(): List<Note> {
-        val cachedSignatures: MutableMap<Note, LevelSignature> = mutableMapOf()
-        val followingKeySet = account.followingKeySet()
-        val eventsToWatch = ThreadAssembler(cacheProvider).findThreadFor(noteId) ?: return emptyList()
+    override fun feed(): List<Note> = thread(noteId, cacheProvider, account.userProfile(), account.followingKeySet())
 
-        // Filter out drafts made by other accounts on device
-        val filteredEvents =
-            eventsToWatch.allNotes
-                .filter { !it.isDraft() || (it.author?.pubkeyHex == account.pubKey) }
-                .toImmutableSet()
-        val filteredThreadInfo = ThreadAssembler.ThreadInfo(eventsToWatch.root, filteredEvents)
+    companion object {
+        /**
+         * The thread [noteId] belongs to, in the order the thread screen shows it: assembled
+         * by [ThreadAssembler], ordered by [ThreadLevelCalculator] reply-level signatures
+         * (the thread author's own replies first, then [me], then people [me] follows, then
+         * everyone else). Shared with amy's `notes thread`.
+         */
+        fun thread(
+            noteId: String,
+            cacheProvider: ICacheProvider,
+            me: User,
+            followingKeySet: Set<String>,
+        ): List<Note> {
+            val cachedSignatures: MutableMap<Note, LevelSignature> = mutableMapOf()
+            val eventsToWatch = ThreadAssembler(cacheProvider).findThreadFor(noteId) ?: return emptyList()
 
-        val eventsInHex = filteredThreadInfo.allNotes.map { it.idHex }.toSet()
-        val now = TimeUtils.now()
+            // Filter out drafts made by other accounts on device
+            val filteredEvents =
+                eventsToWatch.allNotes
+                    .filter { !it.isDraft() || (it.author?.pubkeyHex == me.pubkeyHex) }
+                    .toImmutableSet()
+            val filteredThreadInfo = ThreadAssembler.ThreadInfo(eventsToWatch.root, filteredEvents)
 
-        val signatures =
-            filteredThreadInfo.allNotes.associateWith {
-                ThreadLevelCalculator
-                    .replyLevelSignature(
-                        it,
-                        eventsInHex,
-                        cachedSignatures,
-                        account.userProfile(),
-                        followingKeySet,
-                        now,
-                    ).signature
-            }
+            val eventsInHex = filteredThreadInfo.allNotes.map { it.idHex }.toSet()
+            val now = TimeUtils.now()
 
-        // Currently orders by date of each event, descending, at each level of the reply stack
-        val order =
-            compareByDescending<Note> { signatures[it] }
-                .thenBy { it.idHex }
+            val signatures =
+                filteredThreadInfo.allNotes.associateWith {
+                    ThreadLevelCalculator
+                        .replyLevelSignature(
+                            it,
+                            eventsInHex,
+                            cachedSignatures,
+                            me,
+                            followingKeySet,
+                            now,
+                        ).signature
+                }
 
-        return filteredThreadInfo.allNotes.sortedWith(order)
+            // Currently orders by date of each event, descending, at each level of the reply stack
+            val order =
+                compareByDescending<Note> { signatures[it] }
+                    .thenBy { it.idHex }
+
+            return filteredThreadInfo.allNotes.sortedWith(order)
+        }
     }
 }

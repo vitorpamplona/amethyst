@@ -33,19 +33,25 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -135,6 +141,76 @@ class ReconnectingNestsListenerTest {
         fun fail(reason: String) {
             mutableState.value = NestsListenerState.Failed(reason)
         }
+    }
+
+    /**
+     * A listener whose subscriptions end the way moq-lite ends them: each
+     * subscribe gets its own frame channel, and [end] closes one, either
+     * as the publisher's broadcast ending (`ANNOUNCE Ended`, which bumps
+     * [SubscribeHandle.broadcastEndedCount]) or for any other reason. The
+     * wrapper re-subscribes on the same listener.
+     */
+    private class CyclingSubscriptionListener(
+        connectedRoom: NestsRoomConfig,
+    ) : NestsListener {
+        override val state: StateFlow<NestsListenerState> =
+            MutableStateFlow<NestsListenerState>(NestsListenerState.Connected(connectedRoom, 1)).asStateFlow()
+
+        class Subscription(
+            val frames: Channel<MoqObject>,
+        ) {
+            /** Completes when the wrapper starts collecting, i.e. after it attached. */
+            val collecting = CompletableDeferred<Unit>()
+        }
+
+        private val broadcastEndedCount = AtomicLong(0L)
+        private val opened = MutableStateFlow<List<Subscription>>(emptyList())
+
+        override suspend fun subscribeSpeaker(
+            speakerPubkeyHex: String,
+            maxLatencyMs: Long,
+        ): SubscribeHandle {
+            val sub = Subscription(Channel(Channel.UNLIMITED))
+            val id = opened.updateAndGet { it + sub }.size.toLong()
+            return SubscribeHandle(
+                subscribeId = id,
+                trackAlias = id,
+                ok =
+                    SubscribeOk(
+                        subscribeId = id,
+                        expiresMs = 0L,
+                        groupOrder = 0x01,
+                        contentExists = false,
+                    ),
+                objects =
+                    flow {
+                        sub.collecting.complete(Unit)
+                        emitAll(sub.frames.consumeAsFlow())
+                    },
+                unsubscribeAction = { },
+                broadcastEndedCountProbe = { broadcastEndedCount.get() },
+            )
+        }
+
+        /** The [n]th subscription (1-based), once the wrapper has opened it. */
+        suspend fun subscription(n: Int): Subscription = withTimeout(5_000L) { opened.first { it.size >= n }[n - 1] }
+
+        fun end(
+            sub: Subscription,
+            byPublisher: Boolean,
+        ) {
+            // moq-lite closes the frames first (the relay's subscribe FIN),
+            // then sees the Ended announce.
+            sub.frames.close()
+            if (byPublisher) countBroadcastEnded()
+        }
+
+        /** The session sees the broadcast's `Ended` announce. */
+        fun countBroadcastEnded() {
+            broadcastEndedCount.incrementAndGet()
+        }
+
+        override suspend fun close() {}
     }
 
     private fun frame(
@@ -379,6 +455,116 @@ class ReconnectingNestsListenerTest {
                 scope.cancel()
             }
         }
+
+    /**
+     * Regression for #4577: a publisher whose broadcast ends and comes back
+     * as a new session (`ANNOUNCE Ended` → `Active`) may restart its group
+     * numbering at 0. The browser publisher in the interop suite does, and
+     * sends each cycle as a single group. The replay guard must not treat
+     * the new session's group 0 as a replay of the old session's group 0:
+     * the relay can't re-serve an ended broadcast's cache, so the
+     * watermark from the old session says nothing about the new one.
+     */
+    @Test
+    fun publisher_restart_after_broadcast_end_is_not_dropped_as_replay() =
+        runBlocking {
+            val result = runTwoSubscriptions(byPublisher = true)
+            assertEquals(listOf<Byte>(0x01, 0x02), result.map { it.payload[0] })
+        }
+
+    /**
+     * Companion to the regression above: when a subscription ends while
+     * the broadcast itself stays live, the next subscription can be served
+     * the relay's cached latest group again, and the guard keeps dropping it.
+     */
+    @Test
+    fun resubscribe_while_broadcast_lives_still_drops_replayed_group() =
+        runBlocking {
+            val result = runTwoSubscriptions(byPublisher = false)
+            assertEquals(listOf<Byte>(0x01, 0x03), result.map { it.payload[0] })
+        }
+
+    /**
+     * The `Ended` announce and the subscribe FIN travel on different
+     * streams, so `Ended` can be counted only after the wrapper has already
+     * re-subscribed. The reset is decided at the new subscription's first
+     * frame, not at attach time, so this ordering still counts as a new
+     * publisher session.
+     */
+    @Test
+    fun broadcast_end_counted_after_resubscribe_still_resets_the_guard() =
+        runBlocking {
+            val result = runTwoSubscriptions(byPublisher = true, endedCountedAfterResubscribe = true)
+            assertEquals(listOf<Byte>(0x01, 0x02), result.map { it.payload[0] })
+        }
+
+    /**
+     * Delivers group 0 (0x01) on the first subscription, ends it
+     * ([byPublisher] picks how), then sends group 0 (0x02) and group 1
+     * (0x03) on the re-issued second subscription. Returns the first two
+     * frames the consumer saw. With [endedCountedAfterResubscribe], the
+     * `Ended` count rises only once the second subscription has attached.
+     */
+    private suspend fun runTwoSubscriptions(
+        byPublisher: Boolean,
+        endedCountedAfterResubscribe: Boolean = false,
+    ): List<MoqObject> {
+        val scope = CoroutineScope(SupervisorJob())
+        try {
+            val listener = CyclingSubscriptionListener(room)
+            val reconnecting =
+                connectReconnectingNestsListener(
+                    httpClient = httpClient,
+                    transport = transport,
+                    scope = scope,
+                    room = room,
+                    signer = signer,
+                    policy = NestsReconnectPolicy(initialDelayMs = 1L),
+                    connector = { listener },
+                )
+            withTimeout(5_000L) {
+                reconnecting.state.first { it is NestsListenerState.Connected }
+            }
+
+            val handle = reconnecting.subscribeSpeaker("speaker-pubkey")
+            val consumerSubscribed = CompletableDeferred<Unit>()
+            val consumerProgress = MutableStateFlow(0)
+
+            @Suppress("UNCHECKED_CAST")
+            val objectsAsShared = handle.objects as SharedFlow<MoqObject>
+            val collected =
+                scope.async {
+                    withTimeout(5_000L) {
+                        objectsAsShared
+                            .onSubscription { consumerSubscribed.complete(Unit) }
+                            .take(2)
+                            .onEach { consumerProgress.value += 1 }
+                            .toList()
+                    }
+                }
+            withTimeout(5_000L) { consumerSubscribed.await() }
+
+            val first = listener.subscription(1)
+            first.frames.send(frame(byteArrayOf(0x01), groupId = 0L))
+            withTimeout(5_000L) { consumerProgress.first { it >= 1 } }
+
+            listener.end(first, byPublisher && !endedCountedAfterResubscribe)
+            val second = listener.subscription(2)
+            if (byPublisher && endedCountedAfterResubscribe) {
+                withTimeout(5_000L) { second.collecting.await() }
+                listener.countBroadcastEnded()
+            }
+            second.frames.send(frame(byteArrayOf(0x02), groupId = 0L))
+            second.frames.send(frame(byteArrayOf(0x03), groupId = 1L))
+
+            val result = collected.await()
+            handle.unsubscribe()
+            reconnecting.close()
+            return result
+        } finally {
+            scope.cancel()
+        }
+    }
 
     @Test
     fun unsubscribe_before_session_swap_releases_handle() =

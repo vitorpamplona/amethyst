@@ -117,6 +117,7 @@ import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_subtitle_que
 import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostsViewModel
 import com.vitorpamplona.amethyst.commons.scheduledposts.extractContentPreview
 import com.vitorpamplona.amethyst.commons.scheduledposts.extractEventId
 import com.vitorpamplona.amethyst.commons.scheduledposts.extractFirstMediaUrl
@@ -248,7 +249,8 @@ fun ScheduledPostsScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 groups.forEach { group ->
-                    stickyHeader(key = group.day) {
+                    // Lazy keys must be Bundle-storable on Android: a data class key crashes there.
+                    stickyHeader(key = "day-${group.day.ymd()}") {
                         DayHeader(group.day, today)
                     }
                     items(group.posts, key = { it.id }) { post ->

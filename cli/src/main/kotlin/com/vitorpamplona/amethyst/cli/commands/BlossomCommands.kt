@@ -27,11 +27,11 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomReport
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
 import java.nio.file.Files
 
@@ -186,7 +186,8 @@ object BlossomCommands {
                     BlossomAuth.createUploadAuth(hash, file.length(), "Upload ${file.name}", ctx.signer, servers = listOf(server))
                 }
             return withPayment(server) {
-                val result = if (media) client.media(file, mime, server, auth) else client.upload(file, mime, server, auth)
+                // `media` may be transformed by the server, so only a plain upload counts a blob it already holds.
+                val result = if (media) client.media(file, mime, server, auth) else client.uploadOrHeld(hash, file.length(), mime, server) { client.upload(file, mime, server, auth) }
                 Output.emit(
                     mapOf(
                         "url" to result.url,

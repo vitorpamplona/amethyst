@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.preview
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Comments, declarations and the text-only elements (script, style, title, textarea) are not
@@ -234,5 +236,15 @@ class MetaTagsParserCommentTest {
         assertEquals("Brainstorm - Your Network. Your Rules.", info.title)
         assertEquals("The decentralized Web of Trust layer for Nostr.", info.description)
         assertEquals("https://brainstorm.nosfabrica.com/og-image.png", info.image)
+    }
+
+    @Test
+    fun onlyAHeadEndInMarkupEndsTheHead() {
+        // What UrlPreview asks before it stops reading: a byte search finds all of these.
+        assertFalse(MetaTagsParser.reachesHeadEnd("<html><head><script>var s = \"</head>\";</script>"))
+        assertFalse(MetaTagsParser.reachesHeadEnd("<html><head><!-- </head> -->"))
+        assertFalse(MetaTagsParser.reachesHeadEnd("<html><head><title>a </head> b</title>"))
+        assertTrue(MetaTagsParser.reachesHeadEnd("<html><head><script>var s = \"</head>\";</script></HEAD>"))
+        assertTrue(MetaTagsParser.reachesHeadEnd("<html><head></head><body>"))
     }
 }

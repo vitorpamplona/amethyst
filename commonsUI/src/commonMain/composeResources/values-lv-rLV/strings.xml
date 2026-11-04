@@ -657,12 +657,9 @@
     <string name="wallet_connect_connect_app">Pievienot maku</string>
     <string name="see_relay_feed">Skatīt relay plūsmu</string>
     <string name="pledge_amount_in_sats">Solījuma summa sats</string>
-    <string name="poll_option_description">Aptaujas varianta apraksts</string>
     <string name="poll_zap_value_min">Zap minimums</string>
     <string name="poll_zap_value_max">Zap maksimums</string>
     <string name="poll_consensus_threshold">Vienprātība</string>
-    <string name="poll_closing_date_time">Aptaujas slēgšanas datums &amp; laiks</string>
-    <string name="poll_closing_in">Aptauja beidzas pēc %1$s</string>
     <string name="looking_for_event">Meklē notikumu %1$s</string>
     <string name="send_zap">Sūtīt Zap</string>
     <string name="custom_zaps_add_a_message">Pievienot publisku ziņu</string>
@@ -710,7 +707,6 @@
     <string name="uploading_state_hashing">Kešo</string>
     <string name="uploading_state_finished">Pabeigts</string>
     <string name="uploading_state_error">Kļūda</string>
-    <string name="connect_via_tor1">Pielāgot</string>
     <string name="connect_via_tor2">Tor iestatījumi</string>
     <string name="yes">Jā</string>
     <string name="no">Nē</string>
@@ -786,7 +782,6 @@
     <string name="show_sensitive_content_explainer">Parāda brīdinājuma ziņojumu, ja autors atzīmējis ierakstu kā jutīgu</string>
     <string name="max_hashtag_limit_title">Maks. hashtagus vienā ierakstā</string>
     <string name="max_hashtag_limit_explainer">Slēpj ierakstus ar vairāk hashtagiem nekā šis ierobežojums. Iestatiet 0, lai atspējotu</string>
-    <string name="new_reaction_symbol">Jauns reakcijas simbols</string>
     <string name="zapraiser_explainer">Pievieno mērķa sats summu šim ierakstam. Atbalstošie klienti var to rādīt kā progresa joslu, lai stimulētu ziedojumus</string>
     <string name="zapraiser_target_amount_in_sats">Mērķa summa sats</string>
     <string name="sats_to_complete">Zapraiser pie %1$s. %2$s sats līdz mērķim</string>
@@ -929,9 +924,7 @@
     <string name="created_at">Izveidots</string>
     <string name="guidelines">Vadlīnijas</string>
     <string name="moderators">Moderatori</string>
-    <string name="login_with_external_signer">Pieteikties ar Amber</string>
     <string name="status_update">Atjauniniet savu statusu</string>
-    <string name="poll_zap_value_min_max_explainer">Balsis tiek svērtas pēc zap summas. Varat iestatīt minimālo summu, lai izvairītos no surogātpasta sūtītājiem, un maksimālo summu, lai neļautu lieliem zap sūtītājiem dominēt aptaujā. Izmantojiet vienādu summu abos laukos, lai katrai balsij būtu vienāda vērtība. Atstājiet tukšu, lai pieņemtu jebkādu summu.</string>
     <string name="error_dialog_talk_to_user">Rakstīt lietotājam</string>
     <string name="error_dialog_talk_to_user_name">Rakstīt %1$s</string>
     <string name="error_dialog_button_ok">Labi</string>
@@ -1448,7 +1441,6 @@
     <string name="closing_time">Slēgšanas laiks</string>
     <string name="confirm">Apstiprināt</string>
     <string name="next">Tālāk</string>
-    <string name="add_poll_option_button">Pievienot aptaujas opcijas pogu</string>
     <string name="go_back">Atpakaļ</string>
     <string name="approve">Apstiprināt</string>
     <string name="connected">Savienots</string>
@@ -1456,13 +1448,9 @@
     <string name="poll_submit">Iesniegt</string>
     <string name="poll_view_results">Skatīt rezultātus</string>
     <string name="restart">Restartēt</string>
-    <string name="chess_accept">Pieņemt</string>
-    <string name="chess_decline">Noraidīt</string>
     <string name="new_chess_game">Jauna šaha spēle</string>
     <string name="chess_loading_game">Ielādē spēli…</string>
     <string name="chess_game_not_found">Spēle nav atrasta</string>
-    <string name="chess_game_waiting">Šī spēle, iespējams, ir beigusies vai gaida pretinieku.</string>
-    <string name="chess_game_id">Spēles ID: %1$s…</string>
     <string name="badge_and_n_others"> un vēl %1$d</string>
     <string name="remove_language">Noņemt %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Sāciet ar labu plūsmu, sekojot tiem pašiem cilvēkiem kā kādam, kam uzticaties.</string>
@@ -2425,7 +2413,6 @@
     <string name="media_added_to_profile_gallery">Multivide pievienota jūsu profila galerijai</string>
     <string name="media_download_has_started_toast">Multivides lejupielāde ir sākusies…</string>
     <string name="media_servers">Mediju serveri</string>
-    <string name="media_too_big_for_nip95">Multivide ir pārāk liela NIP-95</string>
     <string name="messages_cant_upload_explainer">Vispirms ievadiet ziņojuma galamērķi</string>
     <string name="messages_cant_upload_title">Nevar augšupielādēt</string>
     <string name="messages_new_message_subject">Temats</string>
@@ -2666,7 +2653,6 @@
     <string name="poll_author_no_vote">Aptaujas autori nevar balsot savās aptaujās.</string>
     <string name="poll_is_closed_explainer">Aptauja ir slēgta jaunām balsīm</string>
     <string name="poll_multiple_choice">Vairāki varianti</string>
-    <string name="poll_option_index">Variants %1$s</string>
     <string name="poll_single_choice">Viens variants</string>
     <string name="poll_unable_to_vote">Nevar balsot</string>
     <string name="polls">Aptaujas</string>
@@ -2929,7 +2915,6 @@
     <string name="upload_error_title">Augšupielādes kļūda</string>
     <string name="upload_error_voice_message_exception">Balss augšupielāde neizdevās: %1$s</string>
     <string name="upload_error_voice_message_failed">Neizdevās augšupielādēt balss ziņojumu</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 balss ziņojumiem vēl netiek atbalstīts</string>
     <string name="uptime">%1$d% darbalaiks</string>
     <string name="use_internal_tor">Aktīvs Tor dzinējs</string>
     <string name="use_internal_tor_explainer">Izmantot iekšējo versiju vai Orbot</string>
@@ -2983,4 +2968,8 @@
          what leaves the device; the fork strings say why the old phone stops. -->
     <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
 </resources>

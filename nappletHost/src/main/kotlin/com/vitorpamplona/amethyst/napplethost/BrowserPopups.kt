@@ -120,6 +120,8 @@ object BrowserPopups {
         // the popup must see the same logged-in session anyway.
         NappletWebViewProfile.apply(app, webView, webViewProfile)
         BrowserWebTools.applyBrowserSettings(webView)
+        // A popup opened from a page on Tor is on Tor too: no WebRTC around the proxy.
+        NappletWebRtcGuard.sync(webView, useTor)
         val entry = Pending(webView, wrapper, proxyPort, useTor, themeType, webViewProfile, searchEngine)
         WebViewCompat.addWebMessageListener(webView, NappletWebContract.BRIDGE_NAME, setOf("*")) { view, message, origin, isMainFrame, reply ->
             entry.dispatch(view, message, origin, isMainFrame, reply)

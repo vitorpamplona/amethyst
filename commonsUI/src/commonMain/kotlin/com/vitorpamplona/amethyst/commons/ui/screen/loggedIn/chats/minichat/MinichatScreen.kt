@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.minichat.MinichatFeedViewModel
 import com.vitorpamplona.amethyst.commons.chats.publicChannels.concord.datasource.ConcordChannelHistorySubAssembler
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -96,6 +97,8 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -257,12 +260,14 @@ fun MinichatScreen(
                                 onEncryptedUploadError = { title, message ->
                                     launch(Dispatchers.Main) { longNotice.show("$title: $message") }
                                 },
-                                uploader = accountViewModel.host.mediaUploader,
+                                uploader = accountViewModel.mediaUploader,
                                 onceUploaded = { uploads ->
-                                    val caption = uploadState.caption
-                                    val imetas = if (isConcord) uploads.mapNotNull { it.toConcordImeta() } else uploads.toPlainImetas()
-                                    if (imetas.isNotEmpty()) {
-                                        accountViewModel.account.sendMinichatReply(rootNote, caption, imetas)
+                                    accountViewModel.reportSignerErrors {
+                                        val caption = uploadState.caption
+                                        val imetas = if (isConcord) uploads.mapNotNull { it.toConcordImeta() } else uploads.toPlainImetas()
+                                        if (imetas.isNotEmpty()) {
+                                            accountViewModel.account.sendMinichatReply(rootNote, caption, imetas)
+                                        }
                                     }
                                 },
                             )
@@ -281,6 +286,7 @@ fun MinichatScreen(
             Column(modifier = EditFieldModifier) {
                 ThinPaddingTextField(
                     state = composer,
+                    spellCheck = true,
                     onTextChanged = {
                         val group = buzzGroup
                         val now = TimeUtils.now()
@@ -332,6 +338,7 @@ fun MinichatScreen(
                                     try {
                                         accountViewModel.account.sendMinichatReply(rootNote, text)
                                     } catch (e: Exception) {
+                                        currentCoroutineContext().ensureActive()
                                         launch(Dispatchers.Main) {
                                             shortNotice.show("Failed to send message: ${e.message}")
                                         }

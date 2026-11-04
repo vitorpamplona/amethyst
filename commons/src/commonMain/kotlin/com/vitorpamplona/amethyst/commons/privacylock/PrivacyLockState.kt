@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.privacylock
 
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -36,12 +37,12 @@ import kotlinx.coroutines.launch
  *
  * One instance per gated route (Messages, Wallet, …) is provided via
  * [LocalPrivacyLockState] at the App composition root. All instances share
- * the same [PrivacyLockSettings] — one master `lockEnabled` flag enables
- * every scope together — but each scope keeps its own [LockState] and its
+ * the same [PrivacyLockSettings], but each scope has its own switch
+ * ([enabledFor]), its own [LockState] and its
  * own idle-timer [Job] so unlock, leave-route, and inactivity transitions
  * apply independently per route.
  *
- * - Initial value is seeded synchronously from [settings.lockEnabled.value]
+ * - Initial value is seeded synchronously from the scope's switch
  *   so the first composition sees [LockState.Locked] without flashing
  *   content (deep-link race fix, plan §Security Hardening H1).
  * - The underlying StateFlow is hot (`MutableStateFlow`); notification path
@@ -51,17 +52,27 @@ class PrivacyLockState(
     val scope: LockScope,
     private val settings: PrivacyLockSettings,
     private val coroutineScope: CoroutineScope,
+    /** Wall-clock millis; tests pass their virtual clock. */
+    private val nowMs: () -> Long = { TimeUtils.nowMillis() },
 ) {
+    private val enabled = settings.enabledFor(scope)
+
     private val seed: LockState =
-        if (settings.lockEnabled.value) LockState.Locked else LockState.Disabled
+        if (enabled.value) LockState.Locked else LockState.Disabled
 
     private val mutableState = MutableStateFlow(seed)
     val state: StateFlow<LockState> = mutableState.asStateFlow()
 
+    /** Until when unlocking is refused after too many failures; shared by every scope. */
+    val lockedUntilEpochMs: StateFlow<Long?> get() = settings.lockedUntilEpochMs
+
     private var idleTimerJob: Job? = null
 
+    /** When the user last touched, typed or clicked; the idle timer counts from here. */
+    private var lastInteractionMs = 0L
+
     init {
-        settings.lockEnabled
+        enabled
             .onEach { enabled ->
                 if (!enabled) {
                     cancelIdleTimer()
@@ -71,16 +82,20 @@ class PrivacyLockState(
                 }
             }.launchIn(coroutineScope)
 
-        combine(settings.lockEnabled, settings.inactivityTimer) { enabled, timer -> enabled to timer }
+        combine(enabled, settings.inactivityTimer) { enabled, timer -> enabled to timer }
             .onEach { _ ->
                 if (mutableState.value is LockState.Unlocked) restartIdleTimer()
             }.launchIn(coroutineScope)
     }
 
-    /** Resets the inactivity timer. No-op unless currently Unlocked. */
+    /**
+     * Resets the inactivity timer. No-op unless currently Unlocked. Called for every pointer move and
+     * key press, so it only records the time: the running timer re-arms itself from it.
+     */
     fun onUserInteraction() {
         if (mutableState.value !is LockState.Unlocked) return
-        restartIdleTimer()
+        lastInteractionMs = nowMs()
+        if (idleTimerJob?.isActive != true) restartIdleTimer()
     }
 
     /** Re-lock immediately on route exit or account switch. Idempotent. */
@@ -132,34 +147,23 @@ class PrivacyLockState(
      * @return the new [PrivacyLockSettings.lockedUntilEpochMs] value, or
      *   null when no lockout yet applies.
      */
-    fun onFailedUnlockAttempt(nowMs: Long): Long? {
-        val next = settings.failedUnlockAttempts.value + 1
-        settings.setFailedUnlockAttempts(next)
-        val overshoot = next - PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES
-        if (overshoot < 0) {
-            settings.setLockedUntilEpochMs(null)
-            return null
-        }
-        val duration =
-            (PrivacyLockSettings.LOCKOUT_BASE_MS shl overshoot)
-                .coerceAtMost(PrivacyLockSettings.LOCKOUT_MAX_MS)
-        val until = nowMs + duration
-        settings.setLockedUntilEpochMs(until)
-        return until
-    }
+    fun onFailedUnlockAttempt(nowMs: Long): Long? = settings.recordFailedUnlock(nowMs)
 
     /** Clear the failed-attempt counter and any active lockout. */
-    fun onUnlockAttemptResetToZero() {
-        settings.setFailedUnlockAttempts(0)
-        settings.setLockedUntilEpochMs(null)
-    }
+    fun onUnlockAttemptResetToZero() = settings.resetFailedUnlocks()
 
     private fun restartIdleTimer() {
         cancelIdleTimer()
+        lastInteractionMs = nowMs()
         val millis = settings.inactivityTimer.value.millis ?: return
         idleTimerJob =
             coroutineScope.launch {
-                delay(millis)
+                // Sleeps until the idle time is up, counted from the latest interaction.
+                while (true) {
+                    val left = lastInteractionMs + millis - nowMs()
+                    if (left <= 0) break
+                    delay(left)
+                }
                 if (mutableState.value is LockState.Unlocked) {
                     mutableState.value = LockState.Locked
                 }

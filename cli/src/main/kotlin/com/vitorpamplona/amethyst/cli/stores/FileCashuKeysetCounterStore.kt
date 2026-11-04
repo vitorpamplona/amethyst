@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.cli.stores
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.SecureFileIO
 import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
+import kotlinx.serialization.Serializable
 import java.io.File
 
 /**
@@ -40,16 +40,16 @@ import java.io.File
 class FileCashuKeysetCounterStore(
     private val file: File,
 ) : CashuKeysetCounterStore {
-    private val mapper = jacksonObjectMapper()
     private val lock = Any()
 
+    @Serializable
     private data class Persisted(
         val keyset_counters: MutableMap<String, Long> = mutableMapOf(),
     )
 
     private fun load(): Persisted =
         if (file.exists()) {
-            runCatching { mapper.readValue<Persisted>(file.readText()) }.getOrDefault(Persisted())
+            runCatching { CliJson.files.decodeFromString<Persisted>(file.readText()) }.getOrDefault(Persisted())
         } else {
             Persisted()
         }
@@ -64,7 +64,7 @@ class FileCashuKeysetCounterStore(
             val state = load()
             val first = state.keyset_counters[keysetId] ?: 0L
             state.keyset_counters[keysetId] = first + count.coerceAtLeast(0)
-            SecureFileIO.writeTextAtomic(file, mapper.writeValueAsString(state))
+            SecureFileIO.writeTextAtomic(file, CliJson.files.encodeToString(state))
             first
         }
 }

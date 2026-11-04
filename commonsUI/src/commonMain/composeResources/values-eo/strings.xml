@@ -645,12 +645,9 @@
     <string name="wallet_connect_connect_app">Konekti monujon</string>
     <string name="see_relay_feed">Vidi relay-fluon</string>
     <string name="pledge_amount_in_sats">Promesi Kvanton en Satoj</string>
-    <string name="poll_option_description">Priskribo de elekto de enketo</string>
     <string name="poll_zap_value_min">Minimumo de Zapoj</string>
     <string name="poll_zap_value_max">Maksimumo de Zapoj</string>
     <string name="poll_consensus_threshold">Interkonsento</string>
-    <string name="poll_closing_date_time">Dato &amp; Horo de fermo de balotenketo</string>
-    <string name="poll_closing_in">Balotenketo fermiĝas en %1$s</string>
     <string name="looking_for_event">Serĉanta Eventon %1$s</string>
     <string name="send_zap">Sendi Zap</string>
     <string name="custom_zaps_add_a_message">Aldoni publikan mesaĝon</string>
@@ -699,7 +696,6 @@
     <string name="uploading_state_hashing">Haŝante</string>
     <string name="uploading_state_finished">Farite</string>
     <string name="uploading_state_error">Eraro</string>
-    <string name="connect_via_tor1">Agordi</string>
     <string name="connect_via_tor2">Tor-Agordojn</string>
     <string name="yes">Jes</string>
     <string name="no">Ne</string>
@@ -773,7 +769,6 @@
     <string name="max_hashtag_limit_title">Maksimuma hashtag-nombro per afiŝo</string>
     <string name="max_hashtag_limit_explainer">Kaŝas afiŝojn kun pli da hashtag-oj ol tiu ĉi limo. Agordu al 0 por malŝalti</string>
     <string name="security_unlimited">∞</string>
-    <string name="new_reaction_symbol">Nova Reaga Simbolo</string>
     <string name="zapraiser">Zapkolekto</string>
     <string name="zapraiser_explainer">Difinas kvanton de zapoj por kolekti por ĉi tiu afiŝo. Subtenantaj klientoj montrus ĉi tion kiel plenumskalo por kuraĝigi donacojn</string>
     <string name="zapraiser_target_amount_in_sats">Celita Kvanto da Satoj</string>
@@ -919,9 +914,7 @@
     <string name="created_at">Kreita en</string>
     <string name="guidelines">Gvidlinioj</string>
     <string name="moderators">Moderigistoj</string>
-    <string name="login_with_external_signer">Ensaluti kun Amber</string>
     <string name="status_update">Ĝistadigi vian staton</string>
-    <string name="poll_zap_value_min_max_explainer">Voĉdonoj pezas laŭ la zap-kvanto. Vi povas difini minimuman kvanton por eviti spamistojn kaj maksimuman kvanton por eviti ke grandaj zapistoj ekregu la enketon. Uzu la saman kvanton en ambaŭ kampoj por certigi ke ĉiuj voĉdonoj pezus same. Malplenigu ĝin por akcepti ajnan kvanton.</string>
     <string name="error_dialog_talk_to_user">Mesaĝi la Uzanto</string>
     <string name="error_dialog_talk_to_user_name">Mesaĝi %1$s</string>
     <string name="error_dialog_button_ok">Okej</string>
@@ -1451,7 +1444,6 @@
     <string name="closing_time">Ferma Horo</string>
     <string name="confirm">Konfirmi</string>
     <string name="next">Sekva</string>
-    <string name="add_poll_option_button">Aldoni balotopcion-butonon</string>
     <string name="go_back">Iri Reen</string>
     <string name="approve">Aprobi</string>
     <string name="connected">Konektita</string>
@@ -1459,13 +1451,9 @@
     <string name="poll_submit">Sendi</string>
     <string name="poll_view_results">Vidi rezultojn</string>
     <string name="restart">Rekomenci</string>
-    <string name="chess_accept">Akcepti</string>
-    <string name="chess_decline">Rifuzi</string>
     <string name="new_chess_game">Nova Ŝaka Ludo</string>
     <string name="chess_loading_game">Ŝargante ludon…</string>
     <string name="chess_game_not_found">Ludo Ne Trovita</string>
-    <string name="chess_game_waiting">Ĉi tiu ludo eble finiĝis aŭ atendas kontraŭulon.</string>
-    <string name="chess_game_id">Luda ID: %1$s…</string>
     <string name="badge_and_n_others"> kaj %1$d aliaj</string>
     <string name="remove_language">Forigi %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Komencu per bonega fluo sekvante la samajn homojn kiel iu en kiu vi fidas.</string>
@@ -2453,7 +2441,6 @@
     <string name="media_added_to_profile_gallery">Amaskomunikiloj aldonitaj al via Profila Galerio</string>
     <string name="media_download_has_started_toast">Amaskomunikila elŝuto komenciĝis…</string>
     <string name="media_servers">Amaskomunikilaj Serviloj</string>
-    <string name="media_too_big_for_nip95">La medio estas tro granda por NIP-95</string>
     <string name="messages_cant_upload_explainer">Unue enigu la celon de la mesaĝo</string>
     <string name="messages_cant_upload_title">Ne Eblas Alŝuti</string>
     <string name="messages_new_message_subject">Temo</string>
@@ -2694,7 +2681,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Balotenketo estas fermita al novaj voĉoj</string>
     <string name="poll_multiple_choice">Multobla elekto</string>
-    <string name="poll_option_index">Elekto %1$s</string>
     <string name="poll_single_choice">Ununura elekto</string>
     <string name="poll_unable_to_vote">Ne eblas voĉdoni</string>
     <string name="polls">Balotadoj</string>
@@ -2951,7 +2937,6 @@
     <string name="upload_error_title">Alŝuta Eraro</string>
     <string name="upload_error_voice_message_exception">Voĉa alŝuto malsukcesis: %1$s</string>
     <string name="upload_error_voice_message_failed">Malsukcesis alŝuti voĉan mesaĝon</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 ankoraŭ ne estas subtenata por voĉaj mesaĝoj</string>
     <string name="uptime">%1$d% funkcia tempo</string>
     <string name="use_internal_tor">Aktiva Tor-Motoro</string>
     <string name="use_internal_tor_explainer">Uzu la internan version aŭ Orbot</string>

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.relaybench.bench
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
@@ -29,11 +28,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySession
+import com.vitorpamplona.relaybench.BenchJson
 import com.vitorpamplona.relaybench.NostrSocket
+import com.vitorpamplona.relaybench.asText
+import com.vitorpamplona.relaybench.get
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.Serializable
 import okhttp3.OkHttpClient
 
 /**
@@ -59,8 +62,7 @@ import okhttp3.OkHttpClient
  * pair would never converge.
  */
 object SyncBenchmark {
-    private val mapper = jacksonObjectMapper()
-
+    @Serializable
     data class ReconcileStats(
         val ms: Double,
         val rounds: Int,
@@ -70,6 +72,7 @@ object SyncBenchmark {
         val error: String?,
     )
 
+    @Serializable
     data class PairResult(
         val serverA: String,
         val serverB: String,
@@ -187,7 +190,7 @@ object SyncBenchmark {
                     val subId = "fetch-$batchIdx"
                     socket.req(subId, Filter(ids = batch).toJson())
                     for (raw in socket.incoming) {
-                        val node = runCatching { mapper.readTree(raw) }.getOrNull() ?: continue
+                        val node = runCatching { BenchJson.parse(raw) }.getOrNull() ?: continue
                         if (node[1]?.asText() != subId) continue
                         when (node[0]?.asText()) {
                             "EVENT" ->

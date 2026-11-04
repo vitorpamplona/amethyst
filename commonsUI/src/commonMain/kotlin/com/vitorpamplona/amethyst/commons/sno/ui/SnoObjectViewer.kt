@@ -39,10 +39,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -120,6 +122,14 @@ private val TOGGLE_INSET = 4.dp
  * object looks the same everywhere it is quoted, and the switch starts off.
  * See [SnoLighting] for what it does and what it costs.
  *
+ * Inside a feed card it is [zoomable] `false`: every drag turns the object,
+ * since pinching or moving it there would only push it out of its own card.
+ * Which way a drag goes is settled by where it starts. One that starts on the
+ * object turns it and is consumed from its first move, so the feed never sees
+ * enough of it to scroll; one that starts outside belongs to the feed, which
+ * keeps scrolling even as it passes over the object, because a pointer's
+ * events go to what was under it when it went down.
+ *
  * Unlike [SnoThumbnail] this does not go through Coil: a turn produces a new
  * angle every frame and each would become its own cache entry, evicting the
  * image cache within a second. Nothing here is worth caching — the object is
@@ -132,6 +142,8 @@ fun SnoObjectViewer(
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
     background: Color = Color.Transparent,
+    zoomable: Boolean = true,
+    onTap: (() -> Unit)? = null,
 ) {
     var yaw by remember(eventId) { mutableFloatStateOf(SnoRasterizer.DEFAULT_YAW_DEGREES) }
     var pitch by remember(eventId) { mutableFloatStateOf(SnoRasterizer.DEFAULT_PITCH_DEGREES) }
@@ -145,11 +157,14 @@ fun SnoObjectViewer(
     // on the angle, and a turn would otherwise pay for it sixty times a second.
     val lighting = remember(payload) { LightingCache() }
     val backgroundArgb = if (background == Color.Transparent) 0 else background.toArgb()
+    val currentOnTap by rememberUpdatedState(onTap)
+    val hasTap = onTap != null
 
     BoxWithConstraints(
         modifier =
             modifier
-                .pointerInput(eventId) {
+                .clipToBounds()
+                .pointerInput(eventId, zoomable) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
                         gesturing = true
@@ -158,7 +173,7 @@ fun SnoObjectViewer(
                                 val event = awaitPointerEvent(PointerEventPass.Main)
                                 val moved = event.changes.any { it.positionChanged() }
                                 if (moved) {
-                                    if (event.changes.size > 1) {
+                                    if (zoomable && event.changes.size > 1) {
                                         // Two fingers move and scale the object.
                                         val scale = event.calculateZoom()
                                         if (scale != 1f) zoom = (zoom * scale).coerceIn(MIN_ZOOM, MAX_ZOOM)
@@ -178,8 +193,11 @@ fun SnoObjectViewer(
                             gesturing = false
                         }
                     }
-                }.pointerInput(eventId) {
+                }.pointerInput(eventId, hasTap) {
                     detectTapGestures(
+                        // Only when there is somewhere to go, so a tap with nothing to
+                        // do is not delayed waiting to rule out a double tap.
+                        onTap = if (hasTap) ({ currentOnTap?.invoke() }) else null,
                         onDoubleTap = {
                             yaw = SnoRasterizer.DEFAULT_YAW_DEGREES
                             pitch = SnoRasterizer.DEFAULT_PITCH_DEGREES

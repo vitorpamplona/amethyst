@@ -3,7 +3,8 @@
 Thanks for your interest in improving Amethyst. This document captures the
 expectations, conventions, and review rules for code, documentation, and
 translation contributions across all modules in this repository (`amethyst/`,
-`desktopApp/`, `quartz/`, `commons/`, `commonsUI/`, `cli/`, `quic/`, `nestsClient/`).
+`desktopApp/`, `commons/`, `commonsUI/`, `cli/`, `nestsClient/`). The Quartz library has its own
+repo and its own contributing rules: [vitorpamplona/quartz](https://github.com/vitorpamplona/quartz).
 
 By contributing, you agree to license your work under the MIT license. Any
 work contributed where you are not the original author must contain its
@@ -83,10 +84,9 @@ affects the DMG build), say so explicitly. Honest "I couldn't test this on
 Windows" beats a silent guess.
 
 If you used an AI coding assistant for a substantial portion of the diff,
-also read [`CONTRIBUTING-WITH-AI.md`](CONTRIBUTING-WITH-AI.md) — it adds
-gates specific to AI-authored PRs (research before code, both-flavour
-build, performance footguns, automated tests, regression test plan,
-second-agent code review).
+also read [`CONTRIBUTING-WITH-AI.md`](CONTRIBUTING-WITH-AI.md). Its main
+rule: no PR may be opened until a human has reviewed the whole diff and
+tested the app by hand on a device. An agent must never open the PR itself.
 
 ## Reporting bugs and requesting features
 
@@ -116,6 +116,11 @@ exist to move issues nobody is currently working on. Security issues do not
 need a bounty and should not be filed publicly; see
 [SECURITY.md](SECURITY.md).
 
+**A bounty is not, and will never be, a promise of payment.** Even if the
+issue's author likes your solution and it is approved and merged, the author
+can still decide, for any reason, whether to pay you or not. If you take on a
+bounty, you accept the risk of not being paid even after the work is done.
+
 ## Security issues
 
 **Do not file security vulnerabilities as public GitHub issues.** Use
@@ -130,7 +135,7 @@ Prerequisites:
 1. **JDK 21+** (Zulu or Temurin recommended)
 2. **Android Studio** (for Android development)
 3. **Android 8.0+ phone or emulator** (for installing the Android app)
-4. **Xcode + iOS simulator** if you're touching `quartz/` iOS code
+4. **Xcode + iOS simulator** if you're touching iOS code
 5. **libsodium** for full local builds (`brew install libsodium` on macOS)
 
 Desktop packaging prerequisites (only if you're building installers) are
@@ -148,7 +153,7 @@ Common Gradle entry points:
 ```bash
 ./gradlew :desktopApp:run         # Run desktop app
 ./gradlew :amethyst:installDebug  # Install Android debug build
-./gradlew :quartz:build           # Build Quartz for all targets
+./gradlew -PquartzDir=../quartz build   # Build against a local Quartz checkout
 ./gradlew build                   # Full build + tests
 ```
 
@@ -156,12 +161,13 @@ Common Gradle entry points:
 
 Modules:
 
-- `quartz/` — Nostr KMP library (protocol, crypto, models). **No UI.**
+- Quartz — Nostr KMP library (protocol, crypto, models), in its own repo
+  ([vitorpamplona/quartz](https://github.com/vitorpamplona/quartz)) and on Maven Central. **No UI.**
 - `commons/` — Shared headless layer: models, ViewModels, flows, relay client. **No Compose UI** (the CLI depends on it).
 - `commonsUI/` — Shared Compose Multiplatform UI, icons, theme, Compose resources, on top of `commons`.
-- `quic/` — Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport.
-- `nestsClient/` — Audio-rooms client (NIP-53) built on `:quic` and
-  `:quartz`.
+- `nestsClient/` — Audio-rooms client (NIP-53) built on quic-kmp and
+  quartz. The pure-Kotlin QUIC v1 + HTTP/3 + WebTransport stack lives in
+  its own repo, [quic-kmp](https://github.com/vitorpamplona/quic-kmp), and comes from Maven Central.
 - `amethyst/` — Android app: Activity, layouts, navigation.
 - `desktopApp/` — Desktop JVM app: Window, sidebar, keyboard shortcuts.
 - `cli/` — `amy`, a non-interactive JVM CLI over `quartz` + `commons`.
@@ -175,18 +181,23 @@ of PR churn. Place new code by purpose:
 
 | What you're adding | Goes in |
 |---|---|
-| Nostr event types, NIPs, tags, signing, crypto, Bech32 | `quartz/commonMain/` |
+| Nostr event types, NIPs, tags, signing, crypto, Bech32 | [quartz](https://github.com/vitorpamplona/quartz) (its own repo) |
 | Shared ViewModels, StateFlows, relay subscriptions | `commons/commonMain/viewmodels/` or `commons/commonMain/` |
 | Shared Composables, icons, theme | `commonsUI/commonMain/` (same packages as `commons`) |
 | Android-only screen, navigation, system integration | `amethyst/` |
 | Desktop-only window, sidebar, menu bar, shortcut | `desktopApp/` |
 | `amy <verb>` subcommand (thin assembly only) | `cli/src/main/kotlin/.../cli/` |
-| QUIC / HTTP/3 / WebTransport protocol code | `quic/` |
+| Hashes, ciphers, KDFs, curves, secure random | [crypto-kmp](https://github.com/vitorpamplona/crypto-kmp) (its own repo) |
+| The RFC 9420 MLS engine | [mls-kmp](https://github.com/vitorpamplona/mls-kmp) (its own repo) |
+| Marmot group logic that needs MLS state, `MarmotManager`, the QUIC agent-stream transport | [marmot-kmp](https://github.com/vitorpamplona/marmot-kmp) (its own repo; Marmot's event classes are in Quartz) |
+| cordn group logic, `CordnGroupManager`, the coordinator client | [cordn-kmp](https://github.com/vitorpamplona/cordn-kmp) (its own repo) |
+| Encrypted-at-rest store implementations, account wiring for Marmot/cordn | `commons/` |
+| QUIC / HTTP/3 / WebTransport protocol code | [quic-kmp](https://github.com/vitorpamplona/quic-kmp) (its own repo) |
 | MoQ session / audio-room logic | `nestsClient/` |
 
 Hard rules:
 
-- `quartz/` has **no UI**.
+- Quartz has **no UI**.
 - `cli/` has **no Nostr protocol or business logic** — it's a thin assembly
   layer over `quartz` + `commons`. If your CLI command needs new behavior,
   extract it into `commons/` first.
@@ -198,7 +209,7 @@ Hard rules:
 ## Workflow
 
 1. **Survey first.** Search the codebase for existing implementations before
-   writing new code. The `.claude/CLAUDE.md` file has a recommended set of
+   writing new code. The `AGENTS.md` file has a recommended set of
    `grep` queries; running them routinely turns up the exact class you were
    about to re-invent.
 2. **Open a small PR.** One feature or one fix per PR. Refactors that
@@ -224,15 +235,15 @@ Hard rules:
 ```bash
 ./gradlew test                 # Unit + KMP common tests, all modules
 ./gradlew connectedAndroidTest # Android instrumented tests (needs device)
-./gradlew :quartz:test         # Single module
+./gradlew :commons:test        # Single module
 ```
 
 Add tests when:
 
 - You fix a bug — a regression test that fails before your fix and passes
   after.
-- You add new protocol code in `quartz/` — Nostr event parsing, NIP
-  implementations, and crypto paths should have unit coverage.
+- You add new protocol code in quartz — Nostr event parsing, NIP
+  implementations, and crypto paths should have unit coverage there.
 - You add anything to `commons/` with non-trivial state transitions.
 
 UI changes don't need automated UI tests, but they do need the screenshots
@@ -249,12 +260,12 @@ the PR description. Reviewers may ask if you didn't.
 
 | Suite | Path | What it covers | When you must run it |
 |---|---|---|---|
-| **Marmot / MLS (Whitenoise)** | `cli/tests/marmot/` | NIP-EE MLS groups: KeyPackage publish, group create/invite/remove, admin promote/demote, leave, replay, KP rotation — Amethyst (or `amy`) ↔ `whitenoise-rs` Rust reference | Changes to MLS / Marmot code in `quartz/` or `commons/`, or to the Marmot UI / group-chat flow in `amethyst/` |
+| **Marmot / MLS (White Noise)** | `cli/tests/marmot/` | Marmot MLS groups: KeyPackage publish, group create/invite/remove, admin promote/demote, leave, replay, KP rotation, agent-stream previews — Amethyst (or `amy`) ↔ MDK's `wn`/`wnd` Rust reference | A marmot-kmp or mls-kmp version bump, Marmot wiring in `commons/`, or the Marmot UI / group-chat flow |
+| **cordn** | `cli/tests/cordn/` | `amy` against the reference coordinator (`tier-b.sh`), against the reference client in one group (`interop-client.sh`), and a device handoff (`migrate.sh`), over a local geode relay. The coordinator image has no license: pull it by hand | A cordn-kmp or mls-kmp version bump, or cordn wiring in `commons/` (`CordnRuntime`, the file stores, `CordnMigration`) |
 | **NIP-17 DMs (amy ↔ amy)** | `cli/tests/dm/` | Text + file DM round-trip, strict kind:10050, `--allow-fallback` NIP-65 chain, `dm list --since` window slide | Changes to DM, gift-wrap (NIP-59), or NIP-17 code paths in `quartz/` or `commons/` |
 | **Audio rooms (manual)** | `cli/tests/nests/` | 47-test manual harness: Amethyst Android ↔ nostrnests.com reference web client. Host/listener flows, hand-raise, role promotion, kicks, schedule, reconnect, JWT refresh, PIP | Changes to NIP-53 audio rooms (`amethyst/` UI) or `nestsClient/` that affect host/listener UX |
 | **MoQ-lite hang-tier** | `nestsClient/tests/hang-interop/` | Rust `hang-listen` / `hang-publish` ↔ Amethyst Kotlin through a real `moq-relay` 0.10.x subprocess. Wire-byte capture, FFT-on-PCM, mute / hot-swap / packet-loss / late-join / 60s broadcast / multi-listener fan-out | Changes to `nestsClient/.../moq/lite/`, `nestsClient/.../audio/`, `MoqLite*Speaker.kt` / `*Listener.kt`, `ReconnectingNests*.kt`, or `quartz/.../nip53` |
-| **MoQ-lite browser-tier** | `nestsClient/tests/browser-interop/` | Headless Chromium with `@moq/lite` + `@moq/hang` via Playwright ↔ Amethyst Kotlin (forward + reverse). WebCodecs encode/decode, ALPN negotiation, browser-side reconnect | Same as hang-tier, plus any change to `:quic` (WebTransport, packet header protection, key updates, stream demux) |
-| **QUIC interop-runner** | `quic/interop/` | The standard `quic-interop-runner` matrix (ns-3 sim) against aioquic, picoquic, quic-go, quinn. Handshake, transfer, loss, corruption, IPv6, migration, key update, version negotiation | Any change in `:quic` that could affect wire bytes, congestion control, or the TLS state machine |
+| **MoQ-lite browser-tier** | `nestsClient/tests/browser-interop/` | Headless Chromium with `@moq/lite` + `@moq/hang` via Playwright ↔ Amethyst Kotlin (forward + reverse). WebCodecs encode/decode, ALPN negotiation, browser-side reconnect | Same as hang-tier, plus any quic-kmp version bump (WebTransport, packet header protection, key updates, stream demux) |
 
 ### Running them
 
@@ -264,10 +275,8 @@ front:
 - **MoQ-lite tiers** are opt-in via `-DnestsHangInterop=true` and
   `-DnestsBrowserInterop=true` on `:nestsClient:jvmTest`. Cold first run is
   ~10–13 min per tier; cached runs ~3–7 min.
-- **`quic/interop/run-matrix.sh` is not concurrency-safe.** Run peers
-  sequentially: `for peer in aioquic picoquic quic-go quinn; do
-  quic/interop/run-matrix.sh -s $peer; done`. Plan at
-  `quic/interop/plans/2026-05-06-interop-runner.md`.
+- **The QUIC interop-runner matrix** moved with the QUIC stack to
+  [quic-kmp](https://github.com/vitorpamplona/quic-kmp) (`quic/interop/` there).
 - **CLI suites** ([`cli/tests/README.md`](cli/tests/README.md)): every
   relay-backed suite boots the embedded `amy serve` relay (geode) — no
   external relay binary; only the Marmot suites additionally need `cargo`

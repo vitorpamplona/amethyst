@@ -648,12 +648,9 @@
     <string name="wallet_connect_connect_app">Conectar Carteira</string>
     <string name="see_relay_feed">Ver feed do Relay</string>
     <string name="pledge_amount_in_sats">Valor em Sats</string>
-    <string name="poll_option_description">Descrição da opção de enquete</string>
     <string name="poll_zap_value_min">Zap mínimo</string>
     <string name="poll_zap_value_max">Zap máximo</string>
     <string name="poll_consensus_threshold">Consenso</string>
-    <string name="poll_closing_date_time">Data e hora de encerramento da enquete</string>
-    <string name="poll_closing_in">Enquete encerra em %1$s</string>
     <string name="looking_for_event">Procurando o evento %1$s</string>
     <string name="send_zap">Enviar Zap</string>
     <string name="custom_zaps_add_a_message">Adicionar uma mensagem pública</string>
@@ -702,7 +699,6 @@
     <string name="uploading_state_hashing">Hashando</string>
     <string name="uploading_state_finished">Concluído</string>
     <string name="uploading_state_error">Erro</string>
-    <string name="connect_via_tor1">Ajustar</string>
     <string name="connect_via_tor2">Configurações Tor</string>
     <string name="yes">Sim</string>
     <string name="no">Não</string>
@@ -778,7 +774,6 @@
     <string name="show_sensitive_content_explainer">Mostra uma mensagem de aviso quando o autor da publicação a marcar como sensível</string>
     <string name="max_hashtag_limit_title">Máximo de hashtags por postagem</string>
     <string name="max_hashtag_limit_explainer">Oculta postagens com mais hashtags do que este limite. Defina como 0 para desativar</string>
-    <string name="new_reaction_symbol">Novo símbolo de reação</string>
     <string name="zapraiser">Arrecadação de Zaps</string>
     <string name="zapraiser_explainer">Adiciona uma quantidade alvo de sats para financiar esta postagem. Os clientes podem mostrar isso como uma barra de progresso para incentivar doações</string>
     <string name="zapraiser_target_amount_in_sats">Valor alvo em Sats</string>
@@ -920,9 +915,7 @@
     <string name="created_at">Criado em</string>
     <string name="guidelines">Diretrizes</string>
     <string name="moderators">Moderadores</string>
-    <string name="login_with_external_signer">Login com Amber</string>
     <string name="status_update">O que você está fazendo?</string>
-    <string name="poll_zap_value_min_max_explainer">Os votos são ponderados pelo valor do zap. Você pode definir um valor mínimo para evitar spammers e um valor máximo para evitar que grandes zappers assumam o controle da enquete. Use o mesmo valor em ambos os campos para garantir que cada voto tenha o mesmo valor. Deixe em branco para aceitar qualquer valor.</string>
     <string name="error_dialog_talk_to_user">Mensagem ao usuário</string>
     <string name="error_dialog_talk_to_user_name">Mensagem %1$s</string>
     <string name="zap_split_title">Dividir e encaminhar Zaps</string>
@@ -1432,7 +1425,6 @@
     <string name="closing_time">Hora de encerramento</string>
     <string name="confirm">Confirmar</string>
     <string name="next">Próximo</string>
-    <string name="add_poll_option_button">Adicionar opção à enquete</string>
     <string name="go_back">Voltar</string>
     <string name="approve">Aprovar</string>
     <string name="connected">Conectado</string>
@@ -1440,13 +1432,9 @@
     <string name="poll_submit">Enviar</string>
     <string name="poll_view_results">Ver resultados</string>
     <string name="restart">Reiniciar</string>
-    <string name="chess_accept">Aceitar</string>
-    <string name="chess_decline">Recusar</string>
     <string name="new_chess_game">Novo Jogo de Xadrez</string>
     <string name="chess_loading_game">Carregando jogo…</string>
     <string name="chess_game_not_found">Jogo não encontrado</string>
-    <string name="chess_game_waiting">Este jogo pode ter terminado ou está aguardando um oponente.</string>
-    <string name="chess_game_id">ID do Jogo: %1$s…</string>
     <string name="badge_and_n_others"> e mais %1$d</string>
     <string name="remove_language">Remover %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Comece com um ótimo feed seguindo as mesmas pessoas que alguém em quem você confia.</string>
@@ -2379,7 +2367,6 @@
     <string name="media_added_to_profile_gallery">Mídia adicionada à sua Galeria de Perfil</string>
     <string name="media_download_has_started_toast">O download da mídia foi iniciado…</string>
     <string name="media_servers">Servidores de Mídia</string>
-    <string name="media_too_big_for_nip95">Mídia muito grande para NIP-95</string>
     <string name="messages_cant_upload_explainer">Insira o destino da mensagem primeiro</string>
     <string name="messages_cant_upload_title">Não pode enviar</string>
     <string name="messages_new_message_subject">Assunto</string>
@@ -2608,7 +2595,6 @@
     <string name="poll_author_no_vote">Os autores de enquetes não podem votar em suas próprias enquetes.</string>
     <string name="poll_is_closed_explainer">A enquete está fechada para novos votos</string>
     <string name="poll_multiple_choice">Múltipla escolha</string>
-    <string name="poll_option_index">Opção %1$s</string>
     <string name="poll_single_choice">Escolha única</string>
     <string name="poll_unable_to_vote">Impossibilitado de votar</string>
     <string name="polls">Enquetes</string>
@@ -2860,7 +2846,6 @@
     <string name="upload_error_title">Erro de upload</string>
     <string name="upload_error_voice_message_exception">Falha no upload de voz: %1$s</string>
     <string name="upload_error_voice_message_failed">Falha ao enviar mensagem de voz</string>
-    <string name="upload_error_voice_message_nip95_not_supported">O NIP-95 ainda não é suportado para mensagens de voz</string>
     <string name="uptime">%1$d% de disponibilidade</string>
     <string name="use_internal_tor">Motor Tor Ativo</string>
     <string name="use_internal_tor_explainer">Use a versão interna ou o Orbot</string>
@@ -2915,4 +2900,8 @@
          what leaves the device; the fork strings say why the old phone stops. -->
     <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
 </resources>

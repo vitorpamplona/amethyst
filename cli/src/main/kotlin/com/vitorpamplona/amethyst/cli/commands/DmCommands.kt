@@ -27,9 +27,8 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.actions.DmActions
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
-import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
-import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
+import com.vitorpamplona.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -177,7 +176,7 @@ object DmCommands {
         }
         val server = args.requireFlag("server")
         val cipher =
-            com.vitorpamplona.quartz.utils.ciphers
+            com.vitorpamplona.crypto.aes
                 .AESGCM()
         val orchestrator = UploadOrchestrator()
         val uploaded = orchestrator.uploadEncrypted(file, cipher, server, ctx.signer)
@@ -264,7 +263,7 @@ object DmCommands {
                     .DimensionTag(match.groupValues[1].toInt(), match.groupValues[2].toInt())
             }
         val cipher =
-            com.vitorpamplona.quartz.utils.ciphers
+            com.vitorpamplona.crypto.aes
                 .AESGCM(keyBytes, nonceBytes)
         val result =
             DmActions.buildFileDmReference(

@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.commons.service.http.EncryptedBlobInterceptor
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
+import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.junit.Assert.assertEquals

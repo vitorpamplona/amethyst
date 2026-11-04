@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
@@ -127,7 +128,7 @@ object ProfileCommands {
             }
             val metadata =
                 try {
-                    Output.mapper.readTree(event.content)
+                    CliJson.parse(event.content)
                 } catch (_: Exception) {
                     null
                 }
@@ -245,7 +246,7 @@ object ProfileCommands {
                     "kind" to signed.kind,
                     "created_at" to signed.createdAt,
                     "based_on" to latest?.id,
-                    "metadata" to Output.mapper.readTree(signed.content),
+                    "metadata" to CliJson.parse(signed.content),
                 ) + RawEventSupport.ackFields(ack),
             )
             return 0

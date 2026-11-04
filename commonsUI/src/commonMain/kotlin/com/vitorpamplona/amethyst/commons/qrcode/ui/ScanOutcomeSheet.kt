@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_copy
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_kind_bunker
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_kind_cashu
+import com.vitorpamplona.amethyst.commons.resources.qr_scanner_kind_hex_key
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_kind_lightning
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_kind_nostr_unsupported
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_kind_nsec
@@ -51,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.resources.qr_scanner_kind_signer
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_kind_text
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_kind_wallet
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_kind_web
+import com.vitorpamplona.amethyst.commons.resources.qr_scanner_open_as_profile
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_open_link
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_try_again
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_unsupported_secret
@@ -65,6 +67,10 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
  * cancelled", "the camera never read anything" and "that scanned perfectly but Amethyst has no
  * screen for it" into the same silent return to the previous screen (issue #417), which trains
  * people to believe the reader is broken when it is working exactly as designed.
+ *
+ * [onOpenProfile] receives the npub of a [ScannedPayload.HexKey] once the user confirms it is a
+ * public key. A raw hex key is never opened without that confirmation, because a private key
+ * looks exactly the same and opening it as a profile would send it to relays.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +79,7 @@ fun ScanOutcomeSheet(
     onDismiss: () -> Unit,
     onOpenLink: (String) -> Unit,
     onCopy: (String) -> Unit,
+    onOpenProfile: (String) -> Unit,
 ) {
     val sheetState =
         rememberBottomSheetState(
@@ -114,6 +121,12 @@ fun ScanOutcomeSheet(
                 )
             }
 
+            if (payload is ScannedPayload.HexKey) {
+                Button(onClick = { onOpenProfile(payload.npub) }) {
+                    Text(stringRes(Res.string.qr_scanner_open_as_profile))
+                }
+            }
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (payload is ScannedPayload.Web) {
                     Button(onClick = { onOpenLink(payload.url) }) {
@@ -134,24 +147,32 @@ fun ScanOutcomeSheet(
 }
 
 @Composable
-private fun explain(payload: ScannedPayload): String =
-    when (payload) {
-        is ScannedPayload.Nostr ->
-            if (payload.entity is NSec) {
-                stringRes(Res.string.qr_scanner_kind_nsec)
-            } else {
-                stringRes(Res.string.qr_scanner_kind_nostr_unsupported)
-            }
+private fun explain(payload: ScannedPayload): String {
+    val kind =
+        when (payload) {
+            is ScannedPayload.Nostr ->
+                if (payload.entity is NSec) {
+                    stringRes(Res.string.qr_scanner_kind_nsec)
+                } else {
+                    stringRes(Res.string.qr_scanner_kind_nostr_unsupported)
+                }
 
-        is ScannedPayload.WalletConnect -> stringRes(Res.string.qr_scanner_kind_wallet)
-        // Split deliberately: Amethyst PUBLISHES bunker:// addresses (it is the signer) and has no
-        // screen that consumes one, so pointing the user at the signer screen -- as this used to --
-        // sends them somewhere that cannot accept it.
-        is ScannedPayload.Bunker -> stringRes(Res.string.qr_scanner_kind_bunker)
-        is ScannedPayload.NostrConnect -> stringRes(Res.string.qr_scanner_kind_signer)
-        is ScannedPayload.PrivateKey -> stringRes(Res.string.qr_scanner_kind_nsec)
-        is ScannedPayload.Lightning -> stringRes(Res.string.qr_scanner_kind_lightning)
-        is ScannedPayload.Cashu -> stringRes(Res.string.qr_scanner_kind_cashu)
-        is ScannedPayload.Web -> stringRes(Res.string.qr_scanner_kind_web)
-        is ScannedPayload.HexPubKey, is ScannedPayload.Unknown -> stringRes(Res.string.qr_scanner_kind_text)
-    } + if (payload.containsSecret) "\n\n" + stringRes(Res.string.qr_scanner_unsupported_secret) else ""
+            is ScannedPayload.WalletConnect -> stringRes(Res.string.qr_scanner_kind_wallet)
+            // Split deliberately: Amethyst PUBLISHES bunker:// addresses (it is the signer) and has no
+            // screen that consumes one, so pointing the user at the signer screen -- as this used to --
+            // sends them somewhere that cannot accept it.
+            is ScannedPayload.Bunker -> stringRes(Res.string.qr_scanner_kind_bunker)
+            is ScannedPayload.NostrConnect -> stringRes(Res.string.qr_scanner_kind_signer)
+            is ScannedPayload.PrivateKey -> stringRes(Res.string.qr_scanner_kind_nsec)
+            is ScannedPayload.Lightning -> stringRes(Res.string.qr_scanner_kind_lightning)
+            is ScannedPayload.Cashu -> stringRes(Res.string.qr_scanner_kind_cashu)
+            is ScannedPayload.Web -> stringRes(Res.string.qr_scanner_kind_web)
+            is ScannedPayload.HexKey -> stringRes(Res.string.qr_scanner_kind_hex_key)
+            is ScannedPayload.Unknown -> stringRes(Res.string.qr_scanner_kind_text)
+        }
+
+    // A hex key explains its own hiding: the generic "carries a private key or a pairing secret"
+    // line would claim to know which kind of key it is.
+    val explainSecret = payload.containsSecret && payload !is ScannedPayload.HexKey
+    return if (explainSecret) kind + "\n\n" + stringRes(Res.string.qr_scanner_unsupported_secret) else kind
+}

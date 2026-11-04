@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.service
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedWith
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.quartz.experimental.clink.client.OfferClient
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
@@ -83,7 +85,7 @@ object ClinkOfferPayer {
             // A random short id: relays cap subscription ids at 64 chars (NIP-01) and reject an
             // over-long REQ outright. The reply is matched by request id in the listener, not by subId.
             val subId = newSubId()
-            val filters: Map<NormalizedRelayUrl, List<Filter>> = relays.associateWith { listOf(client.responseFilter(request.id)) }
+            val filters: Map<NormalizedRelayUrl, List<Filter>> = relays.associateWith { listOf(client.responseFilter(request.id).taggedWith(SubPurpose.WALLET, "CLINK")) }
 
             val listener =
                 object : SubscriptionListener {

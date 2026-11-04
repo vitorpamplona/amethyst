@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -62,6 +63,7 @@ private fun makePodcastFilter(
         is AllFollowsTopNavPerRelayFilterSet -> filterPodcastEventsByFollows(feedSettings, kinds, since, defaultSince, additionalTags)
         is AuthorsTopNavPerRelayFilterSet -> filterPodcastEventsByAuthors(feedSettings, kinds, since, defaultSince, additionalTags)
         is GlobalTopNavPerRelayFilterSet -> filterPodcastEventsGlobal(feedSettings, kinds, since, defaultSince, additionalTags)
+        is RelayTopNavPerRelayFilterSet -> filterPodcastEventsByRelay(feedSettings, kinds, since, defaultSince, additionalTags)
         is HashtagTopNavPerRelayFilterSet -> filterPodcastEventsByHashtag(feedSettings, kinds, since, defaultSince, additionalTags)
         is LocationTopNavPerRelayFilterSet -> filterPodcastEventsByGeohashes(feedSettings, kinds, since, defaultSince, additionalTags)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterPodcastEventsByMutedAuthors(feedSettings, kinds, since, defaultSince, additionalTags)

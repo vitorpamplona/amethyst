@@ -57,7 +57,7 @@ val DefaultGlobalRelays = listOf(Constants.wine, Constants.news)
 val DefaultDMRelayList = listOf(Constants.auth, Constants.oxchat, Constants.nos)
 
 val DefaultSearchRelayList =
-    setOf(Constants.wine, Constants.where, Constants.nostoday, Constants.antiprimal, Constants.ditto)
+    setOf(Constants.wine, Constants.where, Constants.nostoday, Constants.antiprimal, Constants.ditto, Constants.brainstorm)
 
 val DefaultIndexerRelayList =
-    setOf(Constants.purplepages, Constants.coracle, Constants.userkinds, Constants.yabu, Constants.nostr1)
+    setOf(Constants.purplepages, Constants.coracle, Constants.userkinds, Constants.yabu, Constants.nostr1, Constants.brainstorm)

@@ -26,6 +26,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.cashu.UnavailableCashuKeysetCounterStore
+import com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinition
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.backups.BackupConflictGuard
 import com.vitorpamplona.amethyst.commons.model.backups.backupSlotOf
@@ -34,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordListRepository
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
+import com.vitorpamplona.amethyst.commons.model.deck.DeckLayout
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
@@ -44,9 +46,11 @@ import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupRepository
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcBackupPayload
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
+import com.vitorpamplona.amethyst.commons.model.preferences.FollowListSlot
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
@@ -57,6 +61,7 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -86,10 +91,13 @@ import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.serialization.Serializable
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -98,7 +106,21 @@ import kotlin.uuid.Uuid
 class AccountSettings(
     val keyPair: KeyPair,
     val transientAccount: Boolean = false,
+    /**
+     * Whether this device keeps the private key. False: the account and its settings are saved,
+     * the key is not, and it is asked for at the next launch. Set by the login screen's
+     * "Remember my key on this device", and by the session store when it loads such an account.
+     */
+    var rememberKey: Boolean = true,
     var externalSignerPackageName: String? = null,
+    /**
+     * NIP-46 login: the `bunker://` address (secret stripped) of the remote signer that holds this
+     * account's key. Set together with [remoteSignerTransportKey]; desktop logs in this way, Android
+     * does not (it is a bunker, never a bunker's client).
+     */
+    var remoteSignerBunkerUri: String? = null,
+    /** NIP-46 login: this client's transport private key (hex) for [remoteSignerBunkerUri]. */
+    var remoteSignerTransportKey: String? = null,
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
     var stripLocationOnUpload: Boolean = true,
@@ -179,12 +201,18 @@ class AccountSettings(
     val defaultCommunitiesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultFollowPacksFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultAppRecommendationsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultChessFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
     val defaultRelayGroupsDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
     val clinkDebitWallets: MutableStateFlow<List<ClinkDebitWalletEntryNorm>> = MutableStateFlow(emptyList()),
     // The unified default spend rail (an NWC wallet OR a CLINK debit). Persisted under a
     // new key, migrated from the legacy NWC-only `defaultNwcWalletId`.
     val defaultPaymentSourceId: MutableStateFlow<String?> = MutableStateFlow(null),
+    // Local-only: synced to a device without the wallets, it could overwrite the good backup.
+    val backupNwcWallets: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val backupNwcCardDismissed: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val backedUpNwcWalletIds: MutableStateFlow<Set<String>> = MutableStateFlow(emptySet()),
+    val nwcBackupRelays: MutableStateFlow<List<String>> = MutableStateFlow(emptyList()),
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var hideNIP17WarningDialog: Boolean = false,
@@ -240,6 +268,8 @@ class AccountSettings(
     val cashuCounters: CashuKeysetCounterStore = UnavailableCashuKeysetCounterStore,
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
+    /** Until when (unix seconds) the web of trust card stays hidden from Home; 0 when it was never hidden. */
+    val webOfTrustNudgeHiddenUntil: MutableStateFlow<Long> = MutableStateFlow(0L),
     val dismissedPollNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     /**
      * Channel ids the viewer chose NOT to show on Messages after somebody added them to the channel
@@ -256,6 +286,10 @@ class AccountSettings(
      */
     val mutedPublicChats: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val viewedPollResultNoteIds: MutableStateFlow<Map<String, Long>> = MutableStateFlow(mapOf()),
+    /** The feeds this user built, offered in the Home feed picker as [TopFilter.CustomFeed]. */
+    val customFeeds: MutableStateFlow<List<FeedDefinition>> = MutableStateFlow(emptyList()),
+    /** The deck's workspaces and columns, shown beside the main screen on wide windows when the deck is on. */
+    val deck: MutableStateFlow<DeckLayout> = MutableStateFlow(DeckLayout()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
     var backupBolt12Offers: Bolt12OfferListEvent? = null,
@@ -268,6 +302,8 @@ class AccountSettings(
     val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.ALWAYS),
     val relayGroupViewMode: MutableStateFlow<RelayGroupViewMode> = MutableStateFlow(RelayGroupViewMode.DEFAULT),
     val concordViewMode: MutableStateFlow<ConcordViewMode> = MutableStateFlow(ConcordViewMode.DEFAULT),
+    /** This account's accent color; null follows the app-wide one in [UiSettings.accentColor]. */
+    val accentColor: MutableStateFlow<AccentColorType?> = MutableStateFlow(null),
     // Which conversation protocols the Messages inbox loads and shows. A disabled type is both hidden
     // from the inbox and dropped from the always-on downloading routes. Defaults to everything on.
     val enabledChatFeeds: MutableStateFlow<Set<ChatFeedType>> = MutableStateFlow(ChatFeedType.ALL),
@@ -294,23 +330,55 @@ class AccountSettings(
         saveable.update { AccountSettingsUpdater(this) }
     }
 
-    fun isWriteable(): Boolean = keyPair.privKey != null || externalSignerPackageName != null
+    /**
+     * Fires when a setting that syncs through NIP-78 but lives here (see [SyncedLocalSettings])
+     * is changed on this device. [Account] publishes the blob a second after the last one. Values
+     * that arrive from another device are applied without it, so they are not echoed back.
+     */
+    val syncedChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    /**
+     * Like [syncedChanges], for the feed filter each screen's top bar shows. It only remembers
+     * where the user was on that screen, and switching it is part of browsing, so [Account] waits
+     * 30 s before publishing it: a session of switches costs one signature, not one per switch.
+     */
+    val slowSyncedChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    private fun saveAndSync() {
+        saveAccountSettings()
+        syncedChanges.tryEmit(Unit)
+    }
+
+    private fun saveAndSyncLater() {
+        saveAccountSettings()
+        slowSyncedChanges.tryEmit(Unit)
+    }
+
+    fun isWriteable(): Boolean = keyPair.privKey != null || externalSignerPackageName != null || usesRemoteSigner()
+
+    /** Whether this account signs through a NIP-46 remote signer it logged in with. */
+    fun usesRemoteSigner(): Boolean = remoteSignerBunkerUri != null && remoteSignerTransportKey != null
 
     fun updateRelayGroupViewMode(mode: RelayGroupViewMode) {
         if (relayGroupViewMode.value != mode) {
             relayGroupViewMode.tryEmit(mode)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun updateConcordViewMode(mode: ConcordViewMode) {
         if (concordViewMode.value != mode) {
             concordViewMode.tryEmit(mode)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
-    fun isChatFeedEnabled(type: ChatFeedType): Boolean = type in enabledChatFeeds.value
+    fun updateAccentColor(color: AccentColorType?) {
+        if (accentColor.value != color) {
+            accentColor.tryEmit(color)
+            saveAndSync()
+        }
+    }
 
     fun setChatFeedEnabled(
         type: ChatFeedType,
@@ -320,7 +388,7 @@ class AccountSettings(
         val next = if (enabled) current + type else current - type
         if (next != current) {
             enabledChatFeeds.tryEmit(next)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
@@ -334,7 +402,7 @@ class AccountSettings(
         val next = if (enabled) current + type else current - type
         if (next != current) {
             enabledHomeFeedTypes.tryEmit(next)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
@@ -471,6 +539,7 @@ class AccountSettings(
         if (existing >= 0) {
             nwcWallets.tryEmit(nwcWallets.value.toMutableList().apply { set(existing, wallet) })
         } else {
+            if (nwcWallets.value.any { it.uri == wallet.uri }) return false
             nwcWallets.tryEmit(nwcWallets.value + wallet)
             // First configured source of any kind becomes the default; adding more never
             // silently changes an existing default.
@@ -485,9 +554,63 @@ class AccountSettings(
     fun removeNwcWallet(walletId: String): Boolean {
         val wallets = nwcWallets.value.filter { it.id != walletId }
         nwcWallets.tryEmit(wallets)
+        if (backedUpNwcWalletIds.value.contains(walletId)) {
+            backedUpNwcWalletIds.tryEmit(backedUpNwcWalletIds.value - walletId)
+        }
+        // With no NWC wallet left, a dismissed backup card would leave restore unreachable.
+        if (wallets.isEmpty() && backupNwcCardDismissed.value) {
+            backupNwcCardDismissed.tryEmit(false)
+        }
         reassignDefaultIfRemoved(walletId)
         saveAccountSettings()
         return true
+    }
+
+    fun changeBackupNwcWallets(enabled: Boolean) {
+        if (backupNwcWallets.value != enabled) {
+            backupNwcWallets.tryEmit(enabled)
+            saveAccountSettings()
+        }
+    }
+
+    fun updateNwcBackupRelays(relays: List<String>) {
+        if (nwcBackupRelays.value != relays) {
+            nwcBackupRelays.tryEmit(relays)
+            saveAccountSettings()
+        }
+    }
+
+    fun updateBackedUpNwcWalletIds(walletIds: Set<String>) {
+        if (backedUpNwcWalletIds.value != walletIds) {
+            backedUpNwcWalletIds.tryEmit(walletIds)
+            saveAccountSettings()
+        }
+    }
+
+    fun dismissBackupNwcCard() {
+        if (!backupNwcCardDismissed.value) {
+            backupNwcCardDismissed.tryEmit(true)
+            saveAccountSettings()
+        }
+    }
+
+    /** Dedupes by connection URI; returns how many wallets were new. */
+    fun mergeRestoredNwcWallets(payload: NwcBackupPayload): Int {
+        val existing = nwcWallets.value
+        val existingUris = existing.mapTo(HashSet()) { it.uri }
+        val restored = payload.wallets.mapNotNull { it.normalize() }
+        val restoredUris = restored.mapTo(HashSet()) { it.uri }
+        val newWallets = restored.filter { it.uri !in existingUris }
+        val inBackup = (existing.filter { it.uri in restoredUris } + newWallets).mapTo(HashSet()) { it.id }
+        if (newWallets.isNotEmpty()) {
+            nwcWallets.tryEmit(existing + newWallets)
+            if (defaultPaymentSourceId.value == null) {
+                defaultPaymentSourceId.tryEmit(payload.defaultId ?: newWallets.first().id)
+            }
+        }
+        backedUpNwcWalletIds.tryEmit(backedUpNwcWalletIds.value + inBackup)
+        saveAccountSettings()
+        return newWallets.size
     }
 
     fun addClinkDebitWallet(wallet: ClinkDebitWalletEntryNorm): Boolean {
@@ -589,7 +712,7 @@ class AccountSettings(
                     NwcWalletEntryNorm(
                         id =
                             Uuid.random().toString(),
-                        name = "Wallet",
+                        name = "Lightning Wallet",
                         uri = newServer,
                     )
                 addNwcWallet(entry)
@@ -606,14 +729,14 @@ class AccountSettings(
     fun changeDefaultFileServer(server: ServerName) {
         if (defaultFileServer != server) {
             defaultFileServer = server
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeStripLocationOnUpload(strip: Boolean) {
         if (stripLocationOnUpload != strip) {
             stripLocationOnUpload = strip
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
@@ -627,7 +750,7 @@ class AccountSettings(
     fun changeHideCommunityRulesViolations(enabled: Boolean) {
         if (hideCommunityRulesViolations.value != enabled) {
             hideCommunityRulesViolations.tryEmit(enabled)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
@@ -670,14 +793,14 @@ class AccountSettings(
     fun changeMirrorUploadsToAllServers(enabled: Boolean) {
         if (mirrorUploadsToAllServers.value != enabled) {
             mirrorUploadsToAllServers.tryEmit(enabled)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeOptimizeMediaOnUpload(enabled: Boolean) {
         if (optimizeMediaOnUpload.value != enabled) {
             optimizeMediaOnUpload.tryEmit(enabled)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
@@ -751,6 +874,7 @@ class AccountSettings(
             defaultCommunitiesFollowList to TopFilter.AllFollows,
             defaultFollowPacksFollowList to TopFilter.Global,
             defaultAppRecommendationsFollowList to TopFilter.Global,
+            defaultChessFollowList to TopFilter.Mine,
             defaultRelayGroupsDiscoveryFollowList to TopFilter.Mine,
         )
 
@@ -766,223 +890,409 @@ class AccountSettings(
             }
         }
 
-        if (changed) saveAccountSettings()
+        if (changed) saveAndSyncLater()
+    }
+
+    /**
+     * Points every feed set to Global at [filter] instead. Notifications keep their choice: there
+     * Global means every event that mentions the user, not a feed of the network.
+     */
+    fun moveGlobalFeedsTo(filter: TopFilter) {
+        var changed = false
+
+        feedFiltersWithDefaults.forEach { (flow, _) ->
+            if (flow !== defaultNotificationFollowList && flow.value == TopFilter.Global) {
+                flow.tryEmit(filter)
+                changed = true
+            }
+        }
+
+        if (changed) saveAndSyncLater()
+    }
+
+    // ---
+    // NIP-78 sync of the settings that live here (see SyncedLocalSettings)
+    // ---
+
+    private fun feedFilterFlow(slot: FollowListSlot): MutableStateFlow<TopFilter> =
+        when (slot) {
+            FollowListSlot.HOME -> defaultHomeFollowList
+            FollowListSlot.STORIES -> defaultStoriesFollowList
+            FollowListSlot.NOTIFICATION -> defaultNotificationFollowList
+            FollowListSlot.DISCOVERY -> defaultDiscoveryFollowList
+            FollowListSlot.POLLS -> defaultPollsFollowList
+            FollowListSlot.PICTURES -> defaultPicturesFollowList
+            FollowListSlot.RELAY_GROUPS_DISCOVERY -> defaultRelayGroupsDiscoveryFollowList
+            FollowListSlot.NAPPLETS -> defaultNappletsFollowList
+            FollowListSlot.NSITES -> defaultNsitesFollowList
+            FollowListSlot.WORKOUTS -> defaultWorkoutsFollowList
+            FollowListSlot.GIT_REPOSITORIES -> defaultGitRepositoriesFollowList
+            FollowListSlot.HIGHLIGHTS -> defaultHighlightsFollowList
+            FollowListSlot.CALENDARS -> defaultCalendarsFollowList
+            FollowListSlot.PRODUCTS -> defaultProductsFollowList
+            FollowListSlot.GEOCACHES -> defaultGeocachesFollowList
+            FollowListSlot.SHORTS -> defaultShortsFollowList
+            FollowListSlot.PUBLIC_CHATS -> defaultPublicChatsFollowList
+            FollowListSlot.LIVE_STREAMS -> defaultLiveStreamsFollowList
+            FollowListSlot.NESTS -> defaultNestsFollowList
+            FollowListSlot.LONGS -> defaultLongsFollowList
+            FollowListSlot.ARTICLES -> defaultArticlesFollowList
+            FollowListSlot.MUSIC_TRACKS -> defaultMusicTracksFollowList
+            FollowListSlot.MUSIC_PLAYLISTS -> defaultMusicPlaylistsFollowList
+            FollowListSlot.PODCAST_EPISODES -> defaultPodcastEpisodesFollowList
+            FollowListSlot.PODCASTS -> defaultPodcastsFollowList
+            FollowListSlot.SOFTWARE_APPS -> defaultSoftwareAppsFollowList
+            FollowListSlot.BADGES -> defaultBadgesFollowList
+            FollowListSlot.BROWSE_EMOJI_SETS -> defaultBrowseEmojiSetsFollowList
+            FollowListSlot.COMMUNITIES -> defaultCommunitiesFollowList
+            FollowListSlot.FOLLOW_PACKS -> defaultFollowPacksFollowList
+            FollowListSlot.APP_RECOMMENDATIONS -> defaultAppRecommendationsFollowList
+            FollowListSlot.CHESS -> defaultChessFollowList
+        }
+
+    fun syncedLocalSettings() =
+        SyncedLocalSettings(
+            accentColor = accentColor.value,
+            relayGroupViewMode = relayGroupViewMode.value,
+            concordViewMode = concordViewMode.value,
+            enabledChatFeeds = enabledChatFeeds.value,
+            enabledHomeFeedTypes = enabledHomeFeedTypes.value,
+            feedFilters = FollowListSlot.entries.associateWith { feedFilterFlow(it).value },
+            customFeeds = customFeeds.value,
+            hideCommunityRulesViolations = hideCommunityRulesViolations.value,
+            relayAuthPolicy = defaultRelayAuthPolicy.value,
+            relayAuthTrustMyRelaysAndVenues = relayAuthTrustMyRelaysAndVenues.value,
+            relayAuthTrustReadFollows = relayAuthTrustReadFollows.value,
+            relayAuthTrustMessageFollows = relayAuthTrustMessageFollows.value,
+            relayAuthTrustMessageStrangers = relayAuthTrustMessageStrangers.value,
+            defaultFileServer = defaultFileServer,
+            stripLocationOnUpload = stripLocationOnUpload,
+            mirrorUploadsToAllServers = mirrorUploadsToAllServers.value,
+            optimizeMediaOnUpload = optimizeMediaOnUpload.value,
+            callsEnabled = callsEnabled.value,
+        )
+
+    /** The whole NIP-78 blob: [syncedSettings] plus the groups that live here. */
+    fun toSyncedSettingsInternal(): AccountSyncedSettingsInternal = syncedSettings.toInternal(mutedPublicChats.value).withLocalGroups(syncedLocalSettings())
+
+    /**
+     * Applies the groups [remote] carries. A group it lacks was written by a version that did not
+     * know it, so this device keeps its own values for it.
+     */
+    private fun applyLocalGroups(remote: AccountSyncedSettingsInternal) {
+        remote.appearance?.let { group -> accentColor.update { decodeAccentColor(group.accentColor, it) } }
+
+        remote.messages?.let { group ->
+            relayGroupViewMode.update { enumByName(group.relayGroupViewMode, it) }
+            concordViewMode.update { enumByName(group.concordViewMode, it) }
+            enabledChatFeeds.value = ChatFeedType.ALL - ChatFeedType.decode(group.disabledChatFeeds)
+        }
+
+        remote.feeds?.let { group ->
+            enabledHomeFeedTypes.value = HomeFeedType.ALL - HomeFeedType.decode(group.disabledHomeFeedTypes)
+            hideCommunityRulesViolations.value = group.hideCommunityRulesViolations
+            decodeCustomFeeds(group.customFeeds)?.let { applyCustomFeeds(it) }
+            // By JSON: a decoded filter that carries an id or address never equals the current one,
+            // and assigning it would reload that screen's feed although nothing changed.
+            readableFeedFilters(group.feedFilters).forEach { (slot, json) ->
+                val flow = feedFilterFlow(slot)
+                if (JsonMapper.toJson(flow.value) != json) decodeFeedFilter(json)?.let { flow.value = it }
+            }
+        }
+
+        remote.relayAuth?.let { group ->
+            defaultRelayAuthPolicy.update { enumByName(group.policy, it) }
+            relayAuthTrustMyRelaysAndVenues.value = group.trustMyRelaysAndVenues
+            relayAuthTrustReadFollows.value = group.trustReadFollows
+            relayAuthTrustMessageFollows.value = group.trustMessageFollows
+            relayAuthTrustMessageStrangers.value = group.trustMessageStrangers
+        }
+
+        remote.uploads?.let { group ->
+            decodeFileServer(group.defaultFileServer)?.let { defaultFileServer = it }
+            stripLocationOnUpload = group.stripLocation
+            mirrorUploadsToAllServers.value = group.mirrorToAllServers
+            optimizeMediaOnUpload.value = group.optimizeMedia
+        }
+
+        remote.calls?.let { group -> callsEnabled.value = group.callsEnabled }
+    }
+
+    /**
+     * Replaces the custom feeds with [feeds] from another device, as [saveCustomFeed] and
+     * [deleteCustomFeed] would: a screen showing a feed that changed gets a fresh
+     * [TopFilter.CustomFeed], and one showing a feed that is gone goes back to its default.
+     */
+    private fun applyCustomFeeds(feeds: List<FeedDefinition>) {
+        val before = customFeeds.value
+        if (before == feeds) return
+        customFeeds.value = feeds
+        val byId = feeds.associateBy { it.id }
+        feedFiltersWithDefaults.forEach { (flow, default) ->
+            val current = flow.value as? TopFilter.CustomFeed ?: return@forEach
+            val now = byId[current.id]
+            when {
+                now == null -> flow.value = default
+                before.firstOrNull { it.id == current.id } != now -> flow.value = TopFilter.CustomFeed(current.id)
+            }
+        }
+    }
+
+    /** Applies [transform] to the deck layout and saves it when it changed. */
+    fun updateDeck(transform: (DeckLayout) -> DeckLayout) {
+        val before = deck.value
+        deck.update(transform)
+        if (deck.value != before) saveAccountSettings()
+    }
+
+    /**
+     * Adds [feed], or replaces the one with its id. A screen showing the feed gets a fresh
+     * [TopFilter.CustomFeed]: the feeds key their contents and relay EOSE times by that instance, so
+     * keeping the old one would leave the edited feed showing its old notes and asking relays only
+     * for what is newer than the old definition's last load.
+     */
+    fun saveCustomFeed(feed: FeedDefinition) {
+        customFeeds.update { feeds ->
+            if (feeds.any { it.id == feed.id }) feeds.map { if (it.id == feed.id) feed else it } else feeds + feed
+        }
+        feedFiltersWithDefaults.forEach { (flow, _) ->
+            val current = flow.value
+            if (current is TopFilter.CustomFeed && current.id == feed.id) flow.tryEmit(TopFilter.CustomFeed(feed.id))
+        }
+        saveAndSync()
+    }
+
+    /** Deletes the custom feed [id] and sends any screen that showed it back to its default feed. */
+    fun deleteCustomFeed(id: String) {
+        customFeeds.update { feeds -> feeds.filterNot { it.id == id } }
+        feedFiltersWithDefaults.forEach { (flow, default) ->
+            val current = flow.value
+            if (current is TopFilter.CustomFeed && current.id == id) flow.tryEmit(default)
+        }
+        saveAndSync()
     }
 
     fun changeDefaultHomeFollowList(name: TopFilter) {
         if (defaultHomeFollowList.value != name) {
             defaultHomeFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultStoriesFollowList(name: TopFilter) {
         if (defaultStoriesFollowList.value != name) {
             defaultStoriesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultNotificationFollowList(name: TopFilter) {
         if (defaultNotificationFollowList.value != name) {
             defaultNotificationFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultDiscoveryFollowList(name: TopFilter) {
         if (defaultDiscoveryFollowList.value != name) {
             defaultDiscoveryFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultPollsFollowList(name: TopFilter) {
         if (defaultPollsFollowList.value != name) {
             defaultPollsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultCommunitiesFollowList(name: TopFilter) {
         if (defaultCommunitiesFollowList.value != name) {
             defaultCommunitiesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultRelayGroupsDiscoveryFollowList(name: TopFilter) {
         if (defaultRelayGroupsDiscoveryFollowList.value != name) {
             defaultRelayGroupsDiscoveryFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultNappletsFollowList(name: TopFilter) {
         if (defaultNappletsFollowList.value != name) {
             defaultNappletsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultNsitesFollowList(name: TopFilter) {
         if (defaultNsitesFollowList.value != name) {
             defaultNsitesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
+        }
+    }
+
+    fun changeDefaultChessFollowList(name: TopFilter) {
+        if (defaultChessFollowList.value != name) {
+            defaultChessFollowList.tryEmit(name)
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultWorkoutsFollowList(name: TopFilter) {
         if (defaultWorkoutsFollowList.value != name) {
             defaultWorkoutsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultGitRepositoriesFollowList(name: TopFilter) {
         if (defaultGitRepositoriesFollowList.value != name) {
             defaultGitRepositoriesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultHighlightsFollowList(name: TopFilter) {
         if (defaultHighlightsFollowList.value != name) {
             defaultHighlightsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultCalendarsFollowList(name: TopFilter) {
         if (defaultCalendarsFollowList.value != name) {
             defaultCalendarsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultProductsFollowList(name: TopFilter) {
         if (defaultProductsFollowList.value != name) {
             defaultProductsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultGeocachesFollowList(name: TopFilter) {
         if (defaultGeocachesFollowList.value != name) {
             defaultGeocachesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultShortsFollowList(name: TopFilter) {
         if (defaultShortsFollowList.value != name) {
             defaultShortsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultPublicChatsFollowList(name: TopFilter) {
         if (defaultPublicChatsFollowList.value != name) {
             defaultPublicChatsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultLiveStreamsFollowList(name: TopFilter) {
         if (defaultLiveStreamsFollowList.value != name) {
             defaultLiveStreamsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultNestsFollowList(name: TopFilter) {
         if (defaultNestsFollowList.value != name) {
             defaultNestsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultLongsFollowList(name: TopFilter) {
         if (defaultLongsFollowList.value != name) {
             defaultLongsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultArticlesFollowList(name: TopFilter) {
         if (defaultArticlesFollowList.value != name) {
             defaultArticlesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultMusicTracksFollowList(name: TopFilter) {
         if (defaultMusicTracksFollowList.value != name) {
             defaultMusicTracksFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultMusicPlaylistsFollowList(name: TopFilter) {
         if (defaultMusicPlaylistsFollowList.value != name) {
             defaultMusicPlaylistsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultPodcastEpisodesFollowList(name: TopFilter) {
         if (defaultPodcastEpisodesFollowList.value != name) {
             defaultPodcastEpisodesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultPodcastsFollowList(name: TopFilter) {
         if (defaultPodcastsFollowList.value != name) {
             defaultPodcastsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultSoftwareAppsFollowList(name: TopFilter) {
         if (defaultSoftwareAppsFollowList.value != name) {
             defaultSoftwareAppsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultBadgesFollowList(name: TopFilter) {
         if (defaultBadgesFollowList.value != name) {
             defaultBadgesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultBrowseEmojiSetsFollowList(name: TopFilter) {
         if (defaultBrowseEmojiSetsFollowList.value != name) {
             defaultBrowseEmojiSetsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultFollowPacksFollowList(name: TopFilter) {
         if (defaultFollowPacksFollowList.value != name) {
             defaultFollowPacksFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultAppRecommendationsFollowList(name: TopFilter) {
         if (defaultAppRecommendationsFollowList.value != name) {
             defaultAppRecommendationsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSyncLater()
         }
     }
 
@@ -1424,6 +1734,18 @@ class AccountSettings(
         }
     }
 
+    /**
+     * A version built from these live settings, back from the relays: kept as the backup but not
+     * merged, since the live settings may have moved on while it was out (see
+     * `AppSpecificState.snapshotsSignedHere`).
+     */
+    fun keepOwnAppSpecificData(appSettings: AppSpecificDataEvent) {
+        if (backupGuard.accept(backupAppSpecificData, appSettings, isEmpty = appSettings.content.isBlank()) { keepOwnAppSpecificData(appSettings) }) {
+            backupAppSpecificData = appSettings
+            saveAccountSettings()
+        }
+    }
+
     fun updateAppSpecificData(
         appSettings: AppSpecificDataEvent?,
         newSyncedSettings: AccountSyncedSettingsInternal,
@@ -1438,6 +1760,7 @@ class AccountSettings(
                 return
             }
             syncedSettings.updateFrom(newSyncedSettings)
+            applyLocalGroups(newSyncedSettings)
 
             // Null means an older client rewrote the blob without this key — leave the
             // local set alone rather than treating "absent" as "unmute everything".
@@ -1472,6 +1795,17 @@ class AccountSettings(
     fun setHideBlockAlertDialog() {
         if (!hideBlockAlertDialog) {
             hideBlockAlertDialog = true
+            saveAccountSettings()
+        }
+    }
+
+    // ---
+    // web of trust card
+    // ---
+
+    fun hideWebOfTrustNudgeUntil(time: Long) {
+        if (webOfTrustNudgeHiddenUntil.value != time) {
+            webOfTrustNudgeHiddenUntil.value = time
             saveAccountSettings()
         }
     }
@@ -1593,32 +1927,34 @@ class AccountSettings(
     // last read flows
     // ----
 
-    fun getLastReadFlow(route: String): StateFlow<Long> = lastReadPerRoute.value[route] ?: addLastRead(route, 0)
+    fun getLastReadFlow(route: String): StateFlow<Long> = lastReadPerRoute.value[route] ?: lastReadFlowFor(route)
 
-    private fun addLastRead(
-        route: String,
-        timestampInSecs: Long,
-    ): MutableStateFlow<Long> =
-        MutableStateFlow(timestampInSecs).also { newFlow ->
-            lastReadPerRoute.update { it + Pair(route, newFlow) }
-            saveAccountSettings()
-        }
+    /**
+     * The route's flow, created at 0 when absent. Created inside the map's atomic update so two threads meeting a new
+     * route share one flow: the loser of a plain check-then-put would replace the winner's,
+     * dropping its timestamp or leaving a row observing a flow nothing updates.
+     *
+     * Nothing is saved here: a route at 0 reads back the same as no route at all.
+     */
+    private fun lastReadFlowFor(route: String): MutableStateFlow<Long> =
+        lastReadPerRoute
+            .updateAndGet { if (route in it) it else it + Pair(route, MutableStateFlow(0L)) }
+            .getValue(route)
 
     fun markAsRead(
         route: String,
         timestampInSecs: Long,
     ): Boolean {
-        val lastTime = lastReadPerRoute.value[route]
-        return if (lastTime == null) {
-            addLastRead(route, timestampInSecs)
-            true
-        } else if (timestampInSecs > lastTime.value) {
-            lastTime.tryEmit(timestampInSecs)
-            saveAccountSettings()
-            true
-        } else {
-            false
+        val lastTime = lastReadPerRoute.value[route] ?: lastReadFlowFor(route)
+        // Compare-and-set: rows mark themselves read from parallel coroutines, and a plain
+        // check-then-emit lets an older timestamp land after a newer one.
+        while (true) {
+            val current = lastTime.value
+            if (timestampInSecs <= current) return false
+            if (lastTime.compareAndSet(current, timestampInSecs)) break
         }
+        saveAccountSettings()
+        return true
     }
 
     // ---
@@ -1688,6 +2024,14 @@ class AccountSettings(
             false
         }
 
+    fun updateMinTrustScore(score: Int): Boolean =
+        if (syncedSettings.security.updateMinTrustScore(score)) {
+            saveAccountSettings()
+            true
+        } else {
+            false
+        }
+
     // ---
     // Call settings
     // ---
@@ -1710,14 +2054,14 @@ class AccountSettings(
     fun changeCallsEnabled(enabled: Boolean) {
         if (callsEnabled.value != enabled) {
             callsEnabled.tryEmit(enabled)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultRelayAuthPolicy(policy: RelayAuthPolicy) {
         if (defaultRelayAuthPolicy.value != policy) {
             defaultRelayAuthPolicy.tryEmit(policy)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
@@ -1727,7 +2071,7 @@ class AccountSettings(
     ) {
         if (flow.value != enabled) {
             flow.tryEmit(enabled)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 

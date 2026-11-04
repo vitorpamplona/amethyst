@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.napplet
 
 /**
  * The capability classes a napplet shell can broker, aligned with the upstream NAP domains
- * (`napplet/naps`, `@napplet/web`). A napplet declares the domains it needs via `requires` tags;
+ * (`napplet/naps`, `@napplet/web`). A napplet declares the domains it needs via `R` and `O` tags;
  * [fromNapDomain] maps each bare domain string to the capability the broker enforces.
  *
  * The mapping is **default-deny**: an unrecognized or only partially implemented NAP domain maps
@@ -68,7 +68,7 @@ enum class NappletCapability {
     /** `resource` — sandboxed fetching of https/blossom/nostr/data resources. */
     RESOURCE,
 
-    /** `upload` — shell-mediated blob upload (Blossom). */
+    /** `upload` — NAP-UPLOAD: shell-mediated blob upload on the `blossom` rail, signed and sent by the shell. */
     UPLOAD,
 
     /** `theme` — read the host's current theme colors (`theme.get`). Cosmetic, read-only, no consent. */
@@ -77,8 +77,40 @@ enum class NappletCapability {
     /** `notify` — create/list/dismiss user-facing notifications (`notify.*`). */
     NOTIFY,
 
-    /** `inc` — a topic pub/sub bus between napplets/services (`inc.emit`/`inc.event`). */
+    /**
+     * `inc` — NAP-INC: topics (`inc.emit` / `inc.event`) and point-to-point channels between the
+     * napplets running in this app, routed by the host's `NappletIncBus` under runtime-assigned
+     * endpoint identifiers. Authorized on the declaration alone, like the upstream reference shell.
+     */
     INC,
+
+    /**
+     * `outbox` — NIP-65 aware reads and writes: the shell finds each author's relays, queries them,
+     * deduplicates, and publishes shell-signed events to the user's write relays and to the inboxes
+     * the napplet names (NAP-OUTBOX).
+     */
+    OUTBOX,
+
+    /**
+     * `fs` — NAP-FS, the files the user picks for the napplet: it asks the shell to show the system
+     * picker, and reads or writes only what the user chose there ([com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession]).
+     * Consent covers asking to pick; the pick itself is the user's choice of what to share.
+     */
+    FS,
+
+    /**
+     * `common` — NAP-COMMON: public NIP-19 helpers, profile and follow-list reads, and the common
+     * social actions (follow, unfollow, react, report). The shell builds and signs every event; the
+     * napplet only names the targets, and each action reaches the signer prompt as the event it is.
+     */
+    COMMON,
+
+    /**
+     * `intent` — NAP-INTENT: hand a convention (`napplet:<archetype>/<action>`) to another napplet the
+     * user has installed, which the shell starts and delivers it to. The user picks which napplet
+     * handles each archetype; a napplet can never choose or change that.
+     */
+    INTENT,
     ;
 
     /**
@@ -131,11 +163,17 @@ enum class NappletCapability {
                 "storage" -> STORAGE
                 "resource" -> RESOURCE
                 "theme" -> THEME
+                "outbox" -> OUTBOX
+                "fs" -> FS
+                "inc" -> INC
+                "upload" -> UPLOAD
+                "common" -> COMMON
+                "intent" -> INTENT
                 else -> null
             }
 
         /** Exact NIP-5D domain names Amethyst currently exposes through its injection prelude. */
-        val supportedNapDomains: Set<String> = setOf("identity", "relay", "storage", "resource", "theme")
+        val supportedNapDomains: Set<String> = setOf("identity", "relay", "storage", "resource", "theme", "outbox", "fs", "inc", "upload", "common", "intent")
     }
 }
 
@@ -144,7 +182,7 @@ data class UnknownNapDomain(
     val domain: String,
 )
 
-/** Outcome of resolving a manifest's `requires` list against the capabilities this shell brokers. */
+/** Outcome of resolving a manifest's required domain list against the capabilities this shell brokers. */
 data class NappletRequiredCapabilities(
     val capabilities: Set<NappletCapability>,
     val unknown: List<UnknownNapDomain>,

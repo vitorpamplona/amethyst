@@ -1,281 +1,59 @@
-# Shared Composables Catalog
+# Shared composables catalog
 
-This catalog documents shared UI components in `commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/` (the Compose half of the shared layer; headless state stays in `commons`).
+A starting map of reusable composables in
+`commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/` (paths below are relative
+to it). It is not exhaustive: `ui/components/` alone has ~85 files. Before writing a new
+component, `ls` the folder and grep for the concept.
 
-## Directory Structure
+## Avatars and images (`components/`)
 
-```
-commonsUI/src/commonMain/kotlin/.../commons/ui/
-├── components/    # Reusable UI components
-├── screens/       # Screen-level composables
-├── theme/         # Theming and styling
-└── feed/          # Feed-specific components
-```
+| Composable | File | Notes |
+|---|---|---|
+| `UserAvatar(userHex, pictureUrl, size, modifier, ..., badge)` | `UserAvatar.kt` | The user avatar. Reads `LocalDisplaySettings` for picture / robohash / GIF autoplay; optional `BoxScope` badge slot |
+| `RobohashFallbackAsyncImage(robot, model, ...)` | `RobohashAsyncImage.kt` | Coil image with a robohash fallback |
+| `RobohashImage(robot, ...)` | `RobohashImage.kt` | Robohash only; see `icon-assets.md` |
+| `MyAsyncImage(imageUrl, contentDescription, contentScale, mainImageModifier, loadedImageModifier, accountViewModel, onLoadingBackground, onError)` | `MyAsyncImage.kt` | Coil image with the app's loading / error slots |
+| `ImageGallery(images, state, accountViewModel, ...)` | `ImageGallery.kt` | Renders an `ImageGalleryParagraph` from the rich-text parser |
+| `UrlPreviewCard(url, previewInfo, ...)` | `UrlPreviewCard.kt` | Link preview card |
 
-## Components (`ui/components/`)
+## Rich text and notes
 
-### State Visualization
+| Composable | File | Notes |
+|---|---|---|
+| `RichTextViewer(content, canPreview, quotesLeft, modifier, tags, backgroundColor, ...)` | `components/RichTextViewer.kt` | Parses through `CachedRichTextParser`; see `rich-text-parsing.md` |
+| `NoteCompose(...)` | `note/NoteCompose.kt` | The note card used by every feed; `ui/note/` holds its parts and per-kind cards |
 
-**LoadingState** - Centered loading indicator with message
-```kotlin
-@Composable
-fun LoadingState(message: String, modifier: Modifier = Modifier)
-```
-- Use for: Async operations, data fetching
-- Pattern: fillMaxSize, centered Column, CircularProgressIndicator
-- Works on: Android, Desktop
+## Feeds (`feeds/`)
 
-**EmptyState** - Centered empty state with optional refresh
-```kotlin
-@Composable
-fun EmptyState(
-    title: String,
-    modifier: Modifier = Modifier,
-    description: String? = null,
-    onRefresh: (() -> Unit)? = null,
-    refreshLabel: String = "Refresh"
-)
-```
-- Use for: Empty lists, no data scenarios
-- Pattern: Centered Column, optional OutlinedButton
-- Works on: Android, Desktop
+| Composable | File | Notes |
+|---|---|---|
+| `RefresheableFeedContentStateView(feedContentState, routeForLastRead, ..., accountViewModel, nav)` | `FeedContentStateView.kt` | Standard pull-to-refresh feed over a `FeedContentState` |
+| `RenderFeedContentState(...)`, `SaveableFeedContentState(...)`, `SaveableGridFeedContentState(...)` | `FeedContentStateView.kt` | Lower-level pieces: state switch, saved list / grid scroll |
+| `RefresheableBox(invalidateableContent \| onRefresh, content: BoxScope.() -> Unit)` | `RefresheableBox.kt` | Pull-to-refresh container |
+| `FeedEmpty(onRefresh)`, `FeedError(...)`, `LoadingFeed()` | `FeedEmpty.kt`, `FeedError.kt`, `LoadingFeed.kt` | What feeds show for empty / error / loading |
+| `ShimmerPlaceholder(modifier)`, `NoteCardSkeleton(modifier)` | `components/ShimmerPlaceholder.kt` | Skeleton placeholders |
 
-**ErrorState** - Centered error message with retry
-```kotlin
-@Composable
-fun ErrorState(
-    message: String,
-    modifier: Modifier = Modifier,
-    onRetry: (() -> Unit)? = null,
-    retryLabel: String = "Try Again"
-)
-```
-- Use for: Error handling, failed operations
-- Pattern: error color, optional Button
-- Works on: Android, Desktop
+`components/LoadingState.kt` also has generic `LoadingState`, `EmptyState`, `ErrorState`,
+`FeedEmptyState`, `FeedErrorState`; the app's feeds use the `feeds/` versions above.
 
-### Feed-Specific States
+## Containers, menus and dialogs (`components/`)
 
-**FeedEmptyState** - Pre-configured empty state for feeds
-```kotlin
-@Composable
-fun FeedEmptyState(
-    modifier: Modifier = Modifier,
-    title: String = "Feed is empty",
-    onRefresh: (() -> Unit)? = null
-)
-```
+| Composable | File | Notes |
+|---|---|---|
+| `ClickableBox(modifier, onClick, [onLongClick], content)`, `ToggleableBox(...)` | `ClickableBox.kt` | Click / long-click / toggle containers |
+| `RoundedDropdownMenu(expanded, onDismissRequest, ..., content: ColumnScope.() -> Unit)`, `RoundedMenuSection`, `RoundedMenuItemModifier` | `RoundedDropdownMenu.kt` | The app's dropdown menu style |
+| `M3ActionDialog(title, onDismiss, content)`, `M3ActionSection`, `M3ActionRow(icon, text, ...)` | `M3ActionDialog.kt` | Action-sheet style dialog |
+| `TextSpinner(...)`, `SpinnerSelectionDialog(...)` | `TextSpinner.kt` | Option pickers over `ImmutableList<TitleExplainer>` |
+| `SwipeToDeleteContainer(...)`, `SwipeToDeleteWithConfirmation(...)` | `SwipeToDelete.kt` | Swipe-to-delete rows |
+| `HoverTooltip(text, content)` | `HoverTooltip.kt` | Tooltip on pointer hover (desktop / laptops) |
+| `InformationDialog(obj, ...)` | `InformationDialog.kt` | Shows a toast-manager error message |
+| `AddButton(modifier, text: StringResource, ...)`, `RemoveButton(...)` | `ActionButtons.kt` | Outlined add / remove buttons |
+| `LoadingAnimation(...)` | `LoadingAnimation.kt` | Small animated loading indicator |
 
-**FeedErrorState** - Pre-configured error state for feeds
-```kotlin
-@Composable
-fun FeedErrorState(
-    errorMessage: String,
-    modifier: Modifier = Modifier,
-    onRetry: (() -> Unit)? = null
-)
-```
+## Screens and layout
 
-### Action Buttons
-
-**Shared Constants**:
-```kotlin
-val ActionButtonShape = RoundedCornerShape(20.dp)
-val ActionButtonPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp)
-```
-
-**AddButton** - Consistent "Add" action button
-```kotlin
-@Composable
-fun AddButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    text: String = "Add",
-    enabled: Boolean = true
-)
-```
-- Pattern: OutlinedButton with consistent shape/padding
-- Works on: Android, Desktop
-
-**RemoveButton** - Consistent "Remove" action button
-```kotlin
-@Composable
-fun RemoveButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    text: String = "Remove",
-    enabled: Boolean = true
-)
-```
-
-### Custom Images
-
-**RobohashImage** - Deterministic avatar generation
-```kotlin
-@Composable
-fun RobohashImage(
-    robot: String,  // Seed (e.g., pubkey)
-    modifier: Modifier = Modifier,
-    contentDescription: String? = null,
-    loadRobohash: Boolean = true
-)
-
-// Overload with more options
-@Composable
-fun RobohashImage(
-    robot: String,
-    modifier: Modifier = Modifier,
-    contentDescription: String? = null,
-    alignment: Alignment = Alignment.Center,
-    contentScale: ContentScale = ContentScale.Fit,
-    colorFilter: ColorFilter? = null,
-    loadRobohash: Boolean = true
-)
-```
-- Use for: User avatars, deterministic graphics
-- Pattern: Uses CachedRobohash.get(), isLightTheme() detection
-- Fallback: Icons.Default.Face
-- Works on: Android, Desktop (pure ImageVector)
-
-**Theme Detection Helper**:
-```kotlin
-@Composable
-private fun isLightTheme(): Boolean {
-    val background = MaterialTheme.colorScheme.background
-    return (background.red + background.green + background.blue) / 3 > 0.5f
-}
-```
-
-## Feed Components (`ui/feed/`)
-
-### FeedHeader
-
-**FeedHeader** - Screen header with title and relay status
-```kotlin
-@Composable
-fun FeedHeader(
-    title: String,
-    connectedRelayCount: Int,
-    onRefresh: () -> Unit,
-    modifier: Modifier = Modifier
-)
-```
-- Pattern: Row with SpaceBetween, title + RelayStatusIndicator
-- Works on: Android, Desktop
-
-**RelayStatusIndicator** - Compact relay connection indicator
-```kotlin
-@Composable
-fun RelayStatusIndicator(
-    connectedCount: Int,
-    onRefresh: () -> Unit,
-    modifier: Modifier = Modifier
-)
-```
-- Pattern: Status icon + count text + refresh button
-- Colors: RelayStatusColors.{Disconnected, Connecting, Connected}
-- Visual cues: Check icon (connected), Close icon (disconnected)
-
-## Screens (`ui/screens/`)
-
-### Placeholder Pattern
-
-**PlaceholderScreen** - Generic placeholder
-```kotlin
-@Composable
-fun PlaceholderScreen(
-    title: String,
-    description: String,
-    modifier: Modifier = Modifier
-)
-```
-- Pattern: Column with title (headlineMedium) + description
-- Use for: Unimplemented screens, coming soon features
-
-**Specific Placeholders**:
-- `SearchPlaceholder()` - Search screen
-- `MessagesPlaceholder()` - DMs screen
-- `NotificationsPlaceholder()` - Notifications screen
-
-Pattern: Specific implementations wrap PlaceholderScreen with preset text.
-
-## Custom Icons (`robohash/parts/`)
-
-### ImageVector Builder Pattern
-
-Amethyst uses a custom DSL for building ImageVector assets:
-
-```kotlin
-@Composable
-fun Face0C3po() {
-    Image(
-        painter = rememberVectorPainter(
-            roboBuilder {
-                face0C3po(SolidColor(Color.Blue), this)
-            }
-        ),
-        contentDescription = ""
-    )
-}
-
-fun face0C3po(fgColor: SolidColor, builder: Builder) {
-    builder.addPath(pathData1, fill = fgColor, stroke = Black, strokeLineWidth = 1.5f)
-    builder.addPath(pathData2, fill = Black, fillAlpha = 0.4f)
-    // ...
-}
-
-private val pathData1 = PathData {
-    moveTo(144.5f, 87.5f)
-    reflectiveCurveToRelative(-51.0f, 3.0f, -53.0f, 55.0f)
-    // ... path commands
-}
-```
-
-**roboBuilder** - Custom ImageVector.Builder DSL
-- Located in: `commonsUI/.../commons/robohash/`
-- Pattern: Builder-based, composable paths
-- Parts: Face, Eyes, Mouth, Body, Accessory (0-9 variants each)
-- Colors: Dynamic (fgColor parameter) + Black constants
-
-### CachedRobohash
-
-```kotlin
-CachedRobohash.get(seed: String, isLight: Boolean): ImageVector
-```
-- Deterministic: Same seed → same avatar
-- Theme-aware: Different colors for light/dark
-- Cached: Performance optimization
-- Pure ImageVector: Works on all platforms
-
-## Sharing Guidelines
-
-### Always Share
-- State visualization (Loading, Empty, Error)
-- Action buttons with consistent styling
-- Generic placeholders
-- Custom ImageVector icons
-- Material3 themed components
-- Theme utilities (isLightTheme)
-
-### Platform-Specific (Delegate to Experts)
-- Navigation structure (android-expert, desktop-expert)
-- Screen layouts and scaffolds
-- Platform system integrations
-- Gesture handling specifics
-
-### Decision Framework
-1. **Can it use Material3 primitives?** → Share
-2. **Does it need platform system APIs?** → Platform-specific
-3. **Is it a visual component without navigation?** → Share
-4. **Does it require platform UX patterns?** → Ask platform expert
-
-## Material3 Usage
-
-All shared composables use Material3:
-- `MaterialTheme.colorScheme.*` for colors
-- `MaterialTheme.typography.*` for text styles
-- `OutlinedButton`, `Button`, `IconButton` for actions
-- `CircularProgressIndicator` for loading
-- `Icon`, `Image` for visuals
-
-This ensures consistent theming across Android and Desktop.
+- `screens/PlaceholderScreens.kt`: `PlaceholderScreen(title, description, modifier)` plus
+  `SearchPlaceholder`, `MessagesPlaceholder`, `NotificationsPlaceholder`.
+- `navigation/topbars/`: `TopBarWithBackButton`, `TopBarExtensibleWithBackButton`, `ActionTopBar`,
+  `ShorterTopAppBar`, `UserDrawerSearchTopBar`, `FeedFilterSpinner`.
+- `layouts/ScreenLayout.kt`: `ScreenLayoutSpec`, `LocalScreenLayout`, `FeedContentMaxWidth`.

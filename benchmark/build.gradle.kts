@@ -26,12 +26,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    sourceSets {
-        getByName("androidTest") {
-            resources.directories.add(file("../quartz/src/androidDeviceTest/resources").path)
-        }
-    }
-
     testBuildType = "benchmark"
     buildTypes {
         getByName("debug") {
@@ -65,7 +59,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.benchmark.junit4)
-    androidTestImplementation(project(":quartz"))
+    androidTestImplementation(libs.quartz)
     androidTestImplementation(project(":commons"))
     androidTestImplementation(project(":commonsUI"))
 

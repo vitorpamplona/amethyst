@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.commons.qrcode
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class StructuredAppendAccumulatorTest {
@@ -109,5 +111,82 @@ class StructuredAppendAccumulatorTest {
         assertEquals("ab", acc.add(part("b", 1, 2), 10))
         assertEquals(0, acc.captured)
         assertEquals(0, acc.total)
+    }
+
+    @Test
+    fun `a different part at an index already held restarts rather than splicing`() {
+        // Two posters whose sequences happen to share an id (for QR, the one-byte parity) and a
+        // count. Taking "ZZZ" as index 1 of the sequence that "AAA" started would splice them.
+        val acc = StructuredAppendAccumulator()
+
+        acc.add(part("AAA", 0, 2), 0)
+        acc.add(part("BBB", 0, 2), 10)
+        assertEquals(1, acc.captured)
+        assertEquals("BBBCCC", acc.add(part("CCC", 1, 2), 20))
+    }
+
+    @Test
+    fun `a joined payload is returned whatever the id says`() {
+        // The id is a parity byte some generators compute differently. A fully captured code is
+        // never thrown away over it.
+        val acc = StructuredAppendAccumulator()
+
+        acc.add(part("abc", 0, 2, id = "0"), 0)
+        assertEquals("abcdef", acc.add(part("def", 1, 2, id = "0"), 10))
+    }
+
+    @Test
+    fun `only parts of the sequence being collected count as current`() {
+        val acc = StructuredAppendAccumulator()
+        assertFalse("nothing is current while idle", acc.isCurrentSequence(part("x", 0, 2, id = "a")))
+
+        acc.add(part("x", 0, 2, id = "a"), 0)
+        assertTrue(acc.isCurrentSequence(part("y", 1, 2, id = "a")))
+        assertFalse(acc.isCurrentSequence(part("y", 1, 2, id = "b")))
+        assertFalse(acc.isCurrentSequence(part("y", 1, 3, id = "a")))
+    }
+
+    @Test
+    fun `an image with every part joins them and never returns a fragment`() {
+        val parity = "7"
+        val assembled =
+            assembleStructuredAppend(
+                listOf(
+                    part("bbb", 1, 3, id = parity),
+                    ScanResult("npub1plain", bounds = null),
+                    part("ccc", 2, 3, id = parity),
+                    part("nsec1aaa", 0, 3, id = parity),
+                ),
+            )
+
+        assertEquals(listOf("npub1plain", "nsec1aaabbbccc"), assembled.texts)
+        assertNull(assembled.incomplete)
+    }
+
+    @Test
+    fun `an image with only some parts reports progress and returns no fragment`() {
+        val assembled =
+            assembleStructuredAppend(
+                listOf(
+                    part("nsec1aaa", 0, 3),
+                    part("ccc", 2, 3),
+                ),
+            )
+
+        assertTrue(assembled.texts.isEmpty())
+        assertEquals(2 to 3, assembled.incomplete)
+    }
+
+    @Test
+    fun `one image code alone is opened, anything more is a choice`() {
+        assertEquals(ImageCodesOutcome.NothingFound, AssembledCodes(emptyList(), null).outcome())
+        assertEquals(ImageCodesOutcome.OnlyPartial(2, 3), AssembledCodes(emptyList(), 2 to 3).outcome())
+        assertEquals(ImageCodesOutcome.Open("npub1a"), AssembledCodes(listOf("npub1a"), null).outcome())
+        assertEquals(ImageCodesOutcome.Choose(listOf("npub1a", "npub1b"), null), AssembledCodes(listOf("npub1a", "npub1b"), null).outcome())
+    }
+
+    @Test
+    fun `one image code next to a partial sequence is a choice, not a silent open`() {
+        assertEquals(ImageCodesOutcome.Choose(listOf("npub1a"), 2 to 3), AssembledCodes(listOf("npub1a"), 2 to 3).outcome())
     }
 }

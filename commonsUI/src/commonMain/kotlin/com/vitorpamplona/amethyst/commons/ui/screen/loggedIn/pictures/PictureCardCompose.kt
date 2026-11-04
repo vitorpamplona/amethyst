@@ -49,7 +49,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.commons.ui.components.collectContentWarningReasons
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
+import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.UserCardHeader
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -86,6 +86,7 @@ fun PictureCardCompose(
             editState = null,
             accountViewModel = accountViewModel,
             nav = nav,
+            alignToText = true,
         )
     }
 }

@@ -55,13 +55,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.cordn.CordnGroupException
-import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -124,6 +121,8 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_share_copy
 import com.vitorpamplona.amethyst.commons.resources.cordn_share_explainer
 import com.vitorpamplona.amethyst.commons.resources.cordn_share_title
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
@@ -139,11 +138,15 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
-import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
+import com.vitorpamplona.cordn.client.CordnGroupException
+import com.vitorpamplona.cordn.client.GroupExposure
+import com.vitorpamplona.cordn.groups.CordnGroupPolicy
+import com.vitorpamplona.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /**
@@ -220,7 +223,7 @@ private fun CordnGroupInfo(
     // The same rule the policy enforces, asked here so the screen offers only
     // what would actually go through: empty is egalitarian and everyone
     // administers, otherwise it is the named set.
-    val canAdminister = admins.isEmpty() || me in admins
+    val canAdminister = CordnGroupPolicy.isAdmin(admins, me)
 
     val scope = rememberCoroutineScope()
     val runtime = accountViewModel.account.cordnRuntime
@@ -298,6 +301,7 @@ private fun CordnGroupInfo(
             try {
                 block(target)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 // Not e.message. Those are written for a log and name pubkeys
                 // and gids in full, so the screen that had just shown a face
                 // answered with 64 hex characters.
@@ -501,13 +505,12 @@ private fun CordnGroupInfo(
                     onSave = { newName, newDescription ->
                         renaming = false
                         runAdmin {
-                            // The whole metadata travels together, admin list
-                            // included, because the extension is replaced whole.
-                            it.updateGroupMetadata(
-                                coordinatorPubKey,
-                                room.gid,
-                                CordnGroupMetadata(name = newName, description = newDescription, adminPubkeys = admins),
-                            )
+                            // Applied to the metadata the group carries now: the extension is
+                            // replaced whole, so building a fresh one from the two edited fields
+                            // erased the icon and the image on every rename.
+                            it.updateGroupMetadata(coordinatorPubKey, room.gid) { current ->
+                                current.copy(name = newName, description = newDescription)
+                            }
                         }
                     },
                 )
@@ -805,7 +808,8 @@ internal fun CopyableKeyRow(
     copied: String,
     copyDescription: String,
 ) {
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
 
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Text(
@@ -821,7 +825,7 @@ internal fun CopyableKeyRow(
                 maxLines = 1,
             )
             IconButton(
-                onClick = { clipboard.setText(AnnotatedString(copied)) },
+                onClick = { scope.launch { clipboard.setText(copied) } },
                 modifier = Modifier.size(24.dp).padding(start = 4.dp),
             ) {
                 Icon(
@@ -891,6 +895,7 @@ private fun JoinRequests(
         try {
             requests = runtime.joinRequests(coordinatorPubKey, room.gid)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             error = e.message ?: failed
         } finally {
             busy = false
@@ -938,6 +943,7 @@ private fun JoinRequests(
                         try {
                             runtime.acceptJoinRequest(coordinatorPubKey, request)
                         } catch (e: Exception) {
+                            currentCoroutineContext().ensureActive()
                             error = e.message ?: failed
                         }
                         reload()
@@ -950,6 +956,7 @@ private fun JoinRequests(
                         try {
                             runtime.declineJoinRequest(coordinatorPubKey, request)
                         } catch (e: Exception) {
+                            currentCoroutineContext().ensureActive()
                             error = e.message ?: failed
                         }
                         reload()
@@ -990,7 +997,8 @@ private fun ShareGroup(
                 ?.getOrNull()
         } ?: return
 
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     var copied by remember { mutableStateOf(false) }
 
     Text(stringRes(Res.string.cordn_share_title), style = MaterialTheme.typography.titleMedium)
@@ -1007,7 +1015,7 @@ private fun ShareGroup(
 
     OutlinedButton(
         onClick = {
-            clipboard.setText(AnnotatedString(ref))
+            scope.launch { clipboard.setText(ref) }
             copied = true
         },
         modifier = Modifier.padding(top = 8.dp),
@@ -1047,7 +1055,7 @@ private fun EditGroupDetailsDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = draftDescription,
                     onValueChange = { draftDescription = it },
                     label = { Text(stringRes(Res.string.cordn_create_description)) },

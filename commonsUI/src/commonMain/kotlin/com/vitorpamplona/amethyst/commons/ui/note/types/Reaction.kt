@@ -23,9 +23,11 @@ package com.vitorpamplona.amethyst.commons.ui.note.types
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ActivityBadge
@@ -36,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.LikeTint
 import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
+import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.ui.note.RenderReaction as RenderReactionEmoji
 
@@ -52,7 +55,10 @@ fun RenderReaction(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val reactionType = note.event?.content ?: ""
+    val reactionType =
+        remember(note.event) {
+            note.event?.let { it.content.firstFullCharOrEmoji(ImmutableListOfLists(it.tags)) } ?: ""
+        }
 
     ActivityCardFrame(LikeTint) { cardBackground ->
         ActivityHeaderRow(

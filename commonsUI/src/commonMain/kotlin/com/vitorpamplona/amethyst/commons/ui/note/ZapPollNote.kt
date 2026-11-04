@@ -48,6 +48,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,7 +77,10 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.polls.PollNoteViewModel
+import com.vitorpamplona.amethyst.commons.polls.PollOption
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteZaps
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
@@ -89,12 +93,12 @@ import com.vitorpamplona.amethyst.commons.resources.poll_unable_to_vote
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.zaps
 import com.vitorpamplona.amethyst.commons.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.commons.ui.components.ScopedViewModelStore
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.StringToastMsg
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BigPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
@@ -108,6 +112,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.commons.ui.wallet.payInvoice
+import com.vitorpamplona.amethyst.commons.ui.wallet.rememberWalletAppLauncher
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
@@ -257,19 +263,25 @@ fun ZapPollNote(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val pollViewModel: PollNoteViewModel = rememberViewModel(key = "PollNoteViewModel${baseNote.idHex}") { PollNoteViewModel() }
+    // A store per card: in the screen's store, every poll scrolled past kept its model (holding the
+    // note and the account) until the screen was popped, which for Home is never.
+    key(baseNote.idHex) {
+        ScopedViewModelStore {
+            val pollViewModel: PollNoteViewModel = rememberViewModel(key = "PollNoteViewModel${baseNote.idHex}") { PollNoteViewModel() }
 
-    pollViewModel.init(accountViewModel.account)
-    pollViewModel.load(baseNote)
+            pollViewModel.init(accountViewModel.account)
+            pollViewModel.load(baseNote)
 
-    ZapPollNote(
-        baseNote = baseNote,
-        pollViewModel = pollViewModel,
-        canPreview = canPreview,
-        backgroundColor = backgroundColor,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
+            ZapPollNote(
+                baseNote = baseNote,
+                pollViewModel = pollViewModel,
+                canPreview = canPreview,
+                backgroundColor = backgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+    }
 }
 
 @Composable
@@ -537,6 +549,7 @@ fun ZapVote(
 ) {
     val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val errorDialogZapErrorStr = stringRes(Res.string.error_dialog_zap_error)
+    val walletLauncher = rememberWalletAppLauncher()
     val isLoggedUser by remember { derivedStateOf { accountViewModel.isLoggedUser(baseNote.author) } }
 
     var wantsToZap by remember { mutableStateOf(false) }
@@ -603,9 +616,9 @@ fun ZapVote(
                                 onPayViaIntent = {
                                     if (it.size == 1) {
                                         val payable = it.first()
-                                        if (!accountViewModel.host.openLightningWallet(payable.invoice)) {
+                                        walletLauncher.payInvoice(payable.invoice, noWalletFoundStr, { }) {
                                             zappingProgress = 0f
-                                            showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, noWalletFoundStr)
+                                            showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, it)
                                         }
                                     } else {
                                         val uid = Uuid.random().toString()
@@ -643,9 +656,9 @@ fun ZapVote(
                 onPayViaIntent = {
                     if (it.size == 1) {
                         val payable = it.first()
-                        if (!accountViewModel.host.openLightningWallet(payable.invoice)) {
+                        walletLauncher.payInvoice(payable.invoice, noWalletFoundStr, { }) {
                             zappingProgress = 0f
-                            showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, noWalletFoundStr)
+                            showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, it)
                         }
                     } else {
                         val uid = Uuid.random().toString()

@@ -63,6 +63,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui.RelayRoleChips
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_members_count
 import com.vitorpamplona.amethyst.commons.resources.relay_members_empty
@@ -150,6 +152,7 @@ fun RelayMembersScreen(
 
             val events =
                 accountViewModel.account.client
+                    .taggedAs(SubPurpose.RELAY_INFO, "Members")
                     .fetchAsFlow(normalizedRelayUrl, filters)
                     .lastOrNull()
 

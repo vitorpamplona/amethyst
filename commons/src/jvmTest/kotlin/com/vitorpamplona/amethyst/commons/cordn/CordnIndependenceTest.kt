@@ -28,8 +28,9 @@ import kotlin.test.fail
 /**
  * The app half of the Marmot/cordn boundary.
  *
- * `quartz`'s `BindingIsolationTest` holds the protocol layer apart. This holds
- * the layer above it apart, and the rule is the same and deliberate: **Marmot is
+ * The protocol layers are two libraries, marmot-kmp and cordn-kmp, and neither
+ * depends on the other, so the build graph holds them apart. This holds the
+ * layer above them apart, and the rule is the same and deliberate: **Marmot is
  * frozen, and neither binding may acquire a reason to change when the other
  * does.** The two protocols do not interoperate and neither is a layer of the
  * other, so a shared model, state holder or chatroom type would be a coupling
@@ -102,7 +103,7 @@ class CordnIndependenceTest {
             "the Marmot matcher would not flag $realImport — the guard cannot fire",
         )
         assertTrue(
-            cordnImport.containsMatchIn("import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager"),
+            cordnImport.containsMatchIn("import com.vitorpamplona.cordn.client.CordnGroupManager"),
             "the cordn matcher cannot fire either",
         )
     }

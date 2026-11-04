@@ -59,6 +59,8 @@ import com.vitorpamplona.amethyst.commons.model.observables.NoteListMatchingFilt
 import com.vitorpamplona.amethyst.commons.model.observables.Observable
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.model.redirectStrayRelayGroupContent
+import com.vitorpamplona.amethyst.commons.rendering.unknown.isStorableUnknownKind
+import com.vitorpamplona.amethyst.commons.rendering.unknown.unknownKindAddress
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
 import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
@@ -69,6 +71,7 @@ import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
 import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactEvent
 import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactRemovalEvent
 import com.vitorpamplona.quartz.buzz.audit.AuditEntryEvent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadSummaryEvent
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadWindowBoundsEvent
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.WindowBoundsEvent
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
@@ -156,6 +159,20 @@ import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoShardEvent
+import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
+import com.vitorpamplona.quartz.drss.eventList.UnrecognizedKind30102Event
+import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
+import com.vitorpamplona.quartz.drss.feedList.UnrecognizedKind30100Event
+import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
+import com.vitorpamplona.quartz.drss.listFolder.UnrecognizedKind30101Event
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressAppDataEvent
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
+import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind30104Event
+import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind31985Event
+import com.vitorpamplona.quartz.drss.readWriteLists.DrssReadWriteListsEvent
+import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -170,15 +187,22 @@ import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.citations.ExternalCitationEvent
 import com.vitorpamplona.quartz.experimental.citations.HardcopyCitationEvent
 import com.vitorpamplona.quartz.experimental.citations.PromptCitationEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.AddressableListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
+import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
 import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
 import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
 import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
@@ -192,8 +216,14 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
+import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
 import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
+import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
+import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
+import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.active.ActiveProfileThemeEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
@@ -201,10 +231,20 @@ import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.topEight.TopEightEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.addressables.AddressableTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.events.EventTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalIdTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.assetBundle.AssetBundleEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
+import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -214,6 +254,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isRegular
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
+import com.vitorpamplona.quartz.nip01Core.core.supersedes
 import com.vitorpamplona.quartz.nip01Core.crypto.checkSignature
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
@@ -221,16 +262,16 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterIndex
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isDialableFromOthers
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
@@ -238,6 +279,12 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bidConfirmation.BidConfirmationEvent
+import com.vitorpamplona.quartz.nip15Marketplace.marketplace.MarketplaceEvent
+import com.vitorpamplona.quartz.nip15Marketplace.product.ProductEvent
+import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
@@ -248,6 +295,7 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip19Bech32.isATag
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip23LongContent.draft.LongFormDraftEvent
 import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -276,7 +324,18 @@ import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupJoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.stickers.StickerPackEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
+import com.vitorpamplona.quartz.nip34Git.ci.coordinatorAdvertisement.CiCoordinatorAdvertisementEvent
+import com.vitorpamplona.quartz.nip34Git.ci.jobResult.CiJobResultEvent
+import com.vitorpamplona.quartz.nip34Git.ci.manualTrigger.CiManualTriggerEvent
+import com.vitorpamplona.quartz.nip34Git.ci.repositoryStatus.CiRepositoryStatusEvent
+import com.vitorpamplona.quartz.nip34Git.ci.requestReadiness.CiRequestReadinessListEvent
+import com.vitorpamplona.quartz.nip34Git.ci.serviceRequest.CiServiceRequestEvent
+import com.vitorpamplona.quartz.nip34Git.ci.serviceStop.CiServiceStopEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -296,11 +355,13 @@ import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRoleEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
+import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
@@ -353,8 +414,10 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.snapshot.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -374,6 +437,12 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDevFee.MostroDevFeePaymentEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDispute.MostroDisputeEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroRating.MostroUserRatingEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.robosatsRating.RoboSatsCoordinatorRatingEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -382,10 +451,14 @@ import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.addressables.AddressableAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.events.EventAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.externalIds.ExternalIdAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
@@ -396,6 +469,8 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
+import com.vitorpamplona.quartz.nip90Dvms.DvmRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.DvmResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.DvmContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
@@ -405,6 +480,9 @@ import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.DvmUserDiscovery
 import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.review.ProductReviewEvent
+import com.vitorpamplona.quartz.nip99Classifieds.shipping.ShippingOptionEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
@@ -434,7 +512,11 @@ import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
+import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
+import com.vitorpamplona.quartz.openagents.nipExtExtensions.release.ExtensionReleaseEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -444,6 +526,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -527,7 +611,9 @@ open class EventCache :
     @Volatile
     var lnurlEndpointResolver: LnurlEndpointResolver? = null
 
-    override val relayHints = HintIndexer()
+    // Hints come from other people's events and feed the relays we dial for them, so a stranger's
+    // `ws://192.168.1.10` hint is never indexed.
+    override val relayHints = HintIndexer { it.isDialableFromOthers() }
 
     /**
      * Cashu mint URL directory, populated passively as
@@ -859,6 +945,22 @@ open class EventCache :
 
     fun getLiveActivityChannelIfExists(key: Address): LiveActivitiesChannel? = liveChatChannels.get(key)
 
+    /**
+     * The note that shows event [id], the way every filter and observer hands it out: for the current
+     * version of an addressable or replaceable event, its [AddressableNote] (which carries the replies,
+     * reactions and zaps); for a regular event, or a superseded version, the event's own note. Null when
+     * the event isn't cached.
+     *
+     * An id names a version, so `getNoteIfExists(id)` returns the version note even for the latest one,
+     * and a screen showing that beside the addressable note draws the same event twice.
+     */
+    fun getNoteShowingEventIfExists(id: HexKey): Note? {
+        val note = getNoteIfExists(id) ?: return null
+        val event = note.event as? AddressableEvent ?: return note
+        val addressable = getAddressableNoteIfExists(event.address())
+        return if (addressable?.event?.id == id) addressable else note
+    }
+
     fun getNoteIfExists(event: Event): Note? =
         if (event is AddressableEvent) {
             getAddressableNoteIfExists(event.addressTag())
@@ -1101,14 +1203,15 @@ open class EventCache :
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
-        // new event
-        consumeBaseReplaceable(event, relay, wasVerified)
+        // new event. consumeBaseReplaceable only reports a new version after verifying it, so a
+        // true here spares the second Schnorr check below — the common case for a fresh kind 0.
+        val isNew = consumeBaseReplaceable(event, relay, wasVerified)
 
         val user = getOrCreateUser(event.pubKey)
 
         if (user.metadata().shouldUpdateWith(event)) {
             val newUserMetadata = event.contactMetaData()
-            if (newUserMetadata != null && (wasVerified || justVerify(event))) {
+            if (newUserMetadata != null && (wasVerified || isNew || justVerify(event))) {
                 user.updateUserInfo(newUserMetadata, event)
                 BuzzIdentityNames.invalidate()
                 if (relay != null) {
@@ -1142,11 +1245,15 @@ open class EventCache :
         // Already processed this event.
         if (note.event != null) return false
 
-        if (event is BaseNoteEvent && antiSpam.isSpam(event, relay)) {
+        // Verify before the spam check: the check records each event it sees, so a forged copy of
+        // a real note would otherwise get the real one dropped as its duplicate.
+        val verified = wasVerified || justVerify(event)
+
+        if (verified && event is BaseNoteEvent && antiSpam.isSpam(event, relay)) {
             return false
         }
 
-        return if (wasVerified || justVerify(event)) {
+        return if (verified) {
             val replyTo = computeReplyTo(event)
 
             note.loadEvent(event, author, replyTo)
@@ -1221,7 +1328,7 @@ open class EventCache :
         if (isVerified || justVerify(event)) {
             val replyTo = computeReplyTo(event)
 
-            if (event.createdAt > (note.createdAt() ?: 0L)) {
+            if (supersedesCurrent(event, note)) {
                 note.loadEvent(event, author, replyTo)
 
                 refreshNewNoteObservers(note)
@@ -1266,7 +1373,7 @@ open class EventCache :
         if (isVerified || justVerify(event)) {
             val replyTo = computeReplyTo(event)
 
-            if (event.createdAt > (note.createdAt() ?: 0L)) {
+            if (supersedesCurrent(event, note)) {
                 note.loadEvent(event, author, replyTo)
 
                 refreshNewNoteObservers(note)
@@ -1308,7 +1415,7 @@ open class EventCache :
             return false
         }
 
-        if ((isVerified || justVerify(event)) && event.createdAt > (note.createdAt() ?: 0L)) {
+        if ((isVerified || justVerify(event)) && supersedesCurrent(event, note)) {
             val replyTo = computeReplyTo(event)
 
             note.loadEvent(event, author, replyTo)
@@ -1351,7 +1458,7 @@ open class EventCache :
             return false
         }
 
-        if ((isVerified || justVerify(event)) && event.createdAt > (note.createdAt() ?: 0L)) {
+        if ((isVerified || justVerify(event)) && supersedesCurrent(event, note)) {
             val replyTo = computeReplyTo(event)
 
             note.loadEvent(event, author, replyTo)
@@ -1393,6 +1500,13 @@ open class EventCache :
                 listOfNotNull(event.threadRoot(), event.replyTo()).distinct().mapNotNull { checkGetOrCreateNote(it) }
             }
 
+            is GitCoverNoteEvent -> {
+                // A cover note threads alongside the NIP-34 replies of the issue / patch / PR it
+                // covers (its root `e`), so the item's history shows each edit and the card can quote
+                // its target. The banner above the description is resolved separately (GitCoverNotes).
+                listOfNotNull(event.rootEventId()?.let { checkGetOrCreateNote(it) })
+            }
+
             is GitStatusEvent -> {
                 // A status event roots itself at a patch/PR/issue via a
                 // marked-`root` `e` tag; link only that so the transition
@@ -1408,6 +1522,26 @@ open class EventCache :
 
             is CommentEvent -> {
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is BidEvent -> {
+                // A bid names the auction version by event id (NIP-15: an edited auction loses its
+                // bids). checkGetOrCreateNote files it under the auction's address, whose replies the
+                // auction card reads for the highest bid, keeping only those on the current version.
+                listOfNotNull(event.auctionId()?.let { checkGetOrCreateNote(it) })
+            }
+
+            is BidConfirmationEvent -> {
+                // Under the bid it confirms and the auction, so the auction card sees the merchant's
+                // statuses and time extensions next to the bids themselves.
+                event.linkedEventIds().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is KanbanCardEvent -> {
+                // Files the card under its board's addressable note, so the board's replies hold
+                // its cards: the board card counts them per column, and the board's thread lists
+                // them. Only the board `a`; a tracker card's other `a` is what it mirrors.
+                listOfNotNull(event.board()?.let { getOrCreateAddressableNote(Address(it.kind, it.pubKeyHex, it.dTag)) })
             }
 
             is GeocacheFoundLogEvent -> {
@@ -1438,8 +1572,8 @@ open class EventCache :
 
             is ZapReceiptEvent -> {
                 event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
-                    event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
-                    (event.zapRequest?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptyList())
+                    event.zappedAddresses().mapNotNull { checkGetOrCreateAddressableNote(it) } +
+                    (event.zapRequest?.zappedAddresses()?.mapNotNull { checkGetOrCreateAddressableNote(it) } ?: emptyList())
             }
 
             is OnchainZapEvent -> {
@@ -1466,20 +1600,26 @@ open class EventCache :
             }
 
             is NutzapEvent -> {
-                // The zapped event is carried in the kind:9321's `e` tags
-                // (and optionally an `a` tag for addressables). Whichever
-                // notes those resolve to receive the nutzap entry —
+                // The zapped event is the kind:9321's `e` tag (NIP-61 allows one).
+                // The note it resolves to receives the nutzap entry —
                 // analogous to how ZapReceiptEvent flows into `addZap`.
-                event.linkedEventIds().mapNotNull { checkGetOrCreateNote(it) }
+                listOfNotNull(event.zappedEventId()?.let { checkGetOrCreateNote(it) })
             }
 
             is ZapRequestEvent -> {
                 event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
-                    event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+                    event.zappedAddresses().mapNotNull { checkGetOrCreateAddressableNote(it) }
             }
 
-            is AcceptedBadgeSetEvent, is ProfileBadgesEvent -> {
-                event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) } +
+            is AcceptedBadgeSetEvent -> {
+                event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.badgeAwardDefinitions().map { getOrCreateAddressableNote(it) }
+            }
+
+            is ProfileBadgesEvent -> {
+                // Every `a`, not just badgeAwardDefinitions(), which drops the badge-set (30008)
+                // pointers these profiles also carry; those have always been linked here.
+                event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
             }
 
@@ -1506,7 +1646,7 @@ open class EventCache :
 
             is ReactionEvent -> {
                 event.originalPost().mapNotNull { checkGetOrCreateNote(it) } +
-                    event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+                    event.originalAddresses().mapNotNull { checkGetOrCreateAddressableNote(it) }
             }
 
             is WakeUpEvent -> {
@@ -1527,18 +1667,24 @@ open class EventCache :
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             }
 
+            is JesterEvent -> {
+                // A Jester move points at its game's start event first, then at the move it
+                // follows. Linking only the start makes a game's start note hold every move as a
+                // reply, which is what the chess board reads its game from.
+                if (event.isMoveEvent()) {
+                    listOfNotNull(event.startEventId()?.let { checkGetOrCreateNote(it) })
+                } else {
+                    emptyList()
+                }
+            }
+
             is ChatEvent -> {
                 // Amethyst's own kind:9 replies carry the parent as a NIP-18
                 // `q` tag (see ChatEvent.replyingTo), but the broader Marmot
                 // ecosystem — WhiteNoise in particular — threads kind:9 chats
                 // with a plain NIP-10 `e` tag. Accept both so inbound replies
                 // from either client show their quote bubble in the feed.
-                val eTagTargets =
-                    event.tags
-                        .filter { it.size > 1 && it[0] == "e" }
-                        .map { it[1] }
-                val qTagTargets = event.quotedEvents().map { it.eventId }
-                (eTagTargets + qTagTargets).mapNotNull { checkGetOrCreateNote(it) }
+                event.replyTargetIds().mapNotNull { checkGetOrCreateNote(it) }
             }
 
             else -> {
@@ -1566,7 +1712,7 @@ open class EventCache :
 
         if (note.event?.id == event.id) return false
 
-        if (event.createdAt > (note.createdAt() ?: 0L) && (isVerified || justVerify(event))) {
+        if (supersedesCurrent(event, note) && (isVerified || justVerify(event))) {
             note.loadEvent(event, author, emptyList())
 
             val channel = getOrCreateLiveChannel(note.address)
@@ -1652,6 +1798,23 @@ open class EventCache :
         return false
     }
 
+    /**
+     * NIP-01 supersession: true when [event] should replace the version [note] holds — the higher
+     * `created_at`, a same-second tie to the lowest id, as every relay and store resolves it.
+     *
+     * Reads the stored event's own `created_at`, never [AddressableNote.createdAt]: that one shows
+     * `published_at` when the kind carries it (articles, wiki, classifieds, video, app definitions,
+     * drafts), a date every edit of the address keeps. Compared against it, any edit looks newer
+     * than the current one, so an older edit arriving late from a slow relay replaced the newest.
+     */
+    private fun supersedesCurrent(
+        event: Event,
+        note: AddressableNote,
+    ): Boolean {
+        val current = note.event ?: return true
+        return event.supersedes(current)
+    }
+
     private fun consumeBaseReplaceable(
         event: Event,
         relay: NormalizedRelayUrl?,
@@ -1659,9 +1822,18 @@ open class EventCache :
     ): Boolean {
         // TODO: Redo the Event sctructure in Quartz to avoid this check
         check(event is AddressableEvent) { "Event must be addressable: ${event.kind}" }
+        return consumeAtAddress(event, event.address(), relay, wasVerified)
+    }
 
+    /** Stores [event] as the newest version at [address], and by its id as one version of it. */
+    private fun consumeAtAddress(
+        event: Event,
+        address: Address,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
         val version = getOrCreateNote(event.id)
-        val replaceableNote = getOrCreateAddressableNote(event.address())
+        val replaceableNote = getOrCreateAddressableNote(address)
         val author = getOrCreateUser(event.pubKey)
 
         val isVerified =
@@ -1681,7 +1853,7 @@ open class EventCache :
         // Already processed this event.
         if (replaceableNote.event?.id == event.id) return isVerified
 
-        return if (event.createdAt > (replaceableNote.createdAt() ?: 0L) && (isVerified || justVerify(event))) {
+        return if (supersedesCurrent(event, replaceableNote) && (isVerified || justVerify(event))) {
             // clear index from previous tags
             replaceableNote.replyTo?.forEach {
                 it.removeNote(replaceableNote)
@@ -1716,7 +1888,8 @@ open class EventCache :
         return if (wasVerified || justVerify(event)) {
             note.loadEvent(event, author, emptyList())
 
-            if (deletionIndex.add(event, wasVerified)) {
+            // Verified just above: passing the caller's flag on made the index check it again.
+            if (deletionIndex.add(event, true)) {
                 event
                     .deleteEvents()
                     .mapNotNull { getNoteIfExists(it) }
@@ -1724,7 +1897,13 @@ open class EventCache :
                         val deleteNoteEvent = deleteNote.event
                         if (deleteNoteEvent is AddressableEvent) {
                             val addressableNote = getAddressableNoteIfExists(deleteNoteEvent.addressTag())
-                            if (addressableNote?.author?.pubkeyHex == event.pubKey && (addressableNote.createdAt() ?: 0L) <= event.createdAt) {
+                            // An `e` tag deletes that one version: the address goes only when the
+                            // version it currently shows is the one being deleted. Its real
+                            // `created_at`, not the note's `published_at`-aware display date.
+                            if (addressableNote?.author?.pubkeyHex == event.pubKey &&
+                                addressableNote.event?.id == deleteNoteEvent.id &&
+                                deleteNoteEvent.createdAt <= event.createdAt
+                            ) {
                                 // Counts the replies
                                 deleteNote(addressableNote)
 
@@ -1739,14 +1918,18 @@ open class EventCache :
                         }
                     }
 
+                deleteCurrentVersionsWhoseNoteWasCollected(event, event.deleteEventIds())
+
                 val addressList = event.deleteAddressIds()
                 val addressSet = addressList.toSet()
 
                 addressList
                     .mapNotNull { getAddressableNoteIfExists(it) }
                     .forEach { deleteNote ->
-                        // must be the same author
-                        if (deleteNote.author?.pubkeyHex == event.pubKey && (deleteNote.createdAt() ?: 0L) <= event.createdAt) {
+                        // must be the same author, and an `a` deletion only reaches versions up to its
+                        // own `created_at` — the stored event's, since `createdAt()` may be the
+                        // `published_at` an edit made after the deletion still carries.
+                        if (deleteNote.author?.pubkeyHex == event.pubKey && (deleteNote.event?.createdAt ?: 0L) <= event.createdAt) {
                             // Counts the replies
                             deleteNote(deleteNote)
 
@@ -1754,14 +1937,18 @@ open class EventCache :
                         }
                     }
 
-                notes.forEach { _, note ->
-                    val noteEvent = note.event
-                    if (noteEvent is AddressableEvent &&
-                        noteEvent.addressTag() in addressSet &&
-                        noteEvent.pubKey == event.pubKey &&
-                        noteEvent.createdAt <= event.createdAt
-                    ) {
-                        deleteNote(note)
+                // A full pass over the cache, so only for deletions that name addresses; most
+                // (un-likes, deleted replies) carry `e` tags alone.
+                if (addressSet.isNotEmpty()) {
+                    notes.forEach { _, note ->
+                        val noteEvent = note.event
+                        if (noteEvent is AddressableEvent &&
+                            noteEvent.addressTag() in addressSet &&
+                            noteEvent.pubKey == event.pubKey &&
+                            noteEvent.createdAt <= event.createdAt
+                        ) {
+                            deleteNote(note)
+                        }
                     }
                 }
             }
@@ -1771,6 +1958,34 @@ open class EventCache :
             true
         } else {
             false
+        }
+    }
+
+    /**
+     * An `e` deletion of the version an address currently shows, when that version's note is gone.
+     * [notes] holds a version only weakly; the addressable note keeps the event, so after a GC the
+     * id lookup above finds nothing and the version stayed on screen. The deletion's `k` tags name
+     * the kinds (NIP-09 asks for them), so look for that version at the author's addresses of each
+     * replaceable or addressable one. Same rules as above: the deleter's own, and no newer than the
+     * deletion.
+     */
+    private fun deleteCurrentVersionsWhoseNoteWasCollected(
+        deletion: DeletionRequestEvent,
+        deletedIds: List<HexKey>,
+    ) {
+        val collected = deletedIds.filterTo(HashSet()) { getNoteIfExists(it)?.event == null }
+        if (collected.isEmpty()) return
+
+        deletion.kinds().forEach { kind ->
+            if (!kind.isAddressable() && !kind.isReplaceable()) return@forEach
+            addressables
+                .filterIntoSet(kind, deletion.pubKey) { _, note -> note.event?.id in collected }
+                .forEach { current ->
+                    if ((current.event?.createdAt ?: Long.MAX_VALUE) <= deletion.createdAt) {
+                        deleteNote(current)
+                        addressables.remove(current.address)
+                    }
+                }
         }
     }
 
@@ -1811,6 +2026,13 @@ open class EventCache :
 
         pruner.unlinkAndRemove(deleteNote)
     }
+
+    /**
+     * Removes [note] the way a NIP-09 delete does, for a removal that no kind:5 carries: a
+     * Marmot admin deletion (kind 4891) or an expired disappearing message. Dropping it from
+     * its chatroom alone left it in every other feed that held it, such as notifications.
+     */
+    fun removeLocally(note: Note) = deleteNote(note)
 
     /**
      * Removes the envelope notes that delivered [rumorNote]'s rumor: its
@@ -1960,8 +2182,9 @@ open class EventCache :
     ): Boolean {
         val note = getOrCreateNote(event.id)
 
-        // Already processed this event.
-        if (note.event != null) return true
+        // Already processed this event. Not new: a `true` here re-ran the hint, mint and gatherer
+        // indexes for every relay that served it, and made the Marmot inbound path re-persist it.
+        if (note.event != null) return false
 
         if (wasVerified || justVerify(event)) {
             val author = getOrCreateUser(event.pubKey)
@@ -1986,8 +2209,8 @@ open class EventCache :
     ): Boolean {
         val note = getOrCreateNote(event.id)
 
-        // Already processed this event.
-        if (note.event != null) return true
+        // Already processed this event. Not new, as for reactions above.
+        if (note.event != null) return false
 
         if (wasVerified || justVerify(event)) {
             val author = getOrCreateUser(event.pubKey)
@@ -2106,7 +2329,11 @@ open class EventCache :
         val isVerified =
             if (event.createdAt > oldChannel.updatedMetadataAt) {
                 if (wasVerified || justVerify(event)) {
-                    oldChannel.updateChannelInfo(author, event, note)
+                    // NIP-28: only the kind-40 author may update the channel. While the 40 is still
+                    // unknown, the update waits in the channel's notes and the 40 applies it.
+                    if (oldChannel.creator == author) {
+                        oldChannel.updateChannelInfo(event, note)
+                    }
                     true
                 } else {
                     false
@@ -2116,7 +2343,12 @@ open class EventCache :
             }
 
         if (note.event == null && (isVerified || justVerify(event))) {
-            oldChannel.addNote(note, relay)
+            // An ignored update stays out of the timeline too, or it would read as "X updated the
+            // channel". While the creator is unknown it waits here; the kind 40 drops it if it isn't theirs.
+            val creator = oldChannel.creator
+            if (creator == null || creator == author) {
+                oldChannel.addNote(note, relay)
+            }
             note.loadEvent(event, author, emptyList())
 
             refreshNewNoteObservers(note)
@@ -2270,6 +2502,25 @@ open class EventCache :
         if (relay != null && isRelaySignedGroupEvent(event, relay)) {
             val latest = getOrCreateAddressableNote(event.address()).event as? GroupPinnedEvent
             latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updatePinned(it) }
+        }
+        return new
+    }
+
+    /**
+     * A Kanban card (kind 30302) is stored like any addressable event and also counted as a reply
+     * of its board ([computeReplyTo] links the board), which [consumeBaseReplaceable] alone does
+     * not do: the board card reads its column counts from those replies. A newer version of the
+     * card is unlinked from the old board first, inside [consumeBaseReplaceable].
+     */
+    private fun consumeKanbanCard(
+        event: KanbanCardEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (new) {
+            val note = getOrCreateAddressableNote(event.address())
+            if (note.event === event) note.replyTo?.forEach { it.addReply(note) }
         }
         return new
     }
@@ -2765,6 +3016,17 @@ open class EventCache :
             return true
         }
 
+        if (lnurlEndpointResolver != null && recipientLnurl != null && recipientLnurlpUrl == null) {
+            // The recipient's lud16/lud06 is malformed (LnurlForm rejects its host), so no
+            // provider can vouch for this receipt. Same outcome as a failed lookup below:
+            // show it, but don't credit it.
+            Log.w("ZP") { "recipient lnurl of ${event.id} is malformed; not crediting" }
+            note.loadEvent(event, author, repliesTo)
+            attachZapToLiveActivityChannel(event, note, relay)
+            refreshNewNoteObservers(note)
+            return true
+        }
+
         val resolver = lnurlEndpointResolver
         if (resolver == null || recipientLnurlpUrl == null) {
             // No resolver configured, or recipient has no lud16/lud06 on file.
@@ -2806,6 +3068,7 @@ open class EventCache :
                 }
                 repliesTo.forEach { it.addZap(zapRequest, note) }
             } catch (t: Throwable) {
+                currentCoroutineContext().ensureActive()
                 Log.w("ZP", "validation failed for ${event.id}", t)
             }
         }
@@ -2961,19 +3224,36 @@ open class EventCache :
         relay: NormalizedRelayUrl?,
     ) {
         // Match zap.stream: only show zaps whose receiver is the live activity host.
-        val hosts = event.zappedAuthor().toHashSet()
-        if (hosts.isEmpty()) return
+        val receivers = event.zappedAuthor().toHashSet()
+        if (receivers.isEmpty()) return
 
         // Route into every live-activity address this zap references (zap.stream uses one, but
         // a receipt could legitimately reference multiple simulcasted streams).
-        event.tags
+        event
+            .zappedAddresses()
             .asSequence()
-            .mapNotNull(ATag::parseAddress)
-            .filter { it.kind == LiveActivitiesEvent.KIND && it.pubKeyHex in hosts }
+            .mapNotNull(Address::parse)
+            .filter { it.kind == LiveActivitiesEvent.KIND }
             .distinct()
             .forEach { address ->
-                getOrCreateLiveChannel(address).addNote(note, relay)
+                val channel = getOrCreateLiveChannel(address)
+                if (isPaidToLiveActivityHost(channel, receivers)) channel.addNote(note, relay)
             }
+    }
+
+    /**
+     * Streaming services (zap.stream, Shosho, …) sign the kind-30311 with their own key and name
+     * the streamer in a `p … host` tag, so a zap to the streamer carries the service's key in its
+     * `a` and the host's in its `p`. Before the stream event is cached there is no host to check;
+     * the receipt's `a` already ties it to this stream, so it is kept rather than lost for good.
+     */
+    private fun isPaidToLiveActivityHost(
+        channel: LiveActivitiesChannel,
+        receivers: Set<HexKey>,
+    ): Boolean {
+        if (channel.address.pubKeyHex in receivers) return true
+        val info = channel.info ?: return true
+        return info.hosts().any { it.pubKey in receivers }
     }
 
     private fun attachZapToLiveActivityChannel(
@@ -2981,16 +3261,15 @@ open class EventCache :
         note: Note,
         relay: NormalizedRelayUrl?,
     ) {
-        // Only surface zaps whose recipient is the live activity host.
+        // Only surface zaps whose recipient is the live activity host. Route by the zapped address
+        // alone: it is the only `a` Bolt12ZapValidator checks against the intent, so any other
+        // `a` would place the zap in a stream its validation never covered.
         val host = event.recipient() ?: return
-        event.tags
-            .asSequence()
-            .mapNotNull(ATag::parseAddress)
-            .filter { it.kind == LiveActivitiesEvent.KIND && it.pubKeyHex == host }
-            .distinct()
-            .forEach { address ->
-                getOrCreateLiveChannel(address).addNote(note, relay)
-            }
+        val address = event.zappedAddress()?.let { Address.parse(it) } ?: return
+        if (address.kind == LiveActivitiesEvent.KIND) {
+            val channel = getOrCreateLiveChannel(address)
+            if (isPaidToLiveActivityHost(channel, setOf(host))) channel.addNote(note, relay)
+        }
     }
 
     fun consume(
@@ -3259,6 +3538,12 @@ open class EventCache :
         // indistinguishable in the field.
         if (getNoteIfExists(event.id)?.event != null) return false
 
+        // Verify before the tracker: matching consumes the pending entry, and the two things it
+        // matches on — the wallet's pubkey and the request id — are public on the relay. A copy
+        // with a forged signature that names them would otherwise use up the entry, and the real
+        // wallet answer arriving next would find nothing waiting and be dropped as late.
+        if (!wasVerified && !justVerify(event)) return false
+
         val pending =
             when (val match = paymentTracker.onResponseReceived(requestId, event.pubKey)) {
                 is NwcPaymentTracker.MatchResult.Matched -> {
@@ -3301,19 +3586,15 @@ open class EventCache :
         // check above and here. Same outcome, no warning: it is not a protocol problem.
         if (note.event != null) return false
 
-        if (wasVerified || justVerify(event)) {
-            note.loadEvent(event, author, emptyList())
+        note.loadEvent(event, author, emptyList())
 
-            requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
+        requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
 
-            appHost.scope.launch {
-                responseCallback(event)
-            }
-
-            return true
+        appHost.scope.launch {
+            responseCallback(event)
         }
 
-        return false
+        return true
     }
 
     fun getPeopleListNotesFor(user: User): List<AddressableNote> = addressables.filter(FollowSetEvent.KIND, user.pubkeyHex)
@@ -3424,22 +3705,30 @@ open class EventCache :
         return justConsumeAndUpdateIndexes(event, null, true)
     }
 
+    /**
+     * Consumes [event], received from [relay] when known. When that relay is behind (it sent an
+     * event this cache knows was deleted, or an older version of an addressable one), the
+     * deletion or the newer version is handed to [sendBack] for that relay, once per note.
+     * [sendBack] should publish through the client, so the relay gets the outbox's retries and
+     * the client's relay filters; this cache used to write it on the relay's socket itself.
+     */
     fun justConsume(
         event: Event,
-        relay: IRelayClient?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
+        sendBack: ((Event, NormalizedRelayUrl) -> Unit)? = null,
     ): Boolean {
         if (deletionIndex.hasBeenDeleted(event)) {
             // update relay with deletion event from another.
-            if (relay != null) {
+            if (relay != null && sendBack != null) {
                 deletionIndex.hasBeenDeletedBy(event)?.let { deletionEvent ->
                     getNoteIfExists(deletionEvent.id)?.let { note ->
-                        if (!note.hasRelay(relay.url)) {
+                        if (!note.hasRelay(relay)) {
                             if (appHost.isDebug) {
-                                Log.d("LocalCache") { "Updating ${relay.url.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}" }
+                                Log.d("LocalCache") { "Updating ${relay.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}" }
                             }
-                            relay.sendIfConnected(EventCmd(deletionEvent))
-                            note.addRelay(relay.url)
+                            sendBack(deletionEvent, relay)
+                            note.addRelay(relay)
                         }
                     }
                 }
@@ -3447,24 +3736,24 @@ open class EventCache :
             return false
         }
 
-        if (event is AddressableEvent && relay != null) {
+        if (event is AddressableEvent && relay != null && sendBack != null) {
             // updates relay with a new event.
             getAddressableNoteIfExists(event.address())?.let { note ->
                 note.event?.let { existingEvent ->
-                    if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.url) && !deletionIndex.hasBeenDeleted(event) && !event.isExpired()) {
+                    if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay) && !deletionIndex.hasBeenDeleted(event) && !event.isExpired()) {
                         if (appHost.isDebug) {
-                            Log.d("LocalCache") { "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}" }
+                            Log.d("LocalCache") { "Updating ${relay.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}" }
                         }
 
-                        relay.sendIfConnected(EventCmd(existingEvent))
+                        sendBack(existingEvent, relay)
                         // only send once.
-                        note.addRelay(relay.url)
+                        note.addRelay(relay)
                     }
                 }
             }
         }
 
-        return justConsumeAndUpdateIndexes(event, relay?.url, wasVerified)
+        return justConsumeAndUpdateIndexes(event, relay, wasVerified)
     }
 
     fun checkDeletionAndConsume(
@@ -3833,6 +4122,8 @@ open class EventCache :
                 is AppDefinitionEvent,
                 is AppRecommendationEvent,
                 is AppSpecificDataEvent,
+                is DrssReadWriteListsEvent,
+                is DrssListenProgressAppDataEvent,
                 is AttestationEvent,
                 is AttestationRequestEvent,
                 is AttestorRecommendationEvent,
@@ -3855,7 +4146,15 @@ open class EventCache :
                 is DmRelayListEvent,
                 is Bolt12OfferListEvent,
                 is ClassifiedsEvent,
+                // Open Markets. Shopstr's carts and escrow records on 30405/30406 split off as
+                // UnrecognizedKind3040xEvent and stay unconsumed, so their ciphertext is never drawn.
+                is ProductCollectionEvent,
+                is ShippingOptionEvent,
+                is ProductReviewEvent,
                 is FundraiserEvent,
+                is EbookEvent,
+                is MagazineEvent,
+                is MagazineIssueEvent,
                 is BirdexEvent,
                 is Ps1SaveEvent,
                 is CommunityDefinitionEvent,
@@ -3887,6 +4186,10 @@ open class EventCache :
                 // The relay-signed NIP-29 39004 AV-participants addressable is durable group state.
                 is GroupParticipantsEvent,
                 is ExternalIdentitiesEvent,
+                // OpenAgents capability heads (30180) and package listings (30184): discovery records,
+                // newest per address; nothing derives state from them yet.
+                is CapabilityDiscoveryEvent,
+                is ExtensionListingEvent,
                 is FileServersEvent,
                 is StarterPackEvent,
                 is GeocacheListingEvent,
@@ -3897,6 +4200,9 @@ open class EventCache :
                 is CyberspaceBagEvent,
                 is GitRepositoryEvent,
                 is GitRepositoryStateEvent,
+                // Nostr CI Workflow Progress (39842): the live marker of a run, replaced as it advances.
+                // CiStatusIndex reads it for the PR / patch CI badge; not linked into any thread.
+                is CiWorkflowProgressEvent,
                 is UserGraspListEvent,
                 is RootSiteEvent,
                 is NamedSiteEvent,
@@ -3926,6 +4232,11 @@ open class EventCache :
                 is AuthoredPodcastsEvent,
                 is FavoritePodcastsListEvent,
                 is Podcasting20EpisodeEvent,
+                // drss.io's legacy listening progress and other shapes on 30054: stored at their address,
+                // so a newer non-episode version still supersedes an older episode there and a quote
+                // finds them. The episode feeds pick `is PodcastEpisode`, so no feed draws them.
+                is DrssListenProgressEvent,
+                is UnrecognizedKind30054Event,
                 is Podcasting20TrailerEvent,
                 is MuteListEvent,
                 is NNSEvent,
@@ -3946,6 +4257,9 @@ open class EventCache :
                 is PushLeaseEvent,
                 is WindowBoundsEvent,
                 is ThreadWindowBoundsEvent,
+                // The thread summary sidecar shares kind 39005 with NIP-29 pins; EventFactory picks
+                // this class only for the Buzz shape.
+                is ThreadSummaryEvent,
                 is ArchivedIdentitiesListEvent,
                 is RelayDiscoveryEvent,
                 is RelayMonitorEvent,
@@ -3955,6 +4269,20 @@ open class EventCache :
                 is SoftwareApplicationEvent,
                 is TrustedRelayListEvent,
                 is TrustProviderListEvent,
+                // NIP-85 assertions about an event, an address or an external id (30383-30385) and
+                // the Trusted Lists built on them (30392-30395). Nothing derives state from them yet;
+                // they are stored so a link to one opens its card, and so a newer version replaces
+                // the old one at its address.
+                is EventAssertionEvent,
+                is AddressableAssertionEvent,
+                is ExternalIdAssertionEvent,
+                is UserTrustedListEvent,
+                is EventTrustedListEvent,
+                is AddressableTrustedListEvent,
+                is ExternalIdTrustedListEvent,
+                // Decentralized Lists' editable header and item (39998 / 39999).
+                is AddressableListHeaderEvent,
+                is AddressableListItemEvent,
                 is AddressableNormalVideoEvent,
                 is AddressableShortVideoEvent,
                 is TextTrackEvent,
@@ -3979,7 +4307,70 @@ open class EventCache :
                 is PredictionMarketEvent,
                 // Unread junk on 38000 still supersedes an older version at its address.
                 is UnrecognizedKind38000Event,
+                // drss.io's lists, show settings and provenance records, and the other apps' events
+                // on those kinds. No feed asks for these kinds; the account loads its own, and
+                // quotes and links load the rest. NIP-51 article curation sets are where drss saves
+                // articles, so its folders hold them too.
+                is ArticleCurationSetEvent,
+                is DrssFeedListEvent,
+                is DrssListFolderEvent,
+                is DrssEventListEvent,
+                is DrssProvenanceFolderEvent,
+                is DrssProvenanceEvent,
+                is DrssShowEvent,
+                is UnrecognizedKind30100Event,
+                is UnrecognizedKind30101Event,
+                is UnrecognizedKind30102Event,
+                is UnrecognizedKind30104Event,
+                is UnrecognizedKind31985Event,
+                // The shapes of the shared kinds 30301, 30302 and 38385 that have cards: Kanban
+                // boards and cards, WalletScrutiny verdicts and Mostro instance terms. Their
+                // UnrecognizedKind…Event siblings (other apps' formats) stay unconsumed, so
+                // nothing ever draws them.
+                is KanbanBoardEvent,
+                is BuildVerificationEvent,
+                is MostroInfoEvent,
+                // Kinds that only got a feed card later; stored so the card has a note to draw.
+                is ActiveProfileThemeEvent,
+                is CiCoordinatorAdvertisementEvent,
+                is CiRepositoryStatusEvent,
+                is CiRequestReadinessListEvent,
+                is CommunityRulesEvent,
+                is FeedDefinitionEvent,
+                is IdentityProofEvent,
+                is LongFormDraftEvent,
+                is MostroDisputeEvent,
+                is MostroUserRatingEvent,
+                is P2POrderEvent,
+                is PostingStreakEvent,
+                is RelayRoleEvent,
+                is RoboSatsCoordinatorRatingEvent,
+                is StickerPackEvent,
+                is ThemeDefinitionEvent,
+                is TopEightEvent,
+                is WorkoutTemplateEvent,
                 -> consumeBaseReplaceable(event, relay, wasVerified)
+
+                is KanbanCardEvent -> consumeKanbanCard(event, relay, wasVerified)
+
+                // NIP-15 marketplace. Other apps publish their own formats on 30017-30020 (a typing
+                // game's scores, offers, encrypted blobs); only the shapes the cards can draw are
+                // stored, so the rest stay unconsumed as before and nothing draws them as raw JSON.
+                is StallEvent -> if (event.isWellFormed()) consumeBaseReplaceable(event, relay, wasVerified) else false
+                is ProductEvent -> if (event.isWellFormed()) consumeBaseReplaceable(event, relay, wasVerified) else false
+                is MarketplaceEvent -> if (event.isWellFormed()) consumeBaseReplaceable(event, relay, wasVerified) else false
+                is AuctionEvent -> if (event.isWellFormed()) consumeBaseReplaceable(event, relay, wasVerified) else false
+                is BidEvent -> if (event.isWellFormed()) consumeRegularEvent(event, relay, wasVerified) else false
+                is BidConfirmationEvent -> if (event.isWellFormed()) consumeRegularEvent(event, relay, wasVerified) else false
+
+                // Decentralized Lists' immutable header and item (9998 / 9999). Other apps publish
+                // their own formats on these kinds (license offers, encrypted blobs); only a header
+                // that declares a list, and an item that names its list or declares one itself (the
+                // spec's "nonstandard" header, drawn as a header), are this protocol. The rest stay
+                // unconsumed as before, so nothing draws them as a list.
+                is ListHeaderEvent -> if (event.names() != null) consumeRegularEvent(event, relay, wasVerified) else false
+
+                is ListItemEvent -> if (event.declaresList() || event.parentListPointers().isNotEmpty()) consumeRegularEvent(event, relay, wasVerified) else false
 
                 // ============================================================
                 // Regular kinds with no per-kind logic: stored as plain notes.
@@ -3999,6 +4390,8 @@ open class EventCache :
                 is ChatMessageEvent,
                 is BirdDetectionEvent,
                 is CommentEvent,
+                // OpenAgents package releases (3184): immutable, pointed at by a 30184 listing.
+                is ExtensionReleaseEvent,
                 // The NIP-29 9xxx moderation actions and join/leave requests are regular
                 // one-shot events the relay is authoritative for (it applies them and
                 // republishes the 39000/39001/39002); we store them so they're queryable,
@@ -4025,6 +4418,11 @@ open class EventCache :
                 is GitPullRequestEvent,
                 is GitPullRequestUpdateEvent,
                 is GitStatusEvent,
+                // Cover notes are linked to the item they cover (computeReplyTo); the CI results are
+                // not linked into any thread — CiStatusIndex and the runs sheet read them instead.
+                is GitCoverNoteEvent,
+                is CiJobResultEvent,
+                is CiWorkflowResultEvent,
                 is SnoShardEvent,
                 is ChessGameEvent,
                 is JesterEvent,
@@ -4069,10 +4467,37 @@ open class EventCache :
                 is WelcomeEvent,
                 is WorkoutRecordEvent,
                 is ConcordTimerNoticeEvent,
+                // Legacy MIP-00 KeyPackages (kind 443): the invite lookup now asks for them,
+                // so they arrive; stored like any regular event, never rendered.
+                is LegacyKeyPackageEvent,
+                // Kinds that only got a feed card later. The DVM bases come after the DVM kinds with
+                // their own handling above, so they only pick up the remaining job requests/results.
+                is AssetBundleEvent,
+                is CiManualTriggerEvent,
+                is CiServiceRequestEvent,
+                is CiServiceStopEvent,
+                is MostroDevFeePaymentEvent,
+                is NappletSnapshotEvent,
+                is SiteSnapshotEvent,
+                is DvmRequestEvent,
+                is DvmResponseEvent,
                 -> consumeRegularEvent(event, relay, wasVerified)
 
                 else -> {
-                    Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
+                    if (isStorableUnknownKind(event)) {
+                        // A kind quartz has no class for, kept so a quote, a notification or a link
+                        // to it draws the fallback card instead of nothing. A replaceable or
+                        // addressable one lives at its address, like a typed one, so an naddr finds
+                        // it and a newer version replaces it.
+                        val address = unknownKindAddress(event)
+                        if (address != null) {
+                            consumeAtAddress(event, address, relay, wasVerified)
+                        } else {
+                            consumeRegularEvent(event, relay, wasVerified)
+                        }
+                    } else {
+                        Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
+                    }
                 }
             }
         } catch (e: Exception) {

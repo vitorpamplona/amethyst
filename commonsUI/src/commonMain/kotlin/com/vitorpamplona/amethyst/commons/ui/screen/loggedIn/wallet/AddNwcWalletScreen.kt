@@ -30,7 +30,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,6 +43,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +56,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcBackupState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accessibility_scan_qr_code
 import com.vitorpamplona.amethyst.commons.resources.back
@@ -61,14 +65,23 @@ import com.vitorpamplona.amethyst.commons.resources.couldnt_find_nwc_wallets_des
 import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.commons.resources.paste_from_clipboard
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_title
+import com.vitorpamplona.amethyst.commons.resources.wallet_already_connected
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_all_already_added
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_none_found
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_restore
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_restored_toast
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_searching
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_connect_app
 import com.vitorpamplona.amethyst.commons.resources.wallet_name
 import com.vitorpamplona.amethyst.commons.resources.wallet_name_hint
 import com.vitorpamplona.amethyst.commons.resources.wallet_paste_uri
 import com.vitorpamplona.amethyst.commons.resources.wallet_save
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
@@ -96,6 +109,10 @@ fun AddNwcWalletScreen(
     // Prefilled when arriving from the `nostr+walletconnect` connect deep link.
     var nwcUri by remember { mutableStateOf(nip47Uri.orEmpty()) }
     var error by remember { mutableStateOf<String?>(null) }
+    val shortNotice = rememberShortNotice()
+    val restoreScope = rememberCoroutineScope()
+    val noneFoundMsg = stringRes(Res.string.wallet_backup_none_found)
+    val alreadyConnectedMsg = stringRes(Res.string.wallet_already_connected)
     var qrScanning by remember { mutableStateOf(false) }
 
     val uri = LocalUriHandler.current
@@ -246,8 +263,12 @@ fun AddNwcWalletScreen(
                 onClick = {
                     try {
                         val parsed = Nip47WalletConnect.parse(nwcUri.trim())
-                        walletViewModel.addWallet(walletName.trim(), parsed)
-                        nav.popBack()
+                        if (walletViewModel.addWallet(walletName.trim(), parsed)) {
+                            nav.popBack()
+                        } else {
+                            error = alreadyConnectedMsg
+                            shortNotice.show(alreadyConnectedMsg)
+                        }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         error = e.message ?: "Invalid NWC connection URI"
@@ -257,6 +278,68 @@ fun AddNwcWalletScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringRes(Res.string.wallet_save))
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            val backupBusy by walletViewModel.backupBusy.collectAsState()
+            var restoreCandidate by remember { mutableStateOf<NwcBackupState.FoundNwcBackup?>(null) }
+
+            restoreCandidate?.let { backup ->
+                RestoreFoundDialog(
+                    backup = backup,
+                    onConfirm = { chosen ->
+                        restoreCandidate = null
+                        restoreScope.launch {
+                            val added = walletViewModel.applyRestoredBackup(backup, chosen)
+                            shortNotice.show(
+                                if (added > 0) {
+                                    loadPluralStringRes(Res.plurals.wallet_backup_restored_toast, added, added)
+                                } else {
+                                    loadStringRes(Res.string.wallet_backup_all_already_added)
+                                },
+                            )
+                            nav.popBack()
+                        }
+                    },
+                    onDismiss = { restoreCandidate = null },
+                )
+            }
+
+            OutlinedButton(
+                onClick = {
+                    walletViewModel.fetchBackupForRestore { backup ->
+                        if (backup == null) {
+                            shortNotice.show(noneFoundMsg)
+                        } else {
+                            restoreCandidate = backup
+                        }
+                    }
+                },
+                enabled = !backupBusy,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                if (backupBusy) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(
+                    text =
+                        stringRes(
+                            if (backupBusy) {
+                                Res.string.wallet_backup_searching
+                            } else {
+                                Res.string.wallet_backup_restore
+                            },
+                        ),
+                )
             }
         }
     }

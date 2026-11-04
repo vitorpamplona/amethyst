@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.viewmodels
 
 import com.vitorpamplona.amethyst.commons.audio.AnonymizedResult
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
+import com.vitorpamplona.amethyst.commons.relays.health.RelayHealthStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
@@ -31,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
+import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderHttp
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthSnapshot
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
@@ -60,11 +62,17 @@ interface AccountViewModelHost {
     /** Per-relay connection statistics, which order the relays a crawl visits. */
     val relayStats: RelayStats
 
+    /** How fast each relay answers and which ones are slow, for the relay screens; null where not measured. */
+    val relayHealth: RelayHealthStore? get() = null
+
     /** Opens sockets for the throwaway clients crawls use (Event Sync, Cashu discovery). */
     val websocketBuilder: WebsocketBuilder
 
     /** HTTP for LNURL-pay (zaps, invoices, melts), over the clients the app routes payments through. */
     val lnurlTransport: LnurlHttpTransport
+
+    /** HTTP for Web of Trust provider sign-ups (Brainstorm's API). */
+    val trustProviderHttp: TrustProviderHttp get() = TrustProviderHttp.Unsupported
 
     /** Routes a payment's relays under the money-operations Tor preference while it runs. */
     val moneyOpRelays: MoneyOpRelayRouting
@@ -83,6 +91,12 @@ interface AccountViewModelHost {
 
     /** Posts signed now and published later by a background worker; null where scheduling is unsupported. */
     val scheduledPostStore: ScheduledPostStore? get() = null
+
+    /**
+     * Where the pictures the user draws on are kept between sessions, one subfolder per account
+     * (see `DrawingBackgroundStore`). Null where the platform keeps none.
+     */
+    val drawingBackgroundsDir: Path? get() = null
 
     /**
      * Re-voices the recording at [input] with the voice preset named [presetName], into a new file

@@ -35,6 +35,30 @@ sealed class NamecoinResolveState {
     data object NotFound : NamecoinResolveState()
 
     data class Error(
-        val message: String,
+        val reason: Reason,
     ) : NamecoinResolveState()
+
+    /** Why a lookup failed, as a typed fact; the UI words it (and localizes it). */
+    sealed interface Reason {
+        data class NoNostrField(
+            val name: String,
+        ) : Reason
+
+        /** [detail] is the parser's own message, kept verbatim so the record's publisher can find the bad byte. */
+        data class MalformedRecord(
+            val name: String,
+            val detail: String,
+        ) : Reason
+
+        data object ServersUnreachable : Reason
+
+        data object InvalidIdentifier : Reason
+
+        data object Timeout : Reason
+
+        /** An unexpected failure; [message] is the exception's own text. */
+        data class Other(
+            val message: String?,
+        ) : Reason
+    }
 }

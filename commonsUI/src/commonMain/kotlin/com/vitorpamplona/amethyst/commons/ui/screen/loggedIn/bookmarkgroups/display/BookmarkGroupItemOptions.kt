@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.block_report
 import com.vitorpamplona.amethyst.commons.resources.bookmark_item_actions_dialog_title
@@ -53,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.resources.request_deletion
 import com.vitorpamplona.amethyst.commons.resources.timestamp_it
 import com.vitorpamplona.amethyst.commons.resources.timestamp_pending
 import com.vitorpamplona.amethyst.commons.resources.unfollow
+import com.vitorpamplona.amethyst.commons.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
@@ -61,13 +63,11 @@ import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.commons.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.commons.ui.note.copyNoteTextAction
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DropDownParams
 import com.vitorpamplona.amethyst.commons.ui.note.elements.observeBookmarksFollowsAndAccount
 import com.vitorpamplona.amethyst.commons.ui.note.externalLinkForNote
-import com.vitorpamplona.amethyst.commons.ui.note.platform.EditPostView
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes

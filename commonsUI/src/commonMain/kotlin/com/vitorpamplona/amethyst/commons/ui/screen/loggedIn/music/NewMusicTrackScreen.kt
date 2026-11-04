@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDial
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.DocumentSelectSingle
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -199,7 +200,7 @@ fun NewMusicTrackScreen(
                 enabled = !isBusy,
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.title.value,
                 onValueChange = { vm.title.value = it },
                 label = { Text(stringRes(Res.string.music_track_title_label)) },
@@ -245,7 +246,7 @@ fun NewMusicTrackScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.description.value,
                 onValueChange = { vm.description.value = it },
                 label = { Text(stringRes(Res.string.music_track_description_label)) },

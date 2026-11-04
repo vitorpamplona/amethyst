@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -47,10 +48,10 @@ class RelaySpeedLogger(
 
     var current = FrameStat()
 
-    // Owns the once-per-second log+reset tick. A coroutine on Default instead of a
+    // Owns the once-per-second log+reset tick. A coroutine on IO instead of a
     // JVM Timer so the tick is KMP-portable and actually stops in [destroy] (the
     // old daemon timer outlived the logger).
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val clientListener =
         object : RelayConnectionListener {

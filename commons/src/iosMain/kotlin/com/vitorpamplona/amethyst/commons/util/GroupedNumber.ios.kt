@@ -34,11 +34,13 @@ actual fun formatGrouped(value: Long): String {
 actual fun formatDecimal(
     value: Double,
     maxFractionDigits: Int,
+    minFractionDigits: Int,
 ): String {
     val formatter =
         NSNumberFormatter().apply {
             numberStyle = NSNumberFormatterDecimalStyle
             maximumFractionDigits = maxFractionDigits.toULong()
+            minimumFractionDigits = minFractionDigits.toULong()
         }
     return formatter.stringFromNumber(NSNumber.numberWithDouble(value)) ?: value.toString()
 }

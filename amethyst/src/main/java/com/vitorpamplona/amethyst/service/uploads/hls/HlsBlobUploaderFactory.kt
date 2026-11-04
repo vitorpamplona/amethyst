@@ -26,8 +26,9 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
-import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
+import com.vitorpamplona.amethyst.service.uploads.nip96.upload
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -69,12 +70,6 @@ object HlsBlobUploaderFactory {
                 nip96Adapter(server.baseUrl, account, context)
             }
 
-            ServerType.NIP95 -> {
-                throw IllegalArgumentException(
-                    "NIP-95 storage stores each blob as an event and is not suitable for HLS renditions",
-                )
-            }
-
             ServerType.BuzzWorkspace -> {
                 throw IllegalArgumentException("HLS publishing does not target a Buzz workspace's media server")
             }
@@ -89,7 +84,6 @@ object HlsBlobUploaderFactory {
             BlossomUploader().upload(
                 uri = file.toUri(),
                 contentType = contentType,
-                size = file.length(),
                 alt = null,
                 sensitiveContent = null,
                 serverBaseUrl = serverBaseUrl,

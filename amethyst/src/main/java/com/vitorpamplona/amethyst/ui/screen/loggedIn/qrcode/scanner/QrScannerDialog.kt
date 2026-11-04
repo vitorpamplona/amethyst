@@ -25,6 +25,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.SystemClock
 import android.util.Size
@@ -33,6 +34,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.CameraState
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -61,10 +63,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -84,12 +88,14 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
+import androidx.lifecycle.Observer
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
+import com.vitorpamplona.amethyst.commons.qrcode.ImageCodesOutcome
 import com.vitorpamplona.amethyst.commons.qrcode.ScanResult
 import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
 import com.vitorpamplona.amethyst.commons.qrcode.ui.QrImageCodeChooser
@@ -109,11 +115,15 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.call.openAppSettings
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Full-screen QR scanner.
@@ -148,12 +158,16 @@ private fun QrScannerScreen(
     onDismiss: () -> Unit,
     onScan: (String) -> ScanOutcome,
 ) {
-    val cameraPermission = rememberPermissionState(Manifest.permission.CAMERA)
+    // Set from the permission result, not when the request is launched: `shouldShowRationale` is
+    // false both before the first answer and after a permanent denial, so flipping this before
+    // the system dialog returned showed "camera blocked, open settings" behind the very first ask.
+    var answered by rememberSaveable { mutableStateOf(false) }
+    val cameraPermission = rememberPermissionState(Manifest.permission.CAMERA) { answered = true }
 
     if (cameraPermission.status.isGranted) {
         QrCameraScanner(onDismiss = onDismiss, onScan = onScan)
     } else {
-        CameraPermissionGate(permission = cameraPermission, onDismiss = onDismiss)
+        CameraPermissionGate(permission = cameraPermission, answered = answered, onDismiss = onDismiss)
     }
 }
 
@@ -167,19 +181,18 @@ private fun QrScannerScreen(
 @Composable
 private fun CameraPermissionGate(
     permission: PermissionState,
+    answered: Boolean,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    var asked by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        asked = true
         permission.launchPermissionRequest()
     }
 
-    // `shouldShowRationale` is false both before the first ask and after a permanent denial, so
-    // the two are only distinguishable once we know we have asked.
-    val blocked = asked && !permission.status.shouldShowRationale
+    // `shouldShowRationale` is false both before the first answer and after a permanent denial,
+    // so the two are only distinguishable once a request has actually come back.
+    val blocked = answered && !permission.status.shouldShowRationale
 
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -238,7 +251,10 @@ private fun QrCameraScanner(
     // One shared accept path: camera frames, a tapped candidate and an imported image all land
     // here, so the haptic, the dedupe and the "we can't open this" branch behave identically
     // however the payload arrived.
-    val submit: (String) -> Unit = { text ->
+    val submit: (String) -> Unit = { scanned ->
+        // Trimmed once here so every caller gets what was classified: a code ending in a newline
+        // classified fine but then failed to parse downstream.
+        val text = scanned.trim()
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         when (currentOnScan(text)) {
             ScanOutcome.Handled -> currentOnDismiss()
@@ -261,6 +277,16 @@ private fun QrCameraScanner(
 
     var camera by remember { mutableStateOf<Camera?>(null) }
     var provider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+    var preview by remember { mutableStateOf<Preview?>(null) }
+    var analysis by remember { mutableStateOf<ImageAnalysis?>(null) }
+    var cameraOpens by remember { mutableIntStateOf(0) }
+
+    // Read on the analysis thread, so it is a plain volatile flag mirrored from the snapshot
+    // state rather than the state itself.
+    val paused = remember { AtomicBoolean(false) }
+    LaunchedEffect(state) {
+        snapshotFlow { state.isAwaitingUser }.collect { paused.set(it) }
+    }
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
     var focusRing by remember { mutableStateOf<Offset?>(null) }
 
@@ -281,9 +307,17 @@ private fun QrCameraScanner(
     LaunchedEffect(decoder, viewSize) {
         if (decoder == null || viewSize == IntSize.Zero) return@LaunchedEffect
 
+        // A rebind restarts the camera. Rotation needs one (the viewport changes shape), but a
+        // freeform or laptop window being dragged reports a new size every frame, so wait for
+        // the size to settle; each new size restarts this effect and cancels the wait.
+        if (camera != null) delay(RESIZE_SETTLE_MS)
+
         val cameraProvider =
             try {
                 ProcessCameraProvider.awaitInstance(context)
+            } catch (e: CancellationException) {
+                // The size changed again while CameraX was still initialising. Not a failure.
+                throw e
             } catch (e: Exception) {
                 Log.w("QrScanner", "Camera provider unavailable", e)
                 state.notice = decoderUnavailable
@@ -291,9 +325,9 @@ private fun QrCameraScanner(
             }
         provider = cameraProvider
 
-        val preview = Preview.Builder().build().apply { setSurfaceProvider(previewView.surfaceProvider) }
+        val newPreview = Preview.Builder().build().apply { setSurfaceProvider(previewView.surfaceProvider) }
 
-        val analysis =
+        val newAnalysis =
             ImageAnalysis
                 .Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -301,14 +335,14 @@ private fun QrCameraScanner(
                 .setResolutionSelector(ANALYSIS_RESOLUTION)
                 .build()
                 .apply {
-                    setAnalyzer(analysisExecutor, QrFrameAnalyzer(decoder) { frames.trySend(it) })
+                    setAnalyzer(analysisExecutor, QrFrameAnalyzer(decoder, isPaused = paused::get) { frames.trySend(it) })
                 }
 
         val group =
             UseCaseGroup
                 .Builder()
-                .addUseCase(preview)
-                .addUseCase(analysis)
+                .addUseCase(newPreview)
+                .addUseCase(newAnalysis)
                 .apply { previewView.viewPort?.let { setViewPort(it) } }
                 .build()
 
@@ -320,6 +354,8 @@ private fun QrCameraScanner(
                     state.maxZoomRatio = it.cameraInfo.zoomState.value
                         ?.maxZoomRatio ?: 1f
                 }
+            preview = newPreview
+            analysis = newAnalysis
         } catch (e: Exception) {
             Log.w("QrScanner", "Could not bind the camera", e)
             state.notice = decoderUnavailable
@@ -332,16 +368,49 @@ private fun QrCameraScanner(
         }
     }
 
+    // CameraX resets zoom to 1x and the torch to off whenever the camera closes -- a rebind, or
+    // the app going to the background -- and hands back the same Camera object afterwards, so
+    // keying on `camera` alone never noticed. Counting opens re-applies what the UI is showing
+    // each time the camera comes back.
+    DisposableEffect(camera, lifecycleOwner) {
+        val cameraState = camera?.cameraInfo?.cameraState
+        val observer = Observer<CameraState> { if (it.type == CameraState.Type.OPEN) cameraOpens++ }
+        cameraState?.observe(lifecycleOwner, observer)
+        onDispose { cameraState?.removeObserver(observer) }
+    }
+
     // One writer each for torch and zoom, driven off state rather than from the gesture handlers,
     // so the auto-zoom sweep and a pinch cannot fight over the camera control.
-    LaunchedEffect(camera) {
+    LaunchedEffect(camera, cameraOpens) {
         val control = camera?.cameraControl ?: return@LaunchedEffect
         snapshotFlow { state.torchOn }.collect { runCatching { control.enableTorch(it) } }
     }
 
-    LaunchedEffect(camera) {
+    LaunchedEffect(camera, cameraOpens) {
         val control = camera?.cameraControl ?: return@LaunchedEffect
         snapshotFlow { state.zoomRatio }.collect { runCatching { control.setZoomRatio(it) } }
+    }
+
+    // A flip between landscape and reverse landscape keeps the view's size, so nothing above
+    // rebinds -- but the frames now arrive upside down relative to the screen, and the outlines
+    // and tap targets were drawn mirrored through the centre. Follow the display instead.
+    DisposableEffect(preview, analysis) {
+        val displayManager = context.getSystemService(DisplayManager::class.java)
+        val listener =
+            object : DisplayManager.DisplayListener {
+                override fun onDisplayAdded(displayId: Int) = Unit
+
+                override fun onDisplayRemoved(displayId: Int) = Unit
+
+                override fun onDisplayChanged(displayId: Int) {
+                    val display = previewView.display ?: return
+                    if (display.displayId != displayId) return
+                    preview?.targetRotation = display.rotation
+                    analysis?.targetRotation = display.rotation
+                }
+            }
+        displayManager?.registerDisplayListener(listener, null)
+        onDispose { displayManager?.unregisterDisplayListener(listener) }
     }
 
     LaunchedEffect(state.notice) {
@@ -359,15 +428,19 @@ private fun QrCameraScanner(
     }
 
     // One picture can hold several codes. Taking the first silently is the same mistake the
-    // camera refuses to make, so anything past one goes to the picker.
+    // camera refuses to make, so anything past one goes to the picker. Multi-part codes are
+    // joined first, so a fragment is never offered or submitted on its own.
     val readImage: (Uri) -> Unit = { uri ->
         if (decoder != null) {
             scope.launch {
-                val found = QrImageImport.decode(context, uri, decoder).map { it.text }.distinct()
-                when {
-                    found.isEmpty() -> state.notice = noCodeInImage
-                    found.size == 1 -> submit(found.first())
-                    else -> state.imageCodes = found.map(::classifyScannedPayload)
+                when (val outcome = QrImageImport.outcome(context, uri, decoder)) {
+                    ImageCodesOutcome.NothingFound -> state.notice = noCodeInImage
+                    is ImageCodesOutcome.OnlyPartial -> state.notice = QrImageImport.partialProgressText(outcome.captured, outcome.total)
+                    is ImageCodesOutcome.Open -> submit(outcome.text)
+                    is ImageCodesOutcome.Choose -> {
+                        state.imageCodesNote = QrImageImport.partialNote(outcome.partial)
+                        state.imageCodes = outcome.texts.map(::classifyScannedPayload)
+                    }
                 }
             }
         }
@@ -418,13 +491,15 @@ private fun QrCameraScanner(
             onToggleTorch = { state.torchOn = !state.torchOn },
             onPickImage = { pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
             onPaste = {
-                pasteFromClipboard(
-                    context = context,
-                    decoder = decoder,
-                    onText = submit,
-                    onImage = readImage,
-                    onEmpty = { state.notice = clipboardEmpty },
-                )
+                scope.launch {
+                    pasteFromClipboard(
+                        context = context,
+                        decoder = decoder,
+                        onText = submit,
+                        onImage = readImage,
+                        onEmpty = { state.notice = clipboardEmpty },
+                    )
+                }
             },
         )
     }
@@ -432,6 +507,7 @@ private fun QrCameraScanner(
     if (state.imageCodes.isNotEmpty()) {
         QrImageCodeChooser(
             codes = state.imageCodes,
+            note = state.imageCodesNote,
             onPick = { picked ->
                 state.imageCodes = emptyList()
                 submit(picked.raw)
@@ -452,6 +528,10 @@ private fun QrCameraScanner(
             onCopy = { text ->
                 copyToClipboard(context, text)
                 state.dismissRejection(SystemClock.elapsedRealtime())
+            },
+            onOpenProfile = { npub ->
+                state.dismissRejection(SystemClock.elapsedRealtime())
+                submit(npub)
             },
         )
     }
@@ -503,7 +583,10 @@ private fun pickCandidateAt(
     if (state.candidates.size <= 1) return null
     val mapping = ScanViewMapping.of(state.frame, viewSize) ?: return null
 
+    // Parts of a multi-part code are outlined so the user can see them being read, but each is a
+    // fragment of something else: tapping one must not submit it.
     return state.candidates
+        .filterNot { it.isPartOfSequence }
         .mapNotNull { candidate ->
             val bounds = candidate.bounds ?: return@mapNotNull null
             val center = bounds.centerInView(mapping)
@@ -532,20 +615,24 @@ private fun focusAt(
     }
 }
 
-private fun pasteFromClipboard(
+/**
+ * Reads the clipboard off the main thread: the MIME lookup is an IPC to the clip's provider, and
+ * coercing a content-URI clip to text reads its stream. The callbacks run back on the caller's.
+ */
+private suspend fun pasteFromClipboard(
     context: Context,
     decoder: BarcodeDecoder?,
     onText: (String) -> Unit,
     onImage: (Uri) -> Unit,
     onEmpty: () -> Unit,
 ) {
-    val image = QrImageImport.clipboardImage(context)
+    val image = withContext(Dispatchers.IO) { QrImageImport.clipboardImage(context) }
     if (image != null && decoder != null) {
         onImage(image)
         return
     }
 
-    val text = QrImageImport.clipboardText(context)
+    val text = withContext(Dispatchers.IO) { QrImageImport.clipboardText(context) }
     if (!text.isNullOrBlank()) onText(text) else onEmpty()
 }
 
@@ -574,6 +661,7 @@ private val ANALYSIS_RESOLUTION =
         ).build()
 
 private const val NOTICE_DURATION_MS = 3_000L
+private const val RESIZE_SETTLE_MS = 300L
 private const val FOCUS_RING_DURATION_MS = 800L
 private const val FOCUS_AUTO_CANCEL_SECONDS = 4L
 private const val MIN_TAP_RADIUS_PX = 120f

@@ -22,8 +22,11 @@ package com.vitorpamplona.amethyst.commons.napplet.protocol
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletNotification
+import com.vitorpamplona.amethyst.commons.napplet.OutboxEvent
+import com.vitorpamplona.amethyst.commons.napplet.OutboxRelayPlan
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
  * The broker's reply to a [NappletRequest]. Crucially, **no variant ever carries private
@@ -59,6 +62,40 @@ sealed interface NappletResponse {
 
     /** `relay.subscribe` was authorized; the host now streams `relay.event`/`relay.eose` pushes. */
     data object Subscribed : NappletResponse
+
+    /** `outbox.getEvent`: the event, or null with an [error] (`"not found"`, …). */
+    data class OutboxFound(
+        val found: OutboxEvent?,
+        val incomplete: Boolean,
+        val error: String? = null,
+    ) : NappletResponse
+
+    /** `outbox.query`: deduplicated events, [incomplete] when some relay lists or relays failed. */
+    data class OutboxEvents(
+        val events: List<OutboxEvent>,
+        val incomplete: Boolean,
+    ) : NappletResponse
+
+    /**
+     * `outbox.publish`: the [event] the shell signed and where it went. [ok] is false, with an
+     * [error], when no relay took it or a required inbox could not be resolved.
+     */
+    data class OutboxPublished(
+        val ok: Boolean,
+        val event: Event?,
+        val relays: Map<String, Boolean>,
+        val error: String? = null,
+    ) : NappletResponse
+
+    /** `outbox.resolveRelays`. */
+    data class OutboxPlan(
+        val plan: OutboxRelayPlan,
+    ) : NappletResponse
+
+    /** `outbox.subscribe` was authorized on these [relays]; the host streams `outbox.event` pushes. */
+    data class OutboxSubscribed(
+        val relays: Set<NormalizedRelayUrl>,
+    ) : NappletResponse
 
     /** Result of a storage read; [value] is null when the key is absent. */
     data class StorageValue(
@@ -122,12 +159,65 @@ sealed interface NappletResponse {
         val message: String? = null,
     ) : NappletResponse
 
-    /** Result of an `upload.upload`; [url] is where the blob can be fetched, plus NIP-94-ish metadata. */
+    /**
+     * A completed upload (`upload.upload`, or `upload.status` for one): [url] is where the blob can be
+     * fetched, with its NIP-94 metadata. [uploadId] is the shell's id for it, scoped to the napplet;
+     * [updatedAt] is when it completed, in seconds.
+     */
     data class Uploaded(
         val url: String,
         val sha256: String? = null,
         val size: Long? = null,
         val mimeType: String? = null,
+        val uploadId: String = sha256 ?: url,
+        val updatedAt: Long = 0,
+    ) : NappletResponse
+
+    /** `common.encodeNip19`: the encoded [value] and its [nip19Type]. */
+    data class CommonEncoded(
+        val value: String,
+        val nip19Type: String,
+    ) : NappletResponse
+
+    /**
+     * `common.decodeNip19`: the decoded identifier's fields, by their NAP-COMMON names (`hex`,
+     * `pubkey`, `eventId`, `identifier`, `author`, `relay` as text, `kind` as a number, `relays` as a list).
+     */
+    data class CommonDecoded(
+        val nip19Type: String,
+        val text: Map<String, String> = emptyMap(),
+        val kind: Int? = null,
+        val relays: List<String> = emptyList(),
+    ) : NappletResponse
+
+    /** `common.getProfile`: [pubkey]'s latest kind 0 [event], or null when none was found. */
+    data class CommonProfile(
+        val pubkey: String,
+        val event: Event?,
+    ) : NappletResponse
+
+    /** `common.follows`: the hex keys followed. */
+    data class CommonFollowList(
+        val pubkeys: List<String>,
+    ) : NappletResponse
+
+    /**
+     * A NAP-COMMON action that changed nothing (following someone already followed): [event] is the
+     * current list, published already, or null when there is none.
+     */
+    data class CommonUnchanged(
+        val event: Event?,
+    ) : NappletResponse
+
+    /** A NAP-COMMON request refused with one of its error codes (`invalid-pubkey`, `invalid-reaction`, ...). */
+    data class CommonFailure(
+        val error: String,
+    ) : NappletResponse
+
+    /** `upload.info`: whether the `blossom` rail can be used now, and the largest upload accepted. */
+    data class UploadInfo(
+        val enabled: Boolean,
+        val maxBytes: Long,
     ) : NappletResponse
 
     /** Result of a successful invoice payment; [preimage] is null when unconfirmed. */
@@ -170,4 +260,67 @@ sealed interface NappletResponse {
     data class Failed(
         val reason: String,
     ) : NappletResponse
+
+    /** A NAP-FS result. They go out only through the `fs.*` reply shape, never the generic one. */
+    sealed interface Fs : NappletResponse
+
+    /** A NAP-FS `FsRoot`. */
+    data class FsRoot(
+        val path: String,
+        val name: String,
+        val permissions: List<String>,
+    )
+
+    /** A file as NAP-FS shows it: an `FsPickedEntry`, or the fields of `FsMetadata`. */
+    data class FsEntry(
+        val path: String,
+        val name: String,
+        val permissions: List<String>,
+        val size: Long? = null,
+        val kind: String = "file",
+    )
+
+    /** `fs.info`: the visible roots and the byte limits of one read and one write. */
+    data class FsInfoResult(
+        val roots: List<FsRoot>,
+        val maxReadBytes: Int,
+        val maxWriteBytes: Int,
+    ) : Fs
+
+    /** A successful pick: the entries the user chose, as virtual paths. */
+    data class FsPicked(
+        val entries: List<FsEntry>,
+    ) : Fs
+
+    /** `fs.stat`. */
+    data class FsMetadata(
+        val entry: FsEntry,
+    ) : Fs
+
+    /** `fs.read`: [bytes] read from [offset]; [eof] when nothing follows them. */
+    data class FsReadResult(
+        val bytes: ByteArray,
+        val offset: Long,
+        val eof: Boolean,
+        val size: Long? = null,
+    ) : Fs {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is FsReadResult) return false
+            return offset == other.offset && eof == other.eof && size == other.size && bytes.contentEquals(other.bytes)
+        }
+
+        override fun hashCode(): Int = 31 * (31 * (31 * offset.hashCode() + eof.hashCode()) + size.hashCode()) + bytes.contentHashCode()
+    }
+
+    /** `fs.write`: every byte landed; [size] is the file's size after it, when known. */
+    data class FsWritten(
+        val bytesWritten: Int,
+        val size: Long? = null,
+    ) : Fs
+
+    /** A failed `fs.*` request, with its NAP-FS [error] code. */
+    data class FsFailure(
+        val error: String,
+    ) : Fs
 }

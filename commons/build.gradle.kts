@@ -68,7 +68,21 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(project(":quartz"))
+                implementation(libs.quartz)
+                // The headless cart runtime that plays 128x128 fantasy-console carts in notes:
+                // kiko-player runs one in real time and brings kiko itself. `api` because
+                // CartPlayerViewModel hands its KikoPlayer to the screen in commonsUI.
+                api(libs.kiko.player)
+                // The MLS bindings: Marmot (MarmotManager and the group pipeline) and cordn.
+                implementation(libs.marmot)
+                implementation(libs.cordn)
+
+                // Imported directly (sha256, AESGCM, RandomInstance, MLS types), so declared directly.
+                // Through quartz's api alone, a -PcryptoKmpDir / -PmlsKmpDir checkout never reaches
+                // the common metadata compile: it does not see an included build that it reaches
+                // only transitively through a module.
+                implementation(libs.crypto)
+                implementation(libs.mls.kmp)
 
                 // Compose *runtime* only — @Stable/@Immutable annotations and
                 // snapshot state (mutableStateOf, State) used by state holders.
@@ -129,11 +143,21 @@ kotlin {
                     // Phase 5 lands.
                     implementation(project(":nestsClient"))
 
+                    // QuicLogBridge routes quic-kmp's QuicLog into Quartz's Log.
+                    implementation(libs.quic)
+
                     // OkHttp (+ coroutines bridge) for the link-preview fetcher
                     // (service/preview/UrlPreview). JVM-only; iOS will swap to
                     // Ktor when its UI ships.
                     implementation(libs.okhttp)
                     implementation(libs.okhttpCoroutines)
+
+                    // Chess engine behind ChessEngine's JVM/Android actual: move validation and
+                    // legal move generation for live NIP-64 games. Moved here from quartz, whose
+                    // protocol code only carries PGN/SAN.
+                    // NOTE: 1.0.4+ uses Java 21's removeLast() which crashes on Android API < 34
+                    // TODO: Test if 1.0.0 works, or fork library to fix
+                    implementation(libs.kchesslib)
                 }
             }
 
@@ -145,6 +169,11 @@ kotlin {
 
                 // EXIF stripping for image uploads (used by service/upload/MediaCompressor).
                 implementation(libs.commons.imaging)
+
+                // APK inspection for `amy releases publish` (appupdate/ApkInspector): signature
+                // verification, signer certificate and manifest fields. Google's own library,
+                // Apache-2.0, the version the Android Gradle plugin ships.
+                implementation(libs.apksig)
 
                 // Image re-encode + progressive downscale (used by service/upload/ImageReencoder).
                 // Pure-Java, MIT. See docs/plans/2026-06-08-feat-desktop-image-compression-plan.md.
@@ -196,6 +225,8 @@ kotlin {
         getByName("jvmTest") {
             dependencies {
                 implementation(libs.secp256k1.kmp.jni.jvm)
+                // RouteForPointerTest stubs an Account.
+                implementation(libs.mockk)
             }
         }
 
@@ -214,6 +245,13 @@ kotlin {
 tasks.withType<Test>().configureEach {
     if (name == "jvmTest") {
         jvmArgs("-Djava.awt.headless=true")
+        // ~550 test classes in one JVM made this suite the critical path of a pre-push run after
+        // any :commons edit (165 s). Two forks: 116-129 s, peaking at 1.2 GB for both, green on
+        // every run. The tests bind port 0, so forks don't collide on ports. They do share
+        // ~/.amethyst/tmp, so a test must not list that folder: unique file names don't help, it
+        // sees the other fork's files. One fork on a 2-core machine, where a second would only
+        // contend.
+        maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 2)
     }
 }
 

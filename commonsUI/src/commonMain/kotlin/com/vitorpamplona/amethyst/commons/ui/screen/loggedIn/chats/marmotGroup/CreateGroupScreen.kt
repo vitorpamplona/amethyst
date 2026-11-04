@@ -42,7 +42,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconChange
 import com.vitorpamplona.amethyst.commons.marmot.ui.MarmotRetentionChoice
 import com.vitorpamplona.amethyst.commons.marmot.ui.MarmotRetentionPicker
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -58,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_relays_not
 import com.vitorpamplona.amethyst.commons.resources.marmot_skip_for_now
 import com.vitorpamplona.amethyst.commons.resources.marmot_use_outbox_relays
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -66,13 +66,13 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send.uploadMarmotGroupIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
-import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
 fun CreateGroupScreen(
@@ -111,48 +111,21 @@ fun CreateGroupScreen(
             try {
                 prepare?.invoke()
                 val nostrGroupId = RandomInstance.bytes(32).toHexKey()
+                val icon = pickedIcon
                 accountViewModel.createMarmotGroup(
                     nostrGroupId,
                     groupName.trim(),
                     groupDescription.trim(),
                     disappearing.seconds,
+                    uploadIcon =
+                        icon?.let { media ->
+                            { gid -> accountViewModel.uploadMarmotGroupIcon(gid, media.uri, media.mimeType, accountViewModel.mediaUploader) }
+                        },
                 )
-                // Encrypt + upload the picked icon (if any) before the metadata commit,
-                // so its parameters land in the group's MarmotGroupData extension.
-                val iconChange =
-                    pickedIcon?.let { media ->
-                        MarmotGroupIconChange.Set(
-                            accountViewModel.uploadMarmotGroupIcon(media.uri, media.mimeType, accountViewModel.host.mediaUploader),
-                        )
-                    } ?: MarmotGroupIconChange.Keep
-                // Always commit an initial metadata extension so that
-                // (a) the name (if any) is persisted in MLS extensions
-                //     and survives app restarts,
-                // (b) the inviter's outbox relays land in the group
-                //     metadata so every member ends up with the same
-                //     canonical relay set for kind:445 — without this,
-                //     invitees would never receive the group's messages.
-                // Both are handled inside `updateMarmotGroupMetadata`.
-                accountViewModel.updateMarmotGroupMetadata(
-                    nostrGroupId = nostrGroupId,
-                    name = groupName.trim(),
-                    description = groupDescription.trim(),
-                    icon = iconChange,
-                )
-                // Commit the encrypted-media policy while we are the only member. White Noise
-                // (MDK) refuses to send any attachment in a group without one
-                // ("group does not require encrypted media"), and joiners learn it from the
-                // Welcome, so nobody has to apply a later commit to be able to share media.
-                // Best-effort: a group without it still works for text and legacy MIP-04.
-                try {
-                    accountViewModel.enableMarmotEncryptedMediaV2(nostrGroupId)
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    Log.w("CreateGroupScreen") { "Could not enable encrypted media for $nostrGroupId: ${e.message}" }
-                }
                 nav.popUpTo(Route.MarmotGroupChat(nostrGroupId), Route.CreateMarmotGroup::class)
             } catch (e: Exception) {
                 isCreating = false
+                currentCoroutineContext().ensureActive()
                 launch(Dispatchers.Main) {
                     longNotice.show(loadStringRes(Res.string.marmot_failed_to_create_group, e.message))
                 }
@@ -218,7 +191,7 @@ fun CreateGroupScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = groupDescription,
                 onValueChange = { groupDescription = it },
                 label = { Text(stringRes(Res.string.description)) },

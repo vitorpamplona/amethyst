@@ -67,7 +67,40 @@ data class UiSettings(
     val showPayToZapChip: Boolean = true,
     // The browser omnibox's search engine, by [SearchEngines] id. Unknown ids fall back to the default.
     val searchEngine: String = SearchEngines.DEFAULT.id,
+    // Extra columns beside the main screen on wide windows (desktop, tablets, Chromebooks). Off by default.
+    val deckMode: Boolean = false,
+    // Which engine underlines misspellings in the composers, on platforms that offer one (desktop).
+    val spellCheck: SpellCheckType = SpellCheckType.AUTOMATIC,
+    // How a note lays out its author: a picture column beside the text, or a header row above it.
+    val noteLayout: NoteLayoutType = NoteLayoutType.AUTHOR_COLUMN,
+    // When the on-device translator may download a language model (~30 MB each). Wi-Fi only by
+    // default: a feed full of languages would otherwise pull several of them over mobile data.
+    val automaticallyDownloadTranslationModels: ConnectivityType = ConnectivityType.WIFI_ONLY,
+    val hideWalletBalances: Boolean = false,
 )
+
+/**
+ * How feed notes place their author and media. [AUTHOR_COLUMN] keeps the picture in a column to
+ * the left of the whole note (Twitter style). [FULL_WIDTH] puts it in a header row with the name,
+ * like the Picture feed cards, and lets the content use the full width below. [EDGE_TO_EDGE] is
+ * [FULL_WIDTH] with the note's own images and videos running out to the screen edges.
+ */
+enum class NoteLayoutType {
+    AUTHOR_COLUMN,
+    FULL_WIDTH,
+    EDGE_TO_EDGE,
+}
+
+/**
+ * The spell checker the composers use. [AUTOMATIC] picks the operating system's checker (macOS,
+ * Windows) when it works and the bundled dictionary otherwise; [BUILT_IN] always uses the bundled
+ * dictionary.
+ */
+enum class SpellCheckType {
+    AUTOMATIC,
+    BUILT_IN,
+    OFF,
+}
 
 enum class ThemeType(
     val screenCode: Int,
@@ -151,6 +184,15 @@ enum class ConnectivityType(
     ALWAYS(null, 0),
     WIFI_ONLY(true, 1),
     NEVER(false, 2),
+    ;
+
+    /** Whether this choice lets the download run on the current connection. */
+    fun allows(isOnMobileOrMeteredConnection: Boolean): Boolean =
+        when (this) {
+            WIFI_ONLY -> !isOnMobileOrMeteredConnection
+            NEVER -> false
+            ALWAYS -> true
+        }
 }
 
 enum class FeatureSetType(

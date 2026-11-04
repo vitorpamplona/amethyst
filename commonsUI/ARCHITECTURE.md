@@ -21,13 +21,15 @@ Its end state is **the whole app UI**: every screen, the navigation host and the
 navigation chrome for every window size (bottom bar, rail, permanent drawer), with
 `amethyst` and a new JVM `desktopApp` as thin shims around it. Screens still in
 `amethyst/` are waiting on their own app-only helpers and the app root, not staying
-there by design. `AccountViewModel` lives here (`commons.viewmodels`) rather than in
-`commons` because it toasts through compose-resources strings; it reaches the
-platform through `AccountViewModelHost`. See `commons/plans/2026-09-27-one-ui-android-desktop.md`.
+there by design. `AccountViewModel` lives here (`commons.viewmodels`) as a thin
+subclass of `commons`' `BaseAccountViewModel`: it adds the `ToastManager` that headless
+`UserNotice`s land in (worded by `notices/ui/UserNoticeText.kt`) and the call/nest
+bridges. See `commons/plans/2026-09-27-one-ui-android-desktop.md` and
+`commons/plans/2026-10-09-headless-account-viewmodel.md`.
 
-It depends on `:commons` (and `:quartz`) as **`api`**, so a consumer that adds
+It depends on `:commons` (and quartz, `libs.quartz`) as **`api`**, so a consumer that adds
 `:commonsUI` sees the headless layer transitively. `amethyst`, `desktopApp`,
-`nappletHost` and `benchmark` depend on it; `cli`, `geode`, `marmotBench`
+`nappletHost` and `benchmark` depend on it; `cli`, `geode`
 must never.
 
 ## Platform slots
@@ -75,12 +77,12 @@ is specific to the UI module.
 
 - Icon fonts: `tools/material-symbols-subset/subset.sh` and
   `tools/icon-font/build_icon_font.py` read `icons/` and write
-  `composeResources/font/` in this module (see root `.claude/CLAUDE.md`, "Icons").
+  `composeResources/font/` in this module (see root `AGENTS.md`, "Icons").
 - Translations: `crowdin.yml` and `tools/strings-migrate/` target
   `commonsUI/src/commonMain/composeResources/`. This is where **every new
   user-visible string** goes, Android-only screens included; the app's own
   `res/values/strings.xml` holds only the synchronous-platform tier (see root
-  `.claude/CLAUDE.md`, "Strings").
+  `AGENTS.md`, "Strings").
 - CI: `.github/workflows/build.yml` runs `:commonsUI:jvmTest`,
   `:commonsUI:verifyKmpPurity` and the iOS compile/test tasks next to the
   `:commons` ones.

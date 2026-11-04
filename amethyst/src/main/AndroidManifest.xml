@@ -13,6 +13,12 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="nostrsigner" />
         </intent>
+        <!-- The remote-signer login hands its nostrconnect:// code to a NIP-46 signer app. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="nostrconnect" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
@@ -294,6 +300,23 @@
                 <data android:scheme="https" />
                 <data android:host="amethyst.social" />
                 <data android:pathPrefix="/invite/" />
+            </intent-filter>
+
+            <!-- cordn group links, as cordn.net's "Share group link" and its QR codes hand them out:
+                 https://cordn.net/chat/cordn1…?m=<preview>. Only paths that start with a cordn1 ref,
+                 so cordn.net's other pages (news, profiles, settings) stay in the browser. Not
+                 autoVerify: we don't own the domain, so Android 12+ opens these here only once the
+                 user turns cordn.net on in Amethyst's "Open by default" settings; older Android
+                 asks which app to use. -->
+            <intent-filter android:label="Amethyst">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="cordn.net" />
+                <data android:host="www.cordn.net" />
+                <data android:host="cordn.relay.tools" />
+                <data android:pathPattern="/chat/cordn1.*" />
             </intent-filter>
 
             <!-- Buzz workspace invite links: https://<team>.communities.buzz.xyz/invite/<token> -->
@@ -741,6 +764,15 @@
              singleTop would collapse the second onto the first and strand its page's file input. -->
         <activity
             android:name=".napplet.WebFileChooserActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <!-- Invisible host for a NAP-FS pick (fs.pickFile / pickFiles / pickSaveFile). The broker is a
+             Service, so the main process runs the system document picker here and the broker reads and
+             writes what the user chose. Standard launch mode for the same reason as above. -->
+        <activity
+            android:name=".napplet.NappletFsPickerActivity"
             android:exported="false"
             android:excludeFromRecents="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"

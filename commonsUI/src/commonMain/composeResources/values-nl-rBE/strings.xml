@@ -645,12 +645,9 @@
     <string name="wallet_connect_connect_app">Wallet verbinden</string>
     <string name="see_relay_feed">Relay-feed bekijken</string>
     <string name="pledge_amount_in_sats">Bedrag in sats</string>
-    <string name="poll_option_description">Poll-optiebeschrijvingen</string>
     <string name="poll_zap_value_min">Minimum zap-bedrag</string>
     <string name="poll_zap_value_max">Maximum zap-bedrag</string>
     <string name="poll_consensus_threshold">Consensusdrempel</string>
-    <string name="poll_closing_date_time">Sluitingsdatum &amp; -tijd</string>
-    <string name="poll_closing_in">Poll sluit over %1$s</string>
     <string name="looking_for_event">Zoeken naar bericht %1$s</string>
     <string name="send_zap">Zap versturen</string>
     <string name="custom_zaps_add_a_message">Openbaar bericht toevoegen</string>
@@ -699,7 +696,6 @@
     <string name="uploading_state_hashing">Hashen</string>
     <string name="uploading_state_finished">Klaar</string>
     <string name="uploading_state_error">Fout</string>
-    <string name="connect_via_tor1">Aanpassen</string>
     <string name="connect_via_tor2">Tor-instellingen</string>
     <string name="yes">Ja</string>
     <string name="no">Nee</string>
@@ -773,7 +769,6 @@
     <string name="max_hashtag_limit_title">Maximum hashtags per bericht</string>
     <string name="max_hashtag_limit_explainer">Verbergt berichten met meer hashtags dan deze limiet. Stel in op 0 om uit te schakelen.</string>
     <string name="security_unlimited">∞</string>
-    <string name="new_reaction_symbol">Nieuw reactie-symbool</string>
     <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">Voegt een streefbedrag in sats toe voor dit bericht. Ondersteunende clients kunnen dit als voortgangsbalk tonen.</string>
     <string name="zapraiser_target_amount_in_sats">Streefbedrag in sats</string>
@@ -919,9 +914,7 @@
     <string name="created_at">Aangemaakt op</string>
     <string name="guidelines">Richtlijnen</string>
     <string name="moderators">Moderators</string>
-    <string name="login_with_external_signer">Inloggen met Amber</string>
     <string name="status_update">Status bijwerken</string>
-    <string name="poll_zap_value_min_max_explainer">Stemmen wegen zwaarder naarmate het zap-bedrag hoger is. Stel een minimum in om spam te voorkomen en een maximum om dominante stemmen te voorkomen.</string>
     <string name="error_dialog_talk_to_user">Bericht de gebruiker</string>
     <string name="error_dialog_talk_to_user_name">Bericht %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
@@ -1451,7 +1444,6 @@
     <string name="closing_time">Sluitingstijd</string>
     <string name="confirm">Bevestigen</string>
     <string name="next">Volgende</string>
-    <string name="add_poll_option_button">Poll-optie toevoegen</string>
     <string name="go_back">Terug</string>
     <string name="approve">Goedkeuren</string>
     <string name="connected">Verbonden</string>
@@ -1459,13 +1451,9 @@
     <string name="poll_submit">Indienen</string>
     <string name="poll_view_results">Resultaten bekijken</string>
     <string name="restart">Opnieuw starten</string>
-    <string name="chess_accept">Accepteren</string>
-    <string name="chess_decline">Weigeren</string>
     <string name="new_chess_game">Nieuw schaakspel</string>
     <string name="chess_loading_game">Spel laden…</string>
     <string name="chess_game_not_found">Spel niet gevonden</string>
-    <string name="chess_game_waiting">Dit spel is mogelijk beëindigd of wacht op een tegenstander.</string>
-    <string name="chess_game_id">Spel-ID: %1$s…</string>
     <string name="badge_and_n_others"> en %1$d anderen</string>
     <string name="remove_language">%1$s verwijderen</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Begin met een goede feed door dezelfde mensen te volgen als iemand die je vertrouwt.</string>
@@ -2453,7 +2441,6 @@
     <string name="media_added_to_profile_gallery">Media toegevoegd aan je profielgalerij</string>
     <string name="media_download_has_started_toast">Media download gestart…</string>
     <string name="media_servers">Mediaservers</string>
-    <string name="media_too_big_for_nip95">Media is te groot voor NIP-95</string>
     <string name="messages_cant_upload_explainer">Voeg eerst een bestemming toe</string>
     <string name="messages_cant_upload_title">Kan niet uploaden</string>
     <string name="messages_new_message_subject">Onderwerp</string>
@@ -2694,7 +2681,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Deze poll is gesloten voor nieuwe stemmen</string>
     <string name="poll_multiple_choice">Meerdere keuzes</string>
-    <string name="poll_option_index">Optie %1$s</string>
     <string name="poll_single_choice">Enkele keuze</string>
     <string name="poll_unable_to_vote">Kan niet stemmen</string>
     <string name="polls">Polls</string>
@@ -2951,7 +2937,6 @@
     <string name="upload_error_title">Uploadfout</string>
     <string name="upload_error_voice_message_exception">Spraakbericht uploaden mislukt: %1$s</string>
     <string name="upload_error_voice_message_failed">Spraakbericht uploaden mislukt</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 wordt nog niet ondersteund voor spraakberichten</string>
     <string name="uptime">%1$d% uptime</string>
     <string name="use_internal_tor">Interne Tor-engine gebruiken</string>
     <string name="use_internal_tor_explainer">Gebruik de ingebouwde versie van Orbot</string>

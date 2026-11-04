@@ -30,7 +30,7 @@ import com.davotoula.lightcompressor.hls.Rendition
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.service.upload.HlsPublishState
-import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPosterUpload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishOrchestrator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishRequest

@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.cartridges.CartLinks
 import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -70,6 +72,8 @@ open class MediaUrlImage(
     mimeType: String? = null,
     thumbhash: String? = null,
     authorPubKey: String? = null,
+    /** The note's `imeta` tags when they may link game carts: see [CartLinks.forEntry]. */
+    val cartImetas: Map<String, IMetaTag>? = null,
 ) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash, authorPubKey)
 
 class EncryptedMediaUrlImage(

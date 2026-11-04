@@ -22,19 +22,29 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.core.graphics.scale
 import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
 import com.davotoula.lightcompressor.video.GifToMp4Converter
+import com.vitorpamplona.amethyst.commons.cartridges.CartDetector
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
 import com.vitorpamplona.amethyst.commons.service.uploads.isAvif
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import com.vitorpamplona.quartz.utils.Log
 import id.zelory.compressor.Compressor
-import id.zelory.compressor.constraint.default
+import id.zelory.compressor.constraint.Constraint
+import id.zelory.compressor.determineImageRotation
+import id.zelory.compressor.overWrite
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import java.io.File
+import kotlin.math.roundToInt
 
 class MediaCompressor {
     // ALL ERRORS ARE IGNORED. The original file is returned.
@@ -70,11 +80,14 @@ class MediaCompressor {
                 VideoCompressionHelper.compressVideo(uri, contentType, applicationContext, mediaQuality, useH265)
             }
 
-            contentType?.startsWith("image", ignoreCase = true) == true &&
-                !contentType.contains("gif") &&
-                !contentType.contains("svg") &&
-                !isAvif(contentType) -> {
-                compressImage(uri, contentType, applicationContext, mediaQuality)
+            isReencodableImage(contentType) -> {
+                if (isCartridge(uri, contentType, applicationContext)) {
+                    // A game cart lives in the low bits of its pixels: any re-encode destroys it.
+                    Log.d("MediaCompressor", "Game cartridge detected, uploading it unchanged.")
+                    MediaCompressorResult(uri, contentType, null)
+                } else {
+                    compressImage(uri, contentType, applicationContext, mediaQuality)
+                }
             }
 
             else -> {
@@ -89,23 +102,20 @@ class MediaCompressor {
         context: Context,
         mediaQuality: CompressorQuality,
     ): MediaCompressorResult {
-        val imageQuality =
-            when (mediaQuality) {
-                CompressorQuality.VERY_LOW -> 40
-                CompressorQuality.LOW -> 50
-                CompressorQuality.MEDIUM -> 60
-                CompressorQuality.HIGH -> 80
-                CompressorQuality.VERY_HIGH -> 90
-                else -> 60
-            }
+        val maxDimension = mediaQuality.imageMaxDimension ?: return MediaCompressorResult(uri, contentType, null)
 
         var tempFile: File? = null
         return try {
             Log.d("MediaCompressor") { "Using image compression $mediaQuality" }
             tempFile = MediaCompressorFileUtils.from(uri, context)
+            // Zelory hands its output back through a cancellable withContext: cancelled during the
+            // encode (the composer's preview is, every time the slider moves on), it drops a
+            // finished file no one can then delete. So cancellation is checked before the work and
+            // the work runs to its end; a caller cancelled after that holds the file to clean up.
+            currentCoroutineContext().ensureActive()
             val compressedImageFile =
-                Compressor.compress(context, tempFile) {
-                    default(width = 640, format = Bitmap.CompressFormat.JPEG, quality = imageQuality)
+                Compressor.compress(context, tempFile, Dispatchers.IO + NonCancellable) {
+                    constraint(FitWithinConstraint(maxDimension, mediaQuality.imageQuality))
                 }
             if (tempFile != compressedImageFile && !tempFile.delete()) {
                 Log.w("MediaCompressor") { "Failed to delete temp file: ${tempFile.absolutePath}" }
@@ -113,12 +123,102 @@ class MediaCompressor {
             Log.d("MediaCompressor") { "Image compression success. New size [${compressedImageFile.length()}]" }
             MediaCompressorResult(compressedImageFile.toUri(), MimeTypes.IMAGE_JPEG, compressedImageFile.length())
         } catch (e: Exception) {
-            if (e is CancellationException) throw e
+            if (e is CancellationException) {
+                // The copy of the original is a full-size file in the cache.
+                if (tempFile?.delete() == false) {
+                    Log.w("MediaCompressor") { "Failed to delete temp file: ${tempFile.absolutePath}" }
+                }
+                throw e
+            }
             Log.d("MediaCompressor") { "Image compression failed: ${e.message}" }
             if (tempFile?.delete() == false) {
                 Log.w("MediaCompressor") { "Failed to delete temp file: ${tempFile.absolutePath}" }
             }
             MediaCompressorResult(uri, contentType, null)
+        }
+    }
+
+    /** A 160x205 PNG that loads as a game cartridge. Small files only, so this never reads a photo. */
+    private fun isCartridge(
+        uri: Uri,
+        contentType: String?,
+        context: Context,
+    ): Boolean {
+        if (contentType?.contains("png", ignoreCase = true) != true) return false
+        return try {
+            val bytes =
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    val buffer = ByteArray(MAX_CART_BYTES + 1)
+                    var read = 0
+                    while (read < buffer.size) {
+                        val n = input.read(buffer, read, buffer.size - read)
+                        if (n < 0) break
+                        read += n
+                    }
+                    if (read > MAX_CART_BYTES) null else buffer.copyOf(read)
+                } ?: return false
+            CartDetector.isCartridge(bytes)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            false
+        }
+    }
+
+    companion object {
+        private const val MAX_CART_BYTES = 256 * 1024
+
+        /** Still images this compressor re-encodes; animated GIFs, SVGs and AVIFs go up as they are. */
+        fun isReencodableImage(contentType: String?): Boolean =
+            contentType?.startsWith("image", ignoreCase = true) == true &&
+                !contentType.contains("gif") &&
+                !contentType.contains("svg") &&
+                !isAvif(contentType)
+    }
+}
+
+/**
+ * Decodes at the coarsest power-of-two stride that keeps the longer edge at or above [maxDimension], applies the EXIF
+ * rotation, scales so the longer edge is at most [maxDimension] (never up), and writes one JPEG at
+ * [quality]. Zelory's `default` constraint stops at the stride, so a 4032 x 3024 photo asked for
+ * 640 px came out at 2016 x 1512.
+ */
+private class FitWithinConstraint(
+    private val maxDimension: Int,
+    private val quality: Int,
+) : Constraint {
+    private var done = false
+
+    override fun isSatisfied(imageFile: File): Boolean = done
+
+    override fun satisfy(imageFile: File): File {
+        // Zelory's own sampler stops when the shorter edge would drop below the target, so a
+        // 4032 x 3024 photo asked for 1920 px decoded at full size; this one goes by the longer edge.
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(imageFile.absolutePath, bounds)
+        val longerSource = maxOf(bounds.outWidth, bounds.outHeight)
+        var sample = 1
+        while (longerSource / (sample * 2) >= maxDimension) sample *= 2
+
+        val sampled =
+            BitmapFactory.decodeFile(imageFile.absolutePath, BitmapFactory.Options().apply { inSampleSize = sample })
+                ?: throw IllegalStateException("Could not decode ${imageFile.name}")
+        // Each step frees the one before it: a phone photo is tens of MB per copy.
+        val rotated = determineImageRotation(imageFile, sampled)
+        if (rotated !== sampled) sampled.recycle()
+        val longer = maxOf(rotated.width, rotated.height)
+        val fitted =
+            if (longer > maxDimension) {
+                val ratio = maxDimension.toFloat() / longer
+                rotated.scale((rotated.width * ratio).roundToInt().coerceAtLeast(1), (rotated.height * ratio).roundToInt().coerceAtLeast(1))
+            } else {
+                rotated
+            }
+        if (fitted !== rotated) rotated.recycle()
+        done = true
+        return try {
+            overWrite(imageFile, fitted, Bitmap.CompressFormat.JPEG, quality)
+        } finally {
+            fitted.recycle()
         }
     }
 }

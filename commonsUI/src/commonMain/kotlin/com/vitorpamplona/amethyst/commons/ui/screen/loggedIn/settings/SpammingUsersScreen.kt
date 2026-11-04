@@ -31,9 +31,9 @@ import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.security_spamming_users_empty
 import com.vitorpamplona.amethyst.commons.resources.spamming_users
+import com.vitorpamplona.amethyst.commons.settings.dal.SpammerAccountsFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.dal.SpammerAccountsFeedViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable

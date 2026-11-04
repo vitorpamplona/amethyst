@@ -49,12 +49,15 @@ class SecureKeyStorageVaultTest {
         val readsBySlot: ConcurrentHashMap<Pair<String, String>, AtomicInteger> = ConcurrentHashMap()
         val writesBySlot: ConcurrentHashMap<Pair<String, String>, AtomicInteger> = ConcurrentHashMap()
 
+        @Volatile
+        var failWrites = false
+
         override fun getPassword(
             service: String,
             account: String,
         ): String {
             readsBySlot.computeIfAbsent(service to account) { AtomicInteger(0) }.incrementAndGet()
-            return store[service to account] ?: throw PasswordAccessException("no entry")
+            return store[service to account] ?: throw PasswordAccessException("No stored credentials match $service account: $account")
         }
 
         override fun setPassword(
@@ -63,6 +66,7 @@ class SecureKeyStorageVaultTest {
             password: String,
         ) {
             writesBySlot.computeIfAbsent(service to account) { AtomicInteger(0) }.incrementAndGet()
+            if (failWrites) throw PasswordAccessException("denied")
             store[service to account] = password
         }
 
@@ -71,7 +75,7 @@ class SecureKeyStorageVaultTest {
             account: String,
         ) {
             if (store.remove(service to account) == null) {
-                throw PasswordAccessException("no entry")
+                throw PasswordAccessException("No stored credentials match $service account: $account")
             }
         }
 
@@ -234,6 +238,40 @@ class SecureKeyStorageVaultTest {
             assertEquals(3, backend.writes("vault-v1"))
             assertEquals("1111", storage.getPrivateKey("npub1new"))
             assertEquals("2222", storage.getPrivateKey("npub1other"))
+        }
+
+    @Test
+    fun `saving the same key again does not touch the keychain`() =
+        runBlocking {
+            val (storage, backend) = newStorageWith()
+            storage.enableConsolidatedVault(emptyList())
+            storage.savePrivateKey("npub1new", "1111")
+            val reads = backend.reads("vault-v1")
+
+            repeat(5) { storage.savePrivateKey("npub1new", "1111") }
+
+            // Empty-vault seed (1) plus the first save; the repeats are no-ops.
+            assertEquals(2, backend.writes("vault-v1"))
+            assertEquals(reads, backend.reads("vault-v1"))
+
+            storage.savePrivateKey("npub1new", "2222")
+            assertEquals(3, backend.writes("vault-v1"))
+        }
+
+    @Test
+    fun `a denied vault write is retried by the next save`() =
+        runBlocking {
+            val (storage, backend) = newStorageWith()
+            storage.enableConsolidatedVault(emptyList())
+
+            backend.failWrites = true
+            assertTrue(runCatching { storage.savePrivateKey("npub1new", "1111") }.isFailure)
+            assertNull(storage.getPrivateKey("npub1new"))
+
+            backend.failWrites = false
+            storage.savePrivateKey("npub1new", "1111")
+            assertEquals("1111", storage.getPrivateKey("npub1new"))
+            assertTrue(backend.store.values.any { it.contains(Base64.getEncoder().encodeToString("1111".toByteArray())) })
         }
 
     @Test
@@ -417,17 +455,12 @@ class SecureKeyStorageVaultTest {
                 }
             storage.enableConsolidatedVault(listOf("account-metadata-key"))
 
-            // An alias the vault never covered still falls through to the strict probe.
-            // Off macOS that probe is javakeyring, which cannot tell a miss from a denial,
-            // so the strict contract there is to throw on any miss.
+            // An alias the vault never covered still falls through to the strict probe. Off macOS
+            // that probe is javakeyring: its "No stored credentials match" (Windows: error 1168) is
+            // a miss, and anything else, a denial, throws (SecureKeyStorageOrThrowTest). A miss
+            // used to throw too, which left every view-only or bunker login unloadable there.
             if (!System.getProperty("os.name").orEmpty().startsWith("Mac")) {
-                try {
-                    storage.getPrivateKeyOrThrow("npub1neverseen")
-                    throw AssertionError("Expected SecureStorageException for a non-mac keyring miss")
-                } catch (e: SecureStorageException) {
-                    // Walk the chain: coroutine stack-trace recovery may wrap the original.
-                    assertTrue(generateSequence<Throwable>(e) { it.cause }.any { it is PasswordAccessException })
-                }
+                assertNull(storage.getPrivateKeyOrThrow("npub1neverseen"))
                 return@runBlocking
             }
 

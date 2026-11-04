@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_show_type_serial
 import com.vitorpamplona.amethyst.commons.resources.podcast_show_website_label
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -152,7 +153,7 @@ fun EditPodcastShowScreen(
 
             Field(vm.title, Res.string.podcast_show_title_label, Res.string.podcast_show_title_placeholder, isError = vm.title.value.isBlank())
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.description.value,
                 onValueChange = { vm.description.value = it },
                 label = { Text(stringRes(Res.string.podcast_show_description_label)) },

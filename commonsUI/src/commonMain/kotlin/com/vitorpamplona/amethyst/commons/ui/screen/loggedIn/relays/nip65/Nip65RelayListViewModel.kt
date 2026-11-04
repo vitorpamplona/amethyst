@@ -25,6 +25,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.nip65ListOf
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.relays.ui.RelayCountResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.events_from_you
@@ -38,7 +41,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
-import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -118,23 +120,11 @@ class Nip65RelayListViewModel : ViewModel() {
         if (autoSave) autoSaver.schedule(::flushAutoSave)
     }
 
-    private fun advertisedRelays(): List<AdvertisedRelayInfo> {
-        val writes = _homeRelays.value.map { it.relay }.toSet()
-        val reads = _notificationRelays.value.map { it.relay }.toSet()
-
-        return writes.union(reads).map {
-            val type =
-                if (writes.contains(it) && reads.contains(it)) {
-                    AdvertisedRelayType.BOTH
-                } else if (writes.contains(it)) {
-                    AdvertisedRelayType.WRITE
-                } else {
-                    AdvertisedRelayType.READ
-                }
-
-            AdvertisedRelayInfo(it, type)
-        }
-    }
+    private fun advertisedRelays(): List<AdvertisedRelayInfo> =
+        nip65ListOf(
+            writes = _homeRelays.value.map { it.relay }.toSet(),
+            reads = _notificationRelays.value.map { it.relay }.toSet(),
+        )
 
     fun loadRelayDocuments() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -168,7 +158,7 @@ class Nip65RelayListViewModel : ViewModel() {
 
         _homeRelays.value.forEach { item ->
             viewModelScope.launch(Dispatchers.IO) {
-                val result = client.count(item.relay, Filter(authors = listOf(account.pubKey)))
+                val result = client.taggedAs(SubPurpose.RELAY_INFO).count(item.relay, Filter(authors = listOf(account.pubKey)))
                 if (result != null) {
                     val countResult =
                         RelayCountResult(
@@ -187,7 +177,7 @@ class Nip65RelayListViewModel : ViewModel() {
 
         _notificationRelays.value.forEach { item ->
             viewModelScope.launch(Dispatchers.IO) {
-                val result = client.count(item.relay, Filter(tags = mapOf("p" to listOf(account.pubKey))))
+                val result = client.taggedAs(SubPurpose.RELAY_INFO).count(item.relay, Filter(tags = mapOf("p" to listOf(account.pubKey))))
                 if (result != null) {
                     val countResult =
                         RelayCountResult(
@@ -207,19 +197,22 @@ class Nip65RelayListViewModel : ViewModel() {
 
     fun clear() {
         hasModified = false
+        // Marked like every other relay list, so the outbox shows when it waits for Tor.
+        val torEvaluation = accountViewModel.host.torRelayEvaluation.value
         _homeRelays.update {
-            val relayList = account.nip65RelayList.getNIP65RelayList()?.writeRelaysNorm() ?: emptyList()
+            // Every entry of the user's own list, local ones included, so saving round-trips it.
+            val relayList = account.nip65RelayList.ownWriteRelays()
 
             relayList
-                .map { relaySetupInfoBuilder(it) }
+                .map { relaySetupInfoBuilder(it, forcesTor = torEvaluation.useTor(it)) }
                 .distinctBy { it.relay }
         }
 
         _notificationRelays.update {
-            val relayList = account.nip65RelayList.getNIP65RelayList()?.readRelaysNorm() ?: emptyList()
+            val relayList = account.nip65RelayList.ownReadRelays()
 
             relayList
-                .map { relaySetupInfoBuilder(it) }
+                .map { relaySetupInfoBuilder(it, forcesTor = torEvaluation.useTor(it)) }
                 .distinctBy { it.relay }
         }
     }

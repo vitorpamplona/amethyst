@@ -38,8 +38,8 @@
 class Amy < Formula
   desc "Nostr client from the Amethyst project"
   homepage "https://github.com/vitorpamplona/amethyst"
-  url "https://github.com/vitorpamplona/amethyst/releases/download/v1.17.0/amy-1.17.0-jvm.tar.gz"
-  sha256 "b7d830cb4f2ce0ae8b8734da7e51529a4cf0ddf55857816904f96b6e359dfcbb"
+  url "https://github.com/vitorpamplona/amethyst/releases/download/v1.21.0/amy-1.21.0-jvm.tar.gz"
+  sha256 "541e2a4c21ac439032f65a5e5c6c5fdff3b872176e1c1ab21acdc5894aab4779"
   license "MIT"
 
   # Lets homebrew-core's BrewTestBot auto-open version-bump PRs when a new

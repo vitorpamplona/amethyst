@@ -52,8 +52,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.cordn.CordnInvitation
-import com.vitorpamplona.amethyst.commons.model.cordn.CordnInvitations
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
@@ -82,6 +80,10 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.Coor
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.cordn.client.CordnInvitation
+import com.vitorpamplona.cordn.client.CordnInvitations
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.pluralStringResource
 
@@ -129,6 +131,7 @@ fun CordnInvitationsScreen(
         try {
             invitations = runtime?.invitations()
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             error = e.message ?: loadFailed
         } finally {
             busy = false
@@ -202,6 +205,7 @@ fun CordnInvitationsScreen(
                                     val gid = runtime.accept(invitation)
                                     nav.nav(Route.CordnGroupChat(invitation.coordinator.pubKey, gid))
                                 } catch (e: Exception) {
+                                    currentCoroutineContext().ensureActive()
                                     error = e.message ?: loadFailed
                                     reload()
                                 }
@@ -212,6 +216,7 @@ fun CordnInvitationsScreen(
                                 try {
                                     runtime.decline(invitation)
                                 } catch (e: Exception) {
+                                    currentCoroutineContext().ensureActive()
                                     error = e.message ?: loadFailed
                                 }
                                 reload()

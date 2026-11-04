@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.relays.dialableReadRelays
+import com.vitorpamplona.amethyst.commons.relays.dialableWriteRelays
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -88,8 +90,9 @@ object OutboxCommand {
                     "npub" to NPub.create(pubkey),
                     "found" to true,
                     "created_at" to event.createdAt,
-                    "read" to (event.readRelaysNorm()?.map { it.url } ?: emptyList()),
-                    "write" to (event.writeRelaysNorm()?.map { it.url } ?: emptyList()),
+                    // read/write are the relays we may dial for this user; "all" is the list as published.
+                    "read" to (event.dialableReadRelays()?.map { it.url } ?: emptyList()),
+                    "write" to (event.dialableWriteRelays()?.map { it.url } ?: emptyList()),
                     "all" to event.relaysNorm().map { it.url },
                 ),
             )

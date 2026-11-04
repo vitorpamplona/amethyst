@@ -35,8 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.marmot.AgentStreamPreview
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.PreviewStatus
+import com.vitorpamplona.marmot.appComponents.agentTextStream.PreviewStatus
+import com.vitorpamplona.marmot.client.AgentStreamPreview
 
 /**
  * The live agent-preview row, shown between the transcript and the composer.

@@ -20,17 +20,19 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -39,11 +41,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
-import kotlin.math.min
 
 /**
  * The quiet zone around the code, in **modules** — the QR spec's minimum of 4.
@@ -69,6 +69,17 @@ fun QrCodeDrawerPreview() {
     }
 }
 
+/**
+ * Draws [contents] as a QR code: always square, centred in whatever space [modifier] gives it.
+ *
+ * Square is enforced on an inner box rather than with `aspectRatio` on the caller's modifier. A
+ * caller that fixes both dimensions (`fillMaxWidth().weight(1f)` in a column) left `aspectRatio`
+ * nothing to satisfy, so it fell back to a width-by-width square centred in a shorter slot, and
+ * the clip trimmed its top and bottom: on a landscape phone or a laptop window the wallet's
+ * invoice lost its quiet zone and finder patterns and would not scan.
+ *
+ * A payload too long for any QR code draws an empty light square — there is no code to show.
+ */
 @Composable
 fun QrCodeDrawer(
     contents: String,
@@ -76,140 +87,105 @@ fun QrCodeDrawer(
 ) {
     val matrix = remember(contents) { encodeQrMatrix(contents) }
 
-    val foregroundColor = Color.Black
-
-    Box(
-        modifier =
-            modifier
-                .clip(shape = QuoteBorder)
-                .defaultMinSize(48.dp, 48.dp)
-                .aspectRatio(1f)
-                .background(Color.White),
-    ) {
-        if (matrix != null) {
-            QrCanvas(matrix, foregroundColor)
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Box(
+            modifier =
+                Modifier
+                    .defaultMinSize(48.dp, 48.dp)
+                    .aspectRatio(1f)
+                    .clip(shape = QuoteBorder)
+                    .background(Color.White),
+        ) {
+            if (matrix != null) {
+                QrCanvas(matrix, Color.Black)
+            }
         }
     }
 }
 
+/**
+ * Builds the code's shapes once per size and only replays them on draw.
+ *
+ * One path for the data modules and one for the three finders, instead of a fresh `Path` and
+ * draw call per dark module — about two thousand of each for an nprofile — every time the layer
+ * was re-recorded (a resize, the keyboard opening, a list item scrolling back into view).
+ */
 @Composable
 private fun QrCanvas(
     matrix: QrMatrix,
     foregroundColor: Color,
 ) {
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        // Calculate the height and width of each column/row
-        // Solve for the module size with the quiet zone measured in modules, so the whole code
-        // (zone included) is exactly as wide as the canvas.
-        val rowHeight = size.height / (matrix.height + QR_QUIET_ZONE_MODULES * 2f)
-        val columnWidth = size.width / (matrix.width + QR_QUIET_ZONE_MODULES * 2f)
-        // Scale the rounding with the module size. A fixed 20px radius is a gentle touch on
-        // a large code and a serious deformation on a small one: the finder patterns are what
-        // a decoder locates first, and rounding away a third of a module's worth of their
-        // corners is exactly the kind of damage that makes a code readable on screen and
-        // unreadable in a photo of that screen.
-        val radius = CornerRadius(min(columnWidth, rowHeight) * FINDER_CORNER_RADIUS_MODULES)
+    Spacer(
+        modifier =
+            Modifier.fillMaxSize().drawWithCache {
+                // The box is square, but size against the shorter side anyway so a non-square
+                // canvas can only ever shrink the code, never misplace its bottom finder.
+                val side = size.minDimension
+                val origin = Offset((size.width - side) / 2f, (size.height - side) / 2f)
 
-        // Draw all of the finder patterns required by the QR spec. Calculate the ratio
-        // of the number of rows/columns to the width and height
-        drawQrCodeFinders(
-            quietZonePx = columnWidth * QR_QUIET_ZONE_MODULES,
-            sideLength = size.width,
-            finderPatternSize =
-                Size(
-                    width = columnWidth * FINDER_PATTERN_ROW_COUNT,
-                    height = rowHeight * FINDER_PATTERN_ROW_COUNT,
-                ),
-            color = foregroundColor,
-            cornerRadius = radius,
-        )
+                // Solve for the module size with the quiet zone measured in modules, so the whole
+                // code (zone included) is exactly as wide as the canvas.
+                val module = side / (matrix.width + QR_QUIET_ZONE_MODULES * 2f)
+                val quietZonePx = module * QR_QUIET_ZONE_MODULES
 
-        // Draw data bits (encoded data part)
-        drawAllQrCodeDataBits(
-            quietZonePx = columnWidth * QR_QUIET_ZONE_MODULES,
-            bytes = matrix,
-            size =
-                Size(
-                    width = columnWidth,
-                    height = rowHeight,
-                ),
-            color = foregroundColor,
-        )
-    }
+                // Scale the rounding with the module size. A fixed 20px radius is a gentle touch on
+                // a large code and a serious deformation on a small one: the finder patterns are
+                // what a decoder locates first, and rounding away a third of a module's worth of
+                // their corners is exactly the kind of damage that makes a code readable on screen
+                // and unreadable in a photo of that screen.
+                val radius = CornerRadius(module * FINDER_CORNER_RADIUS_MODULES)
+
+                val finders =
+                    qrCodeFindersPath(
+                        origin = origin,
+                        quietZonePx = quietZonePx,
+                        sideLength = side,
+                        finderPatternSize = Size(module * FINDER_PATTERN_ROW_COUNT, module * FINDER_PATTERN_ROW_COUNT),
+                        cornerRadius = radius,
+                    )
+                val data = qrCodeDataBitsPath(origin + Offset(quietZonePx, quietZonePx), matrix, module)
+
+                onDrawBehind {
+                    drawPath(finders, foregroundColor)
+                    drawPath(data, foregroundColor)
+                }
+            },
+    )
 }
 
-private typealias Coordinate = Pair<Int, Int>
-
-fun newPath(withPath: Path.() -> Unit) =
+/**
+ * Every dark module outside the three finder patterns, as one path.
+ *
+ * Each module is grown by half a pixel so neighbours overlap instead of leaving hairline seams
+ * from anti-aliasing; with the default non-zero fill the overlaps simply merge.
+ */
+private fun qrCodeDataBitsPath(
+    topLeft: Offset,
+    matrix: QrMatrix,
+    module: Float,
+): Path =
     Path().apply {
-        fillType = PathFillType.EvenOdd
-        withPath(this)
-    }
-
-fun DrawScope.drawAllQrCodeDataBits(
-    quietZonePx: Float,
-    bytes: QrMatrix,
-    size: Size,
-    color: Color,
-) {
-    setOf(
-        // data bits between top left finder pattern and top right finder pattern.
-        Pair(
-            first = Coordinate(first = FINDER_PATTERN_ROW_COUNT, second = 0),
-            second =
-                Coordinate(
-                    first = (bytes.width - FINDER_PATTERN_ROW_COUNT),
-                    second = FINDER_PATTERN_ROW_COUNT,
-                ),
-        ),
-        // data bits below top left finder pattern and above bottom left finder pattern.
-        Pair(
-            first = Coordinate(first = 0, second = FINDER_PATTERN_ROW_COUNT),
-            second =
-                Coordinate(
-                    first = bytes.width,
-                    second = bytes.height - FINDER_PATTERN_ROW_COUNT,
-                ),
-        ),
-        // data bits to the right of the bottom left finder pattern.
-        Pair(
-            first =
-                Coordinate(
-                    first = FINDER_PATTERN_ROW_COUNT,
-                    second = (bytes.height - FINDER_PATTERN_ROW_COUNT),
-                ),
-            second =
-                Coordinate(
-                    first = bytes.width,
-                    second = bytes.height,
-                ),
-        ),
-    ).forEach { section ->
-        val newSize = Size(size.width + 0.5f, size.height + 0.5f)
-        for (y in section.first.second until section.second.second) {
-            for (x in section.first.first until section.second.first) {
-                if (bytes[x, y]) {
-                    drawPath(
-                        color = color,
-                        path =
-                            newPath {
-                                addRect(
-                                    rect =
-                                        Rect(
-                                            offset =
-                                                Offset(
-                                                    x = quietZonePx + x * size.width,
-                                                    y = quietZonePx + y * size.height,
-                                                ),
-                                            size = newSize,
-                                        ),
-                                )
-                            },
-                    )
+        val cell = Size(module + 0.5f, module + 0.5f)
+        for (y in 0 until matrix.height) {
+            for (x in 0 until matrix.width) {
+                if (matrix[x, y] && !isInFinder(x, y, matrix)) {
+                    addRect(Rect(Offset(topLeft.x + x * module, topLeft.y + y * module), cell))
                 }
             }
         }
     }
+
+/** The three 7x7 corners that [qrCodeFindersPath] draws with rounded shapes instead. */
+private fun isInFinder(
+    x: Int,
+    y: Int,
+    matrix: QrMatrix,
+): Boolean {
+    val left = x < FINDER_PATTERN_ROW_COUNT
+    val top = y < FINDER_PATTERN_ROW_COUNT
+    val right = x >= matrix.width - FINDER_PATTERN_ROW_COUNT
+    val bottom = y >= matrix.height - FINDER_PATTERN_ROW_COUNT
+    return (left && top) || (right && top) || (left && bottom)
 }
 
 const val FINDER_PATTERN_ROW_COUNT = 7
@@ -221,95 +197,86 @@ private const val INTERIOR_BACKGROUND_EXTERIOR_OFFSET_RATIO = 1f / FINDER_PATTER
 private const val INTERIOR_BACKGROUND_EXTERIOR_SHAPE_CORNER_RADIUS = 0.5f
 
 /**
- * A valid QR code has three finder patterns (top left, top right, bottom left).
+ * A valid QR code has three finder patterns (top left, top right, bottom left), as one even-odd
+ * path: each is three nested rounded squares, and the even-odd fill punches the middle ring out.
  *
- * @param qrCodeProperties how the QR code is drawn
- * @param sideLength length, in pixels, of each side of the QR code
+ * @param origin top-left corner of the square the code is drawn in
+ * @param sideLength length, in pixels, of each side of that square
  * @param finderPatternSize [Size] of each finder patten, based on the QR code spec
  */
-internal fun DrawScope.drawQrCodeFinders(
+private fun qrCodeFindersPath(
+    origin: Offset,
     quietZonePx: Float,
     sideLength: Float,
     finderPatternSize: Size,
     cornerRadius: CornerRadius,
-    color: Color,
-) {
-    setOf(
-        // Draw top left finder pattern.
-        Offset(x = quietZonePx, y = quietZonePx),
-        // Draw top right finder pattern.
-        Offset(x = sideLength - (quietZonePx + finderPatternSize.width), y = quietZonePx),
-        // Draw bottom finder pattern.
-        Offset(x = quietZonePx, y = sideLength - (quietZonePx + finderPatternSize.height)),
-    ).forEach { offset ->
-        drawQrCodeFinder(
-            topLeft = offset,
-            finderPatternSize = finderPatternSize,
-            cornerRadius = cornerRadius,
-            color = color,
-        )
+): Path =
+    Path().apply {
+        fillType = PathFillType.EvenOdd
+        listOf(
+            // Top left finder pattern.
+            Offset(x = quietZonePx, y = quietZonePx),
+            // Top right finder pattern.
+            Offset(x = sideLength - (quietZonePx + finderPatternSize.width), y = quietZonePx),
+            // Bottom left finder pattern.
+            Offset(x = quietZonePx, y = sideLength - (quietZonePx + finderPatternSize.height)),
+        ).forEach { offset ->
+            addQrCodeFinder(
+                topLeft = origin + offset,
+                finderPatternSize = finderPatternSize,
+                cornerRadius = cornerRadius,
+            )
+        }
     }
-}
 
-/** This func is responsible for drawing a single finder pattern, for a QR code */
-private fun DrawScope.drawQrCodeFinder(
+/** Adds a single finder pattern's three nested shapes. */
+private fun Path.addQrCodeFinder(
     topLeft: Offset,
     finderPatternSize: Size,
     cornerRadius: CornerRadius,
-    color: Color,
 ) {
-    drawPath(
-        color = color,
-        path =
-            newPath {
-                // Draw the outer rectangle for the finder pattern.
-                addRoundRect(
-                    roundRect =
-                        RoundRect(
-                            rect =
-                                Rect(
-                                    offset = topLeft,
-                                    size = finderPatternSize,
-                                ),
-                            cornerRadius = cornerRadius,
-                        ),
-                )
+    // The outer rectangle for the finder pattern.
+    addRoundRect(
+        roundRect =
+            RoundRect(
+                rect = Rect(offset = topLeft, size = finderPatternSize),
+                cornerRadius = cornerRadius,
+            ),
+    )
 
-                // Draw background for the finder pattern interior (this keeps the arc ratio consistent).
-                val innerBackgroundOffset =
-                    Offset(
-                        x = finderPatternSize.width * INTERIOR_BACKGROUND_EXTERIOR_OFFSET_RATIO,
-                        y = finderPatternSize.height * INTERIOR_BACKGROUND_EXTERIOR_OFFSET_RATIO,
-                    )
-                addRoundRect(
-                    roundRect =
-                        RoundRect(
-                            rect =
-                                Rect(
-                                    offset = topLeft + innerBackgroundOffset,
-                                    size = finderPatternSize * INTERIOR_BACKGROUND_EXTERIOR_SHAPE_RATIO,
-                                ),
-                            cornerRadius = cornerRadius * INTERIOR_BACKGROUND_EXTERIOR_SHAPE_CORNER_RADIUS,
-                        ),
-                )
+    // Background for the finder pattern interior (this keeps the arc ratio consistent).
+    val innerBackgroundOffset =
+        Offset(
+            x = finderPatternSize.width * INTERIOR_BACKGROUND_EXTERIOR_OFFSET_RATIO,
+            y = finderPatternSize.height * INTERIOR_BACKGROUND_EXTERIOR_OFFSET_RATIO,
+        )
+    addRoundRect(
+        roundRect =
+            RoundRect(
+                rect =
+                    Rect(
+                        offset = topLeft + innerBackgroundOffset,
+                        size = finderPatternSize * INTERIOR_BACKGROUND_EXTERIOR_SHAPE_RATIO,
+                    ),
+                cornerRadius = cornerRadius * INTERIOR_BACKGROUND_EXTERIOR_SHAPE_CORNER_RADIUS,
+            ),
+    )
 
-                // Draw the inner rectangle for the finder pattern.
-                val innerRectOffset =
-                    Offset(
-                        x = finderPatternSize.width * INTERIOR_EXTERIOR_OFFSET_RATIO,
-                        y = finderPatternSize.height * INTERIOR_EXTERIOR_OFFSET_RATIO,
-                    )
-                addRoundRect(
-                    roundRect =
-                        RoundRect(
-                            rect =
-                                Rect(
-                                    offset = topLeft + innerRectOffset,
-                                    size = finderPatternSize * INTERIOR_EXTERIOR_SHAPE_RATIO,
-                                ),
-                            cornerRadius = cornerRadius * INTERIOR_EXTERIOR_SHAPE_CORNER_RADIUS,
-                        ),
-                )
-            },
+    // The inner rectangle for the finder pattern.
+    val innerRectOffset =
+        Offset(
+            x = finderPatternSize.width * INTERIOR_EXTERIOR_OFFSET_RATIO,
+            y = finderPatternSize.height * INTERIOR_EXTERIOR_OFFSET_RATIO,
+        )
+    addRoundRect(
+        roundRect =
+            RoundRect(
+                rect =
+                    Rect(
+                        offset = topLeft + innerRectOffset,
+                        size = finderPatternSize * INTERIOR_EXTERIOR_SHAPE_RATIO,
+                    ),
+                cornerRadius = cornerRadius * INTERIOR_EXTERIOR_SHAPE_CORNER_RADIUS,
+            ),
     )
 }

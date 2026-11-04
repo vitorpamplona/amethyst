@@ -59,6 +59,8 @@ data class DrawerSection(
      * True for a section that renders rows of its own on top of its catalog items (see [CatalogSection]).
      * Such a section stays in the drawer even with every catalog row switched off, and — since a fixed
      * row is not a catalog destination — it never appears in the Side Menu settings screen's counts.
+     * A fixed row can still be build-gated (HLS upload needs the front end's screen); when every fixed
+     * row of a section is gated off, CatalogSection drops the section like any other empty one.
      */
     val hasFixedRows: Boolean = false,
 )
@@ -108,6 +110,7 @@ private val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.MUSIC_TRACKS,
         NavBarItem.MUSIC_PLAYLISTS,
         NavBarItem.POLLS,
+        NavBarItem.CHESS,
         NavBarItem.PRODUCTS,
         NavBarItem.GEOCACHES,
         NavBarItem.GEOCACHE_HUNTS,
@@ -143,6 +146,12 @@ val DrawerSections: List<DrawerSection> =
         DrawerSection(DrawerSectionId.CREATE, Res.string.drawer_section_create, MaterialSymbols.Edit, emptyList(), hasFixedRows = true),
         DrawerSection(DrawerSectionId.SYSTEM, Res.string.drawer_section_system, MaterialSymbols.Settings, listOf(NavBarItem.SETTINGS), hasFixedRows = true),
     )
+
+/**
+ * [DrawerSections] with Navigate first, for windows without a bottom bar: there the menu is where
+ * the main destinations live, so they lead. Same instances, only reordered.
+ */
+val DrawerSectionsNavigateFirst: List<DrawerSection> = DrawerSections.sortedBy { it.id != DrawerSectionId.NAVIGATE }
 
 /**
  * Catalog ids deliberately absent from every [DrawerSections] list, with the reason. Only Favorite

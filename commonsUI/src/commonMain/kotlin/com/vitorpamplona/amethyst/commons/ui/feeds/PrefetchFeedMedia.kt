@@ -34,6 +34,7 @@ import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import com.vitorpamplona.amethyst.commons.cartridges.CartLinks
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -47,20 +48,24 @@ import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
+import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip71Video.image
 import com.vitorpamplona.quartz.nip73ExternalIds.scope
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.UrlTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -68,6 +73,9 @@ import kotlinx.coroutines.withContext
 
 /** How many notes on each side of the viewport to warm. */
 private const val PREFETCH_RADIUS = 3
+
+/** How far below the viewport to look for the videos to open or download ahead (see [NotePlatform.warmVideos]). */
+private const val VIDEO_LOOKAHEAD = 4
 
 private const val MIME_TYPE_KEY = "m"
 
@@ -96,9 +104,11 @@ private const val DIM_KEY = "dim"
  * visible range changes. The only main-thread cost is reading the visible item
  * keys in the snapshot flow.
  *
- * Video *bytes* are deliberately not prefetched — they are large, often HLS
- * (whose prefix can't be cleanly pre-cached), and the player pool already starts
- * fast once a video is on screen. Warming the poster covers the visible card.
+ * Video bytes are not fetched here, since a player needs them in its own cache. The
+ * videos on screen and just below it go to [NotePlatform.warmVideos], for a platform
+ * (the desktop) whose player only opens a video when it plays, to open them ahead;
+ * the ones below go to [NotePlatform.prefetchVideos], for a platform (Android) whose
+ * player opens a video when its card is composed, to download their start ahead.
  */
 @Composable
 fun PrefetchFeedMedia(
@@ -108,10 +118,14 @@ fun PrefetchFeedMedia(
     radius: Int = PREFETCH_RADIUS,
 ) {
     val visibleEnds = remember(listState) { listState.visibleEnds() }
-    PrefetchVisibleMedia(listState, visibleEnds, notes, accountViewModel, radius)
+    PrefetchVisibleMedia(listState, visibleEnds, notes, accountViewModel, radius, prefetchVideoHeads = true)
 }
 
-/** Grid variant: identical behavior, driven by a [LazyGridState] (galleries, discover, products). */
+/**
+ * Grid variant, driven by a [LazyGridState] (galleries, discover, products). Same warming, except
+ * no video heads go to [NotePlatform.prefetchVideos]: a grid cell draws a video as a still frame
+ * and only opens a player when tapped, so those bytes would never be read.
+ */
 @Composable
 fun PrefetchFeedMedia(
     gridState: LazyGridState,
@@ -120,7 +134,7 @@ fun PrefetchFeedMedia(
     radius: Int = PREFETCH_RADIUS,
 ) {
     val visibleEnds = remember(gridState) { gridState.visibleEnds() }
-    PrefetchVisibleMedia(gridState, visibleEnds, notes, accountViewModel, radius)
+    PrefetchVisibleMedia(gridState, visibleEnds, notes, accountViewModel, radius, prefetchVideoHeads = false)
 }
 
 @Composable
@@ -130,22 +144,61 @@ private fun PrefetchVisibleMedia(
     notes: ImmutableList<Note>,
     accountViewModel: AccountViewModel,
     radius: Int,
+    prefetchVideoHeads: Boolean,
 ) {
     val context = LocalPlatformContext.current
     val platform = LocalNotePlatform.current
     val currentNotes by rememberUpdatedState(notes)
     val warmed = remember(stateKey) { ConcurrentSet<String>() }
 
+    // The videos each note shows, found while warming it: which ones to open ahead.
+    val videosByNote = remember(stateKey) { mutableMapOf<String, List<FeedVideo>>() }
+
     LaunchedEffect(stateKey, accountViewModel) {
-        visibleEnds.collectLatest { ends ->
-            withContext(Dispatchers.Default) {
-                currentNotes.notesAround(ends, radius).forEach { note ->
-                    if (note.idHex !in warmed) {
-                        note.warm(context, platform, accountViewModel)
-                        warmed.add(note.idHex)
+        // The withdrawals live in this finally, not in a DisposableEffect: the block below runs on
+        // IO and does not stop at cancellation, so its last call could land after an onDispose and
+        // register this feed again for good. Here they run after that block has returned.
+        try {
+            visibleEnds.collectLatest { ends ->
+                withContext(Dispatchers.IO) {
+                    currentNotes.notesAround(ends, radius).forEach { note ->
+                        if (note.idHex !in warmed) {
+                            note.warm(context, platform, accountViewModel)?.let { videosByNote[note.idHex] = it.feedVideos() }
+                            warmed.add(note.idHex)
+                        }
+                    }
+
+                    fun List<Note>.videos() =
+                        flatMap { note ->
+                            videosByNote.getOrPut(note.idHex) { note.collectWarmTargets()?.feedVideos() ?: emptyList() }
+                        }
+
+                    // The videos on screen and the next few below it, in feed order.
+                    val onScreen = currentNotes.notesBetween(ends).videos().map { it.url }
+                    val belowNotes = currentNotes.notesAfter(ends.lastKey, VIDEO_LOOKAHEAD + 1)
+                    val below = belowNotes.take(VIDEO_LOOKAHEAD).videos().map { it.url }
+                    platform.warmVideos(stateKey, (onScreen + below).distinct(), accountViewModel)
+
+                    if (prefetchVideoHeads) {
+                        // The card right below the screen is already composed by the lazy list's
+                        // own prefetch, so its player is loading it: downloading it here too would
+                        // fetch the same bytes twice. Start from the one after it. HLS is left out:
+                        // its playlist and segments are separate requests the player makes itself.
+                        val ahead =
+                            belowNotes
+                                .drop(1)
+                                .videos()
+                                .filter { !isHlsMedia(it.url, it.mimeType) }
+                                .map { it.url }
+                                .distinct()
+                                .filter { it !in onScreen }
+                        platform.prefetchVideos(stateKey, ahead, accountViewModel)
                     }
                 }
             }
+        } finally {
+            platform.warmVideos(stateKey, emptyList(), accountViewModel)
+            platform.prefetchVideos(stateKey, emptyList(), accountViewModel)
         }
     }
 }
@@ -176,6 +229,12 @@ fun PrefetchLoadedFeedMedia(
     PrefetchFeedMedia(gridState, items.list, accountViewModel)
 }
 
+/** A video a note shows, with its mime type when the note gives one (HLS can hide behind a bare hash). */
+private data class FeedVideo(
+    val url: String,
+    val mimeType: String?,
+)
+
 /** The keys (note `idHex`) of the first and last visible feed items. */
 private data class VisibleEnds(
     val firstKey: String?,
@@ -202,6 +261,14 @@ private fun List<Note>.notesAround(
     radius: Int,
 ): List<Note> = notesBefore(ends.firstKey, radius) + notesAfter(ends.lastKey, radius)
 
+/** The notes from the first visible to the last visible. */
+private fun List<Note>.notesBetween(ends: VisibleEnds): List<Note> {
+    val first = ends.firstKey?.let { k -> indexOfFirst { it.idHex == k } } ?: -1
+    val last = ends.lastKey?.let { k -> indexOfFirst { it.idHex == k } } ?: -1
+    if (first < 0 || last < first) return emptyList()
+    return subList(first, last + 1)
+}
+
 private fun List<Note>.notesBefore(
     key: String?,
     count: Int,
@@ -220,13 +287,16 @@ private fun List<Note>.notesAfter(
     return subList(minOf(idx + 1, size), minOf(idx + 1 + count, size))
 }
 
-/** Prefetches this note's media into Coil and warms its link previews, honoring the data-saver gates. */
+/**
+ * Prefetches this note's media into Coil and warms its link previews, honoring the data-saver
+ * gates. Returns what it found, null when the note has no event.
+ */
 private fun Note.warm(
     context: PlatformContext,
     platform: NotePlatform,
     accountViewModel: AccountViewModel,
-) {
-    val targets = collectWarmTargets() ?: return
+): WarmTargets? {
+    val targets = collectWarmTargets() ?: return null
 
     if (accountViewModel.settings.showImages()) {
         targets.forEachImage { url, videoUrlForDims -> context.prefetchImage(url, videoUrlForDims) }
@@ -236,6 +306,7 @@ private fun Note.warm(
             platform.warmUrlPreview(url, accountViewModel)
         }
     }
+    return targets
 }
 
 /** The set of URLs worth warming ahead of a note scrolling into view. */
@@ -244,6 +315,20 @@ private class WarmTargets {
     // image's (poster's) decoded aspect ratio, or null for a plain image.
     private val images = LinkedHashMap<String, String?>()
     val links = LinkedHashSet<String>()
+
+    // The videos themselves, each with its mime type when the note gives one, for a platform that
+    // opens or downloads them ahead (see NotePlatform.warmVideos and prefetchVideos).
+    val videos = LinkedHashMap<String, String?>()
+
+    fun video(
+        url: String,
+        mimeType: String? = null,
+    ) {
+        // Never lose a mime type another source of the same URL already gave.
+        videos[url] = mimeType ?: videos[url]
+    }
+
+    fun feedVideos(): List<FeedVideo> = videos.map { (url, mime) -> FeedVideo(url, mime) }
 
     fun image(url: String) {
         if (url !in images) images[url] = null
@@ -271,10 +356,12 @@ private class WarmTargets {
         state.mediaList.forEach { media ->
             when (media) {
                 is MediaUrlImage -> image(media.url)
-                is MediaUrlVideo ->
+                is MediaUrlVideo -> {
+                    video(media.url, media.mimeType)
                     media.artworkUri?.let { poster ->
                         videoPoster(poster, media.url.takeIf { media.dim == null })
                     }
+                }
             }
         }
         state.urlSet.withScheme.forEach { url ->
@@ -291,7 +378,7 @@ private class WarmTargets {
         UrlParser().parseValidUrls(content).withScheme.forEach { url ->
             when {
                 RichTextParser.isImageUrl(url) -> image(url)
-                RichTextParser.isVideoUrl(url) -> Unit
+                RichTextParser.isVideoUrl(url) -> video(url)
                 else -> link(url)
             }
         }
@@ -329,7 +416,11 @@ private fun Note.collectWarmTargets(): WarmTargets? {
     // kinds whose typed accessors wrap imetas() — Picture, Video). Video imeta carries
     // its poster in the `image` field.
     ev.tags.imetas().forEach { meta ->
+        // The carts a note names are fetched when the game is played, not when it scrolls past. The
+        // cart in its text is still warmed from the body below.
+        if (CartLinks.CART_FIELD in meta.properties) return@forEach
         if (meta.isImage()) targets.image(meta.url)
+        if (meta.isVideo()) targets.video(meta.url, meta.properties[MIME_TYPE_KEY]?.firstOrNull())
         meta.image()?.forEach { poster -> targets.videoPoster(poster, meta.videoUrlForPosterDims()) }
     }
 
@@ -343,6 +434,14 @@ private fun Note.collectWarmTargets(): WarmTargets? {
     // the renderer uses — so we only warm a URL that will actually be shown.
     if (ev is CommentEvent) {
         (ev.scope() as? UrlId)?.let { targets.link(it.url) }
+    }
+
+    // A web highlight's source row titles itself from the page's preview. Warming it here, with
+    // the URL exactly as the row asks for it, keeps the title from swapping once on screen.
+    // A nostr source (`a`/`e`) wins over the URL in the row, so its URL is never shown.
+    if (ev is HighlightEvent && ev.inPostAddress() == null && ev.inPostVersion() == null) {
+        val source = ev.inUrl() ?: (ev.inExternalIds().firstOrNull() as? UrlId)?.url
+        source?.let { targets.link(HttpUrlFormatter.addSchemeIfNeeded(it)) }
     }
 
     // Free-text body. The reproducible-key kinds parse through the shared cache
@@ -446,4 +545,10 @@ private fun IMetaTag.videoUrlForPosterDims(): String? = url.takeIf { properties[
 private fun IMetaTag.isImage(): Boolean {
     val mimeType = properties[MIME_TYPE_KEY]?.firstOrNull()
     return mimeType?.startsWith("image/") ?: RichTextParser.isImageUrl(url)
+}
+
+/** True for video blobs: by mime type, or the URL's extension when there is none. */
+private fun IMetaTag.isVideo(): Boolean {
+    val mimeType = properties[MIME_TYPE_KEY]?.firstOrNull()
+    return mimeType?.startsWith("video/") ?: RichTextParser.isVideoUrl(url)
 }

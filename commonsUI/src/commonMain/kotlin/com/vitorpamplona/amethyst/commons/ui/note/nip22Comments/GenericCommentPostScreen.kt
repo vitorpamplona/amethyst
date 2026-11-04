@@ -52,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -119,6 +120,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPickerButton
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
@@ -386,7 +388,7 @@ private fun GenericCommentPostBody(
                     )
                 }
 
-                DisplayPreviews(postViewModel.urlPreviews, accountViewModel, nav)
+                DisplayPreviews(postViewModel.urlPreviews, postViewModel.iMetaAttachments, accountViewModel, nav)
 
                 if (postViewModel.wantsToMarkAsSensitive) {
                     Row(
@@ -436,8 +438,8 @@ private fun GenericCommentPostBody(
                             it,
                             accountViewModel.account.settings.defaultFileServer,
                             isUploading = postViewModel.mediaUploadTracker.isUploading,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, _, stripMetadata, _ ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader, stripMetadata)
+                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata, convertGifToMp4 ->
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.mediaUploader, useH265, stripMetadata, convertGifToMp4)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,
@@ -606,6 +608,12 @@ private fun BottomRowActions(postViewModel: CommentPostViewModel) {
                 postViewModel.selectImage(it)
             },
         )
+
+        DrawingButton(postViewModel.accountViewModel, enabled = !postViewModel.isUploadingImage && !postViewModel.isUploadingFile) { drawing, alt ->
+            postViewModel.uploadDrawing(drawing, alt, postViewModel.accountViewModel.toastManager::toast)
+        }
+
+        EmojiPickerButton(postViewModel.emojiSuggestions?.emojiPacks, postViewModel.message)
 
         TakeVideoButton(
             onVideoTaken = {

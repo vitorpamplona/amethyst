@@ -33,3 +33,14 @@ expect fun formatDateTime(
     date: DateTimeStyle,
     time: DateTimeStyle,
 ): String
+
+/**
+ * Like [formatDateTime], but on the wall clock of the IANA zone [zoneId] ("Europe/Oslo") instead
+ * of the reader's, for NIP-52's `start_tzid`. Null when the platform does not know the zone.
+ */
+expect fun formatDateTimeInZone(
+    epochMillis: Long,
+    date: DateTimeStyle,
+    time: DateTimeStyle,
+    zoneId: String,
+): String?

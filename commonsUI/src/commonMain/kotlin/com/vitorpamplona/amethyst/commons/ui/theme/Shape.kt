@@ -72,7 +72,10 @@ val TabRowHeight = Modifier
 val SmallestBorder = RoundedCornerShape(5.dp)
 val SmallBorder = RoundedCornerShape(7.dp)
 val SmallishBorder = RoundedCornerShape(9.dp)
-val QuoteBorder = RoundedCornerShape(15.dp)
+
+/** The corner radius of [QuoteBorder], the rounded frame of note images. */
+val ImageCornerRadius = 15.dp
+val QuoteBorder = RoundedCornerShape(ImageCornerRadius)
 
 val ButtonBorder = RoundedCornerShape(20.dp)
 val LeftHalfCircleButtonBorder = ButtonBorder.copy(topEnd = CornerSize(0f), bottomEnd = CornerSize(0f))
@@ -177,6 +180,17 @@ val RowColSpacing10dp = Arrangement.spacedBy(10.dp)
 val HalfHorzPadding = Modifier.padding(horizontal = 5.dp)
 val HalfVertPadding = Modifier.padding(vertical = 5.dp)
 
+/**
+ * The space above and below a block in a post's text: an image, a video, a gallery, a PDF or a
+ * link card. The same on both sides, so a block in the middle of a post sits evenly between its
+ * paragraphs; the blank lines an author types around a block are dropped
+ * (`dropBlankLinesAroundBlocks`), so this is the whole gap.
+ */
+val RichTextBlockSpacing = 8.dp
+
+/** [RichTextBlockSpacing] above and below a block. */
+val RichTextBlockPadding = Modifier.padding(vertical = RichTextBlockSpacing)
+
 val HorzPadding = Modifier.padding(horizontal = 10.dp)
 val VertPadding = Modifier.padding(vertical = 10.dp)
 
@@ -216,6 +230,12 @@ val ReactionRowZapraiserWithPadding = Modifier.defaultMinSize(minHeight = 4.dp).
 val ReactionRowZapraiser = Modifier.defaultMinSize(minHeight = 4.dp).fillMaxWidth()
 
 val ReactionRowExpandButton = Modifier.width(65.dp).padding(start = 31.dp)
+
+// The reactions row of a note whose author sits above a full-width body: the actions start at the
+// body's 12dp edge and the expand button takes a fixed slot at the end instead of the author column.
+val ReactionRowExpandButtonAtEnd = Modifier.width(28.dp)
+val ReactionRowHeightAlignedToText = Modifier.padding(vertical = 6.dp).heightIn(min = 24.dp).padding(horizontal = 12.dp)
+val ReactionRowZapraiserAlignedToText = Modifier.defaultMinSize(minHeight = 4.dp).padding(horizontal = 12.dp).fillMaxWidth()
 
 val WidthAuthorPictureModifier = Modifier.width(55.dp)
 val WidthAuthorPictureModifierWithPadding = Modifier.width(65.dp)

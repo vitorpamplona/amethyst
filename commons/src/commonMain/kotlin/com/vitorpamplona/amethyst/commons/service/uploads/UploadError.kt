@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.service.uploads
 
 /** Why an upload failed. The UI names it with `UploadingState.Error.errorResource`. */
 enum class UploadError {
-    MEDIA_TOO_BIG_FOR_NIP95,
     COULD_NOT_CHECK_DOWNLOADED_FILE,
     COULD_NOT_OPEN_COMPRESSED_FILE,
     LOGIN_WITH_PRIVATE_KEY,
@@ -30,6 +29,8 @@ enum class UploadError {
     BLOSSOM_PAYMENT_REQUIRED,
     SERVER_DID_NOT_PROVIDE_URL,
     COULD_NOT_DOWNLOAD_FROM_SERVER,
+    SERVER_RETURNED_DIFFERENT_FILE,
+    FILE_TOO_LARGE_TO_ENCRYPT,
     AVIF_METADATA_STRIP_FAILED,
     UPLOAD_CANCELLED,
 }

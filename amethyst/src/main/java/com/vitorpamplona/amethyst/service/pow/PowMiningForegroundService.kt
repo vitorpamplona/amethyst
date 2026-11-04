@@ -26,8 +26,11 @@ import android.os.PowerManager
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
+import com.vitorpamplona.amethyst.commons.service.pow.PoWEventShape
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobPhase
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
+import com.vitorpamplona.amethyst.commons.service.pow.PoWRateEstimate
+import com.vitorpamplona.amethyst.commons.service.pow.platformMinerWorkers
 import com.vitorpamplona.amethyst.service.foreground.FlowProgressForegroundService
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -65,6 +68,8 @@ import kotlinx.coroutines.launch
  * to that card.
  */
 class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<PoWJobState>>() {
+    // Only passed to startForeground on API 34+, where the type exists.
+    @Suppress("InlinedApi")
     override val fgsType: Int = ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE
     override val channelId = CHANNEL_ID
     override val channelNameRes = R.string.pow_notification_channel_name
@@ -94,7 +99,7 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
 
     // Benchmarked once per service run (~250 ms, cached by the estimator).
     @Volatile
-    private var hashRate: Double? = null
+    private var hashRate: PoWRateEstimate? = null
 
     private var wakeLock: PowerManager.WakeLock? = null
 
@@ -123,7 +128,7 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
             }
         }
 
-        // Mirrors what the resumed UI collects (AccountScreen's ManageRelayServices +
+        // Mirrors what the resumed UI collects (AndroidAppRoot's ManageRelayServices +
         // ManageWebOkHttp): subscribed, they keep the relay pool connected and, through
         // the connector's combine and the proxy-port provider, Tor up.
         val app = Amethyst.instance
@@ -152,7 +157,9 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
     override fun needsClockRefresh(value: ImmutableList<PoWJobState>) = value.any { it.isMining }
 
     override fun onStarted() {
-        scope.launch { hashRate = PoWEstimator.hashesPerSecond() }
+        // The queue's own worker count, measured live once its miners run: a one-worker benchmark
+        // made the notification promise several times the real wait.
+        scope.launch { hashRate = PoWEstimator.currentRate(platformMinerWorkers()) }
     }
 
     override fun onEmission(value: ImmutableList<PoWJobState>) {
@@ -160,6 +167,8 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
         if (value.size > lastQueueSize) sessionTotal += value.size - lastQueueSize
         lastQueueSize = value.size
     }
+
+    private fun miningShape(value: ImmutableList<PoWJobState>) = value.firstOrNull { it.isMining }?.shape ?: PoWEventShape.SHORT_NOTE
 
     override fun render(value: ImmutableList<PoWJobState>): Content {
         val done = (sessionTotal - value.size).coerceAtLeast(0)
@@ -171,7 +180,12 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
         // "≈ 10 minutes left" and fill its bar toward a predictable end.
         val rate = hashRate
         val startedAt = current?.miningStartedAt
-        val expectedSec = if (current != null && rate != null) PoWEstimator.estimateSeconds(current.difficulty, rate) else null
+        val expectedSec =
+            if (current != null && rate != null) {
+                PoWEstimator.estimateSeconds(current.difficulty, rate.hashesPerSecond(current.shape ?: PoWEventShape.SHORT_NOTE, miningShape(value)))
+            } else {
+                null
+            }
         val elapsedSec = startedAt?.let { (TimeUtils.now() - it).coerceAtLeast(0) }
 
         val base =

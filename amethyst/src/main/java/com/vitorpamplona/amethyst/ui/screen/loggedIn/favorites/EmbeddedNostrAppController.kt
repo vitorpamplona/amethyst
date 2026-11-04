@@ -45,6 +45,7 @@ import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
+import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.favorite_notice_paid
 import com.vitorpamplona.amethyst.commons.resources.favorite_notice_published
@@ -99,6 +100,12 @@ class EmbeddedNostrAppController(
     private var bound = false
 
     private var sandboxedSdkView: SandboxedSdkView? = null
+
+    /**
+     * Set for an app running inside a note: it never opens the picker or the camera. A run in the feed
+     * asks the user nothing (the broker refuses its prompts the same way); opening the app answers.
+     */
+    var refusesFileChooser: Boolean = false
     private var pendingAdapter: SandboxedUiAdapter? = null
 
     /**
@@ -162,6 +169,9 @@ class EmbeddedNostrAppController(
 
     /** Notified on the main thread whenever [loadStatus] changes. */
     override var onLoadStatusChanged: ((EmbeddedLoadStatus) -> Unit)? = null
+
+    /** Notified on the main thread with how far the download the page waits on has come; null when it ended. */
+    var onDownloadChanged: ((NappletDownloadProgress?) -> Unit)? = null
 
     override var onImeEvent: ((ImeEvent) -> Unit)? = null
 
@@ -248,6 +258,7 @@ class EmbeddedNostrAppController(
         onImeEvent = null
         onMagnifierFrame = null
         onLoadStatusChanged = null
+        onDownloadChanged = null
     }
 
     /**
@@ -491,6 +502,10 @@ class EmbeddedNostrAppController(
             NappletEmbedContract.MSG_FILE_CHOOSER_REQUEST -> {
                 val data = msg.data ?: return true
                 val requestId = data.getLong(NappletEmbedContract.KEY_FILE_CHOOSER_ID)
+                if (refusesFileChooser) {
+                    send(NappletEmbedContract.MSG_FILE_CHOOSER_RESULT) { putLong(NappletEmbedContract.KEY_FILE_CHOOSER_ID, requestId) }
+                    return true
+                }
                 // The sandbox has no Activity to run a picker from, so the main process runs it here and
                 // ships the URIs back. The reply is sent on every outcome (a cancel included) — the page's
                 // file input stays busy until it hears something.
@@ -508,6 +523,19 @@ class EmbeddedNostrAppController(
                 }
             }
             NappletEmbedContract.MSG_ROUTE -> routedOverTor.value = msg.data?.getBoolean(NappletEmbedContract.KEY_ROUTE_TOR, false) ?: false
+            NappletEmbedContract.MSG_DOWNLOAD -> {
+                val data = msg.data
+                val download =
+                    if (data != null && data.containsKey(NappletEmbedContract.KEY_DOWNLOAD_BYTES)) {
+                        NappletDownloadProgress(
+                            data.getLong(NappletEmbedContract.KEY_DOWNLOAD_BYTES),
+                            data.getLong(NappletEmbedContract.KEY_DOWNLOAD_TOTAL, -1).takeIf { it > 0 },
+                        )
+                    } else {
+                        null
+                    }
+                onDownloadChanged?.invoke(download)
+            }
             NappletEmbedContract.MSG_FIND_RESULT -> {
                 val data = msg.data ?: return true
                 _findResult.value = FindResult(data.getInt(NappletEmbedContract.KEY_FIND_ACTIVE), data.getInt(NappletEmbedContract.KEY_FIND_TOTAL))

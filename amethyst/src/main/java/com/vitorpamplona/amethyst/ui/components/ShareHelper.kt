@@ -27,7 +27,7 @@ import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.richtext.mimeTypeMap
 import com.vitorpamplona.amethyst.commons.richtext.normalizeMimeType
-import com.vitorpamplona.amethyst.service.images.BlossomFetcher
+import com.vitorpamplona.amethyst.commons.service.image.BlossomFetcher
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

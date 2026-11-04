@@ -20,16 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.privacylock
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
+import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 
 /**
- * Platform-agnostic credential prompt for the Messages privacy lock.
- *
- * Implementations:
- * - Android: BiometricPrompt(STRONG | DEVICE_CREDENTIAL).
- * - macOS: Touch ID via libAmethystTouchID.dylib (with OS password fallback).
- * - Windows: CredUIPromptForCredentials (OS password — Windows Hello deferred to v2).
- * - Linux: disabled — `available` returns false; toggle is hidden in settings.
+ * How the privacy lock asks the user to prove it is them. Android prompts for biometrics or the
+ * device credential; the desktop asks for an app password ([usesPassword]), hashed and kept in the
+ * lock's settings. See [rememberPrivacyLockPrompter].
  */
 interface CredentialPrompter {
     /** True when the platform credential surface can be invoked. */
@@ -41,6 +39,21 @@ interface CredentialPrompter {
      * strings (security finding #14: avoid OS-prompt spoofing surface).
      */
     suspend fun prompt(): PromptResult
+
+    /** True when the user unlocks by typing the app password rather than through a platform prompt. */
+    val usesPassword: Boolean get() = false
+
+    /** Checks [password] against the stored app password; password mode only. */
+    suspend fun verifyPassword(password: CharArray): PromptResult = PromptResult.Unavailable
+
+    /**
+     * Replaces the app password with [new], or removes it when [new] is null, after checking
+     * [current] against the stored one when there is one. Password mode only.
+     */
+    suspend fun changePassword(
+        current: CharArray?,
+        new: CharArray?,
+    ): PromptResult = PromptResult.Unavailable
 }
 
 enum class PromptResult {
@@ -67,3 +80,7 @@ val LocalCredentialPrompter =
     compositionLocalOf<CredentialPrompter> {
         error("LocalCredentialPrompter not provided — wrap App() with platform CredentialPrompter")
     }
+
+/** The platform's way to unlock the privacy lock whose settings are [settings]. */
+@Composable
+expect fun rememberPrivacyLockPrompter(settings: PrivacyLockSettings): CredentialPrompter

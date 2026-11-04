@@ -55,8 +55,8 @@ val LocalUserFinderAccount =
  *
  * Because a `LazyColumn` composes only the visible window (+ a small prefetch
  * buffer), this naturally means "load metadata only for users currently on
- * screen" — the [LifecycleAwareKeyDataSourceSubscription] unsubscribes ~30s
- * after the row leaves composition or the app is backgrounded.
+ * screen" — the [LifecycleAwareKeyDataSourceSubscription] unsubscribes as soon
+ * as the row leaves composition, and ~30s after the app is backgrounded.
  */
 @Composable
 fun UserFinderFilterAssemblerSubscription(

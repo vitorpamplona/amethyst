@@ -39,6 +39,15 @@ class PoWPolicyTest {
     }
 
     @Test
+    fun desktopMinerWorkersLeavesTwoCoresButNeverZero() {
+        assertEquals(1, PoWPolicy.desktopMinerWorkers(0))
+        assertEquals(1, PoWPolicy.desktopMinerWorkers(2))
+        assertEquals(1, PoWPolicy.desktopMinerWorkers(3))
+        assertEquals(6, PoWPolicy.desktopMinerWorkers(8))
+        assertEquals(10, PoWPolicy.desktopMinerWorkers(12))
+    }
+
+    @Test
     fun difficultyOffMinesNothing() {
         assertNull(PoWPolicy.shouldMine(1, 0, allCategories))
         assertNull(PoWPolicy.shouldMine(1, -5, allCategories))

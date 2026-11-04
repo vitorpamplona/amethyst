@@ -67,6 +67,10 @@ class TextToSpeechEngine private constructor() {
         context: Context,
         message: String,
     ) {
+        // Each call binds a new engine; release the last one or every tap leaves an engine bound
+        // (and still speaking) until the process dies.
+        tts?.stop()
+        tts?.shutdown()
         tts =
             TextToSpeech(context) { result ->
                 if (result == TextToSpeech.SUCCESS) {
@@ -94,7 +98,7 @@ class TextToSpeechEngine private constructor() {
                                     onHighlightListener?.invoke(start, end)
                                 }
                             },
-                            onDone = { onStartListener?.invoke() },
+                            onDone = { onDoneListener?.invoke() },
                         )
                         speak(message)
                     }

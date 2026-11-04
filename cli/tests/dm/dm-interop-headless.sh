@@ -3,11 +3,19 @@
 # dm-interop-headless.sh — zero-prompt NIP-17 DM interop harness.
 #
 # Two `amy` processes (Identity A and Identity D) talk to each other
-# through a local embedded relay (`amy serve`, i.e. geode) on
-# ws://127.0.0.2:$RELAY_PORT. No MDK, no Marmot, no Rust toolchain, no
-# public internet traffic.
+# through a local embedded relay (`amy serve`, i.e. geode). No MDK, no
+# Marmot, no Rust toolchain, no public internet traffic.
 #
-# Usage: ./dm-interop-headless.sh [--port N] [--no-build]
+# amy (like the app) drops loopback, RFC 1918 and link-local relays from
+# other people's relay lists, so A only finds D's kind:10050 inbox when the
+# relay runs on an address outside those ranges. The harness takes the
+# first such address on any interface (or --host IP). Without one the
+# relay runs on 127.0.0.2 and the inbox tests (dm-01/02/05/06) are skipped;
+# dm-03/04 still run. Any host can provide one on loopback:
+# `sudo ip addr add 192.0.2.2/32 dev lo` (Linux) or
+# `sudo ifconfig lo0 alias 192.0.2.2 up` (macOS).
+#
+# Usage: ./dm-interop-headless.sh [--port N] [--host IP] [--no-build]
 #
 set -uo pipefail
 
@@ -27,19 +35,13 @@ RESULTS_FILE="$STATE_DIR/results-$RUN_TS.tsv"
 
 AMY_BIN="$REPO_ROOT/cli/build/install/amy/bin/amy"
 
-# Loopback relay = `amy serve` (geode), booted from $AMY_BIN by
+# The relay = `amy serve` (geode), booted from $AMY_BIN by
 # start_local_relay in headless/helpers.sh. Override RELAY_DATA if you
-# want full isolation between runs.
-# 127.0.0.2 used to dodge Quartz's `isLocalHost()` strip of loopback
-# relays in kind:10050 inbox lists. That filter now covers all of
-# 127.0.0.0/8, so the strict-inbox sends (dm-01/02/05/06) fail with
-# no_dm_relays regardless of which loopback address the relay binds;
-# only the fallback-chain tests (dm-03/04) are unaffected. Kept for
-# parity with the other harnesses until that routing rule is revisited.
-RELAY_HOST="${RELAY_HOST:-127.0.0.2}"
+# want full isolation between runs. RELAY_HOST is resolved after the
+# helpers are sourced (see the header for why it must be routable).
+RELAY_HOST="${RELAY_HOST:-}"
 RELAY_DATA="$STATE_DIR/relay"
 RELAY_PORT="${RELAY_PORT:-8090}"
-RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
 NO_BUILD=0
 
 A_NPUB=""
@@ -49,11 +51,11 @@ D_HEX=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --port)     RELAY_PORT="$2"; RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"; shift ;;
-    --host)     RELAY_HOST="$2"; RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"; shift ;;
+    --port)     RELAY_PORT="$2"; shift ;;
+    --host)     RELAY_HOST="$2"; shift ;;
     --no-build) NO_BUILD=1 ;;
     -h|--help)
-      sed -n '3,12p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'
+      sed -n '3,19p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'
       exit 0 ;;
     *) printf 'unknown flag: %s\n' "$1" >&2; exit 2 ;;
   esac
@@ -79,6 +81,24 @@ source "$TESTS_DIR/headless/helpers.sh"
 # shellcheck source=tests-dm.sh
 source "$SCRIPT_DIR/tests-dm.sh"
 
+INBOX_SKIP=""
+if [[ -z "$RELAY_HOST" ]] && ! RELAY_HOST="$(detect_routing_host)"; then
+  RELAY_HOST=127.0.0.2
+  INBOX_SKIP="no non-loopback, non-private IPv4 on any interface (see --help)"
+elif ! is_routable_ipv4 "$RELAY_HOST"; then
+  INBOX_SKIP="$RELAY_HOST is loopback/private: amy drops it from D's kind:10050"
+fi
+RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
+
+# run_inbox_test FN ID — a test whose send resolves D's kind:10050 inbox.
+run_inbox_test() {
+  if [[ -n "$INBOX_SKIP" ]]; then
+    record_result "$2" skip "$INBOX_SKIP"
+  else
+    "$1"
+  fi
+}
+
 cleanup() {
   local rc=$?
   trap - EXIT INT TERM HUP
@@ -93,14 +113,15 @@ trap 'exit 129' HUP
 
 banner "Amethyst NIP-17 DM headless interop ($RUN_TS)"
 preflight_dm
+[[ -n "$INBOX_SKIP" ]] && warn "dm-01/02/05/06 will be skipped: $INBOX_SKIP"
 start_local_relay
 ensure_identity_for A
 ensure_identity_for D
 configure_relays_dm
 
-test_01_dm_text_round_trip
-test_02_dm_list_surfaces_history
+run_inbox_test test_01_dm_text_round_trip "dm-01 text round-trip"
+run_inbox_test test_02_dm_list_surfaces_history "dm-02 dm list text history"
 test_03_dm_send_rejects_no_inbox
 test_04_dm_send_allow_fallback
-test_05_dm_file_reference_round_trip
-test_06_dm_list_since_filter
+run_inbox_test test_05_dm_file_reference_round_trip "dm-05 file reference round-trip"
+run_inbox_test test_06_dm_list_since_filter "dm-06 since filter"

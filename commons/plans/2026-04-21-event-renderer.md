@@ -1,7 +1,7 @@
 ---
 title: "feat(commons): cross-platform event renderer"
 type: feat
-status: proposed
+status: in-progress
 date: 2026-04-21
 owner: commons
 consumers: cli, desktopApp, amethyst
@@ -9,8 +9,32 @@ consumers: cli, desktopApp, amethyst
 
 # feat(commons): cross-platform event renderer
 
-> **Status:** queued — no `rendering/` subsystem, `RenderedEvent`, or `EventRenderer` exists anywhere in the tree; front-matter status is still "proposed".
-> _Audited 2026-06-30._
+> **Status:** in progress (2026-10-06). Migration steps 1, 2 (JSON half) and 4 are
+> in: `commons/.../rendering/` holds `RenderedEvent`, `EventRenderer` /
+> `EventRendererRegistry` (+ `DefaultRenderer`), `RenderContext`, the shared
+> `BodySpans` post-processor and `json/JsonEventFormatter`, with renderers for
+> kinds 0, 1, 3, 5, 6, 7, 16, 1111, 9735, 10002, 10050 and 30023. amy consumes it
+> (`notes show`, `notes thread`, `notes feed`, `notifications`). Remaining: the
+> Compose formatter (it belongs in `commonsUI`, not here — see "Decisions taken")
+> and switching Android/Desktop note rendering over to it (step 3).
+
+## Decisions taken while implementing
+
+- **`EventRenderer` is not generic.** The registry is keyed by kind and erases the
+  type anyway; each renderer casts and falls back to the default renderer on a
+  mismatch, so a malformed event never throws.
+- **`RenderContext` is pre-resolved** (the open question below): it carries a
+  pubkey → `UserMetadata` map the caller fills. Renderers stay pure and synchronous.
+- **Rich text is a shared post-processor** (`BodySpans`), built on the existing
+  `richtext/RichTextParser` the Android/Desktop viewers already use — not a second
+  parser. Every text-bearing kind gets hashtag / mention / link / media detection.
+- **Gift wraps are not rendered specially**: callers unwrap first, then render the
+  inner event; an outer kind:1059 goes through the default renderer.
+- **Kind-specific data lives in a sealed `RenderedDetails`** instead of more
+  nullable top-level fields.
+- **The Compose formatter goes to `commonsUI`.** Since the 2026-09-12 split,
+  `commons` carries no Compose UI, so the "Compose lock-in" risk below is resolved
+  by the module boundary: `commons/rendering` (pure) + `commonsUI/rendering` (Compose).
 
 ## Overview
 

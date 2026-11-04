@@ -234,7 +234,7 @@ fun LeaveSiteDialogPreview() {
 fun PageInfoPreview() {
     PreviewFrame {
         Box(Modifier.padding(16.dp).width(380.dp)) {
-            PageInfoSheet(BrowserPillSamples.primal, BrowserPillSamples.certificate, onPermissionChange = { _, _ -> }, onClearSiteData = {}, initiallyConfirmingClear = true)
+            PageInfoSheet(BrowserPillSamples.primal, BrowserPillSamples.certificate, onPermissionChange = { _, _ -> }, onClearSiteData = {}, onClearAllSiteData = {}, initiallyConfirmingClear = ClearScope.SITE)
         }
     }
 }

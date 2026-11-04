@@ -70,11 +70,17 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copy
 import com.vitorpamplona.amethyst.commons.resources.quick_action_dont_show_again_button
 import com.vitorpamplona.amethyst.commons.resources.send
+import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_address_unavailable
+import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_balance_unavailable
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_copy_dialog_confirm
+import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_no_backend_short
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_chip
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog_body
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog_confirm
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_subtitle
+import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_title
+import com.vitorpamplona.amethyst.commons.resources.wallet_sats
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.sats
@@ -112,6 +118,8 @@ fun OnchainSection(
     val balanceSats = funds?.totalSats
 
     val orange = MaterialTheme.colorScheme.bitcoinColor
+    val hideBalance by accountViewModel.settings.uiSettingsFlow.hideWalletBalances
+        .collectAsStateWithLifecycle()
 
     Card(
         modifier =
@@ -130,12 +138,13 @@ fun OnchainSection(
                 orange = orange,
                 balanceState = balanceState,
                 balanceSats = balanceSats,
+                hideBalance = hideBalance,
             )
 
             if (address == null) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Address derivation unavailable for this account.",
+                    text = stringRes(Res.string.wallet_onchain_address_unavailable),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -152,14 +161,17 @@ private fun HeaderRow(
     orange: Color,
     balanceState: OnchainBalanceStatus,
     balanceSats: Long?,
+    hideBalance: Boolean,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        BitcoinChip(orange)
+        Spacer(modifier = Modifier.width(12.dp))
         HeaderRowTitle(modifier = Modifier.weight(1f), orange = orange)
-        BalanceBlock(state = balanceState, sats = balanceSats, orange = orange)
+        BalanceBlock(state = balanceState, sats = balanceSats, orange = orange, hideBalance = hideBalance)
     }
 }
 
@@ -170,10 +182,8 @@ private fun HeaderRowTitle(
 ) {
     Column(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            BitcoinChip(orange)
-            Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = "Bitcoin",
+                text = stringRes(Res.string.wallet_onchain_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -182,7 +192,7 @@ private fun HeaderRowTitle(
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Onchain · Taproot",
+            text = stringRes(Res.string.wallet_onchain_subtitle),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -263,6 +273,7 @@ private fun BalanceBlock(
     state: OnchainBalanceStatus,
     sats: Long?,
     orange: Color,
+    hideBalance: Boolean,
 ) {
     if (state == OnchainBalanceStatus.LOADING && sats == null) {
         CircularProgressIndicator(
@@ -275,18 +286,22 @@ private fun BalanceBlock(
     Column(horizontalAlignment = Alignment.End) {
         when (state) {
             OnchainBalanceStatus.READY -> {
-                val formatted =
-                    remember(sats) {
-                        formatGrouped(sats ?: 0L)
-                    }
+                if (hideBalance) {
+                    BalanceDots(pulsing = false)
+                } else {
+                    val formatted =
+                        remember(sats) {
+                            formatGrouped(sats ?: 0L)
+                        }
+                    Text(
+                        text = formatted,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = orange,
+                    )
+                }
                 Text(
-                    text = formatted,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = orange,
-                )
-                Text(
-                    text = "sats",
+                    text = stringRes(Res.string.wallet_sats),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -300,7 +315,7 @@ private fun BalanceBlock(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "unavailable",
+                    text = stringRes(Res.string.wallet_onchain_balance_unavailable),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -314,7 +329,7 @@ private fun BalanceBlock(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "no backend",
+                    text = stringRes(Res.string.wallet_onchain_no_backend_short),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

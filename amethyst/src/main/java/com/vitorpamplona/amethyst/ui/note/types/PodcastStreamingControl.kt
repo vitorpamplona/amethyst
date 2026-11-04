@@ -112,7 +112,7 @@ fun PodcastStreamingControl(
     // Deliberately plain remember (not rememberSaveable): streaming must never silently resume after
     // a rotation or process death. Any fresh creation of this control starts OFF; the user re-opts in.
     var enabled by remember(note.idHex) { mutableStateOf(false) }
-    var rate by remember(note.idHex) { mutableStateOf(DEFAULT_STREAM_RATE) }
+    var rate by remember(note.idHex) { mutableLongStateOf(DEFAULT_STREAM_RATE) }
     var rateMenuOpen by remember { mutableStateOf(false) }
     var streamedSats by remember(note.idHex) { mutableLongStateOf(0L) }
 

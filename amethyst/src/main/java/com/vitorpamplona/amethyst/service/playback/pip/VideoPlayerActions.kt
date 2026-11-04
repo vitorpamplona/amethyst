@@ -67,7 +67,7 @@ fun createMuteAction(
         PendingIntent.getBroadcast(
             context,
             0,
-            Intent(ACTION_MUTE),
+            Intent(ACTION_MUTE).setPackage(context.packageName),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     return RemoteAction(icon, title, title, intent)
@@ -88,7 +88,7 @@ fun createPlayPauseAction(
         PendingIntent.getBroadcast(
             context,
             0,
-            Intent(ACTION_PLAY_PAUSE),
+            Intent(ACTION_PLAY_PAUSE).setPackage(context.packageName),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     return RemoteAction(icon, title, title, intent)

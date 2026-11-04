@@ -87,5 +87,6 @@ private fun TopNavFilterBar(
         options = allLists,
         onSelect = onChange,
         accountViewModel = accountViewModel,
+        filtersNotifications = true,
     )
 }

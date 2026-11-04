@@ -34,29 +34,27 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
+import com.vitorpamplona.amethyst.commons.notifications.NotificationDraft
+import com.vitorpamplona.amethyst.commons.notifications.composers.ChessNotificationComposer
+import com.vitorpamplona.amethyst.commons.notifications.composers.MentionNotificationComposer
+import com.vitorpamplona.amethyst.commons.notifications.composers.StandardNotificationComposer
 import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.auth.ScreenAuthAccount
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_challenge_accepted
 import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_your_turn
-import com.vitorpamplona.amethyst.commons.resources.app_notification_poll_channel_message
+import com.vitorpamplona.amethyst.commons.wot.curatedHidesByTrust
+import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
-import com.vitorpamplona.amethyst.service.notifications.renderers.ArticleNotification
-import com.vitorpamplona.amethyst.service.notifications.renderers.BadgeNotification
 import com.vitorpamplona.amethyst.service.notifications.renderers.BuzzDmNotification
-import com.vitorpamplona.amethyst.service.notifications.renderers.ChessNotification
-import com.vitorpamplona.amethyst.service.notifications.renderers.CodeNotification
 import com.vitorpamplona.amethyst.service.notifications.renderers.DirectMessageNotification
 import com.vitorpamplona.amethyst.service.notifications.renderers.GroupMessageNotification
-import com.vitorpamplona.amethyst.service.notifications.renderers.MediaNotification
-import com.vitorpamplona.amethyst.service.notifications.renderers.MentionNotification
-import com.vitorpamplona.amethyst.service.notifications.renderers.ReactionNotification
 import com.vitorpamplona.amethyst.service.notifications.renderers.ReplyNotification
-import com.vitorpamplona.amethyst.service.notifications.renderers.RepostNotification
-import com.vitorpamplona.amethyst.service.notifications.renderers.ZapNotification
-import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.ScreenAuthAccount
+import com.vitorpamplona.amethyst.service.notifications.renderers.StandardNotification
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
@@ -66,46 +64,28 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
-import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
-import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
-import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
-import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
-import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
-import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
-import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
-import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
-import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
-import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
-import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
-import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
-import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
-import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -230,6 +210,9 @@ class EventNotificationConsumer(
         // Don't push-notify events this account authored.
         if (event.pubKey == account.signer.pubKey) return
 
+        // A DM protocol turned off in Settings › Messages doesn't notify.
+        if (event is ChatroomKeyable && !account.chatFeedToggles.isEnabled(event)) return
+
         // Drop reactions/zaps/reposts whose target note lives on a muted thread, or in a
         // public chat the user has silenced (matches the in-app feed, which mutes all four).
         // Without the second check, muting a channel still let a like on your own message
@@ -246,6 +229,15 @@ class EventNotificationConsumer(
             }
         }
 
+        // Curated notifications apply the Web of Trust to push as well, with the in-app feed's
+        // exemptions (curatedHidesByTrust). A process just woken by this push may not have read
+        // the network index yet, so wait for it (tens of ms) before deciding.
+        if (account.settings.defaultNotificationFollowList.value is TopFilter.Selected) {
+            account.trustNetwork.awaitLoaded()
+            val inJoinedCommunity = LocalCache.getNoteIfExists(event)?.let { account.isConcordActivity(it) } == true
+            if (account.curatedHidesByTrust(event, inJoinedCommunity = inJoinedCommunity)) return
+        }
+
         when (event) {
             is EncryptedDmEvent -> DirectMessageNotification.notify(applicationContext, account, event)
             is ChatMessageEvent -> DirectMessageNotification.notify(applicationContext, account, event)
@@ -256,52 +248,26 @@ class EventNotificationConsumer(
             is StreamMessageV2Event -> BuzzDmNotification.notify(applicationContext, account, event)
             is ChatEvent -> BuzzDmNotification.notify(applicationContext, account, event)
 
-            is ZapReceiptEvent -> ZapNotification.notify(applicationContext, account, event)
-            is NutzapEvent -> ZapNotification.notify(applicationContext, account, event)
-            is OnchainZapEvent -> ZapNotification.notify(applicationContext, account, event)
-
-            is ReactionEvent -> ReactionNotification.notify(applicationContext, account, event)
-
-            is RepostEvent -> RepostNotification.notify(applicationContext, account, event)
-            is GenericRepostEvent -> RepostNotification.notify(applicationContext, account, event)
-
-            is BadgeAwardEvent -> BadgeNotification.notify(applicationContext, account, event)
-
             is TextNoteEvent -> notifyTextNote(event, account)
             is CommentEvent -> notifyComment(event, account)
             is ChannelMessageEvent -> notifyChannelMessage(event, account)
 
-            is PictureEvent,
-            is VideoNormalEvent,
-            is VideoShortEvent,
-            is AddressableNormalVideoEvent,
-            is AddressableShortVideoEvent,
-            -> MediaNotification.notify(applicationContext, account, event)
+            // NIP-64 chess is a debug-only feature for now; don't notify in release.
+            is LiveChessGameAcceptEvent -> if (isDebug) post(account, ChessNotificationComposer.compose(account, event, Res.string.app_notification_chess_challenge_accepted))
+            is LiveChessMoveEvent -> if (isDebug) post(account, ChessNotificationComposer.compose(account, event, Res.string.app_notification_chess_your_turn))
 
-            is PollEvent -> MentionNotification.notify(applicationContext, account, event, titleRes = Res.string.app_notification_poll_channel_message)
-
-            is HighlightEvent,
-            is LongFormContentEvent,
-            is WikiArticleEvent,
-            -> ArticleNotification.notify(applicationContext, account, event)
-
-            is GitIssueEvent -> CodeNotification.notify(applicationContext, account, event)
-            is GitPatchEvent -> CodeNotification.notify(applicationContext, account, event)
-            is GitPullRequestEvent -> CodeNotification.notify(applicationContext, account, event)
-            is GitPullRequestUpdateEvent -> CodeNotification.notify(applicationContext, account, event)
-            is GitReplyEvent -> CodeNotification.notify(applicationContext, account, event)
-            is GitStatusOpenEvent -> CodeNotification.notify(applicationContext, account, event)
-            is GitStatusAppliedEvent -> CodeNotification.notify(applicationContext, account, event)
-            is GitStatusClosedEvent -> CodeNotification.notify(applicationContext, account, event)
-            is GitStatusDraftEvent -> CodeNotification.notify(applicationContext, account, event)
-
-            is LiveChessGameAcceptEvent -> ChessNotification.notify(applicationContext, account, event, Res.string.app_notification_chess_challenge_accepted)
-            is LiveChessMoveEvent -> ChessNotification.notify(applicationContext, account, event, Res.string.app_notification_chess_your_turn)
+            // Zaps, reactions, reposts, badges, media, polls, articles and git.
+            else -> post(account, StandardNotificationComposer.compose(account, event))
         }
     }
 
+    private fun post(
+        account: Account,
+        draft: NotificationDraft?,
+    ) = StandardNotification.post(applicationContext, account, draft)
+
     // Reply-vs-mention decisions are source-kind-specific, so they stay in the
-    // dispatcher; the actual rendering is in ReplyNotification / MentionNotification.
+    // dispatcher; the actual rendering is in ReplyNotification / MentionNotificationComposer.
 
     private suspend fun notifyTextNote(
         event: TextNoteEvent,
@@ -316,7 +282,7 @@ class EventNotificationConsumer(
                 return
             }
         }
-        MentionNotification.notify(applicationContext, account, event)
+        post(account, MentionNotificationComposer.compose(account, event))
     }
 
     private suspend fun notifyComment(
@@ -354,7 +320,7 @@ class EventNotificationConsumer(
             val threadRoot = event.channelId() ?: event.id
             ReplyNotification.notify(applicationContext, account, event, parentNote, threadRoot)
         } else {
-            MentionNotification.notify(applicationContext, account, event)
+            post(account, MentionNotificationComposer.compose(account, event))
         }
     }
 
@@ -445,6 +411,8 @@ class EventNotificationConsumer(
         event: CallOfferEvent,
         account: Account,
     ) {
+        // Calls turned off in Settings (or with NIP-17, which carries them) never ring.
+        if (!account.chatFeedToggles.isCallingActive()) return
         if (!account.isFollowing(event.pubKey)) return
         if (TimeUtils.now() - event.createdAt > CallManager.MAX_EVENT_AGE_SECONDS) return
 
@@ -482,6 +450,7 @@ class EventNotificationConsumer(
                         val result = ImageLoader(applicationContext).execute(request)
                         (result.image?.asDrawable(applicationContext.resources) as? BitmapDrawable)?.bitmap
                     } catch (_: Exception) {
+                        currentCoroutineContext().ensureActive()
                         null
                     }
                 }

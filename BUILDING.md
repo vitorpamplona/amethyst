@@ -5,7 +5,7 @@ cut its own release: prerequisites, build commands, the CI release pipeline, the
 secrets it needs, the distribution channels, and one-time bootstrap steps.
 
 > **Amethyst maintainers:** the account-specific checklist for shipping the
-> official build (Play Console upload, Zapstore `zsp publish` with our nsec,
+> official build (Play Console upload, Zapstore `amy releases publish` with our nsec,
 > secret ownership) lives in [`RELEASE_OPS.md`](RELEASE_OPS.md). This
 > file stays fork-generic.
 
@@ -41,7 +41,12 @@ Platform-specific:
   package an arm64 MSI. Locally you *can* build one on an arm64 Windows box with
   WiX 3.x installed (jpackage produces host-native artifacts; the WiX 3 binaries
   themselves are x86 and run under emulation).
-- **Linux (all)**: nothing extra for `.deb`; `rpm` + `fakeroot` for `.rpm`;
+- **Linux (all)**: run Gradle on the **JetBrains Runtime 21** (the `jbrsdk`
+  build: `actions/setup-java` with `distribution: jetbrains`, or
+  `JAVA_HOME=/path/to/jbrsdk-21`). jpackage bundles the JDK Gradle runs on, and
+  only JBR's AWT can draw natively on Wayland; a package built on Temurin runs on
+  X11/XWayland only (see [Wayland and X11 on Linux](#wayland-and-x11-on-linux)).
+  Nothing extra for `.deb`; `rpm` + `fakeroot` for `.rpm`;
   `appimagetool` + `desktop-file-utils` for AppImage; `flatpak` +
   `flatpak-builder` for the Flatpak bundle (see
   [`desktopApp/packaging/flatpak/README.md`](desktopApp/packaging/flatpak/README.md))
@@ -147,7 +152,7 @@ either way; Studio/AGP fetches the pinned NDK on demand, or pre-install it with
 | Windows MSI | `./gradlew :desktopApp:packageReleaseMsi` | `desktopApp/build/compose/binaries/main-release/msi/Amethyst-*.msi` |
 | Linux `.deb` | `./gradlew :desktopApp:packageReleaseDeb` | `desktopApp/build/compose/binaries/main-release/deb/amethyst_*.deb` |
 | Linux `.rpm` | `./gradlew :desktopApp:packageReleaseRpm` | `desktopApp/build/compose/binaries/main-release/rpm/amethyst-*.rpm` |
-| Linux AppImage | `./gradlew :desktopApp:createReleaseAppImage` | `desktopApp/build/appimage/Amethyst-*-<arch>.AppImage` (x86_64 or aarch64, from host) |
+| Linux AppImage | `./gradlew :desktopApp:createReleaseAppImage` | `desktopApp/build/appimage/amethyst-desktop-*-<arch>.AppImage` (x86_64 or aarch64, from host), plus its `.zsync` when `zsyncmake` is installed |
 | Linux Flatpak | `flatpak-builder` over `createReleaseDistributable` output — see [`desktopApp/packaging/flatpak/README.md`](desktopApp/packaging/flatpak/README.md) | `desktopApp/build/flatpak/Amethyst-*-<arch>.flatpak` (CI; x86_64 or aarch64) |
 | Windows `.zip` portable | See below (inline `7z`) | — |
 | Linux `.tar.gz` portable | See below (inline `tar`) | — |
@@ -220,8 +225,9 @@ else. What makes that hold:
   for a fixed version + inputs, so the minified output is stable. Build with the
   same JDK 21 you see in `BUILDING.md` / CI.
 - **No build-time clock.** Nothing injects `System.currentTimeMillis()` /
-  build dates into `BuildConfig` (a Spotless rule bans the call in `quartz` and
-  `commons`), and AGP normalizes ZIP entry timestamps, so two builds an hour
+  build dates into `BuildConfig` (`verifyKmpPurity` bans the call in the shared
+  source sets of `commons` and `commonsUI`, and quartz keeps its own copy of that
+  gate), and AGP normalizes ZIP entry timestamps, so two builds an hour
   apart are identical.
 - **Deterministic version name.** `generateVersionName` only appends a branch
   suffix off feature branches; a release tag builds in detached-`HEAD` (or from a
@@ -339,8 +345,9 @@ tool fetched after explicit opt-in; it is never linked into shipped artifacts.
 
 ## Release runbook
 
-The release flow is driven by a tag push. Every cut ships Android + Desktop +
-Quartz library in one pipeline.
+The release flow is driven by a tag push. Every cut ships Android + Desktop in
+one pipeline. The Quartz library releases from its own repo
+([vitorpamplona/quartz](https://github.com/vitorpamplona/quartz)).
 
 1. **Bump the app version and Android `versionCode`** in
    `gradle/libs.versions.toml` (`appCode` is a monotonic integer — it must
@@ -451,10 +458,6 @@ provided automatically; everything else you set yourself.)
 | `KEY_ALIAS` | Keystore key alias | Same Android signing step |
 | `KEY_STORE_PASSWORD` | Keystore password | Same |
 | `KEY_PASSWORD` | Key password | Same |
-| `SONATYPE_USERNAME` | Maven Central (Sonatype) user token name | Publishing the `quartz` library |
-| `SONATYPE_PASSWORD` | Maven Central user token password | Same |
-| `SIGNING_PRIVATE_KEY` | **GPG/PGP** private key, ASCII-armored | Signs the Maven artifacts (Central requires it) |
-| `SIGNING_PASSWORD` | Passphrase for that GPG key | Same |
 | `MAC_CERTIFICATE_P12` | Base64 of your **Apple Developer ID Application** cert (`.p12`, includes the private key) | Signs the macOS desktop **DMG** and the macOS **amy** jlink tarball |
 | `MAC_CERTIFICATE_PASSWORD` | Password set when exporting the `.p12` | Imports the cert into the CI keychain |
 | `MAC_SIGN_IDENTITY` | Full identity string, e.g. `Developer ID Application: Your Name (TEAMID)` | The `codesign` identity to sign with |
@@ -465,11 +468,11 @@ provided automatically; everything else you set yourself.)
 | ~~`WINGET_TOKEN`~~ | *Not used.* The winget bump runs on a maintainer's machine — see § Winget | — |
 | `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Crowdin API creds | Translation sync (separate workflow, not the release) |
 
-Note the **three distinct signing identities** people often conflate:
-`SIGNING_KEY` + `KEY_*` is the **Android keystore**; `SIGNING_PRIVATE_KEY` +
-`SIGNING_PASSWORD` is the **GPG key** for Maven Central; `MAC_CERTIFICATE_*` +
+Note the **two distinct signing identities** people often conflate:
+`SIGNING_KEY` + `KEY_*` is the **Android keystore**; `MAC_CERTIFICATE_*` +
 `MAC_SIGN_IDENTITY` + `MAC_NOTARY_*` is the **Apple Developer ID** for the macOS
-desktop DMG. They are unrelated — each comes from a different authority.
+desktop DMG. They are unrelated — each comes from a different authority. (The GPG
+key that signs Maven artifacts belongs to the library repos, not this one.)
 
 The macOS signing secrets are **optional**: if `MAC_CERTIFICATE_P12` is unset
 the release workflow still builds the DMG **and** the macOS `amy` tarball, just
@@ -516,10 +519,6 @@ keytool -genkey -v -keystore upload.jks -keyalg RSA -keysize 2048 \
   -validity 10000 -alias upload          # creates the keystore (once)
 base64 -i upload.jks | tr -d '\n'        # paste output into SIGNING_KEY
 
-# GPG key → armored private key for SIGNING_PRIVATE_KEY
-gpg --full-generate-key                  # create the key (once)
-gpg --armor --export-secret-keys <KEY_ID>   # paste output into SIGNING_PRIVATE_KEY
-
 # Apple Developer ID Application cert → base64 for MAC_CERTIFICATE_P12.
 # In Keychain Access, export the "Developer ID Application: ..." cert (with its
 # private key) as a .p12, setting an export password (-> MAC_CERTIFICATE_PASSWORD).
@@ -529,10 +528,9 @@ security find-identity -v -p codesigning  # shows the exact MAC_SIGN_IDENTITY st
 # (Sign-In and Security -> App-Specific Passwords), NOT your Apple ID login.
 ```
 
-`SONATYPE_USERNAME`/`SONATYPE_PASSWORD` are a **user token** from
-<https://central.sonatype.com> (Account → Generate User Token), not your login.
-A fork that doesn't publish a library can drop the `Publish Quartz Lib` step and
-the four Sonatype/GPG secrets.
+Publishing to Maven Central (the Sonatype and GPG secrets) is set up in each library
+repo's `create-release.yml` (quartz, crypto-kmp, mls-kmp, marmot-kmp, cordn-kmp,
+quic-kmp), not here.
 
 ---
 
@@ -545,10 +543,9 @@ distributes; the official Amethyst rollout for each is in
 | Channel | How it ships | Push or pull |
 |---|---|---|
 | **GitHub Releases** | The release workflow builds + signs all assets and attaches them to the tag's Release | Automatic (CI) |
-| **Maven Central** | Same workflow runs `publishAllPublicationsToMavenCentral` for `quartz` — a *step* at the end of the `deploy-android` job, not a job of its own, so it does not appear in a job list | Automatic (CI) |
 | **Google Play** | Download the signed `amethyst-googleplay-<version>.aab` from the GH Release and upload it in Play Console | **Manual push** |
 | **F-Droid** | F-Droid's build server detects the new tag and **builds the `fdroid` flavor from source** per its recipe in the external [`fdroiddata`](https://gitlab.com/fdroid/fdroiddata) repo, then signs + publishes itself | **Pull (build-from-source)** |
-| **Zapstore** | The [`zsp`](https://zapstore.dev/) CLI reads [`zapstore.yaml`](zapstore.yaml) and publishes a Nostr software-release event signed with the app's nsec | **Manual push (Nostr)** |
+| **Zapstore** | `amy releases publish` reads [`zapstore.yaml`](zapstore.yaml), as the [`zsp`](https://github.com/zapstore/zsp) CLI did, and publishes the APK's Nostr software-release events signed with the app's nsec | **Manual push (Nostr)** |
 | **Homebrew + Winget** | `bump-homebrew.yml` / `bump-winget.yml` open version-bump PRs on stable tags — **currently no-ops**: neither package has been bootstrapped upstream yet (§ Bootstrap) | Automatic (CI), inactive |
 
 Two channels need the build to stay split into product flavors (see
@@ -623,7 +620,7 @@ So the split is:
   PR, and fails if the sha256 in it differs from ours. No token is needed:
 
 ```bash
-scripts/bump-homebrew-cask.sh v1.17.0     # verify only; re-run if the PR is not open yet
+scripts/bump-homebrew-cask.sh v1.20.0     # verify only; re-run if the PR is not open yet
 ```
 
 Only if the cask is ever taken off autobump does the script call
@@ -632,7 +629,7 @@ shell:
 
 ```bash
 export HOMEBREW_GITHUB_API_TOKEN=ghp_...   # classic PAT, `repo` scope
-scripts/bump-homebrew-cask.sh v1.17.0
+scripts/bump-homebrew-cask.sh v1.20.0
 ```
 
 Create one at
@@ -648,7 +645,7 @@ Same split, and it needs **no token at all**. `scripts/bump-winget.sh` drives
 runs fine from macOS or Linux:
 
 ```bash
-scripts/bump-winget.sh v1.16.0
+scripts/bump-winget.sh v1.20.0
 ```
 
 CI (`bump-winget.yml`, `GITHUB_TOKEN` only) does the bookkeeping: downloads the
@@ -780,16 +777,75 @@ bypasses the UI dialog after accepting the installer's inherent trust.
 ### Linux AppImage won't execute
 
 ```bash
-chmod +x Amethyst-*.AppImage
-./Amethyst-*.AppImage
+chmod +x amethyst-desktop-*.AppImage
+./amethyst-desktop-*.AppImage
 ```
 
 On Fedora Silverblue / very minimal distros, FUSE might be missing. Use
 `--appimage-extract-and-run`:
 
 ```bash
-./Amethyst-*.AppImage --appimage-extract-and-run
+./amethyst-desktop-*.AppImage --appimage-extract-and-run
 ```
+
+---
+
+## Wayland and X11 on Linux
+
+Every Linux package (`.deb`, `.rpm`, AppImage, tar.gz, Flatpak) draws natively
+on Wayland, with no XWayland, and through X11 on an X11 session. Two pieces
+make that work:
+
+- **The runtime.** The packages bundle the JetBrains Runtime instead of
+  Temurin: stock OpenJDK's AWT only speaks X11, while JBR's has a Wayland
+  toolkit (`WLToolkit`). Release CI builds the Linux legs on it and fails a
+  build whose runtime lacks `lib/libawt_wlawt.so`.
+- **The window.** On a Wayland session (`$WAYLAND_DISPLAY` names a live
+  socket) the app starts AWT on `WLToolkit` before anything else
+  (`desktopApp/.../platform/WaylandDisplay.kt`). Compose's own window can't
+  draw there (Skiko's window surface needs an X11 handle), so the windows are
+  Swing frames with a Compose panel that draws through Swing, with Skiko's CPU
+  renderer (`AppWindow.kt`). On X11, macOS and Windows nothing changes.
+
+The title bar on Wayland: where the compositor draws window decorations (KDE,
+sway, labwc, Hyprland, COSMIC, niri) the app uses them, so it gets the same
+title bar as every other app there. GNOME draws none, so JBR draws a GTK title
+bar, which follows the desktop's light/dark setting. That is deliberate: JBR
+has no API to draw into the title bar on Wayland (as the app does on macOS),
+and an app-drawn bar would lose GNOME's window menu and button layout.
+`-Dsun.awt.wl.WindowDecorationStyle=builtin|gtk|server` overrides the choice.
+
+Set `AMETHYST_X11=1` to keep a Wayland session on XWayland (the Flatpak also
+needs `--socket=x11` for that). `./gradlew :desktopApp:run` on a stock JDK runs
+on X11/XWayland; run it on JBR to try the Wayland path.
+`scripts/wayland-smoke-test.sh <launcher>` starts a packaged app on a headless
+sway with Xwayland turned off and passes only if it opens a native Wayland
+window (needs `sway`).
+
+---
+
+## Video and audio on Linux
+
+The desktop player decodes through the system's GStreamer. The released `.deb`
+and `.rpm` depend on the plugins it needs (base and good, plus the H.264/AAC
+decoders as a recommended package), so the package manager installs them. The
+`.rpm` gets them from `packageRpm` itself; the `.deb` from
+`scripts/add-deb-gstreamer-deps.sh`, which CI runs after `packageDeb`, so run
+it yourself on a `.deb` you build locally. The AppImage, the tar.gz and
+`./gradlew :desktopApp:run` cannot declare dependencies: without the plugins,
+every video shows "Can't play this video — Failed to create native player".
+Install them with:
+
+```bash
+# Debian / Ubuntu
+sudo apt install gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav
+# Fedora (its libav plugin is built on ffmpeg-free, which can lack H.264; openh264 covers it)
+sudo dnf install gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugin-libav gstreamer1-plugin-openh264
+# openSUSE
+sudo zypper install gstreamer-plugins-base gstreamer-plugins-good gstreamer-plugins-libav
+```
+
+The app reads the plugin list at start, so restart it after installing.
 
 ---
 
@@ -801,9 +857,45 @@ expose downgrade migration risks — **prefer a single install channel per
 machine**.
 
 **Exception: Flatpak.** The sandbox redirects XDG dirs into
-`~/.var/app/com.vitorpamplona.amethyst.Desktop/`, so a Flatpak install keeps
+`~/.var/app/com.vitorpamplona.amethyst.Amethyst/` (the manifest persists `~/.amethyst`
+and `~/.java` there too), so a Flatpak install keeps
 its own separate state and does not see (or risk downgrading) state written
 by any other channel.
+
+**Flatpak app ID changes.** The bundle is now
+`com.vitorpamplona.amethyst.Amethyst`. Each earlier ID installs as a separate
+app with its own `~/.var/app/<id>/`:
+
+- **v1.18.0, `com.vitorpamplona.amethyst`.** It kept accounts, drafts and
+  settings in `~/.var/app/com.vitorpamplona.amethyst/`. Without a system
+  keyring, the private keys are there too: the password key file lives under
+  the sandbox's `XDG_DATA_HOME` (`data/amethyst/`). Move the whole directory to
+  the new ID, then remove the old app *without* `--delete-data`:
+
+  ```bash
+  flatpak kill com.vitorpamplona.amethyst 2>/dev/null
+  flatpak kill com.vitorpamplona.amethyst.Amethyst 2>/dev/null
+  mv -T ~/.var/app/com.vitorpamplona.amethyst ~/.var/app/com.vitorpamplona.amethyst.Amethyst
+  flatpak uninstall com.vitorpamplona.amethyst
+  ```
+
+  `mv -T` refuses to merge into a directory that is not empty, instead of
+  nesting the old one inside it. If it fails with "Directory not empty", the
+  new app has already run once. If you have not logged in to it yet, delete its
+  fresh directory (`rm -r ~/.var/app/com.vitorpamplona.amethyst.Amethyst`) and
+  run the `mv` again.
+
+  Until the old app is removed, the menu shows two "Amethyst" entries: the
+  single-file bundle has no remote, so flatpak cannot replace one ID with the
+  other on its own.
+
+- **Up to v1.17.0, `com.vitorpamplona.amethyst.Desktop`** (Flathub forbids IDs
+  ending in `.desktop`). There is no data worth moving: that bundle did not
+  persist `~/.amethyst` or `~/.java`, so it lost its accounts, drafts and
+  settings on every restart, and what it did keep (Tor state, image cache) is
+  rebuilt on demand. Remove it with
+  `flatpak uninstall --delete-data com.vitorpamplona.amethyst.Desktop` and log
+  in again in the new one.
 
 | OS | App location | State directories |
 |---|---|---|
@@ -811,7 +903,7 @@ by any other channel.
 | Windows | `%LOCALAPPDATA%\Amethyst` or `C:\Program Files\Amethyst` | `%APPDATA%\Amethyst`<br>`%LOCALAPPDATA%\Amethyst` |
 | Linux (deb/rpm) | `/opt/amethyst` | `~/.config/amethyst`<br>`~/.local/share/amethyst`<br>`~/.cache/amethyst` |
 | Linux (AppImage/tar.gz) | user-chosen | Same as above |
-| Linux (Flatpak) | `/var/lib/flatpak` or `~/.local/share/flatpak` | `~/.var/app/com.vitorpamplona.amethyst.Desktop/` |
+| Linux (Flatpak) | `/var/lib/flatpak` or `~/.local/share/flatpak` | `~/.var/app/com.vitorpamplona.amethyst.Amethyst/` |
 
 **macOS preferences are in a SHARED file.** `DesktopPreferences` uses the Java
 Preferences API, which on macOS writes into
@@ -827,7 +919,7 @@ Uninstall:
 - .deb: `sudo apt remove amethyst`
 - .rpm: `sudo dnf remove amethyst`
 - AppImage / tar.gz: delete the file / extracted directory
-- Flatpak: `flatpak uninstall com.vitorpamplona.amethyst.Desktop` (add
+- Flatpak: `flatpak uninstall com.vitorpamplona.amethyst.Amethyst` (add
   `--delete-data` to also remove `~/.var/app/…`)
 - macOS `.dmg`: drag from `/Applications` to Trash, then delete state dirs manually
 
@@ -929,4 +1021,4 @@ internal policy.
 
 - **AUR** (`amethyst-desktop-bin`) — blocked on AUR account ownership decision
 - **Scoop** (Windows) — blocked on bucket strategy (own vs Extras)
-- **Flathub** — deferred (moderate ongoing maintenance)
+- **Flathub** — source-build manifest in `desktopApp/packaging/flatpak/flathub/`, not submitted (see its README section for what is left)

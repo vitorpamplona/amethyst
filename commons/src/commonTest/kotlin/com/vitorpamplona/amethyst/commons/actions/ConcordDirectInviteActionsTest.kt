@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.actions
 
 import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteDraft
 import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteSendResult
+import com.vitorpamplona.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
@@ -32,7 +33,6 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleScope
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
-import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair

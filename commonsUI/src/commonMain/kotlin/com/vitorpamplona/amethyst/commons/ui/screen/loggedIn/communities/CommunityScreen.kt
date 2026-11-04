@@ -42,6 +42,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.communities.dal.CommunityFeedViewModel
+import com.vitorpamplona.amethyst.commons.communities.dal.CommunityModerationFeedViewModel
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.relayClient.communities.CommunityFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -62,8 +64,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.LongCommunityHeader
 import com.vitorpamplona.amethyst.commons.ui.note.types.ShortCommunityActionOptions
 import com.vitorpamplona.amethyst.commons.ui.note.types.ShortCommunityHeaderNoActions
 import com.vitorpamplona.amethyst.commons.ui.screen.RefresheableFeedView
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.dal.CommunityFeedViewModel
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.dal.CommunityModerationFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight

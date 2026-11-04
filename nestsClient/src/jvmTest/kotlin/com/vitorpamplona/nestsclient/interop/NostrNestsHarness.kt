@@ -30,7 +30,7 @@ import java.nio.file.Path
  * `:nestsClient`'s production code can be exercised end-to-end against
  * the reference server (https://github.com/nostrnests/nests).
  *
- * Mirrors the pattern used by `:quic`'s `InteropRunner` against aioquic:
+ * Mirrors the pattern used by quic-kmp's `InteropRunner` against aioquic:
  *
  *   - opt-in via `-DnestsInterop=true` system property; default test runs
  *     skip via `assumeNestsInterop()` so CI without Docker stays green

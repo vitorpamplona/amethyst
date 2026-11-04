@@ -20,32 +20,24 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.platform
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
+import com.vitorpamplona.amethyst.commons.cartridges.CartDetector
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
-import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
+import com.vitorpamplona.amethyst.commons.ui.cartridges.CartPlayOverlay
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
-import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonCallbacks
-import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonConfig
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
-import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size18dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
@@ -57,6 +49,15 @@ import okio.Path
 // Call-site shims for [NotePlatform]: the same names and defaults the app's own composables have,
 // so shared note code reads as it did and only its imports point here.
 
+/**
+ * The platform's media view, with a Play button on top when the image is a game cartridge.
+ *
+ * Encrypted chat attachments (NIP-17 files, Marmot and Cordn media) qualify too: their chat view
+ * puts the key in the account's `EncryptionKeyCache`, and the image HTTP client the player
+ * downloads with decrypts in flight, so the cart arrives as plaintext with its plaintext hash. A
+ * `blossom:` URI works too: the cache finds the key again by the blob's sha256 once the URI
+ * resolves to a server URL.
+ */
 @Composable
 fun ZoomableContentView(
     content: BaseMediaContent,
@@ -64,27 +65,53 @@ fun ZoomableContentView(
     roundedCorner: Boolean,
     contentScale: ContentScale,
     accountViewModel: AccountViewModel,
-) = LocalNotePlatform.current.ZoomableContentView(
-    content = content,
-    images = images,
-    roundedCorner = roundedCorner,
-    contentScale = contentScale,
-    accountViewModel = accountViewModel,
-)
+) {
+    val platform = LocalNotePlatform.current
+    if (content is MediaUrlImage && CartDetector.mightBeCart(content.url, content.mimeType, content.dim)) {
+        Box {
+            platform.ZoomableContentView(content, images, roundedCorner, contentScale, accountViewModel)
+            CartPlayOverlay(content, accountViewModel, Modifier.matchParentSize())
+        }
+    } else {
+        platform.ZoomableContentView(content, images, roundedCorner, contentScale, accountViewModel)
+    }
+}
+
+@Composable
+fun PdfViewerDialog(
+    content: MediaUrlPdf,
+    onDismiss: () -> Unit,
+    accountViewModel: AccountViewModel,
+) = LocalNotePlatform.current.PdfViewerDialog(content, onDismiss, accountViewModel)
 
 @Composable
 fun ZoomableImageDialog(
     imageUrl: BaseMediaContent,
     allImages: ImmutableList<BaseMediaContent> = remember(imageUrl) { persistentListOf(imageUrl) },
-    sourceBounds: Rect? = null,
+    source: ZoomSourceAnchor? = null,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) = LocalNotePlatform.current.ZoomableImageDialog(
     imageUrl = imageUrl,
     allImages = allImages,
-    sourceBounds = sourceBounds,
+    source = source,
     onDismiss = onDismiss,
     accountViewModel = accountViewModel,
+)
+
+@Composable
+fun AnimatedImage(
+    url: String,
+    contentDescription: String?,
+    contentScale: ContentScale,
+    modifier: Modifier,
+    onError: () -> Unit,
+) = LocalNotePlatform.current.AnimatedImage(
+    url = url,
+    contentDescription = contentDescription,
+    contentScale = contentScale,
+    modifier = modifier,
+    onError = onError,
 )
 
 @Composable
@@ -193,33 +220,41 @@ fun LoadCityName(
 )
 
 @Composable
-fun RenderAudioTrack(
+fun MusicTrackAudioPlayer(
+    audioUrl: String,
+    mimeType: String?,
+    title: String?,
     note: Note,
-    contentScale: ContentScale,
+    borderModifier: Modifier,
     accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderAudioTrack(
+) = LocalNotePlatform.current.MusicTrackAudioPlayer(
+    audioUrl = audioUrl,
+    mimeType = mimeType,
+    title = title,
     note = note,
-    contentScale = contentScale,
+    borderModifier = borderModifier,
     accountViewModel = accountViewModel,
-    nav = nav,
 )
 
 @Composable
-fun RenderMusicTrack(
+fun NoteMediaView(
+    mediaUri: String,
+    isAudio: Boolean?,
+    title: String?,
+    coverUri: String?,
+    waveform: WaveformData?,
+    contentScale: ContentScale,
     note: Note,
-    makeItShort: Boolean,
-    canPreview: Boolean,
-    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderMusicTrack(
+) = LocalNotePlatform.current.NoteMediaView(
+    mediaUri = mediaUri,
+    isAudio = isAudio,
+    title = title,
+    coverUri = coverUri,
+    waveform = waveform,
+    contentScale = contentScale,
     note = note,
-    makeItShort = makeItShort,
-    canPreview = canPreview,
-    backgroundColor = backgroundColor,
     accountViewModel = accountViewModel,
-    nav = nav,
 )
 
 @Composable
@@ -240,26 +275,13 @@ fun PodcastEpisodeAudioPlayer(
 )
 
 @Composable
-fun RenderVoiceTrack(
-    note: Note,
+fun RenderAudioPlayer(
+    mediaUrl: String,
+    title: String?,
+    mimeType: String?,
+    waveform: WaveformData?,
     accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderVoiceTrack(
-    note = note,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderAudioFromIMeta(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderAudioFromIMeta(
-    note = note,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
+) = LocalNotePlatform.current.RenderAudioPlayer(mediaUrl, title, mimeType, waveform, accountViewModel)
 
 @Composable
 fun RenderAudioWithWaveform(
@@ -276,45 +298,6 @@ fun RenderAudioWithWaveform(
     mimeType = mimeType,
     waveform = waveform,
     note = note,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderChessGame(
-    note: Note,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderChessGame(
-    note = note,
-    backgroundColor = backgroundColor,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderLiveChessChallenge(
-    note: Note,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderLiveChessChallenge(
-    note = note,
-    backgroundColor = backgroundColor,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderLiveChessGameEnd(
-    note: Note,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderLiveChessGameEnd(
-    note = note,
-    backgroundColor = backgroundColor,
     accountViewModel = accountViewModel,
     nav = nav,
 )
@@ -406,171 +389,6 @@ fun RenderGitPullRequestUpdateEvent(
     nav = nav,
 )
 
-@Composable
-fun RenderCalendarRSVPEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderCalendarRSVPEvent(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderMeetingSpaceEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderMeetingSpaceEvent(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderMeetingRoomEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderMeetingRoomEvent(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderMeetingRoomPresence(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderMeetingRoomPresence(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderRootNappletEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderRootNappletEvent(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderNamedNappletEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderNamedNappletEvent(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderRootSiteEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderRootSiteEvent(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderNamedSiteEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderNamedSiteEvent(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun ReactionsRow(
-    baseNote: Note,
-    showReactionDetail: Boolean,
-    addPadding: Boolean,
-    editState: State<GenericLoadable<EditState>>?,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.ReactionsRow(
-    baseNote = baseNote,
-    showReactionDetail = showReactionDetail,
-    addPadding = addPadding,
-    editState = editState,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun LikeReaction(
-    baseNote: Note,
-    grayTint: Color,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    iconSize: Dp = Size18dp,
-    heartSizeModifier: Modifier = Size18Modifier,
-    iconFontSize: TextUnit = Font14SP,
-    showCounter: Boolean = true,
-) = LocalNotePlatform.current.LikeReaction(
-    baseNote = baseNote,
-    grayTint = grayTint,
-    accountViewModel = accountViewModel,
-    nav = nav,
-    iconSize = iconSize,
-    heartSizeModifier = heartSizeModifier,
-    iconFontSize = iconFontSize,
-    showCounter = showCounter,
-)
-
-@Composable
-fun ZapReaction(
-    baseNote: Note,
-    grayTint: Color,
-    accountViewModel: AccountViewModel,
-    iconSize: Dp = Size20dp,
-    iconSizeModifier: Modifier = Size20Modifier,
-    animationModifier: Modifier = Size14Modifier,
-    showCounter: Boolean = true,
-    nav: INav,
-) = LocalNotePlatform.current.ZapReaction(
-    baseNote = baseNote,
-    grayTint = grayTint,
-    accountViewModel = accountViewModel,
-    iconSize = iconSize,
-    iconSizeModifier = iconSizeModifier,
-    animationModifier = animationModifier,
-    showCounter = showCounter,
-    nav = nav,
-)
-
-@Composable
-fun ReusableZapButton(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    config: ZapButtonConfig = ZapButtonConfig(),
-    callbacks: ZapButtonCallbacks = ZapButtonCallbacks(),
-) = LocalNotePlatform.current.ReusableZapButton(baseNote, accountViewModel, nav, config, callbacks)
-
-@Composable
-fun QuickZapAmountRow(
-    note: Note,
-    onDismiss: () -> Unit,
-    onOnchainRequest: (Long?) -> Unit,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.QuickZapAmountRow(note, onDismiss, onOnchainRequest, accountViewModel, nav)
-
 /** The longest voice message the recorder allows, in seconds. */
 const val MAX_VOICE_RECORD_SECONDS = 600
 
@@ -579,6 +397,14 @@ fun RecordVoiceButton(
     onVoiceTaken: (RecordingResult) -> Unit,
     maxDurationSeconds: Int? = null,
 ) = LocalNotePlatform.current.RecordVoiceButton(onVoiceTaken, maxDurationSeconds)
+
+@Composable
+fun RecordAudioBox(
+    modifier: Modifier = Modifier,
+    onRecordTaken: (RecordingResult) -> Unit,
+    maxDurationSeconds: Int? = null,
+    content: @Composable (isRecording: Boolean, elapsedSeconds: Int, onStop: () -> Unit) -> Unit,
+) = LocalNotePlatform.current.RecordAudioBox(modifier, onRecordTaken, maxDurationSeconds, content)
 
 @Composable
 fun VoiceMessagePreview(
@@ -591,30 +417,7 @@ fun VoiceMessagePreview(
 ) = LocalNotePlatform.current.VoiceMessagePreview(voiceMetadata, localFile, onRemove, onReRecord, isUploading, modifier)
 
 @Composable
-fun EditPostView(
-    onClose: () -> Unit,
-    edit: Note,
-    versionLookingAt: Note?,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.EditPostView(
-    onClose = onClose,
-    edit = edit,
-    versionLookingAt = versionLookingAt,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
 fun rememberUrlPreviewState(
     url: String,
     accountViewModel: AccountViewModel,
 ): UrlPreviewState = LocalNotePlatform.current.rememberUrlPreviewState(url, accountViewModel)
-
-@Composable
-fun RenderAudioHeader(
-    note: Note,
-    contentScale: ContentScale,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderAudioHeader(note, contentScale, accountViewModel, nav)

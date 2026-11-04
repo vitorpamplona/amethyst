@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.Aut
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
+import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -75,6 +76,10 @@ class NoteFeedFlow(
 
             is StarterPackEvent -> {
                 AuthorsByOutboxTopNavFilter(noteEvent.followIdSet(), blockedRelays)
+            }
+
+            is DrssFeedListEvent -> {
+                AuthorsByOutboxTopNavFilter(noteEvent.feedKeys().toSet(), blockedRelays)
             }
 
             is CommunityListEvent -> {
@@ -122,6 +127,10 @@ class NoteFeedFlow(
 
             is StarterPackEvent -> {
                 emit(AuthorsByOutboxTopNavFilter(noteEvent.followIdSet(), blockedRelays))
+            }
+
+            is DrssFeedListEvent -> {
+                emit(AuthorsByOutboxTopNavFilter(noteEvent.feedKeys().toSet(), blockedRelays))
             }
 
             is CommunityListEvent -> {
@@ -176,6 +185,10 @@ class NoteFeedFlow(
                 AuthorsByProxyTopNavFilter(noteEvent.followIdSet(), proxyRelays)
             }
 
+            is DrssFeedListEvent -> {
+                AuthorsByProxyTopNavFilter(noteEvent.feedKeys().toSet(), proxyRelays)
+            }
+
             is CommunityListEvent -> {
                 AllCommunitiesTopNavFilter(caches.communityListCache.cachedCommunityIdSet(noteEvent), blockedRelays)
             }
@@ -221,6 +234,10 @@ class NoteFeedFlow(
 
             is StarterPackEvent -> {
                 emit(AuthorsByProxyTopNavFilter(noteEvent.followIdSet(), proxyRelays))
+            }
+
+            is DrssFeedListEvent -> {
+                emit(AuthorsByProxyTopNavFilter(noteEvent.feedKeys().toSet(), proxyRelays))
             }
 
             is CommunityListEvent -> {

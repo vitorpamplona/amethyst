@@ -40,6 +40,7 @@ import kotlinx.coroutines.yield
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 @OptIn(UnstableApi::class)
 class ExoPlayerPool(
@@ -48,9 +49,13 @@ class ExoPlayerPool(
     // Requested ceiling on paused-with-buffer players retained across releases. Each retained
     // player keeps its decoder and LoadControl buffer alive, which costs both memory and a
     // MediaCodec instance, so warm slots count against the same [poolSize] codec budget as
-    // cold players (see [warmSlotsCap]). Default 3 keeps the most recent few feed videos hot
-    // for scroll-back without monopolizing the device's decoder pool.
-    requestedWarmSlots: Int = DEFAULT_WARM_SLOTS,
+    // cold players (see [warmSlotsCap]). [warmSlotsFor] sizes it for the device.
+    requestedWarmSlots: Int = MIN_WARM_SLOTS,
+    // How short of memory the device is right now. Asked on the main thread each time a player
+    // would go warm, so it must not block (see MemoryPressure). The system only trims a backgrounded
+    // app (API 34+ delivers no foreground trim level), so this is what keeps a scrolling feed from
+    // holding warm decoders while the device runs out.
+    private val memoryLevel: () -> MemoryPressure.Level = { MemoryPressure.Level.NORMAL },
 ) {
     // Cap warm slots at poolSize-1 so there's always at least one slot available for a cold
     // (cleared) player; otherwise a feed full of unique URIs would starve the cold pool and
@@ -69,6 +74,8 @@ class ExoPlayerPool(
     private data class WarmPlayer(
         val mediaId: String,
         val player: ExoPlayer,
+        // When it went warm, across every pool, so the oldest of both pools can be found.
+        val order: Long = warmOrder.incrementAndGet(),
     )
 
     private val warmPool = ArrayDeque<WarmPlayer>(warmSlotsCap.coerceAtLeast(1))
@@ -247,19 +254,29 @@ class ExoPlayerPool(
                 return@withLock
             }
 
+            // Each warm player holds a decoder and its frame buffers (~30 MB measured), so the cache
+            // shrinks with free memory: the old three slots when it is getting tight, none when the
+            // system says it is low, counted across both pools. Above it the oldest warm player goes cold, one per
+            // release: stop() releases a hardware decoder on this (main) thread, and dropping the
+            // whole cache at once would stall it just when the device is struggling.
+            val cap = warmCapFor(memoryLevel(), warmSlotsCap)
+
             val mediaId = player.currentMediaItem?.mediaId
-            if (mediaId != null && warmSlotsCap > 0) {
+            if (mediaId != null && cap > 0) {
                 // Warm path: keep the player paused but loaded so a quick scroll-back to the
                 // same video resumes from the existing buffer instead of re-fetching from disk
                 // cache and re-priming the decoder.
                 player.pause()
-                val evicted = pushWarm(mediaId, player)
+                val evicted = pushWarm(mediaId, player, cap)
                 if (evicted != null) {
                     Log.d("PlaybackService") { "ExoPlayerPool warm evict: ${evicted.mediaId}" }
                     demoteToCold(evicted.player)
                 }
+                shedOneWarmAbove(cap)
                 return@withLock
             }
+
+            shedOneWarmAbove(cap)
 
             demoteToCold(player)
         }
@@ -268,6 +285,7 @@ class ExoPlayerPool(
     private fun pushWarm(
         mediaId: String,
         player: ExoPlayer,
+        cap: Int,
     ): WarmPlayer? =
         synchronized(warmPoolLock) {
             // If the same URI is already warm (rare — duplicate VideoView in another scroller),
@@ -276,7 +294,7 @@ class ExoPlayerPool(
             val displaced =
                 if (duplicate >= 0) {
                     warmPool.removeAt(duplicate)
-                } else if (warmPool.size >= warmSlotsCap) {
+                } else if (warmPool.size >= cap) {
                     warmPool.removeFirst()
                 } else {
                     null
@@ -284,6 +302,23 @@ class ExoPlayerPool(
             warmPool.addLast(WarmPlayer(mediaId, player))
             displaced
         }
+
+    /**
+     * Sends the oldest warm player of any pool cold when all pools together hold more than [cap];
+     * at most one per call. The cap is for the whole process: the direct and Tor pools each keep a
+     * warm cache, and a feed that mixes both routes would otherwise hold twice what RAM allows.
+     */
+    private fun shedOneWarmAbove(cap: Int) {
+        if (livePools.sumOf { it.warmCount() } <= cap) return
+        val pool = livePools.minByOrNull { it.oldestWarmOrder() ?: Long.MAX_VALUE } ?: return
+        val oldest = synchronized(pool.warmPoolLock) { pool.warmPool.removeFirstOrNull() } ?: return
+        Log.d("PlaybackService") { "ExoPlayerPool warm budget evict: ${oldest.mediaId} (cap $cap)" }
+        pool.demoteToCold(oldest.player)
+    }
+
+    private fun warmCount() = synchronized(warmPoolLock) { warmPool.size }
+
+    private fun oldestWarmOrder() = synchronized(warmPoolLock) { warmPool.firstOrNull()?.order }
 
     private fun demoteToCold(player: ExoPlayer) {
         if (player.isReleased) return
@@ -368,7 +403,60 @@ class ExoPlayerPool(
     }
 
     companion object {
-        private const val DEFAULT_WARM_SLOTS = 3
+        // What the pool kept before it was sized by the device, and its floor.
+        private const val MIN_WARM_SLOTS = 3
+
+        // Decoders kept out of the warm cache for the players in use: the videos on screen plus
+        // the card the feed prepares ahead of the viewport.
+        private const val DECODERS_IN_USE = 4
+
+        private const val GIB = 1024L * 1024 * 1024
+
+        /**
+         * How many released players to keep paused with their buffer, for a device with [poolSize]
+         * decoders and [totalRamBytes] of RAM.
+         *
+         * A feed hands a player back as soon as its card scrolls off, and with three slots a video
+         * was dropped a few cards later: scrolling back, or a card prepared ahead that left and came
+         * back, loaded it from nothing again. Every slot more saves one of those, but a warm player
+         * keeps its decoder and that decoder's frame buffers: about 30 MB each on an SM-T220
+         * (3 GB), measured as the Graphics line of `dumpsys meminfo` climbing from 221 MB at 8
+         * decoders to ~470 MB at 16, while the device's MemAvailable fell from ~650 MB to ~260 MB.
+         * So RAM, not the decoder count, sets the size; the decoder budget only caps it. Only the
+         * 3 GB tier was measured, so the larger ones stay modest, and `memoryLevel` shrinks the
+         * cache when the device runs short.
+         */
+        fun warmSlotsFor(
+            poolSize: Int,
+            totalRamBytes: Long,
+        ): Int {
+            val byRam =
+                when {
+                    totalRamBytes <= 0L -> MIN_WARM_SLOTS
+                    totalRamBytes < 4 * GIB -> 4
+                    totalRamBytes < 8 * GIB -> 5
+                    else -> 6
+                }
+            return byRam.coerceAtMost(poolSize - DECODERS_IN_USE).coerceAtLeast(MIN_WARM_SLOTS)
+        }
+
+        /**
+         * The warm players to keep across all pools at memory [level], for a pool sized to
+         * [warmSlots]: all of them while memory is fine, the old three when it is getting tight,
+         * none when the system says it is low.
+         */
+        fun warmCapFor(
+            level: MemoryPressure.Level,
+            warmSlots: Int,
+        ): Int =
+            when (level) {
+                MemoryPressure.Level.NORMAL -> warmSlots
+                MemoryPressure.Level.TIGHT -> warmSlots.coerceAtMost(MIN_WARM_SLOTS)
+                MemoryPressure.Level.LOW -> 0
+            }
+
+        // Orders warm players across pools (see WarmPlayer.order).
+        private val warmOrder = AtomicLong(0)
 
         // MediaCodec instances are a per-process resource, but PlaybackService builds one pool for
         // direct traffic and another for Tor-proxied traffic, so a per-pool budget would let the

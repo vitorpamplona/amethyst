@@ -36,7 +36,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.action_cancel
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_archive
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_archive_confirm
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_edit
@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_owner_lock_ftf_expl
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_no_finders
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_qr_warning
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_show_qr
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -67,6 +68,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nipCCGeocaching.firstToFind.FirstToFindResolver
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingRevision
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.launch
 
 /**
@@ -155,7 +157,7 @@ fun GeocacheOwnerActions(
             onConfirm = {
                 confirmArchive = false
                 scope.launch {
-                    runCatching {
+                    runCatchingCancellable {
                         accountViewModel.account.signAndComputeBroadcast(
                             GeocacheListingRevision.archived(listing),
                         )
@@ -179,7 +181,7 @@ fun GeocacheOwnerActions(
                 onConfirm = {
                     confirmLockIn = false
                     scope.launch {
-                        runCatching {
+                        runCatchingCancellable {
                             accountViewModel.account.signAndComputeBroadcast(
                                 GeocacheListingRevision.withFirstToFindWinner(listing, provisionalWinner),
                             )
@@ -193,7 +195,7 @@ fun GeocacheOwnerActions(
 
     if (showQr) {
         val key = listing.verificationKey()
-        ModalBottomSheet(onDismissRequest = { showQr = false }, sheetState = rememberModalBottomSheetState()) {
+        ModalBottomSheet(onDismissRequest = { showQr = false }, sheetState = rememberModalSheetState()) {
             Column(
                 Modifier.fillMaxWidth().padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -222,6 +224,6 @@ private fun ConfirmDialog(
         onDismissRequest = onDismiss,
         text = { Text(body) },
         confirmButton = { TextButton(onClick = onConfirm) { Text(stringRes(Res.string.geocache_owner_archive)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.action_cancel)) } },
     )
 }

@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.relays.dialableWriteRelays
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -53,9 +54,9 @@ class OutboxRelayLoader(
                 if (authorHex != null) {
                     val relays =
                         if (rawOutboxRelays) {
-                            (outboxNote.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm() ?: emptySet()
+                            (outboxNote.note.event as? AdvertisedRelayListEvent)?.dialableWriteRelays() ?: emptySet()
                         } else {
-                            (outboxNote.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()
+                            (outboxNote.note.event as? AdvertisedRelayListEvent)?.dialableWriteRelays()
                                 ?: cache.relayHints.hintsForKey(authorHex).ifEmpty { null }
                                 ?: Constants.eventFinderRelays
                         }

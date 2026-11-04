@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst
 
+import com.vitorpamplona.amethyst.commons.keystorage.PrivateKeyVault
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

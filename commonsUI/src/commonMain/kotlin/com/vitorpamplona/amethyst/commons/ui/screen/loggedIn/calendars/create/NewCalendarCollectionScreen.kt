@@ -37,7 +37,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,6 +52,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.calendars.create.NewCalendarCollectionViewModel
+import com.vitorpamplona.amethyst.commons.calendars.create.OwnedAppointmentSummary
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_all_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_collection_delete
@@ -67,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.edit_calendar_collection
 import com.vitorpamplona.amethyst.commons.resources.new_calendar_collection
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -83,7 +85,7 @@ fun NewCalendarCollectionScreen(
     editDTag: String? = null,
 ) {
     val vm: NewCalendarCollectionViewModel = rememberViewModel { NewCalendarCollectionViewModel() }
-    vm.init(accountViewModel, editDTag)
+    vm.init(accountViewModel.account, editDTag)
 
     Scaffold(
         topBar = {
@@ -113,7 +115,7 @@ fun NewCalendarCollectionScreen(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.title.value,
                 onValueChange = { vm.title.value = it },
                 label = { Text(stringRes(Res.string.calendar_collection_title)) },
@@ -123,7 +125,7 @@ fun NewCalendarCollectionScreen(
                 isError = !vm.isValid(),
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.description.value,
                 onValueChange = { vm.description.value = it },
                 label = { Text(stringRes(Res.string.calendar_collection_description)) },
@@ -239,9 +241,10 @@ private fun AppointmentPickerRow(
     val allDayLabel = stringRes(Res.string.calendar_all_day)
     val whenLabel =
         remember(summary.address, summary.startSeconds, summary.isAllDay, allDayLabel) {
+            val startSeconds = summary.startSeconds
             when {
                 summary.isAllDay -> allDayLabel
-                summary.startSeconds != null -> formatLongDate(summary.startSeconds)
+                startSeconds != null -> formatLongDate(startSeconds)
                 else -> "—"
             }
         }

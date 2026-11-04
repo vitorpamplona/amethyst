@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.stateIn
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.net.Proxy
+import java.util.concurrent.ExecutorService
 
 class DualHttpClientManagerForRelays(
     userAgent: String,
@@ -38,8 +39,10 @@ class DualHttpClientManagerForRelays(
     scope: CoroutineScope,
     dns: SurgeDns,
     onionCache: OnionLocationCache,
+    // See [OkHttpClientFactoryForRelays]; null on Android.
+    dispatcherExecutor: ExecutorService? = null,
 ) : IHttpClientManager {
-    val factory = OkHttpClientFactoryForRelays(userAgent, dns, onionCache)
+    val factory = OkHttpClientFactoryForRelays(userAgent, dns, onionCache, dispatcherExecutor)
 
     val defaultHttpClient: StateFlow<OkHttpClient> =
         combine(proxyPortProvider, isMobileDataProvider) { proxy, mobile ->

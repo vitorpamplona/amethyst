@@ -27,7 +27,8 @@ fun interface WalletAppLauncher {
     /**
      * Opens the payment [uri] (`lightning:` or `bitcoin:`) in the wallet app. [onPaid] runs once
      * the wallet took it, which is not a payment confirmation; [onError] gets [noWalletFound] when
-     * no wallet can open it.
+     * no wallet can open it. Desktop never calls [onError]: with no wallet app it shows the payment
+     * to pay from another wallet instead ([PayElsewhereDialog]).
      */
     fun openPaymentUri(
         uri: String,

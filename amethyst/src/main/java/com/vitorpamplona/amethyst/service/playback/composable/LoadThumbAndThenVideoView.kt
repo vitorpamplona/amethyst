@@ -29,9 +29,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.ImageRequest
+import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -54,6 +56,7 @@ fun LoadThumbAndThenVideoView(
 ) {
     var loadingFinished by remember(thumbUri) { mutableStateOf<Pair<Boolean, Drawable?>>(Pair(false, null)) }
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     // Run the Coil fetch in this LaunchedEffect's scope (was previously launched into the
     // AccountViewModel's viewModelScope, which meant a scroll-away wouldn't cancel the in-flight
@@ -69,7 +72,7 @@ fun LoadThumbAndThenVideoView(
                         context.imageLoader
                             .execute(request)
                             .image
-                            ?.asDrawable(context.resources)
+                            ?.asDrawable(resources)
                     }
                 Pair(true, drawable)
             } catch (e: Exception) {
@@ -79,7 +82,9 @@ fun LoadThumbAndThenVideoView(
             }
     }
 
-    if (loadingFinished.first) {
+    if (!loadingFinished.first) {
+        ReportCaptureLoading()
+    } else {
         VideoView(
             videoUri = videoUri,
             mimeType = mimeType,

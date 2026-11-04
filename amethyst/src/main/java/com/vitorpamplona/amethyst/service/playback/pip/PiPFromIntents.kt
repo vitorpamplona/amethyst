@@ -67,7 +67,7 @@ fun rememberVideoDataFromIntents(): MutableState<MediaItemData?> {
 fun Activity.processIntentForPiP(intent: Intent): MediaItemData? {
     val videoDataOnCreation = IntentExtras.loadBundle(intent.extras)
     val bounds = IntentExtras.loadBounds(intent.extras)
-    val ratio = videoDataOnCreation?.aspectRatio ?: videoDataOnCreation?.videoUri?.let { MediaAspectRatioCache.get(it) }
+    val ratio = videoDataOnCreation?.let { MediaAspectRatioCache.videoRatio(it.videoUri, it.aspectRatio) }
     val isPlaying = true
     val isMuted = DEFAULT_MUTED_SETTING.value
 

@@ -227,6 +227,15 @@ object WorkerThreadPriorityGovernor {
                 continue
             }
 
+            // A thread that raised itself chose its priority on purpose: ExoPlayer's playback
+            // thread (-16), the nests AudioTrack writer and WebRTC's audio threads (audio
+            // priority). Demoting them to [targetNice] is what makes audio underrun under load.
+            val current = runCatching { Process.getThreadPriority(tid) }.getOrNull() ?: continue
+            if (current < 0) {
+                handled.add(tid)
+                continue
+            }
+
             if (runCatching { Process.setThreadPriority(tid, targetNice) }.isSuccess) {
                 handled.add(tid)
                 demoted++

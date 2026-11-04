@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeader
@@ -89,7 +90,7 @@ private fun WikiArticleHeader(
                 ),
     ) {
         Column {
-            if (accountViewModel.settings.showUrlPreview()) {
+            if (LocalMediaCapture.current != null || accountViewModel.settings.showUrlPreview()) {
                 image?.let {
                     MyAsyncImage(
                         imageUrl = it,

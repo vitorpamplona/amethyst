@@ -148,10 +148,11 @@ variants:
 # ═══════════════════════════════════════════════════════════════════
 # PUBLISHING RELAYS
 # ═══════════════════════════════════════════════════════════════════
-# Relays are NOT configured in this file. `zsp` reads them from the
-# RELAY_URLS environment variable (comma-separated) and falls back to
-# wss://relay.zapstore.dev when it is unset. To publish the release event
-# to additional relays, set RELAY_URLS before running `zsp publish`, e.g.:
+# Relays are NOT configured in this file. `amy releases publish`, which reads
+# this file for the listing and the supported NIPs, publishes to
+# AndroidRelease.RELAYS (relay.zapstore.dev first) unless --relay says otherwise.
+# `zsp publish` reads them from the RELAY_URLS environment variable
+# (comma-separated) and falls back to wss://relay.zapstore.dev, e.g.:
 #
 #   RELAY_URLS="wss://relay.zapstore.dev,wss://relay.damus.io,wss://nos.lol" \
 #     SIGN_WITH=<amethyst-nsec> zsp publish

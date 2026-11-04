@@ -34,7 +34,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -48,9 +47,10 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteReactions
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
@@ -91,6 +91,7 @@ fun ChatEngagementDetailSheet(
         remember(reactionsState) {
             buildReactionEntries(reactionsState?.note ?: baseNote)
         }
+    val marmotEmoji = rememberMarmotReactionEmoji(baseNote, reactionsState?.note ?: baseNote, accountViewModel)
 
     val zaps by
         produceState<ImmutableList<ZapAmountCommentNotification>>(initialValue = persistentListOf(), baseNote) {
@@ -99,7 +100,7 @@ fun ChatEngagementDetailSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = rememberModalSheetState(skipPartiallyExpanded = true),
     ) {
         Column(
             modifier =
@@ -113,7 +114,7 @@ fun ChatEngagementDetailSheet(
             }
 
             reactionEntries.forEach { entry ->
-                ReactorRow(entry, accountViewModel, nav, onDismiss)
+                ReactorRow(entry, marmotEmoji?.glyphFor(entry.reactionType) ?: entry.reactionType, accountViewModel, nav, onDismiss)
             }
 
             Spacer(Modifier.height(24.dp))
@@ -172,6 +173,7 @@ private fun ZapperRow(
 @Composable
 private fun ReactorRow(
     entry: ReactionEntry,
+    glyph: String,
     accountViewModel: AccountViewModel,
     nav: INav,
     onDismiss: () -> Unit,
@@ -183,7 +185,7 @@ private fun ReactorRow(
         nav = nav,
         onDismiss = onDismiss,
     ) {
-        ChipReactionGlyph(entry.reactionType)
+        ChipReactionGlyph(glyph)
     }
 }
 

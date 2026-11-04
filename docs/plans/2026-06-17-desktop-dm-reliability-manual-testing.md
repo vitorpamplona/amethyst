@@ -595,7 +595,7 @@ Record:
 
 ## T11 — Bunker `Semaphore(4)` (bunker users only) — 3 min
 
-**Skip if you don't have a NIP-46 bunker (nsec.app / Amber).**
+**Skip if you don't have a NIP-46 bunker (e.g. Amber).**
 
 **Goal:** verify NIP-17 group DMs are rate-limited to ≤4 concurrent bunker RPCs.
 
@@ -605,7 +605,7 @@ Record:
 
 **2.** Compose a group DM to **5 recipients** (5 different npubs with known `kind:10050`).
 
-**3.** In nsec.app / Amber, watch the request feed as you click Send.
+**3.** In Amber, watch the request feed as you click Send.
 
 - **Expected:** at most **4** requests in-flight at any moment. Requests process in batches of 4.
 

@@ -24,25 +24,32 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.ProfileLoader
+import com.vitorpamplona.amethyst.commons.rendering.EventRendererRegistry
+import com.vitorpamplona.amethyst.commons.rendering.json.JsonEventFormatter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 
 /**
- * `amy feed [--author USER] [--following] [--limit N] [--since TS] [--until TS]`
+ * `amy feed [--author USER] [--following] [--hashtag TAG] [--limit N] [--since TS] [--until TS]`
  *
- * Read-side counterpart to `amy post`. Three modes selected by flags:
+ * Read-side counterpart to `amy post`. Four modes selected by flags:
  *
  *  - default: kind:1 by the current account.
  *  - `--author USER`: kind:1 by the given user (npub/nprofile/64-hex/NIP-05).
  *  - `--following`: fetch the current account's NIP-02 contact list and pull
  *    kind:1 from every author in it.
+ *  - `--hashtag TAG`: kind:1 carrying the `t` tag TAG, from anyone.
  *
  * Events are deduplicated by id, sorted newest-first, and capped at `--limit`
  * (default 50). The output is a JSON object with a `notes` array of
- * `{event_id, author, created_at, content, tags}`.
+ * `{event_id, author, created_at, content, tags}` plus the shared renderer's
+ * fields (`author_name`, `reply_to`, `root`, `mentions`, `quotes`, `hashtags`,
+ * `media`, `content_warning`).
  */
 object FeedCommand {
     suspend fun run(
@@ -52,9 +59,15 @@ object FeedCommand {
         val args = Args(rest)
         val author = args.flag("author")
         val following = args.bool("following")
-        if (author != null && following) {
-            return Output.error("bad_args", "feed: pass either --author or --following, not both")
+        val hashtag =
+            args
+                .flag("hashtag")
+                ?.removePrefix("#")
+                ?.trim()
+        if (listOf(author != null, following, hashtag != null).count { it } > 1) {
+            return Output.error("bad_args", "feed: pass at most one of --author, --following, --hashtag")
         }
+        if (hashtag != null && hashtag.isEmpty()) return Output.error("bad_args", "feed: --hashtag must not be empty")
         val limit = args.intFlag("limit", 50)
         if (limit <= 0) return Output.error("bad_args", "feed: --limit must be > 0")
         val since = args.flag("since")?.toLongOrNull()
@@ -70,12 +83,13 @@ object FeedCommand {
 
             val (authors, mode) =
                 when {
+                    hashtag != null -> emptyList<HexKey>() to "hashtag"
                     following -> resolveFollowing(ctx, timeoutSecs * 1000) to "following"
                     author != null -> listOf(ctx.requireUserHex(author)) to "author"
                     else -> listOf(ctx.identity.pubKeyHex) to "self"
                 }
 
-            if (authors.isEmpty()) {
+            if (authors.isEmpty() && hashtag == null) {
                 Output.emit(
                     mapOf(
                         "mode" to mode,
@@ -94,7 +108,10 @@ object FeedCommand {
             val filter =
                 Filter(
                     kinds = listOf(TextNoteEvent.KIND),
-                    authors = authors,
+                    authors = authors.ifEmpty { null },
+                    // The app's case variants (as typed, lower, upper, Title): `t` values are
+                    // case-sensitive on relays and clients tag as the user typed.
+                    tags = hashtag?.let { mapOf("t" to hashtagAlts(it).sorted()) },
                     since = since,
                     until = until,
                     // Ask for some headroom over the requested limit because
@@ -105,29 +122,45 @@ object FeedCommand {
             val filterMap = relays.associateWith { listOf(filter) }
             val received = ctx.drain(filterMap, timeoutSecs * 1000)
 
-            val notes =
+            val authorSet = authors.toSet()
+            val events =
                 received
                     .asSequence()
                     .map { it.second }
-                    .filter { it.kind == TextNoteEvent.KIND }
-                    .filter { it.pubKey in authors.toSet() }
+                    .filter { filter.match(it) }
+                    .filter { hashtag != null || it.pubKey in authorSet }
                     .distinctBy { it.id }
                     .sortedByDescending { it.createdAt }
                     .take(limit)
-                    .map { ev ->
-                        mapOf(
-                            "event_id" to ev.id,
-                            "author" to ev.pubKey,
-                            "created_at" to ev.createdAt,
-                            "content" to ev.content,
-                            "tags" to ev.tags.map { it.toList() },
-                        )
-                    }.toList()
+                    .toList()
+
+            // Cache-only profiles: a feed stays one relay round-trip.
+            val renderCtx = ProfileLoader.renderContext(NoteSupport.access(ctx), events.map { it.pubKey }, fetchMissing = false, timeoutMs = timeoutSecs * 1000)
+            val notes =
+                events.map { ev ->
+                    val rendered = EventRendererRegistry.render(ev, renderCtx)
+                    mapOf(
+                        "event_id" to ev.id,
+                        "author" to ev.pubKey,
+                        "created_at" to ev.createdAt,
+                        "content" to ev.content,
+                        "tags" to ev.tags.map { it.toList() },
+                        "author_name" to (rendered.author.displayName ?: rendered.author.name),
+                        "reply_to" to rendered.replyTo?.let(JsonEventFormatter::ref),
+                        "root" to rendered.root?.let(JsonEventFormatter::ref),
+                        "mentions" to rendered.mentions,
+                        "quotes" to rendered.quotes.map(JsonEventFormatter::ref),
+                        "hashtags" to rendered.hashtags,
+                        "media" to rendered.media.map(JsonEventFormatter::media),
+                        "content_warning" to rendered.contentWarning,
+                    )
+                }
 
             Output.emit(
                 mapOf(
                     "mode" to mode,
                     "authors" to authors,
+                    "hashtag" to hashtag,
                     "queried_relays" to relays.map { it.url },
                     "count" to notes.size,
                     "notes" to notes,
@@ -148,7 +181,7 @@ object FeedCommand {
         mode: String,
     ): Set<NormalizedRelayUrl> =
         when (mode) {
-            "author" -> ctx.bootstrapRelays()
+            "author", "hashtag" -> ctx.bootstrapRelays()
             else -> ctx.outboxRelays().ifEmpty { ctx.bootstrapRelays() }
         }
 

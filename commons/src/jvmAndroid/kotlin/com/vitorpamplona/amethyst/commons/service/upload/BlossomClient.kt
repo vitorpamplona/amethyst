@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -27,7 +28,7 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentProof
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentRequired
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
-import com.vitorpamplona.quartz.utils.sha256.sha256
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -37,8 +38,6 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.coroutines.executeAsync
-import okio.BufferedSink
-import okio.source
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -52,7 +51,7 @@ data class BlossomPreflightResult(
 /**
  * Blossom HTTP client for JVM consumers (desktop + CLI + Android's
  * shared logic). Owns no global state — pass a configured [OkHttpClient] (e.g.
- * desktop's Tor-aware `DesktopHttpClient.currentClient()`) for proxying /
+ * desktop's per-URL role-based client) for proxying /
  * connection pooling. The default constructor uses a fresh OkHttpClient — fine
  * for one-shot uses such as the CLI.
  *
@@ -64,22 +63,53 @@ data class BlossomPreflightResult(
 open class BlossomClient(
     private val okHttpClient: OkHttpClient = OkHttpClient(),
 ) : BlossomBlobClient {
+    /** [onProgress] follows the bytes sent, restarting from zero if OkHttp retries the request. */
     open suspend fun upload(
         file: File,
         contentType: String,
         serverBaseUrl: String,
         authHeader: String?,
-    ): BlossomUploadResult = putBlob(BlossomServerUrl.upload(serverBaseUrl), fileBody(file, contentType), serverBaseUrl, authHeader)
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
+    ): BlossomUploadResult = putBlob(BlossomServerUrl.upload(serverBaseUrl), fileBody(file, contentType, onProgress), serverBaseUrl, authHeader)
 
     /**
-     * Upload raw bytes (e.g. encrypted blobs) to a Blossom server.
+     * Upload [file], naming its [sha256] up front as `X-SHA-256` and `Content-Digest` (the hex hash,
+     * as zsp sends it). cdn.zapstore.dev refuses an upload without `Content-Digest`.
+     */
+    open suspend fun upload(
+        file: File,
+        contentType: String,
+        serverBaseUrl: String,
+        authHeader: String?,
+        sha256: String,
+    ): BlossomUploadResult =
+        putBlob(
+            BlossomServerUrl.upload(serverBaseUrl),
+            fileBody(file, contentType),
+            serverBaseUrl,
+            authHeader,
+            mapOf(BlossomServerUrl.X_SHA_256_HEADER to sha256, CONTENT_DIGEST_HEADER to sha256),
+        )
+
+    /**
+     * Upload raw bytes (e.g. encrypted blobs) to a Blossom server. [onProgress] follows the bytes
+     * sent.
      */
     open suspend fun upload(
         bytes: ByteArray,
         contentType: String,
         serverBaseUrl: String,
         authHeader: String?,
-    ): BlossomUploadResult = putBlob(BlossomServerUrl.upload(serverBaseUrl), bytes.toRequestBody(contentType.toMediaType()), serverBaseUrl, authHeader)
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
+    ): BlossomUploadResult {
+        val body =
+            if (onProgress == null) {
+                bytes.toRequestBody(contentType.toMediaType())
+            } else {
+                ReopenableStreamBody(contentType.toMediaType(), bytes.size.toLong(), onProgress) { bytes.inputStream() }
+            }
+        return putBlob(BlossomServerUrl.upload(serverBaseUrl), body, serverBaseUrl, authHeader)
+    }
 
     /**
      * BUD-05 media-optimization upload: `PUT /media`. The server MAY transform the
@@ -218,6 +248,38 @@ open class BlossomClient(
         }
 
     /**
+     * The blob [put] stores on [serverBaseUrl], or, when the server refuses the upload, the blob it
+     * already holds under [hash]: a server may answer an upload of a blob it has with an error (a
+     * 409) instead of its descriptor, as BUD-02 asks. A blob under that exact hash is these bytes, so
+     * the upload is done; anything else fails as it was.
+     *
+     * A refusal that names some other blob is not that: nostr.download refuses an image it finds
+     * perceptually identical to one it holds (409 with `X-Identical-Media` naming that blob), which
+     * is different bytes under a different hash. That is not this upload: it fails as a
+     * [BlossomIdenticalMediaException], and the uploaders link to that copy when it checks out
+     * (it hashes to its name and has this picture's size), or move on to their next server.
+     *
+     * Only for an upload stored as sent (BUD-02 `/upload`): a BUD-05 `/media` upload may be
+     * transformed, so the original hash says nothing about what the server would have kept.
+     */
+    suspend fun uploadOrHeld(
+        hash: HexKey,
+        size: Long,
+        contentType: String?,
+        serverBaseUrl: String,
+        put: suspend () -> BlossomUploadResult,
+    ): BlossomUploadResult =
+        try {
+            put()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (!has(hash, serverBaseUrl)) throw e
+            Log.d(TAG) { "$serverBaseUrl refused $hash, which it already holds: ${e.message}" }
+            heldDescriptor(hash, size, contentType, serverBaseUrl)
+        }
+
+    /**
      * BUD-01 HEAD probe: does [serverBaseUrl] hold [hash]? A cheap "which server
      * has which blob" check that needs no auth on most servers.
      */
@@ -320,30 +382,25 @@ open class BlossomClient(
     private fun fileBody(
         file: File,
         contentType: String,
-    ): RequestBody =
-        object : RequestBody() {
-            override fun contentType() = contentType.toMediaType()
-
-            override fun contentLength() = file.length()
-
-            override fun writeTo(sink: BufferedSink) {
-                file.inputStream().source().use(sink::writeAll)
-            }
-        }
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
+    ): RequestBody = ReopenableStreamBody(contentType.toMediaType(), file.length(), onProgress) { file.inputStream() }
 
     private suspend fun putBlob(
         endpoint: String,
         body: RequestBody,
         serverBaseUrl: String,
         authHeader: String?,
+        headers: Map<String, String> = emptyMap(),
     ): BlossomUploadResult =
         withContext(Dispatchers.IO) {
             val request =
                 Request
                     .Builder()
                     .url(endpoint)
-                    .apply { authHeader?.let { addHeader("Authorization", it) } }
-                    .put(body)
+                    .apply {
+                        authHeader?.let { addHeader("Authorization", it) }
+                        headers.forEach { (name, value) -> addHeader(name, value) }
+                    }.put(body)
                     .build()
             okHttpClient.newCall(request).executeAsync().use { parseDescriptor(it, serverBaseUrl) }
         }
@@ -353,6 +410,9 @@ open class BlossomClient(
         serverBaseUrl: String,
     ): BlossomUploadResult {
         check402(response, serverBaseUrl)
+        BlossomIdenticalMediaException.existingHashOf(response.code, response.headers[BlossomIdenticalMediaException.IDENTICAL_MEDIA_HEADER])?.let {
+            throw BlossomIdenticalMediaException(serverBaseUrl, it, response.headers[BlossomServerUrl.REASON_HEADER])
+        }
         if (!response.isSuccessful) {
             val reason = response.headers[BlossomServerUrl.REASON_HEADER] ?: response.code.toString()
             throw RuntimeException("Request failed ($serverBaseUrl): $reason")
@@ -382,5 +442,32 @@ open class BlossomClient(
          * should fall back to a direct upload) rather than a mirror the server rejected.
          */
         private val MIRROR_UNSUPPORTED_CODES = setOf(404, 405, 501)
+
+        private const val CONTENT_DIGEST_HEADER = "Content-Digest"
+
+        private const val TAG = "BlossomClient"
+
+        /** What [uploadOrHeld] reports for a blob [serverBaseUrl] already holds under [hash]. */
+        fun heldDescriptor(
+            hash: HexKey,
+            size: Long,
+            contentType: String?,
+            serverBaseUrl: String,
+            extension: String = "",
+        ) = BlossomUploadResult(url = BlossomServerUrl.blob(serverBaseUrl, hash, extension), sha256 = hash, size = size, type = contentType)
+
+        /**
+         * The file extension a blob URL carries for [contentType] (`image/jpeg` -> `jpg`), or "" for
+         * other types. Clients that tell images from links by the URL's ending need one.
+         */
+        fun extensionFor(contentType: String?): String =
+            when (contentType?.substringBefore(';')?.trim()?.lowercase()) {
+                "image/jpeg", "image/jpg" -> "jpg"
+                "image/png" -> "png"
+                "image/gif" -> "gif"
+                "image/webp" -> "webp"
+                "image/avif" -> "avif"
+                else -> ""
+            }
     }
 }

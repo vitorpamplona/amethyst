@@ -36,10 +36,12 @@ import com.vitorpamplona.nestsclient.transport.QuicWebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -568,12 +570,10 @@ class BrowserInteropTest {
     @Test
     fun chromium_publisher_baseline_kotlin_listener_decodes() =
         runBlocking {
-            // 0.5 s sample-count floor — Chromium cold-launch + Playwright
-            // boot eats 3-5 s before the publisher is alive; the listener's
-            // reconnecting wrapper retries until its subscribe lands, so on
-            // a 5 s broadcast the captured tail can be < 1 s. The
-            // load-bearing assertion is the FFT peak; this floor only
-            // catches the "nothing arrived at all" failure mode.
+            // 0.5 s sample-count floor. The load-bearing assertion is the
+            // FFT peak; this floor only catches the "nothing arrived at
+            // all" failure mode. (The collection window starts at the first
+            // frame, so Chromium's 3-5 s cold launch no longer eats into it.)
             runBrowserPublishKotlinListen(
                 speakerSeconds = 5,
                 reconnectAfterMs = 0L,
@@ -606,29 +606,26 @@ class BrowserInteropTest {
      *     re-issuance pump for an upstream that is BROWSER not Rust
      *     (different transport stack on the publisher side).
      *
-     * Threshold: ≥ 2.5 s of decoded mono PCM with the 440 Hz peak
-     * intact across the 7 s collection window. Pre-cycle alone
-     * yields ~1.9 s; ≥ 2.5 s proves the listener attached to the
-     * post-reconnect broadcast at least once. Headroom note: see
-     * `2026-05-07-i7-post-reconnect-cliff-investigation.md` —
-     * cycle-2 may itself be truncated by the relay's per-broadcast
-     * forward queue, so we don't tighten this further.
+     * Threshold: ≥ 3.5 s of decoded mono PCM with the 440 Hz peak
+     * intact. The page sends each cycle as ONE group (group 0), so the
+     * first cycle alone yields at most ~2.5 s (~125 frames); only a
+     * listener that also decodes the second cycle reaches 3.5 s, and a
+     * healthy run gets ~4.9 s. The old 2.5 s floor sat right at the
+     * first cycle's length, so it passed or failed by a hair while the
+     * listener was in fact dropping the whole second cycle as a replay
+     * of group 0 (#4577).
      */
     @Test
     fun chromium_publisher_reconnect_kotlin_listener_recovers() =
         runBlocking {
-            // Pre-reconnect chunk alone yields ~1.9 s of decoded PCM.
-            // 2.5 s threshold proves the listener re-attached to the
-            // publisher's second cycle through the reconnecting
-            // wrapper's re-issuance pump. See
-            // 2026-05-07-i7-post-reconnect-cliff-investigation.md
-            // for why we don't tighten this further (cycle-2 itself
-            // gets truncated by moq-relay 0.10.x's per-broadcast
-            // forward queue under our test conditions).
+            // The first cycle alone yields ~2.5 s of decoded PCM, so 3.5 s
+            // proves the listener re-attached to the publisher's second
+            // cycle through the reconnecting wrapper's re-issuance pump
+            // (see the KDoc above).
             runBrowserPublishKotlinListen(
                 speakerSeconds = 5,
                 reconnectAfterMs = 2_500L,
-                minSamplesAfterWarmup = (2.5 * AudioFormat.SAMPLE_RATE_HZ).toInt(),
+                minSamplesAfterWarmup = (3.5 * AudioFormat.SAMPLE_RATE_HZ).toInt(),
             )
         }
 
@@ -1099,15 +1096,29 @@ private suspend fun runBrowserPublishKotlinListen(
         val decoder = JvmOpusDecoder(channelCount = 1)
         val pcm = mutableListOf<Float>()
         try {
-            // Collect for speakerSeconds + 2 wallclock — publisher
-            // runs `speakerSeconds`, plus headroom for late frames
-            // (and any re-issuance gap if reconnectAfterMs > 0).
+            // Collect for speakerSeconds + 2 wallclock from the FIRST
+            // frame — publisher runs `speakerSeconds`, plus headroom for
+            // late frames (and any re-issuance gap if reconnectAfterMs > 0).
+            // Timing it from subscribe instead let Chromium's 2.5-5 s
+            // launch eat the window and cut the second reconnect cycle
+            // short (#4577).
             val collectMs = (speakerSeconds + 2).toLong() * 1_000L
-            withTimeoutOrNull(collectMs) {
-                subscription.objects.collect { obj ->
-                    val samples = decoder.decode(obj.payload)
-                    for (s in samples) pcm += s.toFloat() / Short.MAX_VALUE.toFloat()
+            val firstFrame = CompletableDeferred<Unit>()
+            coroutineScope {
+                val collector =
+                    launch {
+                        subscription.objects.collect { obj ->
+                            firstFrame.complete(Unit)
+                            val samples = decoder.decode(obj.payload)
+                            for (s in samples) pcm += s.toFloat() / Short.MAX_VALUE.toFloat()
+                        }
+                    }
+                if (withTimeoutOrNull(FIRST_FRAME_TIMEOUT_MS) { firstFrame.await() } == null) {
+                    collector.cancel()
+                    error("listener received no frame within ${FIRST_FRAME_TIMEOUT_MS / 1_000} s of subscribing")
                 }
+                delay(collectMs)
+                collector.cancel()
             }
         } finally {
             decoder.release()
@@ -1245,3 +1256,10 @@ private fun readFloat32Pcm(file: File): FloatArray {
     for (i in 0 until n) out[i] = buf.float
     return out
 }
+
+/**
+ * How long [runBrowserPublishKotlinListen] waits for the first frame:
+ * Chromium's cold launch is 3-5 s for the first test in a JVM and can
+ * reach 60-90 s for a later one (see `overallTimeoutSec` there).
+ */
+private const val FIRST_FRAME_TIMEOUT_MS = 120_000L

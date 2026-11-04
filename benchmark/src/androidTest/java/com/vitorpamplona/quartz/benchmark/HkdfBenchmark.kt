@@ -23,9 +23,10 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.crypto.kdf.Hkdf
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
-import com.vitorpamplona.quartz.nip44Encryption.crypto.Hkdf
+import com.vitorpamplona.quartz.nip44Encryption.crypto.fastExpand
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

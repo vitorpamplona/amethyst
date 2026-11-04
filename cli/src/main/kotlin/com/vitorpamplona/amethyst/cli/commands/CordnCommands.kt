@@ -23,10 +23,10 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
-import com.vitorpamplona.amethyst.commons.cordn.ExposureNote
-import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
-import com.vitorpamplona.quartz.cordn.appGroupRef.CordnGroupRef
+import com.vitorpamplona.cordn.appGroupRef.CordnGroupRef
+import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.client.ExposureNote
+import com.vitorpamplona.cordn.client.GroupExposure
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 /**
@@ -92,6 +92,13 @@ object CordnCommands {
         |             [--reply-to ID] [--react-to ID]
         |  cordn fetch                                    drain the stream and print it
         |  cordn watch [--timeout MS]                     hold a live subscription
+        |
+        |  moving to another device:
+        |  cordn migrate export --relay URL[,URL…]        hand this home's groups over;
+        |                       --server URL[,URL…]       stands it down (handed_off)
+        |  cordn migrate import --code cordndev1…         adopt them, replacing what is here
+        |  cordn migrate resume                           take this home back, only if the
+        |                                                 other device never imported
         |
         |A group ref is a locator, not an invitation: holding one lets you ASK to
         |join, it does not make you a member. Relays say where to reach the
@@ -232,7 +239,8 @@ object CordnCommands {
                 "membership" to exposure.membership.name,
                 "messaging" to exposure.messaging.name,
                 "linked_groups" to exposure.linkedGroupCount,
-                "differs_from_marmot" to exposure.differsFromMarmot(),
+                // Every cordn coordinator today; kept as a field so the JSON shape holds.
+                "differs_from_marmot" to true,
                 "notes" to exposure.notes().map { it.name to describe(it) }.toMap(),
             ),
         )

@@ -60,14 +60,19 @@ object SearchPipeline {
     /**
      * The REQs this query sends, or an empty list when it asks nothing a relay can answer.
      *
-     * [kinds] is the caller's kind window; when the query names its own, that wins — a `kind:`
+     * [kinds] is the caller’s kind window; when the query names its own, that wins — a `kind:`
      * chip that did not reach here is a chip claiming a filter the REQ never carried.
      */
     fun filters(
         query: SearchQuery,
         kinds: List<Int>? = null,
         limit: Int = 100,
-    ): List<Filter> = SearchFilterBuilder.build(query, query.kinds.takeIf { it.isNotEmpty() }?.toList() ?: kinds, limit)
+    ): List<Filter> =
+        SearchFilterBuilder.build(
+            query,
+            query.kinds.takeIf { it.isNotEmpty() }?.toList() ?: kinds,
+            limit,
+        )
 
     /**
      * The parts of the query no relay can be asked about, applied to what came back.

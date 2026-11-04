@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.note.elements
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
@@ -39,16 +40,23 @@ import com.vitorpamplona.amethyst.commons.resources.add_to_private_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.add_to_public_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.article
 import com.vitorpamplona.amethyst.commons.resources.block_report
+import com.vitorpamplona.amethyst.commons.resources.bookmarks
 import com.vitorpamplona.amethyst.commons.resources.broadcast
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user_body
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user_title
 import com.vitorpamplona.amethyst.commons.resources.concord_make_admin
 import com.vitorpamplona.amethyst.commons.resources.concord_remove_admin
+import com.vitorpamplona.amethyst.commons.resources.copy
 import com.vitorpamplona.amethyst.commons.resources.copy_note_id
 import com.vitorpamplona.amethyst.commons.resources.copy_raw_json
 import com.vitorpamplona.amethyst.commons.resources.copy_text
 import com.vitorpamplona.amethyst.commons.resources.copy_user_pubkey
+import com.vitorpamplona.amethyst.commons.resources.devtools_inspect_event
+import com.vitorpamplona.amethyst.commons.resources.drss_menu_collect_to
+import com.vitorpamplona.amethyst.commons.resources.drss_menu_follow_into
+import com.vitorpamplona.amethyst.commons.resources.drss_menu_record_provenance
+import com.vitorpamplona.amethyst.commons.resources.drss_menu_save_to
 import com.vitorpamplona.amethyst.commons.resources.edit_article
 import com.vitorpamplona.amethyst.commons.resources.edit_draft
 import com.vitorpamplona.amethyst.commons.resources.edit_post
@@ -56,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.resources.follow
 import com.vitorpamplona.amethyst.commons.resources.follow_set_add_author_from_note_action
 import com.vitorpamplona.amethyst.commons.resources.highlight_action
 import com.vitorpamplona.amethyst.commons.resources.manage_bookmark_label
+import com.vitorpamplona.amethyst.commons.resources.marmot_admin_delete_message
 import com.vitorpamplona.amethyst.commons.resources.pin_to_profile
 import com.vitorpamplona.amethyst.commons.resources.post
 import com.vitorpamplona.amethyst.commons.resources.propose_an_edit
@@ -66,6 +75,9 @@ import com.vitorpamplona.amethyst.commons.resources.remove_from_emoji_list
 import com.vitorpamplona.amethyst.commons.resources.remove_from_private_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.remove_from_public_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.request_deletion
+import com.vitorpamplona.amethyst.commons.resources.room_dismiss_reports
+import com.vitorpamplona.amethyst.commons.resources.room_remove_for_everyone_body
+import com.vitorpamplona.amethyst.commons.resources.room_remove_for_everyone_title
 import com.vitorpamplona.amethyst.commons.resources.timestamp_it
 import com.vitorpamplona.amethyst.commons.resources.timestamp_pending
 import com.vitorpamplona.amethyst.commons.resources.unfollow
@@ -74,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.QuickActionAlertDialogOneButton
 import com.vitorpamplona.amethyst.commons.ui.note.copyNoteTextAction
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.commons.util.toPrettyJson
@@ -87,6 +100,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.StringResource
 
 /** One note action, rendered as a menu row or an action-sheet tile. */
 @Immutable
@@ -94,8 +108,20 @@ data class NoteAction(
     val symbol: MaterialSymbol,
     val label: String,
     val isDestructive: Boolean = false,
+    /** Sibling actions that share a group fold into one submenu in the dropdown menu; other surfaces ignore it. */
+    val group: NoteActionGroup? = null,
     val onClick: () -> Unit,
 )
+
+/** A submenu of related actions in the note dropdown menu: its label and icon. */
+enum class NoteActionGroup(
+    val label: StringResource,
+    val symbol: MaterialSymbol,
+) {
+    COPY(Res.string.copy, MaterialSymbols.ContentCopy),
+    BOOKMARK(Res.string.bookmarks, MaterialSymbols.Bookmark),
+    SHARE(Res.string.quick_action_share, MaterialSymbols.Share),
+}
 
 /**
  * Callbacks for actions whose UI is owned by the rendering surface (dialogs,
@@ -103,7 +129,12 @@ data class NoteAction(
  */
 @Immutable
 data class NoteActionHandlers(
-    val onShare: () -> Unit,
+    /**
+     * Opens the surface's own Share UI (the chat sheet's Share drawer) from a single Share
+     * action. Null lists the Share options in the menu itself, as the [NoteActionGroup.SHARE]
+     * group (a submenu in the dropdown).
+     */
+    val onShare: (() -> Unit)?,
     val onEditPost: () -> Unit,
     val onEditDraft: () -> Unit,
     val onAddLabel: () -> Unit,
@@ -113,6 +144,9 @@ data class NoteActionHandlers(
     // owns a confirmation dialog (like delete). Null where a caller never renders
     // Concord messages (they simply never see the Ban tile anyway).
     val onConcordBan: (() -> Unit)? = null,
+    // Removing someone else's message for every member cannot be undone, so it is
+    // confirmed by the surface too. Null where a caller never renders room messages.
+    val onRemoveForEveryone: (() -> Unit)? = null,
     val onDismiss: () -> Unit,
 )
 
@@ -142,6 +176,15 @@ fun noteActionSections(
     // OTS timestamp, pin, label, public bookmark).
     val isPrivateRumor = note.isPrivateRumor()
 
+    // drss.io readers keep a read-and-write preference; the drss actions are theirs.
+    val hasDrssLists = accountViewModel.account.drss.preference.value != null
+    val hasDrssEventLists =
+        remember {
+            accountViewModel.account.drss
+                .eventLists()
+                .isNotEmpty()
+        }
+
     val author =
         buildList {
             if (!state.isLoggedUser) {
@@ -168,6 +211,16 @@ fun noteActionSections(
                         handlers.onDismiss()
                     },
                 )
+
+                // A drss.io reader follows feeds into the follow sets under their write folder.
+                if (hasDrssLists) {
+                    add(
+                        NoteAction(MaterialSymbols.AutoMirrored.Feed, stringRes(Res.string.drss_menu_follow_into)) {
+                            note.author?.pubkeyHex?.let { nav.nav(Route.DrssFollowInto(it)) }
+                            handlers.onDismiss()
+                        },
+                    )
+                }
             }
         }
 
@@ -184,12 +237,12 @@ fun noteActionSections(
     val copyAndShare =
         buildList {
             add(
-                NoteAction(MaterialSymbols.ContentCopy, stringRes(Res.string.copy_text)) {
+                NoteAction(MaterialSymbols.ContentCopy, stringRes(Res.string.copy_text), group = NoteActionGroup.COPY) {
                     copyNoteText(note, noteVersionToCopy)
                 },
             )
             add(
-                NoteAction(MaterialSymbols.AlternateEmail, stringRes(Res.string.copy_user_pubkey)) {
+                NoteAction(MaterialSymbols.AlternateEmail, stringRes(Res.string.copy_user_pubkey), group = NoteActionGroup.COPY) {
                     note.author?.let {
                         scope.launch(Dispatchers.IO) {
                             clipboardManager.setText("nostr:${it.pubkeyNpub()}")
@@ -199,7 +252,7 @@ fun noteActionSections(
                 },
             )
             add(
-                NoteAction(MaterialSymbols.FormatQuote, stringRes(Res.string.copy_note_id)) {
+                NoteAction(MaterialSymbols.FormatQuote, stringRes(Res.string.copy_note_id), group = NoteActionGroup.COPY) {
                     scope.launch(Dispatchers.IO) {
                         clipboardManager.setText(note.toNostrUri())
                         handlers.onDismiss()
@@ -207,7 +260,7 @@ fun noteActionSections(
                 },
             )
             add(
-                NoteAction(MaterialSymbols.ContentCopy, stringRes(Res.string.copy_raw_json)) {
+                NoteAction(MaterialSymbols.ContentCopy, stringRes(Res.string.copy_raw_json), group = NoteActionGroup.COPY) {
                     val event = note.event
                     if (event != null) {
                         scope.launch {
@@ -220,6 +273,15 @@ fun noteActionSections(
                     }
                 },
             )
+            // A rumor is unsigned by design, so the inspector would only report a bad signature.
+            if (!isPrivateRumor && note.event != null) {
+                add(
+                    NoteAction(MaterialSymbols.Code, stringRes(Res.string.devtools_inspect_event), group = NoteActionGroup.COPY) {
+                        nav.nav(Route.DevToolsEventInspector(note.idHex))
+                        handlers.onDismiss()
+                    },
+                )
+            }
             // Highlight this note/article as its source: opens the NIP-84 composer with the
             // nostr source pre-tagged (`a` for an addressable article, else `e`) plus the author,
             // and the passage left for the user to type or paste. Prose kinds only, and never a
@@ -240,7 +302,11 @@ fun noteActionSections(
                 )
             }
             if (!isPrivateRumor) {
-                add(NoteAction(MaterialSymbols.Share, stringRes(Res.string.quick_action_share), onClick = handlers.onShare))
+                if (handlers.onShare != null) {
+                    add(NoteAction(MaterialSymbols.Share, stringRes(Res.string.quick_action_share), onClick = handlers.onShare))
+                } else {
+                    addAll(shareNoteActions(note, nav, handlers.onDismiss))
+                }
             }
         }
 
@@ -311,6 +377,30 @@ fun noteActionSections(
                 add(NoteAction(MaterialSymbols.Tag, stringRes(Res.string.add_hashtag_label), onClick = handlers.onAddLabel))
             }
 
+            // drss.io saves articles into collections and records the feeds found through them.
+            if (hasDrssLists && !isPrivateRumor && note.event is LongFormContentEvent && note is AddressableNote) {
+                add(
+                    NoteAction(MaterialSymbols.CollectionsBookmark, stringRes(Res.string.drss_menu_save_to)) {
+                        nav.nav(Route.DrssSaveTo(note.address.toValue()))
+                        handlers.onDismiss()
+                    },
+                )
+                add(
+                    NoteAction(MaterialSymbols.TravelExplore, stringRes(Res.string.drss_menu_record_provenance)) {
+                        nav.nav(Route.DrssRecordProvenance(note.address.toValue()))
+                        handlers.onDismiss()
+                    },
+                )
+            } else if (hasDrssEventLists && !isPrivateRumor && note.event != null) {
+                // Anything else goes in the collections drss kept by event id (kind 30102).
+                add(
+                    NoteAction(MaterialSymbols.CollectionsBookmark, stringRes(Res.string.drss_menu_collect_to)) {
+                        nav.nav(Route.DrssCollectTo(note.event?.id ?: note.idHex))
+                        handlers.onDismiss()
+                    },
+                )
+            }
+
             // Pick exactly one curation flow per kind: music tracks go to playlists,
             // emoji packs go to the emoji list, everything else gets the standard
             // bookmark rows. No bookmark/playlist/emoji-list rows for private rumors:
@@ -347,7 +437,7 @@ fun noteActionSections(
                 else -> {
                     val noteBookmarkType = if (note.event is LongFormContentEvent) stringRes(Res.string.article) else stringRes(Res.string.post)
                     add(
-                        NoteAction(MaterialSymbols.BookmarkAdd, stringRes(Res.string.manage_bookmark_label, noteBookmarkType)) {
+                        NoteAction(MaterialSymbols.BookmarkAdd, stringRes(Res.string.manage_bookmark_label, noteBookmarkType), group = NoteActionGroup.BOOKMARK) {
                             if (note.event is LongFormContentEvent) {
                                 nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
                             } else {
@@ -358,14 +448,14 @@ fun noteActionSections(
                     )
                     if (state.isPrivateBookmarkNote) {
                         add(
-                            NoteAction(MaterialSymbols.LockOpen, stringRes(Res.string.remove_from_private_bookmarks)) {
+                            NoteAction(MaterialSymbols.LockOpen, stringRes(Res.string.remove_from_private_bookmarks), group = NoteActionGroup.BOOKMARK) {
                                 accountViewModel.removePrivateBookmark(note)
                                 handlers.onDismiss()
                             },
                         )
                     } else {
                         add(
-                            NoteAction(MaterialSymbols.Lock, stringRes(Res.string.add_to_private_bookmarks)) {
+                            NoteAction(MaterialSymbols.Lock, stringRes(Res.string.add_to_private_bookmarks), group = NoteActionGroup.BOOKMARK) {
                                 accountViewModel.addPrivateBookmark(note)
                                 handlers.onDismiss()
                             },
@@ -373,14 +463,14 @@ fun noteActionSections(
                     }
                     if (state.isPublicBookmarkNote) {
                         add(
-                            NoteAction(MaterialSymbols.BookmarkRemove, stringRes(Res.string.remove_from_public_bookmarks)) {
+                            NoteAction(MaterialSymbols.BookmarkRemove, stringRes(Res.string.remove_from_public_bookmarks), group = NoteActionGroup.BOOKMARK) {
                                 accountViewModel.removePublicBookmark(note)
                                 handlers.onDismiss()
                             },
                         )
                     } else {
                         add(
-                            NoteAction(MaterialSymbols.Bookmark, stringRes(Res.string.add_to_public_bookmarks)) {
+                            NoteAction(MaterialSymbols.Bookmark, stringRes(Res.string.add_to_public_bookmarks), group = NoteActionGroup.BOOKMARK) {
                                 accountViewModel.addPublicBookmark(note)
                                 handlers.onDismiss()
                             },
@@ -443,9 +533,62 @@ fun noteActionSections(
             if (handlers.onConcordBan != null && accountViewModel.account.concord.concordBanTarget(note) != null) {
                 add(NoteAction(MaterialSymbols.Gavel, stringRes(Res.string.concord_ban_user), isDestructive = true, onClick = handlers.onConcordBan))
             }
+            // A room admin may remove any member's message for everyone (a Marmot group sends a
+            // kind 4891; receivers check the sender was an admin when it was sent).
+            if (handlers.onRemoveForEveryone != null && !state.isLoggedUser && accountViewModel.canRemoveForEveryone(note)) {
+                add(
+                    NoteAction(
+                        MaterialSymbols.Delete,
+                        stringRes(Res.string.marmot_admin_delete_message),
+                        isDestructive = true,
+                        onClick = handlers.onRemoveForEveryone,
+                    ),
+                )
+            }
+            // A room admin may dismiss the reports members made on a message, their own included.
+            // It neither hides nor deletes the message; the reports just stop counting.
+            val toDismiss = accountViewModel.reportsToDismiss(note).size
+            if (toDismiss > 0) {
+                add(
+                    NoteAction(MaterialSymbols.DoneAll, pluralStringRes(Res.plurals.room_dismiss_reports, toDismiss, toDismiss)) {
+                        accountViewModel.dismissReports(note)
+                        handlers.onDismiss()
+                    },
+                )
+            }
         }
 
     return listOf(author, copyAndShare, editAndBroadcast, organize, moderation).filter { it.isNotEmpty() }
+}
+
+/**
+ * Confirmation for an admin's "Delete for everyone": every member's app removes the message,
+ * which cannot be undone. Shared by both action surfaces (sheet + 3-dot menu). [onClose]
+ * dismisses the dialog; [onRemoved] fires after the removal is sent.
+ */
+@Composable
+fun RemoveForEveryoneConfirmationDialog(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    onClose: () -> Unit,
+    onRemoved: () -> Unit,
+) {
+    QuickActionAlertDialogOneButton(
+        title = stringRes(Res.string.room_remove_for_everyone_title),
+        textContent = stringRes(Res.string.room_remove_for_everyone_body),
+        buttonIcon = MaterialSymbols.Delete,
+        buttonText = stringRes(Res.string.marmot_admin_delete_message),
+        buttonColors =
+            ButtonDefaults.buttonColors(
+                containerColor = LightRedColor,
+                contentColor = Color.White,
+            ),
+        onClickDoOnce = {
+            accountViewModel.removeForEveryone(note)
+            onRemoved()
+        },
+        onDismiss = onClose,
+    )
 }
 
 /**

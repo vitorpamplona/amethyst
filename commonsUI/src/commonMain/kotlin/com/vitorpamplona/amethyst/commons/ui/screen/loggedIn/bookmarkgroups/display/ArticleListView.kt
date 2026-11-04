@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.bookmarkgroups.display.BookmarkGroupViewModel
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
@@ -48,8 +49,8 @@ fun RenderArticleList(
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
-    val privateArticles by bookmarkGroupViewModel.privateArticles().collectAsStateWithLifecycle()
-    val publicArticles by bookmarkGroupViewModel.publicArticles().collectAsStateWithLifecycle()
+    val privateArticles by bookmarkGroupViewModel.privateArticles.collectAsStateWithLifecycle()
+    val publicArticles by bookmarkGroupViewModel.publicArticles.collectAsStateWithLifecycle()
 
     HorizontalPager(pagerState, modifier) { page ->
         when (page) {

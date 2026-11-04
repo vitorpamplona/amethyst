@@ -45,7 +45,6 @@ locally and tick the box. If your change can't possibly affect them
 - [ ] Audio rooms manual — `cli/tests/nests/nests-interop.sh` (Amethyst ↔ nostrnests.com)
 - [ ] MoQ-lite hang-tier — `:nestsClient:jvmTest -DnestsHangInterop=true`
 - [ ] MoQ-lite browser-tier — `:nestsClient:jvmTest -DnestsBrowserInterop=true`
-- [ ] QUIC interop-runner — `quic/interop/run-matrix.sh -s {aioquic,picoquic,quic-go,quinn}`
 
 ## AI assistance
 
@@ -57,9 +56,9 @@ appreciated when an assistant did the bulk of the diff. -->
 - [ ] Drafted with AI assistance, manually reviewed and tested
 - [ ] Written by hand
 
-If "Drafted with AI assistance" is ticked, also read
-[`CONTRIBUTING-WITH-AI.md`](CONTRIBUTING-WITH-AI.md) for the additional
-gates that apply to AI-authored PRs.
+If "Drafted with AI assistance" is ticked, a human must have reviewed the
+whole diff and tested the app by hand on a device before this PR was
+opened. See [`CONTRIBUTING-WITH-AI.md`](CONTRIBUTING-WITH-AI.md).
 
 ## License
 

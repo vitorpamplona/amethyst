@@ -41,10 +41,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.audio.MediaTracks
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
@@ -60,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastBadge
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastLinkChip
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastValueSplits
+import com.vitorpamplona.amethyst.commons.ui.note.platform.NoteMediaView
 import com.vitorpamplona.amethyst.commons.ui.note.platform.PodcastEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -114,17 +117,35 @@ fun RenderPodcastEpisode(
             }
         }
 
+    // An `audio` tag can hold a whole music video (`video/mp4`, or a `.mp4` with no type). Drawn as an
+    // episode, its frames render inside the waveform strip; once its track list shows a video track
+    // it plays through the video player, with the episode's cover as the thumb.
+    val tracks = media?.let { rememberMediaTracks(it.url, it.mediaType, accountViewModel) }
+
     Column(MaterialTheme.colorScheme.replyModifier) {
-        PodcastCoverCard(image, note, accountViewModel)
-        media?.let { audio ->
-            PodcastEpisodeAudioPlayer(
-                audio = audio,
-                note = note,
+        if (media != null && tracks == MediaTracks.HAS_VIDEO) {
+            NoteMediaView(
+                mediaUri = media.url,
+                isAudio = false,
                 title = title,
-                image = image,
-                borderModifier = PLAYER_BORDER_MODIFIER,
+                coverUri = image,
+                waveform = null,
+                contentScale = ContentScale.FillWidth,
+                note = note,
                 accountViewModel = accountViewModel,
             )
+        } else {
+            PodcastCoverCard(image, note, accountViewModel)
+            media?.let { audio ->
+                PodcastEpisodeAudioPlayer(
+                    audio = audio,
+                    note = note,
+                    title = title,
+                    image = image,
+                    borderModifier = PLAYER_BORDER_MODIFIER,
+                    accountViewModel = accountViewModel,
+                )
+            }
         }
 
         Column(

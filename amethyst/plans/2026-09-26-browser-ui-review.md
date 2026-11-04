@@ -251,7 +251,7 @@ is gone.
 
 **Sandboxed apps, embedded and full screen alike:**
 - An embedded nSite is labelled as an nSite, not "Sandboxed app", and gets the Tor row. Switching the
-  route saves it in `NappletNetworkRegistry` and rebuilds the session, as the full-screen host relaunches.
+  route saves it in `NsiteNetworkRegistry` and rebuilds the session, as the full-screen host relaunches.
 - "What it can access" is `AccessInfoSheet`: the launch capabilities, the keys-stay-in-Amethyst row, the
   route (nSites), and Manage permissions. It replaces both the platform `AlertDialog` and the embedded
   tab's `AccessDialog`.

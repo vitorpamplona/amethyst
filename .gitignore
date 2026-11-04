@@ -42,6 +42,8 @@ docs/superpowers
 
 # Built application files
 *.apk
+# Signed and unsigned test APKs for ApkInspectorTest (25 KB, built by aapt2 + apksigner).
+!commons/src/jvmTest/resources/appupdate/*.apk
 *.aar
 *.ap_
 *.aab

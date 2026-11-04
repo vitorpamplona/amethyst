@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.search.calendar
 
+import java.time.DateTimeException
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -61,6 +62,22 @@ actual object LocalClock {
             .totalSeconds
             .toLong()
 
+    actual fun utcOffsetSeconds(
+        zoneId: String,
+        unixSeconds: Long,
+    ): Long? {
+        val zone =
+            try {
+                ZoneId.of(zoneId.trim())
+            } catch (e: DateTimeException) {
+                return null
+            }
+        return zone.rules
+            .getOffset(Instant.ofEpochSecond(unixSeconds))
+            .totalSeconds
+            .toLong()
+    }
+
     actual fun epochDayCounter(): EpochDayCounter {
         val rules = zone().rules
         val offsets = ZoneOffsets { rules.getOffset(Instant.ofEpochSecond(it)).totalSeconds.toLong() }
@@ -69,6 +86,8 @@ actual object LocalClock {
 
     // WeekFields counts DayOfWeek 1..7 from Monday; this API counts 0..6 from Sunday.
     actual fun firstDayOfWeek(): Int = WeekFields.of(Locale.getDefault()).firstDayOfWeek.value % 7
+
+    actual fun zoneId(): String = ZoneId.systemDefault().id
 
     actual fun monthLabel(date: SearchDate): String = date.firstOfMonth().toJava().format(monthFormatter)
 

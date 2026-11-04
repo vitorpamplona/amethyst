@@ -53,6 +53,14 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastStatus
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.broadcast_banner_relay_count
+import com.vitorpamplona.amethyst.commons.resources.chess_sync_tap_to_retry
+import com.vitorpamplona.amethyst.commons.resources.profile_broadcast_failed
+import com.vitorpamplona.amethyst.commons.resources.profile_broadcast_updated
+import com.vitorpamplona.amethyst.commons.resources.profile_broadcast_updating
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Shared banner showing profile metadata broadcast progress.
@@ -166,19 +174,21 @@ private fun getStatusIconColor(status: ProfileBroadcastStatus): Color =
         else -> MaterialTheme.colorScheme.primary
     }
 
+@Composable
 private fun getStatusText(status: ProfileBroadcastStatus): String =
     when (status) {
-        is ProfileBroadcastStatus.Broadcasting -> "Updating ${status.fieldName}..."
-        is ProfileBroadcastStatus.Success -> "Updated ${status.fieldName}"
-        is ProfileBroadcastStatus.Failed -> "Failed to update ${status.fieldName}"
+        is ProfileBroadcastStatus.Broadcasting -> stringRes(Res.string.profile_broadcast_updating, status.fieldName)
+        is ProfileBroadcastStatus.Success -> stringRes(Res.string.profile_broadcast_updated, status.fieldName)
+        is ProfileBroadcastStatus.Failed -> stringRes(Res.string.profile_broadcast_failed, status.fieldName)
         is ProfileBroadcastStatus.Idle -> ""
     }
 
+@Composable
 private fun getStatusDetail(status: ProfileBroadcastStatus): String =
     when (status) {
         is ProfileBroadcastStatus.Broadcasting -> "[${status.successCount}/${status.totalRelays}]"
-        is ProfileBroadcastStatus.Success -> "${status.relayCount} relays"
-        is ProfileBroadcastStatus.Failed -> "Tap to retry"
+        is ProfileBroadcastStatus.Success -> pluralStringRes(Res.plurals.broadcast_banner_relay_count, status.relayCount, status.relayCount)
+        is ProfileBroadcastStatus.Failed -> stringRes(Res.string.chess_sync_tap_to_retry)
         is ProfileBroadcastStatus.Idle -> ""
     }
 

@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,11 +62,30 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /**
- * Soft, dismissible "back up your keys" nudge shown on the home feed for freshly
- * generated accounts that haven't saved their secret key yet. It never blocks
- * navigation: the user either backs up (navigates to [Route.AccountBackup]) or
- * confirms they already saved the key. Both actions flip the per-account
- * backed-up flag so the nudge stops appearing.
+ * Whether Home shows [BackupKeysNudge]: for a freshly generated account that hasn't saved its
+ * secret key yet. False until the flag is read, so the card never flashes for everyone else.
+ */
+@Composable
+fun rememberShowBackupKeysNudge(accountViewModel: AccountViewModel): Boolean {
+    val npub =
+        remember(accountViewModel) {
+            accountViewModel.account.signer.pubKey
+                .hexToByteArray()
+                .toNpub()
+        }
+
+    val flow by produceState<StateFlow<Boolean>?>(initialValue = null, key1 = npub) {
+        value = accountViewModel.host.hasBackedUpKeys(npub)
+    }
+    val hasBackedUp = flow?.collectAsStateWithLifecycle()?.value ?: true
+    return !hasBackedUp
+}
+
+/**
+ * Soft, dismissible "back up your keys" card at the top of the home feed, shown while
+ * [rememberShowBackupKeysNudge] says so. It never blocks navigation: the user either backs up
+ * (navigates to [Route.AccountBackup]) or confirms they already saved the key. Both actions flip
+ * the per-account backed-up flag so the card stops appearing.
  */
 @Composable
 fun BackupKeysNudge(
@@ -73,33 +93,13 @@ fun BackupKeysNudge(
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
-    val npub =
-        accountViewModel.account.signer.pubKey
-            .hexToByteArray()
-            .toNpub()
-
-    // Seed the reactive flag off a background read. Rendering only proceeds once the
-    // flow resolves, so the observing composable never conditionally calls hooks.
-    val flow by produceState<StateFlow<Boolean>?>(initialValue = null, key1 = npub) {
-        value = accountViewModel.host.hasBackedUpKeys(npub)
-    }
-
-    flow?.let { stateFlow ->
-        WatchBackupKeysNudge(stateFlow, npub, accountViewModel, nav, modifier)
-    }
-}
-
-@Composable
-private fun WatchBackupKeysNudge(
-    stateFlow: StateFlow<Boolean>,
-    npub: String,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    modifier: Modifier,
-) {
     val scope = rememberCoroutineScope()
-    val hasBackedUp by stateFlow.collectAsStateWithLifecycle()
-    if (hasBackedUp) return
+    val npub =
+        remember(accountViewModel) {
+            accountViewModel.account.signer.pubKey
+                .hexToByteArray()
+                .toNpub()
+        }
 
     BackupKeysNudgeCard(
         modifier = modifier,

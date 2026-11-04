@@ -20,11 +20,16 @@
  */
 package com.vitorpamplona.relaybench
 
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.relaybench.bench.RelayResult
 import com.vitorpamplona.relaybench.bench.SyncBenchmark
 import com.vitorpamplona.relaybench.corpus.Corpus
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
@@ -366,52 +371,52 @@ object Report {
         }
 
     fun json(run: BenchRun): String {
-        val mapper = jacksonObjectMapper().enable(SerializationFeature.INDENT_OUTPUT)
+        val json = BenchJson.pretty
         val tree =
-            mapOf(
-                "startedAt" to run.startedAt.toString(),
-                "corpus" to
-                    mapOf(
-                        "source" to run.corpus.source,
-                        "events" to run.corpus.events.size,
-                        "fingerprint" to run.corpus.fingerprint,
-                        "kinds" to run.corpus.kindHistogram(),
-                    ),
-                "options" to
-                    mapOf(
-                        "publishers" to run.options.publishers,
-                        "window" to run.options.window,
-                        "visibilitySamples" to run.options.visibilitySamples,
-                        "queryRounds" to run.options.queryRounds,
-                        "queryConnections" to run.options.queryConnections,
-                    ),
-                "relays" to
-                    run.relays.map { r ->
-                        mapOf(
-                            "name" to r.name,
-                            "software" to r.info?.software,
-                            "version" to r.info?.version,
-                            "error" to r.error,
-                            "visibility" to r.visibility,
-                            "throughput" to r.throughput,
-                            "storageBytes" to r.storageBytes,
-                            "queries" to
-                                r.queries.map { q ->
-                                    mapOf(
-                                        "scenario" to q.scenario.key,
-                                        "description" to q.scenario.description,
-                                        "filter" to q.scenario.filterJson,
-                                        "eventsPerRound" to q.eventsPerRound,
-                                        "timeToFirst" to q.timeToFirst,
-                                        "timeToEose" to q.timeToEose,
-                                        "sequentialEventsPerSec" to q.sequentialEventsPerSec,
-                                        "concurrentEventsPerSec" to q.concurrentEventsPerSec,
-                                    )
-                                },
-                        )
-                    },
-                "syncs" to run.syncs,
-            )
-        return mapper.writeValueAsString(tree)
+            buildJsonObject {
+                put("startedAt", run.startedAt.toString())
+                putJsonObject("corpus") {
+                    put("source", run.corpus.source)
+                    put("events", run.corpus.events.size)
+                    put("fingerprint", run.corpus.fingerprint)
+                    putJsonObject("kinds") { run.corpus.kindHistogram().forEach { (kind, count) -> put(kind.toString(), count) } }
+                }
+                putJsonObject("options") {
+                    put("publishers", run.options.publishers)
+                    put("window", run.options.window)
+                    put("visibilitySamples", run.options.visibilitySamples)
+                    put("queryRounds", run.options.queryRounds)
+                    put("queryConnections", run.options.queryConnections)
+                }
+                putJsonArray("relays") {
+                    run.relays.forEach { r ->
+                        addJsonObject {
+                            put("name", r.name)
+                            put("software", r.info?.software)
+                            put("version", r.info?.version)
+                            put("error", r.error)
+                            put("visibility", json.encodeToJsonElement(r.visibility))
+                            put("throughput", json.encodeToJsonElement(r.throughput))
+                            put("storageBytes", r.storageBytes)
+                            putJsonArray("queries") {
+                                r.queries.forEach { q ->
+                                    addJsonObject {
+                                        put("scenario", q.scenario.key)
+                                        put("description", q.scenario.description)
+                                        put("filter", q.scenario.filterJson)
+                                        put("eventsPerRound", q.eventsPerRound)
+                                        put("timeToFirst", json.encodeToJsonElement(q.timeToFirst))
+                                        put("timeToEose", json.encodeToJsonElement(q.timeToEose))
+                                        put("sequentialEventsPerSec", q.sequentialEventsPerSec)
+                                        put("concurrentEventsPerSec", q.concurrentEventsPerSec)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                put("syncs", json.encodeToJsonElement(run.syncs))
+            }
+        return json.encodeToString(JsonObject.serializer(), tree)
     }
 }

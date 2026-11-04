@@ -48,11 +48,11 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -126,11 +126,10 @@ class NestViewModel(
     private val speakerConnector: NestsSpeakerConnector = DefaultNestsSpeakerConnector,
     // Scope used for fire-and-forget MoQ cleanup (UNANNOUNCE,
     // SUBSCRIBE_DONE, MoQ session close) that needs to outlive the VM's
-    // own scope. Production passes [GlobalScope] so onCleared can finish
-    // sending control frames before the QUIC transport drops; tests pass
-    // their `backgroundScope` so assertions can observe the close.
-    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
-    private val cleanupScope: CoroutineScope = GlobalScope,
+    // own scope. Production passes the application scope so onCleared can
+    // finish sending control frames before the QUIC transport drops; tests
+    // pass their `backgroundScope` so assertions can observe the close.
+    private val cleanupScope: CoroutineScope,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(NestUiState())
     val uiState: StateFlow<NestUiState> = _uiState.asStateFlow()
@@ -479,8 +478,8 @@ class NestViewModel(
                     // wrap with [connectReconnectingNestsListener] /
                     // [connectReconnectingNestsSpeaker] which both
                     // override the hook to close the inner session.
-                    listener?.runCatching { recycleSession() }
-                    speaker?.runCatching { recycleSession() }
+                    listener?.let { runCatchingCancellable { it.recycleSession() } }
+                    speaker?.let { runCatchingCancellable { it.recycleSession() } }
                 }
             }
     }
@@ -498,7 +497,7 @@ class NestViewModel(
         val userMuted = (ui as? BroadcastUiState.Broadcasting)?.isMuted ?: false
         val effective = userMuted || focusMuted
         viewModelScope.launch {
-            runCatching { handle.setMuted(effective) }
+            runCatchingCancellable { handle.setMuted(effective) }
         }
     }
 
@@ -745,7 +744,7 @@ class NestViewModel(
                     // doesn't get a silent unmute.
                     if (initialMuted) {
                         val effective = initialMuted || focusMuted
-                        runCatching { handle.setMuted(effective) }
+                        runCatchingCancellable { handle.setMuted(effective) }
                     }
                     _uiState.update { it.copy(broadcast = BroadcastUiState.Broadcasting(isMuted = initialMuted)) }
                 } catch (ce: CancellationException) {
@@ -781,7 +780,7 @@ class NestViewModel(
             // the focus-effective state) so a focus-driven mute doesn't
             // visually flip the talk button.
             val effective = muted || focusMuted
-            val result = handle.runCatching { setMuted(effective) }
+            val result = runCatchingCancellable { handle.setMuted(effective) }
             if (closed) return@launch
             _uiState.update {
                 val current = it.broadcast
@@ -905,7 +904,7 @@ class NestViewModel(
                     .d("NestRx") { "observeAnnounces launching collect on l.announces()" }
                 var emissionCount = 0
                 val outcome =
-                    runCatching {
+                    runCatchingCancellable {
                         l.announces().collect { ann ->
                             if (closed) return@collect
                             emissionCount += 1
@@ -1222,7 +1221,7 @@ class NestViewModel(
         catalogJobs.remove(pubkey)?.cancel()
         catalogJobs[pubkey] =
             viewModelScope.launch {
-                val handle = runCatching { l.subscribeCatalog(pubkey) }.getOrNull() ?: return@launch
+                val handle = runCatchingCancellable { l.subscribeCatalog(pubkey) }.getOrNull() ?: return@launch
                 try {
                     handle.objects.collect { obj ->
                         if (closed) return@collect

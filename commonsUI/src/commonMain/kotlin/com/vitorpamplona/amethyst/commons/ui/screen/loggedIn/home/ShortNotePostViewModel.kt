@@ -26,16 +26,17 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateMap
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.actions.ReplyActions
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.VoiceAnonymizationController
 import com.vitorpamplona.amethyst.commons.audio.VoicePreset
-import com.vitorpamplona.amethyst.commons.model.AMETHYST_CLIENT_TAG_NAME
+import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.BooleanType
@@ -48,6 +49,9 @@ import com.vitorpamplona.amethyst.commons.model.composer.IZapRaiser
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.composer.PreviewState
 import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
+import com.vitorpamplona.amethyst.commons.model.composer.messageTags
+import com.vitorpamplona.amethyst.commons.model.composer.pTagsWithHints
+import com.vitorpamplona.amethyst.commons.model.composer.quoteMessage
 import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
@@ -57,12 +61,10 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestio
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
-import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
-import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.upload_error_title
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_exception
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_failed
-import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_nip95_not_supported
+import com.vitorpamplona.amethyst.commons.resources.voice_anonymization_failed
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistantStatus
@@ -93,10 +95,9 @@ import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawingIntoText
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.closedAt
 import com.vitorpamplona.quartz.experimental.zapPolls.consensusThreshold
@@ -112,13 +113,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
-import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
@@ -130,10 +129,10 @@ import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
-import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
@@ -153,7 +152,6 @@ import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
-import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.isClient
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
@@ -171,7 +169,6 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -195,6 +192,7 @@ import kotlin.uuid.Uuid
 enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
     FORWARD_ZAPS,
+    POLL_OPTION,
     TO_USERS,
     NOTIFY,
 }
@@ -207,6 +205,12 @@ private const val AI_DEBOUNCE_MS = 1000L
 
 /** Model status crosses a process boundary, so it is only re-read this often. */
 private const val AI_STATUS_RECHECK_SECONDS = 30
+
+/** A poll needs two answers to choose between. */
+private const val MIN_POLL_OPTIONS = 2
+
+/** A new poll stays open for a day after it is sent. */
+private val DEFAULT_POLL_DEADLINE = PollDeadline.After(TimeUtils.ONE_DAY.toLong())
 
 @Stable
 open class ShortNotePostViewModel :
@@ -266,7 +270,6 @@ open class ShortNotePostViewModel :
     override fun onAudienceChanged() = draftTag.newVersion()
 
     val iMetaAttachments = IMetaAttachments()
-    var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
     override val message = TextFieldState()
 
@@ -301,11 +304,12 @@ open class ShortNotePostViewModel :
             scope = viewModelScope,
             logTag = "ShortNotePostViewModel",
             onError = { error ->
-                accountViewModel.toastManager.toast(
-                    Res.string.error,
-                    error.message ?: "Voice anonymization failed",
-                    error,
-                )
+                val message = error.message
+                if (message != null) {
+                    accountViewModel.toastManager.toast(Res.string.error, message, error)
+                } else {
+                    accountViewModel.toastManager.toast(Res.string.error, Res.string.voice_anonymization_failed, error)
+                }
             },
             anonymize = { file, preset -> accountViewModel.host.anonymizeVoice(file, preset.name) },
         )
@@ -327,9 +331,15 @@ open class ShortNotePostViewModel :
     // between the two poll types never hides or discards the text the user already typed.
     var canUsePoll by mutableStateOf(false)
     var wantsPoll by mutableStateOf(false)
-    var pollOptions: SnapshotStateMap<Int, OptionTag> = newStateMapPollOptions()
+    var pollOptions: SnapshotStateList<PollOptionDraft> = newPollOptions()
+
+    // The option last typed in or focused: the `@` and `:` suggestions and the emoji button write
+    // into it. Null once the message field takes focus back.
+    var activePollOption by mutableStateOf<PollOptionDraft?>(null)
     var pollType by mutableStateOf(PollType.SINGLE_CHOICE)
-    var closedAt by mutableLongStateOf(TimeUtils.oneDayAhead())
+
+    // When voting closes, for both kinds of poll.
+    var pollDeadline by mutableStateOf<PollDeadline>(DEFAULT_POLL_DEADLINE)
 
     // ZapPolls
     var canUseZapPoll by mutableStateOf(false)
@@ -337,7 +347,6 @@ open class ShortNotePostViewModel :
     var zapPollValueMaximum by mutableStateOf<Long?>(null)
     var zapPollValueMinimum by mutableStateOf<Long?>(null)
     var zapPollConsensusThreshold: Int? = null
-    var zapPollClosedAt by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     var isValidValueMaximum = mutableStateOf(true)
     var isValidValueMinimum = mutableStateOf(true)
@@ -727,7 +736,7 @@ open class ShortNotePostViewModel :
             multiOrchestrator = null
 
             quote?.let { quotedNote ->
-                message.setTextAndPlaceCursorAtBeginning(message.text.toString() + "\nnostr:${quotedNote.toNEvent()}")
+                message.setTextAndPlaceCursorAtBeginning(quoteMessage(message.text.toString(), quotedNote))
 
                 quotedNote.author?.let { quotedUser ->
                     if (quotedUser.pubkeyHex != user.pubkeyHex) {
@@ -880,43 +889,37 @@ open class ShortNotePostViewModel :
             zapRaiserAmount.value = zapRaiser
         }
 
-        eTags =
-            draftEvent.tags.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) != "fork" }.mapNotNull {
-                val note = LocalCache.checkGetOrCreateNote(it[1])
-                note
-            }
+        eTags = draftEvent.threadReferenceIds().mapNotNull { LocalCache.checkGetOrCreateNote(it) }
 
         pTags =
-            draftEvent.tags
-                .filter { it.size > 1 && it[0] == "p" }
-                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+            draftEvent
+                .mentions()
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it.pubKey) }
                 // A built event can legitimately repeat a p tag (the voice-reply
                 // branch notifies the parent author on top of the notify list), so
                 // the audience it round-trips through a draft has to be deduped.
                 .distinct()
 
-        draftEvent.tags.filter { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "fork" }.forEach {
-            val note = LocalCache.checkGetOrCreateNote(it[1])
-            forkedFromNote = note
+        // Same precedence as ShowForkInformation: a forked address wins over a forked version.
+        val forkedAddress = draftEvent.forkFromAddress()
+        val forkedVersion = draftEvent.forkFromVersion()
+        if (forkedAddress != null) {
+            forkedFromNote = LocalCache.getOrCreateAddressableNote(forkedAddress)
+        } else if (forkedVersion != null) {
+            forkedFromNote = LocalCache.checkGetOrCreateNote(forkedVersion)
         }
 
+        // The reply-marked e/a tag, else the root-marked one (a direct reply to a root carries
+        // only the root marker). Markers only: an unmarked `a` (a community, a mention) must not
+        // turn a top-level draft into a reply, so replyingToAddressOrEvent()'s positional
+        // fallback is not used here.
         originalNote =
-            draftEvent
-                .tags
-                .filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "reply" }
-                .map {
-                    LocalCache.checkGetOrCreateNote(it[1])
-                }.firstOrNull()
-
-        if (originalNote == null) {
-            originalNote =
-                draftEvent
-                    .tags
-                    .filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "root" }
-                    .map {
-                        LocalCache.checkGetOrCreateNote(it[1])
-                    }.firstOrNull()
-        }
+            draftEvent.tags
+                .firstOrNull { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "reply" }
+                ?.let { LocalCache.checkGetOrCreateNote(it[1]) }
+                ?: draftEvent.tags
+                    .firstOrNull { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "root" }
+                    ?.let { LocalCache.checkGetOrCreateNote(it[1]) }
 
         canUsePoll = originalNote == null
         canUseZapPoll = originalNote == null
@@ -997,9 +1000,9 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags
-                .filter { it.size > 1 && it[0] == "p" }
-                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+            draftEvent
+                .mentionKeys()
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                 // A built event can legitimately repeat a p tag (the voice-reply
                 // branch notifies the parent author on top of the notify list), so
                 // the audience it round-trips through a draft has to be deduped.
@@ -1019,12 +1022,13 @@ open class ShortNotePostViewModel :
         val polls = draftEvent.options()
         wantsPoll = polls.isNotEmpty()
 
-        polls.forEachIndexed { index, tag ->
-            pollOptions[index] = tag
-        }
+        pollOptions.clear()
+        polls.mapTo(pollOptions) { PollOptionDraft(it.code, it.label) }
+        while (pollOptions.size < MIN_POLL_OPTIONS) pollOptions.add(PollOptionDraft())
+        keepTrailingPollOption()
 
         pollType = draftEvent.pollType()
-        closedAt = draftEvent.endsAt() ?: TimeUtils.oneDayAhead()
+        pollDeadline = draftEvent.endsAt()?.let { PollDeadline.At(it) } ?: PollDeadline.Never
 
         message.setTextAndPlaceCursorAtEnd(draftEvent.content)
 
@@ -1069,16 +1073,12 @@ open class ShortNotePostViewModel :
             zapRaiserAmount.value = zapRaiser
         }
 
-        eTags =
-            draftEvent.tags.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) != "fork" }.mapNotNull {
-                val note = LocalCache.checkGetOrCreateNote(it[1])
-                note
-            }
+        eTags = draftEvent.threadReferenceIds().mapNotNull { LocalCache.checkGetOrCreateNote(it) }
 
         pTags =
-            draftEvent.tags
-                .filter { it.size > 1 && it[0] == "p" }
-                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+            draftEvent
+                .mentions()
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it.pubKey) }
                 // A built event can legitimately repeat a p tag (the voice-reply
                 // branch notifies the parent author on top of the notify list), so
                 // the audience it round-trips through a draft has to be deduped.
@@ -1098,15 +1098,15 @@ open class ShortNotePostViewModel :
         val polls = draftEvent.pollOptionsArray()
         wantsZapPoll = polls.isNotEmpty()
 
-        polls.forEach { tag ->
-            val current = pollOptions[tag.index]
-            pollOptions[tag.index] = OptionTag(current?.code ?: RandomInstance.randomChars(6), tag.descriptor)
-        }
+        pollOptions.clear()
+        polls.sortedBy { it.index }.mapTo(pollOptions) { PollOptionDraft(text = it.descriptor) }
+        while (pollOptions.size < MIN_POLL_OPTIONS) pollOptions.add(PollOptionDraft())
+        keepTrailingPollOption()
 
         zapPollValueMinimum = draftEvent.minAmount()
         zapPollValueMaximum = draftEvent.maxAmount()
         zapPollConsensusThreshold = draftEvent.consensusThreshold()?.let { (it * 100).toInt() }
-        zapPollClosedAt = draftEvent.closedAt() ?: TimeUtils.oneDayAhead()
+        pollDeadline = draftEvent.closedAt()?.let { PollDeadline.At(it) } ?: PollDeadline.Never
 
         message.setTextAndPlaceCursorAtEnd(draftEvent.content)
 
@@ -1137,17 +1137,6 @@ open class ShortNotePostViewModel :
         }
 
         val template = createTemplate() ?: return
-        val extraNotesToBroadcast = mutableListOf<Event>()
-
-        if (nip95attachments.isNotEmpty()) {
-            val usedImages = template.tags.taggedQuoteIds().toSet()
-            nip95attachments.forEach {
-                if (usedImages.contains(it.second.id)) {
-                    extraNotesToBroadcast.add(it.first)
-                    extraNotesToBroadcast.add(it.second)
-                }
-            }
-        }
 
         // captured before cancel() resets the chip
         val chosenPow = powOverride
@@ -1161,8 +1150,7 @@ open class ShortNotePostViewModel :
         if (accountViewModel.settings.automaticallyCreateDrafts() && accountViewModel.account.powDifficultyFor(minedKind, chosenPow) != null) {
             draftNote = account.getOrCreateDraftNote(draftTag.current)
             // the same template sendDraftSync() would rebuild; reuse it.
-            val attachments = nip95attachments.flatMapTo(mutableSetOf()) { listOf(it.first, it.second) }
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
 
         val draftToDelete = draftNote
@@ -1219,10 +1207,10 @@ open class ShortNotePostViewModel :
 
             accountViewModel.account.sendMined(
                 rescheduledTemplate,
-                PoWReplay.Schedule(scheduledFor, extraNotesToBroadcast),
+                PoWReplay.Schedule(scheduledFor),
                 chosenPow,
             ) { readyTemplate ->
-                storeScheduledPost(readyTemplate, extraNotesToBroadcast, scheduledFor)
+                storeScheduledPost(readyTemplate, scheduledFor)
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
             return
@@ -1241,18 +1229,18 @@ open class ShortNotePostViewModel :
                         // (NIP-13 recommendation), starting from the moment a worker
                         // picks the job up rather than when it was queued.
                         val mined = PoWMiner.mine(template, anonSigner.pubKey, powDifficulty, accountViewModel.account.powMinerWorkers(), isActive, TimeUtils::now)
-                        accountViewModel.account.signAnonymouslyAndBroadcast(mined, extraNotesToBroadcast, anonSigner)
+                        accountViewModel.account.signAnonymouslyAndBroadcast(mined, anonymousSigner = anonSigner)
                         accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
                     }
             if (!enqueued) {
-                accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonSigner)
+                accountViewModel.account.signAnonymouslyAndBroadcast(template, anonymousSigner = anonSigner)
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
             return
         }
 
-        accountViewModel.account.sendMined(template, PoWReplay.Broadcast(extraNotesToBroadcast), chosenPow) { readyTemplate ->
-            broadcastPublicPost(readyTemplate, extraNotesToBroadcast)
+        accountViewModel.account.sendMined(template, PoWReplay.Broadcast(), chosenPow) { readyTemplate ->
+            broadcastPublicPost(readyTemplate)
             accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }
@@ -1266,10 +1254,9 @@ open class ShortNotePostViewModel :
     @OptIn(ExperimentalUuidApi::class)
     private suspend fun storeScheduledPost(
         template: EventTemplate<out Event>,
-        extraNotesToBroadcast: List<Event>,
         publishAtSec: Long,
     ) {
-        val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
+        val (event, relays, extras) = accountViewModel.account.createPostEvent(template)
         val store = accountViewModel.host.scheduledPostStore ?: return
         store.add(
             ScheduledPost(
@@ -1293,12 +1280,9 @@ open class ShortNotePostViewModel :
      * only progress reporting remains). Runs on the mining queue's scope when
      * PoW is on, so it must not touch viewModelScope.
      */
-    private suspend fun broadcastPublicPost(
-        template: EventTemplate<out Event>,
-        extraNotesToBroadcast: List<Event>,
-    ) {
+    private suspend fun broadcastPublicPost(template: EventTemplate<out Event>) {
         if (accountViewModel.settings.useTrackedBroadcasts()) {
-            val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
+            val (event, relays, extras) = accountViewModel.account.createPostEvent(template)
             accountViewModel.account.scope.launch {
                 accountViewModel.broadcastTracker.trackBroadcast(
                     event = event,
@@ -1308,7 +1292,7 @@ open class ShortNotePostViewModel :
                 accountViewModel.account.consumePostEvent(event, relays, extras)
             }
         } else {
-            accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+            accountViewModel.account.signAndComputeBroadcast(template)
         }
     }
 
@@ -1317,14 +1301,8 @@ open class ShortNotePostViewModel :
         if (text.isBlank() || text.trim() == appliedSignature) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
-            val attachments = mutableSetOf<Event>()
-            nip95attachments.forEach {
-                attachments.add(it.first)
-                attachments.add(it.second)
-            }
-
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
     }
 
@@ -1397,6 +1375,7 @@ open class ShortNotePostViewModel :
 
         val emojis = account.emoji.findEmojiTags(tagger.message)
         val urls = findURLs(tagger.message)
+        iMetaAttachments.awaitLinkedImages()
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
@@ -1414,9 +1393,7 @@ open class ShortNotePostViewModel :
                 // `nostr:` reference resolves — matching the Poll/ZapPoll branches below.
                 pTags(tagger.directMentionsUsers.map { it.toPTag() })
 
-                hashtags(findHashtags(tagger.message))
-                references(findURLs(tagger.message))
-                quotes(findNostrUris(tagger.message))
+                messageTags(tagger.message)
 
                 geoHash?.let { geohash(it) }
                 contentWarningReason?.let { contentWarning(it) }
@@ -1426,17 +1403,16 @@ open class ShortNotePostViewModel :
                 imetas(usedAttachments)
             }
         } else if (wantsPoll) {
-            val options = pollOptions.map { it.value }
-
+            val options = taggedPollOptions()
             if (options.isEmpty()) return null
 
-            val quotes = findNostrUris(tagger.message)
+            val quotes = pollQuotes(tagger, options)
             val relays =
                 accountViewModel.account.nip65RelayList.outboxFlow.value
                     .toList()
 
-            PollEvent.build(tagger.message, options, closedAt, relays, pollType) {
-                pTags(tagger.directMentionsUsers.map { it.toPTag() })
+            PollEvent.build(tagger.message, options.map { OptionTag(it.code, it.tagger.message) }, pollClosesAt(), relays, pollType) {
+                pTags(pollMentions(tagger, options).map { it.toPTag() })
                 quotes(quotes)
                 hashtags(findHashtags(tagger.message))
 
@@ -1446,21 +1422,21 @@ open class ShortNotePostViewModel :
                 contentWarningReason?.let { contentWarning(it) }
                 localExpirationDate?.let { expiration(it) }
 
-                emojis(emojis)
+                emojis(pollEmojis(emojis, options))
                 imetas(usedAttachments)
             }
         } else if (wantsZapPoll) {
-            val options = pollOptions.map { PollOptionTag(it.key, it.value.label) }
+            val options = taggedPollOptions()
             if (options.isEmpty()) return null
 
-            ZapPollEvent.build(tagger.message, options) {
-                closedAt(zapPollClosedAt)
+            ZapPollEvent.build(tagger.message, options.mapIndexed { index, option -> PollOptionTag(index, option.tagger.message) }) {
+                pollClosesAt()?.let { closedAt(it) }
                 zapPollValueMinimum?.let { minAmount(it) }
                 zapPollValueMaximum?.let { maxAmount(it) }
                 zapPollConsensusThreshold?.let { consensusThreshold(it / 100.0) }
 
-                pTags(tagger.directMentionsUsers.map { it.toPTag() })
-                quotes(findNostrUris(tagger.message))
+                pTags(pollMentions(tagger, options).map { it.toPTag() })
+                quotes(pollQuotes(tagger, options))
                 hashtags(findHashtags(tagger.message))
 
                 geoHash?.let { geohash(it) }
@@ -1469,7 +1445,7 @@ open class ShortNotePostViewModel :
                 contentWarningReason?.let { contentWarning(it) }
                 localExpirationDate?.let { expiration(it) }
 
-                emojis(emojis)
+                emojis(pollEmojis(emojis, options))
                 imetas(usedAttachments)
             }
         } else if (shouldReplyAsComment()) {
@@ -1478,22 +1454,9 @@ open class ShortNotePostViewModel :
             val eventHint = originalNote?.toEventHint<Event>() ?: return null
 
             CommentEvent.replyBuilder(tagger.message, eventHint) {
-                tagger.pTags?.let { userList ->
-                    val tags =
-                        userList.map {
-                            val tag = it.toPTag()
-                            if (tag.relayHint == null) {
-                                tag.copy(relayHint = LocalCache.relayHints.hintsForKey(it.pubkeyHex).firstOrNull())
-                            } else {
-                                tag
-                            }
-                        }
-                    notify(tags)
-                }
+                tagger.pTagsWithHints(LocalCache.relayHints)?.let { notify(it) }
 
-                hashtags(findHashtags(tagger.message))
-                references(findURLs(tagger.message))
-                quotes(findNostrUris(tagger.message))
+                messageTags(tagger.message)
 
                 geoHash?.let { geohash(it) }
                 localZapRaiserAmount?.let { zapraiser(it) }
@@ -1534,22 +1497,9 @@ open class ShortNotePostViewModel :
                     markedETags(tags)
                 }
 
-                tagger.pTags?.let { userList ->
-                    val tags =
-                        userList.map {
-                            val tag = it.toPTag()
-                            if (tag.relayHint == null) {
-                                tag.copy(relayHint = LocalCache.relayHints.hintsForKey(it.pubkeyHex).firstOrNull())
-                            } else {
-                                tag
-                            }
-                        }
-                    notify(tags)
-                }
+                tagger.pTagsWithHints(LocalCache.relayHints)?.let { notify(it) }
 
-                hashtags(findHashtags(tagger.message))
-                references(findURLs(tagger.message))
-                quotes(findNostrUris(tagger.message))
+                messageTags(tagger.message)
 
                 if (wantsSubject && subjectValue.isNotBlank()) subject(subjectValue)
 
@@ -1568,14 +1518,13 @@ open class ShortNotePostViewModel :
     /**
      * NIP-22: a reply should be a kind 1111 Comment (instead of a kind 1 reply) when
      * the note being replied to is a kind 1 [TextNoteEvent], is the root of a new
-     * thread, and was itself posted from Amethyst. Forks keep using kind 1.
+     * thread, and was itself posted from Amethyst ([ReplyActions.repliesAsComment],
+     * shared with amy). Forks keep using kind 1.
      */
     private fun shouldReplyAsComment(): Boolean {
         if (forkedFromNote != null) return false
         val replyingToEvent = originalNote?.event ?: return false
-        return replyingToEvent is TextNoteEvent &&
-            replyingToEvent.isNewThread() &&
-            replyingToEvent.isClient(AMETHYST_CLIENT_TAG_NAME)
+        return ReplyActions.repliesAsComment(replyingToEvent)
     }
 
     fun upload(
@@ -1589,16 +1538,7 @@ open class ShortNotePostViewModel :
         stripMetadata: Boolean = true,
         convertGifToMp4: Boolean = false,
     ) {
-        try {
-            uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
-        } catch (_: SignerExceptions.ReadOnlyException) {
-            viewModelScope.launch {
-                onError(
-                    loadStringRes(Res.string.read_only_user),
-                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
-                )
-            }
-        }
+        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
     }
 
     fun uploadUnsafe(
@@ -1636,15 +1576,7 @@ open class ShortNotePostViewModel :
                 val urls =
                     results.successful.mapNotNull { state ->
                         val uploaded = state.result
-                        if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                            val nip95 = account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, alt, contentWarningReason)
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
-
-                            note?.let {
-                                "nostr:" + it.toNEvent()
-                            }
-                        } else if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
                             val iMeta =
                                 IMetaTagBuilder(uploaded.url)
                                     .apply {
@@ -1686,6 +1618,18 @@ open class ShortNotePostViewModel :
         }
     }
 
+    /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the note. */
+    fun uploadDrawing(
+        drawing: RenderedDrawing,
+        alt: String?,
+        onError: (title: String, message: String) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val signer = if (wantsAnonymousPost) anonymousSigner() else null
+            uploadDrawingIntoText(drawing, alt, account, accountViewModel.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message, urlPreviews, signer)
+        }
+    }
+
     open fun cancel() {
         draftTag.rotate()
 
@@ -1714,15 +1658,15 @@ open class ShortNotePostViewModel :
         notifyProvenance = emptyMap()
 
         wantsPoll = false
-        pollOptions = newStateMapPollOptions()
+        pollOptions = newPollOptions()
+        activePollOption = null
         pollType = PollType.SINGLE_CHOICE
-        closedAt = TimeUtils.oneDayAhead()
+        pollDeadline = DEFAULT_POLL_DEADLINE
 
         wantsZapPoll = false
         zapPollValueMaximum = null
         zapPollValueMinimum = null
         zapPollConsensusThreshold = null
-        zapPollClosedAt = TimeUtils.oneDayAhead()
 
         wantsInvoice = false
         wantsZapRaiser = false
@@ -1768,6 +1712,7 @@ open class ShortNotePostViewModel :
     }
 
     override fun onMessageChanged() {
+        activePollOption = null
         urlPreviews.update(message.text.toString())
 
         if (message.selection.collapsed) {
@@ -1801,6 +1746,8 @@ open class ShortNotePostViewModel :
                 val lastWord = message.currentWord()
                 userSuggestions.replaceCurrentWord(message, lastWord, item)
                 urlPreviews.update(message.text.toString())
+            } else if (userSuggestionsMainMessage == UserSuggestionAnchor.POLL_OPTION) {
+                activePollOption?.let { userSuggestions.replaceCurrentWord(it.state, it.state.currentWord(), item) }
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.value.addItem(item)
                 forwardZapToEditting.clearText()
@@ -1817,7 +1764,7 @@ open class ShortNotePostViewModel :
     }
 
     open fun autocompleteWithEmoji(item: EmojiMedia) {
-        emojiSuggestions?.autocompleteInto(message, item)
+        emojiSuggestions?.autocompleteInto(emojiTarget, item)
         urlPreviews.update(message.text.toString())
 
         draftTag.newVersion()
@@ -1827,10 +1774,10 @@ open class ShortNotePostViewModel :
         val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
+            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
-        message.replaceCurrentWord(wordToInsert)
+        emojiTarget.replaceCurrentWord(wordToInsert)
         urlPreviews.update(message.text.toString())
 
         emojiSuggestions?.reset()
@@ -1838,11 +1785,11 @@ open class ShortNotePostViewModel :
         draftTag.newVersion()
     }
 
-    private fun newStateMapPollOptions(): SnapshotStateMap<Int, OptionTag> =
-        mutableStateMapOf(
-            0 to OptionTag(RandomInstance.randomChars(6), ""),
-            1 to OptionTag(RandomInstance.randomChars(6), ""),
-        )
+    /** The field an emoji goes into: the poll option being written, else the message. */
+    val emojiTarget: TextFieldState
+        get() = activePollOption?.takeIf { wantsPoll || wantsZapPoll }?.state ?: message
+
+    private fun newPollOptions(): SnapshotStateList<PollOptionDraft> = mutableStateListOf(PollOptionDraft(), PollOptionDraft())
 
     fun canPost(): Boolean {
         // Voice messages can be posted without text (with either uploaded or pending recording)
@@ -1859,23 +1806,8 @@ open class ShortNotePostViewModel :
             !isUploadingVoice &&
             !wantsInvoice &&
             (!wantsZapRaiser || zapRaiserAmount.value != null) &&
-            (
-                !wantsPoll ||
-                    (
-                        pollOptions.isNotEmpty() &&
-                            pollOptions.all { it.value.label.isNotEmpty() } &&
-                            closedAt > TimeUtils.oneMinuteFromNow()
-                    )
-            ) &&
-            (
-                !wantsZapPoll ||
-                    (
-                        pollOptions.isNotEmpty() &&
-                            pollOptions.all { it.value.label.isNotEmpty() } &&
-                            isValidValueMinimum.value &&
-                            isValidValueMaximum.value
-                    )
-            ) &&
+            (!(wantsPoll || wantsZapPoll) || isPollReady()) &&
+            (!wantsZapPoll || (isValidValueMinimum.value && isValidValueMaximum.value)) &&
             multiOrchestrator == null
     }
 
@@ -1940,7 +1872,6 @@ open class ShortNotePostViewModel :
         val fileToUpload = activeFile ?: recording.file
         val waveform = activeWaveform ?: recording.amplitudes
         val uploadErrorTitle = loadStringRes(Res.string.upload_error_title)
-        val uploadVoiceNip95NotSupported = loadStringRes(Res.string.upload_error_voice_message_nip95_not_supported)
         val uploadVoiceFailed = loadStringRes(Res.string.upload_error_voice_message_failed)
 
         isUploadingVoice = true
@@ -1959,7 +1890,7 @@ open class ShortNotePostViewModel :
                     compressionQuality = CompressorQuality.UNCOMPRESSED,
                     server = server,
                     account = account,
-                    uploader = accountViewModel.host.mediaUploader,
+                    uploader = accountViewModel.mediaUploader,
                     useH265 = false,
                     forcedSigner = if (wantsAnonymousPost) anonymousSigner() else null,
                 )
@@ -1981,12 +1912,6 @@ open class ShortNotePostViewModel :
                             voiceAnonymization.deleteDistortedFiles()
                             voiceLocalFile = null
                             voiceRecording = null
-                        }
-
-                        is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
-                            // For NIP95, we need to create the event and get the nevent URL
-                            // This is handled differently - skip for now
-                            onError(uploadErrorTitle, uploadVoiceNip95NotSupported)
                         }
                     }
                 }
@@ -2047,35 +1972,137 @@ open class ShortNotePostViewModel :
         draftTag.newVersion()
     }
 
-    fun removePollOption(index: Int) {
-        pollOptions.removeOrdered(index)
+    fun removePollOption(option: PollOptionDraft) {
+        pollOptions.remove(option)
+        if (activePollOption === option) activePollOption = null
+        while (pollOptions.size < MIN_POLL_OPTIONS) pollOptions.add(PollOptionDraft())
+        keepTrailingPollOption()
         draftTag.newVersion()
     }
 
-    fun updatePollOption(
-        index: Int,
-        label: String,
+    /**
+     * The cursor in [option] moved, or (when [textChanged]) its text did: offers `@` and `:`
+     * completions and keeps the row to type the next option into. Only a text change is a
+     * new draft version: a draft save signs an event, which on a remote or external signer is a
+     * round trip, so tapping between fields must not cause one.
+     */
+    fun onPollOptionChanged(
+        option: PollOptionDraft,
+        textChanged: Boolean,
     ) {
-        val current = pollOptions[index]
-        pollOptions[index] = OptionTag(current?.code ?: RandomInstance.randomChars(6), label)
-        draftTag.newVersion()
+        activePollOption = option
+        if (textChanged) keepTrailingPollOption()
+
+        if (option.state.selection.collapsed) {
+            val lastWord = option.state.currentWord()
+            if (lastWord.startsWith("@")) {
+                userSuggestionsMainMessage = UserSuggestionAnchor.POLL_OPTION
+                userSuggestions?.processCurrentWord(lastWord)
+            } else {
+                userSuggestionsMainMessage = null
+                userSuggestions?.reset()
+            }
+            emojiSuggestions?.processCurrentWord(lastWord)
+        }
+
+        if (textChanged) draftTag.newVersion()
     }
 
-    private fun MutableMap<Int, OptionTag>.removeOrdered(index: Int) {
-        val keyList = keys
-        val elementList = values.toMutableList()
-        run stop@{
-            for (i in index until elementList.size) {
-                val nextIndex = i + 1
-                if (nextIndex == elementList.size) return@stop
-                elementList[i] = elementList[nextIndex].also { elementList[nextIndex] = OptionTag(RandomInstance.randomChars(6), "") }
-            }
-        }
-        elementList.removeAt(elementList.size - 1)
-        val newEntries = keyList.zip(elementList) { key, content -> Pair(key, content) }
-        this.clear()
-        this.putAll(newEntries)
+    /** The message field took focus: the suggestions open for an option would complete into the wrong field. */
+    fun onMessageFocused() {
+        if (activePollOption == null) return
+        activePollOption = null
+        closePollOptionSuggestions()
     }
+
+    /** Takes the poll off the post. Its options stay, so turning it back on finds them. */
+    fun disablePoll() {
+        wantsPoll = false
+        wantsZapPoll = false
+        activePollOption = null
+        closePollOptionSuggestions()
+    }
+
+    private fun closePollOptionSuggestions() {
+        if (userSuggestionsMainMessage == UserSuggestionAnchor.POLL_OPTION) {
+            userSuggestionsMainMessage = null
+            userSuggestions?.reset()
+        }
+        emojiSuggestions?.reset()
+    }
+
+    /** There is always one empty option at the end to type the next one into, so adding one is just typing. */
+    private fun keepTrailingPollOption() {
+        if (pollOptions.lastOrNull()?.isEmpty != true) pollOptions.add(PollOptionDraft())
+    }
+
+    /** The empty row at the end is where the next option goes, not an option to remove; one emptied mid-list is. */
+    fun isTrailingPollOption(option: PollOptionDraft) = option === pollOptions.lastOrNull() && option.isEmpty && pollOptions.size > MIN_POLL_OPTIONS
+
+    fun canRemovePollOption(option: PollOptionDraft) = pollOptions.size > MIN_POLL_OPTIONS && !isTrailingPollOption(option)
+
+    /** The options that say the same thing as another, ignoring case: they split the vote for nothing. */
+    fun duplicatePollOptions(): Set<PollOptionDraft> =
+        filledPollOptions()
+            .groupBy { it.label.lowercase() }
+            .values
+            .filter { it.size > 1 }
+            .flatMapTo(mutableSetOf()) { it }
+
+    /**
+     * When the poll closes. A length counts from when the poll goes out: the scheduled time for
+     * a scheduled post, which is re-stamped to that moment and published then.
+     */
+    private fun pollClosesAt(): Long? = pollDeadline.closesAt(scheduledForSec ?: TimeUtils.now())
+
+    /** A deadline the poll would reach before or as it goes out: voting would be closed from the start. */
+    fun isPollDeadlinePassed(): Boolean {
+        val closesAt = pollClosesAt() ?: return false
+        return closesAt < (scheduledForSec ?: TimeUtils.now()) + TimeUtils.ONE_MINUTE
+    }
+
+    /** The options as they are sent: in order, trimmed, without the empty ones. */
+    private fun filledPollOptions(): List<PollOptionDraft> = pollOptions.filter { it.label.isNotEmpty() }
+
+    /**
+     * A draft keeps the poll even before any option is written, so it reopens as one; a post
+     * only goes out once [isPollReady].
+     */
+    private fun pollOptionsToSend(): List<PollOptionDraft> = filledPollOptions().ifEmpty { pollOptions }
+
+    /** An option and its text run through the same tagger as the message: `@` mentions become `nostr:` references. */
+    private class TaggedPollOption(
+        val code: String,
+        val tagger: NewMessageTagger,
+    )
+
+    private suspend fun taggedPollOptions(): List<TaggedPollOption> =
+        pollOptionsToSend().map { option ->
+            TaggedPollOption(option.code, NewMessageTagger(option.label, dao = accountViewModel).also { it.run() })
+        }
+
+    /** Everyone the question or an option mentions, so the poll notifies them and renders their names. */
+    private fun pollMentions(
+        tagger: NewMessageTagger,
+        options: List<TaggedPollOption>,
+    ): Set<User> = tagger.directMentionsUsers + options.flatMap { it.tagger.directMentionsUsers }
+
+    /** The notes the question or an option cites, so readers can fetch and show them. */
+    private fun pollQuotes(
+        tagger: NewMessageTagger,
+        options: List<TaggedPollOption>,
+    ) = (findNostrUris(tagger.message) + options.flatMap { findNostrUris(it.tagger.message) }).distinct()
+
+    /** The custom emojis of the question and of every option: the card draws an option's `:code:` from these tags. */
+    private fun pollEmojis(
+        messageEmojis: List<EmojiUrlTag>,
+        options: List<TaggedPollOption>,
+    ): List<EmojiUrlTag> = (messageEmojis + options.flatMap { accountViewModel.account.emoji.findEmojiTags(it.tagger.message) }).distinctBy { it.code }
+
+    private fun isPollReady(): Boolean =
+        filledPollOptions().size >= MIN_POLL_OPTIONS &&
+            duplicatePollOptions().isEmpty() &&
+            !isPollDeadlinePassed()
 
     // ---
     // Zap Polls

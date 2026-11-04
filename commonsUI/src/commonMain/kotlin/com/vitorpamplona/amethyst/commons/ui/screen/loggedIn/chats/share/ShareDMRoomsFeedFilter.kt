@@ -42,9 +42,9 @@ class ShareDMRoomsFeedFilter(
 
         return chatList.rooms
             .mapNotNull { key, chatroom ->
-                if ((chatroom.senderIntersects(followingKeySet) || chatList.hasSentMessagesTo(key)) &&
-                    !account.isAllHidden(key.users)
-                ) {
+                // The Known tab's rule (follows, rooms the user wrote to, pinned, the Web of Trust),
+                // so every room it shows can be shared to.
+                if (account.isKnownChatroom(key, chatroom, followingKeySet) && !account.isAllHidden(key.users)) {
                     chatroom.newestMessage
                 } else {
                     null

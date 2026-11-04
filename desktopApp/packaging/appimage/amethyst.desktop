@@ -4,6 +4,7 @@ Name=Amethyst
 GenericName=Nostr Client
 Comment=Nostr client for desktop
 Exec=Amethyst %u
+MimeType=x-scheme-handler/nostr;x-scheme-handler/amethyst;
 Icon=amethyst
 Categories=Network;InstantMessaging;
 Terminal=false

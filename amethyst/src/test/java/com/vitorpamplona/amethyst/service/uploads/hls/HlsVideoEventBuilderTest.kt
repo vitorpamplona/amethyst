@@ -24,7 +24,7 @@ import com.davotoula.lightcompressor.Resolution
 import com.davotoula.lightcompressor.hls.HlsRenditionSummary
 import com.davotoula.lightcompressor.hls.HlsUploaded
 import com.davotoula.lightcompressor.hls.Rendition
-import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import org.junit.Assert.assertEquals

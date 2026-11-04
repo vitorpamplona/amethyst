@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDial
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.DocumentSelectSingle
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -184,7 +185,7 @@ fun NewPodcastEpisodeScreen(
                 enabled = !isBusy,
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.title.value,
                 onValueChange = { vm.title.value = it },
                 label = { Text(stringRes(Res.string.podcast_episode_title_label)) },
@@ -195,7 +196,7 @@ fun NewPodcastEpisodeScreen(
                 isError = vm.title.value.isBlank(),
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.description.value,
                 onValueChange = { vm.description.value = it },
                 label = { Text(stringRes(Res.string.podcast_episode_summary_label)) },

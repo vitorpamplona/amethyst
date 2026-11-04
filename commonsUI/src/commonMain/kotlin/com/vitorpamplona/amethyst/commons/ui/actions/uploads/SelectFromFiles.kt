@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.upload_file
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
@@ -70,20 +71,22 @@ private fun FileSelectButton(
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        modifier = modifier,
-        enabled = enabled && !isUploading,
-        onClick = { onClick() },
-    ) {
-        if (!isUploading) {
-            Icon(
-                symbol = MaterialSymbols.AttachFile,
-                contentDescription = stringRes(id = Res.string.upload_file),
-                modifier = Modifier.height(20.dp),
-                tint = tint,
-            )
-        } else {
-            LoadingAnimation()
+    HoverTooltip(stringRes(id = Res.string.upload_file)) {
+        IconButton(
+            modifier = modifier,
+            enabled = enabled && !isUploading,
+            onClick = { onClick() },
+        ) {
+            if (!isUploading) {
+                Icon(
+                    symbol = MaterialSymbols.AttachFile,
+                    contentDescription = stringRes(id = Res.string.upload_file),
+                    modifier = Modifier.height(20.dp),
+                    tint = tint,
+                )
+            } else {
+                LoadingAnimation()
+            }
         }
     }
 }
@@ -97,4 +100,14 @@ expect fun FileSelect(onFilesSelected: (ImmutableList<SelectedMedia>) -> Unit = 
 expect fun DocumentSelectSingle(
     mimeTypes: List<String>,
     onPicked: (SelectedMedia?) -> Unit,
+)
+
+/**
+ * Opens the platform's document picker for any number of files of [mimeTypes], which may use a
+ * subtype wildcard (all images); reports an empty list on cancel.
+ */
+@Composable
+expect fun MultiDocumentSelect(
+    mimeTypes: List<String>,
+    onPicked: (ImmutableList<SelectedMedia>) -> Unit,
 )

@@ -44,12 +44,15 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
@@ -184,12 +187,22 @@ class ConcordChannelListState(
             combine((0 until n).map { fragmentNote(it).flow().metadata.stateFlow } + concordListNote.flow().metadata.stateFlow) { it }
         }
 
+    /**
+     * The List as it reads after each change. Every read resolves the fragments, merges the
+     * retired 13302 in and decodes the whole document, so it runs once here and feeds both
+     * [liveCommunities] and [removedAt] instead of once per view.
+     */
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveCommunities: StateFlow<List<ConcordCommunityListEntry>> =
+    private val liveDocument: SharedFlow<ConcordCommunityListDocument> =
         listChanges
-            .transformLatest { emit(entries()) }
-            .onStart { emit(entries()) }
+            .transformLatest { emit(document()) }
+            .onStart { emit(document()) }
             .flowOn(Dispatchers.IO)
+            .shareIn(scope, SharingStarted.Eagerly, replay = 1)
+
+    val liveCommunities: StateFlow<List<ConcordCommunityListEntry>> =
+        liveDocument
+            .map { it.entries }
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -201,12 +214,9 @@ class ConcordChannelListState(
      * tombstone's `removed_at`, unix ms, CORD-02 §8). A Direct Invite sent at or before that moment
      * stays buried instead of resurfacing right after the leave.
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
     val removedAt: StateFlow<Map<String, Long>> =
-        listChanges
-            .transformLatest { emit(document().residue.removals()) }
-            .onStart { emit(document().residue.removals()) }
-            .flowOn(Dispatchers.IO)
+        liveDocument
+            .map { it.residue.removals() }
             .stateIn(scope, SharingStarted.Eagerly, emptyMap())
 
     /** The distinct community ids across the joined list — the "servers" rail. */

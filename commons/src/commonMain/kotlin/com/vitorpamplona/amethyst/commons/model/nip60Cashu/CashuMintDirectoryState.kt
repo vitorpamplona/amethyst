@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEven
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -174,7 +175,7 @@ class CashuMintDirectoryState(
         liveJobLock.withLock {
             if (liveJob != null) return
             liveJob =
-                scope.launch(Dispatchers.Default) {
+                scope.launch(Dispatchers.IO) {
                     cache.live.newEventBundles.collect { notes ->
                         val touched =
                             notes.mapNotNull { note ->
@@ -201,7 +202,7 @@ class CashuMintDirectoryState(
     }
 
     private fun backfillFromCacheAsync() {
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             // NIP-87 kinds are addressable: the current version lives in `addressables` (its
             // per-id note is weakly held and pruned once superseded). Both maps are keyed by id.
             val visit = { note: Note ->
@@ -240,7 +241,8 @@ class CashuMintDirectoryState(
         announced.forEach { e ->
             val d = e.dTag()
             val url = e.mintUrl()
-            if (d != null && url != null) urlByDTag[d] = url
+            // dTag() is "" when the tag is missing: such announcements can't be matched by d-tag.
+            if (d.isNotEmpty() && url != null) urlByDTag[d] = url
         }
 
         // 3. Count recommendations per URL, deduplicating by (recommender, mint URL).

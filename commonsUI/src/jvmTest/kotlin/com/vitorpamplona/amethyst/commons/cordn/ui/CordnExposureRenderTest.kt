@@ -33,8 +33,8 @@ import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.cordn.CoordinatorHealth
-import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
+import com.vitorpamplona.cordn.client.CoordinatorHealth
+import com.vitorpamplona.cordn.client.GroupExposure
 import org.jetbrains.skia.EncodedImageFormat
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream

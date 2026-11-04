@@ -41,6 +41,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ecash_mint_cashu
+import com.vitorpamplona.amethyst.commons.resources.ecash_mint_fedimint
+import com.vitorpamplona.amethyst.commons.resources.ecash_mint_generic
+import com.vitorpamplona.amethyst.commons.resources.ecash_mint_modules
+import com.vitorpamplona.amethyst.commons.resources.ecash_mint_recommendation
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
@@ -55,7 +62,7 @@ fun RenderCashuMint(noteEvent: CashuMintEvent) {
     val network = remember(noteEvent) { noteEvent.network() }
 
     MintAnnouncementCard(
-        title = "Cashu Mint",
+        title = stringRes(Res.string.ecash_mint_cashu),
         url = mintUrl,
         network = network.code,
         capabilities = nuts,
@@ -71,11 +78,11 @@ fun RenderFedimint(noteEvent: FedimintEvent) {
     val network = remember(noteEvent) { noteEvent.network() }
 
     MintAnnouncementCard(
-        title = "Fedimint",
+        title = stringRes(Res.string.ecash_mint_fedimint),
         url = inviteCodes.firstOrNull(),
         network = network.code,
         capabilities = modules,
-        capabilitiesLabel = "Modules",
+        capabilitiesLabel = stringRes(Res.string.ecash_mint_modules),
         metadata = noteEvent.content.ifBlank { null },
     )
 }
@@ -86,14 +93,14 @@ fun RenderMintRecommendation(noteEvent: MintRecommendationEvent) {
     val mintType =
         remember(noteEvent) {
             when {
-                noteEvent.isCashuRecommendation() -> "Cashu Mint"
-                noteEvent.isFedimintRecommendation() -> "Fedimint"
-                else -> "Ecash Mint"
+                noteEvent.isCashuRecommendation() -> Res.string.ecash_mint_cashu
+                noteEvent.isFedimintRecommendation() -> Res.string.ecash_mint_fedimint
+                else -> Res.string.ecash_mint_generic
             }
         }
 
     MintAnnouncementCard(
-        title = "$mintType Recommendation",
+        title = stringRes(Res.string.ecash_mint_recommendation, stringRes(mintType)),
         url = mintUrls.firstOrNull(),
         network = null,
         capabilities = emptyList(),

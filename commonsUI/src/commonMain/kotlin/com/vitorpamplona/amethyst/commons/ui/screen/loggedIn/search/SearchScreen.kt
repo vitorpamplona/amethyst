@@ -61,7 +61,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -83,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -117,12 +117,12 @@ import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
 import com.vitorpamplona.amethyst.commons.search.searchHistoryStorage
 import com.vitorpamplona.amethyst.commons.ui.components.namecoin.NamecoinResolutionRow
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.SearchIcon
@@ -169,6 +169,7 @@ fun SearchScreen(
     nav: INav,
 ) {
     val appStores = LocalAppServices.current.appStores
+    val namecoinResolver = LocalAppServices.current.namecoinResolver
     val historyStorage = remember { appStores.searchHistoryStorage() }
     val searchBarViewModel: SearchBarViewModel =
         rememberViewModel(
@@ -179,6 +180,7 @@ fun SearchScreen(
                 SearchBarViewModel.Factory(
                     accountViewModel.account,
                     accountViewModel.nip05ClientBuilder(),
+                    namecoinResolver,
                     historyStorage,
                     initialQuery,
                 ),
@@ -425,7 +427,7 @@ private fun SearchFiltersSheet(
     onReset: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,

@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.podcasts.dal.OnePodcastFeedViewModel
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_no_episodes
@@ -61,7 +62,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.commons.ui.note.types.PodcastBookmarkButton
 import com.vitorpamplona.amethyst.commons.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.PodcastTrailerListItem
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.dal.OnePodcastFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.datasource.OnePodcastFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness

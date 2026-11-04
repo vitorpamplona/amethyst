@@ -20,9 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.nipACWebRtcCalls
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallHangupEvent
@@ -89,9 +94,9 @@ class CallManagerTest {
         localPubKey: HexKey = bob,
         followedKeys: Set<HexKey> = setOf(alice, carol),
         isCallsEnabled: () -> Boolean = { true },
+        signer: NostrSigner = signers[localPubKey] ?: error("Unknown test identity: $localPubKey"),
     ): Pair<CallManager, MutableList<EphemeralGiftWrapEvent>> {
         val published = mutableListOf<EphemeralGiftWrapEvent>()
-        val signer = signers[localPubKey] ?: error("Unknown test identity: $localPubKey")
         val manager =
             CallManager(
                 signer = signer,
@@ -2037,5 +2042,145 @@ class CallManagerTest {
             // Now the offer finally arrives.  We must NOT start ringing.
             manager.onSignalingEvent(makeOffer(from = alice, to = bob))
             assertIs<CallState.Idle>(manager.state.value)
+        }
+
+    // ========================================================================
+    // Signer refusals: the user rejects a call signal in their signer app
+    // ========================================================================
+
+    /**
+     * Signs like [inner] until [refuse] is set, then throws what an external signer (Amber)
+     * throws when the user rejects the request, counting each refused prompt.
+     */
+    private class RefusingSigner(
+        private val inner: NostrSigner,
+    ) : NostrSigner(inner.pubKey) {
+        var refuse = false
+        var refusals = 0
+
+        override fun isWriteable() = true
+
+        override suspend fun <T : Event> sign(
+            createdAt: Long,
+            kind: Int,
+            tags: Array<Array<String>>,
+            content: String,
+        ): T {
+            if (refuse) {
+                refusals++
+                throw SignerExceptions.ManuallyUnauthorizedException("Could not sign: User has rejected the request.")
+            }
+            return inner.sign(createdAt, kind, tags, content)
+        }
+
+        override suspend fun nip04Encrypt(
+            plaintext: String,
+            toPublicKey: HexKey,
+        ) = inner.nip04Encrypt(plaintext, toPublicKey)
+
+        override suspend fun nip04Decrypt(
+            ciphertext: String,
+            fromPublicKey: HexKey,
+        ) = inner.nip04Decrypt(ciphertext, fromPublicKey)
+
+        override suspend fun nip44Encrypt(
+            plaintext: String,
+            toPublicKey: HexKey,
+        ) = inner.nip44Encrypt(plaintext, toPublicKey)
+
+        override suspend fun nip44Decrypt(
+            ciphertext: String,
+            fromPublicKey: HexKey,
+        ) = inner.nip44Decrypt(ciphertext, fromPublicKey)
+
+        override suspend fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent = inner.decryptZapEvent(event)
+
+        override suspend fun deriveKey(nonce: HexKey) = inner.deriveKey(nonce)
+
+        override suspend fun signPsbt(psbtHex: String) = inner.signPsbt(psbtHex)
+
+        override fun hasForegroundSupport() = inner.hasForegroundSupport()
+    }
+
+    @Test
+    fun refusedOfferEndsOneToOneCallWithoutPromptingAgain() =
+        runTest {
+            val signer = RefusingSigner(aliceSigner).apply { refuse = true }
+            val (manager, published) = createManager(localPubKey = alice, followedKeys = setOf(bob), signer = signer)
+
+            manager.beginOffering(callId, setOf(bob), CallType.VOICE)
+            manager.publishOfferToPeer(bob, setOf(bob), CallType.VOICE, callId, sdpOffer)
+
+            val state = manager.state.value
+            assertIs<CallState.Ended>(state)
+            assertEquals(EndReason.HANGUP, state.reason)
+
+            // No offer went out, so the per-peer and ringing timeouts must not ask the signer
+            // for a hangup to a peer who never rang.
+            advanceTimeBy(CallManager.RINGING_WATCHDOG_MS + 1_000)
+            assertTrue(published.isEmpty(), "Nothing should be published")
+            assertEquals(1, signer.refusals, "The signer should be asked only once")
+        }
+
+    @Test
+    fun refusedOfferDropsOnlyThatPeerFromGroupCall() =
+        runTest {
+            val signer = RefusingSigner(aliceSigner)
+            val (manager, published) = createManager(localPubKey = alice, followedKeys = setOf(bob, carol), signer = signer)
+
+            manager.beginOffering(callId, setOf(bob, carol), CallType.VOICE)
+            manager.publishOfferToPeer(bob, setOf(bob, carol), CallType.VOICE, callId, sdpOffer)
+            signer.refuse = true
+            manager.publishOfferToPeer(carol, setOf(bob, carol), CallType.VOICE, callId, "carol-sdp")
+
+            val state = manager.state.value
+            assertIs<CallState.Offering>(state)
+            assertEquals(setOf(bob), state.peerPubKeys)
+            assertEquals(1, published.size, "Only bob's offer went out")
+            assertEquals(1, signer.refusals)
+        }
+
+    @Test
+    fun refusedAnswerEndsIncomingCallLocally() =
+        runTest {
+            val signer = RefusingSigner(bobSigner)
+            val (manager, published) = createManager(localPubKey = bob, signer = signer)
+
+            manager.onSignalingEvent(makeOffer(from = alice, to = bob))
+            assertIs<CallState.IncomingCall>(manager.state.value)
+
+            signer.refuse = true
+            manager.acceptCall(sdpAnswer)
+
+            val state = manager.state.value
+            assertIs<CallState.Ended>(state)
+            assertEquals(EndReason.REJECTED, state.reason)
+            advanceTimeBy(CallManager.CONNECTING_TIMEOUT_MS + 1_000)
+            assertTrue(published.isEmpty(), "Nothing should be published")
+            assertEquals(1, signer.refusals)
+        }
+
+    @Test
+    fun refusedInviteDropsTheInviteeWithoutHangup() =
+        runTest {
+            val signer = RefusingSigner(aliceSigner)
+            val (manager, published) = createManager(localPubKey = alice, followedKeys = setOf(bob), signer = signer)
+
+            manager.initiateCall(bob, CallType.VOICE, callId, sdpOffer)
+            manager.onSignalingEvent(makeAnswer(from = bob, to = alice))
+            manager.onPeerConnected()
+            assertIs<CallState.Connected>(manager.state.value)
+            published.clear()
+
+            signer.refuse = true
+            manager.invitePeer(carol, "invite-sdp")
+
+            val state = manager.state.value
+            assertIs<CallState.Connected>(state)
+            assertTrue(carol !in state.pendingPeerPubKeys, "The refused invitee should be dropped")
+
+            advanceTimeBy(CallManager.PEER_INVITE_TIMEOUT_MS + 1_000)
+            assertTrue(published.isEmpty(), "No hangup for an invite that never went out")
+            assertEquals(1, signer.refusals)
         }
 }

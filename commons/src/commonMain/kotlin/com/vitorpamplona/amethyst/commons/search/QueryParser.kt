@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.search
 import com.vitorpamplona.amethyst.commons.search.calendar.DateField
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
 
@@ -49,6 +51,13 @@ sealed interface Token {
         val term: String,
     ) : Token
 }
+
+/** A second-pass [Token] with the half-open span [start, end) of the typed string it covers. */
+internal data class PositionedToken(
+    val token: Token,
+    val start: Int,
+    val end: Int,
+)
 
 /**
  * The typed string as a [SearchQuery], in two passes.
@@ -115,8 +124,19 @@ object QueryParser {
 
     // ---- the second pass: the looser operators inside the leftover text --------------------
 
-    internal fun tokenize(input: String): List<Token> {
-        val tokens = mutableListOf<Token>()
+    internal fun tokenize(input: String): List<Token> = positionedTokens(input).map { it.token }
+
+    /**
+     * [tokenize], with the span of the typed string each token was read from.
+     *
+     * The parse itself never needs the offsets — a token carries its meaning, not where it
+     * stood. What needs them is the in-place rewrite of an author qualifier
+     * ([AuthorNameRewrite]), which splices a resolved from:npub1… over exactly the characters
+     * the name occupied, and can only do that without re-reading the field if the same pass
+     * that recognised the token says where it was.
+     */
+    internal fun positionedTokens(input: String): List<PositionedToken> {
+        val tokens = mutableListOf<PositionedToken>()
         var i = 0
         val len = input.length
 
@@ -136,19 +156,21 @@ object QueryParser {
                     i++
                 }
                 if (i < len) i++ // skip closing quote
-                tokens.add(Token.Quoted(sb.toString(), input.substring(start, i)))
+                tokens.add(PositionedToken(Token.Quoted(sb.toString(), input.substring(start, i)), start, i))
                 continue
             }
 
             // Negation
             if (input[i] == '-' && i + 1 < len && !input[i + 1].isWhitespace()) {
+                val start = i
                 i++ // skip -
                 val word = readWord(input, i)
                 i += word.length
-                if (word.isNotEmpty()) tokens.add(Token.Negation(word))
+                if (word.isNotEmpty()) tokens.add(PositionedToken(Token.Negation(word), start, i))
                 continue
             }
 
+            val start = i
             val word = readWord(input, i)
             i += word.length
 
@@ -158,7 +180,7 @@ object QueryParser {
             }
 
             if (word == "OR") {
-                tokens.add(Token.Or)
+                tokens.add(PositionedToken(Token.Or, start, i))
                 continue
             }
 
@@ -167,13 +189,13 @@ object QueryParser {
                 val opName = word.substring(0, colonIdx).lowercase()
                 val opValue = word.substring(colonIdx + 1)
                 if (opName in KNOWN_OPERATORS && opValue.isNotEmpty()) {
-                    tokens.add(Token.Operator(opName, opValue, word))
+                    tokens.add(PositionedToken(Token.Operator(opName, opValue, word), start, i))
                     continue
                 }
                 // Malformed operator (no value or unknown) → treat as text
             }
 
-            tokens.add(Token.Text(word))
+            tokens.add(PositionedToken(Token.Text(word), start, i))
         }
 
         return tokens
@@ -220,6 +242,24 @@ object QueryParser {
             i++
         }
     }
+
+    /**
+     * The pubkey a `from:`/`to:` value names, or null when the value is a name instead — a
+     * NIP-05 address, a `.bit` name, a display name for the picker.
+     *
+     * Strict on purpose: the bech32 spellings decode by their prefix, and a raw key counts only
+     * as exactly 64 hex chars. [decodePublicKeyAsHexOrNull] cannot be asked this — its fallback
+     * hex-decodes any even-length string, so `from:name.bit` or `from:d/alice` would come out
+     * as noise nibbles and the name would filter by a garbage author nobody can ever match.
+     */
+    internal fun decodeQualifierPubkeyOrNull(value: String): HexKey? =
+        if (value.length == 64 && Hex.isHex64(value)) {
+            value.lowercase()
+        } else if (value.startsWith("npub1") || value.startsWith("nprofile1")) {
+            decodePublicKeyAsHexOrNull(value)
+        } else {
+            null
+        }
 
     /**
      * `YYYY`, `YYYY-MM` or `YYYY-MM-DD` as the unix second that bound means, in the reader's own
@@ -289,7 +329,7 @@ object QueryParser {
         fun readOperator(token: Token.Operator) {
             when (token.name) {
                 "from", "to" -> {
-                    val hex = decodePublicKeyAsHexOrNull(token.value)
+                    val hex = decodeQualifierPubkeyOrNull(token.value)
                     val into = if (token.name == "from") authors else mentions
                     if (hex != null) {
                         into.addDistinct(hex)

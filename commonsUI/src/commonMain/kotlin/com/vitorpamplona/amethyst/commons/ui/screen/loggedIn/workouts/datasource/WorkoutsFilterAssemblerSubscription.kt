@@ -52,3 +52,24 @@ fun WorkoutsFilterAssemblerSubscription(
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)
 }
+
+/**
+ * The user's own workouts, for screens that need them regardless of the Workouts feed's top-nav
+ * selection (My Fitness). Same data source as the feed, keyed to a fixed "Mine": the screen would
+ * otherwise only see the workouts some other screen happened to load into the cache. No feed floor,
+ * so it asks each of the user's relays for their newest workouts (the filter's own limit) back to
+ * any date, which is what a history dashboard needs.
+ */
+@Composable
+fun MyWorkoutsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
+    val state =
+        remember(accountViewModel.account) {
+            val account = accountViewModel.account
+            accountViewModel.topNavFeedQueryState(
+                account.mineWorkoutsListName,
+                account.liveMineWorkoutsPerRelay,
+            )
+        }
+
+    LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().workouts)
+}

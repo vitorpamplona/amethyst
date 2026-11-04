@@ -135,16 +135,6 @@ object FollowActions {
         currentContactList: ContactListEvent?,
     ): ContactListEvent? {
         if (currentContactList == null || currentContactList.tags.isEmpty()) return null
-        if (pubkeysToRemove.isEmpty()) return currentContactList
-        val newTags =
-            currentContactList.tags
-                .filter { tag -> !(tag.size > 1 && tag[0] == "p" && tag[1] in pubkeysToRemove) }
-                .toTypedArray()
-        if (newTags.size == currentContactList.tags.size) return currentContactList
-        return ContactListEvent.create(
-            content = currentContactList.content,
-            tags = newTags,
-            signer = signer,
-        )
+        return ContactListEvent.unfollowUsers(currentContactList, pubkeysToRemove, signer)
     }
 }

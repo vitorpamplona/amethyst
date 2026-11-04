@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.note
 
 import java.text.DateFormat
 import java.util.Date
+import java.util.TimeZone
 
 private fun DateTimeStyle.javaStyle(): Int =
     when (this) {
@@ -31,17 +32,35 @@ private fun DateTimeStyle.javaStyle(): Int =
     }
 
 /** A fresh `DateFormat` per call: they are not thread-safe, and the locale may have changed. */
+private fun dateFormatFor(
+    date: DateTimeStyle,
+    time: DateTimeStyle,
+): DateFormat? =
+    when {
+        date == DateTimeStyle.NONE && time == DateTimeStyle.NONE -> null
+        date == DateTimeStyle.NONE -> DateFormat.getTimeInstance(time.javaStyle())
+        time == DateTimeStyle.NONE -> DateFormat.getDateInstance(date.javaStyle())
+        else -> DateFormat.getDateTimeInstance(date.javaStyle(), time.javaStyle())
+    }
+
 actual fun formatDateTime(
     epochMillis: Long,
     date: DateTimeStyle,
     time: DateTimeStyle,
 ): String {
-    val formatter =
-        when {
-            date == DateTimeStyle.NONE && time == DateTimeStyle.NONE -> return ""
-            date == DateTimeStyle.NONE -> DateFormat.getTimeInstance(time.javaStyle())
-            time == DateTimeStyle.NONE -> DateFormat.getDateInstance(date.javaStyle())
-            else -> DateFormat.getDateTimeInstance(date.javaStyle(), time.javaStyle())
-        }
+    val formatter = dateFormatFor(date, time) ?: return ""
+    return formatter.format(Date(epochMillis))
+}
+
+actual fun formatDateTimeInZone(
+    epochMillis: Long,
+    date: DateTimeStyle,
+    time: DateTimeStyle,
+    zoneId: String,
+): String? {
+    // getTimeZone falls back to GMT for an id it does not know; that is a wrong time, not a zone.
+    val zone = TimeZone.getTimeZone(zoneId).takeIf { it.id == zoneId } ?: return null
+    val formatter = dateFormatFor(date, time) ?: return ""
+    formatter.timeZone = zone
     return formatter.format(Date(epochMillis))
 }

@@ -75,6 +75,7 @@ enum class NavBarItem {
     NESTS,
     LONGS,
     POLLS,
+    CHESS,
     GEOCACHES,
     GEOCACHE_HUNTS,
     BADGES,

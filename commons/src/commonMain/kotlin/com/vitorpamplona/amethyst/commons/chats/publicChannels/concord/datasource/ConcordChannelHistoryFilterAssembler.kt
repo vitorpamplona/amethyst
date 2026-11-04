@@ -158,9 +158,18 @@ class ConcordChannelHistorySubAssembler(
         if (pager.advanceAll()) invalidateFilters()
     }
 
+    override fun endSub(
+        key: ConcordChannelId,
+        subId: String,
+    ) {
+        super.endSub(key, subId)
+        // The subscription is gone: let go of what the app-wide pager holds for it.
+        pager.unbind(key)
+    }
+
     override fun newSub(key: ConcordChannelHistoryQueryState): Subscription {
         // Repoint the single-active orchestrator at this channel's cursors and its community relays.
-        pager.bind(cursorsFor(key), key.account.scope) { relaysFor(key) }
+        pager.bind(cursorsFor(key), key.account.scope, owner = id(key)) { relaysFor(key) }
         return requestNewSubscription(historyListener(key))
     }
 

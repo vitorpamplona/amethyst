@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import kotlinx.serialization.json.JsonElement
+import java.io.BufferedWriter
+import java.io.OutputStreamWriter
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -51,11 +51,9 @@ object Output {
 
     @Volatile var mode: Mode = Mode.TEXT
 
-    val mapper: ObjectMapper = jacksonObjectMapper()
-
     fun emit(result: Any?) {
         when (mode) {
-            Mode.JSON -> println(mapper.writeValueAsString(result))
+            Mode.JSON -> println(CliJson.encode(result))
             Mode.TEXT -> println(renderText(result))
         }
     }
@@ -78,8 +76,164 @@ object Output {
         text: (Ansi) -> String,
     ) {
         when (mode) {
-            Mode.JSON -> println(mapper.writeValueAsString(result))
+            Mode.JSON -> println(CliJson.encode(result))
             Mode.TEXT -> println(text(Ansi.forStream(isStderr = false)))
+        }
+    }
+
+    /**
+     * A result with one list too large to hold in memory (`fetch --paginate --limit 0`):
+     * the [head] keys first, then the [listKey] list one item at a time as it arrives,
+     * then the tail keys passed to [ListStream.finish]. Under `--json` it is still ONE JSON
+     * object on one line — just written incrementally, so nothing but the current item is
+     * ever held. Nothing is written until the first [ListStream.item], so a command that
+     * ends up with no items can still answer with a plain [emit] or an [error] instead.
+     */
+    internal fun listStream(
+        head: Map<String, Any?>,
+        listKey: String,
+    ): ListStream = ListStream(head, listKey)
+
+    internal class ListStream(
+        private val head: Map<String, Any?>,
+        private val listKey: String,
+    ) {
+        private val out = BufferedWriter(OutputStreamWriter(System.out, Charsets.UTF_8), 1 shl 16)
+        private val color = Ansi.forStream(isStderr = false)
+
+        /** True once the head (and so the open list) has been written. */
+        var started = false
+            private set
+
+        private var first = true
+        private var finished = false
+        private var items = 0
+
+        // Ctrl-C mid-walk: still end stdout with a complete object instead of a cut-off one.
+        private val onShutdown = Thread { abort("interrupted") }
+
+        private fun start() {
+            started = true
+            try {
+                Runtime.getRuntime().addShutdownHook(onShutdown)
+            } catch (e: IllegalStateException) {
+                // Already shutting down: nothing to guard.
+            }
+            when (mode) {
+                Mode.JSON -> {
+                    out.write("{")
+                    for ((k, v) in head) {
+                        out.write(CliJson.encode(k))
+                        out.write(":")
+                        out.write(CliJson.encode(v))
+                        out.write(",")
+                    }
+                    out.write(CliJson.encode(listKey))
+                    out.write(":[")
+                }
+
+                Mode.TEXT -> {
+                    val body = StringBuilder()
+                    renderMapBody(body, unwrap(head) as Map<*, *>, "", color)
+                    body.append(color.bold(listKey)).append(":\n")
+                    out.write(body.toString())
+                }
+            }
+        }
+
+        /**
+         * One list item. [json] is written under `--json`; text mode renders [asMap], so an item
+         * is never serialised and parsed back just to be printed.
+         */
+        @Synchronized
+        fun item(
+            json: () -> String,
+            asMap: () -> Map<*, *>,
+        ) {
+            if (finished) return
+            if (!started) start()
+            when (mode) {
+                Mode.JSON -> {
+                    if (!first) out.write(",")
+                    out.write(json())
+                }
+
+                Mode.TEXT -> {
+                    val body = StringBuilder()
+                    renderListBody(body, listOf(asMap()), "  ", color)
+                    out.write(body.toString())
+                    // A person is watching: show each item as it arrives.
+                    out.flush()
+                }
+            }
+            first = false
+            items++
+        }
+
+        /**
+         * Ends a stream that cannot [finish]: an exception, a cancellation or Ctrl-C mid-walk.
+         * Under `--json` it closes the list and the object with the items written so far plus an
+         * `error`, so stdout still holds exactly one complete JSON object. No-op once finished.
+         */
+        @Synchronized
+        fun abort(
+            reason: String?,
+            extra: Map<String, Any?> = emptyMap(),
+        ) {
+            if (!started || finished) return
+            finished = true
+            when (mode) {
+                Mode.JSON -> {
+                    out.write("],\"count\":")
+                    out.write(items.toString())
+                    extra.forEach { (key, value) ->
+                        out.write(",")
+                        out.write(CliJson.encode(key))
+                        out.write(":")
+                        out.write(CliJson.encode(value))
+                    }
+                    out.write(",\"error\":")
+                    out.write(CliJson.encode(mapOf("code" to "aborted", "detail" to reason)))
+                    out.write("}\n")
+                }
+
+                Mode.TEXT -> {
+                    out.write("error: aborted${reason?.let { " ($it)" } ?: ""} after $items items\n")
+                }
+            }
+            out.flush()
+        }
+
+        /** Closes the list, writes [tail] and flushes. Only valid once [started]. */
+        @Synchronized
+        fun finish(tail: Map<String, Any?>) {
+            check(started) { "finish() before any item: emit the result instead" }
+            if (finished) return
+            finished = true
+            try {
+                Runtime.getRuntime().removeShutdownHook(onShutdown)
+            } catch (e: IllegalStateException) {
+                // Shutting down already; abort() has run or will no-op.
+            }
+            when (mode) {
+                Mode.JSON -> {
+                    out.write("]")
+                    for ((k, v) in tail) {
+                        out.write(",")
+                        out.write(CliJson.encode(k))
+                        out.write(":")
+                        out.write(CliJson.encode(v))
+                    }
+                    out.write("}\n")
+                }
+
+                Mode.TEXT -> {
+                    val body = StringBuilder()
+                    renderMapBody(body, unwrap(tail) as Map<*, *>, "", color)
+                    out.write(body.toString())
+                }
+            }
+            out.flush()
         }
     }
 
@@ -100,7 +254,7 @@ object Output {
                 val payload = mutableMapOf<String, Any?>("error" to code)
                 if (detail != null) payload["detail"] = detail
                 payload.putAll(cleanExtra)
-                System.err.println(mapper.writeValueAsString(payload))
+                System.err.println(CliJson.encode(payload))
             }
 
             Mode.TEXT -> {
@@ -108,8 +262,16 @@ object Output {
                 val prefix = color.bold(color.red("error"))
                 val codePart = color.yellow(code)
                 val base = if (detail != null) "$prefix: $codePart: $detail" else "$prefix: $codePart"
-                val suffix = if (cleanExtra.isEmpty()) "" else cleanExtra.entries.joinToString(", ", " (", ")") { "${it.key}=${it.value}" }
+                // Scalars ride on the error line; structured extras (fetch's per-relay `relay_errors`) get the
+                // same indented rendering as normal output underneath, instead of a Kotlin `{a={b=c}}` dump.
+                val (structured, scalar) = cleanExtra.entries.partition { unwrap(it.value).let { v -> v is Map<*, *> || v is List<*> } }
+                val suffix = if (scalar.isEmpty()) "" else scalar.joinToString(", ", " (", ")") { "${it.key}=${it.value}" }
                 System.err.println(base + suffix)
+                if (structured.isNotEmpty()) {
+                    val body = StringBuilder()
+                    renderMapBody(body, structured.associate { it.key to unwrap(it.value) }, "  ", color)
+                    System.err.print(body)
+                }
             }
         }
         return when (code) {
@@ -147,16 +309,16 @@ object Output {
     }
 
     /**
-     * Convert any embedded Jackson [JsonNode] into plain Java types
-     * (`LinkedHashMap` / `ArrayList` / boxed primitives) so the generic
+     * Convert any embedded [JsonElement] into plain Kotlin values
+     * (maps / lists / boxed primitives) so the generic
      * renderer can descend into it. Plain Maps / Lists / scalars are
      * returned unchanged. Walks recursively because callers commonly
-     * mix a JsonNode subtree into a hand-built Map (e.g. profile show
+     * mix a parsed subtree into a hand-built Map (e.g. profile show
      * stuffing the parsed kind:0 content under a `metadata` key).
      */
     private fun unwrap(value: Any?): Any? =
         when (value) {
-            is JsonNode -> mapper.convertValue(value, Any::class.java)
+            is JsonElement -> CliJson.toPlain(value)
             is Map<*, *> -> value.mapValues { (_, v) -> unwrap(v) }
             is List<*> -> value.map { unwrap(it) }
             else -> value

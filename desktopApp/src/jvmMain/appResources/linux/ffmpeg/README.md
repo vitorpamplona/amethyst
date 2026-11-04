@@ -4,7 +4,7 @@ The DEB/RPM/AppImage packages **do not bundle FFmpeg** — they declare a
 runtime dependency on system FFmpeg/GStreamer instead, which keeps the
 binary's SPDX cleaner and reduces package size.
 
-The Flatpak manifest similarly relies on `org.freedesktop.Platform 24.08`
+The Flatpak manifest similarly relies on `org.freedesktop.Platform` (26.08)
 which ships an LGPL GStreamer + FFmpeg; thumbnail extraction falls through
 to the host FFmpeg if installed.
 

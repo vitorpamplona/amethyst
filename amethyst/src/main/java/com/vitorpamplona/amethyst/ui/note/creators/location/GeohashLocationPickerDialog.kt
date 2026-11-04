@@ -76,6 +76,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -486,7 +487,7 @@ private fun CenterPin(
             modifier =
                 Modifier
                     .size(46.dp)
-                    .offset(y = -20.dp - lift),
+                    .offset { IntOffset(0, (-20.dp - lift).roundToPx()) },
         )
         // A shadow/anchor dot marking the exact center point; it spreads as the pin lifts.
         Box(

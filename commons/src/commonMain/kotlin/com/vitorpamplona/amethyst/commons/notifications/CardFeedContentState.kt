@@ -69,6 +69,8 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 @Stable
 class CardFeedContentState(
@@ -91,6 +93,14 @@ class CardFeedContentState(
 
     private var lastAccount: Account? = null
     private var lastNotes: Set<Note>? = null
+
+    // [clear] says "rebuild from scratch", but a refresh already computing from the old answers
+    // (verdicts, mutes) would otherwise write its notes back after the clear, and the next refresh
+    // would only add to them. Each clear starts a generation; [lastNotes] counts as the base for
+    // an additive refresh only when it was built in the current one.
+    @OptIn(ExperimentalAtomicApi::class)
+    private val generation = AtomicLong(0L)
+    private var builtGeneration = -1L
 
     fun sendToTop() {
         if (scrolltoTopPending) return
@@ -123,21 +133,25 @@ class CardFeedContentState(
 
     private fun refreshSuspended() = refreshLock.withLock { refreshLocked() }
 
+    @OptIn(ExperimentalAtomicApi::class)
     private fun refreshLocked() {
         try {
             isRefreshing.value = true
 
+            // Read before the filter runs: a clear after this point marks the result stale.
+            val gen = generation.load()
             val notes = localFilter.feed()
             lastFeedKey = localFilter.feedKey()
 
             val thisAccount = (localFilter as? NotificationFeedFilter)?.account
-            val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
+            val lastNotesCopy = if (thisAccount == lastAccount && builtGeneration == gen) lastNotes else null
 
             val oldNotesState = _feedContent.value
             if (lastNotesCopy != null && oldNotesState is CardFeedState.Loaded) {
                 val newCards = convertToCard(notes.minus(lastNotesCopy))
                 if (newCards.isNotEmpty()) {
                     lastNotes = notes.toSet()
+                    builtGeneration = gen
                     lastAccount = (localFilter as? NotificationFeedFilter)?.account
 
                     val updatedCards =
@@ -153,6 +167,7 @@ class CardFeedContentState(
                 }
             } else {
                 lastNotes = notes.toSet()
+                builtGeneration = gen
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
 
                 val cards =
@@ -459,11 +474,15 @@ class CardFeedContentState(
         }
     }
 
-    private fun refreshFromOldState(newItems: Set<Note>) {
+    // Under the refresh lock: it writes the same feed and notes a full refresh does.
+    private fun refreshFromOldState(newItems: Set<Note>) = refreshLock.withLock { refreshFromOldStateLocked(newItems) }
+
+    @OptIn(ExperimentalAtomicApi::class)
+    private fun refreshFromOldStateLocked(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value
 
         val thisAccount = (localFilter as? NotificationFeedFilter)?.account
-        val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
+        val lastNotesCopy = if (thisAccount == lastAccount && builtGeneration == generation.load()) lastNotes else null
 
         if (
             lastNotesCopy != null &&
@@ -498,7 +517,7 @@ class CardFeedContentState(
             }
         } else {
             // Refresh Everything
-            refreshSuspended()
+            refreshLocked()
         }
     }
 
@@ -559,7 +578,9 @@ class CardFeedContentState(
         }
     }
 
+    @OptIn(ExperimentalAtomicApi::class)
     fun clear() {
+        generation.addAndFetch(1L)
         lastAccount = null
         lastNotes = null
     }

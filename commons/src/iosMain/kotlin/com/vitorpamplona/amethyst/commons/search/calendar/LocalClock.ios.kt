@@ -33,6 +33,7 @@ import platform.Foundation.NSTimeZone
 import platform.Foundation.currentLocale
 import platform.Foundation.dateWithTimeIntervalSince1970
 import platform.Foundation.localTimeZone
+import platform.Foundation.timeZoneWithName
 
 // NSDateFormatter is not thread-safe for concurrent stringFromDate calls (Apple docs), and the
 // search field re-reads a month grid from whichever dispatcher the state flow ran on. One lock
@@ -69,6 +70,14 @@ actual object LocalClock {
 
     actual fun utcOffsetSeconds(unixSeconds: Long): Long = localZone.at(unixSeconds)
 
+    actual fun utcOffsetSeconds(
+        zoneId: String,
+        unixSeconds: Long,
+    ): Long? =
+        NSTimeZone
+            .timeZoneWithName(zoneId.trim())
+            ?.secondsFromGMTForDate(dateAt(unixSeconds))
+
     actual fun epochDayCounter(): EpochDayCounter = EpochDayCounter { ZoneMath.epochDayAt(it, localZone) }
 
     /**
@@ -83,6 +92,8 @@ actual object LocalClock {
         // Monday shifts the grid's columns, where an out-of-range index would crash it.
         return if (sundayBased in 0..6) sundayBased else 1
     }
+
+    actual fun zoneId(): String = NSTimeZone.localTimeZone.name
 
     actual fun monthLabel(date: SearchDate): String = labelLock.withLock { monthFormatter.stringFromDate(dateAt(startOfDay(date.firstOfMonth()))) }
 

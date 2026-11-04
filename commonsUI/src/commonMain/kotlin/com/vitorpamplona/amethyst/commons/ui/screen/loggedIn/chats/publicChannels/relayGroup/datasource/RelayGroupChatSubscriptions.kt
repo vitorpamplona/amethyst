@@ -45,7 +45,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
 /**
  * Always-on preload of the relay-signed **state** (metadata/roster/roles/pins) of every joined group,
- * mounted once high in the logged-in tree ([com.vitorpamplona.amethyst.ui.screen.loggedIn.LoggedInPage])
+ * mounted once high in the logged-in tree ([com.vitorpamplona.amethyst.commons.ui.app.AmethystApp])
  * — the NIP-29 analog of the always-on account/DM tail and [ConcordChannelPreload]. The query state is
  * keyed on the account (stable), so we watch the joined-group list and re-derive on every join/leave.
  */
@@ -78,7 +78,7 @@ fun RelayGroupJoinedChatTailPreload(accountViewModel: AccountViewModel) {
     val dataSource = accountViewModel.dataSources().relayGroupJoinedChatTail
 
     val joined by account.relayGroupList.liveRelayGroupList.collectAsStateWithLifecycle()
-    val enabledFeeds by account.settings.enabledChatFeeds.collectAsStateWithLifecycle()
+    val enabledFeeds by account.chatFeedToggles.applied.collectAsStateWithLifecycle()
 
     if (ChatFeedType.NIP29 in enabledFeeds) {
         joined.forEach { tag ->

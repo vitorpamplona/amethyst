@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_de
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -135,7 +136,7 @@ fun ConcordMetadataFields(
             isError = !concordNameFits(name.value),
             supportingText = { ConcordNameBudget(name.value) },
         )
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             value = about.value,
             onValueChange = { about.value = it },
             modifier = Modifier.fillMaxWidth(),
@@ -187,7 +188,7 @@ private fun ConcordIconHero(
             uploading = true
             scope.launch {
                 try {
-                    icon.value = ConcordImageUploader(accountViewModel.account).uploadEncrypted(media, accountViewModel.host.mediaUploader)
+                    icon.value = ConcordImageUploader(accountViewModel.account).uploadEncrypted(media, accountViewModel.mediaUploader)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -260,7 +261,7 @@ private fun ConcordBannerHero(
             uploading = true
             scope.launch {
                 try {
-                    banner.value = ConcordImageUploader(accountViewModel.account).uploadEncrypted(media, accountViewModel.host.mediaUploader)
+                    banner.value = ConcordImageUploader(accountViewModel.account).uploadEncrypted(media, accountViewModel.mediaUploader)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

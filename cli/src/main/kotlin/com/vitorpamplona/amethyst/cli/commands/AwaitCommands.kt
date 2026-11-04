@@ -20,18 +20,16 @@
  */
 package com.vitorpamplona.amethyst.cli.commands
 
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.AwaitTimeout
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.commands.AwaitCommands.awaitAdmin
 import com.vitorpamplona.amethyst.cli.commands.AwaitCommands.awaitMember
-import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
+import com.vitorpamplona.marmot.RecipientRelayFetcher
+import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageFetcher
 import kotlinx.coroutines.delay
 
 /**
@@ -83,11 +81,10 @@ object AwaitCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val target = ctx.requireUserHex(rest[0])
-            val filter = ctx.marmot.subscriptionManager.keyPackageFilter(target)
             // MIP-00: target's KeyPackages live on the relays advertised in
             // their kind:10051 (fallback: kind:10002 write). Resolve the
-            // right relay set once up front against bootstrap seeds; the
-            // polling loop then hits those relays on every tick. If the
+            // relay lists once up front against bootstrap seeds; the
+            // polling loop then asks the same relays on every tick. If the
             // target hasn't published either list yet, fall back to the
             // bootstrap pool so the loop still has something to query.
             val seed = ctx.bootstrapRelays()
@@ -98,28 +95,32 @@ object AwaitCommands {
             val lists =
                 ctx.cachedRelayListsOf(target)
                     ?: RecipientRelayFetcher.fetchRelayLists(ctx.client, target, seed)
-            val relays =
-                KeyPackageFetcher.fetchRelaysFor(
-                    targetKeyPackageRelays = lists.keyPackage,
-                    targetOutbox = lists.nip65Write(),
-                    myOutbox = seed,
-                )
-            if (relays.isEmpty()) {
-                throw AwaitTimeout("no relays to query for $target (configure relays or bootstrap defaults first)")
-            }
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
             while (System.currentTimeMillis() < deadline) {
-                val event =
-                    ctx.client.fetchFirst(
-                        filters = relays.associateWith { listOf(filter) },
+                // Waits for what `group add` would actually invite with: a
+                // valid kind:30443, else a valid legacy kind:443. Settling on
+                // any 30443, valid or not, let the wait succeed and the add
+                // then fail, and never saw a 443-only peer at all.
+                val lookup =
+                    KeyPackageFetcher.fetchForInvite(
+                        client = ctx.client,
+                        targetPubKey = target,
+                        targetOutbox = lists.nip65Write(),
+                        myOutbox = seed,
+                        targetKeyPackageRelays = lists.keyPackage,
                         idleTimeoutMs = 3_000,
                     )
-                if (event is KeyPackageEvent) {
+                if (lookup.relays.isEmpty()) {
+                    throw AwaitTimeout("no relays to query for $target (configure relays or bootstrap defaults first)")
+                }
+                val event = lookup.keyPackage
+                if (event != null) {
                     Output.emit(
                         mapOf(
                             "event_id" to event.id,
                             "author" to event.pubKey,
-                            "found_on" to relays.map { it.url },
+                            "kind" to event.kind,
+                            "found_on" to lookup.relays.map { it.url },
                         ),
                     )
                     return 0
@@ -271,7 +272,7 @@ object AwaitCommands {
                 for (line in msgs.asReversed()) {
                     val obj =
                         try {
-                            Output.mapper.readValue<Map<String, Any?>>(line)
+                            CliJson.toPlain(CliJson.parse(line)) as? Map<*, *>
                         } catch (_: Exception) {
                             null
                         } ?: continue

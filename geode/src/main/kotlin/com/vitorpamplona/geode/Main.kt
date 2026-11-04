@@ -22,6 +22,7 @@ package com.vitorpamplona.geode
 
 import com.vitorpamplona.geode.config.BannedEntry
 import com.vitorpamplona.geode.config.MirrorFilterValidator
+import com.vitorpamplona.geode.config.RateLimits
 import com.vitorpamplona.geode.config.RelayIdentity
 import com.vitorpamplona.geode.config.RuntimeConfig
 import com.vitorpamplona.geode.config.RuntimeConfigData
@@ -30,6 +31,7 @@ import com.vitorpamplona.geode.mirror.MirrorDirection
 import com.vitorpamplona.geode.mirror.MirrorUpstream
 import com.vitorpamplona.geode.mirror.MirrorWorker
 import com.vitorpamplona.geode.mirror.SyncCoverageFile
+import com.vitorpamplona.geode.server.ClientAddresses
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -310,8 +312,10 @@ private fun serve(args: Array<String>) {
             extraPragmas = extraPragmas,
         )
 
+    // Built once: every connection's policy shares these, so the limits are per client, not per socket.
+    val rateLimits = config.rate_limits.toRateLimits()
     val policyBuilder: () -> IRelayPolicy = {
-        composePolicy(config, advertisedUrl, requireAuth, optionalAuth, verifySigs, parallelVerify)
+        composePolicy(config, advertisedUrl, requireAuth, optionalAuth, verifySigs, parallelVerify, rateLimits)
     }
 
     // Static [authorization] feeds the runtime BanStore only when no
@@ -368,6 +372,8 @@ private fun serve(args: Array<String>) {
             workerGroupSize = config.network.worker_group_size,
             callGroupSize = config.network.call_group_size,
             httpCommands = config.http.toSettings(),
+            // Websockets count per client too, so the proxy settings apply even with NIP-FE off.
+            clientAddresses = ClientAddresses(config.http.trusted_proxies.toSet(), config.http.client_address_header),
         ).start()
 
     // `[[mirror]]` upstreams: dial each configured relay and stream its
@@ -527,9 +533,10 @@ private fun serve(args: Array<String>) {
  * Builds the policy stack for one connection from the config.
  *
  * Order matters — cheap rejection paths run before expensive ones:
- *   1. AUTH (drops everything if not authenticated)
- *   2. Future-timestamp rejection
- *   3. Signature verification (most expensive — Schnorr verify)
+ *   1. Per-client rate limits (a flood is turned away before anything else runs)
+ *   2. AUTH (drops everything if not authenticated)
+ *   3. Future-timestamp rejection
+ *   4. Signature verification (most expensive — Schnorr verify)
  */
 private fun composePolicy(
     config: StaticConfig,
@@ -538,8 +545,11 @@ private fun composePolicy(
     optionalAuth: Boolean,
     verifySigs: Boolean,
     parallelVerify: Boolean,
+    rateLimits: RateLimits?,
 ): IRelayPolicy {
     val pieces = mutableListOf<IRelayPolicy>()
+
+    rateLimits?.let { pieces += it.policy() }
 
     if (requireAuth) {
         pieces += SignInPolicy(advertisedUrl)

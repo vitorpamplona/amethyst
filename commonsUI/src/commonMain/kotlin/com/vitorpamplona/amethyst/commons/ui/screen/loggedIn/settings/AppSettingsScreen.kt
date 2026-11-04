@@ -20,22 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -50,32 +42,31 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.appupdate.ui.AppUpdateSettingsSection
+import com.vitorpamplona.amethyst.commons.appupdate.ui.LocalAppUpdates
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.AccentColorType
 import com.vitorpamplona.amethyst.commons.model.BooleanType
 import com.vitorpamplona.amethyst.commons.model.ConnectivityType
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
+import com.vitorpamplona.amethyst.commons.model.NoteLayoutType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.resourceId
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.accent_color
-import com.vitorpamplona.amethyst.commons.resources.accent_color_description
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
+import com.vitorpamplona.amethyst.commons.resources.automatically_download_translation_models
+import com.vitorpamplona.amethyst.commons.resources.automatically_download_translation_models_description
 import com.vitorpamplona.amethyst.commons.resources.automatically_hide_nav_bars
 import com.vitorpamplona.amethyst.commons.resources.automatically_hide_nav_bars_description
 import com.vitorpamplona.amethyst.commons.resources.automatically_load_images_gifs
@@ -91,6 +82,8 @@ import com.vitorpamplona.amethyst.commons.resources.autoplay_videos_description
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_always
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_never
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_unmetered_wifi_only_short
+import com.vitorpamplona.amethyst.commons.resources.deck_mode
+import com.vitorpamplona.amethyst.commons.resources.deck_mode_description
 import com.vitorpamplona.amethyst.commons.resources.font_family
 import com.vitorpamplona.amethyst.commons.resources.font_family_description
 import com.vitorpamplona.amethyst.commons.resources.font_family_monospace_short
@@ -101,6 +94,8 @@ import com.vitorpamplona.amethyst.commons.resources.font_size
 import com.vitorpamplona.amethyst.commons.resources.font_size_description
 import com.vitorpamplona.amethyst.commons.resources.language
 import com.vitorpamplona.amethyst.commons.resources.language_description
+import com.vitorpamplona.amethyst.commons.resources.note_layout
+import com.vitorpamplona.amethyst.commons.resources.note_layout_description
 import com.vitorpamplona.amethyst.commons.resources.settings_section_appearance
 import com.vitorpamplona.amethyst.commons.resources.settings_section_general
 import com.vitorpamplona.amethyst.commons.resources.settings_section_media
@@ -111,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_performa
 import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_simplified_short
 import com.vitorpamplona.amethyst.commons.resources.ui_style
 import com.vitorpamplona.amethyst.commons.resources.ui_style_description
+import com.vitorpamplona.amethyst.commons.ui.components.LocalTranslationPlatform
 import com.vitorpamplona.amethyst.commons.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -124,9 +120,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsDi
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
-import com.vitorpamplona.amethyst.commons.ui.theme.contentColorOnAccent
-import com.vitorpamplona.amethyst.commons.ui.theme.isLight
-import com.vitorpamplona.amethyst.commons.ui.theme.previewColor
 import com.vitorpamplona.amethyst.commons.ui.theme.toFontFamily
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.collections.immutable.ImmutableMap
@@ -180,7 +173,7 @@ fun SettingsScreen(
         SettingsSection(Res.string.settings_section_appearance) {
             ThemeTile(sharedPrefs)
             SettingsDivider()
-            AccentColorTile(sharedPrefs)
+            AccentColorTile(sharedPrefs.accentColor, accountSettings = null)
             SettingsDivider()
             FontFamilyTile(sharedPrefs)
             SettingsDivider()
@@ -197,6 +190,10 @@ fun SettingsScreen(
             UrlPreviewTile(sharedPrefs)
             SettingsDivider()
             ProfilePictureTile(sharedPrefs)
+            if (LocalTranslationPlatform.current.downloadsModels) {
+                SettingsDivider()
+                TranslationModelsTile(sharedPrefs)
+            }
         }
 
         SettingsSection(Res.string.settings_section_general) {
@@ -204,8 +201,14 @@ fun SettingsScreen(
             SettingsDivider()
             UiModeTile(sharedPrefs)
             SettingsDivider()
+            NoteLayoutTile(sharedPrefs)
+            SettingsDivider()
             ImmersiveScrollingTile(sharedPrefs)
+            SettingsDivider()
+            DeckModeTile(sharedPrefs)
         }
+
+        LocalAppUpdates.current?.let { AppUpdateSettingsSection(it) }
     }
 }
 
@@ -246,6 +249,19 @@ private fun ThemeTile(sharedPrefs: UiSettingsFlow) {
         onSelect = { sharedPrefs.theme.tryEmit(it) },
     )
 }
+
+/**
+ * The connectivity choices this platform can honour. "Wi-Fi" only differs from "Always" where the
+ * platform detects metered connections; elsewhere it is left out, unless it is the saved choice,
+ * which the row must still show as selected.
+ */
+@Composable
+private fun connectivityOptions(selected: ConnectivityType): List<ConnectivityType> =
+    if (LocalAppPlatform.current.detectsMeteredConnections || selected == ConnectivityType.WIFI_ONLY) {
+        ConnectivityType.entries
+    } else {
+        ConnectivityType.entries.filter { it != ConnectivityType.WIFI_ONLY }
+    }
 
 // Compact labels for the connectivity segmented rows — "Unmetered WiFi" does not fit a 3-up
 // segment, so it collapses to "Wi-Fi"; the others are already short.
@@ -319,13 +335,27 @@ private fun UiModeTile(sharedPrefs: UiSettingsFlow) {
 }
 
 @Composable
+private fun NoteLayoutTile(sharedPrefs: UiSettingsFlow) {
+    val noteLayout by sharedPrefs.noteLayout.collectAsState()
+    SegmentedChoiceTile(
+        icon = MaterialSymbols.AutoMirrored.Feed,
+        title = Res.string.note_layout,
+        description = Res.string.note_layout_description,
+        options = NoteLayoutType.entries,
+        labelRes = { it.resourceId },
+        selected = noteLayout,
+        onSelect = { sharedPrefs.noteLayout.tryEmit(it) },
+    )
+}
+
+@Composable
 private fun ImagePreviewTile(sharedPrefs: UiSettingsFlow) {
     val value by sharedPrefs.automaticallyShowImages.collectAsState()
     SegmentedChoiceTile(
         icon = MaterialSymbols.Image,
         title = Res.string.automatically_load_images_gifs,
         description = Res.string.automatically_load_images_gifs_description,
-        options = ConnectivityType.entries,
+        options = connectivityOptions(value),
         labelRes = { it.shortLabelRes() },
         selected = value,
         onSelect = { sharedPrefs.automaticallyShowImages.tryEmit(it) },
@@ -339,7 +369,7 @@ private fun VideoPlaybackTile(sharedPrefs: UiSettingsFlow) {
         icon = MaterialSymbols.Videocam,
         title = Res.string.automatically_play_videos,
         description = Res.string.automatically_play_videos_description,
-        options = ConnectivityType.entries,
+        options = connectivityOptions(value),
         labelRes = { it.shortLabelRes() },
         selected = value,
         onSelect = { sharedPrefs.automaticallyStartPlayback.tryEmit(it) },
@@ -353,10 +383,24 @@ private fun UrlPreviewTile(sharedPrefs: UiSettingsFlow) {
         icon = MaterialSymbols.Link,
         title = Res.string.automatically_show_url_preview,
         description = Res.string.automatically_show_url_preview_description,
-        options = ConnectivityType.entries,
+        options = connectivityOptions(value),
         labelRes = { it.shortLabelRes() },
         selected = value,
         onSelect = { sharedPrefs.automaticallyShowUrlPreview.tryEmit(it) },
+    )
+}
+
+@Composable
+private fun TranslationModelsTile(sharedPrefs: UiSettingsFlow) {
+    val value by sharedPrefs.automaticallyDownloadTranslationModels.collectAsState()
+    SegmentedChoiceTile(
+        icon = MaterialSymbols.Translate,
+        title = Res.string.automatically_download_translation_models,
+        description = Res.string.automatically_download_translation_models_description,
+        options = connectivityOptions(value),
+        labelRes = { it.shortLabelRes() },
+        selected = value,
+        onSelect = { sharedPrefs.automaticallyDownloadTranslationModels.tryEmit(it) },
     )
 }
 
@@ -367,7 +411,7 @@ private fun ProfilePictureTile(sharedPrefs: UiSettingsFlow) {
         icon = MaterialSymbols.AccountCircle,
         title = Res.string.automatically_show_profile_picture,
         description = Res.string.automatically_show_profile_picture_description,
-        options = ConnectivityType.entries,
+        options = connectivityOptions(value),
         labelRes = { it.shortLabelRes() },
         selected = value,
         onSelect = { sharedPrefs.automaticallyShowProfilePictures.tryEmit(it) },
@@ -394,34 +438,16 @@ private fun ImmersiveScrollingTile(sharedPrefs: UiSettingsFlow) {
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AccentColorTile(sharedPrefs: UiSettingsFlow) {
-    val accent by sharedPrefs.accentColor.collectAsState()
-    val dark = !MaterialTheme.colorScheme.isLight
-
-    SettingsBlockTile(
-        icon = MaterialSymbols.Circle,
-        title = stringRes(Res.string.accent_color),
-        description = stringRes(Res.string.accent_color_description),
-    ) {
-        // FlowRow so every swatch stays visible (wraps to a second line on narrow screens) instead
-        // of scrolling the last ones off-edge with no affordance.
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            AccentColorType.entries.forEach { option ->
-                AccentColorSwatch(
-                    color = option.previewColor(dark),
-                    label = stringRes(option.resourceId),
-                    selected = option == accent,
-                    onClick = { sharedPrefs.accentColor.tryEmit(option) },
-                )
-            }
-        }
-    }
+private fun DeckModeTile(sharedPrefs: UiSettingsFlow) {
+    val deckMode by sharedPrefs.deckMode.collectAsState()
+    SettingsSwitchTile(
+        icon = MaterialSymbols.Dashboard,
+        title = Res.string.deck_mode,
+        description = Res.string.deck_mode_description,
+        checked = deckMode,
+        onCheckedChange = { sharedPrefs.deckMode.tryEmit(it) },
+    )
 }
 
 // Language can't be a segmented row (50+ locales), so it reads as a disclosure row — icon + title +
@@ -489,38 +515,4 @@ fun getLanguageIndex(
     }
     if (languageIndex == -1) languageIndex = languageEntries.values.toTypedArray().indexOf("en")
     return languageIndex
-}
-
-@Composable
-private fun AccentColorSwatch(
-    color: Color,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier =
-            Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(color)
-                .then(
-                    if (selected) {
-                        Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                    } else {
-                        Modifier
-                    },
-                ).clickable(onClick = onClick)
-                .semantics { contentDescription = label },
-        contentAlignment = Alignment.Center,
-    ) {
-        if (selected) {
-            Icon(
-                symbol = MaterialSymbols.Done,
-                contentDescription = null,
-                tint = contentColorOnAccent(color),
-                modifier = Modifier.size(20.dp),
-            )
-        }
-    }
 }

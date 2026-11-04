@@ -20,10 +20,9 @@
  */
 package com.vitorpamplona.amethyst.cli.commands
 
-import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.OperatorKeys
-import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.RunState
 import com.vitorpamplona.amethyst.cli.secrets.IdentityFile
 import com.vitorpamplona.amethyst.cli.secrets.IdentitySecret
@@ -355,7 +354,7 @@ internal object StatusReport {
                 relays = relayList?.relays()?.size ?: 0,
                 relaysWrite = relayList?.writeRelays()?.size ?: 0,
                 relaysRead = relayList?.readRelays()?.size ?: 0,
-                dmRelays = dmInbox?.relays()?.size ?: 0,
+                dmRelays = dmInbox?.allRelays()?.size ?: 0,
             )
         }.getOrElse { OwnEvents() }
 
@@ -428,9 +427,9 @@ internal object StatusReport {
         ownNpub: String?,
     ): Int = readAliases(file).count { (_, npub) -> npub != ownNpub }
 
-    private fun readIdentity(file: File): IdentityFile? = if (file.isFile) runCatching { Output.mapper.readValue<IdentityFile>(file.readText()) }.getOrNull() else null
+    private fun readIdentity(file: File): IdentityFile? = if (file.isFile) runCatching { CliJson.sparseFiles.decodeFromString<IdentityFile>(file.readText()) }.getOrNull() else null
 
-    private fun readAliases(file: File): Map<String, String> = if (file.isFile) runCatching { Output.mapper.readValue<Map<String, String>>(file.readText()) }.getOrElse { emptyMap() } else emptyMap()
+    private fun readAliases(file: File): Map<String, String> = if (file.isFile) runCatching { CliJson.files.decodeFromString<Map<String, String>>(file.readText()) }.getOrElse { emptyMap() } else emptyMap()
 
-    private fun readRunState(file: File): RunState = if (file.isFile) runCatching { Output.mapper.readValue<RunState>(file.readText()) }.getOrElse { RunState() } else RunState()
+    private fun readRunState(file: File): RunState = if (file.isFile) runCatching { CliJson.files.decodeFromString<RunState>(file.readText()) }.getOrElse { RunState() } else RunState()
 }

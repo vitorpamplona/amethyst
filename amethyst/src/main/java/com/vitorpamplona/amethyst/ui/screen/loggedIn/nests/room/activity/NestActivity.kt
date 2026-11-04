@@ -37,10 +37,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateOf
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
+import com.vitorpamplona.amethyst.commons.relayClient.authCommand.compose.RelayAuthSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.DisplayErrorMessages
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.screen.ManageRelayServices
 import com.vitorpamplona.amethyst.ui.screen.ManageWebOkHttp
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -101,7 +101,7 @@ class NestActivity : AppCompatActivity() {
     /**
      * Wired by [NestActivityBody] via a DisposableEffect. Invokes
      * `viewModel.leave()` so the broadcast handle + listener close
-     * route through `cleanupScope`/GlobalScope and survive Activity
+     * route through `cleanupScope` (the application scope) and survive Activity
      * destruction. Called from PIP close paths (the overlay's Leave
      * action and a swipe-dismiss while in PIP).
      */
@@ -165,7 +165,7 @@ class NestActivity : AppCompatActivity() {
             packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)
 
         setContent {
-            AmethystTheme {
+            AmethystTheme(accountPubKey = accountViewModel.account.pubKey) {
                 // Pauses relay services when the app pauses
                 ManageRelayServices()
                 ManageWebOkHttp()

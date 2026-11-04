@@ -20,15 +20,20 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
-import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
-import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorRegistry
-import com.vitorpamplona.amethyst.commons.cordn.CordnLinks
-import com.vitorpamplona.amethyst.commons.cordn.CordnSession
 import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.commons.cordn.FileBackedCordnScopeFactory
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnCoordinatorStore
-import com.vitorpamplona.amethyst.commons.cordn.KeyedCordnBlobCipher
+import com.vitorpamplona.amethyst.commons.cordn.FileCordnHandoffStore
+import com.vitorpamplona.amethyst.commons.cordn.coordinatorRelayPool
+import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.client.CordnBlobCipher
+import com.vitorpamplona.cordn.client.CordnCoordinatorRegistry
+import com.vitorpamplona.cordn.client.CordnHandoffState
+import com.vitorpamplona.cordn.client.CordnLinks
+import com.vitorpamplona.cordn.client.CordnSession
+import com.vitorpamplona.cordn.client.KeyedCordnBlobCipher
+import com.vitorpamplona.cordn.client.remove
+import com.vitorpamplona.cordn.client.upsert
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -68,6 +73,18 @@ class CordnContext(
 
     private val cipher: CordnBlobCipher by lazy { KeyedCordnBlobCipher(blobKey()) }
 
+    /**
+     * Whether this home handed its groups to another device: the same flag, in the same file, as
+     * the app's. `amy` has no sync loop to stop, but two homes holding one leaf and both
+     * committing fork the ratchet tree as surely as two phones do, so after `migrate export` the
+     * registry refuses to open a session here until `migrate resume`.
+     */
+    val handoff: CordnHandoffState by lazy {
+        CordnHandoffState(FileCordnHandoffStore(CordnStorageLayout.accountDirectoryFor(migrationRoot, accountPubKey)))
+    }
+
+    private var handoffRestored = false
+
     private val registry: CordnCoordinatorRegistry by lazy {
         CordnCoordinatorRegistry(
             accountPubKey = accountPubKey,
@@ -75,9 +92,19 @@ class CordnContext(
                 FileBackedCordnScopeFactory(
                     root = migrationRoot,
                     cipher = cipher,
-                    links = CordnLinks.over(ctx.signer, ctx.client),
+                    links = CordnLinks.over(ctx.signer) { relays -> coordinatorRelayPool(ctx.client, relays) },
                 ),
+            handoff = handoff,
         )
+    }
+
+    /** Reads the handoff flag off disk once per run, before the first session opens. */
+    suspend fun restoreHandoff(): CordnHandoffState {
+        if (!handoffRestored) {
+            handoff.restore()
+            handoffRestored = true
+        }
+        return handoff
     }
 
     private val coordinatorStore by lazy {
@@ -97,26 +124,22 @@ class CordnContext(
      * second entry for the same key with different relays is a corrected
      * address, not a second coordinator.
      */
-    suspend fun remember(config: CoordinatorConfig) {
-        val kept = coordinators().filterNot { it.pubKey == config.pubKey }
-        coordinatorStore.save(kept + config)
-    }
+    suspend fun remember(config: CoordinatorConfig) = coordinatorStore.upsert(config)
 
     suspend fun forget(coordinatorPubKey: HexKey): Boolean {
-        val before = coordinators()
-        val after = before.filterNot { it.pubKey == coordinatorPubKey }
-        if (after.size == before.size) return false
-        coordinatorStore.save(after)
+        if (!coordinatorStore.remove(coordinatorPubKey)) return false
         registry.forget(coordinatorPubKey)
         return true
     }
 
     /** The live session for [config], restored from disk. */
-    suspend fun session(config: CoordinatorConfig): CordnSession =
-        registry.session(config).also {
+    suspend fun session(config: CoordinatorConfig): CordnSession {
+        restoreHandoff()
+        return registry.session(config).also {
             it.manager.restore()
             it.keyPackages.restore()
         }
+    }
 
     /** The root the cordn tree is laid out under, for the stores and the migration verbs. */
     val migrationRoot: Path get() = ctx.dataDir.root.toOkioPath()

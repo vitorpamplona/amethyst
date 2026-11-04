@@ -31,29 +31,18 @@ import androidx.annotation.RequiresApi
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.commons.service.image.BlurhashWrapper
 import com.vitorpamplona.amethyst.commons.service.image.ThumbhashWrapper
+import com.vitorpamplona.amethyst.commons.service.uploads.PreviewHashes
 import com.vitorpamplona.amethyst.commons.service.uploads.isAvif
 import com.vitorpamplona.amethyst.commons.thumbhash.toThumbhash
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
 import java.nio.ByteBuffer
 
-/**
- * Result of precomputing placeholder metadata during an upload. The bitmap or video thumbnail is
- * decoded exactly once and both hashes are computed from the same pixels to keep the hot upload
- * path cheap.
- */
-data class PreviewHashes(
-    val blurhash: BlurhashWrapper? = null,
-    val thumbhash: ThumbhashWrapper? = null,
-    val dim: DimensionTag? = null,
-) {
-    companion object {
-        val EMPTY = PreviewHashes()
-    }
-}
-
 object PreviewMetadataCalculator {
     private const val LOG_TAG = "PreviewMetadataCalc"
+
+    // Twice the 100 pixels blurhash and thumbhash scale down to.
+    private const val HASH_SOURCE_MIN_SIDE = 200
 
     private fun isImage(mimeType: String?) = mimeType?.startsWith("image/", ignoreCase = true) == true
 
@@ -65,6 +54,16 @@ object PreviewMetadataCalculator {
         BitmapFactory.Options().apply {
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
+
+    /** The largest power-of-two step that keeps the short side at [HASH_SOURCE_MIN_SIDE] or more. */
+    private fun sampleSizeForHashes(
+        width: Int,
+        height: Int,
+    ): Int {
+        var sample = 1
+        while (minOf(width, height) / (sample * 2) >= HASH_SOURCE_MIN_SIDE) sample *= 2
+        return sample
+    }
 
     fun computeFromBytes(
         data: ByteArray,
@@ -78,15 +77,14 @@ object PreviewMetadataCalculator {
             }
 
             isImage(mimeType) -> {
-                val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size, createBitmapOptions())
-                processImage(bitmap, dimPrecomputed)
+                processSampledImage(dimPrecomputed) { options -> BitmapFactory.decodeByteArray(data, 0, data.size, options) }
             }
 
             isVideo(mimeType) -> {
                 val retriever = MediaMetadataRetriever()
                 try {
                     retriever.setDataSource(ByteArrayMediaDataSource(data))
-                    processRetriever(retriever, dimPrecomputed)
+                    processRetriever(retriever, videoPixelAspectRatio(ByteArrayMediaDataSource(data)), dimPrecomputed)
                 } finally {
                     retriever.release()
                 }
@@ -113,17 +111,16 @@ object PreviewMetadataCalculator {
                 }
 
                 isImage(mimeType) -> {
-                    context.contentResolver.openInputStream(uri)?.use { stream ->
-                        val bitmap = BitmapFactory.decodeStream(stream, null, createBitmapOptions())
-                        processImage(bitmap, dimPrecomputed)
-                    } ?: PreviewHashes(dim = dimPrecomputed)
+                    processSampledImage(dimPrecomputed) { options ->
+                        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+                    }
                 }
 
                 isVideo(mimeType) -> {
                     val retriever = MediaMetadataRetriever()
                     try {
                         retriever.setDataSource(context, uri)
-                        processRetriever(retriever, dimPrecomputed)
+                        processRetriever(retriever, videoPixelAspectRatio(context, uri), dimPrecomputed)
                     } finally {
                         retriever.release()
                     }
@@ -137,6 +134,24 @@ object PreviewMetadataCalculator {
             Log.w(LOG_TAG, "Failed to compute metadata from uri", e)
             null
         }
+    }
+
+    /**
+     * The real size comes from the header; the pixels are decoded at a fraction of it, since the
+     * preview hashes only look at about 100 of them. A full decode of a 50 MP photo would need a
+     * 200 MB bitmap. [decode] runs twice: once for the bounds, once for the sampled pixels.
+     */
+    private fun processSampledImage(
+        dimPrecomputed: DimensionTag?,
+        decode: (BitmapFactory.Options) -> Bitmap?,
+    ): PreviewHashes {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        decode(bounds)
+        val options = createBitmapOptions().apply { inSampleSize = sampleSizeForHashes(bounds.outWidth, bounds.outHeight) }
+        val bitmap = decode(options)
+        val hashes = processBitmap(bitmap)
+        val realDim = if (bitmap != null && bounds.outWidth > 0 && bounds.outHeight > 0) DimensionTag(bounds.outWidth, bounds.outHeight) else null
+        return hashes.copy(dim = realDim ?: hashes.dim ?: dimPrecomputed)
     }
 
     private fun processImage(
@@ -172,9 +187,10 @@ object PreviewMetadataCalculator {
 
     private fun processRetriever(
         retriever: MediaMetadataRetriever,
+        pixelAspectRatio: Float?,
         dimPrecomputed: DimensionTag?,
     ): PreviewHashes {
-        val dim = retriever.prepareDimFromVideo() ?: dimPrecomputed
+        val dim = retriever.prepareDimFromVideo(pixelAspectRatio) ?: dimPrecomputed
         val thumb = retriever.getThumbnail()
         if (thumb == null) {
             Log.w(LOG_TAG) { "video frame extraction returned null; no blurhash/thumbhash will be generated" }

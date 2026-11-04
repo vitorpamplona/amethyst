@@ -206,7 +206,7 @@ test_11_leave_group() {
 # A single application message is used rather than a second commit on purpose: two
 # commits fired 3s apart race wn's per-epoch processing and give a flaky signal.
 test_17_group_image_commit() {
-  banner "Test 17 — Group image commit stays parseable on whitenoise (MIP-01 v2)"
+  banner "Test 17 — Group image is 0x8002-encrypted and its commit applies on whitenoise"
   local id="17 group image"
 
   local gid mls_gid
@@ -224,13 +224,34 @@ test_17_group_image_commit() {
     record_result "$id" skip "A not in GROUP_02"; return
   fi
 
-  # Contents are irrelevant — amy encrypts whatever bytes it's given; the interop
-  # question is purely whether the resulting image extension parses on wn.
+  # Contents are irrelevant — amy encrypts whatever bytes it's given. With a
+  # local Blossom store the blob is uploaded and fetched back through
+  # `group download-image`, which decrypts in the scheme of the group's carrier:
+  # this group is on the current profile, so it must be `0x8002`
+  # (CURRENT_PROFILE). An avatar encrypted with MIP-01 but committed as `0x8002`
+  # parsed fine on wn and was still unreadable by every other client. wn itself
+  # cannot be asked: MDK fetches group images only from its deployment's public
+  # server, never over loopback.
   local img="$STATE_DIR/marmot-icon.bin"
   head -c 1024 /dev/urandom >"$img" 2>/dev/null || printf 'fake-avatar-bytes-for-interop' >"$img"
 
-  if ! amy_json marmot group set-image "$gid" "$img" >/dev/null; then
+  local server_args=()
+  [[ -n "${BLOSSOM_PID:-}" ]] && server_args=(--server "$BLOSSOM_URL/")
+  if ! amy_json marmot group set-image "$gid" "$img" --mime image/png ${server_args[@]+"${server_args[@]}"} >/dev/null; then
     record_result "$id" fail "amy set-image failed"; return
+  fi
+
+  if [[ -n "${BLOSSOM_PID:-}" ]]; then
+    local back="$STATE_DIR/marmot-icon.back" got
+    got=$(amy_json marmot group download-image "$gid" --server "$BLOSSOM_URL/" --out "$back") || {
+      record_result "$id" fail "amy could not download its own avatar"; return
+    }
+    if [[ "$(printf '%s' "$got" | jq -r '.scheme')" != "CURRENT_PROFILE" ]]; then
+      record_result "$id" fail "avatar is not in the 0x8002 scheme: $got"; return
+    fi
+    if ! cmp -s "$img" "$back"; then
+      record_result "$id" fail "avatar did not decrypt back to the uploaded bytes"; return
+    fi
   fi
 
   sleep 3

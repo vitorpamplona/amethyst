@@ -35,7 +35,7 @@ fun ShowDonationCard(
 ) {
     val releaseNotesId = LocalAppPlatform.current.releaseNotesId ?: return
     if (!accountViewModel.account.hasDonatedInThisVersion()) {
-        val donated by accountViewModel.account.observeDonatedInThisVersion().collectAsStateWithLifecycle()
+        val donated by accountViewModel.account.donatedInThisVersion.collectAsStateWithLifecycle()
         if (!donated) {
             LoadNote(
                 releaseNotesId,

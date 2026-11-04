@@ -1,5 +1,5 @@
 // iOS purity gate shared by every KMP library module that targets Apple
-// (`:quartz`, `:commons`, `:commonsUI`). Apply it from the module's build
+// (`:commons`, `:commonsUI`). Apply it from the module's build
 // script with
 //
 //     apply(from = rootProject.file("gradle/kmp-purity.gradle.kts"))
@@ -9,6 +9,7 @@
 // fast Linux pre-check that runs in the lint job; the macOS iOS compile job is
 // the authoritative one. Keeping the pattern table in one file means a new
 // forbidden API lands in every module at once instead of drifting per copy.
+// vitorpamplona/quartz keeps a copy for :quartz: add a forbidden API to both.
 
 val verifyKmpPurity = tasks.register("verifyKmpPurity") {
     group = "verification"

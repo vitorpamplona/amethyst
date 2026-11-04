@@ -11,6 +11,7 @@
 #   ./build-zxingcpp.sh                  # every ABI
 #   ./build-zxingcpp.sh --abi arm64-v8a  # one ABI (faster)
 #   ./build-zxingcpp.sh --out DIR        # write .so somewhere else (verify uses this)
+#   ./build-zxingcpp.sh --print-ndk      # print the pinned NDK's path and exit
 #
 # Prerequisites: git, cmake, ninja, and the exact NDK revision in
 # tools/arti-build/ANDROID_NDK_VERSION. Any other revision is refused — it
@@ -21,6 +22,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 ZXING_VERSION="$(tr -d '[:space:]' < "$SCRIPT_DIR/ZXING_CPP_VERSION")"
+# The tag names the release; the commit is what is actually pinned. A tag can be moved upstream,
+# and a build keyed on the name alone would then quietly differ between a machine with an old
+# clone and a fresh one (F-Droid's), while still printing the same version.
+ZXING_COMMIT="$(tr -d '[:space:]' < "$SCRIPT_DIR/ZXING_CPP_COMMIT")"
 # One pin for the whole repo, deliberately not a copy of our own. :amethyst
 # already reads this same file for `ndkVersion` (the NDK that strips whatever
 # lands in src/main/jniLibs), so a second copy here could only ever be a way
@@ -46,10 +51,17 @@ MIN_SDK_VERSION=26
 # is missing or built for the wrong architecture.
 ABIS=(arm64-v8a armeabi-v7a x86 x86_64)
 
+PRINT_NDK=false
+
+need_value() {
+    [ $# -ge 2 ] && [ -n "$2" ] || { echo "$1 needs a value" >&2; exit 2; }
+}
+
 while [ $# -gt 0 ]; do
     case "$1" in
-        --abi) ABIS=("$2"); shift 2 ;;
-        --out) OUTPUT_DIR="$2"; shift 2 ;;
+        --abi) need_value "$@"; ABIS=("$2"); shift 2 ;;
+        --out) need_value "$@"; OUTPUT_DIR="$2"; shift 2 ;;
+        --print-ndk) PRINT_NDK=true; shift ;;
         *) echo "Unknown argument: $1" >&2; exit 2 ;;
     esac
 done
@@ -119,14 +131,29 @@ fetch_source() {
         git clone --depth 1 --branch "$ZXING_VERSION" \
             https://github.com/zxing-cpp/zxing-cpp.git "$SOURCE_DIR" >/dev/null 2>&1 \
             || fail "could not clone zxing-cpp at $ZXING_VERSION"
-    else
-        info "Updating clone to $ZXING_VERSION"
-        git -C "$SOURCE_DIR" fetch --depth 1 origin tag "$ZXING_VERSION" >/dev/null 2>&1 || true
-        git -C "$SOURCE_DIR" checkout -q "$ZXING_VERSION"
+
+        # A fresh clone is the one place the tag can be checked against the pin. Disagreeing
+        # means upstream moved the tag: stop rather than build either side of that silently.
+        local tagged
+        tagged="$(git -C "$SOURCE_DIR" rev-parse HEAD)"
+        [ "$tagged" = "$ZXING_COMMIT" ] \
+            || fail "tag $ZXING_VERSION now points at $tagged, not the pinned $ZXING_COMMIT -- upstream moved it"
+    elif ! git -C "$SOURCE_DIR" cat-file -e "$ZXING_COMMIT^{commit}" 2>/dev/null; then
+        info "Fetching zxing-cpp $ZXING_COMMIT"
+        git -C "$SOURCE_DIR" fetch --depth 1 origin "$ZXING_COMMIT" >/dev/null 2>&1 \
+            || fail "could not fetch zxing-cpp $ZXING_COMMIT"
     fi
+
+    # Forced and cleaned: a plain checkout carries uncommitted edits in a reused clone along with
+    # it, and the build would then report the pinned commit while compiling something else.
+    git -C "$SOURCE_DIR" checkout -q -f --detach "$ZXING_COMMIT" \
+        || fail "could not check out zxing-cpp $ZXING_COMMIT"
+    git -C "$SOURCE_DIR" clean -q -fdx
 
     local head
     head="$(git -C "$SOURCE_DIR" rev-parse HEAD)"
+    [ "$head" = "$ZXING_COMMIT" ] || fail "clone is at $head, expected $ZXING_COMMIT"
+    [ -z "$(git -C "$SOURCE_DIR" status --porcelain)" ] || fail "clone at $SOURCE_DIR has local changes"
     ok "zxing-cpp $ZXING_VERSION at $head"
 }
 
@@ -196,7 +223,11 @@ verify_abi() {
     hex="$("$readelf" --notes "$lib" 2>/dev/null | sed -n 's/.*description data: *//p' | head -1)"
     [ -n "$hex" ] || fail "$abi: no .note.android.ident -- not an Android library?"
 
-    ascii="$(printf '%s' "$hex" | tr -d ' ' | sed 's/../\\x&/g' | xargs -0 printf 2>/dev/null | tr -c '[:print:]' ' ')"
+    # bash's own printf, not /usr/bin/printf through xargs: BSD printf(1) on macOS only knows
+    # octal escapes, so \xHH came back literally and every ABI failed the NDK check below.
+    local escaped
+    escaped="$(printf '%s' "$hex" | tr -d ' ' | sed 's/../\\x&/g')"
+    ascii="$(printf '%b' "$escaped" | tr -c '[:print:]' ' ')"
 
     # The build number is everything after the last dot of the pinned revision.
     local ndk_build_number="${NDK_VERSION##*.}"
@@ -218,12 +249,17 @@ verify_abi() {
 # ---------------------------------------------------------------------------
 
 main() {
+    ANDROID_NDK_HOME="$(find_ndk)" || exit 1
+    export ANDROID_NDK_HOME
+    if [ "$PRINT_NDK" = true ]; then
+        echo "$ANDROID_NDK_HOME"
+        exit 0
+    fi
+
     command -v cmake >/dev/null || fail "cmake not found"
     command -v ninja >/dev/null || fail "ninja not found"
     command -v git   >/dev/null || fail "git not found"
 
-    ANDROID_NDK_HOME="$(find_ndk)" || exit 1
-    export ANDROID_NDK_HOME
     ok "NDK $NDK_VERSION at $ANDROID_NDK_HOME"
 
     mkdir -p "$BUILD_ROOT"

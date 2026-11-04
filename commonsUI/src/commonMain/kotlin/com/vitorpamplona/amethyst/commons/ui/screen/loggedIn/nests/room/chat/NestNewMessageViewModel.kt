@@ -45,8 +45,6 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
-import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
-import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
@@ -65,12 +63,9 @@ import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -153,7 +148,6 @@ open class NestNewMessageViewModel :
     val strippingFailureConfirmation = SuspendableConfirmation()
 
     val iMetaAttachments = IMetaAttachments()
-    var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
     val message = TextFieldState()
     var urlPreview by mutableStateOf<String?>(null)
@@ -333,14 +327,8 @@ open class NestNewMessageViewModel :
         if (message.text.toString().isBlank()) {
             account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
-            val attachments = mutableSetOf<Event>()
-            nip95attachments.forEach {
-                attachments.add(it.first)
-                attachments.add(it.second)
-            }
-
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
     }
 
@@ -353,16 +341,7 @@ open class NestNewMessageViewModel :
         uploader: MediaUploader,
         onceUploaded: suspend () -> Unit,
     ) {
-        try {
-            uploadUnsafe(onError, uploader, onceUploaded)
-        } catch (_: SignerExceptions.ReadOnlyException) {
-            viewModelScope.launch {
-                onError(
-                    loadStringRes(Res.string.read_only_user),
-                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
-                )
-            }
-        }
+        uploadUnsafe(onError, uploader, onceUploaded)
     }
 
     fun uploadUnsafe(
@@ -393,13 +372,7 @@ open class NestNewMessageViewModel :
                 val urls =
                     results.successful.mapNotNull { upload ->
                         val uploaded = upload.result
-                        if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                            val nip95 = account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, uploadState.caption, uploadState.contentWarningReason)
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
-
-                            note?.toNostrUri()
-                        } else if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
                             iMetaAttachments.add(uploaded, uploadState.caption, uploadState.contentWarningReason)
 
                             uploaded.url
@@ -571,7 +544,7 @@ open class NestNewMessageViewModel :
         val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
+            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
         message.replaceCurrentWord(wordToInsert)

@@ -28,11 +28,11 @@ class ThrowableToastMsg(
     val titleResId: StringResource,
     val msg: String? = null,
     val throwable: Throwable,
-) : ToastMsg()
+) : ToastMsg(ToastSeverity.ERROR)
 
 @Immutable
 class ThrowableToastMsg2(
     val titleResId: StringResource,
     val description: StringResource,
     val throwable: Throwable,
-) : ToastMsg()
+) : ToastMsg(ToastSeverity.ERROR)

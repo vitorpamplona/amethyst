@@ -36,7 +36,11 @@ preflight() {
     local attempt max_attempts=4 built=0
     for attempt in $(seq 1 $max_attempts); do
       step "building :cli:installDist (attempt $attempt/$max_attempts)"
-      ( cd "$REPO_ROOT" && ./gradlew :cli:installDist ) 2>&1 | tee -a "$LOG_FILE"
+      # AMY_GRADLE_ARGS builds against local library checkouts, e.g.
+      # "-PmarmotKmpDir=../marmot-kmp -PmlsKmpDir=../mls-kmp" while a change
+      # to them is not released yet.
+      # shellcheck disable=SC2086
+      ( cd "$REPO_ROOT" && ./gradlew ${AMY_GRADLE_ARGS:-} :cli:installDist ) 2>&1 | tee -a "$LOG_FILE"
       # gradle's status, not tee's: a failed build must not fall through to the old binary.
       if [[ "${PIPESTATUS[0]}" -eq 0 && -x "$AMY_BIN" ]]; then
         built=1; break
@@ -77,18 +81,17 @@ preflight() {
   # what users are running", which is the question the harness exists to answer.
   #
   # THE TWO APPS NO LONGER AGREE, and the rule for that is: take the newer.
-  # As of 2026-09-27 android is on a master snapshot after 0.10.4
-  # (`03b1809e`, 2026-09-26) and ios on the 0.10.4 release (`fcc85edd`), which
-  # is an ancestor of it — android syncs its bindings on its own cadence and got
-  # there first. The newer one is where new validation lands, so it is where
-  # drift shows up first; a client that satisfies the newer MDK satisfies the
-  # older one. Pinning to the laggard would test the subset and call it
-  # coverage.
+  # As of 2026-10-24 android is on the MDK nightly `d274dd22` (2026-10-22,
+  # marmotkit-v0.14.0-nightly.20261023) and ios on the 0.13.0 release
+  # (`891ab349`), an ancestor of it. Both are ancestors of the v0.14.0 release
+  # (`3fb4b475`, 13 commits after android's nightly), which is pinned here: it
+  # is the release White Noise is about to ship, so it is where new validation
+  # lands first, and a client that satisfies it satisfies both apps.
   #
   # Bump it deliberately, by reading those lockfiles again — not by drifting.
   # If they agree again, that is the value; if they disagree, take the newer
   # and say so here.
-  MDK_PIN="${MDK_PIN:-03b1809e6387f2d95e566a6a2d2f1212bec4d41b}"
+  MDK_PIN="${MDK_PIN:-3fb4b4759ac676b0c21c4c3527074866c9fa4c89}"
   if [[ "$(git -C "$WN_REPO" rev-parse HEAD 2>/dev/null)" != "$MDK_PIN" ]]; then
     if [[ "$NO_BUILD" -eq 1 ]]; then
       info "mdk is not at the pinned $MDK_PIN and --no-build set — testing whatever is checked out"

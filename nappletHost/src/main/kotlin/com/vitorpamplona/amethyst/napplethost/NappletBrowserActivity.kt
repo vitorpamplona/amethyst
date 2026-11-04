@@ -43,6 +43,7 @@ import android.os.SystemClock
 import android.util.TypedValue
 import android.view.ContextMenu
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
@@ -79,6 +80,7 @@ import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.isEmpty
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
@@ -97,11 +99,13 @@ import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogType
+import com.vitorpamplona.amethyst.commons.napplet.BrowserOriginPolicy
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletBridgeDocuments
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
@@ -312,6 +316,9 @@ class NappletBrowserActivity : ComponentActivity() {
             }
         }
 
+    // The chrome sees touches first, so a swipe down on its handle opens it over the page.
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean = chrome?.dispatchTouchEvent(ev) { super.dispatchTouchEvent(it) } ?: super.dispatchTouchEvent(ev)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SandboxComposeResources.ensure(this)
@@ -359,7 +366,7 @@ class NappletBrowserActivity : ComponentActivity() {
             return
         }
 
-        shimJs = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
+        shimJs = readContractAsset(NappletWebResources.SHIM_JS_PATH).decodeToString()
         // Which route is really in effect: an open-web page goes through Tor while another page needs it.
         WebViewProxyPolicy.observeRoute(this) {
             routedOverTor = it
@@ -418,6 +425,7 @@ class NappletBrowserActivity : ComponentActivity() {
             NappletWebViewProfile.apply(this, wv, webViewProfile)
         }
         BrowserWebTools.applyBrowserSettings(wv)
+        NappletWebRtcGuard.sync(wv, useTor)
         wv.webViewClient = BrowserClient()
         wv.webChromeClient = BrowserChromeClient()
         wv.setFindListener { active, total, _ -> chrome?.setFindResult(active, total) }
@@ -1003,6 +1011,7 @@ class NappletBrowserActivity : ComponentActivity() {
         val resolved = OmniboxInput.resolve(text, SearchEngines.byId(searchEngine).queryPrefix) ?: return
         if (resolved.forceTor && !useTor) {
             useTor = true
+            webView?.let { NappletWebRtcGuard.sync(it, true) }
             updateChromeState { copy(torOn = true, torForced = false) }
         }
         // An onion must not leave before the Tor route it just claimed is in place.
@@ -1060,6 +1069,12 @@ class NappletBrowserActivity : ComponentActivity() {
                         putString(NappletIpc.KEY_PAYLOAD, outgoing)
                     }
             }
+        // A page on plain http could have had its script put there by anyone on the path, and a grant is kept
+        // per origin: only an origin whose transport can't be tampered with gets window.nostr.
+        if (!BrowserOriginPolicy.offersNostr(origin)) {
+            bridge.failRequest(msg, "This page isn't secure (http): use its https address to sign in.")
+            return
+        }
 
         // In the background: a sign / encrypt / decrypt waits until the user is back on this window.
         if (!resumed && NappletActingRequests.actsForUser(runCatching { NappletProtocolJson.readType(raw) }.getOrNull())) {
@@ -1431,6 +1446,10 @@ class NappletBrowserActivity : ComponentActivity() {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(WindowInsetsCompat.Type.systemBars())
         }
+        // The page now covers the address bar and everything else that says whose it is: name the site, as
+        // Chrome does, so a full-screen page can't pass itself off as Amethyst asking for the user's key.
+        val site = runCatching { currentUrl().toUri().host }.getOrNull()?.takeIf { it.isNotBlank() } ?: barTitle()
+        Toast.makeText(this, getString(CommonsR.string.browser_fullscreen_notice, site), Toast.LENGTH_LONG).show()
         syncBackState()
     }
 
@@ -1519,7 +1538,7 @@ class NappletBrowserActivity : ComponentActivity() {
         menu: ContextMenu,
         link: String,
     ) {
-        if (menu.size() == 0) menu.setHeaderTitle(link)
+        if (menu.isEmpty()) menu.setHeaderTitle(link)
         if (link.startsWith("http")) {
             menu.add(CommonsR.string.browser_ctx_open_new_window).setOnMenuItemClickListener {
                 startActivity(newWindowIntent(link))
@@ -1540,7 +1559,7 @@ class NappletBrowserActivity : ComponentActivity() {
         menu: ContextMenu,
         image: String,
     ) {
-        if (menu.size() == 0) menu.setHeaderTitle(image.take(80))
+        if (menu.isEmpty()) menu.setHeaderTitle(image.take(80))
         if (image.startsWith("http") || image.startsWith("data:")) {
             menu.add(CommonsR.string.browser_ctx_download_image).setOnMenuItemClickListener {
                 val wv = webView
@@ -1572,7 +1591,9 @@ class NappletBrowserActivity : ComponentActivity() {
      * route is really applied.
      */
     private fun claimRoute(onReady: () -> Unit = {}) {
-        if (useTor && proxyPort <= 0) {
+        // On Tor without a guard against WebRTC (an old WebView), a page would learn the real address
+        // around the proxy: nothing loads, as when Tor's port is unknown.
+        if (useTor && (proxyPort <= 0 || !NappletWebRtcGuard.isSupported())) {
             showRouteBlocked()
             return
         }
@@ -1591,6 +1612,7 @@ class NappletBrowserActivity : ComponentActivity() {
     /** Persists the per-host Tor choice in the main process and re-applies it to the live WebView. */
     private fun setNetworkMode(newUseTor: Boolean) {
         useTor = newUseTor
+        webView?.let { NappletWebRtcGuard.sync(it, useTor) }
         // Reload only once the new route is in effect, or the reload would go out the old way.
         claimRoute { webView?.reload() }
         updateChromeState { copy(torOn = useTor, torForced = !useTor && routedOverTor) }
@@ -1693,6 +1715,10 @@ class NappletBrowserActivity : ComponentActivity() {
 
             override fun onClearSiteData() {
                 webView?.let { BrowserWebTools.clearSiteData(this@NappletBrowserActivity, it, currentUrl()) }
+            }
+
+            override fun onClearAllSiteData() {
+                webView?.let { BrowserWebTools.clearAllSiteData(this@NappletBrowserActivity, it) }
             }
 
             override fun onPanelsChanged() = syncBackState()
@@ -1919,6 +1945,7 @@ class NappletBrowserActivity : ComponentActivity() {
         if (!isMainFrame || useTor || !OmniboxInput.isOnion(url)) return false
         if (proxyPort > 0) {
             useTor = true
+            NappletWebRtcGuard.sync(view, true)
             updateChromeState { copy(torOn = true, torForced = false) }
             claimRoute { if (webView === view) view.loadUrl(url) }
         } else {
@@ -1995,7 +2022,7 @@ class NappletBrowserActivity : ComponentActivity() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
-    private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
+    private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebResources.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
 
     companion object {
         private const val TAG = "NappletBrowserActivity"

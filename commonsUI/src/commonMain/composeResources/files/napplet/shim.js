@@ -4,7 +4,7 @@
 (function(){
   if (window.__nappletShimInstalled) return; window.__nappletShimInstalled = true;
 
-  // Web Storage polyfill. The applet runs in an `allow-scripts` (no `allow-same-origin`) iframe, so
+  // Website-only Web Storage polyfill. The applet runs in an `allow-scripts` (no `allow-same-origin`) iframe, so
   // its origin is opaque and reading `window.localStorage`/`sessionStorage` throws a SecurityError —
   // which aborts the bootstrap of essentially every bundler-built SPA (they read storage at init) and
   // leaves a blank page. We can't grant `allow-same-origin` (that would hand the applet the
@@ -13,6 +13,7 @@
   // storage is available separately and asynchronously via `window.napplet.storage.*`. This inline
   // shim runs before the applet's deferred module script, so the polyfill is in place first.
   (function(){
+    if (!window.__nappletNip07) return;
     function makeStorage(){
       var data = Object.create(null);
       var methods = {
@@ -46,7 +47,7 @@
     install('sessionStorage');
   })();
 
-  var seq = 0, pending = {}, subs = {}, actions = {}, identityHandlers = [];
+  var seq = 0, pending = {}, subs = {}, outboxSubs = {}, actions = {}, identityHandlers = [], themeHandlers = [], fsHandlers = [], uploadHandlers = [];
   // Transport. A napplet/nSite runs inside the trusted shell's iframe and talks to the shell via
   // postMessage (the shell relays to the native bridge). A top-level page opened in the in-app browser
   // has no shell parent, so it talks to the origin-scoped native bridge object (__nappletBridge,
@@ -60,7 +61,7 @@
       if (!recvWired) { recvWired = true; b.onmessage = function(e){ onIncoming(e.data); }; }
       b.postMessage(s);
     } else {
-      parent.postMessage(s, '*');
+      parent.postMessage(JSON.parse(s), '*');
     }
   }
   function send(env){ env.id = env.id || ('r' + (seq++)); rawSend(JSON.stringify(env)); return env.id; }
@@ -71,6 +72,17 @@
       pending[id] = { resolve: resolve, reject: reject };
     });
   }
+  // NAP-OUTBOX results carry their own outcome (`ok`, `error`, `incomplete`) for the napplet to read,
+  // so they resolve with the whole reply instead of rejecting on a failure.
+  function callResult(type, fields){
+    return new Promise(function(resolve){
+      var env = { type: type }; if (fields) for (var k in fields) env[k] = fields[k];
+      var id = send(env);
+      pending[id] = { resolve: resolve, reject: function(err){ resolve(err.napplet || { error: String(err && err.message || err) }); } };
+    });
+  }
+  // The named fields of a reply that are present, so an absent one is absent, not undefined.
+  function pick(m, keys){ var out = {}; keys.forEach(function(k){ if (m[k] !== undefined) out[k] = m[k]; }); return out; }
   // Fire-and-forget (no .result awaited), used for subscribe/unsubscribe.
   function post(type, fields){ var env = { type: type }; if (fields) for (var k in fields) env[k] = fields[k]; send(env); }
   function onIncoming(raw){
@@ -84,15 +96,31 @@
       else { delete subs[msg.subId]; if (sub.onClosed) sub.onClosed(msg.reason); }
       return;
     }
+    if (msg.type === 'outbox.event' || msg.type === 'outbox.closed') {
+      var osub = outboxSubs[msg.subId]; if (!osub) return;
+      if (msg.type === 'outbox.event') osub.event.slice().forEach(function(cb){ try { cb(msg.result); } catch (_) {} });
+      else { delete outboxSubs[msg.subId]; osub.closed.slice().forEach(function(cb){ try { cb(msg.reason); } catch (_) {} }); }
+      return;
+    }
     // keys.action push: the shell triggers a registered keyboard/command action.
     if (msg.type === 'keys.action') { var cb = actions[msg.actionId]; if (cb) cb(); return; }
     // IME ops (host keyboard -> focused page field). Only the direct-bridge browser installs the agent.
     if (msg.type && msg.type.indexOf('ime.') === 0) { if (window.__nappletImeHandle) window.__nappletImeHandle(msg); return; }
     // identity.changed push: the active user's key changed (account switch / connect / disconnect).
     if (msg.type === 'identity.changed') { identityHandlers.slice().forEach(function(h){ try { h(msg.pubkey); } catch (_) {} }); return; }
+    if (msg.type === 'theme.changed') { themeHandlers.slice().forEach(function(h){ try { h(msg.theme); } catch (_) {} }); return; }
+    if (msg.type && msg.type.indexOf('inc.') === 0 && incIncoming(msg)) return;
+    if (msg.type === 'intent.deliver') {
+      if (intentDeliveryHandlers.length) intentDeliveryHandlers.slice().forEach(function(h){ incSafe(h, msg.delivery); });
+      else if (intentDeliveries.length < 64) intentDeliveries.push(msg.delivery);
+      return;
+    }
+    if (msg.type === 'intent.changed') { intentChangedHandlers.slice().forEach(function(h){ incSafe(h, msg.availability); }); return; }
+    if (msg.type === 'upload.status.changed') { uploadHandlers.slice().forEach(function(h){ try { h(msg.status); } catch (_) {} }); return; }
+    if (msg.type === 'fs.changed') { fsHandlers.slice().forEach(function(h){ try { h(msg.change); } catch (_) {} }); return; }
     if (!msg.id) return;
     var p = pending[msg.id]; if (!p) return; delete pending[msg.id]; if (p.cleanup) p.cleanup();
-    if (msg.ok) p.resolve(msg);
+    if (msg.ok !== false && !msg.error) p.resolve(msg);
     else { var err = new Error(msg.reason || msg.operation || msg.error || 'napplet error'); err.napplet = msg; p.reject(err); }
   }
   // The shell-relayed path listens for window messages from the parent; the direct-bridge path wires
@@ -120,8 +148,267 @@
       }
     });
   }
+  function resourceBlob(encoded, mime){
+    if (typeof encoded !== 'string' || typeof mime !== 'string') throw new Error('Invalid resource bytes');
+    var bin = atob(encoded);
+    if (btoa(bin) !== encoded) throw new Error('Non-canonical resource base64');
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
+  }
   function normFilters(filters){ return { filters: Array.isArray(filters) ? filters : [filters || {}] }; }
-  function bytesToB64(bytes){ var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); var s=''; for (var i=0;i<u.length;i++) s+=String.fromCharCode(u[i]); return btoa(s); }
+  function bytesToB64(bytes){
+    var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes), parts = [];
+    // In slices: one fromCharCode call per byte made multi-megabyte uploads crawl.
+    for (var i = 0; i < u.length; i += 0x8000) parts.push(String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)));
+    return btoa(parts.join(''));
+  }
+  // A NAP-COMMON reply without the envelope's own fields.
+  function commonResult(m){ var out = {}; for (var k in m) if (k !== 'type' && k !== 'id') out[k] = m[k]; if (out.ok === undefined) out.ok = !out.error; return out; }
+  // follow('npub1…', 'npub1…') or follow(['npub1…', …]).
+  function commonKeys(args){ return (args.length === 1 && Array.isArray(args[0])) ? args[0].slice() : Array.prototype.slice.call(args); }
+  // The bytes of an upload's `data`, whatever form the napplet handed over.
+  function uploadBytes(data){
+    if (typeof Blob !== 'undefined' && data instanceof Blob) return data.arrayBuffer().then(function(b){ return new Uint8Array(b); });
+    if (data instanceof ArrayBuffer) return Promise.resolve(new Uint8Array(data));
+    if (ArrayBuffer.isView(data)) return Promise.resolve(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+    return Promise.reject(new TypeError('upload data must be a Blob, ArrayBuffer or typed array'));
+  }
+  // NAP-INC: topics and channels between napplets, routed by the shell under runtime-assigned endpoint
+  // identifiers. Several on(topic) handlers share one shell subscription per topic: the wire's
+  // inc.unsubscribe drops the whole topic, so it goes out only when the last handler closes.
+  var incTopics = {}, incChannels = {}, incUnclaimed = [], incOpenedHandlers = [];
+  // How many unclaimed inbound handles, or undelivered messages on one channel, the binding keeps.
+  // Past it the channel is closed (NAP-INC: never drop them silently).
+  var INC_BUFFER = 256;
+  function incLater(fn){ Promise.resolve().then(fn); }
+  function incSafe(cb, arg){ try { cb(arg); } catch (_) {} }
+  function incRemove(list, item){ var i = list.indexOf(item); if (i >= 0) list.splice(i, 1); }
+  // Convention URI napplet:<archetype>/<intent>?a=b -> stable topic + text payload { a: 'b' }.
+  // Values stay text (a '+' is a plus); a fragment, bad percent-encoding, a repeated name, or a query
+  // together with an explicit payload is refused before anything is sent.
+  function incTranspose(topic, payload, hasPayload){
+    if (typeof topic !== 'string' || topic === '') throw new TypeError('inc topic must be a non-empty string');
+    if (topic.indexOf('napplet:') !== 0) return { topic: topic, payload: payload, hasPayload: hasPayload };
+    if (topic.indexOf('#') >= 0) throw new TypeError('inc convention URI must not have a fragment');
+    var q = topic.indexOf('?');
+    if (q < 0) return { topic: topic, payload: payload, hasPayload: hasPayload };
+    var stable = topic.substring(0, q), query = topic.substring(q + 1);
+    if (query === '') return { topic: stable, payload: payload, hasPayload: hasPayload };
+    if (hasPayload) throw new TypeError('inc convention URI query and an explicit payload cannot be combined');
+    var params = {};
+    query.split('&').forEach(function(pair){
+      if (pair === '') return;
+      var eq = pair.indexOf('=');
+      var name, value;
+      try {
+        name = decodeURIComponent(eq < 0 ? pair : pair.substring(0, eq));
+        value = eq < 0 ? '' : decodeURIComponent(pair.substring(eq + 1));
+      } catch (_) { throw new TypeError('inc convention URI has malformed percent-encoding'); }
+      if (Object.prototype.hasOwnProperty.call(params, name)) throw new TypeError('inc convention URI repeats ' + name);
+      params[name] = value;
+    });
+    return { topic: stable, payload: params, hasPayload: true };
+  }
+  function incChannel(channelId, peer){
+    var ch = incChannels[channelId];
+    if (ch) { if (peer && !ch.handle.peer) ch.handle.peer = peer; return ch; }
+    ch = { handlers: [], closedHandlers: [], buffer: [], closed: null, closing: false };
+    incChannels[channelId] = ch;
+    function closeChannel(){ if (ch.closed || ch.closing) return; ch.closing = true; post('inc.channel.close', { channelId: channelId }); }
+    ch.close = closeChannel;
+    ch.handle = {
+      id: channelId,
+      peer: peer || '',
+      emit: function(payload){
+        if (ch.closed || ch.closing) return;
+        var env = { channelId: channelId }; if (payload !== undefined) env.payload = payload;
+        post('inc.channel.emit', env);
+      },
+      on: function(handler){
+        if (typeof handler !== 'function') return { close: function(){} };
+        ch.handlers.push(handler);
+        // Messages that came before anyone listened go to the first handler, in order.
+        var queued = ch.buffer; ch.buffer = [];
+        queued.forEach(function(event){ incSafe(handler, event); });
+        return { close: function(){ incRemove(ch.handlers, handler); } };
+      },
+      onClosed: function(handler){
+        if (typeof handler !== 'function') return { close: function(){} };
+        if (ch.closed) { var record = ch.closed; incLater(function(){ incSafe(handler, record); }); return { close: function(){} }; }
+        ch.closedHandlers.push(handler);
+        return { close: function(){ incRemove(ch.closedHandlers, handler); } };
+      },
+      close: closeChannel
+    };
+    return ch;
+  }
+  function incIncoming(msg){
+    if (msg.type === 'inc.event') {
+      var topic = incTopics[msg.topic]; if (!topic) return true;
+      var event = { topic: msg.topic, sender: msg.sender }; if (msg.payload !== undefined) event.payload = msg.payload;
+      topic.handlers.slice().forEach(function(h){ incSafe(h, event); });
+      return true;
+    }
+    if (msg.type === 'inc.channel.opened') {
+      if (typeof msg.channelId !== 'string') return true;
+      var opened = incChannel(msg.channelId, msg.peer);
+      if (incOpenedHandlers.length) incOpenedHandlers.slice().forEach(function(h){ incSafe(h, opened.handle); });
+      else if (incUnclaimed.length >= INC_BUFFER) opened.close();
+      else incUnclaimed.push(opened);
+      return true;
+    }
+    if (msg.type === 'inc.channel.event') {
+      if (typeof msg.channelId !== 'string') return true;
+      var ch = incChannel(msg.channelId, null); if (ch.closed || ch.closing) return true;
+      var cev = { channelId: msg.channelId, sender: msg.sender }; if (msg.payload !== undefined) cev.payload = msg.payload;
+      if (ch.handlers.length) ch.handlers.slice().forEach(function(h){ incSafe(h, cev); });
+      else if (ch.buffer.length >= INC_BUFFER) ch.close();
+      else ch.buffer.push(cev);
+      return true;
+    }
+    if (msg.type === 'inc.channel.closed') {
+      if (typeof msg.channelId !== 'string') return true;
+      var gone = incChannel(msg.channelId, null); if (gone.closed) return true;
+      var record = { channelId: msg.channelId }; if (typeof msg.reason === 'string') record.reason = msg.reason;
+      gone.closed = record;
+      delete incChannels[msg.channelId];
+      gone.closedHandlers.splice(0).forEach(function(h){ incSafe(h, record); });
+      return true;
+    }
+    return false;
+  }
+  var incDomain = {
+    emit: function(topic, payload){
+      var routed = incTranspose(topic, payload, arguments.length > 1 && payload !== undefined);
+      var env = { topic: routed.topic }; if (routed.hasPayload) env.payload = routed.payload;
+      post('inc.emit', env);
+    },
+    on: function(topicName, handler){
+      if (typeof topicName !== 'string' || topicName === '') throw new TypeError('inc topic must be a non-empty string');
+      if (typeof handler !== 'function') throw new TypeError('inc handler must be a function');
+      // An emit routes a convention URI on its queryless topic, so a listener with a query would never match.
+      if (topicName.indexOf('napplet:') === 0 && /[?#]/.test(topicName)) throw new TypeError('inc.on takes the stable topic, without a query or fragment');
+      var topic = incTopics[topicName];
+      if (!topic) {
+        topic = incTopics[topicName] = { handlers: [] };
+        topic.ready = call('inc.subscribe', { topic: topicName }).then(function(){}, function(err){
+          // Not registered: forget it, so a later on() asks again.
+          if (incTopics[topicName] === topic) delete incTopics[topicName];
+          throw err;
+        });
+        topic.ready.catch(function(){});
+      }
+      topic.handlers.push(handler);
+      var closed = false;
+      var subscription = { close: function(){
+        if (closed) return; closed = true;
+        incRemove(topic.handlers, handler);
+        if (!topic.handlers.length && incTopics[topicName] === topic) { delete incTopics[topicName]; post('inc.unsubscribe', { topic: topicName }); }
+      } };
+      // Settles once the shell registered the topic, or rejects with its reason.
+      Object.defineProperty(subscription, 'ready', { value: topic.ready, enumerable: false });
+      return subscription;
+    },
+    channel: {
+      open: function(target){
+        if (typeof target !== 'string' || target === '') return Promise.reject(new TypeError('inc channel target must be an endpoint identifier'));
+        return call('inc.channel.open', { target: target }).then(function(m){ return incChannel(m.channelId, m.peer || target).handle; });
+      },
+      onOpened: function(handler){
+        if (typeof handler !== 'function') return { close: function(){} };
+        incOpenedHandlers.push(handler);
+        var waiting = incUnclaimed; incUnclaimed = [];
+        waiting.forEach(function(ch){ incSafe(handler, ch.handle); });
+        return { close: function(){ incRemove(incOpenedHandlers, handler); } };
+      },
+      list: function(){ return field(call('inc.channel.list'), 'channels').then(function(list){ return Array.isArray(list) ? list : []; }); },
+      broadcast: function(payload){ var env = {}; if (payload !== undefined) env.payload = payload; post('inc.channel.broadcast', env); }
+    }
+  };
+  // NAP-INTENT. The URI is normalized here, as the runtime-provided binding must: archetype, action,
+  // the queryless convention, the query as a text payload (INC's rules), and a `#naddr` fragment as a
+  // handlerHint. Deliveries wait here until the napplet registers onDelivery.
+  var intentDeliveries = [], intentDeliveryHandlers = [], intentChangedHandlers = [];
+  var B32 = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+  function bech32Bytes(str, hrp){
+    var s = str.toLowerCase();
+    if (s !== str && str.toUpperCase() !== str) return null;
+    var pos = s.lastIndexOf('1');
+    if (pos < 1 || pos + 7 > s.length || s.substring(0, pos) !== hrp) return null;
+    var data = [], i;
+    for (i = pos + 1; i < s.length; i++) { var d = B32.indexOf(s.charAt(i)); if (d < 0) return null; data.push(d); }
+    var values = [];
+    for (i = 0; i < hrp.length; i++) values.push(hrp.charCodeAt(i) >> 5);
+    values.push(0);
+    for (i = 0; i < hrp.length; i++) values.push(hrp.charCodeAt(i) & 31);
+    var GEN = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3], chk = 1;
+    values.concat(data).forEach(function(v){ var b = chk >>> 25; chk = ((chk & 0x1ffffff) << 5) ^ v; for (var j = 0; j < 5; j++) if ((b >>> j) & 1) chk ^= GEN[j]; });
+    if (chk !== 1) return null;
+    var acc = 0, bits = 0, out = [];
+    data.slice(0, data.length - 6).forEach(function(v){ acc = ((acc << 5) | v) & 0xffff; bits += 5; while (bits >= 8) { bits -= 8; out.push((acc >> bits) & 255); } });
+    return new Uint8Array(out);
+  }
+  // A bare naddr of a kind 35129 napplet -> { address: "35129:<pubkey>:<d>", relays? }.
+  function naddrHint(fragment){
+    var bytes = bech32Bytes(fragment, 'naddr'), d = null, author = null, kind = null, relays = [];
+    if (!bytes) throw new TypeError('intent URI fragment must be a bare naddr');
+    var text = new TextDecoder();
+    for (var i = 0; i + 2 <= bytes.length;) {
+      var t = bytes[i], l = bytes[i + 1], v = bytes.subarray(i + 2, i + 2 + l);
+      if (v.length !== l) break;
+      if (t === 0) d = text.decode(v);
+      else if (t === 1) relays.push(text.decode(v));
+      else if (t === 2 && l === 32) author = Array.prototype.map.call(v, function(b){ return (b < 16 ? '0' : '') + b.toString(16); }).join('');
+      else if (t === 3 && l === 4) kind = ((v[0] << 24) | (v[1] << 16) | (v[2] << 8) | v[3]) >>> 0;
+      i += 2 + l;
+    }
+    if (kind !== 35129 || !author || !d) throw new TypeError('intent handler hint must be a kind 35129 napplet address');
+    var hint = { address: '35129:' + author + ':' + d };
+    if (relays.length) hint.relays = relays;
+    return hint;
+  }
+  function intentRequest(uri, options, mustOpen){
+    if (typeof uri !== 'string' || uri.indexOf('napplet:') !== 0) throw new TypeError('intent needs a napplet:<archetype>/<intent> URI');
+    var opts = options || {}, fragment = null, hash = uri.indexOf('#');
+    if (hash >= 0) { fragment = uri.substring(hash + 1); uri = uri.substring(0, hash); }
+    var routed = incTranspose(uri, opts.payload, opts.payload !== undefined);
+    var m = /^napplet:([^\/?#]+)\/([^\/?#]+)$/.exec(routed.topic);
+    if (!m) throw new TypeError('invalid convention');
+    if (mustOpen && m[2] !== 'open') throw new TypeError('open takes a napplet:<archetype>/open URI');
+    var request = { archetype: m[1], action: m[2], convention: routed.topic };
+    if (routed.hasPayload) request.payload = routed.payload;
+    if (opts.handler !== undefined) request.handler = opts.handler;
+    if (opts.behavior !== undefined) request.behavior = opts.behavior;
+    if (fragment !== null) {
+      if (opts.handlerHint !== undefined) throw new TypeError('a URI fragment and a handlerHint cannot be combined');
+      request.handlerHint = naddrHint(fragment);
+    } else if (opts.handlerHint !== undefined) request.handlerHint = opts.handlerHint;
+    return request;
+  }
+  function intentInvoke(uri, options, mustOpen){
+    var request;
+    try { request = intentRequest(uri, options, mustOpen); } catch (e) { return Promise.reject(e); }
+    return field(call('intent.invoke', { request: request }), 'result');
+  }
+  var intentDomain = {
+    invoke: function(uri, options){ return intentInvoke(uri, options, false); },
+    open: function(uri, options){ return intentInvoke(uri, options, true); },
+    available: function(archetype){ return field(call('intent.available', { archetype: archetype }), 'availability'); },
+    handlers: function(){ return field(call('intent.handlers'), 'handlers'); },
+    onChanged: function(handler){
+      if (typeof handler !== 'function') return { close: function(){} };
+      intentChangedHandlers.push(handler);
+      return { close: function(){ incRemove(intentChangedHandlers, handler); } };
+    },
+    onDelivery: function(handler){
+      if (typeof handler !== 'function') return { close: function(){} };
+      intentDeliveryHandlers.push(handler);
+      var waiting = intentDeliveries; intentDeliveries = [];
+      waiting.forEach(function(d){ incSafe(handler, d); });
+      return { close: function(){ incRemove(intentDeliveryHandlers, handler); } };
+    }
+  };
   // Build the methods Amethyst actually implements, then project only the explicit domains the
   // trusted host authorized for this launch. Domain-object presence is the NIP-5D availability
   // signal; there is deliberately no legacy window.napplet.shell capability probe.
@@ -169,6 +456,36 @@
         return { close: function(){ delete subs[subId]; post('relay.close', { subId: subId }); } };
       }
     },
+    // NAP-OUTBOX: the shell finds each author's relays (NIP-65), reads and deduplicates, and fans a
+    // publish out to the user's write relays and the inboxes named. Results are NAP-OUTBOX's objects.
+    outbox: {
+      getEvent: function(eventId, options){
+        return callResult('outbox.getEvent', { eventId: eventId, options: options }).then(function(m){ return pick(m, ['result', 'incomplete', 'error']); });
+      },
+      query: function(filters, options){
+        return callResult('outbox.query', { filters: filters, options: options }).then(function(m){ var r = pick(m, ['events', 'incomplete', 'error']); r.events = r.events || []; return r; });
+      },
+      // A live stream: on('event', cb) gets each RelayEventResult, on('closed', cb) the end; close() stops it.
+      subscribe: function(filters, options){
+        var subId = 'o' + (seq++);
+        var sub = { event: [], closed: [] };
+        outboxSubs[subId] = sub;
+        post('outbox.subscribe', { subId: subId, filters: filters, options: options });
+        var handle = {
+          on: function(name, cb){ if (typeof cb === 'function' && sub[name]) sub[name].push(cb); return handle; },
+          close: function(){ delete outboxSubs[subId]; post('outbox.close', { subId: subId }); }
+        };
+        return handle;
+      },
+      publish: function(template, options){
+        return callResult('outbox.publish', { event: template, options: options }).then(function(m){
+          var r = pick(m, ['event', 'eventId', 'relays', 'error']); r.ok = m.ok === true; return r;
+        });
+      },
+      resolveRelays: function(target){
+        return callResult('outbox.resolveRelays', { target: target }).then(function(m){ if (m.plan) return m.plan; var r = { relays: [], source: 'policy' }; if (m.error) r.error = m.error; return r; });
+      }
+    },
     storage: {
       // SDK method names are getItem/setItem/removeItem/keys; the wire types are storage.get/set/remove/keys.
       getItem: function(key){ return field(call('storage.get', { key: key }), 'value'); },
@@ -188,9 +505,9 @@
     },
     resource: {
       info: function(){ return field(call('resource.info'), 'info'); },
-      // The shell rebuilds Blobs from the host's base64 before these resolve.
-      bytes: function(url, opts){ return field(resourceCall('resource.bytes', { url: url }, opts), 'blob'); },
-      bytesMany: function(urls, opts){ return field(resourceCall('resource.bytesMany', { urls: Array.from(urls || []) }, opts), 'items'); },
+      // The web binding converts canonical wire base64 into actual browser bytes.
+      bytes: function(url, opts){ return resourceCall('resource.bytes', { url: url }, opts).then(function(m){ return resourceBlob(m.blob, m.mime); }); },
+      bytesMany: function(urls, opts){ return resourceCall('resource.bytesMany', { urls: Array.from(urls || []) }, opts).then(function(m){ return m.items.map(function(item){ if (item.ok) { try { item.blob = resourceBlob(item.blob, item.mime); } catch (_) { return { url: item.url, ok: false, error: 'decode-failed' }; } } return item; }); }); },
       bytesAsObjectURL: function(url){
         var objectUrl = '', revoked = false;
         var handle = { url: '', revoke: function(){ if (revoked) return; revoked = true; if (objectUrl) URL.revokeObjectURL(objectUrl); } };
@@ -202,13 +519,88 @@
         return handle;
       }
     },
-    upload: {
-      // Sends the SDK's upload.upload; we inline the bytes as base64 (shell.html does the same for
-      // a Blob from a stock napplet). Resolves to the uploaded URL.
-      blob: function(bytes, contentType){ return field(call('upload.upload', { request: { dataBase64: bytesToB64(bytes), mimeType: contentType } }), 'url'); }
+    // NAP-COMMON. Results are the spec's objects, `ok` and `error` included, so a refusal resolves
+    // with `ok: false` instead of rejecting; `follows()` resolves to the hex keys.
+    common: {
+      encodeNip19: function(input){ return callResult('common.encodeNip19', { input: input }).then(commonResult); },
+      decodeNip19: function(value){ return callResult('common.decodeNip19', { value: value }).then(commonResult); },
+      getProfile: function(target){ return callResult('common.getProfile', { target: target }).then(commonResult); },
+      follows: function(){
+        return callResult('common.follows').then(function(m){ if (m.ok === false) throw new Error(m.error || 'unsupported'); return m.pubkeys || []; });
+      },
+      follow: function(){ return callResult('common.follow', { pubkeys: commonKeys(arguments) }).then(commonResult); },
+      unfollow: function(){ return callResult('common.unfollow', { pubkeys: commonKeys(arguments) }).then(commonResult); },
+      react: function(id, reaction, customEmojiHref){
+        var env = { targetEventId: id, reaction: reaction }; if (customEmojiHref !== undefined) env.customEmojiHref = customEmojiHref;
+        return callResult('common.react', env).then(commonResult);
+      },
+      // Takes a CommonReportTarget, or the shorthand: an npub for a user, a hex id for an event.
+      report: function(target, reason, text){
+        if (typeof target === 'string') target = target.indexOf('npub1') === 0 ? { type: 'pubkey', pubkey: target } : { type: 'event', id: target };
+        return callResult('common.report', { target: target, reason: reason, text: text || '' }).then(commonResult);
+      }
     },
+    // NAP-UPLOAD. `request.data` (a Blob, ArrayBuffer or typed array) crosses as base64 text, which
+    // the bridge carries; the napplet never encodes it. Results are the spec's UploadResult objects.
+    upload: {
+      info: function(){ return field(call('upload.info'), 'info'); },
+      upload: function(request){
+        if (!request || typeof request !== 'object') return Promise.reject(new TypeError('upload request must be an object'));
+        return uploadBytes(request.data).then(function(bytes){
+          var req = { dataBase64: bytesToB64(bytes) };
+          var mime = request.mimeType || (typeof Blob !== 'undefined' && request.data instanceof Blob ? request.data.type : '');
+          if (mime) req.mimeType = mime;
+          ['rail', 'filename', 'caption', 'noTransform', 'metadata'].forEach(function(k){ if (request[k] !== undefined) req[k] = request[k]; });
+          return field(call('upload.upload', { request: req }), 'result');
+        });
+      },
+      status: function(uploadId){ return field(call('upload.status', { uploadId: uploadId }), 'status'); },
+      onStatus: function(handler){
+        if (typeof handler !== 'function') return { close: function(){} };
+        uploadHandlers.push(handler);
+        return { close: function(){ var i = uploadHandlers.indexOf(handler); if (i >= 0) uploadHandlers.splice(i, 1); } };
+      }
+    },
+    // NAP-FS: the files the user picks for this napplet. File bytes cross as standard base64 text both
+    // ways, as the web binding carries them (a Uint8Array or ArrayBuffer given to write is encoded
+    // here). A failure rejects with the NAP-FS error code ('cancelled', 'not-found', ...) as its message.
+    fs: {
+      info: function(){ return field(call('fs.info'), 'info'); },
+      pickFile: function(options){ return field(call('fs.pickFile', { options: options }), 'result'); },
+      pickFiles: function(options){ return field(call('fs.pickFiles', { options: options }), 'result'); },
+      pickDirectory: function(options){ return field(call('fs.pickDirectory', { options: options }), 'result'); },
+      pickSaveFile: function(options){ return field(call('fs.pickSaveFile', { options: options }), 'result'); },
+      stat: function(path){ return field(call('fs.stat', { path: path }), 'metadata'); },
+      list: function(path){ return field(call('fs.list', { path: path }), 'entries'); },
+      read: function(path, options){ return field(call('fs.read', { path: path, options: options }), 'result'); },
+      write: function(path, data, options){
+        var encoded = typeof data === 'string' ? data : bytesToB64(data instanceof ArrayBuffer ? new Uint8Array(data) : data);
+        return field(call('fs.write', { path: path, data: encoded, options: options }), 'result');
+      },
+      mkdir: function(path, options){ return call('fs.mkdir', { path: path, options: options }).then(function(){}); },
+      remove: function(path, recursive){ return call('fs.remove', { path: path, recursive: recursive }).then(function(){}); },
+      move: function(fromPath, toPath){ return call('fs.move', { fromPath: fromPath, toPath: toPath }).then(function(){}); },
+      watch: function(path, options){ return field(call('fs.watch', { path: path, options: options }), 'watchId'); },
+      unwatch: function(watchId){ return call('fs.unwatch', { watchId: watchId }).then(function(){}); },
+      onChanged: function(handler){
+        if (typeof handler !== 'function') return { close: function(){} };
+        fsHandlers.push(handler);
+        return { close: function(){
+          var i = fsHandlers.indexOf(handler); if (i >= 0) fsHandlers.splice(i, 1);
+        } };
+      }
+    },
+    inc: incDomain,
+    intent: intentDomain,
     theme: {
-      get: function(){ return field(call('theme.get'), 'theme'); }
+      get: function(){ return field(call('theme.get'), 'theme'); },
+      onChanged: function(handler){
+        if (typeof handler !== 'function') return { close: function(){} };
+        themeHandlers.push(handler);
+        return { close: function(){
+          var i = themeHandlers.indexOf(handler); if (i >= 0) themeHandlers.splice(i, 1);
+        } };
+      }
     }
   };
   var requested = [];
@@ -218,6 +610,8 @@
     if (typeof domain === 'string' && Object.prototype.hasOwnProperty.call(available, domain)) napplet[domain] = available[domain];
   });
   window.napplet = Object.freeze(napplet);
+  // Tells the runtime this napplet can take intent deliveries (they wait here until onDelivery).
+  if (napplet.intent) post('intent.ready');
 
   // ---- IME agent (in-app browser only) -------------------------------------------------------
   // The embedded browser surface renders cross-process via SurfaceControlViewHost, which forwards
@@ -244,7 +638,7 @@
       return false;
     }
     function isCE(n){ return !!(n && n.isContentEditable); }
-    function valOf(n){ return isCE(n) ? n.textContent : (n.value || ''); }
+    function valOf(n){ return isCE(n) ? ceText(n) : (n.value || ''); }
     // Controlled-input frameworks (React, Preact, …) install an INSTANCE-level `value` setter on the
     // <input>/<textarea> that records the last value they wrote, and then suppress their onChange whenever
     // the element's value already equals that recorded value. A plain `n.value = v` assignment goes through
@@ -262,58 +656,142 @@
       n.value = v;
     }
 
-    // --- contenteditable selection/replacement, mapped through char offsets into textContent ---
-    // We can't use setSelectionRange/value on a contenteditable root; instead we map a char offset
-    // into root.textContent to a DOM (node, offset) position via Range, so we mutate in place and
-    // preserve the surrounding element structure + caret rather than blowing away textContent.
-    function ceTextNodes(root){
-      var out = [], w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false), n;
-      while ((n = w.nextNode())) out.push(n);
+    // --- contenteditable selection/replacement, mapped through char offsets into the field's text ---
+    // We can't use setSelectionRange/value on a contenteditable root; instead we map a char offset into the
+    // root's text to a DOM (node, offset) position, so we mutate in place and preserve the surrounding element
+    // structure + caret rather than blowing away the content. The text is the text nodes in order with each
+    // <br> as "\n" (a line break the user typed), except the trailing placeholder <br> a browser keeps so an
+    // empty last line can hold the caret — the same text innerText shows, without its layout cost.
+    // Within one edit the shim reads the same, unchanged DOM several times (its text, the selection, the
+    // caret it sets); each read is a full walk of a long field. holdLeaves() keeps one walk for those reads and
+    // dropLeaves() ends it — before anything that mutates the field or lets page code run (dispatching events).
+    var heldLeaves = null;
+    function holdLeaves(root){ heldLeaves = null; if (isCE(root)) heldLeaves = { root: root, list: ceLeaves(root) }; }
+    function dropLeaves(){ heldLeaves = null; }
+    function ceLeaves(root){
+      if (heldLeaves && heldLeaves.root === root) return heldLeaves.list;
+      // Filter in the loop, not through a TreeWalker filter: a JS acceptNode is called for every node and was
+      // 85% of a keystroke in a long field. Without a <br> only text nodes matter, so walk just those.
+      var out = [], hasBr = root.getElementsByTagName('br').length > 0, n;
+      var w = document.createTreeWalker(root, hasBr ? (NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT) : NodeFilter.SHOW_TEXT);
+      // Empty text nodes (Range.insertNode leaves one when it splits at a node's end) carry nothing; skipping
+      // them keeps "the last leaf" meaningful for the placeholder checks.
+      while ((n = w.nextNode())) if (n.nodeType === 3 ? n.data.length : n.nodeName === 'BR') out.push(n);
       return out;
     }
-    // Char offset within root.textContent for a DOM (container, nodeOffset) boundary.
-    function ceOffsetOf(root, container, nodeOffset){
-      try { var r = document.createRange(); r.setStart(root, 0); r.setEnd(container, nodeOffset); return r.toString().length; }
-      catch (_) { return 0; }
+    // A <br> with no text after it is the placeholder for an empty last line, not a typed line break.
+    function leafLen(leaves, i){
+      var n = leaves[i];
+      if (n.nodeType === 3) return n.data.length;
+      for (var j = i + 1; j < leaves.length; j++) if (leaves[j].nodeType === 3 ? leaves[j].data.length : 1) return 1;
+      return 0;
     }
-    // DOM {node, offset} position for a char offset into root.textContent.
+    function ceText(root){
+      // No <br>: the text is exactly textContent, which the engine produces far faster than a walk.
+      if (!root.getElementsByTagName('br').length) return root.textContent;
+      var leaves = ceLeaves(root), s = '';
+      for (var i = 0; i < leaves.length; i++) s += leaves[i].nodeType === 3 ? leaves[i].data : (leafLen(leaves, i) ? '\n' : '');
+      return s;
+    }
+    function brIndex(b){ return Array.prototype.indexOf.call(b.parentNode.childNodes, b); }
+    // Char offset within the field's text for a DOM (container, nodeOffset) boundary. One walk that stops at
+    // the boundary: a text container is reached directly; an element boundary sits before its child at
+    // nodeOffset, so it is reached at that child's first leaf (or the first leaf past the element). Linear —
+    // never asks a node for its index among its siblings, which made a many-line field quadratic.
+    function ceOffsetOf(root, container, nodeOffset){
+      try {
+        var leaves = ceLeaves(root), acc = 0;
+        var stop = container.nodeType === 3 ? container : (container.childNodes[nodeOffset] || null);
+        for (var i = 0; i < leaves.length; i++){
+          var n = leaves[i];
+          if (container.nodeType === 3) {
+            if (n === container) return acc + Math.min(nodeOffset, n.data.length);
+            // An empty text node is not a leaf: a boundary in it falls before the next leaf that follows it.
+            if (container.data.length === 0 && (container.compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING)) return acc;
+          } else if (stop) {
+            if (n === stop || stop.contains(n) || (stop.compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING)) return acc;
+          } else if (!container.contains(n) && (container.compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+            return acc;
+          }
+          acc += leafLen(leaves, i);
+        }
+        return acc;
+      } catch (_) { return 0; }
+    }
+    // DOM {node, offset} position for a char offset into the field's text.
     function cePoint(root, off){
-      var nodes = ceTextNodes(root), acc = 0;
-      for (var i = 0; i < nodes.length; i++){
-        var len = nodes[i].data.length;
-        if (off <= acc + len) return { node: nodes[i], offset: off - acc };
+      var leaves = ceLeaves(root), acc = 0;
+      for (var i = 0; i < leaves.length; i++){
+        var n = leaves[i], len = leafLen(leaves, i);
+        if (n.nodeType === 3) { if (off <= acc + len) return { node: n, offset: off - acc }; }
+        else if (off === acc) return { node: n.parentNode, offset: brIndex(n) };
         acc += len;
       }
-      if (nodes.length) { var last = nodes[nodes.length - 1]; return { node: last, offset: last.data.length }; }
+      if (leaves.length) {
+        var last = leaves[leaves.length - 1];
+        if (last.nodeType === 3) return { node: last, offset: last.data.length };
+        // After the last typed line break: before the placeholder, if there is one.
+        return leafLen(leaves, leaves.length - 1) ? { node: last.parentNode, offset: brIndex(last) + 1 } : { node: last.parentNode, offset: brIndex(last) };
+      }
       return { node: root, offset: 0 };
     }
     function ceSelOf(root){
       var s = window.getSelection();
-      if (!s || s.rangeCount === 0) { var v = root.textContent.length; return [v, v]; }
+      if (!s || s.rangeCount === 0) { var v = ceText(root).length; return [v, v]; }
       var r = s.getRangeAt(0);
-      if (!root.contains(r.startContainer) || !root.contains(r.endContainer)) { var v2 = root.textContent.length; return [v2, v2]; }
-      return [ceOffsetOf(root, r.startContainer, r.startOffset), ceOffsetOf(root, r.endContainer, r.endOffset)];
+      if (!root.contains(r.startContainer) || !root.contains(r.endContainer)) { var v2 = ceText(root).length; return [v2, v2]; }
+      var a = ceOffsetOf(root, r.startContainer, r.startOffset);
+      return r.collapsed ? [a, a] : [a, ceOffsetOf(root, r.endContainer, r.endOffset)];
     }
     function ceSetSel(root, s, e){
       try {
-        var a = cePoint(root, s), b = cePoint(root, e), r = document.createRange();
+        var a = cePoint(root, s), b = (e === s) ? a : cePoint(root, e), r = document.createRange();
         r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset);
         var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
       } catch (_) {}
     }
-    // Replace char range [from, to) in root with ins, leaving the rest of the DOM intact.
+    // Whether "\n" in this field's text renders as a line break, or must be a <br>.
+    function ceKeepsNewlines(root){
+      try { var ws = getComputedStyle(root).whiteSpace; return ws === 'pre' || ws === 'pre-wrap' || ws === 'pre-line' || ws === 'break-spaces'; }
+      catch (_) { return false; }
+    }
+    // Replace char range [from, to) in root with ins, leaving the rest of the DOM intact. Line breaks become
+    // <br> where whitespace collapses, and a break that ends the field gets the placeholder <br> that lets the
+    // new empty line show and hold the caret.
     function ceReplace(root, from, to, ins){
       try {
-        var a = cePoint(root, from), b = cePoint(root, to), r = document.createRange();
+        holdLeaves(root);
+        var a = cePoint(root, from), b = (to === from) ? a : cePoint(root, to), r = document.createRange();
+        dropLeaves();
         r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset);
         r.deleteContents();
-        if (ins) r.insertNode(document.createTextNode(ins));
-      } catch (_) { root.textContent = root.textContent.slice(0, from) + (ins || '') + root.textContent.slice(to); }
+        if (ins) {
+          var frag = document.createDocumentFragment(), parts = ceKeepsNewlines(root) ? [ins] : ins.split('\n');
+          for (var i = 0; i < parts.length; i++) {
+            if (i > 0) frag.appendChild(document.createElement('br'));
+            if (parts[i]) frag.appendChild(document.createTextNode(parts[i]));
+          }
+          var tail = frag.lastChild, breaks = ins.indexOf('\n') >= 0;
+          r.insertNode(frag);
+          if (!breaks) return;
+          // A break we just typed at the very end would itself read as the placeholder (and not show): give
+          // it one. Same for a pre-wrap field whose text now ends in "\n", which renders no empty line either.
+          var leaves = ceLeaves(root), li = leaves.length - 1;
+          var endsInOurBr = tail && tail.nodeName === 'BR' && leaves[li] === tail;
+          var endsInNewline = li >= 0 && leaves[li].nodeType === 3 && /\n$/.test(leaves[li].data);
+          if (endsInOurBr || endsInNewline) leaves[li].parentNode.insertBefore(document.createElement('br'), leaves[li].nextSibling);
+        }
+      } catch (_) { root.textContent = ceText(root).slice(0, from) + (ins || '') + ceText(root).slice(to); }
     }
 
     function selOf(n){
       if (isCE(n)) return ceSelOf(n);
       return [n.selectionStart || 0, n.selectionEnd || 0];
+    }
+    function placeSel(n, s, e){
+      lastSelActivityAt = perfNow();
+      if (isCE(n)) ceSetSel(n, s, e);
+      else { try { n.setSelectionRange(s, e); } catch (_) {} }
     }
     function setSel(n, s, e){
       // No-op if already there: re-applying the same selection still fires `select`/`selectionchange`, and
@@ -409,13 +887,32 @@
         return g;
       } catch (_) { return null; }
     }
+    // The text fields the keyboard's Next/Previous walk, as Chrome's IME focus advance does: focusable, enabled
+    // editable fields (and selects) sharing this field's form — or, for a field outside any form, the others
+    // outside forms — in document order.
+    function formSiblings(n){
+      var form = n.form || null, out = [];
+      var all = document.querySelectorAll('input,textarea,select,[contenteditable=""],[contenteditable="true"]');
+      for (var i = 0; i < all.length; i++) {
+        var c = all[i];
+        if (c !== n && (c.disabled || c.readOnly || c.tabIndex < 0 || !c.getClientRects().length)) continue;
+        if (c !== n && !(isEditable(c) || c.tagName === 'SELECT')) continue;
+        if ((c.form || null) !== form) continue;
+        out.push(c);
+      }
+      return out;
+    }
+    function neighbour(n, step){
+      var list = formSiblings(n), i = list.indexOf(n);
+      return (i >= 0 && list[i + step]) || null;
+    }
     function focusInfo(n){
       var t = (n.tagName || '').toUpperCase();
       var multiline = isCE(n) || t === 'TEXTAREA';
       var inputType = isCE(n) ? 'text' : (t === 'TEXTAREA' ? 'textarea' : (n.type || 'text').toLowerCase());
       var sel = selOf(n);
       return { type:'ime.focus', inputType: inputType, enterKeyHint: (n.enterKeyHint || ''),
-               multiline: multiline, readOnly: !!n.readOnly, text: valOf(n), selStart: sel[0],
+               multiline: multiline, readOnly: !!n.readOnly, hasNext: !multiline && !!neighbour(n, 1), text: valOf(n), selStart: sel[0],
                selEnd: sel[1], geom: fieldGeom(n) };
     }
     // Like `ime.focus`, but for a field that is ALREADY focused: the answer to the host's `ime.resync`, which
@@ -430,7 +927,7 @@
       return { type:'ime.refocus',
                inputType: isCE(n) ? 'text' : (t === 'TEXTAREA' ? 'textarea' : (n.type || 'text').toLowerCase()),
                enterKeyHint: (n.enterKeyHint || ''), multiline: isCE(n) || t === 'TEXTAREA',
-               readOnly: !!n.readOnly, text: valOf(n), selStart: sel[0], selEnd: sel[1] };
+               readOnly: !!n.readOnly, hasNext: !(isCE(n) || t === 'TEXTAREA') && !!neighbour(n, 1), text: valOf(n), selStart: sel[0], selEnd: sel[1] };
     }
     // Last selection we either applied (applyState) or already reported, so the asynchronous
     // selectionchange our own setSel triggers doesn't echo back to the host as a fresh edit.
@@ -451,16 +948,19 @@
         else { lastFieldRange = null; }
       }
     }
+    // The field text the host's mirror holds as far as this side knows: what we last applied or reported.
+    var hostText = null;
     function reportState(){
       if (!el) return;
       var sel = selOf(el);
       noteSel(sel);
+      hostText = valOf(el);
       send({ type:'ime.state', text: valOf(el), selStart: sel[0], selEnd: sel[1], geom: fieldGeom(el) });
     }
 
     document.addEventListener('focusin', function(e){
       if (isEditable(e.target)) {
-        el = e.target; inComposition = false; lastSel = selOf(el); send(focusInfo(el));
+        el = e.target; inComposition = false; lastSel = selOf(el); hostText = valOf(el); watchField(el); send(focusInfo(el));
         // Focusing a field clears any page-text selection in the browser. The page selectionchange handler is
         // muted while a field is focused (el is set), so it never emits the `active:false` — emit it here, or
         // the host's page handles + Copy bar linger ABOVE the field overlays (and, being z-above, steal the
@@ -472,13 +972,36 @@
         // The host shrinks the surface for the keyboard, but also nudge the field into view in case IME
         // insets aren't delivered (some hosts) so it never sits behind the keyboard.
         try { el.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (_) {}
-      } else if (el) { el = null; inComposition = false; send({ type:'ime.blur' }); }
+      } else if (el) { el = null; inComposition = false; watchField(null); send({ type:'ime.blur' }); }
     }, true);
     document.addEventListener('focusout', function(e){
-      if (e.target === el) { el = null; inComposition = false; send({ type:'ime.blur' }); }
+      if (e.target === el) { el = null; inComposition = false; watchField(null); send({ type:'ime.blur' }); }
     }, true);
     // The page (its own JS, autofill) changed the field: resync the host keyboard's view of it.
     document.addEventListener('input', function(e){ if (e.target === el && !el.__nappletIme) reportState(); }, true);
+    // ...and the page's JS writing the value directly, which fires no `input`: a chat composer clearing itself
+    // after sending (`textarea.value = ''`, what React/Preact do on a state reset). Without this the host kept the
+    // sent text, and the next keystroke wrote it all back. Wraps the prototype setters, which frameworks capture
+    // when they mount (after this document-start script), so their writes come through here too; our own writes
+    // use the native setters captured above, so they never do. Coalesced to one report per task.
+    var writeReportQueued = false;
+    function onPageWrite(n){
+      if (n !== el || n.__nappletIme || writeReportQueued) return;
+      writeReportQueued = true;
+      // Frameworks often write back the value the field already holds (Vue, Angular on every input): that
+      // changes nothing the host needs, and a report costs a caret-geometry layout.
+      Promise.resolve().then(function(){ writeReportQueued = false; if (el === n && valOf(n) !== hostText) reportState(); });
+    }
+    [window.HTMLInputElement, window.HTMLTextAreaElement].forEach(function(C){
+      try {
+        var d = Object.getOwnPropertyDescriptor(C.prototype, 'value');
+        if (!d || !d.set || !d.configurable) return;
+        Object.defineProperty(C.prototype, 'value', {
+          configurable: true, enumerable: d.enumerable, get: d.get,
+          set: function(v){ d.set.call(this, v); onPageWrite(this); }
+        });
+      } catch (_) {}
+    });
     // Mirror selection changes inside the focused editable to the host. Off-window Chrome abandons a field
     // selection by collapsing the caret to one of its endpoints; we re-assert it RIGHT HERE, synchronously,
     // the same way the page-text path does — reverting before the collapse paints, so it doesn't blink (the
@@ -556,20 +1079,44 @@
       }
     }, true);
 
+    // Returns false when the page cancelled the key (preventDefault), the way a native keystroke reports it.
+    function key(n, type){
+      try { return n.dispatchEvent(new KeyboardEvent(type, { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13, charCode: type === 'keypress' ? 13 : 0 })); }
+      catch (_) { return true; }
+    }
+    // Like a native line break, announced first and cancelable: editors built on contenteditable (and some on
+    // textareas) take Enter here, from `beforeinput`, rather than from the key.
+    function beforeLineBreak(n, inputType){
+      try { return n.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: inputType, data: null })); }
+      catch (_) { return true; }
+    }
+    // The keyboard's Enter, in Chrome's order: keydown, keypress, then the default action — a cancelable
+    // `beforeinput` and the line break — only as far as the page lets each step through. Chat composers send
+    // on a keydown Enter and cancel it; rich editors (Brainstorm's search box is a contenteditable) send from
+    // `beforeinput` insertParagraph. Inserting the line break straight away, as this used to, let neither see
+    // the Enter: it made a new line instead of sending or searching.
     function enter(n){
       if (!n) return;
       var t = (n.tagName || '').toUpperCase();
-      if (isCE(n) || t === 'TEXTAREA') {
-        var s = selOf(n);
-        if (isCE(n)) ceReplace(n, s[0], s[1], '\n');
-        else { var v = valOf(n); setVal(n, v.slice(0, s[0]) + '\n' + v.slice(s[1])); }
-        setSel(n, s[0] + 1, s[0] + 1); fireInput(n, 'insertLineBreak', '\n', false); return;
+      var multiline = isCE(n) || t === 'TEXTAREA';
+      var proceed = key(n, 'keydown') && key(n, 'keypress') &&
+        (!multiline || beforeLineBreak(n, isCE(n) ? 'insertParagraph' : 'insertLineBreak'));
+      if (proceed) {
+        if (multiline) {
+          var s = selOf(n);
+          if (isCE(n)) ceReplace(n, s[0], s[1], '\n');
+          else { var v = valOf(n); setVal(n, v.slice(0, s[0]) + '\n' + v.slice(s[1])); }
+          // Not flagged as ours, so the input listener reports the new line back to the host's mirror,
+          // which never inserted it.
+          setSel(n, s[0] + 1, s[0] + 1); fireInput(n, 'insertLineBreak', '\n', false);
+        } else if (n.form) {
+          try { (n.form.requestSubmit ? n.form.requestSubmit() : n.form.submit()); } catch (_) {}
+        }
       }
-      ['keydown','keyup'].forEach(function(type){ try { n.dispatchEvent(new KeyboardEvent(type, { bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13 })); } catch (_) {} });
-      if (n.form) { try { (n.form.requestSubmit ? n.form.requestSubmit() : n.form.submit()); } catch (_) {} }
+      key(n, 'keyup');
     }
-    function fireInput(n, inputType, data, isComposing){
-      try { n.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: inputType, data: data == null ? null : data, isComposing: !!isComposing })); }
+    function fireInput(n, inputType, data, isComposing, dataTransfer){
+      try { n.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: inputType, data: data == null ? null : data, isComposing: !!isComposing, dataTransfer: dataTransfer || null })); }
       catch (_) { n.dispatchEvent(new Event('input', { bubbles: true })); }
     }
     function fireComp(n, type, data){
@@ -592,32 +1139,127 @@
     }
     // Adopt the host's authoritative editing STATE (Flutter's model) and synthesize the matching DOM
     // input/composition events so the page's framework reacts as if typed natively.
-    function applyState(msg){
+    function applyState(msg, kind){
       if (!el) return;
       var n = el;
+      dropLeaves();
+      // The page dropped the field without a blur (it re-rendered it): nothing typed can reach it any more, so
+      // let the host put its keyboard away, as Chrome does when the focused element goes.
+      if (!n.isConnected) { el = null; inComposition = false; watchField(null); send({ type:'ime.blur' }); return; }
+      holdLeaves(n);
       var prev = valOf(n);
       var next = (msg.text != null) ? String(msg.text) : prev;
       var cs = (msg.composingStart != null) ? msg.composingStart : -1;
       var ce = (msg.composingEnd != null) ? msg.composingEnd : -1;
       var composingActive = (cs >= 0 && ce > cs);
       var d = diff(prev, next);
+      var cancelled = false;
+      var write = next, selS = msg.selStart, selE = msg.selEnd;
+      // maxlength caps what the USER can type or paste, not what script writes — and the shim writes through
+      // the value setter, so it has to apply the cap itself: keep the part of the insertion that fits, as the
+      // browser does. The post-check below then hands the host the shortened text.
+      if (!isCE(n) && n.maxLength >= 0 && d.inserted && !composingActive) {
+        var room = n.maxLength - (prev.length - d.removed.length);
+        if (d.inserted.length > room) {
+          var keep = room > 0 ? d.inserted.slice(0, room) : '';
+          if (keep && isHigh(keep.charCodeAt(keep.length - 1))) keep = keep.slice(0, -1); // never split a pair
+          write = prev.slice(0, d.from) + keep + prev.slice(d.prevEnd);
+          d = diff(prev, write);
+          selS = selE = d.from + keep.length;
+        }
+      }
+      var cur = selOf(n); // the selection the edit starts from; read once, the walks are the cost here
+      dropLeaves();
+      var editType = composingActive ? 'insertCompositionText' : (kind && kind.inputType) || editTypeOf(cur, d);
 
       n.__nappletIme = true;
       try {
         if (composingActive && !inComposition) { inComposition = true; fireComp(n, 'compositionstart', ''); }
-        if (next !== prev) {
+        // A typed character or a backspace outside a composition is announced first, cancelably, as Chrome
+        // does. Rich editors act there instead of in `input` — Brainstorm's search box deletes a whole filter
+        // chip on the backspace next to it — and input masks refuse characters there.
+        if (write !== prev && !composingActive && !inComposition) cancelled = !beforeEdit(n, d, editType, kind && kind.data, cur);
+        if (write !== prev && !cancelled) {
           if (isCE(n)) ceReplace(n, d.from, d.prevEnd, d.inserted); // in-place, preserves structure
-          else setVal(n, next);
-          var inputType = composingActive ? 'insertCompositionText'
-            : (d.inserted && !d.removed) ? 'insertText'
-            : (d.removed && !d.inserted) ? 'deleteContentBackward'
-            : 'insertReplacementText';
+          else setVal(n, write);
           if (inComposition) fireComp(n, 'compositionupdate', next.slice(cs, ce));
-          fireInput(n, inputType, d.inserted, composingActive);
+          fireInput(n, editType, kind && kind.data ? null : d.inserted, composingActive, kind && kind.data);
         }
-        setSel(n, msg.selStart, msg.selEnd);
+        // After a text change the caret has moved anyway, so set it without setSel's "already there?" read.
+        if (!cancelled) { if (write !== prev) placeSel(n, selS, selE); else setSel(n, selS, selE); }
         if (!composingActive && inComposition) { inComposition = false; fireComp(n, 'compositionend', d.inserted || ''); }
-      } finally { n.__nappletIme = false; noteSel(selOf(n)); }
+      } finally { n.__nappletIme = false; holdLeaves(n); noteSel(selOf(n)); }
+      var after = valOf(n);
+      dropLeaves();
+      hostText = next;
+      if (ceObserver) ceObserver.takeRecords(); // our own edits, not the page's
+      // The page rewrote the field while handling the edit (a cancelled edit it performed itself, an editor
+      // re-rendering its text into chips, a mask): the host's mirror no longer matches, and its next edit would
+      // be diffed against text the field doesn't have. Hand it the field as it really is.
+      if (!composingActive && !(kind && kind.reports) && after !== next) reportState();
+    }
+
+    // The inputType a native edit of this shape reports: a forward delete leaves the caret where it was, at
+    // the start of the removed text; a backspace (or deleting a range) is backward.
+    function editTypeOf(cur, d){
+      if (d.inserted && !d.removed) return 'insertText';
+      if (d.removed && !d.inserted) return (cur[0] === d.from && cur[1] === d.from) ? 'deleteContentForward' : 'deleteContentBackward';
+      return 'insertReplacementText';
+    }
+    function beforeEdit(n, d, type, dataTransfer, cur){
+      // The selection a native edit starts from: the caret after the backspaced text (or before a forward
+      // delete), or the range the inserted text replaces. Already true when the mirror is in sync.
+      var collapsedAt = type === 'deleteContentBackward' ? d.prevEnd : d.from;
+      var inPlace = (d.prevEnd === d.from) ? (cur[0] === d.from && cur[1] === d.from)
+        : ((cur[0] === d.from && cur[1] === d.prevEnd) || (cur[0] === collapsedAt && cur[1] === collapsedAt));
+      if (!inPlace) setSel(n, d.from, d.prevEnd);
+      try { return n.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: type, data: dataTransfer ? null : (d.inserted || null), dataTransfer: dataTransfer || null })); }
+      catch (_) { return true; }
+    }
+
+    function clipboardData(text){
+      try { var dt = new DataTransfer(); if (text != null) dt.setData('text/plain', text); return dt; } catch (_) { return null; }
+    }
+    // Paste and cut from the host's toolbar or a hardware keyboard, in Chrome's order: the cancelable clipboard
+    // event (pages clean pastes there, or take images), then the edit as insertFromPaste / deleteByCut. The host
+    // left its own buffer alone, so it is handed the result either way.
+    function paste(n, text){
+      if (!n || n.readOnly) return;
+      var dt = clipboardData(text), ok = true;
+      try { ok = n.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: dt })); } catch (_) {}
+      if (ok && n.isConnected) {
+        var s = selOf(n), prev = valOf(n), next = prev.slice(0, s[0]) + text + prev.slice(s[1]);
+        // As in Chrome: an <input>/<textarea> paste reports its text as `data`, a contenteditable's as `dataTransfer`.
+        applyState({ text: next, selStart: s[0] + text.length, selEnd: s[0] + text.length }, { inputType: 'insertFromPaste', data: isCE(n) ? dt : null, reports: true });
+      }
+      if (el === n) reportState();
+    }
+    function cut(n){
+      if (!n || n.readOnly) return;
+      var s = selOf(n), ok = true;
+      if (s[0] === s[1]) return;
+      try { ok = n.dispatchEvent(new ClipboardEvent('cut', { bubbles: true, cancelable: true, clipboardData: clipboardData(valOf(n).slice(s[0], s[1])) })); } catch (_) {}
+      if (ok && n.isConnected) {
+        var prev = valOf(n);
+        applyState({ text: prev.slice(0, s[0]) + prev.slice(s[1]), selStart: s[0], selEnd: s[0] }, { inputType: 'deleteByCut', reports: true });
+      }
+      if (el === n) reportState();
+    }
+
+    // A contenteditable the page changes on its own (a chip editor re-rendering after a pick, a reset) fires
+    // no `input`; watch its DOM and resync the host when its text drifts from what the mirror holds. Only the
+    // focused one is observed (see watchField), so the rest of the page's DOM churn costs nothing here.
+    var ceObserver = null;
+    try {
+      ceObserver = new MutationObserver(function(){
+        if (!el || !isCE(el) || el.__nappletIme || inComposition) return;
+        if (valOf(el) !== hostText) reportState();
+      });
+    } catch (_) { ceObserver = null; }
+    function watchField(n){
+      if (!ceObserver) return;
+      ceObserver.disconnect();
+      if (n && isCE(n)) ceObserver.observe(n, { subtree: true, childList: true, characterData: true });
     }
 
     // --- Page (non-editable) text selection re-hosting ---
@@ -776,9 +1418,12 @@
       // The host needs to (re-)take a field whose focus never left the page — the tab came back on screen, or
       // a tap rang the doorbell above and the host has no mirror for it. No `focusin` will fire for a field
       // that never blurred, so hand it the editing state here.
-      if (msg.type === 'ime.resync') { if (el) send(refocusInfo(el)); return; }
+      if (msg.type === 'ime.resync') { if (el) { hostText = valOf(el); send(refocusInfo(el)); } return; }
       if (msg.type === 'ime.set') applyState(msg);
       else if (msg.type === 'ime.action') enter(el);
+      else if (msg.type === 'ime.next' || msg.type === 'ime.prev') { var to = el && neighbour(el, msg.type === 'ime.next' ? 1 : -1); if (to) try { to.focus(); } catch (_) {} }
+      else if (msg.type === 'ime.paste') paste(el, String(msg.text || ''));
+      else if (msg.type === 'ime.cut') cut(el);
       else if (msg.type === 'ime.pageextend') pageExtend(msg.edge, msg.x, msg.y);
       else if (msg.type === 'ime.fieldextend') fieldExtend(msg.edge, msg.x, msg.y);
       else if (msg.type === 'ime.autoscroll') {

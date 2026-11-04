@@ -88,6 +88,8 @@ internal class KeyStoreEncryption {
     // through the same object would corrupt each other's output. The
     // transformation is resolved once, off [resolvedPadding], so every thread's
     // instance is built with the spelling this device actually offers.
+    // withInitial never yields null, but Android's SDK annotates ThreadLocal.get() as nullable,
+    // hence the `!!` where it is read.
     private val ciphers = ThreadLocal.withInitial { Cipher.getInstance(transformationFor(padding)) }
 
     private val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -146,7 +148,7 @@ internal class KeyStoreEncryption {
     fun encrypt(bytes: ByteArray): ByteArray {
         try {
             // Initializes the cipher in encrypt mode and encrypts data
-            val cipher = ciphers.get()
+            val cipher = ciphers.get()!!
             cipher.init(Cipher.ENCRYPT_MODE, getKey())
             val iv = cipher.iv
             val encrypted = cipher.doFinal(bytes)
@@ -163,7 +165,7 @@ internal class KeyStoreEncryption {
         try {
             val iv = bytes.copyOfRange(0, IV_BYTES)
             val data = bytes.copyOfRange(IV_BYTES, bytes.size)
-            val cipher = ciphers.get()
+            val cipher = ciphers.get()!!
             // A GCMParameterSpec, not an IvParameterSpec. [BLOCK_MODE] is GCM,
             // and AndroidKeyStore's GCM implementation rejects anything else
             // outright — "Only GCMParameterSpec supported". Encrypting never

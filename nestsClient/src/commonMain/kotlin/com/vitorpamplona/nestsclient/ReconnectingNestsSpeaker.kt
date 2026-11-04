@@ -27,6 +27,7 @@ import com.vitorpamplona.nestsclient.moq.lite.MoqLiteHangCatalog
 import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
@@ -232,19 +233,19 @@ suspend fun connectReconnectingNestsSpeaker(
                         // through the recycle and the listener hears
                         // continuous audio.
                         val toClose = speaker
-                        scope.launch {
-                            try {
-                                toClose.close()
-                            } catch (ce: kotlinx.coroutines.CancellationException) {
-                                throw ce
-                            } catch (_: Throwable) {
-                                // Best-effort.
-                            }
-                        }
+                        // Best-effort: a close that fails leaves nothing more to do.
+                        scope.launch { runCatchingCancellable { toClose.close() } }
                         attempt = 0
                         refreshTriggered = true
                     } else if (terminal is NestsSpeakerState.Failed && !isUserCancelledSpeaker(terminal)) {
-                        // Transport-side failure → schedule a reconnect.
+                        // Transport-side failure → schedule a reconnect. A Failed speaker is not
+                        // closed by anything else: the next openOnce() only replaces
+                        // activeSpeaker, so close it here, off the loop like the refresh branch,
+                        // or its session, pumps and QUIC connection stay up for as long as the
+                        // relay keeps the connection alive.
+                        val toClose = speaker
+                        // Best-effort: a close that fails leaves nothing more to do.
+                        scope.launch { runCatchingCancellable { toClose.close() } }
                         attempt++
                         if (!policy.isExhausted(attempt)) {
                             val delayMs = policy.delayForAttempt(attempt)
@@ -636,7 +637,7 @@ private class ReissuingBroadcastHandle(
             // publisher reference, so the relay can't race a SUBSCRIBE
             // in between.
             newCatalogPublisher.setOnNewSubscriber {
-                runCatching {
+                runCatchingCancellable {
                     newCatalogPublisher.send(catalogPayload)
                     newCatalogPublisher.endGroup()
                 }
@@ -687,11 +688,11 @@ private class ReissuingBroadcastHandle(
             runCatching { handle.close() }
             return
         }
-        if (desiredMuted) {
-            runCatching { handle.setMuted(true) }
-        }
-        liveHandle.set(handle)
         try {
+            if (desiredMuted) {
+                runCatchingCancellable { handle.setMuted(true) }
+            }
+            liveHandle.set(handle)
             awaitCancellation()
         } finally {
             if (liveHandle.get() === handle) liveHandle.set(null)
@@ -708,7 +709,7 @@ private class ReissuingBroadcastHandle(
         // and vice versa — but both reads are cheap and harmless if
         // the unused one is null.
         hotSwapBroadcaster?.setMuted(muted)
-        liveHandle.get()?.let { runCatching { it.setMuted(muted) } }
+        liveHandle.get()?.let { runCatchingCancellable { it.setMuted(muted) } }
     }
 
     override suspend fun close() {

@@ -24,6 +24,7 @@ import android.app.Application
 import android.content.ComponentCallbacks2
 import android.os.Build
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.service.QuicLogBridge
 import com.vitorpamplona.amethyst.commons.service.http.HttpClientEnvironment
 import com.vitorpamplona.amethyst.commons.service.http.MediaCallEventListener
 import com.vitorpamplona.amethyst.commons.util.AndroidDebugFlag
@@ -67,6 +68,7 @@ class Amethyst : Application() {
         // :napplet sandbox, whose onCreate early-returns. Moving it would leave that
         // process on the wrapper's DEBUG default.
         Log.minLevel = DEFAULT_LOG_LEVEL
+        QuicLogBridge.install()
         Log.d("AmethystApp") { "Creating App $this" }
     }
 
@@ -152,7 +154,8 @@ class Amethyst : Application() {
         instance.favoriteApps.init()
 
         // Mirror web-app favorites into the launcher's long-press shortcuts (open in Amethyst's browser).
-        CoroutineScope(Dispatchers.Default).launch {
+        // IO: publishing goes through ShortcutManager, a binder call into system_server.
+        CoroutineScope(Dispatchers.IO).launch {
             instance.favoriteApps.favorites
                 .map { apps -> apps.filterIsInstance<FavoriteApp.WebApp>().map { it.url to it.label } }
                 .distinctUntilChanged()

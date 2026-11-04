@@ -65,6 +65,7 @@ object BrowserChrome {
         TOR,
         ACCESS_INFO,
         SITE_SETTINGS,
+        SITE_DATA,
 
         // Developer
         CONSOLE,
@@ -159,6 +160,7 @@ object BrowserChrome {
                 if (state.torOn != null) add(Action.TOR)
                 if (state.hasAccessInfo) add(Action.ACCESS_INFO)
                 if (state.hasSiteSettings) add(Action.SITE_SETTINGS)
+                if (web) add(Action.SITE_DATA)
             }
         val developer = if (state.hasConsole) listOf(Action.CONSOLE) else emptyList()
         return listOf(

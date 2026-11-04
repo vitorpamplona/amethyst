@@ -183,19 +183,21 @@ fun ConcordDirectInviteDialog(
                     sending = true
                     failure = null
                     scope.launch {
-                        try {
-                            val result = accountViewModel.account.concord.sendConcordDirectInvite(communityId, target.pubkeyHex)
-                            if (result == ConcordDirectInviteSendResult.SENT) {
-                                // Ready for the next person; the check mark below is the confirmation.
-                                invited += target.toBestDisplayName()
-                                picked = null
-                                query = ""
-                            } else {
-                                // Keep the person picked so Send retries.
-                                failure = sendFailureMessage(result)
+                        accountViewModel.reportSignerErrors {
+                            try {
+                                val result = accountViewModel.account.concord.sendConcordDirectInvite(communityId, target.pubkeyHex)
+                                if (result == ConcordDirectInviteSendResult.SENT) {
+                                    // Ready for the next person; the check mark below is the confirmation.
+                                    invited += target.toBestDisplayName()
+                                    picked = null
+                                    query = ""
+                                } else {
+                                    // Keep the person picked so Send retries.
+                                    failure = sendFailureMessage(result)
+                                }
+                            } finally {
+                                sending = false
                             }
-                        } finally {
-                            sending = false
                         }
                     }
                 },
@@ -227,9 +229,9 @@ private fun sendFailureMessage(result: ConcordDirectInviteSendResult) =
     }
 
 /**
- * Sweeps the inbox relays for Direct Invites once when the hub opens (wraps the DM pipeline sees
- * arrive on their own). Call it once per screen, outside any lazy list: inside a lazy item it would
- * re-run every time the item scrolled back into view.
+ * Sweeps the stock Concord relays for Direct Invites once when the hub opens (invites on our DM relays
+ * arrive live through the gift-wrap subscription). Call it once per screen, outside any lazy list:
+ * inside a lazy item it would re-run every time the item scrolled back into view.
  */
 @Composable
 fun RefreshConcordDirectInvites(accountViewModel: AccountViewModel) {
@@ -331,19 +333,21 @@ fun ConcordDirectInviteCard(
                     // The account hides an invite while it is being accepted, which removes this card
                     // from composition: the join runs on the view model's scope so that can't cancel it.
                     accountViewModel.viewModelScope.launch {
-                        try {
-                            when (val result = accountViewModel.account.concord.acceptConcordDirectInvite(invite.wrapId)) {
-                                is ConcordInviteResult.Joined -> nav.nav(Route.ConcordServer(result.communityId))
-                                // The accept already running reports; this tap did nothing.
-                                is ConcordInviteResult.InProgress -> Unit
-                                is ConcordInviteResult.Expired -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_expired)
-                                is ConcordInviteResult.Banned -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_banned)
-                                is ConcordInviteResult.InvalidLink -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_invalid)
-                                is ConcordInviteResult.NotSaved -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_not_saved)
-                                else -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_direct_invite_accept_failed)
+                        accountViewModel.reportSignerErrors {
+                            try {
+                                when (val result = accountViewModel.account.concord.acceptConcordDirectInvite(invite.wrapId)) {
+                                    is ConcordInviteResult.Joined -> nav.nav(Route.ConcordServer(result.communityId))
+                                    // The accept already running reports; this tap did nothing.
+                                    is ConcordInviteResult.InProgress -> Unit
+                                    is ConcordInviteResult.Expired -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_expired)
+                                    is ConcordInviteResult.Banned -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_banned)
+                                    is ConcordInviteResult.InvalidLink -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_invalid)
+                                    is ConcordInviteResult.NotSaved -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_not_saved)
+                                    else -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_direct_invite_accept_failed)
+                                }
+                            } finally {
+                                working = false
                             }
-                        } finally {
-                            working = false
                         }
                     }
                 },

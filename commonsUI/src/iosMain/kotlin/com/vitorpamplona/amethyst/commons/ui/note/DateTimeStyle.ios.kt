@@ -27,7 +27,9 @@ import platform.Foundation.NSDateFormatterMediumStyle
 import platform.Foundation.NSDateFormatterNoStyle
 import platform.Foundation.NSDateFormatterShortStyle
 import platform.Foundation.NSDateFormatterStyle
+import platform.Foundation.NSTimeZone
 import platform.Foundation.dateWithTimeIntervalSince1970
+import platform.Foundation.timeZoneWithName
 
 private fun DateTimeStyle.nsStyle(): NSDateFormatterStyle =
     when (this) {
@@ -47,6 +49,23 @@ actual fun formatDateTime(
         NSDateFormatter().apply {
             dateStyle = date.nsStyle()
             timeStyle = time.nsStyle()
+        }
+    return formatter.stringFromDate(NSDate.dateWithTimeIntervalSince1970(epochMillis / 1000.0))
+}
+
+actual fun formatDateTimeInZone(
+    epochMillis: Long,
+    date: DateTimeStyle,
+    time: DateTimeStyle,
+    zoneId: String,
+): String? {
+    val zone = NSTimeZone.timeZoneWithName(zoneId) ?: return null
+    if (date == DateTimeStyle.NONE && time == DateTimeStyle.NONE) return ""
+    val formatter =
+        NSDateFormatter().apply {
+            dateStyle = date.nsStyle()
+            timeStyle = time.nsStyle()
+            timeZone = zone
         }
     return formatter.stringFromDate(NSDate.dateWithTimeIntervalSince1970(epochMillis / 1000.0))
 }

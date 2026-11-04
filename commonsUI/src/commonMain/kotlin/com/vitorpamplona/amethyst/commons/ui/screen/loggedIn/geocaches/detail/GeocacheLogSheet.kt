@@ -32,9 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,11 +49,14 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_log_post
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_dnf
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_maintenance
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_note
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nipCCGeocaching.comment.GeocacheLogComment
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.launch
 
 /**
@@ -85,7 +86,7 @@ fun GeocacheLogSheet(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalSheetState()
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf("") }
     var publishing by remember { mutableStateOf(false) }
@@ -107,7 +108,7 @@ fun GeocacheLogSheet(
 
             Spacer(Modifier.height(12.dp))
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = message,
                 onValueChange = { message = it },
                 modifier = Modifier.fillMaxWidth(),
@@ -133,7 +134,7 @@ fun GeocacheLogSheet(
                                     GeocacheLogSheetType.MAINTENANCE -> GeocacheLogComment.needsMaintenance(message.trim(), bundle)
                                 }
 
-                            runCatching { accountViewModel.account.signAndComputeBroadcast(template) }
+                            runCatchingCancellable { accountViewModel.account.signAndComputeBroadcast(template) }
                             publishing = false
                             onDismiss()
                         }

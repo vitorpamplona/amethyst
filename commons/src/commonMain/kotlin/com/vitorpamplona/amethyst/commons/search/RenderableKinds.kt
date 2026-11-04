@@ -20,16 +20,27 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
+import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
+import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
+import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
+import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
+import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
+import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
+import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
+import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -63,8 +74,8 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
@@ -79,6 +90,8 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.review.ProductReviewEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
@@ -172,6 +185,9 @@ object RenderableKinds {
             HighlightEvent.KIND,
             CodeSnippetEvent.KIND,
             NipTextEvent.KIND,
+            EbookEvent.KIND,
+            MagazineEvent.KIND,
+            MagazineIssueEvent.KIND,
             // pictures, video, audio
             PictureEvent.KIND,
             VideoNormalEvent.KIND,
@@ -188,6 +204,13 @@ object RenderableKinds {
             MusicPlaylistEvent.KIND,
             PodcastEpisodeEvent.KIND,
             PodcastMetadataEvent.KIND,
+            // drss.io's generated shows, and the lists, folders and provenance notes of its reader
+            DrssShowEvent.KIND,
+            DrssListFolderEvent.KIND,
+            DrssFeedListEvent.KIND,
+            DrssEventListEvent.KIND,
+            DrssProvenanceFolderEvent.KIND,
+            DrssProvenanceEvent.KIND,
             // interactive stories
             InteractiveStoryPrologueEvent.KIND,
             InteractiveStorySceneEvent.KIND,
@@ -212,8 +235,12 @@ object RenderableKinds {
             CalendarDateSlotEvent.KIND,
             CalendarTimeSlotEvent.KIND,
             CalendarCollectionEvent.KIND,
-            // marketplace, apps, code and sites
+            // marketplace, apps, code and sites. Open Markets collections and product reviews have
+            // cards and are what a shopper searches for; shipping options are reached through the
+            // product that names them.
             ClassifiedsEvent.KIND,
+            ProductCollectionEvent.KIND,
+            ProductReviewEvent.KIND,
             SoftwareApplicationEvent.KIND,
             AppCurationSetEvent.KIND,
             GitRepositoryEvent.KIND,
@@ -224,6 +251,11 @@ object RenderableKinds {
             // geocaches
             GeocacheListingEvent.KIND,
             GeocacheFoundLogEvent.KIND,
+            // Kanban boards and cards (titles and descriptions), and the WalletScrutiny build
+            // verifications that share 30301 (their reports). The encrypted planner tasks also on
+            // 30301 index nothing and are never cached, so they cannot surface as a blank row.
+            KanbanBoardEvent.KIND,
+            KanbanCardEvent.KIND,
             // everything else with a card
             BadgeDefinitionEvent.KIND,
             EmojiPackEvent.KIND,

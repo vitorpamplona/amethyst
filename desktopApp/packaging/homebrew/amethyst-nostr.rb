@@ -34,7 +34,7 @@
 # `Amethyst.app`, so the two cannot coexist in /Applications.
 #
 # The `zap` paths were verified against application source, not docs:
-#   ~/.amethyst                            AccountManager.kt -> File(homeDir, ".amethyst")
+#   ~/.amethyst                            DesktopAccountStorage.kt -> File(homeDir, ".amethyst")
 #                                          (accounts + KEYS — destructive)
 #   ~/Library/Application Support/Amethyst DesktopTorManager.kt -> ".../Amethyst/tor"
 #   ~/Library/Caches/AmethystDesktop       DesktopImageLoaderSetup.kt -> cacheDir()
@@ -45,8 +45,8 @@
 # which writes into that single SHARED plist — deleting it would wipe every
 # other Java application's preferences too.
 cask "amethyst-nostr" do
-  version "1.17.0"
-  sha256 "0eddf23c98e8f5d18788c12b83376f7db260118a5a97781b604caf82ae5e905c"
+  version "1.21.0"
+  sha256 "4c58f200807d4589b203447e65aec8ba8d44cc68452c4e82a338157feb557965"
 
   url "https://github.com/vitorpamplona/amethyst/releases/download/v#{version}/amethyst-desktop-#{version}-macos-arm64.dmg"
   name "Amethyst"

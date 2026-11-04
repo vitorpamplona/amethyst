@@ -47,7 +47,10 @@ class SearchQueryState(
     val followPlusAllMineWithSearchRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : MutableQueryState,
     AccountScopedQuery {
-    override fun flow(): Flow<String> = searchQuery
+    // The text alone re-issues the REQs: a `from:` name the field could not decode is rewritten
+    // in place to `from:npub1…` once it resolves (see AuthorNameRewrite), which is a text change
+    // like any other and arrives through this same flow.
+    override fun flow(): Flow<*> = searchQuery
 
     /**
      * Which relays this query went to, and which have answered.

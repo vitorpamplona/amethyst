@@ -26,15 +26,16 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
-import com.vitorpamplona.quartz.marmot.appComponents.BlobStoreEndpointV2
-import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
-import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
-import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaV2
-import com.vitorpamplona.quartz.marmot.appComponents.MarmotMediaType
-import com.vitorpamplona.quartz.marmot.appComponents.MediaLocatorV2
+import com.vitorpamplona.crypto.sha2.sha256
+import com.vitorpamplona.marmot.appComponents.BlobStoreEndpointV2
+import com.vitorpamplona.marmot.appComponents.EncryptedMediaPolicyV2
+import com.vitorpamplona.marmot.appComponents.EncryptedMediaReferenceV2
+import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2
+import com.vitorpamplona.marmot.appComponents.MarmotMediaType
+import com.vitorpamplona.marmot.appComponents.MediaLocatorV2
+import com.vitorpamplona.marmot.groups.MarmotEpochMovedException
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
 
 /**
@@ -111,14 +112,8 @@ object MarmotMediaCommands {
 
         val policy =
             try {
-                EncryptedMediaPolicyV2(
-                    allowedLocatorKinds = listOf(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND),
-                    // Order is preserved deliberately: it IS the upload/fetch
-                    // fallback priority, so sorting it would change where the
-                    // group uploads.
-                    defaultBlobEndpoints =
-                        urls.map { BlobStoreEndpointV2(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND, it) },
-                )
+                // Order is kept: it IS the upload/fetch fallback priority.
+                EncryptedMediaPolicyV2.forBlossom(urls)
             } catch (e: IllegalArgumentException) {
                 return Output.error("bad_args", e.message ?: "invalid media policy")
             }
@@ -191,13 +186,16 @@ object MarmotMediaCommands {
             val mediaType =
                 MarmotMediaType.canonicalize(rawMediaType)
                     ?: return Output.error("bad_args", "'$rawMediaType' is not a usable media type")
-            val encrypted =
+            // The message is pinned to the epoch whose key encrypted the file, so a commit that
+            // lands during the upload refuses the send instead of delivering an unreadable file.
+            val pinned =
                 try {
-                    ctx.marmot.encryptMedia(resolved, file.readBytes(), mediaType, file.name)
+                    ctx.marmot.encryptMediaForSend(resolved, file.readBytes(), mediaType, file.name)
                 } catch (e: IllegalArgumentException) {
                     return Output.error("bad_args", e.message ?: "cannot encrypt this attachment")
                 }
 
+            val encrypted = pinned.result
             val ciphertextHash = encrypted.ciphertextSha256.toHexKey()
             val uploadedUrl: String
             try {
@@ -232,7 +230,12 @@ object MarmotMediaCommands {
                     filename = file.name,
                 )
 
-            val bundle = ctx.marmot.buildMediaMessage(resolved, reference, caption)
+            val bundle =
+                try {
+                    ctx.marmot.buildMediaMessage(resolved, reference, caption, sourceEpoch = pinned.epoch)
+                } catch (e: MarmotEpochMovedException) {
+                    return Output.error("epoch_moved", e.message ?: "the group moved to a new epoch during the upload; send it again")
+                }
             val targets = ctx.marmotGroupRelays(resolved).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(bundle.outbound.signedEvent, targets)
             RawEventSupport.publishGuard(ack, bundle.outbound.signedEvent.id)?.let { return it }
@@ -306,13 +309,15 @@ object MarmotMediaCommands {
                 return Output.error("hash_mismatch", "the blob at ${locator.value} is not the one the message names")
             }
 
+            // The media secret is per-epoch: the attachment opens under the key
+            // of the epoch that carried this message, not the current one.
+            val epochSecret =
+                ctx.marmot.mediaSecretForMessage(resolved, eventId)
+                    ?: return Output.error("decrypt_failed", "the media key of the epoch that carried $eventId is no longer held")
             val plaintext =
                 try {
-                    ctx.marmot.decryptMedia(resolved, reference, ciphertext)
+                    ctx.marmot.decryptMedia(resolved, reference, ciphertext, epochSecret)
                 } catch (e: Exception) {
-                    // A failure here is not "the file is corrupt": the media
-                    // secret is per-epoch, so an attachment from an older epoch
-                    // simply does not open under the current one.
                     return Output.error("decrypt_failed", "${e.message}")
                 }
 

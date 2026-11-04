@@ -20,8 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 
 /**
  * Pure, file- and JNI-free parsers over Arti's persisted guard sample
@@ -42,10 +45,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
  *   circuit — i.e. a real bootstrap reached the guard-confirmation stage.
  */
 object ArtiGuardState {
-    private val mapper = ObjectMapper()
-
     /** Convenience for tests/callers holding the raw file text. */
-    fun parse(json: String): JsonNode = mapper.readTree(json)
+    fun parse(json: String): JsonElement = Json.parseToJsonElement(json)
 
     /**
      * Smallest sample worth judging by ratio. Below this a low usable count is just a young
@@ -77,15 +78,14 @@ object ArtiGuardState {
      * still only judged by the strict `usable == 0` rule, so a legitimate first bootstrap that has
      * sampled one or two guards is never wiped out from under itself.
      */
-    fun hasNoUsableGuards(root: JsonNode): Boolean {
+    fun hasNoUsableGuards(root: JsonElement): Boolean {
         var wedged = false
-        root.forEach { selection ->
-            val guards = selection.get("guards") ?: return@forEach
-            if (guards.isArray && guards.size() > 0) {
-                val usable = guards.count { !it.isDisabled() && !it.isUnlisted() }
+        forEachGuardList(root) { guards ->
+            if (guards.isNotEmpty()) {
+                val usable = guards.count { !it.has("disabled") && !it.has("unlisted_since") }
                 if (usable == 0) {
                     wedged = true
-                } else if (guards.size() >= MIN_SAMPLE_TO_JUDGE_RATIO && usable * USABLE_RATIO_DIVISOR < guards.size()) {
+                } else if (guards.size >= MIN_SAMPLE_TO_JUDGE_RATIO && usable * USABLE_RATIO_DIVISOR < guards.size) {
                     wedged = true
                 }
             }
@@ -104,27 +104,34 @@ object ArtiGuardState {
      * stuck-Connecting watchdog treat persisted state as stale/poisoned (wipe it)
      * rather than as a pristine slow first bootstrap (leave it alone).
      */
-    fun hasConfirmedGuard(root: JsonNode): Boolean {
+    fun hasConfirmedGuard(root: JsonElement): Boolean {
         var confirmed = false
-        root.forEach { selection ->
-            val guards = selection.get("guards") ?: return@forEach
-            if (guards.isArray) {
-                guards.forEach { guard ->
-                    val at = guard.get("confirmed_at")
-                    if (at != null && !at.isNull) confirmed = true
-                }
-            }
+        forEachGuardList(root) { guards ->
+            if (guards.any { it.has("confirmed_at") }) confirmed = true
         }
         return confirmed
     }
 
-    private fun JsonNode.isDisabled(): Boolean {
-        val d = get("disabled")
-        return d != null && !d.isNull
+    /** Each selection's `guards` array: the selections are the values of an object root, or the entries of an array one. */
+    private inline fun forEachGuardList(
+        root: JsonElement,
+        action: (JsonArray) -> Unit,
+    ) {
+        val selections =
+            when (root) {
+                is JsonObject -> root.values
+                is JsonArray -> root
+                else -> return
+            }
+        selections.forEach { selection ->
+            val guards = (selection as? JsonObject)?.get("guards") as? JsonArray ?: return@forEach
+            action(guards)
+        }
     }
 
-    private fun JsonNode.isUnlisted(): Boolean {
-        val u = get("unlisted_since")
-        return u != null && !u.isNull
+    /** The guard carries [key] with a non-null value. */
+    private fun JsonElement.has(key: String): Boolean {
+        val value = (this as? JsonObject)?.get(key)
+        return value != null && value !is JsonNull
     }
 }

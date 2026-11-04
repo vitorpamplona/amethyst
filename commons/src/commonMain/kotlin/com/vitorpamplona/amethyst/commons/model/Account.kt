@@ -22,17 +22,15 @@ package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.actions.DeletionActions
+import com.vitorpamplona.amethyst.commons.actions.EmojiPackActions
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
-import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
 import com.vitorpamplona.amethyst.commons.defaults.Constants
-import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
-import com.vitorpamplona.amethyst.commons.marmot.MarmotPublisher
-import com.vitorpamplona.amethyst.commons.marmot.MarmotPushCoordinator
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.EventProcessor
 import com.vitorpamplona.amethyst.commons.model.IAccount
@@ -50,11 +48,14 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.buzz.ChannelInvitesState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filter
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedToggles
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
 import com.vitorpamplona.amethyst.commons.model.cordn.CordnRuntime
+import com.vitorpamplona.amethyst.commons.model.drss.DrssState
 import com.vitorpamplona.amethyst.commons.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
@@ -66,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.KeyPackageRelayListState
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.nip01UserMetadata.AccountHomeRelayState
@@ -97,6 +99,8 @@ import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.Now
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.NowPlayingSettingsState
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46SignerState
+import com.vitorpamplona.amethyst.commons.model.nip46Signer.acceptsSignerTraffic
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcBackupState
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcInfoCache
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
@@ -151,7 +155,10 @@ import com.vitorpamplona.amethyst.commons.model.nipA3PaymentTargets.NipA3Payment
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
+import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
+import com.vitorpamplona.amethyst.commons.model.rooms.MessageRoom
+import com.vitorpamplona.amethyst.commons.model.rooms.isInRoom
 import com.vitorpamplona.amethyst.commons.model.serverList.AssumedRelayListsState
 import com.vitorpamplona.amethyst.commons.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.commons.model.serverList.MergedFollowPlusMineRelayListsState
@@ -162,9 +169,13 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.FeedTopNavFilterState
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.OutboxLoaderState
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.SelectedListAuthorsState
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderListState
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderRow
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.publicRows
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.commons.relayClient.auth.InMemoryRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionCache
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionLedger
@@ -173,6 +184,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthVenues
 import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.ChatDeliveryTracker
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyRequestsCache
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderAccount
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthCustomToggles
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
@@ -187,6 +200,19 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
+import com.vitorpamplona.amethyst.commons.wot.network.RelayTrustNetworkSource
+import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkState
+import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkStore
+import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
+import com.vitorpamplona.cordn.client.CordnBlobCipher
+import com.vitorpamplona.crypto.aes.AESGCM
+import com.vitorpamplona.crypto.aes.AES_GCM_NAME
+import com.vitorpamplona.crypto.random.RandomInstance
+import com.vitorpamplona.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
+import com.vitorpamplona.marmot.client.MarmotManager
+import com.vitorpamplona.marmot.client.MarmotPublisher
+import com.vitorpamplona.marmot.client.MarmotPushCoordinator
+import com.vitorpamplona.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.buzz.media.BuzzImeta
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
@@ -204,13 +230,6 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.interactiveStories.image
 import com.vitorpamplona.quartz.experimental.interactiveStories.summary
 import com.vitorpamplona.quartz.experimental.interactiveStories.tags.StoryOptionTag
-import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.blurhash
-import com.vitorpamplona.quartz.experimental.nip95.header.dimension
-import com.vitorpamplona.quartz.experimental.nip95.header.fileSize
-import com.vitorpamplona.quartz.experimental.nip95.header.hash
-import com.vitorpamplona.quartz.experimental.nip95.header.mimeType
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.blurhash
 import com.vitorpamplona.quartz.experimental.profileGallery.dimension
@@ -218,15 +237,15 @@ import com.vitorpamplona.quartz.experimental.profileGallery.fromEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.hash
 import com.vitorpamplona.quartz.experimental.profileGallery.image
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
-import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
@@ -281,6 +300,7 @@ import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
@@ -326,7 +346,9 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.KindRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
@@ -355,22 +377,25 @@ import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
-import com.vitorpamplona.quartz.utils.ciphers.AES_GCM_NAME
 import com.vitorpamplona.quartz.utils.containsAny
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -383,16 +408,15 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okio.Path
 import kotlin.coroutines.cancellation.CancellationException
-import com.vitorpamplona.quartz.experimental.nip95.header.thumbhash as nip95thumbhash
 import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as galleryThumbhash
 
 /** How long past a disappearing message's deadline the sweep waits, to purge nearby deadlines in one pass (CORD-08). */
 private const val CONCORD_EXPIRY_COALESCE_MS = 2_000L
 
-/** Delay before the first Direct Invite sweep, so it doesn't compete with the start-up fetches. */
+/** Delay before the first stock-relay Direct Invite sweep, so it doesn't compete with the start-up fetches. */
 private const val DIRECT_INVITE_SWEEP_START_MS = 20_000L
 
-/** How often to sweep for Direct Invites while the account is loaded. */
+/** How often to sweep the stock relays for Direct Invites while the account is loaded. */
 private const val DIRECT_INVITE_SWEEP_EVERY_MS = 15 * 60_000L
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -448,27 +472,40 @@ class Account(
      */
     val cordnBlobCipher: (() -> CordnBlobCipher)? = null,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
-    val marmotMessageStore: com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore? = null,
-    val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
+    val marmotMessageStore: com.vitorpamplona.marmot.groups.MarmotMessageStore? = null,
+    val marmotKeyPackageStore: com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
     /**
      * Durable publish obligations. Null means publish-before-apply does not
      * survive a restart, so a commit interrupted mid-publish is replaced by a
      * fresh one for the same epoch — a fork against the peers that took the
      * first.
      */
-    val marmotPublishObligationStore: com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore? = null,
+    val marmotPublishObligationStore: com.vitorpamplona.marmot.protocolCore.MarmotPublishObligationStore? = null,
     /**
      * Durable "already decided" markers for inbound events. Null means every
      * backdated gift wrap is re-unwrapped on every sync.
      */
-    val marmotIngestDedupStore: com.vitorpamplona.quartz.marmot.MarmotIngestDedupStore? = null,
+    val marmotIngestDedupStore: com.vitorpamplona.marmot.MarmotIngestDedupStore? = null,
     /**
      * Durable push token records, stamps and tombstones. Null means a restart
      * forgets every tombstone, so a relayed but revoked token record can win
      * once and start waking a device its owner asked to be forgotten.
      */
-    val marmotPushStateStore: com.vitorpamplona.quartz.marmot.mip05PushNotifications.MarmotPushStateStore? = null,
+    val marmotPushStateStore: com.vitorpamplona.marmot.mip05PushNotifications.MarmotPushStateStore? = null,
     val powQueue: () -> PoWPublishQueue? = { null },
+    /**
+     * Where the Web of Trust network index lives (the account's own directory), or null to
+     * run without one. See [TrustNetworkState].
+     */
+    trustNetworkDir: Path? = null,
+    /**
+     * Builds a relay client for the trust network sync, apart from [client]: the shared client
+     * files everything it receives into [cache], and a sync receives hundreds of thousands of
+     * cards. Null disables syncing (the index on disk is still used).
+     */
+    trustNetworkClientBuilder: (() -> INostrClient)? = null,
+    /** False on a metered network: background trust network downloads then wait. */
+    canDownloadLargeFiles: () -> Boolean = { true },
     relayAuthPermissionStore: RelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
     signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
     nip46ClientStore: Nip46ClientStore = InMemoryNip46ClientStore(),
@@ -511,6 +548,9 @@ class Account(
 
     override fun cardHomeRelays(): Set<NormalizedRelayUrl> = homeRelays.flow.value
 
+    // Profiles on screen ask the providers for their cards even when the trust network holds
+    // them: a card newer than the last sync updates the network until the next one
+    // (TrustNetworkState.offer).
     override fun trustProvider(): ServiceProviderTag? = trustProviderList.liveUserRankProvider.value
 
     override fun followerCountProvider(): ServiceProviderTag? = trustProviderList.liveUserFollowerCount.value
@@ -647,7 +687,7 @@ class Account(
             fetch = { uri ->
                 client.fetchFirst(
                     uri.relayUri,
-                    Filter(kinds = listOf(NwcInfoEvent.KIND), authors = listOf(uri.pubKeyHex), limit = 1),
+                    ExplainedFilter(kinds = listOf(NwcInfoEvent.KIND), authors = listOf(uri.pubKeyHex), limit = 1, purpose = SubPurpose.NWC),
                 ) as? NwcInfoEvent
             },
             scope = scope,
@@ -679,6 +719,7 @@ class Account(
             scope = scope,
             settings = settings,
             consent = nip46Consent,
+            relayAcceptsSignerTraffic = { cache.appHost.nip11Cache.acceptsSignerTraffic(it) },
         )
 
     val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings)
@@ -909,6 +950,36 @@ class Account(
     val trustProviderListDecryptionCache = TrustProviderListDecryptionCache(signer)
     val trustProviderList = TrustProviderListState(signer, cache, trustProviderListDecryptionCache, scope, settings)
 
+    /** The NIP-85 rank provider's network: who counts as known beyond follows. */
+    val trustNetwork =
+        TrustNetworkState(
+            rankProvider = trustProviderList.resolvedRankProvider,
+            minTrustScore = settings.syncedSettings.security.minTrustScore,
+            store = trustNetworkDir?.let { TrustNetworkStore(it) },
+            source = trustNetworkClientBuilder?.let { RelayTrustNetworkSource(it) },
+            scope = scope,
+            canDownloadLarge = canDownloadLargeFiles,
+        )
+
+    /**
+     * The Web of Trust decisions, published whenever an answer can change (network, minimum
+     * score, follows, a card seen between syncs). Key feeds and screens on it; see [TrustVerdicts].
+     */
+    val trustVerdicts: StateFlow<TrustVerdicts> =
+        trustNetwork.verdicts(
+            me = signer.pubKey,
+            follows = kind3FollowList.flow.map { it.authors }.stateIn(scope, SharingStarted.Eagerly, kind3FollowList.flow.value.authors),
+            scope = scope,
+        )
+
+    /**
+     * The Web of Trust decisions as of this instant. For one-off checks (a push, a room) that
+     * cannot wait for [trustVerdicts] to publish, e.g. right after [TrustNetworkState.awaitLoaded].
+     */
+    fun currentTrustVerdicts(): TrustVerdicts = trustNetwork.snapshot(signer.pubKey, followingKeySet())
+
+    override fun trustRankOf(pubkey: HexKey): Int? = trustNetwork.rankOf(pubkey)
+
     val followSetDecryptionCache = FollowSetDecryptionCache(signer)
     val blockPeopleList = BlockPeopleListState(signer, cache, followSetDecryptionCache, scope)
     val followSets = FollowSetsState(signer, cache, followSetDecryptionCache, scope)
@@ -917,13 +988,14 @@ class Account(
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
     val bookmarkSets = BookmarkSetsState(signer, cache, scope)
+    val drss = DrssState(signer, cache, scope)
     val interestSets = InterestSetsState(signer, cache, scope)
     val appRecommendations = AppRecommendationsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
     val bookmarkState = BookmarkListState(signer, cache, scope)
     val gitRepositoryListState = GitRepositoryListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
-    val emoji = EmojiPackState(signer, cache, scope)
+    val emoji = EmojiPackState(signer, cache, scope, settings.syncedSettings.reactions.reactionChoices)
     val ownedEmojiPacks = OwnedEmojiPacksState(signer, cache, scope)
 
     // needs `emoji` above: nickname edits resolve :shortcodes: against the account's packs
@@ -945,6 +1017,8 @@ class Account(
     val mineRelays = AccountMineRelayState(nip65RelayList, privateStorageRelayList, localRelayList, proxyRelayList, scope)
     val dmRelays = DmInboxRelayState(dmRelayList, nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val notificationRelays = NotificationInboxRelayState(nip65RelayList, localRelayList, scope)
+
+    val nwcBackup = NwcBackupState(signer, client, scope, settings, outboxRelays.flow, nip65RelayList.inboxFlowNoDefaults)
 
     // Account-level notification history paging cursors (one scope per account): how far back each
     // notification relay has been paged by until+limit. Held here so they share the account's lifetime;
@@ -1001,7 +1075,7 @@ class Account(
                 },
         )
 
-    val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, indexerRelayList, proxyRelayList, trustedRelayList, broadcastRelayList, scope)
+    val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, indexerRelayList, proxyRelayList, trustedRelayList, broadcastRelayList, favoriteRelayList, trustProviderList.liveRelays, scope)
 
     /** Relays guessed on the user's behalf until their own lists arrive. Read only by Tor routing. */
     val assumedRelays = AssumedRelayListsState(nip65RelayList, searchRelayList, indexerRelayList, scope)
@@ -1037,6 +1111,28 @@ class Account(
     val newNotesPreProcessor = EventProcessor(this, cache)
 
     /**
+     * The Settings › Messages load toggles, applied in one order (gate, rooms, then [ChatFeedToggles.applied]).
+     * Everything that loads, shows or notifies a chat type asks here rather than the raw setting.
+     */
+    val chatFeedToggles: ChatFeedToggles =
+        ChatFeedToggles(
+            settings = settings,
+            chatroomList = chatroomList,
+            draftRumor = { draftsDecryptionCache.preCachedDraft(it) },
+            decryptDraft = { draftsDecryptionCache.cachedDraft(it) },
+            findCachedNotes = { predicate -> cache.notes.filter { _, note -> predicate(note) } },
+            reindexDraft = { newNotesPreProcessor.consume(it) },
+            onDmProtocolOff = { type ->
+                // Calls signal over NIP-17's inbox: once it closes the peer's renegotiation and hangup
+                // can't reach us, so end any call in progress rather than leave it hanging.
+                if (type == ChatFeedType.NIP17) {
+                    if (callManager.state.value is CallState.IncomingCall) callManager.rejectCall() else callManager.hangup()
+                }
+            },
+            forgetGiftWraps = { cache.pruner.forgetGiftWraps(it) },
+        )
+
+    /**
      * Owns the WebRTC call state machine.
      *
      * Account-scoped on purpose: a call outlives the main UI. It runs in its own
@@ -1057,7 +1153,7 @@ class Account(
             scope = scope,
             isFollowing = { isFollowing(it) },
             publishEvent = { wrap -> scope.launch { publishCallSignaling(wrap) } },
-            isCallsEnabled = { settings.callsEnabled.value },
+            isCallsEnabled = { chatFeedToggles.isCallingActive() },
         )
 
     // Per-message publish acceptance (relay OKs), feeding the delivery ticks on
@@ -1163,6 +1259,17 @@ class Account(
             geohashCache = geohashListDecryptionCache,
         )
 
+    // The members of every list picked in a top bar, on any screen: see [SelectedListAuthorsState].
+    // It must stay declared above the `live*FollowLists` below: Kotlin initializes properties in
+    // declaration order, and each of them registers here while the account is being constructed.
+    private val selectedLists = SelectedListAuthorsState(scope)
+
+    /** The members of every list the user picked in a top bar, watched as feed authors while the app is in the foreground. */
+    val selectedListAuthors: StateFlow<Set<HexKey>> = selectedLists.flow
+
+    /** Builds a screen's top-nav flow and registers it in [selectedListAuthors]. */
+    private fun selectedTopNavFilterFlow(listName: MutableStateFlow<TopFilter>): StateFlow<IFeedTopNavFilter> = topNavFilterFlow(listName).also(selectedLists::register)
+
     fun topNavFilterFlow(listName: MutableStateFlow<TopFilter>) =
         FeedTopNavFilterState(
             feedFilterListName = listName,
@@ -1180,103 +1287,138 @@ class Account(
             favoriteAlgoFeedsOrchestrator = favoriteAlgoFeedsOrchestrator,
             favoriteAlgoFeedAddresses = favoriteAlgoFeedsList.flow,
             interestSetHashtags = interestSets.hashtagsByIdentifier,
+            customFeeds = settings.customFeeds,
         ).flow
 
     // App-ready Feeds
-    val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultHomeFollowList)
+    val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultHomeFollowList)
     val liveHomeFollowListsPerRelay = OutboxLoaderState(liveHomeFollowLists, cache, scope).flow
 
-    val liveStoriesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultStoriesFollowList)
+    val liveStoriesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultStoriesFollowList)
     val liveStoriesFollowListsPerRelay = OutboxLoaderState(liveStoriesFollowLists, cache, scope).flow
 
-    val liveDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultDiscoveryFollowList)
+    val liveDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultDiscoveryFollowList)
     val liveDiscoveryFollowListsPerRelay = OutboxLoaderState(liveDiscoveryFollowLists, cache, scope).flow
 
-    val liveNotificationFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNotificationFollowList)
+    val liveNotificationFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultNotificationFollowList)
     val liveNotificationFollowListsPerRelay = OutboxLoaderState(liveNotificationFollowLists, cache, scope).flow
 
-    val livePollsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPollsFollowList)
+    // The split Notifications tabs pin a list each. Built once per account: the filters that read
+    // them are rebuilt with every AccountViewModel, and each build would add another collector
+    // that runs on [scope] until the account is removed.
+    private val pinnedAllFollowsNotificationLists by lazy { topNavFilterFlow(MutableStateFlow(TopFilter.AllFollows)) }
+    private val pinnedGlobalNotificationLists by lazy { topNavFilterFlow(MutableStateFlow(TopFilter.Global)) }
+
+    /** The follow lists of a Notifications tab pinned to [filter], shared by every filter that pins the same one. */
+    fun pinnedNotificationFollowLists(filter: TopFilter): StateFlow<IFeedTopNavFilter> =
+        when (filter) {
+            TopFilter.AllFollows -> pinnedAllFollowsNotificationLists
+            TopFilter.Global -> pinnedGlobalNotificationLists
+            else -> topNavFilterFlow(MutableStateFlow(filter))
+        }
+
+    val livePollsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultPollsFollowList)
     val livePollsFollowListsPerRelay = OutboxLoaderState(livePollsFollowLists, cache, scope).flow
 
-    val livePicturesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPicturesFollowList)
+    val livePicturesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultPicturesFollowList)
     val livePicturesFollowListsPerRelay = OutboxLoaderState(livePicturesFollowLists, cache, scope).flow
 
-    val liveRelayGroupsDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultRelayGroupsDiscoveryFollowList)
+    val liveRelayGroupsDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultRelayGroupsDiscoveryFollowList)
     val liveRelayGroupsDiscoveryFollowListsPerRelay = OutboxLoaderState(liveRelayGroupsDiscoveryFollowLists, cache, scope).flow
 
-    val liveNappletsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNappletsFollowList)
+    val liveNappletsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultNappletsFollowList)
     val liveNappletsFollowListsPerRelay = OutboxLoaderState(liveNappletsFollowLists, cache, scope).flow
 
-    val liveNsitesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNsitesFollowList)
+    val liveNsitesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultNsitesFollowList)
     val liveNsitesFollowListsPerRelay = OutboxLoaderState(liveNsitesFollowLists, cache, scope).flow
 
-    val liveWorkoutsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultWorkoutsFollowList)
+    val liveWorkoutsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultWorkoutsFollowList)
     val liveWorkoutsFollowListsPerRelay = OutboxLoaderState(liveWorkoutsFollowLists, cache, scope).flow
 
-    val liveGitRepositoriesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultGitRepositoriesFollowList)
+    // My Fitness reads the user's own workouts whatever the Workouts feed has selected, so it keys
+    // the same workouts data source to a fixed "Mine" instead of defaultWorkoutsFollowList.
+    val mineWorkoutsListName = MutableStateFlow<TopFilter>(TopFilter.Mine)
+    val liveMineWorkoutsPerRelay = OutboxLoaderState(selectedTopNavFilterFlow(mineWorkoutsListName), cache, scope).flow
+
+    val liveGitRepositoriesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultGitRepositoriesFollowList)
     val liveGitRepositoriesFollowListsPerRelay = OutboxLoaderState(liveGitRepositoriesFollowLists, cache, scope).flow
 
-    val liveHighlightsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultHighlightsFollowList)
+    val liveHighlightsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultHighlightsFollowList)
     val liveHighlightsFollowListsPerRelay = OutboxLoaderState(liveHighlightsFollowLists, cache, scope).flow
 
-    val liveCalendarsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultCalendarsFollowList)
+    val liveCalendarsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultCalendarsFollowList)
     val liveCalendarsFollowListsPerRelay = OutboxLoaderState(liveCalendarsFollowLists, cache, scope).flow
 
-    val liveProductsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultProductsFollowList)
+    val liveProductsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultProductsFollowList)
     val liveProductsFollowListsPerRelay = OutboxLoaderState(liveProductsFollowLists, cache, scope).flow
 
-    val liveGeocachesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultGeocachesFollowList)
+    val liveGeocachesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultGeocachesFollowList)
     val liveGeocachesFollowListsPerRelay = OutboxLoaderState(liveGeocachesFollowLists, cache, scope).flow
 
-    val liveShortsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultShortsFollowList)
+    val liveShortsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultShortsFollowList)
     val liveShortsFollowListsPerRelay = OutboxLoaderState(liveShortsFollowLists, cache, scope).flow
 
-    val livePublicChatsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPublicChatsFollowList)
+    val livePublicChatsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultPublicChatsFollowList)
     val livePublicChatsFollowListsPerRelay = OutboxLoaderState(livePublicChatsFollowLists, cache, scope).flow
 
-    val liveLiveStreamsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultLiveStreamsFollowList)
+    val liveLiveStreamsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultLiveStreamsFollowList)
     val liveLiveStreamsFollowListsPerRelay = OutboxLoaderState(liveLiveStreamsFollowLists, cache, scope).flow
 
-    val liveNestsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNestsFollowList)
+    val liveNestsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultNestsFollowList)
     val liveNestsFollowListsPerRelay = OutboxLoaderState(liveNestsFollowLists, cache, scope).flow
 
-    val liveLongsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultLongsFollowList)
+    val liveLongsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultLongsFollowList)
     val liveLongsFollowListsPerRelay = OutboxLoaderState(liveLongsFollowLists, cache, scope).flow
 
-    val liveArticlesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultArticlesFollowList)
+    val liveArticlesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultArticlesFollowList)
     val liveArticlesFollowListsPerRelay = OutboxLoaderState(liveArticlesFollowLists, cache, scope).flow
 
-    val liveMusicTracksFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultMusicTracksFollowList)
+    /**
+     * The drss river, the folder [drss] reads ([DrssState.readList]), as a feed: the listening
+     * queue loads its episodes through it. Built on first use; until a river is picked it points
+     * at nothing the queue asks for.
+     */
+    val drssRiverList: MutableStateFlow<TopFilter> by lazy {
+        MutableStateFlow<TopFilter>(drss.readList.value?.let { TopFilter.PeopleList(it) } ?: TopFilter.Mine).also { list ->
+            scope.launch { drss.readList.collect { river -> if (river != null) list.value = TopFilter.PeopleList(river) } }
+        }
+    }
+    val liveDrssRiverPerRelay by lazy { OutboxLoaderState(topNavFilterFlow(drssRiverList), cache, scope).flow }
+
+    val liveMusicTracksFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultMusicTracksFollowList)
     val liveMusicTracksFollowListsPerRelay = OutboxLoaderState(liveMusicTracksFollowLists, cache, scope).flow
 
-    val liveMusicPlaylistsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultMusicPlaylistsFollowList)
+    val liveMusicPlaylistsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultMusicPlaylistsFollowList)
     val liveMusicPlaylistsFollowListsPerRelay = OutboxLoaderState(liveMusicPlaylistsFollowLists, cache, scope).flow
 
-    val livePodcastEpisodesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPodcastEpisodesFollowList)
+    val livePodcastEpisodesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultPodcastEpisodesFollowList)
     val livePodcastEpisodesFollowListsPerRelay = OutboxLoaderState(livePodcastEpisodesFollowLists, cache, scope).flow
 
-    val livePodcastsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPodcastsFollowList)
+    val livePodcastsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultPodcastsFollowList)
     val livePodcastsFollowListsPerRelay = OutboxLoaderState(livePodcastsFollowLists, cache, scope).flow
 
-    val liveSoftwareAppsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultSoftwareAppsFollowList)
+    val liveSoftwareAppsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultSoftwareAppsFollowList)
     val liveSoftwareAppsFollowListsPerRelay = OutboxLoaderState(liveSoftwareAppsFollowLists, cache, scope).flow
 
-    val liveBadgesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultBadgesFollowList)
+    val liveBadgesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultBadgesFollowList)
     val liveBadgesFollowListsPerRelay = OutboxLoaderState(liveBadgesFollowLists, cache, scope).flow
 
-    val liveBrowseEmojiSetsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultBrowseEmojiSetsFollowList)
+    val liveBrowseEmojiSetsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultBrowseEmojiSetsFollowList)
     val liveBrowseEmojiSetsFollowListsPerRelay = OutboxLoaderState(liveBrowseEmojiSetsFollowLists, cache, scope).flow
 
-    val liveCommunitiesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultCommunitiesFollowList)
+    val liveCommunitiesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultCommunitiesFollowList)
     val liveCommunitiesFollowListsPerRelay = OutboxLoaderState(liveCommunitiesFollowLists, cache, scope).flow
 
-    val liveFollowPacksFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultFollowPacksFollowList)
+    val liveFollowPacksFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultFollowPacksFollowList)
     val liveFollowPacksFollowListsPerRelay = OutboxLoaderState(liveFollowPacksFollowLists, cache, scope).flow
 
     // App recommendations are read straight from LocalCache (no relay feed of its
     // own), so only the in-memory author/tag matcher is needed here, not a
     // per-relay outbox loader.
-    val liveAppRecommendationsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultAppRecommendationsFollowList)
+    val liveAppRecommendationsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultAppRecommendationsFollowList)
+
+    val liveChessFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultChessFollowList)
+    val liveChessFollowListsPerRelay = OutboxLoaderState(liveChessFollowLists, cache, scope).flow
 
     override fun isWriteable(): Boolean = settings.isWriteable()
 
@@ -1351,11 +1493,121 @@ class Account(
         }
     }
 
-    suspend fun changeReactionTypes(reactionSet: List<String>) {
-        if (settings.changeReactionTypes(reactionSet)) {
+    /**
+     * Points the account's kind 10040 user-score entries (`30382:rank`, `30382:followers`) at
+     * [providerKey] on [relay], replacing any previous provider and keeping every other entry.
+     * The trust network then downloads that provider's cards.
+     */
+    suspend fun setTrustScoreProvider(
+        providerKey: HexKey,
+        relay: NormalizedRelayUrl,
+        isPrivate: Boolean,
+    ) {
+        // The user is waiting for it: its first download may start on mobile data.
+        trustNetwork.expectNewProvider()
+        loadOwnTrustProviderListIfMissing()
+        sendMyPublicAndPrivateOutbox(trustProviderList.withScoreProvider(providerKey, relay, isPrivate))
+    }
+
+    /**
+     * Publishes the kind 10040 rows a provider set up for the user (see [TrustProviderRow]),
+     * replacing the previous score provider. [rows] must include a `30382:rank` row.
+     */
+    suspend fun setTrustProviderRows(
+        rows: List<TrustProviderRow>,
+        isPrivate: Boolean,
+    ) {
+        trustNetwork.expectNewProvider()
+        loadOwnTrustProviderListIfMissing()
+        sendMyPublicAndPrivateOutbox(trustProviderList.withProviderRows(rows, isPrivate))
+    }
+
+    /**
+     * Sends the events a trust provider computes the user's scores from (profile, follow list,
+     * mute list, relay list) to [relays], and waits for the relays to answer so a sign-up that
+     * follows starts from the current graph. Best effort: returns how many of the events at
+     * least one relay accepted, and an event this device does not have is skipped.
+     */
+    suspend fun shareTrustGraph(relays: Set<NormalizedRelayUrl>): Int {
+        if (relays.isEmpty()) return 0
+        val events =
+            listOfNotNull(
+                userMetadata.getUserMetadataEvent(),
+                kind3FollowList.getFollowListEvent(),
+                muteList.getMuteList(),
+                nip65RelayList.getNIP65RelayList(),
+            )
+        return coroutineScope {
+            events.map { async { client.publishAndConfirm(it, relays) } }.awaitAll().count { it }
+        }
+    }
+
+    /**
+     * Adopts a trust provider's network [relay]: adds it to the trusted, search, indexer and
+     * favorite relay lists (each only when missing, keeping what the list had) and moves every
+     * feed set to Global onto it.
+     */
+    suspend fun adoptTrustProviderRelay(relay: NormalizedRelayUrl) {
+        trustedRelayList.addRelay(relay)?.let { sendMyPublicAndPrivateOutbox(it) }
+        searchRelayList.withRelay(relay)?.let { saveSearchRelayList(it) }
+        indexerRelayList.withRelay(relay)?.let { saveIndexerRelayList(it) }
+        if (relay !in favoriteRelayList.flowNoDefaults.value) followRelayFeed(relay)
+        settings.moveGlobalFeedsTo(TopFilter.Relay(relay.url))
+    }
+
+    /**
+     * Before a rewrite of the kind 10040: on a device that has not received the user's list yet
+     * (a fresh login), building on nothing would publish a list with only the new rows and drop
+     * every row other clients keep there (other providers, Trusted Lists).
+     */
+    private suspend fun loadOwnTrustProviderListIfMissing() {
+        if (trustProviderList.getTrustProviderList() != null || settings.backupTrustProviderList != null) return
+        newestTrustProviderList(signer.pubKey)?.let { cache.justConsumeMyOwnEvent(it) }
+    }
+
+    /**
+     * The public kind 10040 rows of [pubkey]'s list, from the newest version found on their
+     * outbox, the index relays and [hints]; null when no list was found. Copying them into the
+     * user's own list ([setTrustProviderRows]) shows the network as [pubkey] sees it.
+     */
+    suspend fun fetchTrustProviderRowsOf(
+        pubkey: HexKey,
+        hints: Set<NormalizedRelayUrl> = emptySet(),
+    ): List<TrustProviderRow>? = newestTrustProviderList(pubkey, hints)?.publicRows()
+
+    /** [pubkey]'s newest kind 10040 in the cache or on their outbox, the index relays and [hints]. */
+    private suspend fun newestTrustProviderList(
+        pubkey: HexKey,
+        hints: Set<NormalizedRelayUrl> = emptySet(),
+    ): TrustProviderListEvent? {
+        val cached = cache.getAddressableNoteIfExists(TrustProviderListEvent.createAddress(pubkey))?.event as? TrustProviderListEvent
+        val relays = cache.getUserIfExists(pubkey)?.outboxRelays().orEmpty() + indexRelays() + hints
+        val filter = Filter(kinds = listOf(TrustProviderListEvent.KIND), authors = listOf(pubkey), limit = 1)
+        // fetchAll neither verifies nor stores: any relay asked could forge a newer list and pick
+        // the provider the user is about to publish. Newest first, the first that verifies.
+        val fetched =
+            client
+                .fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 8_000)
+                .filter { it.kind == TrustProviderListEvent.KIND && it.pubKey == pubkey }
+                .sortedByDescending { it.createdAt }
+                .firstOrNull { it.verify() }
+        return listOfNotNull(cached, fetched as? TrustProviderListEvent).maxByOrNull { it.createdAt }
+    }
+
+    /** Removes the user-score provider from the kind 10040, which turns Web of Trust filtering off. */
+    suspend fun removeTrustScoreProvider() {
+        loadOwnTrustProviderListIfMissing()
+        trustProviderList.withoutScoreProvider()?.let { sendMyPublicAndPrivateOutbox(it) }
+    }
+
+    suspend fun updateMinTrustScore(score: Int) {
+        if (settings.updateMinTrustScore(score)) {
             sendNewAppSpecificData()
         }
     }
+
+    /** The reaction choices counterpart of [applyBottomBarItems] — same synchronous-apply, publish-after contract. */
+    fun applyReactionTypes(reactionSet: List<String>): Boolean = settings.changeReactionTypes(reactionSet)
 
     suspend fun changeReactionRowItems(items: List<ReactionRowItem>) {
         if (settings.changeReactionRowItems(items)) {
@@ -1454,6 +1706,25 @@ class Account(
     }
 
     suspend fun sendNewAppSpecificData() = sendMyPublicAndPrivateOutbox(appSpecific.saveNewAppSpecificData())
+
+    /** Reverts the toggle when no relay accepted, so the setting never claims a missing backup. */
+    suspend fun enableNwcBackup(): Boolean {
+        settings.changeBackupNwcWallets(true)
+        val published = nwcBackup.publishNow()
+        if (!published) {
+            settings.changeBackupNwcWallets(false)
+        }
+        return published
+    }
+
+    suspend fun disableNwcBackup() {
+        settings.changeBackupNwcWallets(false)
+    }
+
+    suspend fun deleteNwcBackup(): NwcBackupState.DeleteOutcome {
+        settings.changeBackupNwcWallets(false)
+        return nwcBackup.deleteBackup()
+    }
 
     // ---
     // NIP-13 proof-of-work publishing
@@ -1660,15 +1931,25 @@ class Account(
         }
     }
 
+    /**
+     * True, after logging it, when [note] belongs to a [MessageRoom]. Everything about a room's
+     * messages is the room's to send: the public paths here would name the message in a signed
+     * event on relays. Refusing makes an action that forgot to ask the room fail instead of leak.
+     */
+    private fun refusesRoomNote(
+        note: Note,
+        action: String,
+    ): Boolean {
+        if (!note.isInRoom()) return false
+        Log.e("Account") { "Refused to $action ${note.idHex} on a public path: it belongs to a room" }
+        return true
+    }
+
     suspend fun reactTo(
         note: Note,
         reaction: String,
     ) {
-        // A Marmot message reacts inside its MLS group; see AccountMarmotActions.reactToMarmotMessage.
-        marmot.marmotGroupOf(note)?.let { groupId ->
-            marmot.reactToMarmotMessage(groupId, note, reaction)
-            return
-        }
+        if (refusesRoomNote(note, "react to")) return
 
         // Reactions to NIP-17 groups and unsealed rumors are gift-wrapped: the
         // inner kind-7 only ever travels as ciphertext, so mining it is pure
@@ -1790,6 +2071,7 @@ class Account(
         type: ReportType,
         content: String = "",
     ) {
+        if (refusesRoomNote(note, "report")) return
         if (note.isPrivateRumor()) {
             // A kind-1984 e-tagging the rumor would leak the private id onto
             // public relays. Report the author instead (p-tag only).
@@ -1835,22 +2117,9 @@ class Account(
     suspend fun delete(notes: List<Note>) {
         if (!isWriteable()) return
 
-        // Marmot messages are retracted inside their group. A public NIP-09 here would e-tag
-        // the group's private rumor ids onto public relays.
-        val (marmotNotes, nonMarmotNotes) = notes.partition { marmot.marmotGroupOf(it) != null }
-        marmotNotes.groupBy { marmot.marmotGroupOf(it)!! }.forEach { (groupId, groupNotes) ->
-            marmot.deleteMarmotMessages(groupId, groupNotes)
-        }
-
-        // Concord rumors are retracted inside their channel's plane (CORD-01 Deletions), for the
-        // same reason: any other route carries the community's rumor ids outside it.
-        val (concordNotes, otherNotes) = nonMarmotNotes.partition { concord.concordChannelOf(it) != null }
-        concordNotes.groupBy { concord.concordChannelOf(it)!! }.forEach { (channel, channelNotes) ->
-            concord.deleteConcordRumors(channel, channelNotes)
-        }
-
         val (myRumors, myNotes) =
-            otherNotes
+            notes
+                .filterNot { refusesRoomNote(it, "delete") }
                 .filter { it.author == userProfile() && it.event != null }
                 .partition { it.isPrivateRumor() }
 
@@ -1860,15 +2129,10 @@ class Account(
 
         if (myNotes.isNotEmpty()) {
             // chunks in 200 elements to avoid going over the 65KB limit for events.
-            myNotes.chunked(200).forEach { chunkedList ->
+            myNotes.chunked(DeletionActions.MAX_TARGETS_PER_EVENT).forEach { chunkedList ->
                 val template = DeletionRequestEvent.build(chunkedList.mapNotNull { it.event })
                 val deletionEvent = signer.sign(template)
-                val myRelayList = outboxRelays.flow.value.toMutableSet()
-                chunkedList.forEach {
-                    myRelayList.addAll(it.relays)
-                }
-
-                client.publish(deletionEvent, myRelayList)
+                client.publish(deletionEvent, broadcaster.planner.computeDeletionRelays(chunkedList))
                 cache.justConsumeMyOwnEvent(deletionEvent)
             }
         }
@@ -1886,19 +2150,8 @@ class Account(
     ) {
         if (!isWriteable()) return
         val targetEvent = target.event ?: return
-
-        // In a Marmot group the deletion goes to the group, not to the target's author as a DM.
-        marmot.marmotGroupOf(target)?.let { groupId ->
-            marmot.deleteMarmotMessages(groupId, notes)
-            return
-        }
-
-        // In a Concord channel it is an in-channel kind-5 on the channel's plane (CORD-01), never a
-        // NIP-17 DM to the p-tagged users, which would leak the rumor ids outside the community.
-        concord.concordChannelOf(target)?.let { channel ->
-            concord.deleteConcordRumors(channel, notes)
-            return
-        }
+        // A room's deletion goes to the room, not to the target's author as a DM.
+        if (refusesRoomNote(target, "delete privately around")) return
 
         val myRumors = notes.filter { it.author == userProfile() }.mapNotNull { it.event }
         if (myRumors.isEmpty()) return
@@ -2007,67 +2260,7 @@ class Account(
     fun computeMyReactionToNote(
         note: Note,
         reaction: Event,
-    ): Set<NormalizedRelayUrl> {
-        val relaysItCameFrom = note.relays
-
-        val inboxRelaysOfTheAuthorOfTheOriginalNote =
-            note.author?.inboxRelays() ?: note.author?.pubkeyHex?.let {
-                cache.relayHints.hintsForKey(it)
-            } ?: emptyList()
-
-        val reactionOutBoxRelays = outboxRelays.flow.value
-
-        val taggedUsers = reaction.taggedUserIds() + (note.event?.taggedUserIds() ?: emptyList())
-
-        val taggedUserInboxRelays =
-            taggedUsers.flatMapTo(mutableSetOf()) { pubkey ->
-                if (pubkey == userProfile().pubkeyHex) {
-                    notificationRelays.flow.value
-                } else {
-                    cache
-                        .getUserIfExists(pubkey)
-                        ?.inboxRelays()
-                        ?.ifEmpty { null }
-                        ?.toSet()
-                        ?: cache.relayHints.hintsForKey(pubkey).toSet()
-                }
-            }
-
-        val channelRelays = cache.getAnyChannel(note)?.relays() ?: emptySet()
-
-        val replyRelays =
-            note.replyTo?.flatMapTo(mutableSetOf()) {
-                val existingRelays = it.relays.toSet()
-
-                val replyToAuthor = it.author
-
-                val replyAuthorRelays =
-                    if (replyToAuthor != null) {
-                        if (replyToAuthor == userProfile()) {
-                            outboxRelays.flow.value
-                        } else {
-                            replyToAuthor.inboxRelays()?.ifEmpty { null }?.toSet()
-                                ?: replyToAuthor.allUsedRelaysOrNull()
-                                ?: cache.relayHints
-                                    .hintsForKey(replyToAuthor.pubkeyHex)
-                                    .ifEmpty { null }
-                                    ?.toSet()
-                                ?: emptySet()
-                        }
-                    } else {
-                        emptySet()
-                    }
-
-                existingRelays + replyAuthorRelays
-            } ?: emptySet()
-
-        return reactionOutBoxRelays +
-            inboxRelaysOfTheAuthorOfTheOriginalNote +
-            taggedUserInboxRelays +
-            channelRelays +
-            replyRelays +
-            relaysItCameFrom
-    }
+    ): Set<NormalizedRelayUrl> = broadcaster.planner.computeMyReactionToNote(note, reaction)
 
     // ------------------------------------------------------------------
     // Broadcast / relay-routing delegates (logic lives in EventBroadcaster).
@@ -2574,7 +2767,9 @@ class Account(
         event: PollEvent,
         responses: Set<String>,
     ) {
-        val poll = cache.getOrCreateNote(event.id).toEventHint<PollEvent>()
+        val pollNote = cache.getOrCreateNote(event.id)
+        if (refusesRoomNote(pollNote, "vote on")) return
+        val poll = pollNote.toEventHint<PollEvent>()
 
         if (poll != null) {
             // The poll decides how its answers are counted, so it decides which builder applies:
@@ -2593,67 +2788,6 @@ class Account(
 
             client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
         }
-    }
-
-    suspend fun createNip95(
-        byteArray: ByteArray,
-        headerInfo: FileHeader,
-        alt: String?,
-        contentWarningReason: String?,
-    ): Pair<FileStorageEvent, FileStorageHeaderEvent> {
-        val data = signer.sign(FileStorageEvent.build(byteArray, headerInfo.mimeType))
-
-        val template =
-            FileStorageHeaderEvent.build(EventHintBundle(data, userProfile().bestRelayHint()), alt) {
-                hash(headerInfo.hash)
-                fileSize(headerInfo.size)
-
-                headerInfo.mimeType?.let { mimeType(it) }
-                headerInfo.dim?.let { dimension(it) }
-                headerInfo.blurHash?.let { blurhash(it.blurhash) }
-                headerInfo.thumbHash?.let { nip95thumbhash(it.thumbhash) }
-
-                contentWarningReason?.let { contentWarning(contentWarningReason) }
-            }
-
-        val signedEvent = signer.sign(template)
-        return Pair(data, signedEvent)
-    }
-
-    fun consumeAndSendNip95(
-        data: FileStorageEvent,
-        signedEvent: FileStorageHeaderEvent,
-    ): Note? {
-        if (!isWriteable()) return null
-
-        val relayList = computeRelayListToBroadcast(signedEvent)
-
-        client.publish(data, relayList = relayList)
-        cache.justConsumeMyOwnEvent(data)
-
-        client.publish(signedEvent, relayList = relayList)
-        cache.justConsumeMyOwnEvent(signedEvent)
-
-        return cache.getNoteIfExists(signedEvent.id)
-    }
-
-    fun consumeNip95(
-        data: FileStorageEvent,
-        signedEvent: FileStorageHeaderEvent,
-    ): Note? {
-        cache.justConsumeMyOwnEvent(data)
-        cache.justConsumeMyOwnEvent(signedEvent)
-
-        return cache.getNoteIfExists(signedEvent.id)
-    }
-
-    fun sendNip95(
-        data: FileStorageEvent,
-        signedEvent: FileStorageHeaderEvent,
-        relayList: Set<NormalizedRelayUrl>,
-    ) {
-        client.publish(data, relayList = relayList)
-        client.publish(signedEvent, relayList = relayList)
     }
 
     fun sendHeader(
@@ -2853,10 +2987,9 @@ class Account(
     suspend fun createAndSendDraftIgnoreErrors(
         draftTag: String,
         template: EventTemplate<out Event>,
-        broadcast: Set<Event> = emptySet(),
     ) {
         try {
-            createAndSendDraftInner(draftTag, template, broadcast)
+            createAndSendDraftInner(draftTag, template)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
         }
@@ -2865,7 +2998,6 @@ class Account(
     suspend fun createAndSendDraftInner(
         draftTag: String,
         template: EventTemplate<out Event>,
-        broadcast: Set<Event> = emptySet(),
     ) {
         if (!isWriteable()) return
 
@@ -2880,9 +3012,6 @@ class Account(
         val relayList = (privateStorageRelayList.flow.value + localRelayList.flow.value + extraRelays).toSet()
         if (relayList.isNotEmpty()) {
             client.publish(draftEvent, relayList)
-            broadcast.forEach {
-                client.publish(it, relayList.toSet())
-            }
         }
     }
 
@@ -3109,7 +3238,6 @@ class Account(
         originalNote: Note,
         notify: HexKey?,
         summary: String? = null,
-        broadcast: List<Event>,
     ) {
         if (!isWriteable()) return
 
@@ -3129,8 +3257,6 @@ class Account(
         val relayList = computeRelayListToBroadcast(note)
 
         client.publish(event, relayList = relayList)
-
-        broadcast.forEach { client.publish(it, relayList) }
     }
 
     override suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<EncryptedDmEvent>) {
@@ -3153,6 +3279,11 @@ class Account(
 
     override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
         if (!isWriteable()) return
+        // See sendNip17PrivateMessage: a NIP-17 file sent with NIP-17 off would be dropped on arrival.
+        if (!chatFeedToggles.isEnabled(ChatFeedType.NIP17)) {
+            Log.w("Account") { "Not sending a NIP-17 file: NIP-17 is turned off in Messages settings" }
+            return
+        }
 
         val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
         if (powDifficulty != null) {
@@ -3186,6 +3317,14 @@ class Account(
         template: EventTemplate<ChatMessageEvent>,
         onSent: suspend () -> Unit,
     ) {
+        // With NIP-17 off in Messages settings the message would be dropped on arrival (our own copy
+        // included), so it never goes out. The composer already hides itself; this covers every other
+        // way in: a room's subject dialog, an inline reply from a notification posted before the
+        // switch, the desktop chat.
+        if (!chatFeedToggles.isEnabled(ChatFeedType.NIP17)) {
+            Log.w("Account") { "Not sending a NIP-17 message: NIP-17 is turned off in Messages settings" }
+            return
+        }
         val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
         if (powDifficulty != null) {
             // See sendNip17EncryptedFile: sign inline, queue only wrap mining.
@@ -3226,7 +3365,12 @@ class Account(
         if (powDifficulty != null) {
             // See sendNip17EncryptedFile: sign inline, queue only wrap mining.
             val senderNote = signer.sign(template)
-            val recipients = senderNote.taggedUserIds().plus(signer.pubKey).toSet()
+            val recipients =
+                senderNote
+                    .mentions()
+                    .map { it.pubKey }
+                    .plus(signer.pubKey)
+                    .toSet()
             val seals = NIP17Factory().createSeals(senderNote, recipients, signer)
             if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty, displayedNoteId = senderNote.id, onPublished = onSent)) return
         }
@@ -3384,9 +3528,16 @@ class Account(
 
     suspend fun addEmojiToOwnedPack(
         dTag: String,
-        emoji: com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag,
+        emoji: EmojiUrlTag,
         isPrivate: Boolean,
     ) = ownedEmojiPacks.addEmoji(dTag, emoji, isPrivate, this)
+
+    suspend fun addEmojisToOwnedPack(
+        dTag: String,
+        emojis: List<EmojiUrlTag>,
+        isPrivate: Boolean,
+        onConflict: EmojiPackActions.OnConflict,
+    ) = ownedEmojiPacks.addEmojis(dTag, emojis, isPrivate, onConflict, this)
 
     suspend fun removeEmojiFromOwnedPack(
         dTag: String,
@@ -3763,6 +3914,63 @@ class Account(
 
     override fun followingKeySet(): Set<HexKey> = kind3FollowList.flow.value.authors
 
+    /**
+     * A note in a Concord community this account has joined. Notes keep a gatherer reference
+     * from every account and community that ever touched them, so membership is checked here.
+     */
+    fun isInJoinedConcordCommunity(note: Note?): Boolean =
+        note?.inGatherers?.any { g ->
+            g is ConcordChannel && concordSessions.sessionFor(g.channelId.communityId) != null
+        } == true
+
+    /**
+     * A Concord message in a joined community, or a reaction/repost to one (those are not
+     * attached to the channel themselves, so they are recognized through their target).
+     */
+    fun isConcordActivity(note: Note): Boolean {
+        if (isInJoinedConcordCommunity(note)) return true
+        val event = note.event
+        return (event is ReactionEvent || event is RepostEvent || event is GenericRepostEvent) && isInJoinedConcordCommunity(note.replyTo?.lastOrNull())
+    }
+
+    /** True only when a trust network is active and [pubkey] is not in it (see [TrustVerdicts]). */
+    fun isOutsideTrustNetwork(pubkey: HexKey): Boolean = currentTrustVerdicts().isOutside(pubkey)
+
+    /**
+     * [isKnownChatroom] for a room that may not be loaded yet (a push that beat it): then the
+     * same rule is applied to [sender], the only member the message vouches for. The room's
+     * other members are whoever the sender chose to tag, so a stranger tagging a follow (or a
+     * well-ranked key) must not make the room Known.
+     */
+    fun isKnownChatroom(
+        key: ChatroomKey,
+        sender: HexKey,
+    ): Boolean {
+        val room = chatroomList.rooms.get(key)
+        if (room != null) return isKnownChatroom(key, room)
+        if (chatroomList.hasSentMessagesTo(key) || key in settings.syncedSettings.chats.pinnedChatrooms.value) return true
+        if (sender in followingKeySet()) return true
+        val verdicts = currentTrustVerdicts()
+        return verdicts.isActive && verdicts.passes(sender)
+    }
+
+    /**
+     * Whether a private chat room belongs in Known rather than New Requests: a sender is
+     * followed or (when a trust network is active) in the network, this account has written to
+     * the room, or the user pinned it (an explicit "I know this conversation"). The single rule
+     * for the DM tabs and DM notifications, in-app and push.
+     */
+    fun isKnownChatroom(
+        key: ChatroomKey,
+        room: Chatroom,
+        followingKeySet: Set<HexKey> = followingKeySet(),
+    ): Boolean {
+        if (room.senderIntersects(followingKeySet) || chatroomList.hasSentMessagesTo(key)) return true
+        if (key in settings.syncedSettings.chats.pinnedChatrooms.value) return true
+        val verdicts = currentTrustVerdicts()
+        return verdicts.isActive && room.activeSenders.any { verdicts.passes(it.pubkeyHex) }
+    }
+
     fun isAcceptable(user: User): Boolean {
         if (userProfile().pubkeyHex == user.pubkeyHex) {
             return true
@@ -4071,11 +4279,14 @@ class Account(
 
     fun hasDonatedInThisVersion() = settings.hasDonatedInVersion(appVersion)
 
-    fun observeDonatedInThisVersion() =
+    // Built once: the donation card reads it from composition, and a stateIn per call would add a
+    // collector on [scope] every time the card recomposes, never to be removed.
+    val donatedInThisVersion: StateFlow<Boolean> by lazy {
         settings
             .observeDonatedInVersion(appVersion)
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, hasDonatedInThisVersion())
+    }
 
     fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(appVersion)
 
@@ -4130,6 +4341,8 @@ class Account(
             }
         }
 
+        nwcBackup.start()
+
         // Restore Marmot MLS group state on startup
         if (marmotManager != null) {
             // Derived kind:1210 rows go straight into the conversation. Only
@@ -4148,7 +4361,10 @@ class Account(
             // rather than waiting for the next read to omit it.
             marmotManager.onMessagesExpired = { groupId, expiredIds ->
                 expiredIds.forEach { id ->
-                    cache.getNoteIfExists(id)?.let { marmotGroupList.removeMessage(groupId, it) }
+                    cache.getNoteIfExists(id)?.let {
+                        marmotGroupList.removeMessage(groupId, it)
+                        cache.removeLocally(it)
+                    }
                 }
             }
 
@@ -4166,8 +4382,14 @@ class Account(
                 // by KeyPackageRotationManager via marmotKeyPackageStore, so
                 // restoreAll() above has already restored any previously
                 // generated bundles. Only generate-and-publish if no active
-                // bundle exists in memory after restore.
-                marmot.ensureMarmotKeyPackagePublished()
+                // bundle exists in memory after restore. Launched, not awaited: it
+                // waits on relay confirmations, and the group history below must
+                // not wait on the network.
+                scope.launch(Dispatchers.IO) { marmot.ensureMarmotKeyPackagePublished() }
+
+                // Refresh our leaf in groups where it predates support for a
+                // component, after the randomized delay the spec asks for.
+                scope.launch(Dispatchers.IO) { marmot.runMarmotLeafRefreshLoop() }
 
                 // Sync MIP-01 metadata from restored groups to chatrooms and
                 // re-hydrate decrypted messages from persistent storage.
@@ -4206,8 +4428,9 @@ class Account(
                                 // kind:1009 edit is re-linked to its message too.
                                 val innerNote = marmot.indexMarmotInnerEvent(innerEvent).note
                                 marmotGroupList.addMessage(groupId, innerNote)
-                                marmot.applyMarmotAdminRemoval(groupId, innerEvent)
+                                marmot.applyMarmotModeration(groupId, innerEvent)
                             } catch (e: Exception) {
+                                if (e is CancellationException) throw e
                                 Log.w(
                                     "Account",
                                     "Failed to restore persisted Marmot message for $groupId",
@@ -4220,17 +4443,29 @@ class Account(
             }
         }
 
-        // Direct Invites (CORD-05 §6) are shown on Notifications and Messages, not only on the Concord
-        // hub, so they have to be looked for without the hub open. Invites delivered to our DM relays
-        // also arrive through the normal gift-wrap path; this sweep covers the stock relays a sender
-        // falls back to when it can't find our lists. Single-flight, so an overlap with the hub's own
-        // request is dropped.
+        // Direct Invites (CORD-05 §6) on our DM relays arrive live through the account's gift-wrap
+        // subscription. Senders that can't find our lists fall back to the stock Concord relays, which
+        // are swept periodically instead (single-flight, so an overlap with the hub's own request is
+        // dropped). Shown on Notifications and Messages, so swept without the hub open.
         scope.launch {
             delay(DIRECT_INVITE_SWEEP_START_MS)
             while (isActive) {
                 concord.requestConcordDirectInviteSweep()
                 delay(DIRECT_INVITE_SWEEP_EVERY_MS)
             }
+        }
+
+        // An invite that parks may be a catch-up a Grant already authorizes, so adopt those as they
+        // land rather than waiting for the next revision tick, and once Concord is turned back on.
+        scope.launch {
+            combine(
+                concord.directInviteInbox.pending.map { it.keys },
+                chatFeedToggles.applied.map { ChatFeedType.CONCORD in it },
+            ) { keys, on -> keys to on }
+                .distinctUntilChanged()
+                .collect {
+                    runCatchingCancellable { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }
+                }
         }
 
         // Keep Concord channel metadata (community name/icon, membership) live across the whole
@@ -4250,20 +4485,20 @@ class Account(
             @OptIn(kotlinx.coroutines.FlowPreview::class)
             concordSessions.revision.sample(500).collect {
                 // A revision also bumps when a base-rotation rekey lands; adopt ours if present.
-                runCatching { concord.drainConcordRekeys() }.onFailure { Log.w("Concord", "rekey drain failed", it) }
+                runCatchingCancellable { concord.drainConcordRekeys() }.onFailure { Log.w("Concord", "rekey drain failed", it) }
                 // A promotion to staff delivers the Control Plane write key inside the Grant
                 // itself (CORD-04 §3), so the fold that seats the role is also when it arrives.
-                runCatching { concord.drainConcordStaffGrants() }.onFailure { Log.w("Concord", "staff grant drain failed", it) }
+                runCatchingCancellable { concord.drainConcordStaffGrants() }.onFailure { Log.w("Concord", "staff grant drain failed", it) }
                 // A Private Channel rotation lands on its channel-rekey address (CORD-06 §2): adopt the new
                 // key, or drop the channel when it cut us.
-                runCatching { concord.drainConcordChannelRekeys() }.onFailure { Log.w("Concord", "channel rekey drain failed", it) }
+                runCatchingCancellable { concord.drainConcordChannelRekeys() }.onFailure { Log.w("Concord", "channel rekey drain failed", it) }
                 // A Grant folding late turns a parked catch-up invite into one we adopt without a click.
-                runCatching { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }
+                runCatchingCancellable { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }
                 // An honored Kick naming us (CORD-04 §6): leave the community locally and say so.
-                runCatching { concord.drainConcordKicks() }.onFailure { Log.w("Concord", "kick drain failed", it) }
+                runCatchingCancellable { concord.drainConcordKicks() }.onFailure { Log.w("Concord", "kick drain failed", it) }
                 // A rotation we were *excluded* from produces no rekey to drain, so it can only be
                 // found by re-resolving the invite link we joined through. Rate-limited internally.
-                runCatching { concord.recoverStrandedConcordCommunities() }.onFailure { Log.w("Concord", "stranded recovery failed", it) }
+                runCatchingCancellable { concord.recoverStrandedConcordCommunities() }.onFailure { Log.w("Concord", "stranded recovery failed", it) }
             }
         }
 
@@ -4311,16 +4546,27 @@ class Account(
             }
         }
 
+        chatFeedToggles.start(scope)
+
+        // Apart from the collector below, which indexes one batch at a time: a remote signer's
+        // decrypts start as each batch arrives instead of waiting for the batches ahead of it.
+        scope.launch {
+            cache.live.newEventBundles.collect { newNotes -> newNotesPreProcessor.prefetch(newNotes) }
+        }
+
         scope.launch {
             cache.live.newEventBundles.collect { newNotes ->
                 logTime("Account ${userProfile().toBestDisplayName()} newEventBundle Update with ${newNotes.size} new notes") {
                     upgradeAttestations()
+                    // Cards fetched for profiles on screen keep the trust network fresh between syncs.
+                    trustNetwork.offer(newNotes.mapNotNull { it.event as? UserAssertionEvent })
                     newNotesPreProcessor.runNew(newNotes)
                     followSets.newNotes(newNotes)
                     starterPacks.newNotes(newNotes)
                     bookmarkSets.newNotes(newNotes)
                     interestSets.newNotes(newNotes)
                     ownedEmojiPacks.newNotes(newNotes)
+                    drss.newNotes(newNotes)
                 }
             }
         }
@@ -4334,6 +4580,27 @@ class Account(
                     bookmarkSets.deletedNotes(deletedNotes)
                     interestSets.deletedNotes(deletedNotes)
                     ownedEmojiPacks.deletedNotes(deletedNotes)
+                    drss.deletedNotes(deletedNotes)
+                }
+            }
+        }
+
+        // The NIP-78 settings that live in AccountSettings publish on their own, so their many
+        // setters (and the screens calling them) need no Account wrapper: a second after the last
+        // change, or 30 s for top-bar feed filters. One wait serves both, so a feed switch never
+        // holds back a setting changed just before it, and a pending feed switch rides along with
+        // the next publish. See syncedSettingsPublishes. The publish runs on its own so a new
+        // change cannot cancel it halfway through a remote signer's round trip.
+        scope.launch(Dispatchers.IO) {
+            syncedSettingsPublishes(settings.syncedChanges, settings.slowSyncedChanges).collect {
+                if (!settings.isWriteable()) return@collect
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        sendNewAppSpecificData()
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.w("Account", "Could not publish the synced settings", e)
+                    }
                 }
             }
         }
@@ -4342,7 +4609,14 @@ class Account(
             @OptIn(kotlinx.coroutines.FlowPreview::class)
             settings.saveable.debounce(1000).collect {
                 if (it.accountSettings != null) {
-                    saveSettings(it.accountSettings)
+                    // Caught here: one failed write (a full disk, a locked keychain) escaping would
+                    // end this collector, and nothing would be saved again until a restart.
+                    try {
+                        saveSettings(it.accountSettings)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.w("Account", "Could not save the account settings", e)
+                    }
                 }
             }
         }

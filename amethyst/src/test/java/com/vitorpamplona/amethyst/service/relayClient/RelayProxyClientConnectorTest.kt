@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient
 
+import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector
+import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector.RelayServiceInfra
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.commons.tor.RelayClassification
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
 import com.vitorpamplona.amethyst.commons.tor.TorType
-import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector.RelayServiceInfra
-import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -105,7 +105,7 @@ class RelayProxyClientConnectorTest {
             torConnection = MutableStateFlow(torClient),
             clearConnection = MutableStateFlow(clearClient),
             connectivityStatus = MutableStateFlow(ConnectivityStatus.Off),
-            torStatus = MutableStateFlow(TorServiceStatus.Off),
+            torBootstrapped = MutableStateFlow(false),
             client = client,
             // The flow itself is never collected here; apply() is driven directly.
             scope = CoroutineScope(Dispatchers.Unconfined),
@@ -127,13 +127,13 @@ class RelayProxyClientConnectorTest {
         tor: OkHttpClient = torClient,
         clear: OkHttpClient = clearClient,
         evaluation: TorRelayEvaluation = evaluation(),
-        torStatus: TorServiceStatus = TorServiceStatus.Off,
+        torBootstrapped: Boolean = false,
     ) = RelayServiceInfra(
         evaluator = evaluation,
         torConnection = tor,
         clearConnection = clear,
         connectivity = ConnectivityStatus.Active(networkId, isMobile),
-        torStatus = torStatus,
+        torBootstrapped = torBootstrapped,
     )
 
     /**
@@ -226,7 +226,7 @@ class RelayProxyClientConnectorTest {
         settleOnFirstNetwork()
 
         // Tor bootstrap progress: nothing about the transport or the network changed.
-        connector.apply(infra(networkId = 1L, torStatus = TorServiceStatus.Active(9050)))
+        connector.apply(infra(networkId = 1L, torBootstrapped = true))
 
         assertEquals(
             "Backoff must survive unrelated infrastructure events, or dead relays get hammered",
@@ -258,7 +258,7 @@ class RelayProxyClientConnectorTest {
         settleOnFirstNetwork()
 
         connector.apply(
-            RelayServiceInfra(evaluation(), torClient, clearClient, ConnectivityStatus.Off, TorServiceStatus.Off),
+            RelayServiceInfra(evaluation(), torClient, clearClient, ConnectivityStatus.Off, false),
         )
         assertEquals("Losing the network must pause the pool", 1, client.disconnects)
         client.clear()

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import com.vitorpamplona.amethyst.commons.ui.note.types.startsWithinAWeek
 import com.vitorpamplona.quartz.utils.TimeUtils
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

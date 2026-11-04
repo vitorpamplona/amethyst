@@ -57,7 +57,8 @@ class DmRelayListState(
 
     fun normalizeDMRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
         val event = note.event as? DmRelayListEvent ?: settings.backupDMRelayList
-        return event?.relays()?.toSet() ?: emptySet()
+        // The account's own list: a local DM relay the user configured is theirs to read from.
+        return event?.allRelays()?.toSet() ?: emptySet()
     }
 
     val flow =

@@ -155,6 +155,7 @@ import com.vitorpamplona.amethyst.commons.resources.paste_from_clipboard
 import com.vitorpamplona.amethyst.commons.resources.topup_mint_action
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_cashu_title
 import com.vitorpamplona.amethyst.commons.resources.wallet_sats
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
@@ -165,15 +166,15 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuMeltFlowState
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuMintFlowState
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuRebalanceFlowState
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuRedeemFlowState
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuSendTokenFlowState
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuWalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.wallet.CashuMeltFlowState
+import com.vitorpamplona.amethyst.commons.wallet.CashuMintFlowState
+import com.vitorpamplona.amethyst.commons.wallet.CashuRebalanceFlowState
+import com.vitorpamplona.amethyst.commons.wallet.CashuRedeemFlowState
+import com.vitorpamplona.amethyst.commons.wallet.CashuSendTokenFlowState
+import com.vitorpamplona.amethyst.commons.wallet.CashuWalletViewModel
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.SpendingDirection
@@ -1691,7 +1692,7 @@ private fun SendTokenForm(
         modifier = Modifier.fillMaxWidth(),
     )
     Spacer(modifier = Modifier.height(8.dp))
-    OutlinedTextField(
+    SpellCheckedOutlinedTextField(
         value = memo,
         onValueChange = onMemo,
         label = { Text(stringRes(Res.string.cashu_memo_optional)) },

@@ -79,7 +79,7 @@ in `commonsUI`, under the same package.
 ### Domain models & data
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly (`ThreadAssembler`, `ThreadLevelCalculator`, `ReplyContext`, `replyingDirectlyTo`), and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event store: the `ICacheProvider` / `ILocalCache` ports and `UserMetadataCache` in commonMain, and the concrete `LocalCache` (plus `AntiSpamFilter`, `CachePruner`, `CacheSearch` and the `LocalCacheHost` app-shell port) in jvmAndroid. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
+| `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly (`ThreadAssembler`, `ThreadLevelCalculator`, `ReplyContext`, `replyingDirectlyTo`), publish routing (`BroadcastRelayPlanner`, behind `EventBroadcaster`; runs over any `EventCache`, which is how amy shares it), and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event store, all in commonMain: the `ICacheProvider` / `ILocalCache` ports, `EventCache` (the store and its `justConsume` dispatch) and its `object LocalCache` singleton, `UserMetadataCache`, `AntiSpamFilter`, `CachePruner`, `CacheSearch` and the `LocalCacheHost` app-shell port. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
 | `defaults`     | no  | Static bootstrap data (default relays, channels). |
 
 `model/navigation` also holds the headless navigation identifiers: `NavBarItem`, `BottomBarEntry` and the app's `@Serializable` `Route` catalog (`Routes.kt`). `model/composer` holds post-composer state that is not UI (`AudienceSelection`, `SplitBuilder`, `IZapRaiser`).
@@ -92,13 +92,16 @@ in `commonsUI`, under the same package.
 | `actions`      | no  | Event builders for user actions (follow, zap…). The canonical entry point for non-UI callers. |
 | `account`      | mixed | New-account bootstrap events; the logged-off login/sign-up buttons in `commonsUI` `account/ui/login` and `account/ui/signup`. |
 | `onchain`      | mixed | On-chain zap splitting/broadcasting; user-facing failure strings in `commonsUI` `onchain/ui`. |
-| `marmot`       | mixed | MLS group-chat event processing; group-chat composables (retention picker, agent stream banner) in `commonsUI` `marmot/ui`. |
+| `marmot`       | mixed | The encrypted at-rest stores behind marmot-kmp's `MarmotManager` (`jvmAndroid`); group-chat composables (retention picker, agent stream banner) in `commonsUI` `marmot/ui`. The group pipeline itself is `com.vitorpamplona.marmot.client` in marmot-kmp, and the rules for what members send inside a group (polls, emoji, edits, reports) are its `foundation/appEvents`. The account wiring is `model/AccountMarmotActions` and `model/marmotGroups` (chatrooms, the poll tally adapter, upload caches). |
+| `cordn`        | no  | cordn's at-rest stores (`FileCordnStores`, the keystore ciphers) and the blob store over Blossom. The account wiring is `model/cordn/CordnRuntime`. Protocol decisions every cordn client shares belong in cordn-kmp, not here (`CordnLinks`, discovery, the handoff, the snapshot, the tip blob store all live there); the relay pool is quartz's `INostrClient.cvmRelayPool`, labelled for the activity screens by `coordinatorRelayPool`. |
 | `cyberspace`   | no  | `CYBERSPACE_V2` §7.7 region-bag search: the free quote off a bag's `hint`/`h` tags, the device-measured budget, and the cold sweep flow over quartz's `RegionSweep`. The protocol itself (coordinates, Cantor trees, keys, the bag) is `quartz/.../cyberspace`. |
 | `sno`          | mixed | DECK-0003 object rendering math — rasterizer, lighting, face winding, default avatar — here; the Compose viewer/thumbnail and the Coil fetcher in `commonsUI` under `sno` and `sno/ui`. |
 | `nip53LiveActivities` | mixed | Live-activity zapper aggregation (logic) + the stream card in `nip53LiveActivities/ui`. |
 | `search`       | no  | Event search filtering/ranking, kind registry. |
+| `rendering`    | no  | UI-agnostic event rendering: `RenderedEvent`, the kind-keyed `EventRendererRegistry` (renderers under `rendering/renderers`), the `BodySpans` rich-text post-processor over `richtext`, and `rendering/json/JsonEventFormatter` (amy's `--json` shape). A Compose formatter would live in `commonsUI` under the same package. See `plans/2026-04-21-event-renderer.md`. |
 | `preview`      | no  | OpenGraph / meta-tag link-preview parsing. |
 | `emojicoder`   | no  | Variation-selector emoji encode/decode. |
+| `unicodeEmoji` | mixed | Unicode emoji palette (`UnicodeEmojiCatalog`: groups, skin tones, name search) here; the data file (`composeResources/files/emoji/emoji.tsv`, built by `tools/emoji-data/generate.py`) and the picker (`EmojiPickerButton`) in `commonsUI` `unicodeEmoji/ui`. The picker's favorites and per-pack sections come from `model/nip30CustomEmojis/EmojiPackState` (`favorites`, `myPacks`). Desktop has no system emoji keyboard. |
 | `richtext`     | no  | URL/media/pattern parsing for rich text. |
 | `blurhash`     | no  | BlurHash encode/decode (pure math; platform image bridge in platform sets). |
 | `thumbhash`    | no  | ThumbHash encode/decode. |
@@ -110,8 +113,10 @@ in `commonsUI`, under the same package.
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
 | `state`        | no² | Small feature `StateFlow` machines (`FollowState`, `UserMetadataState`, `LoadingState`). |
-| `viewmodels`   | no² | Larger list/feed-backed ViewModels (`androidx.lifecycle.ViewModel`). Shared by all GUI front ends; `cli` usually drives the layers below instead. The few that hold Compose UI state (`ChatNewMessageState` — `TextFieldValue`; `thread/LevelFeedViewModel` — `LazyListState`) live in `commonsUI` under the same package. |
-| `feeds`        | no  | The feed data-access layer at the root (`FeedFilter`, `AdditiveFeedFilter`, `AdditiveComplexFeedFilter`, `ChangesFlowFilter`, `FeedContentState`, `FeedState`, `InvalidatableContent`, `DefaultFeedOrder`, `RepostRenderability`…) plus `feeds/custom` (`FeedDefinitionRepository` — custom-feed definitions & ordering) and `feeds/related`. See the `feed-patterns` skill. |
+| `viewmodels`   | no² | Larger list/feed-backed ViewModels (`androidx.lifecycle.ViewModel`). Shared by all GUI front ends; `cli` usually drives the layers below instead. A ViewModel lives in `commonsUI` only when it cannot compile headless: it holds Compose UI state (`ChatNewMessageState` — `TextFieldValue`; `thread/LevelFeedViewModel` — `LazyListState`), reads `Res`, or needs `AccountViewModel.toastManager`. `BaseAccountViewModel` (the account ViewModel minus its toast manager and platform bridges) is here; take it, or just `Account`, to keep a new ViewModel here. |
+| `notices`      | no  | `UserNotice`: everything headless code tells the user, as typed facts (`SignerNotice.ReadOnly`, `InvoiceNotice.CallbackNotFound(lnAddress)`, …), reported to a `UserNoticeSink` or worded through a `UserNoticeResolver`. A sealed hierarchy, so `commonsUI`'s `notices/ui` rendering is exhaustive. Never put a `Res` key or English text here. |
+| feature screens' logic: `badges`, `bolt12Offers`, `bookmarkgroups`, `buzz`, `calendars`, `chats`, `communities`, `dvms`, `followPacks`, `geocaches`, `geohash`, `gitRepo`, `hashtag`, `lists`, `mediaServers`, `music`, `paymentTargets`, `pinnednotes`, `podcasts`, `polls`, `profile`, `relay`, `relays`, `scheduledposts`, `settings`, `url`, `wallet` | no² | The ViewModels and concrete `FeedFilter`s behind one feature's screens, usually in a `dal/` subpackage (`hashtag/dal/HashtagFeedFilter` + `HashtagFeedViewModel`). Named after the `commonsUI` folder that holds the screens (`ui/screen/loggedIn/<feature>/`), so the two halves pair up. Never under `ui.*` here. |
+| `feeds`        | no  | The feed data-access layer at the root (`FeedFilter`, `AdditiveFeedFilter`, `AdditiveComplexFeedFilter`, `ChangesFlowFilter`, `FeedContentState`, `FeedState`, `InvalidatableContent`, `DefaultFeedOrder`, `RepostRenderability`…) plus `feeds/custom` (`FeedDefinition`, `FeedBuilderState` — the feeds users build, run by `TopFilter.CustomFeed`) and `feeds/related`. See the `account-state` skill (`references/feeds.md`). |
 | `profile`      | mixed | `ProfileBroadcastStatus` (state) + `EditProfileFields` at the root; the `ProfileBroadcastBanner` composable lives in `commonsUI` `profile/ui`. |
 | `privacylock`  | mixed | Lock state machine + settings here; `LocalPrivacyLockState`/`lockStateFor` (CompositionLocal accessor) in `commonsUI`. |
 
@@ -122,7 +127,7 @@ type (`LazyListState`, `TextFieldValue`, `TextFieldState`) goes to `commonsUI`.
 ### Relay client
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `relayClient`  | mixed | Compose-scoped subscription managers, filter assemblers, EOSE managers, preloaders. (Despite a `composeSubscriptionManagers` subpackage name, this is subscription-lifecycle logic, not UI.) The `@Composable` entry points — `relayClient/user/` (`observeUser*` — kind-0 metadata), `relayClient/event/` (`EventFinderFilterAssemblerSubscription`/`observeNote*`), the other `*FilterAssemblerSubscription`s, `KeyDataSourceSubscription`, `auth/AuthApprovalBanner` — are in `commonsUI` under the same packages. See the `relay-client` skill. |
+| `relayClient`  | mixed | Compose-scoped subscription managers, filter assemblers, EOSE managers, preloaders. (Despite a `composeSubscriptionManagers` subpackage name, this is subscription-lifecycle logic, not UI.) The `@Composable` entry points — `relayClient/user/` (`observeUser*` — kind-0 metadata), `relayClient/event/` (`EventFinderFilterAssemblerSubscription`/`observeNote*`), the other `*FilterAssemblerSubscription`s, `KeyDataSourceSubscription`, `auth/AuthApprovalBanner` — are in `commonsUI` under the same packages. `relayClient/oneshot` holds store-first, one-shot loaders (event lookup by reference, profiles, threads, notifications, an `EventCache` filled on demand) over the `OneShotRelayAccess` port, for front ends without live subscriptions (amy). See the `relay-client` skill. |
 | `relays`       | mixed | Low-level EOSE/relay-timing bookkeeping (`EOSECache`, `EOSERelayList`); relay-list settings composables (`DraggableRelayList`, `RelayEventCountRow`, the NIP-45 count result types) in `commonsUI` `relays/ui`. |
 
 ### Platform abstractions (`expect`/`actual`)
@@ -130,6 +135,7 @@ type (`LazyListState`, `TextFieldValue`, `TextFieldState`) goes to `commonsUI`.
 |----------------|-----|---------|
 | `util`         | no  | KMP primitives: `KmpLock`, `WeakReference`, number/URL/codepoint helpers, list/debug helpers. **This is the only general-utility package** — there is no `utils`. |
 | `keystorage`   | no  | Secure key storage interface (Keystore / keychain / keyring actuals). |
+| `appupdate`    | mixed | The desktop app's self-update and the release events behind it, headless: NIP-82 release lookup (`Nip82UpdateSource`, `Nip82UpdateFinder`: only releases signed by `DesktopRelease.PUBLISHER`), the `AppUpdateManager` state machine behind the `AppUpdateController` port, and the `AppUpdateInstaller` port the platform implements. The release events `amy releases publish` signs: the release itself (`Nip82ReleaseEvents`, one shape for every app), `DesktopReleaseEvents`, and `AndroidReleaseEvents` + `ZapstoreConfig` for Zapstore (zsp's event shape), `FlatpakRelease` + `FlatpakReleaseEvents` for Orchard (the Flatpak bundles by URL); in `jvmMain`, `ApkInspector` (apksig, which the desktop app leaves out of its build) and `ReleaseBundles` (files → signed events, Blossom mirroring). The prompt and the Settings section are in `commonsUI` `appupdate/ui`; the installers in `desktopApp` `desktop/update`. |
 | `tor`          | no  | Tor manager interface + settings. |
 | `service`      | no  | Cross-cutting services: `BundledUpdate` batching (common); `service/upload` (JVM), `service/nwc`, `service/lnurl` (jvmAndroid). **Singular `service`** — there is no `services`. |
 
@@ -201,7 +207,7 @@ Instead, **layer is the primary axis, NIP is the secondary axis**:
 - **A top-level package that *is* a single self-contained NIP feature takes the
   same name as its `quartz` counterpart**, and owns its own UI under
   `<feature>/ui`: `nip64Chess`, `nipACWebRtcCalls`, `nip53LiveActivities`,
-  `nip23LongContent`, `marmot`. (`marmot` is un-numbered in `quartz` too.)
+  `nip23LongContent`, `marmot`. (`marmot` is un-numbered in marmot-kmp too.)
   Generic/multi-NIP packages keep their concern name (`search`, `preview`,
   `actions`, `richtext`…).
 - **Feature UI is never under `ui/`.** A single-NIP feature's composables live
@@ -225,7 +231,44 @@ When adding platform code, prefer the **most common** source set that still
 compiles: `commonMain` → `jvmAndroid` → platform-specific. See
 `/kotlin-multiplatform`.
 
+### Choosing a dispatcher
+`Dispatchers.Default` has only one thread per core (minimum 2), shared by every
+CPU-bound coroutine in the process. When 4–8 of those threads wait on anything,
+whether disk, network, binder IPC or simply a lock someone else holds, the whole
+pool stops. So:
+
+- **`Dispatchers.IO` is the default choice.** Use it for anything that touches
+  `LocalCache`, `Note`/`User`, `Account`, a signer, the relay client, a
+  store, preferences, files, or any shared cache. All of those can take a lock
+  (`Note` has a `syncLock`; quartz's `*Cache` classes and `ConcurrentLruCache`
+  lock on write; Compose's snapshot system has a global lock), and with the
+  number of coroutines this app runs, a short lock wait becomes a pileup.
+- **`Dispatchers.Default` only for code you can show never waits:** signature
+  verification, hashing, parsing a byte array, rasterizing, or arithmetic over
+  immutable data you already hold. If the work calls back into caller-supplied
+  code, assume the callback can block and run it on IO
+  (see `ParallelEventVerifier`: verifies on Default, callbacks on IO).
+- **Long CPU jobs get their own threads.** Work that holds a thread for seconds
+  or minutes runs on IO-backed threads (`PoWMiner.MiningDispatcher` for mining,
+  plain IO for the single-threaded `BagSweep`), never on Default, so it cannot
+  queue every other Default task behind it.
+- **A suspend function moves its own blocking work.** Wrap the blocking call in
+  `withContext(Dispatchers.IO)` inside the function (as `NostrSignerExternal`
+  does for its ContentResolver IPC) instead of trusting every caller to pick
+  the right thread. Callers on Main and on Default are then both safe.
+- **No `runBlocking`** outside tests, previews and the CLI's entry point.
+
+In `commonMain`, `Dispatchers.IO` needs `import kotlinx.coroutines.IO`; it is
+available on every target this module builds.
+
 ### Where does my code go? (quick guide)
+0. **Would another client of the same protocol need it** (`amy`, White Noise, a bot, another
+   app)? → not here, it goes in a library (`AGENTS.md` › Libraries). For Marmot and cordn that
+   includes rules with no MLS state: the tags, limits and validation of the unsigned events members
+   send inside a group (edits, polls, custom emoji, reports, deletions) are marmot-kmp's
+   `foundation/appEvents/` or cordn-kmp's `spec02Envelopes/`, not `model/marmotGroups` here. What
+   stays here is the wiring around them: which relays and signer, `LocalCache`/`Note`, the
+   chatroom, the tally cache, the UI.
 1. **Pure Nostr protocol** (events/NIPs/crypto)? → not here, it's `quartz`.
 2. **A composable** (screens and navigation chrome included)? → `commonsUI`, in
    `ui/<area>` or `<feature>/ui` (same package tree as here). Also anything that
@@ -287,6 +330,6 @@ These are intentionally *documented*, not silently tolerated. Fix opportunistica
 
 ## 5. See also
 - `nipACWebRtcCalls/ARCHITECTURE.md` — WebRTC call state machine deep-dive.
-- Root `.claude/CLAUDE.md` — module overview, sharing philosophy, build commands.
-- `/kotlin-multiplatform`, `/compose-expert`, `/feed-patterns`, `/relay-client`,
-  `/account-state` skills for the patterns referenced above.
+- Root `AGENTS.md` — module overview, sharing philosophy, build commands.
+- `kotlin-multiplatform`, `compose-expert`, `relay-client`,
+  `account-state` (feeds included) skills for the patterns referenced above.

@@ -38,7 +38,9 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEv
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag as MeetingSpaceStatusTag
 
@@ -121,6 +123,7 @@ private suspend fun checkChannelIsOnline(
                 }
             }
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.d("LiveStatusIndicator") { "Network error checking channel ${channel.toBestDisplayName()}: ${e.message}" }
             // Return false if any network error occurs
             false

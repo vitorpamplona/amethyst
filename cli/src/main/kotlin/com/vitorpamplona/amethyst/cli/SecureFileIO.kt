@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.cli
 
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
+import java.io.IOException
 import java.io.OutputStream
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.FileAlreadyExistsException
@@ -30,15 +31,24 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.AclEntry
+import java.nio.file.attribute.AclEntryFlag
+import java.nio.file.attribute.AclEntryPermission
+import java.nio.file.attribute.AclEntryType
+import java.nio.file.attribute.AclFileAttributeView
 import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
+import java.util.EnumSet
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Owner-only writes for the on-disk CLI data (identity, relay config, MLS
  * state, decrypted group messages). POSIX filesystems get 0600 files / 0700
- * directories; non-POSIX (Windows) falls back to `File.setReadable/Writable/
- * Executable(…, false)` to strip other-user access.
+ * directories. Windows (NTFS) gets an ACL granting the file's owner, and nobody
+ * else, full control; directories pass it on to what is created inside them.
+ * Anything else falls back to `File.setReadable/Writable/Executable(…, false)`,
+ * which most such filesystems cannot honour — that is reported once, not per file.
  *
  * Atomic overwrites use a sibling tempfile + `ATOMIC_MOVE`, so a crash never
  * leaves a partial world-readable file behind.
@@ -49,6 +59,11 @@ import java.nio.file.attribute.PosixFilePermissions
 object SecureFileIO {
     private val posixSupported: Boolean =
         FileSystems.getDefault().supportedFileAttributeViews().contains("posix")
+
+    private val aclSupported: Boolean =
+        !posixSupported && FileSystems.getDefault().supportedFileAttributeViews().contains("acl")
+
+    private val warnedLegacy = AtomicBoolean(false)
 
     private val filePerms: Set<PosixFilePermission> = PosixFilePermissions.fromString("rw-------")
     private val dirPerms: Set<PosixFilePermission> = PosixFilePermissions.fromString("rwx------")
@@ -153,24 +168,59 @@ object SecureFileIO {
             }
             return
         }
-        val f = path.toFile()
-        warnIfFailed(f, "setReadable(false)") { f.setReadable(false, false) }
-        warnIfFailed(f, "setWritable(false)") { f.setWritable(false, false) }
-        warnIfFailed(f, "setExecutable(false)") { f.setExecutable(false, false) }
-        warnIfFailed(f, "setReadable(true, owner)") { f.setReadable(true, true) }
-        warnIfFailed(f, "setWritable(true, owner)") { f.setWritable(true, true) }
-        if (isDir) warnIfFailed(f, "setExecutable(true, owner)") { f.setExecutable(true, true) }
-    }
+        if (aclSupported && applyOwnerOnlyAcl(path, isDir)) return
 
-    private inline fun warnIfFailed(
-        file: File,
-        op: String,
-        action: () -> Boolean,
-    ) {
-        if (!action()) {
-            Log.w(TAG) { "$op failed on ${file.absolutePath}" }
+        // java.io's permission setters: on Windows `setReadable(false)` always fails (the
+        // platform has no "unreadable" bit), which is why ACLs come first. Whatever cannot be
+        // applied here is the filesystem's limit, the same for every file, so say it once.
+        val f = path.toFile()
+        val applied =
+            listOf(
+                f.setReadable(false, false),
+                f.setWritable(false, false),
+                f.setExecutable(false, false),
+                f.setReadable(true, true),
+                f.setWritable(true, true),
+                !isDir || f.setExecutable(true, true),
+            ).all { it }
+        if (!applied && warnedLegacy.compareAndSet(false, true)) {
+            Log.w(TAG) { "this filesystem cannot restrict amy's data files to their owner (first seen on ${f.absolutePath})" }
         }
     }
+
+    /**
+     * Replaces [path]'s ACL with a single entry: its owner, full control. On a directory the
+     * entry is inheritable, so files and folders created inside start owner-only too. False
+     * when the view is missing or the filesystem refuses (FAT, some network shares), so the
+     * caller can fall back.
+     */
+    private fun applyOwnerOnlyAcl(
+        path: Path,
+        isDir: Boolean,
+    ): Boolean =
+        try {
+            val view = Files.getFileAttributeView(path, AclFileAttributeView::class.java)
+            if (view == null) {
+                false
+            } else {
+                val ownerOnly =
+                    AclEntry
+                        .newBuilder()
+                        .setType(AclEntryType.ALLOW)
+                        .setPrincipal(view.owner)
+                        .setPermissions(EnumSet.allOf(AclEntryPermission::class.java))
+                        .apply { if (isDir) setFlags(AclEntryFlag.FILE_INHERIT, AclEntryFlag.DIRECTORY_INHERIT) }
+                        .build()
+                view.acl = listOf(ownerOnly)
+                true
+            }
+        } catch (_: IOException) {
+            false
+        } catch (_: UnsupportedOperationException) {
+            false
+        } catch (_: SecurityException) {
+            false
+        }
 
     private const val TAG = "SecureFileIO"
 }

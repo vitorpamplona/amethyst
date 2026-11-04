@@ -24,6 +24,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.resources.sno_object_details
 import com.vitorpamplona.amethyst.commons.resources.sno_object_scale
 import com.vitorpamplona.amethyst.commons.resources.sno_object_title
 import com.vitorpamplona.amethyst.commons.resources.sno_object_unreadable
+import com.vitorpamplona.amethyst.commons.sno.ui.SnoObjectViewer
 import com.vitorpamplona.amethyst.commons.sno.ui.SnoThumbnail
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
@@ -85,36 +88,79 @@ fun SnoObjectCard(
 
         Spacer(Modifier.width(12.dp))
 
-        Column(Modifier.weight(1f)) {
+        SnoObjectDetails(payload, footnote, Modifier.weight(1f))
+    }
+}
+
+/**
+ * A Simple Nostr Object drawn large enough to turn where it sits, for a note
+ * whose whole content is the object.
+ *
+ * A drag that starts on the object turns it and the feed stays where it is; one
+ * that starts anywhere else scrolls the feed, even across the object. See
+ * [SnoObjectViewer] for why that falls out of where the drag began. A tap opens
+ * it full size, where it can also be moved and zoomed.
+ */
+@Composable
+fun SnoObjectTurntableCard(
+    payload: SnoPayload,
+    eventId: String,
+    onOpen: (() -> Unit)? = null,
+) {
+    Column(MaterialTheme.colorScheme.replyModifier) {
+        SnoObjectViewer(
+            payload = payload,
+            eventId = eventId,
+            contentDescription = payload.name.ifBlank { null },
+            zoomable = false,
+            onTap = onOpen,
+            modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+        )
+        val details = Modifier.fillMaxWidth()
+        SnoObjectDetails(
+            payload,
+            footnote = null,
+            (if (onOpen != null) details.clickable(onClick = onOpen) else details).padding(10.dp),
+        )
+    }
+}
+
+/** The name, the counts and the scale under an object. */
+@Composable
+private fun SnoObjectDetails(
+    payload: SnoPayload,
+    footnote: String?,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier) {
+        Text(
+            text = payload.name.ifBlank { stringResource(Res.string.sno_object_title) },
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = stringResource(Res.string.sno_object_details, payload.vertexCount, payload.faceCount),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.placeholderText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = stringResource(Res.string.sno_object_scale, CyberspaceScale.describeUnit(payload.unit)),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.placeholderText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        footnote?.let {
             Text(
-                text = payload.name.ifBlank { stringResource(Res.string.sno_object_title) },
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = stringResource(Res.string.sno_object_details, payload.vertexCount, payload.faceCount),
+                text = it,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = stringResource(Res.string.sno_object_scale, CyberspaceScale.describeUnit(payload.unit)),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.placeholderText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            footnote?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.placeholderText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
         }
     }
 }

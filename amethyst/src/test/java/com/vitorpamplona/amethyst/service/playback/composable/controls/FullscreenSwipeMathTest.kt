@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.MuteAction
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.computeLevel
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.levelToVolumeIndex
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.muteActionFor
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

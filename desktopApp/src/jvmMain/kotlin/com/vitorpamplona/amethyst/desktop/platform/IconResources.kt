@@ -25,7 +25,6 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import org.jetbrains.skia.Image
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 
 /**
@@ -81,9 +80,7 @@ object IconResources {
      * matches the dock icon shape on macOS.
      */
     val adaptedBitmapPainter: BitmapPainter by lazy {
-        val adapted = adaptedBufferedImage ?: rawBufferedImage
-        val buf = ByteArrayOutputStream()
-        ImageIO.write(adapted, "png", buf)
-        BitmapPainter(Image.makeFromEncoded(buf.toByteArray()).toComposeImageBitmap())
+        // Straight from the pixels: a PNG round-trip of the 1024 px icon cost an encode and a decode.
+        BitmapPainter((adaptedBufferedImage ?: rawBufferedImage).toComposeImageBitmap())
     }
 }

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -124,7 +125,7 @@ class UserSearchEngine(
             }
             // findUsersStartingWith walks the whole user cache; callers pass a
             // Compose scope, so keep the scan off the main dispatcher.
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .launchIn(scope)
     }
 

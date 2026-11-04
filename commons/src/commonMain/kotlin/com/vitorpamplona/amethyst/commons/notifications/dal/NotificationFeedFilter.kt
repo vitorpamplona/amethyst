@@ -29,11 +29,11 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
-import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.wot.curatedHidesByTrust
 import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -103,7 +104,6 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class NotificationFeedFilter(
@@ -114,7 +114,7 @@ class NotificationFeedFilter(
     // Lazy so the eagerly-collected topNavFilter pipeline is only built when
     // the split UI actually opens this filter.
     private val overrideFollowLists: StateFlow<IFeedTopNavFilter>? by lazy {
-        modeOverride?.let { account.topNavFilterFlow(MutableStateFlow(it)) }
+        modeOverride?.let { account.pinnedNotificationFollowLists(it) }
     }
 
     companion object {
@@ -313,21 +313,12 @@ class NotificationFeedFilter(
                     // reply to the user's reaction stays detectable even when the
                     // reaction event is not in the local cache (the replyTo-author
                     // check above needs it loaded).
+                    //
+                    // This also covers replies to the user's zaps: the receipt is
+                    // signed by the recipient's lightning provider, so its `P`/`p` name
+                    // the provider, and the reply's extra lowercase `p` on the zapper
+                    // is what marks it as theirs.
                     if (event.rootAuthorKeys().contains(authorHex) || event.replyAuthorKeys().contains(authorHex)) {
-                        return true
-                    }
-
-                    // Replies to the user's zaps: the receipt — and therefore the
-                    // author tags above — is signed by the recipient's lightning
-                    // provider, not the zapper. The `k` tag (or the cached parent)
-                    // proves the comment targets a zap; the reply's explicit p tag
-                    // on the user marks it as theirs.
-                    val targetsZapReceipt =
-                        event.hasScopeKind(ZapReceiptEvent.KIND.toString()) ||
-                            event.hasScopeKind(Bolt12ZapEvent.KIND.toString()) ||
-                            note.replyTo?.any { it.event is ZapReceiptEvent || it.event is Bolt12ZapEvent } == true
-
-                    if (targetsZapReceipt && event.isTaggedUser(authorHex)) {
                         return true
                     }
                 }
@@ -466,9 +457,14 @@ class NotificationFeedFilter(
         note: Note,
         me: HexKey,
     ): Boolean {
-        val event = note.event
-        if (event !is ReactionEvent && event !is RepostEvent && event !is GenericRepostEvent) return false
-        if (event.tags.any { it.getOrNull(0) == "p" }) return false
+        val namesAuthor =
+            when (val event = note.event) {
+                is ReactionEvent -> event.originalAuthor().isNotEmpty()
+                is RepostEvent -> event.originalAuthorKeys().isNotEmpty()
+                is GenericRepostEvent -> event.originalAuthorKeys().isNotEmpty()
+                else -> return false
+            }
+        if (namesAuthor) return false
         return note.replyTo
             ?.lastOrNull()
             ?.author
@@ -485,9 +481,13 @@ class NotificationFeedFilter(
         note: Note,
         me: HexKey,
     ): Boolean {
-        val event = note.event
-        if (event !is ChatEvent && event !is StreamMessageV2Event) return false
-        if (!event.isTaggedUser(me)) return false
+        val mentionsMe =
+            when (val event = note.event) {
+                is ChatEvent -> me in event.mentionKeys()
+                is StreamMessageV2Event -> me in event.mentions()
+                else -> return false
+            }
+        if (!mentionsMe) return false
         val group = LocalCache.getRelayGroupChannelForContent(note) ?: return false
         return BuzzRelayDialect.isBuzz(group.groupId.relayUrl)
     }
@@ -512,9 +512,14 @@ class NotificationFeedFilter(
         note: Note,
         me: HexKey,
     ): Boolean {
-        val event = note.event
-        if (event !is ChatEvent && event !is StreamMessageV2Event) return false
-        if (event.tags.any { it.getOrNull(0) == "p" }) return false
+        val event = note.event ?: return false
+        val mentionsAnyone =
+            when (event) {
+                is ChatEvent -> event.mentionKeys().isNotEmpty()
+                is StreamMessageV2Event -> event.mentions().isNotEmpty()
+                else -> return false
+            }
+        if (mentionsAnyone) return false
 
         val threadTargets = setOfNotNull(event.tags.buzzThreadReply(), event.tags.buzzThreadRoot())
         if (threadTargets.isEmpty()) return false
@@ -607,6 +612,10 @@ class NotificationFeedFilter(
         ) {
             return false
         }
+        // A DM protocol turned off in Settings › Messages doesn't notify either.
+        if (noteEvent is ChatroomKeyable && !account.chatFeedToggles.isEnabled(noteEvent)) {
+            return false
+        }
         val notifAuthor =
             if (noteEvent is ZapReceiptEvent) {
                 val zapRequest = noteEvent.zapRequest
@@ -658,25 +667,10 @@ class NotificationFeedFilter(
         // gatherer reference from every account/community that ever touched them, so require the
         // community to be one THIS account has currently joined (mirrors the Marmot check above) —
         // otherwise a note from a prior account or a left community would leak onto Notifications.
-        fun Note?.inJoinedConcordCommunity() =
-            this?.inGatherers?.any { g ->
-                g is ConcordChannel && account.concordSessions.sessionFor(g.channelId.communityId) != null
-            } == true
-
-        val isConcordMessage = it.inJoinedConcordCommunity()
-
-        // A like/repost is NOT itself attached to the channel gatherer — only chat messages/replies are
-        // (see LocalCache.consumeConcordRumor) — so `inGatherers` never flags it as Concord, and its
-        // author (a fellow member) usually isn't a follow, so it falls through the follow filter and is
-        // dropped. Recognize it through its TARGET: a reaction/repost pointing at a message in a
-        // community I've joined is a Concord reaction, and bypasses the follow filter like a reply does.
-        // Relevance (does it target ME) is still enforced below by the p-tag gate — a well-formed kind-7
-        // p-tags the reacted author (NIP-25), which is exactly what our own ChannelChat.reaction writes.
-        val isConcordReaction =
-            (noteEvent is ReactionEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent) &&
-                it.replyTo?.lastOrNull().inJoinedConcordCommunity()
-
-        val isConcord = isConcordMessage || isConcordReaction
+        // Concord membership (see Account.isConcordActivity): a message in a community this
+        // account joined, or a reaction/repost to one.
+        val isConcordMessage = account.isInJoinedConcordCommunity(it)
+        val isConcord = account.isConcordActivity(it)
 
         // A bare reaction/repost (no p-tag) to my own already-loaded note — e.g. a Buzz like, which is
         // just `["e", <id>]` — is relevant to me: bypass the follow filter and satisfy the p-tag gate,
@@ -711,7 +705,10 @@ class NotificationFeedFilter(
             // For a Concord note the explicit p-tag above IS the relevance signal (the reply/reaction/
             // mention targets me directly), so skip the per-kind heuristic — which for a reaction would
             // otherwise need my target message already loaded to resolve replyTo.
-            (isRawGlobal || isConcord || isThreadReplyToMe || tagsAnEventByUser(it, loggedInUserHex))
+            (isRawGlobal || isConcord || isThreadReplyToMe || tagsAnEventByUser(it, loggedInUserHex)) &&
+            // Curated also applies the Web of Trust, with the same exemptions as push. Last, so
+            // only notes that are notifications at all pay for the lookup.
+            !(followList() is TopFilter.Selected && noteEvent != null && notifAuthor != null && account.curatedHidesByTrust(noteEvent, notifAuthor, inJoinedCommunity = isConcord))
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()

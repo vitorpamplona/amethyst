@@ -50,15 +50,17 @@ import com.vitorpamplona.amethyst.commons.chats.ui.ChatGroupPosition
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiCount
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.privateChats.isSubjectOnlyChatMessage
 import com.vitorpamplona.amethyst.commons.notifications.NotificationContent
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.RenderZapRaiser
 import com.vitorpamplona.amethyst.commons.ui.note.WatchBlockAndReport
 import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.DisplayZapSplits
+import com.vitorpamplona.amethyst.commons.ui.note.hovercard.UserHoverCardAnchor
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.commons.ui.note.types.observeChatMessageEdit
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderBuzzActivityRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderBuzzDiff
@@ -83,13 +85,13 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.is
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
-import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
@@ -104,6 +106,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 
 @Composable
 fun ChatroomMessageCompose(
@@ -397,7 +400,9 @@ fun NormalChatNote(
             if (drawAuthorInfo && !isLoggedInUser && !innerQuote) {
                 {
                     note.author?.let { author ->
-                        ChatAuthorAvatar(author.pubkeyHex, accountViewModel) { nav.nav(routeFor(author)) }
+                        UserHoverCardAnchor(author, accountViewModel, nav) {
+                            ChatAuthorAvatar(author.pubkeyHex, accountViewModel) { nav.nav(routeFor(author)) }
+                        }
                     }
                 }
             } else {
@@ -661,7 +666,18 @@ fun NoteRow(
             hasMip04Media(note.event) -> RenderMarmotEncryptedMedia(note, bgColor, accountViewModel, nav)
             // `encrypted-media-v2` is a separate branch because its imeta has
             // no `url` field for the NIP-92 parser above to anchor on.
-            hasEncryptedMediaV2(note.event) -> RenderEncryptedMediaV2(note, bgColor, accountViewModel, nav)
+            hasEncryptedMediaV2(note.event) ->
+                Column {
+                    RenderEncryptedMediaV2(note, bgColor, accountViewModel, nav)
+                    // The content of a media message is its caption (MDK and our own sender
+                    // both put it there), and it may carry custom emoji of its own.
+                    if (note.event?.content?.isNotBlank() == true) {
+                        RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                    }
+                }
+            // A poll renders like a poll anywhere else; its room, when it has one, carries the votes.
+            // Quoted in a reply it is a preview, not a ballot.
+            note.event is PollEvent -> RenderPoll(note, innerQuote, canPreview, if (innerQuote) 0 else 1, bgColor, accountViewModel, nav)
             else -> {
                 // Concord, Buzz and Marmot all overlay edits on their messages (kinds 3302,
                 // 40003 and 1009): when one exists, render the winning edit's content instead of

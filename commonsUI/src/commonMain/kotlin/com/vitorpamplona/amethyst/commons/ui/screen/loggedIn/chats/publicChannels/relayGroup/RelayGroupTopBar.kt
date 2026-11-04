@@ -43,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,6 +80,9 @@ import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_l
 import com.vitorpamplona.amethyst.commons.resources.relay_group_delete
 import com.vitorpamplona.amethyst.commons.resources.relay_group_delete_confirm
 import com.vitorpamplona.amethyst.commons.resources.relay_group_invite_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_join_confirm
+import com.vitorpamplona.amethyst.commons.resources.relay_group_join_invite_confirm
+import com.vitorpamplona.amethyst.commons.resources.relay_group_join_title
 import com.vitorpamplona.amethyst.commons.resources.relay_group_menu_edit
 import com.vitorpamplona.amethyst.commons.resources.relay_group_menu_members
 import com.vitorpamplona.amethyst.commons.resources.relay_group_pending
@@ -126,17 +130,29 @@ fun RelayGroupTopBar(
         if (membership.isMember()) requested = false
     }
 
-    // Arrived via an invite link carrying a join code (`wss://relay'id?code=…`): the
-    // user already opted in by tapping it, so fire the kind-9021 join once (with the
-    // code) instead of making them re-enter it. Guarded to exactly once and skipped if
-    // the roster already shows us as a member.
-    var autoJoined by remember(channel.groupId) { mutableStateOf(false) }
-    LaunchedEffect(channel.groupId, inviteCode, membership) {
-        if (inviteCode != null && !autoJoined && !membership.isMember()) {
-            autoJoined = true
-            requested = true
-            accountViewModel.joinRelayGroup(channel, inviteCode)
+    // Arrived via an invite link carrying a join code (`wss://relay'id?code=…`): offer the join once,
+    // with the code filled in so the user doesn't re-enter it. Asked rather than sent, because the link
+    // can come from any app or an NFC tag, and joining publishes a kind 9021 and the public group list.
+    // Skipped if the roster shows us as a member, so it waits for the roster to arrive; a relay that
+    // publishes none (some private groups) gets the offer after a short wait instead.
+    var inviteOffered by rememberSaveable(channel.groupId) { mutableStateOf(false) }
+    var rosterWaitOver by remember(channel.groupId) { mutableStateOf(false) }
+    LaunchedEffect(channel.groupId, inviteCode) {
+        if (inviteCode != null) {
+            delay(ROSTER_WAIT_MS)
+            rosterWaitOver = true
         }
+    }
+    if (inviteCode != null && !inviteOffered && !membership.isMember() && (channel.hasRoster() || rosterWaitOver)) {
+        JoinFromInviteDialog(
+            groupName = channel.toBestDisplayName(),
+            onConfirm = {
+                inviteOffered = true
+                requested = true
+                accountViewModel.joinRelayGroup(channel, inviteCode)
+            },
+            onDismiss = { inviteOffered = true },
+        )
     }
     val displayMembership = if (!membership.isMember() && requested) RelayGroupMembership.PENDING else membership
 
@@ -635,3 +651,28 @@ private fun observeBuzzCanvas(channelId: String): State<Boolean> {
     val version by state.canvasUpdates.collectAsStateWithLifecycle()
     return remember(channelId, version) { mutableStateOf(state.canvasNote != null) }
 }
+
+@Composable
+private fun JoinFromInviteDialog(
+    groupName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(Res.string.relay_group_join_title)) },
+        text = { Text(stringRes(Res.string.relay_group_join_invite_confirm, groupName)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringRes(Res.string.relay_group_join_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(Res.string.cancel))
+            }
+        },
+    )
+}
+
+private const val ROSTER_WAIT_MS = 3_000L

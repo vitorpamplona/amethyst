@@ -646,12 +646,9 @@
     <string name="wallet_connect_connect_app">Kết nối Ví</string>
     <string name="see_relay_feed">Xem nguồn cấp Relay</string>
     <string name="pledge_amount_in_sats">Số tiền cam kết (Sats)</string>
-    <string name="poll_option_description">Mô tả tùy chọn bình chọn</string>
     <string name="poll_zap_value_min">Zap tối thiểu</string>
     <string name="poll_zap_value_max">Zap tối đa</string>
     <string name="poll_consensus_threshold">Đồng thuận</string>
-    <string name="poll_closing_date_time">Ngày &amp; Giờ Đóng Bình chọn</string>
-    <string name="poll_closing_in">Bình chọn đóng trong %1$s</string>
     <string name="looking_for_event">Đang tìm kiếm Sự kiện %1$s</string>
     <string name="send_zap">Gửi Zap</string>
     <string name="custom_zaps_add_a_message">Thêm tin nhắn công khai</string>
@@ -699,7 +696,6 @@
     <string name="uploading_state_hashing">Đang băm</string>
     <string name="uploading_state_finished">Hoàn tất</string>
     <string name="uploading_state_error">Lỗi</string>
-    <string name="connect_via_tor1">Điều chỉnh</string>
     <string name="connect_via_tor2">Cài đặt Tor</string>
     <string name="yes">Có</string>
     <string name="no">Không</string>
@@ -775,7 +771,6 @@
     <string name="show_sensitive_content_explainer">Hiển thị thông báo cảnh báo khi tác giả bài đăng đánh dấu là nhạy cảm</string>
     <string name="max_hashtag_limit_title">Số hashtag tối đa mỗi bài đăng</string>
     <string name="max_hashtag_limit_explainer">Ẩn bài đăng có nhiều hashtag hơn giới hạn này. Đặt 0 để tắt</string>
-    <string name="new_reaction_symbol">Biểu tượng phản ứng mới</string>
     <string name="zapraiser_explainer">Thêm mục tiêu số lượng sats cần huy động cho bài đăng này. Các client hỗ trợ có thể hiển thị dưới dạng thanh tiến trình để khuyến khích quyên góp</string>
     <string name="zapraiser_target_amount_in_sats">Số lượng mục tiêu tính bằng Sats</string>
     <string name="sats_to_complete">Zapraiser tại %1$s. Còn %2$s sats để đạt mục tiêu</string>
@@ -914,9 +909,7 @@
     <string name="created_at">Tạo lúc</string>
     <string name="guidelines">Hướng dẫn</string>
     <string name="moderators">Người kiểm duyệt</string>
-    <string name="login_with_external_signer">Đăng nhập bằng Amber</string>
     <string name="status_update">Cập nhật trạng thái của bạn</string>
-    <string name="poll_zap_value_min_max_explainer">Các phiếu bầu được tính theo số lượng zap. Bạn có thể đặt số lượng tối thiểu để tránh spam và số lượng tối đa để tránh một người zap lớn chiếm lĩnh cuộc bình chọn. Sử dụng cùng một số lượng ở cả hai trường để đảm bảo mỗi phiếu bầu có giá trị như nhau. Để trống để chấp nhận bất kỳ số lượng nào.</string>
     <string name="error_dialog_talk_to_user">Nhắn tin cho Người dùng</string>
     <string name="error_dialog_talk_to_user_name">Nhắn tin cho %1$s</string>
     <string name="zap_split_title">Chia và Chuyển tiếp Zap</string>
@@ -1426,7 +1419,6 @@
     <string name="closing_time">Thời gian đóng</string>
     <string name="confirm">Xác nhận</string>
     <string name="next">Tiếp theo</string>
-    <string name="add_poll_option_button">Nút thêm tùy chọn bình chọn</string>
     <string name="go_back">Quay lại</string>
     <string name="approve">Chấp thuận</string>
     <string name="connected">Đã kết nối</string>
@@ -1434,13 +1426,9 @@
     <string name="poll_submit">Gửi</string>
     <string name="poll_view_results">Xem kết quả</string>
     <string name="restart">Khởi động lại</string>
-    <string name="chess_accept">Chấp nhận</string>
-    <string name="chess_decline">Từ chối</string>
     <string name="new_chess_game">Trò chơi cờ vua mới</string>
     <string name="chess_loading_game">Đang tải trò chơi…</string>
     <string name="chess_game_not_found">Không tìm thấy trò chơi</string>
-    <string name="chess_game_waiting">Trò chơi này có thể đã kết thúc hoặc đang chờ đối thủ.</string>
-    <string name="chess_game_id">ID trò chơi: %1$s…</string>
     <string name="badge_and_n_others"> và %1$d người khác</string>
     <string name="remove_language">Xóa %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Bắt đầu với nguồn tin tuyệt vời bằng cách theo dõi những người giống như người bạn tin tưởng.</string>
@@ -2365,7 +2353,6 @@
     <string name="media_added_to_profile_gallery">Đã thêm media vào Thư viện Hồ sơ của bạn</string>
     <string name="media_download_has_started_toast">Đang tải phương tiện xuống…</string>
     <string name="media_servers">Máy chủ Phương tiện</string>
-    <string name="media_too_big_for_nip95">Media quá lớn cho NIP-95</string>
     <string name="messages_cant_upload_explainer">Hãy nhập đích đến của tin nhắn trước</string>
     <string name="messages_cant_upload_title">Không thể tải lên</string>
     <string name="messages_new_message_subject">Chủ đề</string>
@@ -2586,7 +2573,6 @@
     <string name="poll_author_no_vote">Tác giả bình chọn không thể bình chọn trong chính bình chọn của họ.</string>
     <string name="poll_is_closed_explainer">Bình chọn đã đóng cho các phiếu mới</string>
     <string name="poll_multiple_choice">Nhiều lựa chọn</string>
-    <string name="poll_option_index">Tùy chọn %1$s</string>
     <string name="poll_single_choice">Một lựa chọn</string>
     <string name="poll_unable_to_vote">Không thể bình chọn</string>
     <string name="polls">Cuộc thăm dò</string>
@@ -2831,7 +2817,6 @@
     <string name="upload_error_title">Lỗi tải lên</string>
     <string name="upload_error_voice_message_exception">Tải lên giọng nói thất bại: %1$s</string>
     <string name="upload_error_voice_message_failed">Không thể tải lên tin nhắn thoại</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 chưa được hỗ trợ cho tin nhắn thoại</string>
     <string name="uptime">%1$d% thời gian hoạt động</string>
     <string name="use_internal_tor">Bật công cụ Tor</string>
     <string name="use_internal_tor_explainer">Sử dụng phiên bản nội bộ hoặc Orbot</string>
@@ -2885,4 +2870,8 @@
          what leaves the device; the fork strings say why the old phone stops. -->
     <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
 </resources>

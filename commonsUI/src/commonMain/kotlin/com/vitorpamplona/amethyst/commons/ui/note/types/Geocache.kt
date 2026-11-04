@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_nearby
 import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayDirectory
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.note.FoundLogProof
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheCard
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheFoundLogCard
@@ -66,7 +67,7 @@ fun RenderGeocache(
     val claimed = remember(noteEvent) { noteEvent.firstToFindWinner() != null }
     val distance = distanceToCache(noteEvent, accountViewModel)
 
-    GeocacheCard(noteEvent, accountViewModel.settings.showImages(), claimed, distance) { latitude, longitude, pinColor, pinEmoji, pinAlpha, aspectRatio ->
+    GeocacheCard(noteEvent, (LocalMediaCapture.current != null || accountViewModel.settings.showImages()), claimed, distance) { latitude, longitude, pinColor, pinEmoji, pinAlpha, aspectRatio ->
         LocationPreviewMap(
             latitude = latitude,
             longitude = longitude,
@@ -160,7 +161,7 @@ fun RenderGeocacheFoundLog(
     val noteEvent = baseNote.event as? GeocacheFoundLogEvent ?: return
     val address = remember(noteEvent) { noteEvent.geocache() }
     val hasProof = remember(noteEvent) { noteEvent.hasVerificationAttached() }
-    val showImages = accountViewModel.settings.showImages()
+    val showImages = (LocalMediaCapture.current != null || accountViewModel.settings.showImages())
 
     if (address == null) {
         GeocacheFoundLogCard(noteEvent, showImages, FoundLogProof.NONE)

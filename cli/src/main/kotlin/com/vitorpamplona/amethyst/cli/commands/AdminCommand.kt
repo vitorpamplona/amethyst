@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
@@ -178,7 +179,7 @@ object AdminCommand {
             if (response.error != null) return Output.error("relay_error", response.error)
             // Reparse the kotlinx JSON result through Jackson so it renders as
             // structured JSON (text + --json) instead of a toString blob.
-            val resultNode = response.result?.toString()?.let { Output.mapper.readTree(it) }
+            val resultNode = response.result?.toString()?.let { CliJson.parse(it) }
             Output.emit(mapOf("relay" to relay.url, "method" to method, "result" to resultNode))
         }
         return 0

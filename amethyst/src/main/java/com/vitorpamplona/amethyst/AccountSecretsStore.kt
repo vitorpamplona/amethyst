@@ -24,7 +24,10 @@ import com.vitorpamplona.amethyst.commons.model.preferences.AccountSecrets
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountSecretsEncryptedStores
 import com.vitorpamplona.amethyst.commons.model.preferences.GeohashIdentitySecrets
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import okio.Path.Companion.toOkioPath
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Moves the per-account secrets — NIP-46 bunker material, wallet connection
@@ -53,6 +56,14 @@ class AccountSecretsStore(
     }
 
     /**
+     * Accounts whose store could not be read this run, so they run on the legacy values. Those
+     * lack what only this store holds (a remote signer's bunker address and transport key):
+     * writing them back would delete that for good, so [mirror] leaves these accounts alone
+     * until a read succeeds. The legacy file still takes every save meanwhile.
+     */
+    private val unreadable: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    /**
      * The account's secrets, migrating out of the legacy file on first use.
      *
      * @param legacy what the legacy encrypted file holds, read by the caller
@@ -67,8 +78,10 @@ class AccountSecretsStore(
                 stores.loadSecrets(npub)
             } catch (e: Exception) {
                 Log.w(TAG, "Could not read the secrets store for $npub; using the legacy file", e)
+                unreadable.add(npub)
                 return legacy
             }
+        unreadable.remove(npub)
 
         if (stored != null) return stored
 
@@ -82,6 +95,10 @@ class AccountSecretsStore(
         npub: String,
         value: AccountSecrets,
     ) {
+        if (npub in unreadable) {
+            Log.w(TAG, "Not writing the secrets for $npub: this run could not read them, so it would drop what only that store holds")
+            return
+        }
         try {
             stores.saveSecrets(npub, value)
         } catch (e: Exception) {
@@ -158,6 +175,7 @@ class AccountSecretsStore(
         try {
             stores.removeAccount(npub)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w(TAG, "Could not drop the secrets store for $npub", e)
         }
     }

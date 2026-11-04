@@ -20,23 +20,15 @@
  */
 package com.vitorpamplona.amethyst.napplet
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
 import com.vitorpamplona.amethyst.napplethost.WebFileChooserLauncher
 
 /**
- * Invisible main-process host for one file pick made on behalf of an **embedded** WebView surface.
- *
- * The surface renders from the keyless `:napplet` process, which has no Activity to start a picker or
- * a permission prompt from, so [WebFileChooserCoordinator] launches this instead. It exists only long
- * enough to run the pick and report the result, and it reports on every exit — a chosen file, a
- * cancel, a system teardown — because the page's `<input type="file">` stays busy until it hears
- * something back.
+ * Invisible main-process host for one file pick made on behalf of an **embedded** WebView surface
+ * ([WebFileChooserCoordinator]). The surface renders from the keyless `:napplet` process, which has no
+ * Activity to start a picker or a permission prompt from. The page's `<input type="file">` stays busy
+ * until it hears back, which [PickerHostActivity] guarantees on every exit.
  */
-class WebFileChooserActivity : ComponentActivity() {
-    private var token: String? = null
-    private var reported = false
-
+class WebFileChooserActivity : PickerHostActivity<WebFileChooserCoordinator.Ask, Array<String>>(WebFileChooserCoordinator.handoff) {
     // Field, not a local: registerForActivityResult must run before this activity reaches STARTED.
     private val chooser =
         WebFileChooserLauncher(this) { uris ->
@@ -44,29 +36,7 @@ class WebFileChooserActivity : ComponentActivity() {
             finish()
         }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        val token = intent.getStringExtra(WebFileChooserCoordinator.EXTRA_TOKEN)
-        this.token = token
-        val ask = token?.let { WebFileChooserCoordinator.pendingFor(it) }
-        if (ask == null) {
-            // No pending request under this token: the surface went away, or the process restarted and
-            // the request died with it. Nothing to report to.
-            reported = true
-            finish()
-            return
-        }
-
-        // A recreated instance has lost the in-flight request that its result would be matched against
-        // (configChanges keeps this rare — a system kill, not a rotation), and relaunching would stack a
-        // second picker on the first. Release the page's input now rather than let it wait on a result
-        // that can no longer be routed anywhere.
-        if (savedInstanceState != null) {
-            finish()
-            return
-        }
-
+    override fun launch(ask: WebFileChooserCoordinator.Ask) {
         chooser.launch(
             acceptTypes = ask.acceptTypes,
             allowMultiple = ask.allowMultiple,
@@ -75,27 +45,12 @@ class WebFileChooserActivity : ComponentActivity() {
         )
     }
 
-    /** Fail-open toward the page: any unreported teardown still releases its file input. */
-    override fun finish() {
-        report(null)
-        super.finish()
-    }
-
     /**
-     * The system can destroy this host without ever calling [finish] — a low-memory kill while the
-     * picker is on top. Without this the page's file input would wait on a result nobody is left to
-     * send, dead for the life of the page, and the coordinator would hold the reply callback (and the
-     * controller behind it) forever.
+     * The request's scratch files and camera grants go with it: without this a host killed under the
+     * picker would leave them for the stale sweep to find a day later.
      */
     override fun onDestroy() {
         chooser.teardown()
-        report(null)
         super.onDestroy()
-    }
-
-    private fun report(uris: Array<String>?) {
-        if (reported) return
-        reported = true
-        token?.let { WebFileChooserCoordinator.complete(it, uris) }
     }
 }

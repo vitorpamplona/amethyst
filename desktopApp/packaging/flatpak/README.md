@@ -1,45 +1,69 @@
 # Flatpak packaging for Amethyst Desktop
 
-This directory contains the Flatpak manifest and associated metadata. It is
-used two ways:
+App ID: **`com.vitorpamplona.amethyst.Amethyst`**. Earlier bundles used two
+other IDs:
 
-1. **Release CI** (`.github/workflows/create-release.yml`, `linux-portable`
-   leg) builds a single-file bundle from it on every tag and attaches it to
-   the GitHub Release as `amethyst-desktop-<version>-linux-x64.flatpak`.
-2. **Flathub submission** — the `flathub/` subdirectory holds a
-   submission-ready variant that builds from the published GitHub Release
-   tarball (Flathub's build servers must fetch sources themselves; the
-   local `type: dir` tree used by CI is not allowed there).
+- Up to v1.17.0: `com.vitorpamplona.amethyst.Desktop`. Flathub forbids IDs that
+  end in generic terms like `.desktop`, `.app` or `.linux` ("it's fine to repeat
+  the application name in such cases", hence `.Amethyst`).
+- v1.18.0: `com.vitorpamplona.amethyst`, the Android package name. Nostr app
+  stores (NIP-82) key an app's listing on its native ID: Zapstore lists the
+  Android app under `com.vitorpamplona.amethyst`, and Orchard, a Flatpak store,
+  would list the Flatpak under its app ID. Both listings are signed by the same
+  key, so one shared ID would make each store's publish overwrite the other's
+  listing.
+
+`BUILDING.md` § Uninstall + state paths explains how users move their data to
+the new ID.
+
+Release CI (`.github/workflows/create-release.yml`, `linux-portable` leg)
+builds a single-file bundle from this directory on every tag and attaches it to
+the GitHub Release as `amethyst-desktop-<version>-linux-<x64|arm64>.flatpak`.
+
+**Amethyst is not on Flathub.** The manifest here repackages a prebuilt tree,
+which Flathub does not accept; [`flathub/`](flathub/) has the source build. See
+[Flathub](#flathub) below.
 
 ## Files
 
-- `com.vitorpamplona.amethyst.Desktop.yml` — Flatpak manifest. It packages
-  the **prebuilt** jpackage tree from
-  `./gradlew :desktopApp:createReleaseDistributable` (which bundles its own
-  trimmed JRE — that's why there is no openjdk module/sdk-extension).
-- `com.vitorpamplona.amethyst.Desktop.metainfo.xml` — AppStream metadata.
-  Release CI injects the `<release>` entry for the version being built
-  (the checked-in file deliberately carries none); screenshots still need
-  to be added before any Flathub submission.
-- `com.vitorpamplona.amethyst.Desktop.desktop` — XDG desktop entry
-- `icons/512/com.vitorpamplona.amethyst.Desktop.png` — 512x512 icon (copy of
-  `desktopApp/src/jvmMain/resources/icon.png`)
-- `flathub/` — self-contained, copy-ready Flathub submission dir: its own
-  manifest (archive source pinned to the release tarball URL + sha256, with
-  `x-checker-data` so Flathub's update bot bumps it), its own metainfo
-  (carries the permanent `<releases>` history Flathub requires), desktop
-  entry, icon, and `flathub.json` — currently gated to `only-arches:
-  x86_64` so the Flathub build machinery never tries the aarch64 tarball
-  before we've validated it end-to-end on Flathub's aarch64 builders. GitHub
-  releases already ship aarch64 flatpak bundles (built from the same source
-  tree on `ubuntu-24.04-arm`); flipping `only-arches` to include `aarch64`
-  is the follow-up once we've smoke-tested a Flathub aarch64 build.
+- `com.vitorpamplona.amethyst.Amethyst.yml`: Flatpak manifest for the GitHub
+  Release bundle. It packages the **prebuilt** jpackage tree from
+  `./gradlew :desktopApp:createReleaseDistributable`, which bundles its own
+  trimmed JRE (hence no openjdk extension). Build that tree on the JetBrains
+  Runtime (see [Sandbox notes](#sandbox-notes)), or the bundle can't draw on
+  Wayland.
+- `com.vitorpamplona.amethyst.Amethyst.metainfo.xml`: AppStream metadata. It
+  keeps the release history: add an entry when tagging (`RELEASE_OPS.md` § Pre-tag
+  checklist). CI injects a bare entry for the version it builds if one is
+  missing.
+- `com.vitorpamplona.amethyst.Amethyst.desktop`: XDG desktop entry.
+- `icons/512/com.vitorpamplona.amethyst.Amethyst.png`: 512x512 icon (copy of
+  `desktopApp/src/jvmMain/resources/icon.png`).
+
+Validate after editing:
+
+```bash
+appstreamcli validate --pedantic com.vitorpamplona.amethyst.Amethyst.metainfo.xml
+desktop-file-validate com.vitorpamplona.amethyst.Amethyst.desktop
+```
+
+Both pass. `--pedantic` prints one hint, `cid-contains-uppercase-letter`: the
+`.Amethyst` component is capitalised, which Flathub's ID rules allow. Flathub's
+own linter (`flatpak-builder-lint` from the `org.flatpak.Builder` app) passed
+on the manifest under the previous ID and has not been re-run since the rename;
+on the built repo it reported only the missing screenshot:
+
+```bash
+flatpak install --user flathub org.flatpak.Builder
+flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest com.vitorpamplona.amethyst.Amethyst.yml
+flatpak run --command=flatpak-builder-lint org.flatpak.Builder repo <path-to>/repo
+```
 
 ## Local build
 
 ```bash
-# 1. Build the app tree the manifest packages
-./gradlew :desktopApp:createReleaseDistributable
+# 1. Build the app tree the manifest packages, on the JetBrains Runtime 21 (jbrsdk)
+JAVA_HOME=/path/to/jbrsdk-21 ./gradlew :desktopApp:createReleaseDistributable
 
 # 2. Tooling + Flathub remote (one-time)
 sudo apt-get install -y flatpak flatpak-builder   # or distro equivalent
@@ -48,63 +72,131 @@ flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/fl
 # 3. Build + install locally
 cd desktopApp/packaging/flatpak
 flatpak-builder --user --install --install-deps-from=flathub --force-clean \
-  build-dir com.vitorpamplona.amethyst.Desktop.yml
-flatpak run com.vitorpamplona.amethyst.Desktop
+  build-dir com.vitorpamplona.amethyst.Amethyst.yml
+flatpak run com.vitorpamplona.amethyst.Amethyst
 ```
 
 To produce the distributable single-file bundle instead (what CI ships):
 
 ```bash
 flatpak-builder --user --install-deps-from=flathub --force-clean \
-  --repo=repo build-dir com.vitorpamplona.amethyst.Desktop.yml
-flatpak build-bundle repo amethyst.flatpak com.vitorpamplona.amethyst.Desktop \
+  --default-branch=stable --repo=repo build-dir com.vitorpamplona.amethyst.Amethyst.yml
+flatpak build-bundle repo amethyst.flatpak com.vitorpamplona.amethyst.Amethyst stable \
   --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
 ```
 
-Installing the bundle: `flatpak install --user ./amethyst.flatpak`. The
+The bundle is on the Flatpak branch `stable`, the branch Flathub uses; Orchard
+refuses a bundle on any other branch. Installing the bundle:
+`flatpak install --user ./amethyst.flatpak`. The
 `--runtime-repo` baked in above lets flatpak fetch the freedesktop runtime
 from Flathub automatically on the user's machine.
 
+## Runtime
+
+`org.freedesktop.Platform` **26.08**. Each freedesktop runtime gets about two
+years of support (a new one ships every August), so bump `runtime-version`
+yearly. CI reads the version from the manifest when it installs the runtime.
+
+Codecs: since 25.08 the runtime declares `org.freedesktop.Platform.codecs-extra`
+(the successor of `ffmpeg-full`: H.264/H.265 and friends) and flatpak installs
+it with the runtime, so the manifest declares no codec extension. Don't set
+`GST_PLUGIN_SYSTEM_PATH` in `finish-args`: the runtime's own value already
+lists the codecs-extra plugin directory, and overriding it hides those plugins.
+
 ## Sandbox notes
 
-- `--socket=x11` (not wayland/fallback-x11): Compose Desktop renders through
-  AWT/skiko, which is X11-only on Linux and runs under XWayland on Wayland
-  sessions.
+- `--socket=wayland` + `--socket=fallback-x11`: the app draws natively on
+  Wayland and gets X11 only on X11 sessions. This needs the bundled runtime to
+  be the JetBrains Runtime (its AWT has a Wayland toolkit, `WLToolkit`; stock
+  OpenJDK's AWT is X11-only), which release CI builds the Linux legs on. Skiko's
+  window surface needs X11, so on Wayland the app draws through Swing with
+  Skiko's CPU renderer (`desktopApp/.../platform/WaylandDisplay.kt`,
+  `AppWindow.kt`). `flatpak run --env=AMETHYST_X11=1 --socket=x11
+  com.vitorpamplona.amethyst.Amethyst` puts it back on XWayland.
+- File access is limited to Downloads and Pictures. AWT's `FileDialog` calls
+  the GTK file chooser directly rather than the file chooser portal, so it can
+  only browse what the sandbox can see.
+- `--talk-name=org.freedesktop.secrets`: `java-keyring` stores the account keys
+  through the Secret Service API.
+- `--talk-name=org.freedesktop.Notifications`: `NucleusNotificationDispatcher`
+  sends desktop notifications over D-Bus through `nucleus.notification-linux`
+  (AWT's tray is only its fallback).
+- `--persist=.amethyst` and `--persist=.java`: the app writes accounts,
+  drafts, scheduled posts and the local relay under `~/.amethyst`, and Java
+  Preferences (relay lists, search history) under `~/.java`. Without home
+  access, writes there are lost when the sandbox exits; `--persist` keeps them
+  under `~/.var/app/com.vitorpamplona.amethyst.Amethyst/`. Tor state and the
+  image cache already follow `XDG_DATA_HOME`/`XDG_CACHE_HOME`.
+- Scheduled posts only publish while the app is open. `OsScheduler` registers
+  a systemd user timer (or crontab entry) to publish while the app is closed,
+  and neither can be reached from the sandbox.
+- The "now playing" reader (`MprisNowPlayingReader`) queries other players
+  over the session bus with `dbus-send`. The sandbox grants no
+  `org.mpris.MediaPlayer2.*` access, so it finds nothing in the Flatpak.
 
-## Codec coverage
+## Flathub
 
-- HEVC / VP9 / AV1: covered via `org.freedesktop.Platform.ffmpeg-full`
-  add-extension declared in the manifest. Flatpak downloads it on install.
-- HLS, H.264, AAC, MP3, Opus: covered by the GStreamer plugin set in
-  `org.freedesktop.Platform 24.08` itself.
+Amethyst has not been submitted yet. [`flathub/`](flathub/) holds a manifest
+that builds from source as Flathub requires, and the tools that keep it current.
+Status against Flathub's
+[requirements](https://docs.flathub.org/docs/for-app-authors/requirements):
 
-## Submission to Flathub
+1. **Build from source: done.** `flathub/com.vitorpamplona.amethyst.Amethyst.yml`
+   compiles the release tag offline with `:desktopApp:createReleaseDistributable`.
+   Its pinned sources are the tag's tarball, the JetBrains Runtime SDK 21 (it runs
+   Gradle and jpackage, so the bundled runtime keeps JBR's Wayland toolkit), the
+   Gradle distribution, and `gradle-sources.json`: every Maven file the build
+   resolves, for x86_64 and aarch64. `flathub-offline.init.gradle` replaces every
+   repository with that local copy. Flathub already ships a prebuilt JBR and
+   Skiko's natives in `com.prof18.feedflow`, a Compose Desktop app built the same
+   way.
 
-Follow https://docs.flathub.org/docs/for-app-authors/submission — no
-separate Flathub account exists; everything runs through GitHub PRs.
+   Checked on aarch64 with `flatpak-builder` (network-less build, installs,
+   `flatpak run` reaches the login screen, bundled runtime has
+   `libawt_wlawt.so`); x86_64's dependency list was captured but not built
+   through `flatpak-builder`. `flatpak-builder-lint` passes the manifest and the
+   metainfo. On the build it reports only `appstream-external-screenshot-url`
+   and `appstream-remote-icon-not-mirrored`: Debian's AppStream 1.0.5 writes
+   media paths relative to `media_baseurl`, while the linter expects the full
+   `https://dl.flathub.org/media` URLs Flathub's own builder writes.
+   Flathub's builder (`org.flatpak.Builder`) could not run nested in Docker, so
+   that was not checked end to end.
 
-**Remaining blocker before submitting:** at least one screenshot with a
-publicly reachable URL in `flathub/….metainfo.xml` (the Flathub linter
-rejects the current empty placeholder).
+   Every release: `flathub/tools/regenerate-gradle-sources.sh vX.Y.Z` (about
+   35 minutes, both arches in Docker) rewrites `gradle-sources.json` from a real
+   online build and prints the tarball's sha256 for the manifest. Flathub's
+   update bot can't regenerate that list, so each release is a manual PR to the
+   Flathub app repo.
 
-1. Fork `flathub/flathub` on GitHub.
-2. Branch from `new-pr` (NOT `master`).
-3. Copy the contents of `flathub/` verbatim into a new top-level directory
-   named `com.vitorpamplona.amethyst.Desktop`.
-4. Open a PR titled "Add com.vitorpamplona.amethyst.Desktop".
-5. After merge, Flathub creates a per-app repo
-   (`flathub/com.vitorpamplona.amethyst.Desktop`) with write access for
-   ongoing updates. Its `x-checker-data` makes
-   flatpak-external-data-checker open update PRs there automatically on
-   each new GitHub Release (bumping url/sha256 and appending the metainfo
-   `<release>` entry).
+   Some Maven dependencies ship prebuilt Linux binaries inside their jars (JNA,
+   secp256k1, SQLite, the media player, notifications, Skiko, and a `tor`
+   executable in kmp-tor). FeedFlow's acceptance covers the Skiko kind; a
+   reviewer may still ask about the `tor` executable.
+2. **Generative AI policy: not met.** Flathub manifests "must not contain
+   AI-generated or AI-assisted content", AI tools "must not open or automate
+   Flathub submission pull requests, or generate their commit messages,
+   descriptions, review comments, or replies", and all other AI-generated
+   code, documentation or packaging must be disclosed. The `flathub/` files
+   were written with Claude Code (the manifest says so), so the submission
+   must disclose it and reviewers may decline; a person opens the submission
+   PR and answers the review.
+3. **Screenshot: done.** The metainfo lists `docs/screenshots/desktop-home.png`,
+   the 1.19.0 Linux build's home feed, from a commit-pinned URL. It landed
+   after `v1.19.0`, so submit with the next tag: the `v1.19.0` metainfo has none.
+4. **Domain verification.** `com.vitorpamplona.amethyst.Amethyst` is verified by
+   serving the token Flathub provides at
+   `https://vitorpamplona.com/.well-known/org.flathub.VerifiedApps.txt`.
+5. **Latest runtime: done.** 26.08 is the newest freedesktop runtime.
 
-To test the Flathub variant locally, run the same flatpak-builder commands
-as above from inside `flathub/` — it downloads the pinned release tarball
-instead of using a local Gradle build.
+Once accepted, Flathub creates `flathub/com.vitorpamplona.amethyst.Amethyst`;
+copy the manifest, the init script and `gradle-sources.json` there, and each
+update is a PR to it.
 
 ## License metadata
 
-The manifest declares the binary as
-`MIT AND LGPL-2.1-or-later AND BSD-2-Clause AND Apache-2.0`. This SPDX
-expression validates via `appstreamcli validate`.
+The metainfo declares
+`MIT AND LGPL-2.1-or-later AND BSD-2-Clause AND Apache-2.0 AND GPL-2.0-only WITH Classpath-exception-2.0`:
+the expression from `rpmLicenseType` in `desktopApp/build.gradle.kts` plus the
+bundled OpenJDK runtime. The manifest installs the repository `LICENSE` to
+`/app/share/licenses/com.vitorpamplona.amethyst.Amethyst/`. The JRE's own notices ship
+inside the jpackage tree under `lib/runtime/legal/`.

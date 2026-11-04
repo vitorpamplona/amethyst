@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,13 +64,17 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.resources.wallet_amount_sats
 import com.vitorpamplona.amethyst.commons.resources.wallet_copy_invoice
 import com.vitorpamplona.amethyst.commons.resources.wallet_create_invoice
 import com.vitorpamplona.amethyst.commons.resources.wallet_creating_invoice
 import com.vitorpamplona.amethyst.commons.resources.wallet_description
+import com.vitorpamplona.amethyst.commons.resources.wallet_details_lud16
 import com.vitorpamplona.amethyst.commons.resources.wallet_receive
 import com.vitorpamplona.amethyst.commons.resources.wallet_sats
+import com.vitorpamplona.amethyst.commons.resources.wallet_show_lud16_qr
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -102,8 +107,39 @@ fun WalletReceiveScreen(
     val receiveState by walletViewModel.receiveState.collectAsState()
     var amountText by remember { mutableStateOf("") }
     var descriptionText by remember { mutableStateOf("") }
+    var showLud16Qr by remember { mutableStateOf(false) }
     val clipboard = LocalClipboard.current
     val clipboardScope = rememberCoroutineScope()
+
+    val wallets by walletViewModel.wallets.collectAsState()
+    val lud16 = wallets.firstOrNull { it.id == walletId }?.uri?.lud16
+
+    if (showLud16Qr && lud16 != null) {
+        AlertDialog(
+            onDismissRequest = { showLud16Qr = false },
+            title = { Text(stringRes(Res.string.wallet_details_lud16)) },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    QrCodeDrawer(
+                        contents = "lightning:$lud16",
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = lud16,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = {
+                OutlinedButton(onClick = { showLud16Qr = false }) {
+                    Text(stringRes(Res.string.close))
+                }
+            },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -144,7 +180,7 @@ fun WalletReceiveScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    OutlinedTextField(
+                    SpellCheckedOutlinedTextField(
                         value = descriptionText,
                         onValueChange = { descriptionText = it },
                         label = { Text(stringRes(Res.string.wallet_description)) },
@@ -176,6 +212,27 @@ fun WalletReceiveScreen(
                             stringRes(Res.string.wallet_create_invoice),
                             fontWeight = FontWeight.SemiBold,
                         )
+                    }
+
+                    if (lud16 != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedButton(
+                            onClick = { showLud16Qr = true },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                            shape = RoundedCornerShape(16.dp),
+                        ) {
+                            Icon(
+                                symbol = MaterialSymbols.QrCode2,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringRes(Res.string.wallet_show_lud16_qr))
+                        }
                     }
                 }
 

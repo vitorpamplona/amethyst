@@ -67,7 +67,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -148,12 +147,16 @@ import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.marmot.client.GroupMemberInfo
+import com.vitorpamplona.marmot.groups.MarmotGroupPermissions
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -362,6 +365,7 @@ fun MarmotGroupInfoScreen(
                                                 shortNotice.show(loadStringRes(Res.string.marmot_encrypted_media_enabled_toast))
                                             }
                                         } catch (e: Exception) {
+                                            currentCoroutineContext().ensureActive()
                                             launch(Dispatchers.Main) {
                                                 longNotice.show(
                                                     loadStringRes(
@@ -412,23 +416,20 @@ fun MarmotGroupInfoScreen(
                     )
                 }
 
-                val isMeAdmin = myPubkey in adminPubkeys
+                val memberPubkeys = members.map { it.pubkey }
                 items(members, key = { it.leafIndex }) { member ->
                     val isMe = member.pubkey == myPubkey
                     val isAdmin = member.pubkey in adminPubkeys
-                    // Only admins can mutate other members' roles. Self-promote
-                    // is a no-op; self-demote must go through the leave flow so
-                    // we hide the toggle for the current user.
-                    val canToggleAdmin = isMeAdmin && !isMe
-                    // Guard against removing the last admin (MIP-03 depletion
-                    // guard would otherwise reject the commit).
-                    val canDemote = canToggleAdmin && isAdmin && adminPubkeys.size > 1
-                    val canPromote = canToggleAdmin && !isAdmin
+                    // The same rules peers apply to the commit (MIP-03), so the menu only
+                    // offers what would be accepted. Self-promote is a no-op and stepping
+                    // down goes through the leave flow, so the user's own row has no toggle.
+                    val canPromote = !isMe && MarmotGroupPermissions.canPromote(adminPubkeys, myPubkey, member.pubkey)
+                    val canDemote = !isMe && MarmotGroupPermissions.canDemote(adminPubkeys, memberPubkeys, myPubkey, member.pubkey)
                     MemberRow(
                         member = member,
                         isMe = isMe,
                         isAdmin = isAdmin,
-                        canRemove = !isMe,
+                        canRemove = MarmotGroupPermissions.canRemove(adminPubkeys, myPubkey, member.pubkey),
                         canPromote = canPromote,
                         canDemote = canDemote,
                         accountViewModel = accountViewModel,
@@ -480,6 +481,7 @@ fun MarmotGroupInfoScreen(
                                 isAddError = true
                             }
                         } catch (e: Exception) {
+                            currentCoroutineContext().ensureActive()
                             addStatus = loadStringRes(Res.string.marmot_failed_to_add_user, targetName, e.message ?: loadStringRes(Res.string.marmot_unknown_error))
                             isAddError = true
                         } finally {
@@ -503,6 +505,7 @@ fun MarmotGroupInfoScreen(
                         nav.nav(Route.Message)
                     } catch (e: Exception) {
                         isLeaving = false
+                        currentCoroutineContext().ensureActive()
                         launch(Dispatchers.Main) {
                             longNotice.show(loadStringRes(Res.string.marmot_failed_to_leave_group, e.message))
                         }
@@ -545,6 +548,7 @@ fun MarmotGroupInfoScreen(
                         // live, so the screen must stay usable rather than
                         // navigate away on a change that did not happen.
                         isDisbanding = false
+                        currentCoroutineContext().ensureActive()
                         launch(Dispatchers.Main) {
                             longNotice.show(loadStringRes(Res.string.marmot_failed_to_disband, e.message))
                         }
@@ -568,6 +572,7 @@ fun MarmotGroupInfoScreen(
                             shortNotice.show(loadStringRes(Res.string.marmot_member_removed))
                         }
                     } catch (e: Exception) {
+                        currentCoroutineContext().ensureActive()
                         launch(Dispatchers.Main) {
                             longNotice.show(loadStringRes(Res.string.marmot_failed_to_remove_member, e.message))
                         }
@@ -591,6 +596,7 @@ fun MarmotGroupInfoScreen(
                             shortNotice.show(loadStringRes(Res.string.marmot_admin_granted))
                         }
                     } catch (e: Exception) {
+                        currentCoroutineContext().ensureActive()
                         launch(Dispatchers.Main) {
                             longNotice.show(loadStringRes(Res.string.marmot_failed_to_grant_admin, e.message))
                         }
@@ -614,6 +620,7 @@ fun MarmotGroupInfoScreen(
                             shortNotice.show(loadStringRes(Res.string.marmot_admin_revoked))
                         }
                     } catch (e: Exception) {
+                        currentCoroutineContext().ensureActive()
                         launch(Dispatchers.Main) {
                             longNotice.show(loadStringRes(Res.string.marmot_failed_to_revoke_admin, e.message))
                         }

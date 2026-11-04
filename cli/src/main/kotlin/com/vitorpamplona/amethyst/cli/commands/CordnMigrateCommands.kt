@@ -24,11 +24,14 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.cli.stores.HttpCordnBlobStore
-import com.vitorpamplona.amethyst.commons.cordn.CordnMigration
-import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationException
+import com.vitorpamplona.amethyst.commons.cordn.BlossomCordnBlobStore
 import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationStores
-import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnHandoffCode
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.cordn.appMultiDevice.CordnHandoffCode
+import com.vitorpamplona.cordn.appMultiDevice.CordnMigration
+import com.vitorpamplona.cordn.appMultiDevice.CordnMigrationException
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 /**
  * `amy cordn migrate …` — the device handoff, drivable without a phone.
@@ -38,15 +41,16 @@ import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnHandoffCode
  * scan; two `amy` homes and a string is the same thing with the camera taken
  * out.
  *
- * ## Why `export` does not stand the CLI down
+ * ## Why `export` stands this home down
  *
  * On a phone, exporting is a handoff: the device stops, because two devices
  * committing from one MLS leaf fork the ratchet tree irrecoverably. `amy` has
- * no sync loop to stop — each invocation is a process — so there is no
- * equivalent state to set, and `--and-stop` would be a flag that did nothing.
- * The check that matters lives on the runtime that actually keeps loops
- * running. Exporting from an `amy` home and then continuing to send from it is
- * the same mistake, and this verb says so rather than pretending to prevent it.
+ * no sync loop to stop (each invocation is a process), but the next run that
+ * sends from this home would fork the group just the same. So `export` sets
+ * the same handoff flag the app does, and every verb that opens a session
+ * refuses with `handed_off` until `resume` takes the home back, which is safe
+ * only while the other device has not imported. `import` clears it: a home
+ * that just adopted state holds the newest copy.
  */
 internal object CordnMigrateCommands {
     suspend fun migrate(
@@ -56,12 +60,13 @@ internal object CordnMigrateCommands {
         route(
             "cordn migrate",
             tail,
-            "cordn migrate <export|import>",
+            "cordn migrate <export|import|resume>",
             help = CordnCommands.USAGE,
             routes =
                 mapOf(
                     "export" to { rest -> export(dataDir, rest) },
                     "import" to { rest -> import(dataDir, rest) },
+                    "resume" to { rest -> resume(dataDir, rest) },
                 ),
         )
 
@@ -99,8 +104,13 @@ internal object CordnMigrateCommands {
                     )
 
                 val code =
-                    CordnMigration(ctx.client, ctx.signer, HttpCordnBlobStore(servers))
+                    CordnMigration(ctx.client, ctx.signer, blobStore(servers))
                         .publish(snapshot, relays.toSet())
+
+                // Only once the handoff is stored and advertised: a failed
+                // publish that had already stood down would leave the account
+                // refusing to send from the only copy of its state.
+                ctx.cordn.restoreHandoff().markHandedOff()
 
                 Output.emit(
                     mapOf(
@@ -113,9 +123,8 @@ internal object CordnMigrateCommands {
                         // sealed state is on someone else's disk now; a reader
                         // learns size and timing but not content.
                         "uploaded" to true,
-                        // amy keeps no sync loop, so nothing was stood down —
-                        // see the object KDoc.
-                        "this_device_stopped" to false,
+                        // No session opens here until `migrate resume`.
+                        "this_device_stopped" to true,
                     ),
                 )
                 0
@@ -126,6 +135,17 @@ internal object CordnMigrateCommands {
             }
         }
     }
+
+    /**
+     * cordn-kmp's migration blob store over plain OkHttp. Each `amy` run is its own process, so a
+     * client per call costs nothing that matters.
+     */
+    private fun blobStore(servers: List<String>): BlossomCordnBlobStore {
+        val http = OkHttpClient.Builder().callTimeout(CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS).build()
+        return BlossomCordnBlobStore(servers) { BlossomClient(http) }
+    }
+
+    private const val CALL_TIMEOUT_SECONDS = 60L
 
     private suspend fun import(
         dataDir: DataDir,
@@ -144,7 +164,7 @@ internal object CordnMigrateCommands {
         return Context.open(dataDir).use { ctx ->
             try {
                 val snapshot =
-                    CordnMigration(ctx.client, ctx.signer, HttpCordnBlobStore(emptyList()))
+                    CordnMigration(ctx.client, ctx.signer, blobStore(emptyList()))
                         .fetch(code)
 
                 // Replaces, never merges: two devices holding one group's state
@@ -158,6 +178,9 @@ internal object CordnMigrateCommands {
                         snapshot,
                     )
                 ctx.cordn.replaceCoordinators(configs)
+                // Not handed off, even if it was before: it now holds the
+                // newest copy.
+                ctx.cordn.restoreHandoff().resume()
 
                 Output.emit(
                     mapOf(
@@ -173,6 +196,26 @@ internal object CordnMigrateCommands {
             } catch (e: IllegalArgumentException) {
                 Output.error("bad_args", e.message ?: "bad migration")
             }
+        }
+    }
+
+    /** Takes this home back after a handoff the other device never imported. */
+    private suspend fun resume(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int {
+        Args(tail).rejectUnknown()
+        return Context.open(dataDir).use { ctx ->
+            val handoff = ctx.cordn.restoreHandoff()
+            val wasHandedOff = handoff.handedOff.value
+            handoff.resume()
+            Output.emit(
+                mapOf(
+                    "was_handed_off" to wasHandedOff,
+                    "this_device_stopped" to false,
+                ),
+            )
+            0
         }
     }
 }

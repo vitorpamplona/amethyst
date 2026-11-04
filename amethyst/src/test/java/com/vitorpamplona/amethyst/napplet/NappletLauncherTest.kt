@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.napplethost.HostProfile
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import io.mockk.every
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Assert.assertNull
@@ -47,22 +47,44 @@ class NappletLauncherTest {
         assertNull(NappletLauncher.buildLaunchParams(context, manifest, author, "demo"))
     }
 
+    // Every refusal below happens before buildLaunchParamsTrusted, which is the first step that
+    // needs the main-process app (Amethyst.instance).
+    private val signer = NostrSignerSync()
+    private val artifact = "ab".repeat(32)
+
+    private fun named(
+        identifier: String = "demo",
+        description: String = "A napplet",
+        required: List<String> = emptyList(),
+    ): NamedNappletEvent = signer.sign(NamedNappletEvent.build(identifier, artifact, description, required = required))
+
     @Test
-    fun rawLaunchRejectsNappletProfile() {
-        every { context.startActivity(any<Intent>()) } returns Unit
+    fun refusesAForgedSignature() {
+        val signed = named()
+        val forged = NamedNappletEvent(signed.id, signed.pubKey, signed.createdAt, signed.tags, "A different description", signed.sig)
+        assertNull(NappletLauncher.buildLaunchParams(context, forged, forged.pubKey, "demo"))
+    }
 
-        NappletLauncher.launch(
-            context = context,
-            paths = emptyList(),
-            servers = emptyList(),
-            authorPubKey = author,
-            identifier = "demo",
-            aggregateHash = null,
-            title = "Demo",
-            requires = emptyList(),
-            profile = HostProfile.NAPPLET,
-        )
+    @Test
+    fun refusesAnotherAuthor() {
+        assertNull(NappletLauncher.buildLaunchParams(context, named(), author, "demo"))
+    }
 
-        verify(exactly = 0) { context.startActivity(any<Intent>()) }
+    @Test
+    fun refusesAnIdentifierMismatch() {
+        val event = named()
+        assertNull(NappletLauncher.buildLaunchParams(context, event, event.pubKey, "other"))
+    }
+
+    @Test
+    fun refusesAnInvalidManifest() {
+        val event = named(description = " ")
+        assertNull(NappletLauncher.buildLaunchParams(context, event, event.pubKey, "demo"))
+    }
+
+    @Test
+    fun refusesAnUnsupportedRequiredDomain() {
+        val event = named(required = listOf("relay", "mesh"))
+        assertNull(NappletLauncher.buildLaunchParams(context, event, event.pubKey, "demo"))
     }
 }

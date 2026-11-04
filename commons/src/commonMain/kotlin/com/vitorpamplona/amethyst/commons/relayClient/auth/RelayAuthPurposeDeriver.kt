@@ -128,6 +128,21 @@ object RelayAuthPurposeDeriver {
         var readsMyInbox = false
         var readsThread = false
         var unattributedRead = false
+
+        // Tag shape: who or what the filter names, for a filter that declares nothing more useful.
+        fun inferFromShape(filter: Filter) {
+            var matched = false
+            filter.authors?.let {
+                readAuthors.addAll(it)
+                matched = true
+            }
+            filter.venueTags().takeIf { it.isNotEmpty() }?.let {
+                readVenues.addAll(it)
+                matched = true
+            }
+            if (!matched) unattributedRead = true
+        }
+
         activeFilters.values.forEach { filters ->
             filters.forEach { filter ->
                 val explained = filter as? ExplainedFilter
@@ -145,9 +160,14 @@ object RelayAuthPurposeDeriver {
                     }
                     // Declared, but the *who*/*what* still comes from the filter. Prefer the entity
                     // ids the assembler named over sniffing tags, and fall back when it named none.
+                    //
+                    // A venue job can also read something that is not a venue — a Concord invite
+                    // bundle by its link signer, a Buzz relay's `#p` = me warm-up. Naming nothing
+                    // must not make it vanish from the prompt: that turns ASK into a silent DENY.
+                    // It falls back to the tag shape, exactly as an untagged filter would.
                     AuthPurposeKind.READ_VENUE -> {
-                        val declared = explained.entityIds.orEmpty()
-                        if (declared.isNotEmpty()) readVenues.addAll(declared) else readVenues.addAll(filter.venueTags())
+                        val declared = explained.entityIds.orEmpty().ifEmpty { filter.venueTags() }
+                        if (declared.isNotEmpty()) readVenues.addAll(declared) else inferFromShape(filter)
                     }
                     AuthPurposeKind.READ_OUTBOX -> {
                         val declared = filter.authors.orEmpty()
@@ -155,18 +175,7 @@ object RelayAuthPurposeDeriver {
                     }
                     // No declared purpose (a plain Filter, or one whose purpose says nothing about
                     // identity): infer from tag shape exactly as before.
-                    else -> {
-                        var matched = false
-                        filter.authors?.let {
-                            readAuthors.addAll(it)
-                            matched = true
-                        }
-                        filter.venueTags().takeIf { it.isNotEmpty() }?.let {
-                            readVenues.addAll(it)
-                            matched = true
-                        }
-                        if (!matched) unattributedRead = true
-                    }
+                    else -> inferFromShape(filter)
                 }
             }
         }

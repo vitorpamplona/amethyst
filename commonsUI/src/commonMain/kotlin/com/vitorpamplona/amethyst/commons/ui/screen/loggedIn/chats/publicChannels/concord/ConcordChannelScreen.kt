@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.chats.publicChannels.concord.datasource.ConcordChannelHistorySubAssembler
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.commons.chats.ui.ReplyModeToggle
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
@@ -77,7 +78,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_two
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
@@ -103,7 +104,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordChannelPins
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.send.ConcordNewMessageViewModel
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
@@ -117,6 +117,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPickerButton
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
@@ -127,7 +128,9 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -222,8 +225,11 @@ fun ConcordChannelScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                    // Hidden in a list/detail screen's detail pane, where there is nothing to go back to.
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                        }
                     }
                 },
             )
@@ -584,7 +590,8 @@ private fun ConcordMessageComposer(
                 newMessageModel.pickedMedia(persistentListOf(SelectedMedia(uri, mimeType)))
             },
             inputTransformation = MentionPreservingInputTransformation,
-            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+            spellCheck = true,
+            outputTransformation = rememberUrlUserTagOutputTransformation(),
             modifier = Modifier.fillMaxWidth(),
             shape = EditFieldBorder,
             placeholder = {
@@ -604,6 +611,11 @@ private fun ConcordMessageComposer(
                         modifier = Modifier,
                         onImageChosen = newMessageModel::pickedMedia,
                     )
+                    EmojiPickerButton(
+                        newMessageModel.emojiSuggestions?.emojiPacks,
+                        newMessageModel.message,
+                        tint = MaterialTheme.colorScheme.placeholderText,
+                    )
                 }
             },
             trailingIcon = {
@@ -616,6 +628,7 @@ private fun ConcordMessageComposer(
                             newMessageModel.sendPost()
                             onMessageSent()
                         } catch (e: Exception) {
+                            currentCoroutineContext().ensureActive()
                             launch(Dispatchers.Main) {
                                 shortNotice.show("Failed to send message: ${e.message}")
                             }
@@ -667,13 +680,15 @@ private fun ConcordFileUploadDialog(
                     onEncryptedUploadError = { title, message ->
                         scope.launch(Dispatchers.Main) { longNotice.show("$title: $message") }
                     },
-                    uploader = accountViewModel.host.mediaUploader,
+                    uploader = accountViewModel.mediaUploader,
                     onceUploaded = { uploads ->
-                        val imetas = uploads.mapNotNull { it.toConcordImeta() }
-                        if (imetas.isNotEmpty()) {
-                            accountViewModel.account.concord.sendConcordChannelImageMessage(community, channel, "", imetas)
+                        accountViewModel.reportSignerErrors {
+                            val imetas = uploads.mapNotNull { it.toConcordImeta() }
+                            if (imetas.isNotEmpty()) {
+                                accountViewModel.account.concord.sendConcordChannelImageMessage(community, channel, "", imetas)
+                            }
+                            onUpload()
                         }
-                        onUpload()
                     },
                 )
 

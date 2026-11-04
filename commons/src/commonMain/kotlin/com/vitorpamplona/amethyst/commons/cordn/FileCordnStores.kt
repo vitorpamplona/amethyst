@@ -26,10 +26,22 @@ import com.vitorpamplona.amethyst.commons.util.deleteRecursivelyQuietly
 import com.vitorpamplona.amethyst.commons.util.moveOrCopy
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.util.sibling
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessageCodec
-import com.vitorpamplona.quartz.cordn.sync.EchoState
-import com.vitorpamplona.quartz.cordn.sync.GroupCursor
+import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.client.CoordinatorListCodec
+import com.vitorpamplona.cordn.client.CordnBlobCipher
+import com.vitorpamplona.cordn.client.CordnCoordinatorStore
+import com.vitorpamplona.cordn.client.CordnGroupStore
+import com.vitorpamplona.cordn.client.CordnHandoffStore
+import com.vitorpamplona.cordn.client.CordnKeyPackageStore
+import com.vitorpamplona.cordn.client.CordnMessageSummary
+import com.vitorpamplona.cordn.client.CordnMessageSummaryCodec
+import com.vitorpamplona.cordn.client.CordnRoomState
+import com.vitorpamplona.cordn.client.CordnRoomStateCodec
+import com.vitorpamplona.cordn.client.EchoStateCodec
+import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessageCodec
+import com.vitorpamplona.cordn.sync.EchoState
+import com.vitorpamplona.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -133,17 +145,35 @@ private const val TAG = "CordnStores"
  * is not a stale group, it is an unreadable one, and the group cannot be
  * re-derived from anywhere else on this device.
  */
-private fun FileSystem.atomicWrite(
+private suspend fun FileSystem.atomicWrite(
     file: Path,
     data: ByteArray,
-) {
+) = lockFor(file).withLock {
     file.parent?.let { createDirectories(it) }
     val temp = file.sibling("${file.name}.tmp")
     write(temp) { write(data) }
     moveOrCopy(temp, file)
 }
 
-private fun FileSystem.readBytes(file: Path): ByteArray = read(file) { readByteArray() }
+private suspend fun FileSystem.readBytes(file: Path): ByteArray = lockFor(file).withLock { read(file) { readByteArray() } }
+
+/**
+ * Serialises every read and replace of one file, across every store instance.
+ *
+ * Windows refuses to open a file that is being renamed over ("being used by
+ * another process"), and refuses the rename while someone is reading it, which
+ * sends [moveOrCopy] to its non-atomic copy. POSIX allows both, so only the
+ * Windows CI job ever saw it. The sync loop persisting a group while a backup
+ * export or a handoff snapshot reads it off disk is exactly that pair.
+ *
+ * Process-wide, not per store: those readers build their own stores over the
+ * same directory, so a lock held by an instance would never meet the writer's.
+ * Striped so it holds no state per file; two files sharing a stripe only wait
+ * on each other, and nothing takes a second stripe while holding one.
+ */
+private val fileLocks = Array(64) { Mutex() }
+
+private fun lockFor(file: Path) = fileLocks[(file.normalized().toString().hashCode() and Int.MAX_VALUE) % fileLocks.size]
 
 private fun FileSystem.isDirectory(path: Path): Boolean = metadataOrNull(path)?.isDirectory == true
 

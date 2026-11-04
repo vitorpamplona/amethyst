@@ -33,8 +33,6 @@ import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVE
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
-import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
-import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
@@ -46,7 +44,6 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -71,7 +68,7 @@ open class NewMediaModel : ViewModel() {
     val strippingFailureConfirmation = SuspendableConfirmation()
 
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
-    var mediaQualitySlider by mutableIntStateOf(1)
+    var mediaQualitySlider by mutableIntStateOf(CompressorQuality.defaultSliderPosition)
 
     // Codec selection: false = H264, true = H265
     var useH265Codec by mutableStateOf(false)
@@ -107,16 +104,7 @@ open class NewMediaModel : ViewModel() {
         onSucess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
-        try {
-            uploadUnsafe(uploader, accountViewModel, onSucess, onError)
-        } catch (e: SignerExceptions.ReadOnlyException) {
-            viewModelScope.launch {
-                onError(
-                    loadStringRes(Res.string.read_only_user),
-                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
-                )
-            }
-        }
+        uploadUnsafe(uploader, accountViewModel, onSucess, onError)
     }
 
     fun uploadUnsafe(
@@ -148,11 +136,6 @@ open class NewMediaModel : ViewModel() {
 
             if (results.allGood) {
                 // It all finished successfully
-                val nip95s =
-                    results.successful.mapNotNull {
-                        it.result as? UploadOrchestrator.OrchestratorResult.NIP95Result
-                    }
-
                 val videosAndOthers =
                     results.successful.mapNotNull {
                         val map = it.result as? UploadOrchestrator.OrchestratorResult.ServerResult
@@ -177,15 +160,6 @@ open class NewMediaModel : ViewModel() {
                 // Sign + publish via launchSigner so SignerExceptions surface
                 // through the standard toastManager pipeline (and timed-out /
                 // rejected prompts get logged instead of crashing the process).
-                val nip95jobs =
-                    nip95s.map {
-                        // upload each file as an individual nip95 event.
-                        accountViewModel.launchSigner {
-                            val nip95 = myAccount.createNip95(it.bytes, headerInfo = it.fileHeader, caption, if (sensitiveContent) "" else null)
-                            myAccount.consumeAndSendNip95(nip95.first, nip95.second)
-                        }
-                    }
-
                 val videoJobs =
                     videosAndOthers.map {
                         accountViewModel.launchSigner {
@@ -216,7 +190,6 @@ open class NewMediaModel : ViewModel() {
                         emptyList()
                     }
 
-                nip95jobs.joinAll()
                 videoJobs.joinAll()
                 imageJobs.joinAll()
 

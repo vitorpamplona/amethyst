@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.buzz.AgentPersonaEditViewModel
 import com.vitorpamplona.amethyst.commons.buzz.ui.DropdownOption
 import com.vitorpamplona.amethyst.commons.buzz.ui.EditableSuggestDropdown
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -58,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_persona_slug_help
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_system_prompt
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_thread_sessions
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_thread_sessions_help
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
@@ -134,7 +136,7 @@ fun AgentPersonaEditScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = state.systemPrompt,
                 onValueChange = viewModel::onSystemPromptChange,
                 label = { Text(stringRes(Res.string.buzz_persona_system_prompt)) },
@@ -168,7 +170,7 @@ fun AgentPersonaEditScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = state.description,
                 onValueChange = viewModel::onDescriptionChange,
                 label = { Text(stringRes(Res.string.buzz_persona_description)) },

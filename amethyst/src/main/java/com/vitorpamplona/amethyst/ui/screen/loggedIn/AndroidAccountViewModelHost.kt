@@ -23,12 +23,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.app.NotificationManager
 import android.media.MediaMetadataRetriever
 import androidx.core.content.ContextCompat
-import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.AppModules
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.audio.AnonymizedResult
 import com.vitorpamplona.amethyst.commons.audio.VoicePreset
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
+import com.vitorpamplona.amethyst.commons.relays.health.RelayHealthStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
@@ -40,6 +41,8 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
+import com.vitorpamplona.amethyst.commons.wot.onboarding.OkHttpTrustProviderHttp
+import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderHttp
 import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
@@ -62,6 +65,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withContext
 import okio.Path
+import okio.Path.Companion.toOkioPath
 
 /** [AccountViewModelHost] over the app's [AppModules]. Lazy services are read on first use. */
 class AndroidAccountViewModelHost(
@@ -75,9 +79,13 @@ class AndroidAccountViewModelHost(
 
     override val relayStats: RelayStats get() = modules.relayStats
 
+    override val relayHealth: RelayHealthStore get() = modules.relayLatencyMonitor.store
+
     override val websocketBuilder: WebsocketBuilder get() = modules.websocketBuilder
 
     override val lnurlTransport: LnurlHttpTransport by lazy { OkHttpLnurlTransport(modules.roleBasedHttpClientBuilder::okHttpClientForMoney) }
+
+    override val trustProviderHttp: TrustProviderHttp by lazy { OkHttpTrustProviderHttp(modules.roleBasedHttpClientBuilder::okHttpClientForNip05) }
 
     override val moneyOpRelays: MoneyOpRelayRouting get() = modules.torEvaluatorFlow
 
@@ -91,6 +99,8 @@ class AndroidAccountViewModelHost(
     override val deviceLocation: DeviceLocation get() = modules.locationManager
 
     override val scheduledPostStore: ScheduledPostStore get() = modules.scheduledPostStore
+
+    override val drawingBackgroundsDir: Path get() = modules.appContext.filesDir.toOkioPath() / DRAWING_BACKGROUNDS_DIR
 
     override suspend fun hasBackedUpKeys(npub: String): StateFlow<Boolean> = LocalPreferences.hasBackedUpKeys(npub)
 
@@ -167,3 +177,5 @@ class AndroidAccountViewModelHost(
                 }
             }?.toSet() ?: emptySet()
 }
+
+private const val DRAWING_BACKGROUNDS_DIR = "drawing_backgrounds"

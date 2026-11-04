@@ -37,7 +37,7 @@ import com.vitorpamplona.amethyst.commons.resources.error
 import com.vitorpamplona.amethyst.commons.resources.upload_error_title
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_exception
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_failed
-import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_nip95_not_supported
+import com.vitorpamplona.amethyst.commons.resources.voice_anonymization_failed
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
@@ -84,11 +84,12 @@ class VoiceReplyViewModel : ViewModel() {
             logTag = "VoiceReplyViewModel",
             onError = { error ->
                 if (::accountViewModel.isInitialized) {
-                    accountViewModel.toastManager.toast(
-                        Res.string.error,
-                        error.message ?: "Voice anonymization failed",
-                        error,
-                    )
+                    val message = error.message
+                    if (message != null) {
+                        accountViewModel.toastManager.toast(Res.string.error, message, error)
+                    } else {
+                        accountViewModel.toastManager.toast(Res.string.error, Res.string.voice_anonymization_failed, error)
+                    }
                 }
             },
             anonymize = { file, preset -> accountViewModel.host.anonymizeVoice(file, preset.name) },
@@ -206,7 +207,7 @@ class VoiceReplyViewModel : ViewModel() {
                                 compressionQuality = CompressorQuality.UNCOMPRESSED,
                                 server = serverToUse,
                                 account = accountViewModel.account,
-                                uploader = accountViewModel.host.mediaUploader,
+                                uploader = accountViewModel.mediaUploader,
                                 useH265 = false,
                             )
                         }
@@ -239,7 +240,6 @@ class VoiceReplyViewModel : ViewModel() {
         onSuccess: () -> Unit,
     ) {
         val uploadErrorTitle = loadStringRes(Res.string.upload_error_title)
-        val uploadVoiceNip95NotSupported = loadStringRes(Res.string.upload_error_voice_message_nip95_not_supported)
         val uploadVoiceFailed = loadStringRes(Res.string.upload_error_voice_message_failed)
 
         when (result) {
@@ -294,10 +294,6 @@ class VoiceReplyViewModel : ViewModel() {
                         voiceMetadata = audioMeta
 
                         onSuccess()
-                    }
-
-                    is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
-                        accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceNip95NotSupported)
                     }
                 }
             }

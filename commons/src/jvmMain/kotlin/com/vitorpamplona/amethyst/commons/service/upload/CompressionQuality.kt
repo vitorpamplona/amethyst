@@ -20,6 +20,18 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload
 
+/** What [ImageReencoder] needs: the longer edge's limit in pixels and the JPEG quality in [0.0, 1.0]. */
+interface ImageCompressionTarget {
+    val maxDim: Int
+    val jpegQuality: Float
+}
+
+/** A target given directly, for the shared composer's quality steps. */
+data class ImageSizeTarget(
+    override val maxDim: Int,
+    override val jpegQuality: Float,
+) : ImageCompressionTarget
+
 /**
  * Image compression quality presets. JPEG quality values are tuned for
  * 2026 display densities — the 2014-era Android values (q=0.40/0.50/0.80)
@@ -37,15 +49,15 @@ package com.vitorpamplona.amethyst.commons.service.upload
  */
 enum class CompressionQuality(
     val displayName: String,
-    val maxDim: Int,
-    val jpegQuality: Float,
+    override val maxDim: Int,
+    override val jpegQuality: Float,
     /**
      * Short subtitle that explains what the preset gives you. Surfaced
      * under the segmented row in settings and under each row in the
      * per-post override dropdown.
      */
     val summary: String,
-) {
+) : ImageCompressionTarget {
     LOW("Low", 640, 0.65f, "640 px · smallest files, best for slow uplinks"),
     MEDIUM("Medium", 640, 0.75f, "640 px · balanced size and quality"),
     HIGH("High", 640, 0.85f, "640 px · visually lossless on phones"),

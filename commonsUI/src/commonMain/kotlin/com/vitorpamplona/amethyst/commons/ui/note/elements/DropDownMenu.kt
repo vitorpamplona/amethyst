@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.elements
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
@@ -30,28 +31,29 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.note_actions_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.quick_action_delete_dialog_btn
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_title
+import com.vitorpamplona.amethyst.commons.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.commons.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.commons.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.commons.ui.note.deletionRequestBody
-import com.vitorpamplona.amethyst.commons.ui.note.platform.EditPostView
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -68,21 +70,25 @@ fun MoreOptionsButton(
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
 
-    ClickableBox(
-        modifier = Size24Modifier,
-        onClick = { popupExpanded.value = true },
-    ) {
-        VerticalDotsIcon()
-    }
+    // The Box is the anchor the large-window dropdown hangs from.
+    Box {
+        ClickableBox(
+            modifier = Size24Modifier,
+            onClick = { popupExpanded.value = true },
+        ) {
+            VerticalDotsIcon()
+        }
 
-    if (popupExpanded.value) {
-        NoteDropDownMenu(
-            note = baseNote,
-            onDismiss = { popupExpanded.value = false },
-            editState = editState,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        if (popupExpanded.value) {
+            NoteDropDownMenu(
+                note = baseNote,
+                onDismiss = { popupExpanded.value = false },
+                editState = editState,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                anchoredToButton = true,
+            )
+        }
     }
 }
 
@@ -98,6 +104,11 @@ data class DropDownParams(
     val isEmojiPackInMyList: Boolean = false,
 )
 
+/**
+ * The note's action menu. Callers that place it beside their ⋮ button pass [anchoredToButton]:
+ * on large windows it then drops down from that button, as menus do on a desktop; everywhere
+ * else (phones, and callers opening it from a long press on a whole card) it is a dialog.
+ */
 @Composable
 fun NoteDropDownMenu(
     note: Note,
@@ -105,28 +116,13 @@ fun NoteDropDownMenu(
     editState: State<GenericLoadable<EditState>>? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    anchoredToButton: Boolean = false,
 ) {
     var reportDialogShowing by remember { mutableStateOf(false) }
     var addLabelDialogShowing by remember { mutableStateOf(false) }
-    var showShareSheet by remember { mutableStateOf(false) }
     var deleteConfirmationShowing by remember { mutableStateOf(false) }
     var concordBanConfirming by remember { mutableStateOf(false) }
-
-    // Tapping "Share" hands the note's share options off to the shared Share
-    // drawer (ShareOptionsBottomSheet). We render it INSTEAD of the menu dialog
-    // — not on top of it — so the menu doesn't sit dimmed behind the sheet;
-    // dismissing the drawer closes the whole menu.
-    if (showShareSheet) {
-        ShareOptionsBottomSheet(
-            note = note,
-            nav = nav,
-            onDismiss = {
-                showShareSheet = false
-                onDismiss()
-            },
-        )
-        return
-    }
+    var removeForEveryoneConfirming by remember { mutableStateOf(false) }
 
     val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(
         DropDownParams(
@@ -194,9 +190,19 @@ fun NoteDropDownMenu(
         )
     }
 
+    if (removeForEveryoneConfirming) {
+        RemoveForEveryoneConfirmationDialog(
+            note = note,
+            accountViewModel = accountViewModel,
+            onClose = { removeForEveryoneConfirming = false },
+            onRemoved = onDismiss,
+        )
+    }
+
     val handlers =
         NoteActionHandlers(
-            onShare = { showShareSheet = true },
+            // The Share options sit in the menu itself, as a submenu like Copy.
+            onShare = null,
             onEditPost = { wantsToEditPost.value = true },
             onEditDraft = { nav.nav { routeEditDraftTo(note, accountViewModel.account) } },
             onAddLabel = { addLabelDialogShowing = true },
@@ -210,6 +216,7 @@ fun NoteDropDownMenu(
                 }
             },
             onConcordBan = { concordBanConfirming = true },
+            onRemoveForEveryone = { removeForEveryoneConfirming = true },
             onDismiss = onDismiss,
         )
 
@@ -217,12 +224,9 @@ fun NoteDropDownMenu(
     // is looking at one.
     val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
 
-    M3ActionDialog(
-        title = stringRes(Res.string.note_actions_dialog_title),
-        onDismiss = onDismiss,
-    ) {
-        // The action inventory is shared with the chat long-press sheet
-        // (noteActionSections), so the two surfaces cannot drift.
+    // The action inventory is shared with the chat long-press sheet
+    // (noteActionSections), so the surfaces cannot drift.
+    val sections =
         noteActionSections(
             note = note,
             noteVersionToCopy = lastNoteVersion,
@@ -230,18 +234,12 @@ fun NoteDropDownMenu(
             handlers = handlers,
             accountViewModel = accountViewModel,
             nav = nav,
-        ).forEach { section ->
-            M3ActionSection {
-                section.forEach { action ->
-                    M3ActionRow(
-                        icon = action.symbol,
-                        text = action.label,
-                        isDestructive = action.isDestructive,
-                        onClick = action.onClick,
-                    )
-                }
-            }
-        }
+        )
+
+    if (anchoredToButton && LocalScreenLayout.current.isLargeScreen) {
+        NoteActionDropdownMenu(sections, onDismiss)
+    } else {
+        NoteActionDialog(sections, onDismiss)
     }
 
     if (reportDialogShowing) {
@@ -264,6 +262,30 @@ fun NoteDropDownMenu(
 }
 
 @Composable
+private fun NoteActionDialog(
+    sections: List<List<NoteAction>>,
+    onDismiss: () -> Unit,
+) {
+    M3ActionDialog(
+        title = stringRes(Res.string.note_actions_dialog_title),
+        onDismiss = onDismiss,
+    ) {
+        sections.forEach { section ->
+            M3ActionSection {
+                section.forEach { action ->
+                    M3ActionRow(
+                        icon = action.symbol,
+                        text = action.label,
+                        isDestructive = action.isDestructive,
+                        onClick = action.onClick,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun observeBookmarksFollowsAndAccount(
     note: Note,
     accountViewModel: AccountViewModel,
@@ -278,7 +300,7 @@ fun observeBookmarksFollowsAndAccount(
     ) { follows, bookmarks, pinnedIds, showSensitiveContent, emojiSelectionState ->
         val isEmojiPackInMyList =
             if (noteIdForEmoji != null) {
-                emojiSelectionState.note.event?.isTaggedAddressableNote(noteIdForEmoji) == true
+                (emojiSelectionState.note.event as? EmojiListEvent)?.hasEmojiPack(noteIdForEmoji) == true
             } else {
                 false
             }
@@ -306,7 +328,7 @@ fun observeBookmarksFollowsAndAccount(
                     noteIdForEmoji?.let {
                         accountViewModel.account.emoji
                             .getEmojiList()
-                            ?.isTaggedAddressableNote(it) == true
+                            ?.hasEmojiPack(it) == true
                     } ?: false,
             ),
         )

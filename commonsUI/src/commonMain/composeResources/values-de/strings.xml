@@ -645,12 +645,9 @@
     <string name="wallet_connect_connect_app">Wallet verbinden</string>
     <string name="see_relay_feed">Relay-Feed anzeigen</string>
     <string name="pledge_amount_in_sats">Spendenbetrag in Sats</string>
-    <string name="poll_option_description">Beschreibung der Umfrageoption</string>
     <string name="poll_zap_value_min">Mindest-Zap-Betrag</string>
     <string name="poll_zap_value_max">Maximaler Zap-Betrag</string>
     <string name="poll_consensus_threshold">Konsens</string>
-    <string name="poll_closing_date_time">Schließdatum und -zeit</string>
-    <string name="poll_closing_in">Umfrage endet in %1$s</string>
     <string name="looking_for_event">Veranstaltung suchen %1$s</string>
     <string name="send_zap">Zap senden</string>
     <string name="custom_zaps_add_a_message">Füge eine öffentliche Nachricht hinzu</string>
@@ -699,7 +696,6 @@
     <string name="uploading_state_hashing">Hashen</string>
     <string name="uploading_state_finished">Fertig</string>
     <string name="uploading_state_error">Fehler</string>
-    <string name="connect_via_tor1">Anpassen</string>
     <string name="connect_via_tor2">Tor-Einstellungen</string>
     <string name="yes">Ja</string>
     <string name="no">Nein</string>
@@ -773,7 +769,6 @@
     <string name="max_hashtag_limit_title">Max. Hashtags pro Beitrag</string>
     <string name="max_hashtag_limit_explainer">Blendet Beiträge mit mehr Hashtags als dieses Limit aus. Auf 0 setzen zum Deaktivieren</string>
     <string name="security_unlimited">∞</string>
-    <string name="new_reaction_symbol">Neues Reaktionssymbol</string>
     <string name="zapraiser">Zap-Sammlung</string>
     <string name="zapraiser_explainer">Fügt einen Zielbetrag in Sats für diesen Beitrag hinzu. Unterstützende Clients können dies als Fortschrittsbalken anzeigen, um Spenden zu fördern</string>
     <string name="zapraiser_target_amount_in_sats">Zielbetrag in Sats</string>
@@ -919,9 +914,7 @@
     <string name="created_at">Erstellt am</string>
     <string name="guidelines">Richtlinien</string>
     <string name="moderators">Moderatoren</string>
-    <string name="login_with_external_signer">Mit Amber anmelden</string>
     <string name="status_update">Status aktualisieren</string>
-    <string name="poll_zap_value_min_max_explainer">Die Abstimmungen werden nach der Höhe des Zaps gewichtet. Sie können einen Mindestbetrag festlegen, um Spam zu verhindern, und einen Höchstbetrag, um zu verhindern, dass große Zapper die Abstimmung dominieren. Verwenden Sie denselben Betrag in beiden Feldern, um sicherzustellen, dass jeder Stimme der gleiche Wert zukommt. Lassen Sie es leer, um jeden Betrag zu akzeptieren.</string>
     <string name="error_dialog_talk_to_user">Mit dem Benutzer kommunizieren</string>
     <string name="error_dialog_talk_to_user_name">Nachricht %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
@@ -1452,7 +1445,6 @@
     <string name="closing_time">Schließzeit</string>
     <string name="confirm">Bestätigen</string>
     <string name="next">Weiter</string>
-    <string name="add_poll_option_button">Umfrageoption hinzufügen</string>
     <string name="go_back">Zurückgehen</string>
     <string name="approve">Genehmigen</string>
     <string name="connected">Verbunden</string>
@@ -1460,13 +1452,9 @@
     <string name="poll_submit">Absenden</string>
     <string name="poll_view_results">Ergebnisse anzeigen</string>
     <string name="restart">Neu starten</string>
-    <string name="chess_accept">Annehmen</string>
-    <string name="chess_decline">Ablehnen</string>
     <string name="new_chess_game">Neues Schachspiel</string>
     <string name="chess_loading_game">Spiel wird geladen…</string>
     <string name="chess_game_not_found">Spiel nicht gefunden</string>
-    <string name="chess_game_waiting">Dieses Spiel ist möglicherweise beendet oder wartet auf einen Gegner.</string>
-    <string name="chess_game_id">Spiel-ID: %1$s…</string>
     <string name="badge_and_n_others"> und %1$d weitere</string>
     <string name="remove_language">%1$s entfernen</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Starte mit einem großartigen Feed, indem du dieselben Personen folgst wie jemand, dem du vertraust.</string>
@@ -2469,7 +2457,6 @@
     <string name="media_download_has_started_toast">Der Mediendownload wurde gestartet…</string>
     <string name="media_servers">Medienserver</string>
     <string name="media_servers_search_keywords">Blossom, Uploads, Bilder, Fotos, Dateien, CDN, Speicher</string>
-    <string name="media_too_big_for_nip95">Medien sind zu groß für NIP-95</string>
     <string name="messages_cant_upload_explainer">Füge das Ziel der Nachricht zuerst ein</string>
     <string name="messages_cant_upload_title">Kann nicht hochladen</string>
     <string name="messages_new_message_subject">Betreff</string>
@@ -2715,7 +2702,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Die Umfrage ist für neue Stimmen geschlossen</string>
     <string name="poll_multiple_choice">Mehrfachauswahl</string>
-    <string name="poll_option_index">Wahl %1$s</string>
     <string name="poll_single_choice">Einzelauswahl</string>
     <string name="poll_unable_to_vote">Konnte nicht abstimmen</string>
     <string name="polls">Umfragen</string>
@@ -2987,7 +2973,6 @@
     <string name="upload_error_title">Upload-Fehler</string>
     <string name="upload_error_voice_message_exception">Sprach-Upload fehlgeschlagen: %1$s</string>
     <string name="upload_error_voice_message_failed">Sprachnachricht konnte nicht hochgeladen werden</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 wird für Sprachnachrichten noch nicht unterstützt</string>
     <string name="uptime">%1$d% Verfügbarkeit</string>
     <string name="use_internal_tor">Aktiver Tor-Engine</string>
     <string name="use_internal_tor_explainer">Verwenden Sie die interne Version oder Orbot</string>

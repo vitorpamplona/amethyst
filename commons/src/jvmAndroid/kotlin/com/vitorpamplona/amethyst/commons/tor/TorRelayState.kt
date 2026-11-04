@@ -40,7 +40,8 @@ class TorRelayState(
     val okHttpClient: DualHttpClientManager,
     val torSettingsFlow: TorSettingsFlow,
     val scope: CoroutineScope,
-) : MoneyOpRelayRouting {
+) : MoneyOpRelayRouting,
+    SignerRelayRouting {
     val dmRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
     val trustedRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
 
@@ -68,22 +69,41 @@ class TorRelayState(
     private fun currentMoneyOpRelays(): Set<NormalizedRelayUrl> = moneyOpRelays.value + adHocMoneyOpCounts.value.keys
 
     /**
+     * NIP-46 relays of every logged-in account's remote signer. Fed by [AccountsTorStateConnector];
+     * these follow the trusted-relay Tor preference (see [TorRelayEvaluation]).
+     */
+    val signerRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+
+    /** Relays of a NIP-46 login in progress, counted like [adHocMoneyOpCounts]. */
+    private val loginSignerCounts = MutableStateFlow<Map<NormalizedRelayUrl, Int>>(emptyMap())
+
+    private fun currentSignerRelays(): Set<NormalizedRelayUrl> = signerRelays.value + loginSignerCounts.value.keys
+
+    override fun registerSignerRelays(relays: Set<NormalizedRelayUrl>) = loginSignerCounts.increment(relays)
+
+    override fun unregisterSignerRelays(relays: Set<NormalizedRelayUrl>) = loginSignerCounts.decrement(relays)
+
+    /**
      * Marks [relays] as money-operation relays until a matching [unregisterMoneyOpRelays] call.
      * Used by the CLINK offer/debit payers so a one-off payment relay honors the money-operations
      * Tor preference instead of being treated as a generic "new" relay.
      */
-    override fun registerMoneyOpRelays(relays: Set<NormalizedRelayUrl>) {
+    override fun registerMoneyOpRelays(relays: Set<NormalizedRelayUrl>) = adHocMoneyOpCounts.increment(relays)
+
+    override fun unregisterMoneyOpRelays(relays: Set<NormalizedRelayUrl>) = adHocMoneyOpCounts.decrement(relays)
+
+    private fun MutableStateFlow<Map<NormalizedRelayUrl, Int>>.increment(relays: Set<NormalizedRelayUrl>) {
         if (relays.isEmpty()) return
-        adHocMoneyOpCounts.update { current ->
+        update { current ->
             current.toMutableMap().apply {
                 relays.forEach { this[it] = (this[it] ?: 0) + 1 }
             }
         }
     }
 
-    override fun unregisterMoneyOpRelays(relays: Set<NormalizedRelayUrl>) {
+    private fun MutableStateFlow<Map<NormalizedRelayUrl, Int>>.decrement(relays: Set<NormalizedRelayUrl>) {
         if (relays.isEmpty()) return
-        adHocMoneyOpCounts.update { current ->
+        update { current ->
             current.toMutableMap().apply {
                 relays.forEach {
                     val next = (this[it] ?: 0) - 1
@@ -140,25 +160,28 @@ class TorRelayState(
             trusted = trustedRelays.value,
             dm = dmRelays.value,
             moneyOp = currentMoneyOpRelays(),
+            signer = currentSignerRelays(),
             assumed = assumedRelays.value,
         )
 
     /**
-     * The four category sets as one value. Folding them here also keeps the evaluation flow below
-     * at two sources instead of six — `combineTransform`'s typed overloads stop at five.
+     * The category sets as one value. Folding them here also keeps the evaluation flow below at two
+     * sources; the saved and in-flight sets are merged first because `combine`'s typed overloads
+     * stop at five.
      */
     private val classification =
         combine(
             trustedRelays,
             dmRelays,
-            moneyOpRelays,
-            adHocMoneyOpCounts,
+            combine(moneyOpRelays, adHocMoneyOpCounts) { saved, adHoc -> saved + adHoc.keys },
+            combine(signerRelays, loginSignerCounts) { saved, login -> saved + login.keys },
             assumedRelays,
-        ) { trusted, dm, moneyOp, adHocMoneyOps, assumed ->
+        ) { trusted, dm, moneyOp, signer, assumed ->
             RelayClassification(
                 trusted = trusted,
                 dm = dm,
-                moneyOp = moneyOp + adHocMoneyOps.keys,
+                moneyOp = moneyOp,
+                signer = signer,
                 assumed = assumed,
             )
         }

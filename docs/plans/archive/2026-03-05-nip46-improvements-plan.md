@@ -14,9 +14,9 @@ origin: docs/plans/2026-03-05-fix-nip46-relay-isolation-and-init-plan.md
 
 Deferred items from the NIP-46 relay isolation fix. All are nice-to-haves discovered during deepening/review — none block the initial fix.
 
-## 1. `auth_url` handling (nsec.app compatibility)
+## 1. `auth_url` handling (web signer compatibility)
 
-**Priority:** Medium — only affects nsec.app users, not Amber
+**Priority:** Medium — only affects web-signer users, not Amber
 
 NIP-46 spec defines `auth_url` for signers needing out-of-band user confirmation:
 ```json

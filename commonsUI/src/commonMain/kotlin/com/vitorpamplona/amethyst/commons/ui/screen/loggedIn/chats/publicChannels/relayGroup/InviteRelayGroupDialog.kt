@@ -46,8 +46,8 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_invite_title
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.launch
 
 /**

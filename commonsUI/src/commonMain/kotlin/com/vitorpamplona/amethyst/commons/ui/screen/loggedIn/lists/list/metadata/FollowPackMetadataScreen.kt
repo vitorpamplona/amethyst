@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_
 import com.vitorpamplona.amethyst.commons.resources.picture_url
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -210,7 +211,7 @@ fun FollowPackMetadataTopBar(
 
 @Composable
 private fun Description(postViewModel: FollowPackMetadataViewModel) {
-    OutlinedTextField(
+    SpellCheckedOutlinedTextField(
         label = { Text(text = stringRes(Res.string.follow_pack_creation_desc_label)) },
         modifier = Modifier.fillMaxWidth(),
         value = postViewModel.description.value,

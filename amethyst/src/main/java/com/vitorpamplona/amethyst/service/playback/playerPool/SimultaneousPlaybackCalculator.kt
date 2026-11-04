@@ -35,6 +35,14 @@ class SimultaneousPlaybackCalculator {
             return activityManager?.isLowRamDevice == true
         }
 
+        /** The device's total RAM, or 0 when the system won't say. */
+        fun totalRamBytes(context: Context): Long {
+            val activityManager: ActivityManager = context.getSystemService() ?: return 0L
+            val info = ActivityManager.MemoryInfo()
+            activityManager.getMemoryInfo(info)
+            return info.totalMem
+        }
+
         @OptIn(UnstableApi::class)
         fun max(appContext: Context): Int {
             val maxInstances =

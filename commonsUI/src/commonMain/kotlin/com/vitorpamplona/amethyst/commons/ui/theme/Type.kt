@@ -51,6 +51,9 @@ val Typography =
      */
     )
 
+/** The app's type scale as Android uses it; front ends may pass their own to the theme. */
+val DefaultTypography: Typography get() = Typography
+
 // Applies the chosen [FontFamily] to every text style so Material components pick it up too.
 // A null family leaves the typography untouched (platform default).
 fun Typography.withFontFamily(fontFamily: FontFamily?): Typography {

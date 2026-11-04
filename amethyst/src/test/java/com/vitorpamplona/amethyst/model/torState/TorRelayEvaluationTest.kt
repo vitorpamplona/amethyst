@@ -83,23 +83,25 @@ class TorRelayEvaluationTest {
         assertFalse(eval.useTor(dmRelay))
     }
 
-    // --- Localhost: always false regardless of Tor ---
+    // --- Localhost: the user's own local relays are always false regardless of Tor ---
+
+    private val ownLocal = setOf(localhostRelay, localhostNameRelay, localNetworkRelay)
 
     @Test
     fun localhost127_alwaysFalse() {
-        val eval = buildEvaluation(torType = TorType.INTERNAL)
+        val eval = buildEvaluation(torType = TorType.INTERNAL, trustedRelays = ownLocal)
         assertFalse(eval.useTor(localhostRelay))
     }
 
     @Test
     fun localhostName_alwaysFalse() {
-        val eval = buildEvaluation(torType = TorType.INTERNAL)
+        val eval = buildEvaluation(torType = TorType.INTERNAL, trustedRelays = ownLocal)
         assertFalse(eval.useTor(localhostNameRelay))
     }
 
     @Test
     fun localNetwork192_alwaysFalse() {
-        val eval = buildEvaluation(torType = TorType.INTERNAL)
+        val eval = buildEvaluation(torType = TorType.INTERNAL, trustedRelays = ownLocal)
         assertFalse(eval.useTor(localNetworkRelay))
     }
 
@@ -235,7 +237,13 @@ class TorRelayEvaluationTest {
 
     @Test
     fun torExternal_localhostStillFalse() {
-        val eval = buildEvaluation(torType = TorType.EXTERNAL)
+        val eval = buildEvaluation(torType = TorType.EXTERNAL, trustedRelays = ownLocal)
         assertFalse(eval.useTor(localhostRelay))
+    }
+
+    @Test
+    fun someoneElsesLocalRelay_followsTheNewRelayPolicy() {
+        assertTrue(buildEvaluation(torType = TorType.INTERNAL, newViaTor = true).useTor(localNetworkRelay))
+        assertFalse(buildEvaluation(torType = TorType.INTERNAL, newViaTor = false).useTor(localNetworkRelay))
     }
 }

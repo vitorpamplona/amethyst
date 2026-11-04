@@ -21,20 +21,40 @@
 package com.vitorpamplona.amethyst.commons.ui.platform
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.UriHandler
+import com.vitorpamplona.amethyst.commons.account.ui.login.LoginViewModel
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
+import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
+
+/** A signer app that takes `nostrconnect://` addresses: [id] is what [AppPlatform.openNostrConnect] takes. */
+@Immutable
+data class NostrConnectApp(
+    val id: String,
+    val label: String,
+)
 
 /**
  * The app shell's pieces that shared screens embed but only the front end can draw yet: the
@@ -50,11 +70,83 @@ interface AppPlatform {
     /** This build's version name ("1.04.2"), shown in the donation card; empty where unknown. */
     val appVersionName: String get() = ""
 
+    /** This build's distribution flavour ("play", "fdroid"), shown next to the version; empty where none. */
+    val appFlavor: String get() = ""
+
+    /** Whether this is a debug build, which unlocks the drawer's in-progress destinations. */
+    val isDebugBuild: Boolean get() = false
+
+    /** Which installed apps can take a `payto` hand-off from the zap picker. */
+    val payToApps: PayToAppProbe get() = PayToAppProbe.None
+
     /** The note announcing this release, which the notifications tab's donation card links to; null shows no card. */
     val releaseNotesId: String? get() = null
 
     /** Dumps the app's runtime state (memory, caches, subscriptions) to the log, for the logo's debug tap. */
     fun logDebugState() {}
+
+    /** Whether a first login must accept the terms of use (the Play Store build). */
+    val requiresTermsAcceptance: Boolean get() = false
+
+    /**
+     * Whether the login screen offers NIP-46 remote signers (`bunker://` addresses and a
+     * `nostrconnect://` code). Desktop and Android both do; Android is also a bunker for other apps.
+     */
+    val supportsRemoteSignerLogin: Boolean get() = false
+
+    /**
+     * The signer apps that take a `nostrconnect://` address, for the login dialog to let the user
+     * pick one when there are several. Empty where the platform picks the app itself (Desktop's
+     * registered handler) or none is installed.
+     */
+    fun nostrConnectApps(uri: String): List<NostrConnectApp> = emptyList()
+
+    /**
+     * Hands a `nostrconnect://` address to a signer app so the user approves without scanning:
+     * [appId], one of [nostrConnectApps], or else the only one there is (the system's registered
+     * handler on Desktop, Opal on Linux). False where nothing took it.
+     */
+    fun openNostrConnect(
+        uri: String,
+        appId: String? = null,
+    ): Boolean = false
+
+    /**
+     * Whether the platform tells metered and mobile connections from unmetered ones. Where it
+     * cannot (Desktop reports every connection as unmetered), the "Wi-Fi" choice of the media
+     * settings behaves exactly like "Always", so the settings leave it out.
+     */
+    val detectsMeteredConnections: Boolean get() = true
+
+    /**
+     * Underlines misspellings in the composers and offers suggestions on right-click. Null where
+     * the keyboard already does this (Android, iOS), which also hides the setting.
+     */
+    val spellCheck: SpellCheckService? get() = null
+
+    /** The terms-of-use checkbox the login and sign-up forms show where [requiresTermsAcceptance]. */
+    @Composable
+    fun TermsGate(
+        checked: Boolean,
+        onCheckedChange: (Boolean) -> Unit,
+        showError: Boolean,
+    ) {}
+
+    /** Logs in through a signer app (Android's NIP-55 signers); shown where [rememberHasExternalSignerLogin]. */
+    @Composable
+    fun ExternalSignerLoginButton(loginViewModel: LoginViewModel) {}
+
+    /** Whether a signer app can log in here: the form then leads with [ExternalSignerLoginButton]. */
+    @Composable
+    fun rememberHasExternalSignerLogin(): Boolean = false
+
+    /** Hands the login form the keys the app is opened with (a `nostr:` link) while logged off. */
+    @Composable
+    fun IncomingLoginKeys(onKey: suspend (String) -> Unit) {}
+
+    /** Shows brief messages over the app (Android's toasts); drops them where there is none. */
+    @Composable
+    fun rememberToaster(): Toaster = Toaster.None
 
     /** The settings screen's legal links, when the build's distribution calls for them. */
     fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? = null
@@ -123,9 +215,40 @@ interface AppPlatform {
         onScan: (String) -> ScanOutcome,
     ) {}
 
-    /** Opens favorite apps and web links in the platform's app surface. */
+    /** Opens favorite apps, web links, napplets and nSites in the platform's app surface. */
     @Composable
     fun rememberAppLauncher(): AppLauncher = AppLauncher.None
+
+    /**
+     * Starts a [callType] call with [peers], asking for the call permissions first where the
+     * platform needs them. Null where calls are not supported, so callers hide their buttons.
+     */
+    @Composable
+    fun rememberCallStarter(
+        peers: Set<HexKey>,
+        callType: CallType,
+    ): (() -> Unit)? = null
+
+    /** Whether [GeocacheMapTab] draws a map here; the geocaches screen hides its Map tab when not. */
+    val hasGeocacheMap: Boolean get() = false
+
+    /** The map view of the nearby geocaches. Empty where the platform has no map. */
+    @Composable
+    fun GeocacheMapTab(
+        feedContentState: FeedContentState,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) {}
+
+    /**
+     * Recent workouts the device already recorded (Android's Health Connect), offered as a tap to
+     * pre-fill the new-workout form. Empty where there is no health store.
+     */
+    @Composable
+    fun DetectedWorkoutCarousel(
+        accountViewModel: AccountViewModel,
+        onPick: (Route.NewWorkout) -> Unit,
+    ) {}
 
     /**
      * The image model for a CORD-02 community picture: the plain URL for a url-only pointer, or a
@@ -140,6 +263,51 @@ interface AppPlatform {
     /** The cached icon of the napplet or nsite at [coordinate], if one was fetched. */
     @Composable
     fun rememberNappletIconModel(coordinate: String): String? = null
+
+    /**
+     * Downloads a napplet's or nSite's files into the platform's blob cache while its card is on
+     * screen, so Open starts at once. Never on the open web while the user wants Tor and Tor isn't
+     * running yet: the launch fetches them then, on the right route.
+     */
+    @Composable
+    fun PrefetchNappletFiles(
+        author: String,
+        identifier: String,
+        paths: List<PathTag>,
+        servers: List<String>,
+    ) {}
+
+    /** Whether [InlineNappletSurface] runs a napplet inside a note here. */
+    val runsNappletsInline: Boolean get() = false
+
+    /**
+     * Runs [manifest] inside a note as its own instance [instanceId], filling [modifier], in the
+     * platform's sandbox. It may use what the user already granted the app and never asks anything
+     * ([com.vitorpamplona.amethyst.commons.napplet.NappletIdentity.inline]). The page gets taps and
+     * keys; the feed keeps the scroll. It runs while it is composed and on screen, and ends when it
+     * leaves the composition. [onStatus] follows its loading.
+     */
+    @Composable
+    fun InlineNappletSurface(
+        manifest: NappletManifest,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {}
+
+    /**
+     * Runs the webxdc [app] posted in [postId] by [poster] inside its note, as instance [instanceId],
+     * where [runsNappletsInline]: offline at its own origin, the same storage its window has.
+     */
+    @Composable
+    fun InlineWebxdcSurface(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {}
 
     /** The icon a napplet manifest by [author] / [identifier] declares, if cached. */
     @Composable
@@ -221,6 +389,48 @@ fun rememberConcordImageModel(
 @Composable
 fun rememberNappletIconModel(coordinate: String): String? = LocalAppPlatform.current.rememberNappletIconModel(coordinate)
 
+/** Prefetches the files of the site [author] / [identifier] (as its launch names it, `""` for a root). */
+@Composable
+fun PrefetchNappletFiles(
+    author: String,
+    identifier: String,
+    paths: List<PathTag>,
+    servers: List<String>,
+) = LocalAppPlatform.current.PrefetchNappletFiles(author, identifier, paths, servers)
+
+val runsNappletsInline: Boolean
+    @Composable get() = LocalAppPlatform.current.runsNappletsInline
+
+@Composable
+fun InlineNappletSurface(
+    manifest: NappletManifest,
+    instanceId: String,
+    onStatus: (InlineNappletStatus) -> Unit,
+    modifier: Modifier = Modifier,
+) = LocalAppPlatform.current.InlineNappletSurface(manifest, instanceId, onStatus, modifier)
+
+@Composable
+fun InlineWebxdcSurface(
+    app: WebxdcApp,
+    postId: HexKey,
+    poster: HexKey,
+    instanceId: String,
+    onStatus: (InlineNappletStatus) -> Unit,
+    modifier: Modifier = Modifier,
+) = LocalAppPlatform.current.InlineWebxdcSurface(app, postId, poster, instanceId, onStatus, modifier)
+
+/** Where a napplet running inside a note is. */
+enum class InlineNappletStatus {
+    /** Fetching and verifying its files, or starting its page. */
+    LOADING,
+
+    /** Its page has painted. */
+    SHOWING,
+
+    /** It could not start here: no server had its files, or the sandbox did not come up. */
+    FAILED,
+}
+
 @Composable
 fun rememberManifestIconModel(
     author: String,
@@ -231,8 +441,8 @@ fun rememberManifestIconModel(
 fun rememberWebAppIconModel(url: String): String? = LocalAppPlatform.current.rememberWebAppIconModel(url)
 
 /**
- * Opens a favorite app or a web link in the platform's app surface (on Android, the sandboxed
- * full-screen WebView in its own task).
+ * Opens a favorite app, a web link, a napplet or an nSite in the platform's app surface (on Android,
+ * the sandboxed full-screen WebView in its own task; on the desktop, a Chromium window).
  */
 interface AppLauncher {
     /** [stillLoading] is shown when a Nostr app's defining event has not arrived yet. */
@@ -247,6 +457,25 @@ interface AppLauncher {
         preferTor: Boolean = false,
     )
 
+    /** Whether [openNapplet] and [openSite] run anything here; cards offer Open only where they do. */
+    val opensNapplets: Boolean get() = false
+
+    /** Runs a NIP-5D napplet in the platform's sandbox, or tells the user why it can't. */
+    fun openNapplet(manifest: NappletManifest) {}
+
+    /** Opens a NIP-5A nSite ([RootSiteEvent] or [NamedSiteEvent]), or tells the user why it can't. */
+    fun openSite(site: Event) {}
+
+    /**
+     * Runs the webxdc [app] attached to post [postId] by [poster] in the platform's sandbox (when
+     * [opensNapplets]), or tells the user why it can't.
+     */
+    fun openWebxdc(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+    ) {}
+
     /** Launches nothing: front ends without an app surface yet. */
     object None : AppLauncher {
         override fun launch(
@@ -258,5 +487,36 @@ interface AppLauncher {
             url: String,
             preferTor: Boolean,
         ) {}
+    }
+}
+
+@Composable
+fun rememberCallStarter(
+    peers: Set<HexKey>,
+    callType: CallType,
+): (() -> Unit)? = LocalAppPlatform.current.rememberCallStarter(peers, callType)
+
+@Composable
+fun GeocacheMapTab(
+    feedContentState: FeedContentState,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) = LocalAppPlatform.current.GeocacheMapTab(feedContentState, accountViewModel, nav)
+
+@Composable
+fun DetectedWorkoutCarousel(
+    accountViewModel: AccountViewModel,
+    onPick: (Route.NewWorkout) -> Unit,
+) = LocalAppPlatform.current.DetectedWorkoutCarousel(accountViewModel, onPick)
+
+/** Shows a brief message over the app; [long] keeps it up longer. */
+fun interface Toaster {
+    fun show(
+        message: String,
+        long: Boolean,
+    )
+
+    companion object {
+        val None = Toaster { _, _ -> }
     }
 }

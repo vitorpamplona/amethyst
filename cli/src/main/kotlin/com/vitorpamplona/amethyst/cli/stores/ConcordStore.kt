@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.cli.stores
 
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.SecureFileIO
+import kotlinx.serialization.Serializable
 import java.io.File
 
 /**
@@ -30,6 +30,7 @@ import java.io.File
  * `channels` runs can re-derive its planes. Holds the community's secrets, so the
  * file is written 0600 via [SecureFileIO].
  */
+@Serializable
 data class StoredCommunity(
     val name: String = "",
     val communityId: String = "",
@@ -74,6 +75,7 @@ data class StoredCommunity(
 )
 
 /** A held Private Channel key at its channel epoch, mirroring quartz `PrivateChannelKey`. */
+@Serializable
 data class StoredPrivateChannel(
     val channelId: String = "",
     val key: String = "",
@@ -82,6 +84,7 @@ data class StoredPrivateChannel(
 )
 
 /** A Refounding's reserved keys, mirroring quartz `PendingRefounding`. */
+@Serializable
 data class StoredPendingRefounding(
     val rootEpoch: Long = 0,
     val prevCommit: String = "",
@@ -90,6 +93,7 @@ data class StoredPendingRefounding(
 )
 
 /** A past community_root for a specific epoch, mirroring quartz `HeldRoot`. */
+@Serializable
 data class StoredHeldRoot(
     val epoch: Long = 0,
     val root: String = "",
@@ -113,12 +117,12 @@ class ConcordStore(
 ) {
     fun load(): List<StoredCommunity> =
         if (file.exists()) {
-            runCatching { Output.mapper.readValue<List<StoredCommunity>>(file.readText()) }.getOrDefault(emptyList())
+            runCatching { CliJson.files.decodeFromString<List<StoredCommunity>>(file.readText()) }.getOrDefault(emptyList())
         } else {
             emptyList()
         }
 
-    fun save(list: List<StoredCommunity>) = SecureFileIO.writeTextAtomic(file, Output.mapper.writeValueAsString(list))
+    fun save(list: List<StoredCommunity>) = SecureFileIO.writeTextAtomic(file, CliJson.files.encodeToString(list))
 
     /** Insert or replace by community id, keyed on the self-certifying id. */
     fun upsert(community: StoredCommunity) {

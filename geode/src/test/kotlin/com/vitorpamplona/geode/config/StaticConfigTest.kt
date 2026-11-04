@@ -27,6 +27,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
@@ -332,5 +333,46 @@ class StaticConfigTest {
         // Defaults preserved for unspecified sections.
         assertEquals(7447, c.network.port)
         assertEquals(true, c.database.in_memory)
+    }
+
+    @Test
+    fun rateLimitsAreOffByDefault() {
+        assertNull(StaticConfig.fromToml("").rate_limits.toRateLimits())
+    }
+
+    @Test
+    fun rateLimitsParseAndAZeroBurstMeansTheRate() {
+        val limits =
+            StaticConfig
+                .fromToml(
+                    """
+                    [rate_limits]
+                    events_per_minute = 120
+                    reqs_per_minute = 30
+                    req_burst = 5
+                    """.trimIndent(),
+                ).rate_limits
+                .toRateLimits()
+        assertNotNull(limits)
+        assertEquals(120, limits.events?.perMinute)
+        assertEquals(120, limits.events?.burst)
+        assertEquals(30, limits.reqs?.perMinute)
+        assertEquals(5, limits.reqs?.burst)
+    }
+
+    @Test
+    fun oneRateCanBeOnWithoutTheOther() {
+        val limits = assertNotNull(StaticConfig.fromToml("[rate_limits]\nreqs_per_minute = 30").rate_limits.toRateLimits())
+        assertNull(limits.events)
+        assertNotNull(limits.reqs)
+    }
+
+    @Test
+    fun negativeRateLimitsFailValidation() {
+        listOf("events_per_minute", "event_burst", "reqs_per_minute", "req_burst").forEach { key ->
+            assertFailsWith<IllegalArgumentException>(key) {
+                StaticConfig.fromToml("[rate_limits]\n$key = -1").validate()
+            }
+        }
     }
 }

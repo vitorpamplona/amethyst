@@ -193,9 +193,10 @@ internal val DarkChatBackground = DarkColorPalette.onSurface.copy(alpha = 0.12f)
 internal val LightChatBackground = LightColorPalette.onSurface.copy(alpha = 0.08f)
 
 // Bubble fill for other users' chat messages. Stronger than chatBackground so the
-// bubble clearly separates from the screen background in both themes.
+// bubble clearly separates from the screen background in both themes. Light lands on
+// RGB 234 over the #FDFDFD background (0.11 gave 228, which read too dark).
 internal val DarkChatBubbleThem = DarkColorPalette.onSurface.copy(alpha = 0.18f)
-internal val LightChatBubbleThem = LightColorPalette.onSurface.copy(alpha = 0.11f)
+internal val LightChatBubbleThem = LightColorPalette.onSurface.copy(alpha = 0.084f)
 
 internal val DarkChatDraftBackground = DarkColorPalette.onSurface.copy(alpha = 0.15f)
 internal val LightChatDraftBackground = LightColorPalette.onSurface.copy(alpha = 0.15f)
@@ -424,9 +425,23 @@ val ColorScheme.chatBackground: Color
 // fill: enough accent that "mine" vs "theirs" reads at a glance, low enough that a screen
 // of my own messages is a deep muted tone carrying white text, not a wall of purple (at
 // 45% the bubbles were the loudest thing on the screen and the gray captions on them
-// were hard to read).
+// were hard to read). The accent is first pulled halfway to mid gray: a straight tint of a
+// near-pure accent like Purple500 keeps all its saturation and reads as neon lavender.
 val ColorScheme.chatBubbleMe: Color
-    get() = primary.copy(alpha = if (isLight) 0.20f else 0.24f)
+    get() = dustyTint(primary, alpha = if (isLight) 0.22f else 0.30f)
+
+// Plain sRGB average with mid gray (Compose's Color lerp blends in Oklab, which keeps more
+// of the accent's chroma than intended here).
+private fun dustyTint(
+    accent: Color,
+    alpha: Float,
+): Color =
+    Color(
+        red = (accent.red + 0.5f) / 2f,
+        green = (accent.green + 0.5f) / 2f,
+        blue = (accent.blue + 0.5f) / 2f,
+        alpha = alpha,
+    )
 
 val ColorScheme.chatBubbleThem: Color
     get() = if (isLight) LightChatBubbleThem else DarkChatBubbleThem

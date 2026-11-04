@@ -45,6 +45,16 @@ expect object LocalClock {
     fun utcOffsetSeconds(unixSeconds: Long): Long
 
     /**
+     * How many seconds the IANA zone [zoneId] is ahead of UTC at [unixSeconds], or null when this
+     * platform does not know the zone. Two ids name the same clock at an instant when these match
+     * ("UTC" and "Etc/UTC"; Paris and Berlin).
+     */
+    fun utcOffsetSeconds(
+        zoneId: String,
+        unixSeconds: Long,
+    ): Long?
+
+    /**
      * Which local day a unix second falls on, with the zone read once for the whole counter
      * rather than per timestamp: for grouping a batch of events by day in one pass.
      */
@@ -52,6 +62,9 @@ expect object LocalClock {
 
     /** Which weekday a week starts on here, 0 = Sunday. */
     fun firstDayOfWeek(): Int
+
+    /** The reader's IANA time zone ("America/Sao_Paulo"), as NIP-52 events record it. */
+    fun zoneId(): String
 
     /** The month above a calendar grid, in the reader's own spelling ("April 2026"). */
     fun monthLabel(date: SearchDate): String

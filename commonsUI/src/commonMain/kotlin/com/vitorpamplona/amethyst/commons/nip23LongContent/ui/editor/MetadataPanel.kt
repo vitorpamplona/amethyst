@@ -46,6 +46,16 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.metadata_panel_add_tag
+import com.vitorpamplona.amethyst.commons.resources.metadata_panel_banner_url
+import com.vitorpamplona.amethyst.commons.resources.metadata_panel_remove_tag
+import com.vitorpamplona.amethyst.commons.resources.metadata_panel_slug
+import com.vitorpamplona.amethyst.commons.resources.metadata_panel_slug_description
+import com.vitorpamplona.amethyst.commons.resources.metadata_panel_summary
+import com.vitorpamplona.amethyst.commons.resources.metadata_panel_title
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Form fields for article metadata: title, summary, banner, tags, slug.
@@ -71,19 +81,21 @@ fun MetadataPanel(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             value = title,
-            onValueChange = { if (it.length <= 256) onTitleChange(it) },
-            label = { Text("Title") },
+            onValueChange = onTitleChange,
+            maxLength = 256,
+            label = { Text(stringRes(Res.string.metadata_panel_title)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             supportingText = { Text("${title.length}/256") },
         )
 
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             value = summary,
-            onValueChange = { if (it.length <= 1024) onSummaryChange(it) },
-            label = { Text("Summary") },
+            onValueChange = onSummaryChange,
+            maxLength = 1024,
+            label = { Text(stringRes(Res.string.metadata_panel_summary)) },
             maxLines = 3,
             modifier = Modifier.fillMaxWidth(),
             supportingText = { Text("${summary.length}/1024") },
@@ -92,7 +104,7 @@ fun MetadataPanel(
         OutlinedTextField(
             value = bannerUrl,
             onValueChange = onBannerUrlChange,
-            label = { Text("Banner Image URL") },
+            label = { Text(stringRes(Res.string.metadata_panel_banner_url)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -106,7 +118,7 @@ fun MetadataPanel(
                 OutlinedTextField(
                     value = tagInput,
                     onValueChange = { tagInput = it },
-                    label = { Text("Add tag (Enter to add)") },
+                    label = { Text(stringRes(Res.string.metadata_panel_add_tag)) },
                     singleLine = true,
                     modifier =
                         Modifier.weight(1f).onKeyEvent { event ->
@@ -137,7 +149,7 @@ fun MetadataPanel(
                             trailingIcon = {
                                 Icon(
                                     MaterialSymbols.Close,
-                                    contentDescription = "Remove $tag",
+                                    contentDescription = stringRes(Res.string.metadata_panel_remove_tag, tag),
                                     modifier = Modifier.size(16.dp),
                                 )
                             },
@@ -150,10 +162,10 @@ fun MetadataPanel(
         OutlinedTextField(
             value = slug,
             onValueChange = onSlugChange,
-            label = { Text("Slug (d-tag)") },
+            label = { Text(stringRes(Res.string.metadata_panel_slug)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            supportingText = { Text("Used as the unique identifier for this article") },
+            supportingText = { Text(stringRes(Res.string.metadata_panel_slug_description)) },
         )
     }
 }

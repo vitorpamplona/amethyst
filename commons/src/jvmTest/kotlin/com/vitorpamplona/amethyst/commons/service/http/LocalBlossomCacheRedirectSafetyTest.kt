@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.service.http
 
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
+import com.vitorpamplona.crypto.SymmetricCipher
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -48,7 +48,7 @@ class LocalBlossomCacheRedirectSafetyTest {
         kind: String = LocalBlossomCacheRedirectInterceptor.MEDIA,
     ) = Request.Builder().url(url).header(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER, kind)
 
-    private object IdentityCipher : NostrCipher {
+    private object IdentityCipher : SymmetricCipher {
         override fun name() = "identity"
 
         override fun encrypt(bytesToEncrypt: ByteArray) = bytesToEncrypt

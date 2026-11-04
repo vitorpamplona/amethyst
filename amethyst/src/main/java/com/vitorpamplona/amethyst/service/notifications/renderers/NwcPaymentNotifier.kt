@@ -22,26 +22,19 @@ package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.app_notification_payments_channel_message
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.commons.util.showAmount
-import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
-import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
+import com.vitorpamplona.amethyst.commons.notifications.composers.PaymentNotificationComposer
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Posts a tray notification for an incoming Lightning payment reported by the
- * connected NWC wallet (NIP-47 `payment_received`). Renders on the green Payments
- * channel with a wallet icon; the title leads with the amount.
+ * connected NWC wallet (NIP-47 `payment_received`), on the green Payments channel.
  *
  * Zaps are intentionally NOT routed here — a `payment_received` whose transaction
  * metadata carries a NIP-57 zap request is filtered out upstream by
  * [com.vitorpamplona.amethyst.service.notifications.NwcPaymentNotificationWatcher],
- * because those already surface through the kind-9735 [ZapNotification] path.
+ * because those already surface through the kind-9735 zap notification.
  */
 object NwcPaymentNotifier {
     suspend fun notify(
@@ -52,28 +45,7 @@ object NwcPaymentNotifier {
         val nm = context.notificationManager()
         if (!nm.areNotificationsEnabled()) return
 
-        val msats = tx.amount ?: return
-        val amount = showAmount((msats / 1000L).toBigDecimal())
-
-        val id = tx.payment_hash ?: tx.invoice ?: tx.created_at?.toString() ?: return
-        val time = tx.settled_at ?: tx.created_at ?: TimeUtils.now()
-
-        val title = loadStringRes(Res.string.app_notification_payments_channel_message, amount)
-        val comment = tx.parsedMetadata()?.displayComment() ?: tx.displayDescription()
-        val body = comment ?: title
-
-        val accountNpub = NotificationRoutes.accountNpub(account)
-        val uri = NotificationRoutes.notificationsUri(accountNpub, id)
-
-        nm.postStandard(
-            category = NotificationCategory.PAYMENT_RECEIVED,
-            id = id,
-            messageTitle = title,
-            messageBody = body,
-            time = time,
-            pictureUrl = null,
-            uri = uri,
-            applicationContext = context,
-        )
+        val message = PaymentNotificationComposer.compose(account, tx) ?: return
+        nm.postStandard(message, context)
     }
 }

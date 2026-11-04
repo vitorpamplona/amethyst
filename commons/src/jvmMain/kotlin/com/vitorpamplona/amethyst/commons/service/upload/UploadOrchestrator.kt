@@ -20,15 +20,16 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload
 
+import com.vitorpamplona.amethyst.commons.notices.UploadNotice
 import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder.ReencodeResult
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
+import com.vitorpamplona.crypto.aes.AESGCM
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -37,6 +38,8 @@ import kotlin.coroutines.cancellation.CancellationException
 data class UploadResult(
     val blossom: BlossomUploadResult,
     val metadata: MediaMetadata,
+    /** Where the upload went when it was not simply the chosen server taking these bytes. */
+    val notices: List<UploadNotice> = emptyList(),
 )
 
 data class EncryptedUploadResult(
@@ -44,10 +47,17 @@ data class EncryptedUploadResult(
     val metadata: MediaMetadata,
     val encryptedHash: String,
     val encryptedSize: Int,
+    /** Where the upload went when it was not the chosen server. */
+    val notices: List<UploadNotice> = emptyList(),
 )
 
 class UploadOrchestrator(
     private val client: BlossomClient = BlossomClient(),
+    /**
+     * The client for a server: a fallback server goes out on its own route (the app may send one
+     * server through Tor and another not), not on the selected server's. Defaults to [client].
+     */
+    private val clientFor: (serverBaseUrl: String) -> BlossomClient = { client },
 ) {
     /**
      * Upload an image file to a Blossom server, optionally re-encoding
@@ -76,11 +86,13 @@ class UploadOrchestrator(
         serverBaseUrl: String,
         signer: NostrSigner,
         stripExif: Boolean = true,
-        quality: CompressionQuality? = null,
+        quality: ImageCompressionTarget? = null,
         bypassReencode: Boolean = false,
         preCompressed: File? = null,
         // Tried in order after [serverBaseUrl] fails; see [uploadToFirstAccepting].
         fallbackServerBaseUrls: List<String> = emptyList(),
+        // The bytes sent, per attempt: a retry or the next server starts again from zero.
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
     ): UploadResult {
         var reencodedTemp: File? = null
         var strippedTemp: File? = null
@@ -136,18 +148,30 @@ class UploadOrchestrator(
                     signer = signer,
                 )
 
-            // 5. Upload.
-            val result =
+            // 5. Upload. A server holding an identical image names it instead of taking this one:
+            //    the note links to that copy, so its header describes that copy's bytes.
+            var identicalCopy: MediaMetadata? = null
+            val accepted =
                 uploadToFirstAccepting(serverBaseUrl, fallbackServerBaseUrls) { server ->
-                    client.upload(
-                        file = finalFile,
-                        contentType = metadata.mimeType,
-                        serverBaseUrl = server,
-                        authHeader = authHeader,
-                    )
+                    val blossom = clientFor(server)
+                    try {
+                        blossom.uploadOrHeld(metadata.sha256, metadata.size, metadata.mimeType, server) {
+                            blossom.upload(
+                                file = finalFile,
+                                contentType = metadata.mimeType,
+                                serverBaseUrl = server,
+                                authHeader = authHeader,
+                                onProgress = onProgress,
+                            )
+                        }
+                    } catch (e: BlossomIdenticalMediaException) {
+                        val copy = identicalCopy(blossom, e, metadata) ?: throw e
+                        identicalCopy = copy
+                        BlossomClient.heldDescriptor(copy.sha256, copy.size, copy.mimeType, server, BlossomClient.extensionFor(copy.mimeType))
+                    }
                 }
 
-            return UploadResult(blossom = result, metadata = metadata)
+            return UploadResult(blossom = accepted.result, metadata = identicalCopy ?: metadata, notices = listOfNotNull(accepted.notice(serverBaseUrl)))
         } finally {
             // Eager cleanup of every intermediate. NonCancellable so a
             // user-cancelled upload still cleans up its temps.
@@ -172,7 +196,7 @@ class UploadOrchestrator(
         // strip → encrypt raw bytes) for existing Android/CLI callers. Only
         // callers that opt in (e.g. Desktop DMs) change what leaves the machine.
         stripExif: Boolean = false,
-        quality: CompressionQuality? = null,
+        quality: ImageCompressionTarget? = null,
         // When false (default) the encrypted blob is uploaded as opaque
         // application/octet-stream so the server can't learn the media type.
         // When true it's uploaded with the real media type — less private, but
@@ -180,6 +204,8 @@ class UploadOrchestrator(
         declareRealMimeType: Boolean = false,
         // Tried in order after [serverBaseUrl] fails; see [uploadToFirstAccepting].
         fallbackServerBaseUrls: List<String> = emptyList(),
+        // The bytes sent, per attempt: a retry or the next server starts again from zero.
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
     ): EncryptedUploadResult {
         var reencodedTemp: File? = null
         var strippedTemp: File? = null
@@ -241,21 +267,26 @@ class UploadOrchestrator(
                 if (declareRealMimeType) metadata.mimeType else "application/octet-stream"
             // The same ciphertext goes to every server tried, so the cipher and the
             // encrypted hash stay valid wherever it lands.
-            val result =
+            val accepted =
                 uploadToFirstAccepting(serverBaseUrl, fallbackServerBaseUrls) { server ->
-                    client.upload(
-                        bytes = encrypted,
-                        contentType = uploadContentType,
-                        serverBaseUrl = server,
-                        authHeader = authHeader,
-                    )
+                    val blossom = clientFor(server)
+                    blossom.uploadOrHeld(encryptedHash, encryptedSize.toLong(), uploadContentType, server) {
+                        blossom.upload(
+                            bytes = encrypted,
+                            contentType = uploadContentType,
+                            serverBaseUrl = server,
+                            authHeader = authHeader,
+                            onProgress = onProgress,
+                        )
+                    }
                 }
 
             return EncryptedUploadResult(
-                blossom = result,
+                blossom = accepted.result,
                 metadata = metadata,
                 encryptedHash = encryptedHash,
                 encryptedSize = encryptedSize,
+                notices = listOfNotNull(accepted.notice(serverBaseUrl)),
             )
         } finally {
             withContext(NonCancellable) {
@@ -276,13 +307,13 @@ class UploadOrchestrator(
         serverBaseUrl: String,
         fallbacks: List<String>,
         upload: suspend (String) -> BlossomUploadResult,
-    ): BlossomUploadResult {
+    ): Accepted {
         val seen = mutableSetOf<String>()
         val order = (listOf(serverBaseUrl) + fallbacks).filter { seen.add(BlossomServerUrl.domain(it)) }
         var firstError: Exception? = null
         for (server in order) {
             try {
-                return upload(server)
+                return Accepted(upload(server), server, firstError)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 if (firstError == null) firstError = e
@@ -290,5 +321,88 @@ class UploadOrchestrator(
             }
         }
         throw firstError!!
+    }
+
+    /** The server that took the upload, and the chosen server's refusal when it was not that one. */
+    private class Accepted(
+        val result: BlossomUploadResult,
+        val server: String,
+        val refusal: Exception?,
+    ) {
+        /** What to tell the user when [server] is not [chosen]: where it went, and why. */
+        fun notice(chosen: String): UploadNotice? =
+            refusal?.let {
+                UploadNotice.UploadedToAnotherServer(
+                    chosenServer = BlossomServerUrl.domain(chosen),
+                    usedServer = BlossomServerUrl.domain(server),
+                    reason = it.message,
+                )
+            }
+    }
+
+    /**
+     * The metadata of the copy [refusal] names, when [blossom] serves it, it hashes to that name and
+     * it has [local]'s dimensions, or null. The server says it is the same picture; the hash proves
+     * the copy is a fixed file, and the size check catches a server naming some other image.
+     */
+    private suspend fun identicalCopy(
+        blossom: BlossomClient,
+        refusal: BlossomIdenticalMediaException,
+        local: MediaMetadata,
+    ): MediaMetadata? {
+        val bytes = blossom.download(BlossomServerUrl.blob(refusal.server, refusal.existingHash)) ?: return null
+        if (!sha256(bytes).toHexKey().equals(refusal.existingHash, ignoreCase = true)) {
+            Log.w("UploadOrchestrator") { "${refusal.server} serves other bytes than its identical copy ${refusal.existingHash}" }
+            return null
+        }
+        val copy = MediaMetadataReader.compute(bytes, local.mimeType)
+        if (copy.width != local.width || copy.height != local.height) {
+            Log.w("UploadOrchestrator") { "${refusal.server}'s identical copy is ${copy.width}x${copy.height}, not ${local.width}x${local.height}" }
+            return null
+        }
+        return copy
+    }
+
+    companion object {
+        /**
+         * The bytes [upload] would send, for servers this class doesn't speak to (NIP-96):
+         * re-encoded at [quality], or, when passed through, stripped of EXIF if [stripExif]. [block]
+         * gets that file and its metadata; every temp is deleted afterwards, even on cancellation.
+         */
+        suspend fun <T> withPreparedFile(
+            file: File,
+            stripExif: Boolean,
+            quality: ImageCompressionTarget?,
+            block: suspend (prepared: File, metadata: MediaMetadata) -> T,
+        ): T {
+            var reencodedTemp: File? = null
+            var strippedTemp: File? = null
+            try {
+                val reencode =
+                    when {
+                        quality == null -> ReencodeResult.PassThrough(ImageReencoder.PassReason.BypassByUser)
+                        else -> ImageReencoder.reencode(file, quality)
+                    }
+                val afterReencode =
+                    when (reencode) {
+                        is ReencodeResult.Reencoded -> reencode.file.also { reencodedTemp = it }
+                        is ReencodeResult.PassThrough -> file
+                    }
+                val finalFile =
+                    if (stripExif && reencode is ReencodeResult.PassThrough) {
+                        val stripped = MediaCompressor.stripExif(afterReencode)
+                        if (stripped != afterReencode) strippedTemp = stripped
+                        stripped
+                    } else {
+                        afterReencode
+                    }
+                return block(finalFile, MediaMetadataReader.compute(finalFile))
+            } finally {
+                withContext(NonCancellable) {
+                    strippedTemp?.deleteOrWarn("UploadOrchestrator", "prepared stripped temp")
+                    reencodedTemp?.deleteOrWarn("UploadOrchestrator", "prepared reencoded temp")
+                }
+            }
+        }
     }
 }

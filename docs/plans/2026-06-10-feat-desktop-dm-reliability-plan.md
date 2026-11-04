@@ -45,7 +45,7 @@ Eleven parallel review passes (skills + reviewers) revealed substantial correcti
 - **R10 (self-copy)**: already half-implemented via `BaseDMGroupEvent.groupMembers() = recipients.plus(pubKey)`. On desktop, port the pre-consume + alias-note pattern (Android has it; we replicate the *technique* in `DesktopIAccount`, not import the Android code) + route self-wrap to `account.dmInboxRelays()`, not `connectedRelays`.
 - **R11 (relay hint on p-tag)**: a one-line change in `GiftWrapEvent.create:117-122`; keep but no separate sub-phase.
 - **R12**: drop as standalone scope item — compress to a single regression test under Phase 5.
-- **Phase 6 decouple**: spec PR + bunker batch RPC has external coordination dependencies (nsec.app/Amber/Keychat). Spin into its own plan file; Phases 1–5 ship independently.
+- **Phase 6 decouple**: spec PR + bunker batch RPC has external coordination dependencies (Amber/Keychat). Spin into its own plan file; Phases 1–5 ship independently.
 - **Manual relay-entry dialog → simple error message** (Phase 4): replace `DmInboxRelayMissingDialog` UI with a Snackbar "Can't find DM relays for `<name>`. They need to publish their NIP-17 inbox first." Only re-introduce manual entry if security validation requirements (F-02) are met.
 
 ### Cross-cutting corrections
@@ -420,7 +420,6 @@ The bulk of the change lives in `quartz/.../nip01Core/relay/client/` (publish pa
 
 **Coordination:**
 - Open NIPs PR + cross-post to bunker maintainers:
-  - **nsec.app** (Yegor) — github.com/nostrband/nsec.app
   - **Amber** (greenart7c3) — github.com/greenart7c3/Amber
   - **Keychat** — github.com/keychat-io
 - Resolve open semantics question (brainstorm Q4):
@@ -585,7 +584,7 @@ RelayConnection.onIncomingMessage(EventMessage(kind=1059))
 
 ## Dependencies & Prerequisites
 
-- **Phase 6 blocked on NIPs PR consensus.** Spec authors (nsec.app/Amber/Keychat) need to weigh in. If consensus stalls, Phase 6 implementation can still land **behind a feature flag** as a discussion prototype.
+- **Phase 6 blocked on NIPs PR consensus.** Spec authors (Amber/Keychat) need to weigh in. If consensus stalls, Phase 6 implementation can still land **behind a feature flag** as a discussion prototype.
 - Phases 1–5 are sequential within Track A but each is independently shippable.
 - Phase 4's manual-entry dialog needs design pass (no Figma assumed; brainstorm spec is the source).
 - Mock bunker test infra for Phase 6 — small new utility, no external deps.
@@ -596,7 +595,7 @@ RelayConnection.onIncomingMessage(EventMessage(kind=1059))
 |---|---|---|---|
 | Phase 2 AUTH classifier wrongly tier-3-drops a legit relay | M | High (silent drop) | Default tier-3 to "log warning" not "silently drop" during rollout; flip later. Tier-1 + tier-2 catch the common cases. |
 | Retry queue grows unbounded (e.g. dead relay) | M | M | `max_attempts=8` + exp-backoff caps total relay-time per event to ~10 min. Dead-letter table for inspection. UI surfaces "permanent failure" ⚠. |
-| Phase 6 NIPs PR rejected | M | M | Implement Vitor's design as a discussion prototype regardless; if PR rejected, ship as Amethyst↔nsec.app/Amber bilateral capability negotiation (slightly worse interop, equivalent end-user outcome). |
+| Phase 6 NIPs PR rejected | M | M | Implement Vitor's design as a discussion prototype regardless; if PR rejected, ship as Amethyst↔Amber bilateral capability negotiation (slightly worse interop, equivalent end-user outcome). |
 | Security fix (Phase 4) breaks existing users who relied on the leaky fallback | L | L | Surface dialog + provide manual-entry fallback. Document migration in release notes. Add telemetry for "no-10050" send attempts in 1.0 to size the affected population. |
 | Window-focus listener leaks on close | L | L | Standard `addWindowFocusListener` / `removeWindowFocusListener` pairing; unit-test via headless ComposeWindow. |
 | Conversation-key cache (Phase 6) leaks across account switch | L | High (cross-account decryption) | Wipe `ConversationKeyCache` in `AccountStateHolder.onAccountChanged`. Unit test. |

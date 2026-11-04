@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.model.DEFAULT_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.commons.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
@@ -100,7 +101,6 @@ import com.vitorpamplona.amethyst.commons.service.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.commons.service.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
@@ -123,6 +123,7 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.SegwitAddress
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
 import com.vitorpamplona.quartz.utils.BigDecimal
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -316,7 +317,7 @@ private fun SendPaymentLoaded(
             if (fees != null) return@LaunchedEffect
             val backend = LocalCache.onchainBackend
             if (backend != null) {
-                val newFees = runCatching { withContext(Dispatchers.IO) { backend.feeEstimates() } }.getOrNull()
+                val newFees = runCatchingCancellable { withContext(Dispatchers.IO) { backend.feeEstimates() } }.getOrNull()
                 if (newFees != null) {
                     fees = newFees
                     return@LaunchedEffect

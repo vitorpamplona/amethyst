@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.zap_split_title
 import com.vitorpamplona.amethyst.commons.resources.zaps
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
@@ -49,13 +50,15 @@ fun ForwardZapToButton(
     isActive: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        onClick = { onClick() },
-    ) {
-        if (!isActive) {
-            ZapSplitIcon(tint = MaterialTheme.colorScheme.onBackground)
-        } else {
-            ZapSplitIcon(tint = BitcoinOrange)
+    HoverTooltip(stringRes(Res.string.zap_split_title)) {
+        IconButton(
+            onClick = { onClick() },
+        ) {
+            if (!isActive) {
+                ZapSplitIcon(tint = MaterialTheme.colorScheme.onBackground)
+            } else {
+                ZapSplitIcon(tint = BitcoinOrange)
+            }
         }
     }
 }

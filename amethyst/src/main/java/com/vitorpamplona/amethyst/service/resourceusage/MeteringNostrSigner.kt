@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.resourceusage
 
+import com.vitorpamplona.amethyst.commons.service.resourceusage.ResourceUsageAccountant
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.service.playback.playerPool.positions
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import com.vitorpamplona.amethyst.commons.service.playback.MutableVideoViewedPositionCache
+import com.vitorpamplona.amethyst.commons.service.playback.VideoViewedPositionCache
 import com.vitorpamplona.amethyst.service.playback.playerPool.isHlsMediaItem
 import kotlin.math.abs
 
@@ -68,7 +70,7 @@ class CurrentPlayPositionCacher(
                         // flush right at playback start) for almost any saved position.
                         // 5 s gives the user a perceptible "resumed where I left off"
                         // without forcing a re-seek for trivially short clips.
-                        if (abs(player.currentPosition - lastPosition) > 5_000) {
+                        if (VideoViewedPositionCache.shouldRestore(player.currentPosition, lastPosition)) {
                             player.seekTo(lastPosition)
                         }
                     }

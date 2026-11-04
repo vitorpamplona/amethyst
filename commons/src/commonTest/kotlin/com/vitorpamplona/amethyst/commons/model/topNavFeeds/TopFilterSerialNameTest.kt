@@ -58,6 +58,7 @@ class TopFilterSerialNameTest {
             "FavoriteAlgoFeed" to TopFilter.FavoriteAlgoFeed(address),
             "AllFavoriteAlgoFeeds" to TopFilter.AllFavoriteAlgoFeeds,
             "InterestSet" to TopFilter.InterestSet(address),
+            "CustomFeed" to TopFilter.CustomFeed("6f1c2a"),
         )
 
     @Test

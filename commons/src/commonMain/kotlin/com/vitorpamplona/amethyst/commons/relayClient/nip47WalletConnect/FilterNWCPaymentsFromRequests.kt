@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
@@ -42,7 +44,8 @@ fun filterNWCPaymentsFromRequests(
     paymentRequests: Set<HexKey>,
     fromUsers: Set<HexKey>,
 ): Filter =
-    Filter(
+    ExplainedFilter(
+        purpose = SubPurpose.NWC,
         kinds = listOf(NwcResponseEvent.KIND),
         tags =
             mapOf(

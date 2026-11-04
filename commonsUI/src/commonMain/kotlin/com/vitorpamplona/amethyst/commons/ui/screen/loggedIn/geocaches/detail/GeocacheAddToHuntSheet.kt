@@ -35,7 +35,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_already_on
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_caches
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_new
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_none_yet
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -63,6 +63,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationRevision
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.launch
 
 /**
@@ -100,7 +101,7 @@ fun GeocacheAddToHuntSheet(
             else -> emptyList()
         }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState()) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalSheetState()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
             Text(
                 text = stringRes(Res.string.geocache_add_to_hunt),
@@ -152,7 +153,7 @@ fun GeocacheAddToHuntSheet(
                         .clickable(enabled = !already && !working) {
                             working = true
                             scope.launch {
-                                runCatching {
+                                runCatchingCancellable {
                                     accountViewModel.account.signAndComputeBroadcast(
                                         GeocacheCurationRevision.withCache(hunt, cache),
                                     )

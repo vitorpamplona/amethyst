@@ -22,13 +22,16 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Orphaned translations (no locale string may outlive its default key)
-        run: .claude/hooks/orphan_strings_check.py
+        run: tools/agent-hooks/orphan_strings_check.py
 
       - name: Compose catalog escaping (Android escapes render literally there)
-        run: .claude/hooks/compose_escaping_check.py
+        run: tools/agent-hooks/compose_escaping_check.py
+
+      - name: Agent config (Claude Code and Codex read the same rules and skills)
+        run: tools/agent-hooks/agent_config_check.py
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -45,33 +48,45 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Linter (gradle)
-        # The three metadata compiles resolve commonMain against only the
+        # The metadata compiles resolve commonMain against only the
         # deps every target shares, which is the Apple classpath — a
         # dependency that reaches JVM transitively (okio via OkHttp) but is
-        # missing for iOS fails here, on Linux, instead of in test-quartz-ios.
+        # missing for iOS fails here, on Linux, instead of in test-commons-ios.
+        # skikoMain (desktop + iOS) does the same for the skiko code: a skia or
+        # okio `use` that only resolves on the JVM fails here, not in
+        # test-commonsui-ios. The .git-hooks/pre-push hook runs this same list
+        # when PREPUSH_KMP_METADATA=1 (a plain push skips the compiles).
         run: |
           ./gradlew spotlessCheck \
-            :quartz:verifyKmpPurity :commons:verifyKmpPurity :commonsUI:verifyKmpPurity \
-            :quartz:compileCommonMainKotlinMetadata \
+            :commons:verifyKmpPurity :commonsUI:verifyKmpPurity \
             :commons:compileCommonMainKotlinMetadata \
-            :commonsUI:compileCommonMainKotlinMetadata
+            :commonsUI:compileCommonMainKotlinMetadata \
+            :commonsUI:compileSkikoMainKotlinMetadata
 
+  # No job waits for `lint` (they used to `needs: lint`): that put its ~3.5 minutes in front of
+  # every run's critical path. A lint failure still fails the run.
   build-desktop:
-    needs: lint
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             desktop-task: packageDeb
+            # Every shared JVM suite runs on this leg. Running all of them on all three legs is
+            # what made the macOS leg the slowest job (~32 min against ~5 on Linux), and only
+            # :commons has tests that take an OS-specific path (ffmpeg lookup, file permissions,
+            # the keystore), so the other legs run that one beside the desktop shim's.
+            jvm-tests: ':commons:jvmTest :commonsUI:jvmTest :nestsClient:jvmTest :cli:test'
             desktop-artifact-name: Desktop Linux DEB
             desktop-artifact-path: desktopApp/build/compose/binaries/main/deb/*.deb
           - os: macos-latest
             desktop-task: packageDmg
+            jvm-tests: ':commons:jvmTest'
             desktop-artifact-name: Desktop macOS DMG
             desktop-artifact-path: desktopApp/build/compose/binaries/main/dmg/*.dmg
           - os: windows-latest
             desktop-task: packageMsi
+            jvm-tests: ':commons:jvmTest'
             desktop-artifact-name: Desktop Windows MSI
             desktop-artifact-path: desktopApp/build/compose/binaries/main/msi/*.msi
     runs-on: ${{ matrix.os }}
@@ -83,8 +98,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      # Linux packages bundle the JetBrains Runtime, the JDK Gradle runs on, for its native Wayland
+      # toolkit (see create-release.yml); build and test the .deb the same way.
+      - name: Set up JDK 21 (JetBrains Runtime)
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/setup-jbr
+
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        if: runner.os != 'Linux'
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -102,16 +124,15 @@ jobs:
 
       - name: Test + Build Desktop (gradle)
         run: |
-          CMD="./gradlew :quartz:jvmTest :commons:jvmTest :commonsUI:jvmTest :quic:jvmTest :nestsClient:jvmTest :marmotQuic:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}"
+          CMD="./gradlew ${{ matrix.jvm-tests }} :desktopApp:test :desktopApp:${{ matrix.desktop-task }}"
           if [ "${{ runner.os }}" = "Linux" ]; then
             xvfb-run --auto-servernum $CMD
           else
             $CMD
           fi
 
-      # This job runs the JVM test suites (:quartz, :commons, :commonsUI, :quic,
-      # :nestsClient, :marmotQuic, :cli, :desktopApp) but, unlike test-geode /
-      # test-quartz-ios /
+      # This job runs the JVM test suites (all of them on Linux; :commons and
+      # :desktopApp on macOS and Windows) but, unlike test-geode /
       # test-and-build-android, published nothing when one of them failed. The
       # console line names the failing test and the exception class and stops
       # there, so the message is lost with the runner. That is how the
@@ -120,7 +141,7 @@ jobs:
       # branch fired (connect timeout / idle silence / NEG-ERR / disconnect),
       # and nobody could read it. Same action and pin as the Android job below.
       - name: Desktop Test Report
-        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
+        uses: mikepenz/action-junit-report@8a133bfa3ecb0ea9024c1e2ae788b4c25f6cdb9d # v6.6.2
         if: always()
         with:
           report_paths: '**/build/test-results/**/TEST-*.xml'
@@ -137,22 +158,48 @@ jobs:
         with:
           name: Desktop Test Reports (${{ matrix.os }})
           path: |
-            quartz/build/reports/tests
             commons/build/reports/tests
             commonsUI/build/reports/tests
             nestsClient/build/reports/tests
             cli/build/reports/tests
             desktopApp/build/reports/tests
 
-      # jpackage pins libicu to the build host's version (libicu74 on
-      # ubuntu-24.04). Rewrite the .deb so testers on other Debian/Ubuntu
+      # jpackage pins libicu and the t64-renamed libs (libasound2t64, ...) to the
+      # build host (ubuntu-24.04). Rewrite the .deb so testers on other Debian/Ubuntu
       # releases can install the uploaded artifact.
-      - name: Relax libicu dependency in .deb
+      - name: Relax build-host-pinned deps in .deb
         if: matrix.desktop-task == 'packageDeb'
         run: |
           set -euo pipefail
           chmod +x scripts/relax-deb-libicu.sh
           scripts/relax-deb-libicu.sh desktopApp/build/compose/binaries/main/deb/*.deb
+
+      # The media player drives the system GStreamer from a native library jpackage
+      # never sees, so the .deb has to be told to depend on it.
+      - name: Add GStreamer deps to .deb
+        if: matrix.desktop-task == 'packageDeb'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/add-deb-gstreamer-deps.sh
+          scripts/add-deb-gstreamer-deps.sh desktopApp/build/compose/binaries/main/deb/*.deb
+
+      # The bundled JBR opens libxkbcommon (the keyboard on Wayland) with dlopen.
+      - name: Add Wayland deps to .deb
+        if: matrix.desktop-task == 'packageDeb'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/add-deb-wayland-deps.sh
+          scripts/add-deb-wayland-deps.sh desktopApp/build/compose/binaries/main/deb/*.deb
+
+      # Ships the menu entry in /usr/share/applications with StartupWMClass (docks match the
+      # window's WM_CLASS to it) instead of registering it from postinst with xdg-desktop-menu,
+      # which fails on systems without menu directories. Also sets the .deb's compression (xz).
+      - name: Fix desktop entry in .deb
+        if: matrix.desktop-task == 'packageDeb'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/fix-deb-desktop-entry.sh
+          scripts/fix-deb-desktop-entry.sh desktopApp/build/compose/binaries/main/deb/*.deb
 
       - name: Upload Desktop Distribution
         uses: actions/upload-artifact@v7
@@ -164,11 +211,11 @@ jobs:
   # rather than the build-desktop matrix — one runner suffices (no reason to test
   # a platform-independent module 3× across the desktop OS matrix). Isolating it
   # also keeps its default suite's CPU-heavy throughput benchmarks (a 1M-event
-  # mirror sync, WireReqFloor, NegentropyServerReconcile) from contending with the
-  # timing-sensitive quartz relay-client tests under org.gradle.parallel — that
-  # contention flakes tests like NostrClientReqBypassingRelayLimitsTest.
+  # mirror sync, WireReqFloor, NegentropyServerReconcile) from contending with
+  # timing-sensitive relay-client tests under org.gradle.parallel. It also runs
+  # the quartz client tests that need a real socket relay (KtorRelay), which
+  # stayed here when quartz moved to vitorpamplona/quartz.
   test-geode:
-    needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -176,7 +223,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -208,72 +255,36 @@ jobs:
           name: geode Test Reports
           path: geode/build/reports
 
-  # Until this job existed nothing ran the linuxX64 target at all — it was compiled by
-  # no CI leg. That is how a copy-on-write LargeCache with O(n) writes and a non-atomic
-  # read-copy-write (concurrent writers silently dropped entries) sat in the tree
-  # unnoticed, and how TestResourceLoader stayed a TODO() that failed every vector-driven
-  # suite on the target.
-  #
-  # Runs the whole :quartz suite on a Linux Native frontend, which also catches a
-  # commonMain or commonTest source reaching for a JVM-only API on a target that, unlike
-  # Apple, has no Foundation to fall back on.
-  test-quartz-linux-native:
-    needs: lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
-        with:
-          distribution: 'temurin'
-          java-version: 21
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-
-      # The Kotlin/Native toolchain (compiler distribution + LLVM + the sysroot) lands
-      # in ~/.konan, which setup-gradle does not cache. Without this the job re-downloads
-      # well over a gigabyte on every run. Keyed on the version catalog so a Kotlin bump
-      # re-populates it.
-      - name: Cache Kotlin/Native toolchain
-        uses: actions/cache@v6
-        with:
-          path: ~/.konan
-          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
-          restore-keys: konan-${{ runner.os }}-
-
-      - name: Test Quartz on Linux Native
-        run: ./gradlew :quartz:linuxX64Test
-
-      - name: Linux Native Test Report
-        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
-        if: always()
-        with:
-          report_paths: 'quartz/build/test-results/linuxX64Test/TEST-*.xml'
-          annotate_only: true
-          detailed_summary: true
-          fail_on_failure: true
-
-      - name: Upload Linux Native Test Reports
-        uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: Quartz Linux Native Test Reports
-          path: quartz/build/reports
-
-  test-quartz-ios:
-    # Phase 1 of the iOS support plan
-    # (amethyst/plans/2026-05-24-ios-support.md): keep :quartz green on iOS
-    # so JVM-only imports can't sneak into commonMain unnoticed. The
-    # `verifyKmpPurity` task in the lint job is the fast pre-check (Linux,
-    # ~1s); this job is the real one — compiles for the device variant
-    # and actually runs the simulator test suite.
-    needs: lint
+  # The two iOS jobs run on macos-latest, the smallest hosted runner there
+  # is: 3 M1 cores and 7 GB of RAM, and 5 to 10x slower than a current laptop
+  # on Kotlin/Native compiles and links (:commonsUI:compileKotlinIosSimulatorArm64
+  # is 48 s on an M5 Pro and 8 to 14 minutes here). Run-to-run speed also
+  # varies by about 1.5x, so every job needs real headroom under its limit.
+  # What keeps them inside 45 minutes:
+  # - One job per module, so each has its own 45 minutes and they run side by
+  #   side: about 15 to 20 min for :commons, about 25 for :commonsUI. (quartz,
+  #   the third, runs in vitorpamplona/quartz's own CI now.)
+  # - ~/.konan is cached, so a run does not re-download the compiler, LLVM and
+  #   the sysroot, keyed per job because each job populates different
+  #   per-library caches.
+  # - gradle.properties asks for a 6 GB daemon heap, more than the host has.
+  #   These jobs cap it at 4 GB with the same `-D` override the Android jobs
+  #   use. That keeps the daemon off swap, but measured on CI it is not what
+  #   makes the difference: the runner's speed is. The Kotlin JVM daemon is not
+  #   involved; every compile and link task here is Kotlin/Native and runs
+  #   inside the Gradle daemon.
+  test-commons-ios:
+    # :commons gained iosArm64 + iosSimulatorArm64 targets in Phase 2 of the
+    # iOS plan. Actual UI / lifecycle wiring will land with the iosApp module
+    # in Phase 3, but the shared commonMain + commonTest sources are already
+    # built here against an Apple Native frontend. Two tasks:
+    # - iosSimulatorArm64Test compiles AND runs the shared commonTest suite
+    #   on the simulator. commonTest is built for every target, so a test
+    #   reaching for a JVM-only API (JUnit, javaClass, @JvmStatic, or a
+    #   jvmAndroid-only symbol) breaks the Apple build even though
+    #   :commons:jvmTest stays green — this is the job that catches it.
+    # - compileTestKotlinIosArm64 catches device-only compile drift
+    #   (iosArm64 = aarch64-apple-ios) without needing a physical device.
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
@@ -281,7 +292,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -291,49 +302,93 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
-      # Two tasks, two purposes:
-      # - iosSimulatorArm64Test runs the existing iosTest suite on the
-      #   simulator (NIP-04 / NIP-17 / NIP-19 / NIP-49 / AES-GCM /
-      #   Chatroom keys), exercising secp256k1 and CryptoKit-backed
-      #   primitives on a real Apple toolchain.
-      # - compileTestKotlinIosArm64 catches any device-only compile drift
-      #   (iosArm64 = aarch64-apple-ios) without needing a physical
-      #   device to run on. Compile-only is enough — running on-device
-      #   would require xcodebuild + a provisioning profile.
-      - name: Test Quartz on iOS
-        run: |
-          ./gradlew \
-            :quartz:iosSimulatorArm64Test \
-            :quartz:compileTestKotlinIosArm64
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@v6
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-commons-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-commons-
+            konan-${{ runner.os }}-
 
-      # :commons gained iosArm64 + iosSimulatorArm64 targets in Phase 2 of the
-      # iOS plan. Actual UI / lifecycle wiring will land with the iosApp module
-      # in Phase 3, but the shared commonMain + commonTest sources are already
-      # built here against an Apple Native frontend. Same two-task shape as
-      # quartz above:
-      # - iosSimulatorArm64Test compiles AND runs the shared commonTest suite
-      #   on the simulator. commonTest is built for every target, so a test
-      #   reaching for a JVM-only API (JUnit, javaClass, @JvmStatic, or a
-      #   jvmAndroid-only symbol) breaks the Apple build even though
-      #   :commons:jvmTest stays green — this is the job that catches it.
-      # - compileTestKotlinIosArm64 catches device-only compile drift
-      #   (iosArm64 = aarch64-apple-ios) without needing a physical device.
-      # :commonsUI (the Compose half split out of :commons) gets the same
-      # treatment so the shared composables keep compiling on Apple targets.
       - name: Test Commons on iOS
         run: |
           ./gradlew \
+            -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" \
             :commons:iosSimulatorArm64Test \
-            :commons:compileTestKotlinIosArm64 \
-            :commonsUI:iosSimulatorArm64Test \
-            :commonsUI:compileTestKotlinIosArm64
+            :commons:compileTestKotlinIosArm64
 
-      - name: Upload iOS Test Reports
+      - name: Commons iOS Test Report
+        uses: mikepenz/action-junit-report@8a133bfa3ecb0ea9024c1e2ae788b4c25f6cdb9d # v6.6.2
+        if: always()
+        with:
+          report_paths: 'commons/build/test-results/iosSimulatorArm64Test/TEST-*.xml'
+          annotate_only: true
+          detailed_summary: true
+          fail_on_failure: true
+
+      - name: Upload Commons iOS Test Reports
         uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: Quartz iOS Test Reports
-          path: quartz/build/reports
+          name: Commons iOS Test Reports
+          path: commons/build/reports
+
+  test-commonsui-ios:
+    # :commonsUI (the Compose half split out of :commons) gets the same
+    # treatment as :commons so the shared composables keep compiling on Apple
+    # targets. It is the slowest of the three iOS modules by far (Compose,
+    # Skiko and the resource pipeline all go through the native compiler), so
+    # it has a job to itself: together with :commons it ran 35 to 37 minutes
+    # against the 45-minute limit on back-to-back runs.
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6.1.0
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@v6
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-commonsui-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-commonsui-
+            konan-${{ runner.os }}-
+
+      - name: Test CommonsUI on iOS
+        run: |
+          ./gradlew \
+            -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" \
+            :commonsUI:iosSimulatorArm64Test \
+            :commonsUI:compileTestKotlinIosArm64
+
+      - name: CommonsUI iOS Test Report
+        uses: mikepenz/action-junit-report@8a133bfa3ecb0ea9024c1e2ae788b4c25f6cdb9d # v6.6.2
+        if: always()
+        with:
+          report_paths: 'commonsUI/build/test-results/iosSimulatorArm64Test/TEST-*.xml'
+          annotate_only: true
+          detailed_summary: true
+          fail_on_failure: true
+
+      - name: Upload CommonsUI iOS Test Reports
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: CommonsUI iOS Test Reports
+          path: commonsUI/build/reports
 
   # Android Lint, split out of test-and-build-android.
   #
@@ -355,7 +410,6 @@ jobs:
   # repeat some module compilation. That buys back more than it spends here,
   # because the duplicated work is parallel while the memory pressure was not.
   lint-android:
-    needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -363,7 +417,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -376,6 +430,8 @@ jobs:
       # Same daemon cap as the sibling job: lintAnalyze draws on the Gradle
       # daemon's heap, which is why the earlier 4g experiment broke it. Only the
       # Kotlin daemon is trimmed.
+      # .git-hooks/pre-push runs :amethyst:lintPlayDebug, the debug twin of these
+      # two; change the variant in both places.
       - name: Lint Android (gradle)
         run: |
           ./gradlew \
@@ -392,12 +448,11 @@ jobs:
           path: amethyst/build/reports/lint-results-*.html
 
   test-and-build-android:
-    needs: lint
     runs-on: ubuntu-latest
     # 90, not 60. On main this job's Gradle step takes ~46 minutes, which used
     # 76% of a 60-minute budget — fine for an incremental run, but PR runs set
     # `cache-read-only` (below), so they restore main's Gradle cache and never
-    # save. A PR that touches `quartz` or `commons` invalidates most of what
+    # save. A PR that touches `commons` or `commonsUI` invalidates most of what
     # that cache holds for everything downstream, and the job then rebuilds it
     # from cold: measured 2-3x the main-branch time across every job in the
     # workflow, which puts this one past the cap and gets it killed mid-step
@@ -409,7 +464,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -439,22 +494,19 @@ jobs:
       # variants are compile-equivalent for unit-test purposes; running all six
       # adds ~5× the kotlinc work without catching new defects on PRs. Push to
       # main still gets the full test matrix via the production-build path.
-      # Memory, CI-only. gradle.properties asks for -Xmx6g (Gradle) plus -Xmx8g
-      # and 2g metaspace (Kotlin daemon) — about 16GB of ceiling on a 16GB
-      # ubuntu-latest runner, before the launcher JVM, Lint's fork and the KSP
-      # workers. This job is the only one heavy enough to reach it, and it died
-      # five times mid-compile with "the runner has received a shutdown signal",
-      # which is the OOM killer taking the runner agent.
+      # Test scope: :commons, :commonsUI and :nestsClient jvmTest run in the
+      # build-desktop Linux leg, not here; this job builds :commonsUI for Android
+      # anyway, but running those suites here too compiled both shared modules for
+      # the JVM a second time in the workflow.
       #
-      # Only the Kotlin daemon is cut. An earlier attempt capped BOTH to 4g and
-      # traded one OOM for another: the runner survived and the job ran to
-      # completion, but R8 and lintAnalyze then failed with
-      # "java.lang.OutOfMemoryError: Java heap space" — they draw on the Gradle
-      # daemon's heap, and 4g is not enough for them on this app. 6g always was,
-      # so it stays; 8g + 2g for kotlinc is the part that did not fit.
-      #
-      # Overridden here rather than in gradle.properties so local builds on
-      # bigger machines keep the headroom.
+      # Memory, CI-only. This job died five times mid-compile with "the runner has
+      # received a shutdown signal" (the OOM killer taking the runner agent) when the
+      # Kotlin daemon had 8g + 2g metaspace beside the Gradle daemon's 6g, so it caps
+      # the Kotlin daemon at 4g + 1g. The Gradle daemon keeps 6g: an earlier attempt
+      # capped both to 4g, and R8 and lintAnalyze then failed with
+      # "java.lang.OutOfMemoryError: Java heap space". gradle.properties asks 6g for
+      # local builds, since a cold local build at 4g stalled in full GCs; this job
+      # compiles with --max-workers=3 (below), so fewer compiles share the daemon.
       #
       # `--max-workers` is the second half, and it is about concurrency rather
       # than ceilings. The heap numbers above are per-JVM limits; what actually
@@ -480,11 +532,7 @@ jobs:
           ./gradlew \
             -Dkotlin.daemon.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
             --max-workers=3 \
-            :quartz:jvmTest \
-            :commons:jvmTest \
-            :commonsUI:jvmTest \
             :commonsUI:testAndroidHostTest \
-            :nestsClient:jvmTest \
             :amethyst:testFdroidDebugUnitTest \
             :amethyst:testPlayDebugUnitTest \
             :amethyst:assembleBenchmark \
@@ -500,7 +548,7 @@ jobs:
       # GITHUB_TOKEN is read-only). fail_on_failure preserves the old step's
       # behavior of marking the job red when a test fails.
       - name: Android Test Report
-        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
+        uses: mikepenz/action-junit-report@8a133bfa3ecb0ea9024c1e2ae788b4c25f6cdb9d # v6.6.2
         if: always()
         with:
           report_paths: '**/build/test-results/**/TEST-*.xml'

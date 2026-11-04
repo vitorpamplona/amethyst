@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.qrcode.ImageCodesOutcome
 import com.vitorpamplona.amethyst.commons.qrcode.ScannedPayload
 import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
 import com.vitorpamplona.amethyst.commons.qrcode.ui.QrImageCodeChooser
@@ -55,8 +56,8 @@ import com.vitorpamplona.amethyst.commons.resources.qr_scanner_unavailable
 import com.vitorpamplona.amethyst.commons.resources.scan_qr
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.routeForScannedPayload
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.uriToRoute
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrImageImport
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.ZxingCppBarcodeDecoder
@@ -78,9 +79,13 @@ private sealed interface ImageScanState {
         val message: String,
     ) : ImageScanState
 
-    /** The picture held more than one code, so the reader says which one they meant. */
+    /**
+     * The picture held more than one code, or one next to part of a multi-part code, so the
+     * reader says which one they meant. [note] mentions the partial code.
+     */
     data class Choosing(
         val codes: List<ScannedPayload>,
+        val note: String?,
     ) : ImageScanState
 }
 
@@ -108,11 +113,11 @@ fun ScanQrImageScreen(
     val context = LocalContext.current
 
     // Navigating or explaining, for one chosen code. Shared by the single-code path and the
-    // chooser, so both treat a hex pubkey and an unsupported payload the same way.
+    // chooser, so both treat a hex key and an unsupported payload the same way.
     val resolve: (ScannedPayload) -> Unit = { payload ->
-        // A bare hex pubkey is re-encoded first, the same as in the live scanner.
-        val routable = if (payload is ScannedPayload.HexPubKey) payload.npub else payload.raw
-        val route = runCatching { uriToRoute(routable, accountViewModel.account) }.getOrNull()
+        // Never opens a bare hex key directly (it may be a private key): the outcome sheet asks,
+        // and comes back here with the npub.
+        val route = runCatching { routeForScannedPayload(payload, accountViewModel.account) }.getOrNull()
 
         if (route != null) {
             nav.newStack(route)
@@ -127,22 +132,19 @@ fun ScanQrImageScreen(
             return@LaunchedEffect
         }
 
-        // Distinct: a picture of a screen often repeats the same code across a reflection or a
-        // duplicated crop, and offering the identical string twice is a choice with no answer.
-        val found =
-            withContext(Dispatchers.IO) {
-                QrImageImport
-                    .decode(context, uri.toUri(), decoder)
-                    .map { it.text }
-                    .distinct()
-                    .map(::classifyScannedPayload)
-            }
+        val outcome = withContext(Dispatchers.IO) { QrImageImport.outcome(context, uri.toUri(), decoder) }
 
-        when {
-            found.isEmpty() -> state = ImageScanState.Failed(noCodeFound)
-            // One code is unambiguous, so asking would only add a tap.
-            found.size == 1 -> resolve(found.first())
-            else -> state = ImageScanState.Choosing(found)
+        when (outcome) {
+            ImageCodesOutcome.NothingFound -> state = ImageScanState.Failed(noCodeFound)
+            is ImageCodesOutcome.OnlyPartial -> state = ImageScanState.Failed(QrImageImport.partialProgressText(outcome.captured, outcome.total))
+            // One code alone is unambiguous, so asking would only add a tap.
+            is ImageCodesOutcome.Open -> resolve(classifyScannedPayload(outcome.text))
+            is ImageCodesOutcome.Choose ->
+                state =
+                    ImageScanState.Choosing(
+                        codes = outcome.texts.map(::classifyScannedPayload),
+                        note = QrImageImport.partialNote(outcome.partial),
+                    )
         }
     }
 
@@ -179,6 +181,7 @@ fun ScanQrImageScreen(
     (state as? ImageScanState.Choosing)?.let { choosing ->
         QrImageCodeChooser(
             codes = choosing.codes,
+            note = choosing.note,
             onPick = { picked ->
                 state = ImageScanState.Working
                 resolve(picked)
@@ -198,6 +201,10 @@ fun ScanQrImageScreen(
             onCopy = { text ->
                 copyToClipboard(context, text)
                 nav.popBack()
+            },
+            onOpenProfile = { npub ->
+                state = ImageScanState.Working
+                resolve(classifyScannedPayload(npub))
             },
         )
     }

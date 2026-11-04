@@ -25,6 +25,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.flow.catch
@@ -52,6 +53,7 @@ data class DialogDismissal(
     val mutedPublicChats: Set<String> = emptySet(),
     val hasDonatedInVersion: Set<String> = emptySet(),
     val viewedPollResultNoteIdsJson: String? = null,
+    val webOfTrustNudgeHiddenUntil: Long = 0L,
 )
 
 /** Reads and writes [DialogDismissal] in the account's DataStore. */
@@ -68,6 +70,7 @@ class DialogDismissalStore(
         val mutedPublicChats = stringSetPreferencesKey("mutedPublicChats")
         val hasDonatedInVersion = stringSetPreferencesKey("hasDonatedInVersion")
         val viewedPollResultNoteIdsJson = stringPreferencesKey("viewedPollResultNoteIds")
+        val webOfTrustNudgeHiddenUntil = longPreferencesKey("webOfTrustNudgeHiddenUntil")
 
         /**
          * What the `secret_keeper_<npub>` file called these, for the one-shot copy.
@@ -108,6 +111,7 @@ class DialogDismissalStore(
             mutedPublicChats = prefs[mutedPublicChats] ?: emptySet(),
             hasDonatedInVersion = prefs[hasDonatedInVersion] ?: emptySet(),
             viewedPollResultNoteIdsJson = prefs[viewedPollResultNoteIdsJson],
+            webOfTrustNudgeHiddenUntil = prefs[webOfTrustNudgeHiddenUntil] ?: 0L,
         )
     }
 
@@ -122,6 +126,7 @@ class DialogDismissalStore(
             prefs[dismissedChannelInvites] = value.dismissedChannelInvites
             prefs[mutedPublicChats] = value.mutedPublicChats
             prefs[hasDonatedInVersion] = value.hasDonatedInVersion
+            prefs[webOfTrustNudgeHiddenUntil] = value.webOfTrustNudgeHiddenUntil
             value.viewedPollResultNoteIdsJson.let { if (it != null) prefs[viewedPollResultNoteIdsJson] = it else prefs.remove(viewedPollResultNoteIdsJson) }
         }
     }

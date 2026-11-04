@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.commons.util.withLock
  * is a no-op (it authorizes only the in-flight request and is applied by the broker, not
  * remembered here).
  */
-class NappletPermissionLedger(
+class NappletPermissionLedger private constructor(
     private val store: NappletPermissionStore,
     /**
      * The account session grants belong to, read at call time. This ledger is a process-wide
@@ -47,12 +47,22 @@ class NappletPermissionLedger(
      * npub would authorize the same applet under every other npub on the device. The persistent
      * store is namespaced the same way.
      */
-    private val accountPubKey: () -> String = { "" },
-) {
-    private val lock = KmpLock()
-
+    private val accountPubKey: () -> String,
+    private val lock: KmpLock,
     // "<account>\u0000<coordinate>" -> capability -> ALLOW_SESSION (the only state kept here).
-    private val session = mutableMapOf<String, MutableMap<NappletCapability, GrantState>>()
+    private val session: MutableMap<String, MutableMap<NappletCapability, GrantState>>,
+) {
+    constructor(
+        store: NappletPermissionStore,
+        accountPubKey: () -> String = { "" },
+    ) : this(store, accountPubKey, KmpLock(), mutableMapOf())
+
+    /**
+     * This ledger for [pubKey] alone, whoever is logged in: a broker acting for one account (a
+     * full-screen app survives an account switch) must judge and record by that account's grants. It
+     * shares this ledger's session grants, so [endSession] still clears them.
+     */
+    fun forAccount(pubKey: String): NappletPermissionLedger = NappletPermissionLedger(store.forAccount(pubKey), { pubKey }, lock, session)
 
     private fun sessionKey(identity: NappletIdentity) = "${accountPubKey()}\u0000${identity.coordinate}"
 

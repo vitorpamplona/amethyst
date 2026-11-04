@@ -21,13 +21,20 @@
 package com.vitorpamplona.amethyst.desktop.platform
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.withContext
 import java.awt.Window
+import java.awt.event.WindowEvent
 import java.awt.event.WindowFocusListener
+import java.util.concurrent.TimeUnit
 
 /**
  * Reads the OS's preferred light/dark appearance.
@@ -41,6 +48,9 @@ import java.awt.event.WindowFocusListener
  * system theme see Amethyst follow within a second of bringing the window forward.
  */
 object PlatformAppearance {
+    /** The preference when the app started: read once, ahead of the first frame, so it opens in the right theme. */
+    val startupDark: Boolean by lazy { isSystemDark() }
+
     /**
      * Resolves the OS dark/light preference, with an override hook for testing
      * on a single machine: `-Damethyst.appearance=light|dark` (system property)
@@ -112,25 +122,28 @@ object PlatformAppearance {
         return match.groupValues[1].toIntOrNull(16) == 0
     }
 
+    /**
+     * The trimmed output of [cmd], or null if it fails, exits non-zero or takes over 2 s. It waits
+     * first and reads after: reading first would block until the child closes its output, which a
+     * child that leaves a daemon holding it (gsettings starting dconf) never does, so the timeout
+     * would never apply. The answers are a line or two, well within the pipe's buffer.
+     */
     private fun exec(vararg cmd: String): String? =
         try {
             val proc =
                 ProcessBuilder(*cmd)
                     .redirectErrorStream(true)
                     .start()
-            val out =
-                proc.inputStream
-                    .bufferedReader()
-                    .readText()
-                    .trim()
-            val finished = proc.waitFor(2, java.util.concurrent.TimeUnit.SECONDS)
-            if (!finished) {
+            if (!proc.waitFor(2, TimeUnit.SECONDS)) {
                 proc.destroyForcibly()
                 null
             } else if (proc.exitValue() != 0) {
                 null
             } else {
-                out
+                proc.inputStream
+                    .bufferedReader()
+                    .readText()
+                    .trim()
             }
         } catch (e: Exception) {
             Log.d("PlatformAppearance") { "Failed to exec ${cmd.joinToString(" ")}: ${e.message}" }
@@ -139,25 +152,29 @@ object PlatformAppearance {
 }
 
 /**
- * Returns a Compose [State]<Boolean> that tracks the OS dark/light preference and
- * refreshes whenever the given AWT [Window] gains focus. Lightweight (~30ms shell-out
- * on focus) and avoids polling.
+ * The OS dark/light preference, re-read whenever [awtWindow] gains focus (the OSes have no portable
+ * change event, and focus is when a user who just flipped it comes back). It starts from
+ * [PlatformAppearance.startupDark], and the re-reads shell out off the UI thread.
  */
 @Composable
 fun rememberSystemDark(awtWindow: Window?): State<Boolean> {
-    val state = remember { mutableStateOf(PlatformAppearance.isSystemDark()) }
-    DisposableEffect(awtWindow) {
-        if (awtWindow == null) return@DisposableEffect onDispose {}
-        val listener =
-            object : WindowFocusListener {
-                override fun windowGainedFocus(e: java.awt.event.WindowEvent?) {
-                    state.value = PlatformAppearance.isSystemDark()
-                }
+    val state = remember { mutableStateOf(PlatformAppearance.startupDark) }
+    LaunchedEffect(awtWindow) {
+        if (awtWindow == null) return@LaunchedEffect
+        callbackFlow {
+            val listener =
+                object : WindowFocusListener {
+                    override fun windowGainedFocus(e: WindowEvent?) {
+                        trySend(Unit)
+                    }
 
-                override fun windowLostFocus(e: java.awt.event.WindowEvent?) = Unit
-            }
-        awtWindow.addWindowFocusListener(listener)
-        onDispose { awtWindow.removeWindowFocusListener(listener) }
+                    override fun windowLostFocus(e: WindowEvent?) = Unit
+                }
+            awtWindow.addWindowFocusListener(listener)
+            awaitClose { awtWindow.removeWindowFocusListener(listener) }
+        }.conflate().collect {
+            state.value = withContext(Dispatchers.IO) { PlatformAppearance.isSystemDark() }
+        }
     }
     return state
 }

@@ -22,5 +22,16 @@ package com.vitorpamplona.amethyst.commons.ui.components.toasts
 
 import androidx.compose.runtime.Immutable
 
+/** How serious a message is: picks the dialog's icon and color. */
+enum class ToastSeverity { ERROR, WARNING, INFO }
+
 @Immutable
-open class ToastMsg
+open class ToastMsg(
+    val severity: ToastSeverity = ToastSeverity.WARNING,
+) {
+    /**
+     * Two messages with the same non-null key say the same thing: the queue keeps one. Null (the
+     * default) never matches, for messages that carry an action or a live list.
+     */
+    open val dedupeKey: Any? get() = null
+}

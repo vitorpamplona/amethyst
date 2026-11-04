@@ -1,0 +1,4 @@
+# Local flatpak-builder output (RELEASE_OPS.md § Flathub).
+/builddir/
+/repo/
+/.flatpak-builder/

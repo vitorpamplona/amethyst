@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.service.namecoin
 
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinLookupCache
@@ -136,7 +136,7 @@ class NamecoinNameService(
                 throw e
             } catch (e: Exception) {
                 Log.w("NamecoinNameService", "resolve failed for $identifier", e)
-                state.value = NamecoinResolveState.Error(e.message ?: e::class.simpleName ?: "Unknown error")
+                state.value = NamecoinResolveState.Error(NamecoinResolveState.Reason.Other(e.message ?: e::class.simpleName))
             }
         }
         return state

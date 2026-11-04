@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -32,18 +33,33 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserDisplayNickname
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.UserNameText
+import com.vitorpamplona.amethyst.commons.ui.note.hovercard.UserHoverCardAnchor
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
+/**
+ * The note author's name. With [nav], resting the mouse on the name opens their
+ * [UserHoverCardAnchor] card; [weight] then sizes the slot, and only the name itself is hoverable.
+ */
 @Composable
 fun NoteUsernameDisplay(
     baseNote: Note,
     weight: Modifier = Modifier,
     textColor: Color = Color.Unspecified,
     accountViewModel: AccountViewModel,
+    nav: INav? = null,
 ) {
     WatchAuthor(baseNote, accountViewModel) {
-        UsernameDisplay(it, weight, textColor = textColor, accountViewModel = accountViewModel)
+        if (nav == null) {
+            UsernameDisplay(it, weight, textColor = textColor, accountViewModel = accountViewModel)
+        } else {
+            Box(weight) {
+                UserHoverCardAnchor(it, accountViewModel, nav) {
+                    UsernameDisplay(it, textColor = textColor, accountViewModel = accountViewModel)
+                }
+            }
+        }
     }
 }
 

@@ -25,10 +25,13 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
+import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -75,6 +78,16 @@ val PostsAndChatMessagesToAddresses =
     )
 
 /**
+ * A PressStr magazine's issues point at it with `a`, and nothing else lists them, so this is how a
+ * magazine on screen finds its issues. Its own filter rather than a seat in the ones above: those
+ * are shared with every address on screen and with live-stream chat, which would use up their
+ * limit first, and only the magazine's own author can publish its issues.
+ */
+val MagazineIssueKindList = listOf(MagazineIssueEvent.KIND)
+
+private val MAGAZINE_ADDRESS_PREFIX = "${MagazineEvent.KIND}:"
+
+/**
  * NIP-22 keeps the conversation root in the **uppercase** `A` tag and only the direct
  * parent in lowercase `a`. A comment on a comment of an article therefore never carries
  * `a`=<address>, so an `a`-only engagement filter sees only the first level of that
@@ -113,74 +126,102 @@ fun filterRepliesAndReactionsToAddresses(
         val since = since?.get(it.key)?.time
         val sortedList = it.value.sorted()
         val relay = it.key
-        listOf(
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    ExplainedFilter(
-                        purpose = SubPurpose.ENGAGEMENT,
-                        accountPubKeys = listOfNotNull(accountPubKey),
-                        kinds = RepliesAndReactionsToAddressesKinds1,
-                        tags = mapOf("a" to sortedList),
-                        since = since,
-                        // Max amount of "replies" to download on a specific event.
-                        limit = 1000,
-                    ),
-            ),
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    ExplainedFilter(
-                        purpose = SubPurpose.ENGAGEMENT,
-                        accountPubKeys = listOfNotNull(accountPubKey),
-                        kinds = PostsAndChatMessagesToAddresses,
-                        tags = mapOf("a" to sortedList),
-                        since = since,
-                        // Max amount of "replies" to download on a specific event.
-                        limit = 100,
-                    ),
-            ),
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    ExplainedFilter(
-                        purpose = SubPurpose.ENGAGEMENT,
-                        accountPubKeys = listOfNotNull(accountPubKey),
-                        kinds = DeletionKindList,
-                        tags = mapOf("a" to sortedList),
-                        since = since,
-                        // Max amount of "replies" to download on a specific event.
-                        limit = 10,
-                    ),
-            ),
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    ExplainedFilter(
-                        purpose = SubPurpose.ENGAGEMENT,
-                        accountPubKeys = listOfNotNull(accountPubKey),
-                        kinds = TextNoteKindList,
-                        tags = mapOf("q" to sortedList),
-                        since = since,
-                        limit = 1000,
-                    ),
-            ),
-            // Its own filter on purpose: tag names inside one filter are ANDed, so folding
-            // "A" into the "a" filter above would only match comments carrying both.
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    ExplainedFilter(
-                        purpose = SubPurpose.ENGAGEMENT,
-                        accountPubKeys = listOfNotNull(accountPubKey),
-                        kinds = RootScopedRepliesToAddressesKinds,
-                        tags = mapOf("A" to sortedList),
-                        since = since,
-                        // Matches the ceiling of the direct-reply filter above: this is the
-                        // rest of the same thread, not a second conversation.
-                        limit = 1000,
-                    ),
-            ),
-        )
+        magazineIssuesFilter(relay, sortedList, since, accountPubKey) +
+            listOf(
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        ExplainedFilter(
+                            purpose = SubPurpose.ENGAGEMENT,
+                            accountPubKeys = listOfNotNull(accountPubKey),
+                            kinds = RepliesAndReactionsToAddressesKinds1,
+                            tags = mapOf("a" to sortedList),
+                            since = since,
+                            // Max amount of "replies" to download on a specific event.
+                            limit = 1000,
+                        ),
+                ),
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        ExplainedFilter(
+                            purpose = SubPurpose.ENGAGEMENT,
+                            accountPubKeys = listOfNotNull(accountPubKey),
+                            kinds = PostsAndChatMessagesToAddresses,
+                            tags = mapOf("a" to sortedList),
+                            since = since,
+                            // Max amount of "replies" to download on a specific event.
+                            limit = 100,
+                        ),
+                ),
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        ExplainedFilter(
+                            purpose = SubPurpose.ENGAGEMENT,
+                            accountPubKeys = listOfNotNull(accountPubKey),
+                            kinds = DeletionKindList,
+                            tags = mapOf("a" to sortedList),
+                            since = since,
+                            // Max amount of "replies" to download on a specific event.
+                            limit = 10,
+                        ),
+                ),
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        ExplainedFilter(
+                            purpose = SubPurpose.ENGAGEMENT,
+                            accountPubKeys = listOfNotNull(accountPubKey),
+                            kinds = TextNoteKindList,
+                            tags = mapOf("q" to sortedList),
+                            since = since,
+                            limit = 1000,
+                        ),
+                ),
+                // Its own filter on purpose: tag names inside one filter are ANDed, so folding
+                // "A" into the "a" filter above would only match comments carrying both.
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        ExplainedFilter(
+                            purpose = SubPurpose.ENGAGEMENT,
+                            accountPubKeys = listOfNotNull(accountPubKey),
+                            kinds = RootScopedRepliesToAddressesKinds,
+                            tags = mapOf("A" to sortedList),
+                            since = since,
+                            // Matches the ceiling of the direct-reply filter above: this is the
+                            // rest of the same thread, not a second conversation.
+                            limit = 1000,
+                        ),
+                ),
+            )
     }
+}
+
+private fun magazineIssuesFilter(
+    relay: NormalizedRelayUrl,
+    sortedAddresses: List<String>,
+    since: Long?,
+    accountPubKey: HexKey?,
+): List<RelayBasedFilter> {
+    val magazines = sortedAddresses.filter { it.startsWith(MAGAZINE_ADDRESS_PREFIX) }
+    if (magazines.isEmpty()) return emptyList()
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                ExplainedFilter(
+                    purpose = SubPurpose.ENGAGEMENT,
+                    accountPubKeys = listOfNotNull(accountPubKey),
+                    kinds = MagazineIssueKindList,
+                    authors = magazines.mapNotNull { it.split(':').getOrNull(1) }.distinct(),
+                    tags = mapOf("a" to magazines),
+                    since = since,
+                    // A run of a periodical, not a conversation: years of monthly issues fit.
+                    limit = 200,
+                ),
+        ),
+    )
 }

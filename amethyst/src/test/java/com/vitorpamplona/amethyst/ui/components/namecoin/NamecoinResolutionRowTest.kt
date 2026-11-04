@@ -23,10 +23,12 @@ package com.vitorpamplona.amethyst.ui.components.namecoin
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
 import com.vitorpamplona.amethyst.commons.ui.components.namecoin.looksLikeNamecoinIdentifier
 import com.vitorpamplona.amethyst.commons.ui.components.namecoin.mapOutcomeToResolveState
+import com.vitorpamplona.amethyst.commons.ui.components.namecoin.namecoinLookupTerm
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNostrResult
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -137,6 +139,70 @@ class NamecoinResolutionRowTest {
         assertFalse(looksLikeNamecoinIdentifier("u/someuser"))
     }
 
+    // ── namecoinLookupTerm ───────────────────────────────────────────────
+    // The search field speaks the token language: a seeded chip (the
+    // `kind:git ` the Git Repositories search icon pre-populates) is a
+    // segment of its own, separate from the word typed after it. Only a
+    // lone plain word is ever a Namecoin lookup; a compound query is a
+    // search, and the row stays out of its way.
+
+    @Test
+    fun `bare identifier is looked up as itself`() {
+        assertEquals("mstrofnone.bit", namecoinLookupTerm("mstrofnone.bit"))
+        assertEquals("m@testls.bit", namecoinLookupTerm("m@testls.bit"))
+        assertEquals("d/alice", namecoinLookupTerm("d/alice"))
+        assertEquals("id/alice", namecoinLookupTerm("id/alice"))
+    }
+
+    @Test
+    fun `leading at sign is stripped before the lookup`() {
+        assertEquals("mstrofnone.bit", namecoinLookupTerm("@mstrofnone.bit"))
+    }
+
+    @Test
+    fun `surrounding whitespace is ignored`() {
+        assertEquals("mstrofnone.bit", namecoinLookupTerm("  mstrofnone.bit  "))
+    }
+
+    @Test
+    fun `seeded kind chip plus typed word is a search not a lookup`() {
+        // The reported case: the Git Repositories search icon seeds
+        // `kind:git ` and the user types a repository name after it. The
+        // chip is a segment of its own; gluing it to the typed word made
+        // the row report "No record for kind:git mstrofnone.bit".
+        assertNull(namecoinLookupTerm("kind:git mstrofnone.bit"))
+        assertNull(namecoinLookupTerm("kind:git testls.bit"))
+    }
+
+    @Test
+    fun `any search token before the word makes it a search not a lookup`() {
+        assertNull(namecoinLookupTerm("#nostr mstrofnone.bit"))
+        assertNull(namecoinLookupTerm("since:2026-01-01 mstrofnone.bit"))
+    }
+
+    @Test
+    fun `two plain words are a search not a lookup`() {
+        assertNull(namecoinLookupTerm("foo mstrofnone.bit"))
+        assertNull(namecoinLookupTerm("mstrofnone.bit foo"))
+    }
+
+    @Test
+    fun `lone kind token is not a lookup`() {
+        assertNull(namecoinLookupTerm("kind:git"))
+    }
+
+    @Test
+    fun `blank input is not a lookup`() {
+        assertNull(namecoinLookupTerm(""))
+        assertNull(namecoinLookupTerm("   "))
+    }
+
+    @Test
+    fun `plain word that is not namecoin-shaped is not a lookup`() {
+        assertNull(namecoinLookupTerm("example.com"))
+        assertNull(namecoinLookupTerm("rabbit"))
+    }
+
     // ── mapOutcomeToResolveState ───────────────────────────────────────────
     // Reuses the shared NamecoinResolveState already used by
     // NamecoinNameService and the desktop SearchScreen so all surfaces
@@ -152,8 +218,7 @@ class NamecoinResolutionRowTest {
     fun `no nostr field maps to Error and mentions the name`() {
         val state = mapOutcomeToResolveState(NamecoinResolveOutcome.NoNostrField("d/noname"))
         require(state is NamecoinResolveState.Error)
-        assertTrue(state.message.contains("d/noname"))
-        assertTrue(state.message.contains("Nostr"))
+        assertEquals(NamecoinResolveState.Reason.NoNostrField("d/noname"), state.reason)
     }
 
     @Test
@@ -166,8 +231,10 @@ class NamecoinResolutionRowTest {
                 ),
             )
         require(state is NamecoinResolveState.Error)
-        assertTrue(state.message.contains("d/broken"))
-        assertTrue(state.message.contains("Unfinished JSON"))
+        assertEquals(
+            NamecoinResolveState.Reason.MalformedRecord("d/broken", "Unfinished JSON term at EOF at line 1, column 474"),
+            state.reason,
+        )
     }
 
     @Test
@@ -175,7 +242,7 @@ class NamecoinResolutionRowTest {
         val state =
             mapOutcomeToResolveState(NamecoinResolveOutcome.ServersUnreachable("Connection refused"))
         require(state is NamecoinResolveState.Error)
-        assertTrue(state.message.contains("ElectrumX"))
+        assertSame(NamecoinResolveState.Reason.ServersUnreachable, state.reason)
     }
 
     @Test
@@ -183,14 +250,14 @@ class NamecoinResolutionRowTest {
         val state =
             mapOutcomeToResolveState(NamecoinResolveOutcome.InvalidIdentifier("not_a_name"))
         require(state is NamecoinResolveState.Error)
-        assertEquals("Invalid Namecoin identifier", state.message)
+        assertSame(NamecoinResolveState.Reason.InvalidIdentifier, state.reason)
     }
 
     @Test
     fun `timeout maps to a timeout Error`() {
         val state = mapOutcomeToResolveState(NamecoinResolveOutcome.Timeout)
         require(state is NamecoinResolveState.Error)
-        assertTrue(state.message.contains("timed out"))
+        assertSame(NamecoinResolveState.Reason.Timeout, state.reason)
     }
 
     @Test(expected = IllegalStateException::class)

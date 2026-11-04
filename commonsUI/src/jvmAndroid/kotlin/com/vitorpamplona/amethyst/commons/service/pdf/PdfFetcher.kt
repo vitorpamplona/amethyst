@@ -30,19 +30,33 @@ import java.io.IOException
 
 object PdfFetcher {
     /**
-     * Returns a snapshot of the cached PDF for [url], downloading it if necessary. The caller is
-     * responsible for closing the returned snapshot; while it's open the cache entry cannot be
-     * evicted, so the underlying file stays valid for `PdfRenderer`.
+     * Opens a snapshot of the cached PDF for [url], downloading it if necessary, and hands it to
+     * [open], which takes ownership: the snapshot is closed here only if [open] throws. While it's
+     * open the cache entry cannot be evicted, so the underlying file stays valid for `PdfRenderer`.
+     *
+     * [open] runs on the IO dispatcher right after the snapshot is created, with no suspension in
+     * between, so the caller can record what it built there: if the caller is cancelled before this
+     * returns, `withContext` drops the result, and only that record lets the caller close it.
      *
      * Pass the app's Coil disk cache so PDFs share the same LRU eviction and disk budget as
      * images. It is a provider, read on the IO dispatcher: the app builds its cache lazily
      * (statvfs, directory setup), and a card composing on a cold start must not do that on main.
      */
-    suspend fun fetchSnapshot(
+    suspend fun <T> openSnapshot(
         url: String,
         diskCache: () -> DiskCache,
         okHttpClient: (String) -> OkHttpClient,
-    ): DiskCache.Snapshot = withContext(Dispatchers.IO) { openOrDownload(url, diskCache, okHttpClient) }
+        open: (DiskCache.Snapshot) -> T,
+    ): T =
+        withContext(Dispatchers.IO) {
+            val snapshot = openOrDownload(url, diskCache, okHttpClient)
+            try {
+                open(snapshot)
+            } catch (t: Throwable) {
+                runCatching { snapshot.close() }
+                throw t
+            }
+        }
 
     /** The fetch itself. Callers run it on the IO dispatcher. */
     private suspend fun openOrDownload(
@@ -90,7 +104,7 @@ object PdfFetcher {
      * close would run on main, and closing takes the same global DiskLruCache lock as opening.
      * The snapshot is created by the last non-suspending step of the fetch and handed straight
      * to `use`, inside one `withContext`, so a cancellation cannot land between the two and leak
-     * it open (which returning through [fetchSnapshot]'s own `withContext` could).
+     * it open (which returning a bare snapshot through a `withContext` could).
      */
     suspend fun <T> useSnapshot(
         url: String,

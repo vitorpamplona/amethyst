@@ -27,11 +27,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -44,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.amethyst.commons.ui.note.RenderReaction as RenderReactionEmoji
@@ -59,13 +62,13 @@ import com.vitorpamplona.amethyst.commons.ui.note.RenderReaction as RenderReacti
 @Composable
 fun RenderExternalReaction(
     note: Note,
-    backgroundColor: androidx.compose.runtime.MutableState<Color>,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val noteEvent = note.event as? ExternalReactionEvent ?: return
 
-    val reactionType = noteEvent.content
+    val reactionType = remember(noteEvent) { noteEvent.content.firstFullCharOrEmoji(ImmutableListOfLists(noteEvent.tags)) }
     val target = remember(noteEvent) { noteEvent.externalIds().firstOrNull() }
     val url = remember(noteEvent) { noteEvent.openableUrl() }
     val externalKind = remember(noteEvent) { noteEvent.externalKinds().firstOrNull() }

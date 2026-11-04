@@ -43,6 +43,7 @@ import com.patrykandpatrick.vico.compose.common.ProvideVicoTheme
 import com.vitorpamplona.amethyst.commons.notifications.NotificationSummaryState
 import com.vitorpamplona.amethyst.commons.ui.note.UserReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.chart.ShowChart
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.chart.toChartModel
 import com.vitorpamplona.amethyst.commons.ui.theme.chartStyle
 
 @Composable
@@ -75,9 +76,10 @@ fun SummaryBar(state: NotificationSummaryState) {
 
 @Composable
 private fun ObserveAndShowChart(state: NotificationSummaryState) {
-    val chartModel by state.chartModel.collectAsStateWithLifecycle()
+    val chartData by state.chartData.collectAsStateWithLifecycle()
 
-    chartModel?.let {
-        ShowChart(it)
+    chartData?.let {
+        val chartModel = remember(it) { it.toChartModel(state) }
+        ShowChart(chartModel)
     }
 }

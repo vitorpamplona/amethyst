@@ -6,15 +6,16 @@ _Audited 2026-06-30. 21 plans: 19 shipped (archived), 1 in-progress, 1 queued, 0
 | Plan | Summary |
 | ---- | ------- |
 | [2026-09-07-generic-local-filter.md](2026-09-07-generic-local-filter.md) | Local note search moved onto `LocalCache.filter(Filter)` so the search box's tokens narrow local and relay results alike; steps 1–6 shipped, `FilterMatcher` left untouched via a predicate parameter. |
-| [2026-05-24-ios-support.md](2026-05-24-ios-support.md) | Incremental KMP-to-iOS port; quartz/commons iOS targets are configured (Phase 1) but no `iosApp` module exists yet. |
+| [2026-05-24-ios-support.md](2026-05-24-ios-support.md) | Incremental KMP-to-iOS port; quartz/commons iOS targets are configured (Phase 1) but no `iosApp` module exists yet. **Superseded 2026-10-09** by [commons/plans/2026-10-09-ios-app.md](../../commons/plans/2026-10-09-ios-app.md). |
 
 ## Queued
 | Plan | Summary |
 | ---- | ------- |
+| [2026-10-28-lightcompressor-2.3.0-upgrade.md](2026-10-28-lightcompressor-2.3.0-upgrade.md) | Bump LightCompressor-enhanced 2.2.3 → 2.3.0 (developed against a local `2.3.0-SNAPSHOT`, pinned to the JitPack tag 2026-10-29): compile-level upgrade is a one-line version change; decisions on the new HDR default (`hdrMode`) and on calling `VideoCompressor.cancel()` on timeout now that cancel is per batch; a line in the upload dialog, from the new `VideoCompressor.probeHdr`, saying whether a picked HDR video stays HDR or is converted to SDR; an Android `probeVideo` override so the quality slider names the picked video's resolution; device checks for HLG uploads. |
 | [2026-09-19-cordn-ui.md](2026-09-19-cordn-ui.md) | Every user-facing feature cordn-web has, mapped onto Amethyst — the account-level cordn runtime (the real gate), group list/chat/info screens, welcomes, join requests, message features and settings. Marmot is frozen and the two bindings must stay independently deletable, enforced by isolation tests rather than a README; flags the 1009-vs-1010 edit-kind divergence. |
 | [2026-09-15-qr-reader-overhaul.md](2026-09-15-qr-reader-overhaul.md) | QR reader rebuilt on CameraX + zxing-cpp in-app (replacing the Camera1 zxing-android-embedded activity) — continuous AF, zoom, torch, full-frame decode, explicit failure feedback, and gallery/clipboard import. |
 | [2026-07-23-push-notification-redesign.md](2026-07-23-push-notification-redesign.md) | Per-kind tray notification redesign — accent colors, status-bar icons, MessagingStyle/BigPictureStyle/colorized zap cards, aggregation, Conversations/Bubbles; closes nutzap/onchain/repost/badge parity gaps. |
-| [2026-06-20-napplet-inter-applet.md](2026-06-20-napplet-inter-applet.md) | NAP-INC / NAP-INTENT inter-applet messaging — deferred; prerequisites (multi-applet hosting, archetype registry, `MESSAGING` capability) not yet built. |
+| [2026-06-20-napplet-inter-applet.md](2026-06-20-napplet-inter-applet.md) | NAP-INC / NAP-INTENT inter-applet messaging — deferred; prerequisites (multi-applet hosting, archetype registry, `MESSAGING` capability) not yet built. NAP-INC shipped 2026-11-01 ([nap-inc](../../commons/plans/2026-11-01-nap-inc.md)); NAP-INTENT shipped 2026-11-01 ([nap-upload-common-intent](../../commons/plans/2026-11-01-nap-upload-common-intent.md)). |
 
 ## Archived (shipped)
 | Plan | Summary |

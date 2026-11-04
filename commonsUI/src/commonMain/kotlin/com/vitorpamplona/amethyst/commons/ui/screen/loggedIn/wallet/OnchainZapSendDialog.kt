@@ -49,7 +49,6 @@ import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -116,8 +115,11 @@ import com.vitorpamplona.amethyst.commons.resources.onchain_send_success
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_title
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_to
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_use_note_split
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_sats_amount
 import com.vitorpamplona.amethyst.commons.resources.send
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.namecoin.NamecoinResolutionRow
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
@@ -140,6 +142,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nipBCOnchainZaps.builder.OnchainZapBuilder
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
 import com.vitorpamplona.quartz.utils.BigDecimal
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
@@ -190,7 +193,7 @@ fun OnchainZapSendDialog(
     prefillAmountSats: Long? = null,
     prefillComment: String = "",
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
     val userSuggestions =
@@ -245,7 +248,7 @@ fun OnchainZapSendDialog(
             if (fees != null) return@LaunchedEffect
             val backend = LocalCache.onchainBackend
             if (backend != null) {
-                val newFees = runCatching { withContext(Dispatchers.IO) { backend.feeEstimates() } }.getOrNull()
+                val newFees = runCatchingCancellable { withContext(Dispatchers.IO) { backend.feeEstimates() } }.getOrNull()
                 if (newFees != null) {
                     fees = newFees
                     return@LaunchedEffect
@@ -418,7 +421,7 @@ fun OnchainZapSendDialog(
 
                             SectionSpacer()
 
-                            OutlinedTextField(
+                            SpellCheckedOutlinedTextField(
                                 value = comment,
                                 onValueChange = { comment = it },
                                 label = { Text(stringRes(Res.string.onchain_send_comment_label)) },
@@ -867,7 +870,7 @@ private fun SplitsRecipientSection(
                     if (share != null) {
                         val belowDust = share.sats < OnchainZapBuilder.DUST_THRESHOLD_SATS
                         Text(
-                            text = "${formatGrouped(share.sats)} sats",
+                            text = stringRes(Res.string.reload_mint_sats_amount, formatGrouped(share.sats)),
                             style = MaterialTheme.typography.bodySmall,
                             color =
                                 if (belowDust) {

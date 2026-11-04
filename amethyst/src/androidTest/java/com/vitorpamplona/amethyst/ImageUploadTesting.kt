@@ -33,16 +33,16 @@ import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.service.http.DefaultContentTypeInterceptor
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
-import com.vitorpamplona.amethyst.service.uploads.ImageDownloader
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
+import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
+import com.vitorpamplona.amethyst.commons.service.uploads.nip96.ServerInfoRetriever
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
-import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
-import com.vitorpamplona.amethyst.service.uploads.nip96.ServerInfoRetriever
 import com.vitorpamplona.amethyst.service.uploads.prepare
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import junit.framework.TestCase.fail
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -106,11 +106,10 @@ class ImageUploadTesting {
     private suspend fun testBlossom(server: ServerName) {
         val paylod = getBitmap()
         val initialHash = sha256(paylod).toHexKey()
-        val inputStream = paylod.inputStream()
         val result =
             BlossomUploader()
                 .upload(
-                    inputStream = inputStream,
+                    openStream = { paylod.inputStream() },
                     hash = initialHash,
                     length = paylod.size.toLong(),
                     baseFileName = "filename.png",
@@ -147,11 +146,10 @@ class ImageUploadTesting {
                 ) { client }
 
         val payload = getBitmap()
-        val inputStream = payload.inputStream()
         val result =
             Nip96Uploader()
                 .upload(
-                    inputStream = inputStream,
+                    openStream = { payload.inputStream() },
                     length = payload.size.toLong(),
                     contentType = "image/png",
                     alt = null,
@@ -162,7 +160,6 @@ class ImageUploadTesting {
                     httpAuth = { url, method, body ->
                         signer.sign(HTTPAuthorizationEvent.build(url, method, body))
                     },
-                    context = InstrumentationRegistry.getInstrumentation().targetContext,
                 )
 
         val url = result.url!!

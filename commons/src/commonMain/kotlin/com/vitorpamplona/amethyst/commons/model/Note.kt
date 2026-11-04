@@ -44,7 +44,6 @@ import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
@@ -69,6 +68,7 @@ import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.anyAsync
 import com.vitorpamplona.quartz.utils.containsAny
+import com.vitorpamplona.quartz.utils.internIfPossible
 import com.vitorpamplona.quartz.utils.launchAndWaitAll
 import com.vitorpamplona.quartz.utils.plus
 import kotlinx.coroutines.CancellationException
@@ -103,7 +103,9 @@ class AddressableNote(
 
     fun dTag(): String = address.dTag
 
-    fun toNAddr() = NAddress.create(address.kind, address.pubKeyHex, address.dTag, relayHintUrl())
+    fun toNAddr() = address.toNIP19OrFallback(relayHintUrl(), event)
+
+    override fun toNostrUri() = address.toNostrUriOrFallback(relayHintUrl(), event)
 }
 
 @Stable
@@ -245,6 +247,8 @@ open class Note(
     var labels = mapOf<String, List<Note>>()
         private set
 
+    // `@Volatile`: written under [syncLock], read lock-free by addZap/removeZap's fast paths.
+    @Volatile
     var zaps = mapOf<Note, Note?>()
         private set
 
@@ -310,6 +314,8 @@ open class Note(
     var bolt12Zaps = mapOf<String, Bolt12ZapEntry>()
         private set
 
+    // `@Volatile`: written under [syncLock], read lock-free by removeZapPayment's fast path.
+    @Volatile
     var zapPayments = mapOf<Note, Note?>()
         private set
 
@@ -389,7 +395,8 @@ open class Note(
             }
         }
 
-        val currentOutbox = author?.outboxRelays()?.toSet()
+        // A short list (a handful of outbox relays): scanning it beats building a Set per call.
+        val currentOutbox = author?.outboxRelays()
 
         return if (relays.isNotEmpty()) {
             if (!currentOutbox.isNullOrEmpty()) {
@@ -401,11 +408,19 @@ open class Note(
 
             relays.firstOrNull()
         } else {
-            currentOutbox?.firstOrNull() ?: author?.mostUsedNonLocalRelay()
+            currentOutbox?.firstOrNull() ?: author?.mostUsedDialableRelay()
         }
     }
 
-    fun toNostrUri(): String = "nostr:${toNEvent()}"
+    /** `nostr:` + [toNEvent], built in one buffer. */
+    open fun toNostrUri(): String {
+        val host = rumorHost
+        return if (host != null) {
+            NEvent.createNostrUri(host.id, host.pubKey, host.kind, relayHintUrl())
+        } else {
+            NEvent.createNostrUri(idHex, author?.pubkeyHex, event?.kind, relayHintUrl())
+        }
+    }
 
     open fun idDisplayNote() = idNote().toShortDisplay()
 
@@ -441,6 +456,11 @@ open class Note(
         replyTo: List<Note>,
     ) {
         if (this.event?.id != event.id) {
+            // The cache keeps this event, so this is where its strings get shared with the
+            // rest of the cache: the id with this note's key (an addressable note's key is its
+            // address instead), the pubkey with the author's, tag values through the intern
+            // pool. Parsers no longer intern: most events they produce are never kept.
+            event.shareStrings(if (this is AddressableNote) event.id else idHex, author.pubkeyHex, String::internIfPossible)
             this.event = event
             this.author = author
             this.replyTo = replyTo
@@ -648,25 +668,45 @@ open class Note(
         }
     }
 
+    // Pruning calls this for every child it frees, nearly always a reply or a reaction, so the
+    // no-op is decided without the lock: only a zap request (key) or receipt (value) can be in
+    // [zaps], and the map is an immutable snapshot published through a volatile field. A child that
+    // is there is removed under syncLock, like the add paths: an unlocked remove wrote back a map
+    // built from a snapshot, dropping any zap a relay thread added in between.
     fun removeZap(note: Note) {
-        if (zaps[note] != null) {
-            zaps = zaps.minus(note)
-            updateZapTotal()
-            flowSet?.zaps?.invalidateData()
-        } else if (zaps.containsValue(note)) {
-            zaps = zaps.filterValues { it != note }
-            updateZapTotal()
-            flowSet?.zaps?.invalidateData()
+        val event = note.event
+        if (event != null && event !is ZapRequestEvent && event !is ZapReceiptEvent) return
+        val current = zaps
+        if (current.isEmpty() || (current[note] == null && !current.containsValue(note))) return
+
+        syncLock.withLock {
+            if (zaps[note] != null) {
+                zaps = zaps.minus(note)
+                updateZapTotal()
+                flowSet?.zaps?.invalidateData()
+            } else if (zaps.containsValue(note)) {
+                zaps = zaps.filterValues { it != note }
+                updateZapTotal()
+                flowSet?.zaps?.invalidateData()
+            }
         }
     }
 
+    // Same fast path as [removeZap]: only NWC requests (keys) and responses (values) are in here.
     fun removeZapPayment(note: Note) {
-        if (zapPayments.containsKey(note)) {
-            zapPayments = zapPayments.minus(note)
-            flowSet?.zaps?.invalidateData()
-        } else if (zapPayments.containsValue(note)) {
-            zapPayments = zapPayments.filterValues { it != note }
-            flowSet?.zaps?.invalidateData()
+        val event = note.event
+        if (event != null && event !is NwcRequestEvent && event !is NwcResponseEvent) return
+        val current = zapPayments
+        if (current.isEmpty() || (!current.containsKey(note) && !current.containsValue(note))) return
+
+        syncLock.withLock {
+            if (zapPayments.containsKey(note)) {
+                zapPayments = zapPayments.minus(note)
+                flowSet?.zaps?.invalidateData()
+            } else if (zapPayments.containsValue(note)) {
+                zapPayments = zapPayments.filterValues { it != note }
+                flowSet?.zaps?.invalidateData()
+            }
         }
     }
 

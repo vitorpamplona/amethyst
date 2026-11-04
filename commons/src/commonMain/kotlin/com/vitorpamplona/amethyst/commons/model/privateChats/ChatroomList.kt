@@ -100,21 +100,66 @@ class ChatroomList(
     fun removeMessage(
         user: User,
         msg: Note,
-    ) {
-        val privateChatroom = getOrCreatePrivateChatroom(user)
-        if (msg in privateChatroom.messages) {
-            privateChatroom.removeMessageSync(msg)
-        }
-    }
+    ) = removeMessage(getOrCreatePrivateChatroom(user), msg)
 
     fun removeMessage(
         room: ChatroomKey,
         msg: Note,
+    ) = removeMessage(getOrCreatePrivateChatroom(room), msg)
+
+    // ownerSentMessage stays as it was: a single removal is an expiration or deletion, and the owner
+    // having written here still makes the room Known after their message is gone. Only a protocol
+    // unload (removeMessagesIf) re-derives it.
+    private fun removeMessage(
+        privateChatroom: Chatroom,
+        msg: Note,
     ) {
-        val privateChatroom = getOrCreatePrivateChatroom(room)
-        if (msg in privateChatroom.messages) {
-            privateChatroom.removeMessageSync(msg)
+        privateChatroom.removeMessageSync(msg)
+    }
+
+    // Whether the owner still has a message in [room], re-derived only when one of theirs just left.
+    private fun refreshOwnerSent(
+        room: Chatroom,
+        removed: Collection<Note>,
+    ) {
+        if (removed.any { it.author?.pubkeyHex == ownerPubKey }) {
+            room.ownerSentMessage = room.messages.any { it.author?.pubkeyHex == ownerPubKey }
         }
+    }
+
+    /**
+     * Adds every note whose event is a DM including the owner to its room, one batch per room (see
+     * [Chatroom.addMessagesSync]).
+     */
+    fun addAll(notes: Collection<Note>) {
+        notes
+            .groupBy { (it.event as? ChatroomKeyable)?.takeIf { event -> event.isIncluded(ownerPubKey) }?.chatroomKey(ownerPubKey) }
+            .forEach { (key, roomNotes) ->
+                if (key == null) return@forEach
+                val room = getOrCreatePrivateChatroom(key)
+                if (room.addMessagesSync(roomNotes).any { it.author?.pubkeyHex == ownerPubKey }) room.ownerSentMessage = true
+            }
+    }
+
+    /**
+     * Drops every message matching [predicate] from every room (e.g. all of a DM protocol the user
+     * turned off), then re-derives whether the owner still has a message in each room it touched, so a
+     * room is not kept in Known on the strength of messages that are gone. Returns the dropped notes.
+     */
+    fun removeMessagesIf(predicate: (Note) -> Boolean): Set<Note> {
+        val removed = mutableSetOf<Note>()
+        rooms.forEach { _, room ->
+            val fromRoom = room.removeMessagesIf(predicate)
+            refreshOwnerSent(room, fromRoom)
+            removed.addAll(fromRoom)
+        }
+        return removed
+    }
+
+    /** Forgets the NIP-04 paging progress of the rooms list and of every conversation. */
+    fun resetNip04History() {
+        nip04History.reset()
+        rooms.forEach { _, room -> room.resetNip04History() }
     }
 
     fun hasSentMessagesTo(key: ChatroomKey?): Boolean {

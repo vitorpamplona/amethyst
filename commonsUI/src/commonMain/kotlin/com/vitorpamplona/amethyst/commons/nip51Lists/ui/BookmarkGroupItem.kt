@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedTextField
 import com.vitorpamplona.amethyst.commons.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -388,7 +389,7 @@ private fun GroupCloneDialog(
                 )
                 Spacer(modifier = DoubleVertSpacer)
                 // For the group clone description
-                TextField(
+                SpellCheckedTextField(
                     value = optionalNewDesc ?: "",
                     onValueChange = onCloneDescChange,
                     label = {

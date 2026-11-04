@@ -51,15 +51,7 @@ fun NewDateOrSubjectDivisor(
 ) {
     if (previous == null) return
 
-    val never = stringRes(Res.string.never)
-    val today = stringRes(Res.string.today)
-
-    val prevDate = remember(previous) { dateFormatter(previous.event?.createdAt, never, today) }
-    val date = remember(note) { dateFormatter(note.event?.createdAt, never, today) }
-
-    if (prevDate != date) {
-        ChatDivisor(date)
-    }
+    NewDateDivisor(previous, note)
 
     val newSubject = remember(previous, note) { subjectChangeOf(previous.event, note.event) }
     if (newSubject != null) {
@@ -74,6 +66,29 @@ fun NewDateOrSubjectDivisor(
                 }
             }
         ChatSystemCaption(text)
+    }
+}
+
+/**
+ * The day header alone: [note]'s date when it differs from [previous]'s. For a row that must not
+ * show a subject change (it names the author), like a collapsed run of messages from outside the
+ * network.
+ */
+@Composable
+fun NewDateDivisor(
+    previous: Note?,
+    note: Note,
+) {
+    if (previous == null) return
+
+    val never = stringRes(Res.string.never)
+    val today = stringRes(Res.string.today)
+
+    val prevDate = remember(previous) { dateFormatter(previous.event?.createdAt, never, today) }
+    val date = remember(note) { dateFormatter(note.event?.createdAt, never, today) }
+
+    if (prevDate != date) {
+        ChatDivisor(date)
     }
 }
 

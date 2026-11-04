@@ -28,6 +28,8 @@ import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import okio.Path.Companion.toOkioPath
 import java.io.File
 
@@ -112,6 +114,7 @@ actual class SecureKeyStorage private actual constructor() {
         try {
             store.get(keyFor(npub))
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             throw SecureStorageException("Failed to retrieve private key", e)
         }
 
@@ -126,6 +129,7 @@ actual class SecureKeyStorage private actual constructor() {
         try {
             store.getOrThrow(keyFor(npub))
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             throw SecureStorageException("Failed to retrieve private key", e)
         }
 
@@ -143,6 +147,7 @@ actual class SecureKeyStorage private actual constructor() {
             store.remove(keyFor(npub))
             existed
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             throw SecureStorageException("Failed to delete private key", e)
         }
 

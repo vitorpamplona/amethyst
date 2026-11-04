@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
-import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
+import com.vitorpamplona.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair

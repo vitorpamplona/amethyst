@@ -22,8 +22,11 @@ package com.vitorpamplona.amethyst.commons.relayClient.gitRepo
 
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
@@ -59,6 +62,42 @@ fun filterRepositoryContent(
                 tags = mapOf("a" to listOf(repository.addressTag())),
                 kinds = RepositoryContentKinds,
                 limit = 500,
+                since = since,
+            ),
+    )
+
+/**
+ * The CI kinds a repository's PR / patch list needs for its status badges: Workflow Results (9842,
+ * no content, small) and live Workflow Progress markers (39842, NIP-40-expiring, so the live set
+ * stays small). Kept out of [RepositoryContentKinds] so a busy CI cannot use up that filter's limit
+ * and push issues and PRs out of the list. Job Results (9841) carry log tails and are fetched by id
+ * only when someone opens the runs sheet.
+ */
+val RepositoryCiKinds =
+    listOf(
+        CiWorkflowResultEvent.KIND,
+        CiWorkflowProgressEvent.KIND,
+    )
+
+/**
+ * Every coordinate a CI event may tag the repository with: CI events carry one `a` per maintainer
+ * announcement, so the owner's coordinate alone would miss runs tagged under a maintainer's.
+ */
+fun repositoryCoordinates(repository: GitRepositoryEvent): List<String> = (listOf(repository.pubKey) + repository.maintainers()).distinct().map { Address.assemble(GitRepositoryEvent.KIND, it, repository.dTag()) }
+
+fun filterRepositoryCi(
+    relay: NormalizedRelayUrl,
+    repository: GitRepositoryEvent,
+    since: Long?,
+): RelayBasedFilter =
+    RelayBasedFilter(
+        relay = relay,
+        filter =
+            ExplainedFilter(
+                purpose = SubPurpose.TOPIC_FEED,
+                tags = mapOf("a" to repositoryCoordinates(repository)),
+                kinds = RepositoryCiKinds,
+                limit = 300,
                 since = since,
             ),
     )

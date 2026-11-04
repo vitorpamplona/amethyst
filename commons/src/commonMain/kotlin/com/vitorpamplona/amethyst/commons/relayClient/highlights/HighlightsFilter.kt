@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavP
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -48,6 +49,7 @@ fun makeHighlightsFilter(
         is AllFollowsTopNavPerRelayFilterSet -> filterHighlightsByFollows(feedSettings, since, defaultSince)
         is AuthorsTopNavPerRelayFilterSet -> filterHighlightsByAuthors(feedSettings, since, defaultSince)
         is GlobalTopNavPerRelayFilterSet -> filterHighlightsGlobal(feedSettings, since, defaultSince)
+        is RelayTopNavPerRelayFilterSet -> filterHighlightsByRelay(feedSettings, since, defaultSince)
         is HashtagTopNavPerRelayFilterSet -> filterHighlightsByHashtag(feedSettings, since, defaultSince)
         is LocationTopNavPerRelayFilterSet -> filterHighlightsByGeohashes(feedSettings, since, defaultSince)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterHighlightsByMutedAuthors(feedSettings, since, defaultSince)

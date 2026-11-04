@@ -27,14 +27,21 @@ import android.os.Handler
 import android.os.Looper
 import android.text.format.Formatter.formatFileSize
 import android.widget.Toast
+import androidx.core.net.toUri
 import com.davotoula.lightcompressor.CompressionListener
 import com.davotoula.lightcompressor.VideoCodec
 import com.davotoula.lightcompressor.VideoCompressor
 import com.davotoula.lightcompressor.config.AppSpecificStorageConfiguration
 import com.davotoula.lightcompressor.config.Configuration
 import com.davotoula.lightcompressor.config.VideoResizer
+import com.davotoula.lightcompressor.hdr.HdrInput
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoCompressionRules
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoHdrInfo
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoResolution
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -44,107 +51,30 @@ import java.util.UUID
 import kotlin.coroutines.resume
 
 // TODO: add Auto setting. Focus on small fast streams. 4->1080p, 1080p->720p, 720p and below stay the same resolution. Use existing matrix to determine bitrate.
-data class VideoInfo(
-    val resolution: VideoResolution,
-    val framerate: Float,
-)
-
-data class VideoResolution(
-    val width: Int,
-    val height: Int,
-) {
-    fun getStandard(): VideoStandard {
-        val shortSide = minOf(width, height)
-        return when {
-            shortSide >= 2160 -> VideoStandard.UHD_4K
-            shortSide >= 1440 -> VideoStandard.QHD_1440P
-            shortSide >= 1080 -> VideoStandard.FHD_1080P
-            shortSide >= 720 -> VideoStandard.HD_720P
-            shortSide >= 480 -> VideoStandard.SD_480P
-            shortSide >= 360 -> VideoStandard.NHD_360P
-            shortSide >= 240 -> VideoStandard.QVGA_240P
-            else -> VideoStandard.UNKNOWN
-        }
-    }
-}
-
-enum class VideoStandard(
-    val label: String,
-) {
-    UHD_4K("4K"),
-    QHD_1440P("1440p"),
-    FHD_1080P("1080p"),
-    HD_720P("720p"),
-    SD_480P("480p"),
-    NHD_360P("360p"),
-    QVGA_240P("240p"),
-    UNKNOWN("unknown"),
-    ;
-
-    override fun toString(): String = label
-}
-
-private const val MBPS_TO_BPS_MULTIPLIER = 1_000_000
-
-data class CompressionRule(
-    val shortSide: Int,
-    val bitrateMbps: Float,
-    val description: String,
-) {
-    fun getBitrateBps(
-        framerate: Float,
-        useH265: Boolean,
-    ): Int {
-        // Apply 1.3x multiplier for 60fps+ videos, 0.7x multiplier for H265
-        val framerateMultiplier = if (framerate >= 60f) 1.3f else 1.0f
-        val codecMultiplier = if (useH265) 0.75f else 1.0f
-        val finalMultiplier = framerateMultiplier * codecMultiplier
-
-        Log.d("VideoCompressionHelper") { "framerate: $framerate, useH265: $useH265, Bitrate multiplier: $finalMultiplier" }
-
-        return (bitrateMbps * finalMultiplier * MBPS_TO_BPS_MULTIPLIER).toInt()
-    }
-}
-
 object VideoCompressionHelper {
     private const val LOG_TAG = "VideoCompressionHelper"
 
-    private val compressionRules =
-        mapOf(
-            CompressorQuality.LOW to
-                mapOf(
-                    VideoStandard.UHD_4K to CompressionRule(720, 1f, "4K→720p, 1Mbps"),
-                    VideoStandard.QHD_1440P to CompressionRule(720, 1f, "1440p→720p, 1Mbps"),
-                    VideoStandard.FHD_1080P to CompressionRule(480, 0.75f, "1080p→480p, 0.75Mbps"),
-                    VideoStandard.HD_720P to CompressionRule(360, 0.5f, "720p→360p, 0.5Mbps"),
-                    VideoStandard.SD_480P to CompressionRule(240, 0.5f, "480p→240p, 0.5Mbps"),
-                    VideoStandard.NHD_360P to CompressionRule(240, 0.3f, "360p→240p, 0.3Mbps"),
-                    VideoStandard.QVGA_240P to CompressionRule(180, 0.2f, "240p→180p, 0.2Mbps"),
-                    VideoStandard.UNKNOWN to CompressionRule(480, 0.75f, "Low quality fallback, 0.75Mbps"),
-                ),
-            CompressorQuality.MEDIUM to
-                mapOf(
-                    VideoStandard.UHD_4K to CompressionRule(1080, 4f, "4K→1080p, 4Mbps"),
-                    VideoStandard.QHD_1440P to CompressionRule(1080, 4f, "1440p→1080p, 4Mbps"),
-                    VideoStandard.FHD_1080P to CompressionRule(720, 2f, "1080p→720p, 2Mbps"),
-                    VideoStandard.HD_720P to CompressionRule(480, 1.5f, "720p→480p, 1.5Mbps"),
-                    VideoStandard.SD_480P to CompressionRule(360, 1f, "480p→360p, 1Mbps"),
-                    VideoStandard.NHD_360P to CompressionRule(240, 0.5f, "360p→240p, 0.5Mbps"),
-                    VideoStandard.QVGA_240P to CompressionRule(180, 0.3f, "240p→180p, 0.3Mbps"),
-                    VideoStandard.UNKNOWN to CompressionRule(720, 2f, "Medium quality fallback, 2Mbps"),
-                ),
-            CompressorQuality.HIGH to
-                mapOf(
-                    VideoStandard.UHD_4K to CompressionRule(2160, 8f, "4K→4K, 8Mbps"),
-                    VideoStandard.QHD_1440P to CompressionRule(1080, 8f, "1440p→1080p, 8Mbps"),
-                    VideoStandard.FHD_1080P to CompressionRule(1080, 4f, "1080p→1080p, 4Mbps"),
-                    VideoStandard.HD_720P to CompressionRule(720, 2f, "720p→720p, 2Mbps"),
-                    VideoStandard.SD_480P to CompressionRule(480, 1.5f, "480p→480p, 1.5Mbps"),
-                    VideoStandard.NHD_360P to CompressionRule(360, 1f, "360p→360p, 1Mbps"),
-                    VideoStandard.QVGA_240P to CompressionRule(240, 0.5f, "240p→240p, 0.5Mbps"),
-                    VideoStandard.UNKNOWN to CompressionRule(1080, 4f, "High quality fallback, 4Mbps"),
-                ),
-        )
+    /** The size and frame rate [compressVideo] would judge [uri] by, for the slider label; null when unreadable. */
+    fun probe(
+        context: Context,
+        uri: Uri,
+    ): VideoInfo? = getVideoInfo(uri, context, videoPixelAspectRatio(context, uri))
+
+    /**
+     * Whether [uri] is HDR and whether [compressVideo] with H.265 keeps it so on this device; null
+     * when unreadable, like [probe]. The library answers from the same policy compression uses, so
+     * the two cannot drift.
+     */
+    fun probeHdr(
+        context: Context,
+        uri: Uri,
+    ): VideoHdrInfo? =
+        try {
+            VideoCompressor.probeHdr(context, uri).let { VideoHdrInfo(isHdr = it.input != HdrInput.SDR, canKeepHdr = it.canKeepHdr) }
+        } catch (e: Exception) {
+            Log.w(LOG_TAG, "HDR probe failed", e)
+            null
+        }
 
     suspend fun compressVideo(
         uri: Uri,
@@ -154,14 +84,16 @@ object VideoCompressionHelper {
         useH265: Boolean,
         timeoutMs: Long = 60_000L, // configurable, default 60s
     ): MediaCompressorResult {
-        val videoInfo = getVideoInfo(uri, applicationContext)
+        // An anamorphic source is resized in square pixels (see SquarePixelsResizer), so the rules
+        // judge its display size and the upload plays at the right shape everywhere.
+        val pixelAspectRatio = videoPixelAspectRatio(applicationContext, uri)
+        val videoInfo = getVideoInfo(uri, applicationContext, pixelAspectRatio)
 
         val (videoBitrateInBps, resizer) =
             videoInfo?.let { info ->
                 val rule =
-                    compressionRules
-                        .getValue(mediaQuality)
-                        .getValue(info.resolution.getStandard())
+                    VideoCompressionRules.ruleFor(mediaQuality, info.resolution.getStandard())
+                        ?: return MediaCompressorResult(uri, contentType, null)
 
                 val bitrateBps = rule.getBitrateBps(info.framerate, useH265)
                 Log.d(LOG_TAG) { "Bitrate: ${bitrateBps}bps for ${info.resolution.getStandard()} quality=$mediaQuality framerate=${info.framerate}fps useH265=$useH265." }
@@ -170,13 +102,14 @@ object VideoCompressionHelper {
                     "Resizer: ${info.resolution.width}x${info.resolution.height} -> " +
                         "shortSide=${rule.shortSide} (${rule.description})"
                 }
-                val resizer = VideoResizer.limitShortSide(rule.shortSide.toDouble())
+                val limit = VideoResizer.limitShortSide(rule.shortSide.toDouble())
+                val resizer = pixelAspectRatio?.let { SquarePixelsResizer(it, limit) } ?: limit
 
                 Pair(bitrateBps, resizer)
             } ?: run {
                 Log.w(LOG_TAG, "Video bitrate fallback: 2Mbps (videoInfo unavailable)")
                 Log.d(LOG_TAG, "Resizer: null (original resolution preserved)")
-                Pair(2 * MBPS_TO_BPS_MULTIPLIER, null)
+                Pair(VideoCompressionRules.PROBE_FAILED_BITRATE_BPS, pixelAspectRatio?.let { SquarePixelsResizer(it, null) })
             }
 
         // Get original file size safely
@@ -185,113 +118,118 @@ object VideoCompressionHelper {
         val result =
             withTimeoutOrNull(timeoutMs) {
                 suspendCancellableCoroutine { continuation ->
-                    VideoCompressor.start(
-                        context = applicationContext,
-                        uris = listOf(uri),
-                        isStreamable = true,
-                        storageConfiguration = AppSpecificStorageConfiguration(),
-                        configureWith =
-                            Configuration(
-                                videoBitrateInBps = videoBitrateInBps.toLong(),
-                                resizer = resizer,
-                                videoNames = listOf(UUID.randomUUID().toString()),
-                                isMinBitrateCheckEnabled = false,
-                                videoCodec = if (useH265) VideoCodec.H265 else VideoCodec.H264,
-                            ),
-                        listener =
-                            object : CompressionListener {
-                                override fun onStart(index: Int) {
-                                    // No action needed on compression start
-                                }
-
-                                override fun onProgress(
-                                    index: Int,
-                                    percent: Float,
-                                ) {
-                                    // Progress tracking not needed for this use case
-                                }
-
-                                override fun onSuccess(
-                                    index: Int,
-                                    size: Long,
-                                    path: String?,
-                                ) {
-                                    if (path == null) {
-                                        applicationContext.notifyUser(
-                                            "Video compression succeeded, but path was null",
-                                            LogLevel.WARN,
-                                        )
-                                        if (continuation.isActive) continuation.resume(null)
-                                        return
+                    val handle =
+                        VideoCompressor.start(
+                            context = applicationContext,
+                            uris = listOf(uri),
+                            isStreamable = true,
+                            storageConfiguration = AppSpecificStorageConfiguration(),
+                            configureWith =
+                                Configuration(
+                                    videoBitrateInBps = videoBitrateInBps.toLong(),
+                                    resizer = resizer,
+                                    videoNames = listOf(UUID.randomUUID().toString()),
+                                    isMinBitrateCheckEnabled = false,
+                                    videoCodec = if (useH265) VideoCodec.H265 else VideoCodec.H264,
+                                ),
+                            listener =
+                                object : CompressionListener {
+                                    override fun onStart(index: Int) {
+                                        // No action needed on compression start
                                     }
 
-                                    val reductionPercent =
-                                        if (originalSize > 0) {
-                                            ((originalSize - size) * 100.0 / originalSize).toInt()
-                                        } else {
-                                            0
+                                    override fun onProgress(
+                                        index: Int,
+                                        percent: Float,
+                                    ) {
+                                        // Progress tracking not needed for this use case
+                                    }
+
+                                    override fun onSuccess(
+                                        index: Int,
+                                        size: Long,
+                                        path: String?,
+                                    ) {
+                                        if (path == null) {
+                                            applicationContext.notifyUser(
+                                                "Video compression succeeded, but path was null",
+                                                LogLevel.WARN,
+                                            )
+                                            continuation.resume(null)
+                                            return
                                         }
 
-                                    // Sanity check: compression not smaller than original
-                                    if (originalSize in 1..size) {
-                                        if (!File(path).delete()) {
-                                            Log.w("VideoCompressionHelper") { "Failed to delete compressed file: $path" }
+                                        val reductionPercent =
+                                            if (originalSize > 0) {
+                                                ((originalSize - size) * 100.0 / originalSize).toInt()
+                                            } else {
+                                                0
+                                            }
+
+                                        // Sanity check: compression not smaller than original
+                                        if (originalSize in 1..size) {
+                                            deleteOutput(path)
+                                            if (continuation.isActive) {
+                                                applicationContext.notifyUser(
+                                                    "Compressed file larger than original. Using original.",
+                                                    LogLevel.WARN,
+                                                )
+                                            }
+                                            continuation.resume(MediaCompressorResult(uri, contentType, null))
+                                            return
                                         }
-                                        applicationContext.notifyUser(
-                                            "Compressed file larger than original. Using original.",
-                                            LogLevel.WARN,
-                                        )
-                                        if (continuation.isActive) {
-                                            continuation.resume(
-                                                MediaCompressorResult(uri, contentType, null),
+
+                                        // No toast for a post that was cancelled or timed out while the encode finished.
+                                        if (continuation.isActive && originalSize > 0 && size > 0) {
+                                            val sizeLabel = formatFileSize(applicationContext, size)
+                                            val percentLabel =
+                                                if (reductionPercent >= 0) "-$reductionPercent%" else "+${-reductionPercent}%"
+                                            applicationContext.notifyUser(
+                                                "Video compressed: $sizeLabel ($percentLabel)",
                                             )
                                         }
-                                        return
+
+                                        Log.d(LOG_TAG) {
+                                            "Compression success: Original [$originalSize] -> " +
+                                                "Compressed [$size] ($reductionPercent% reduction)"
+                                        }
+
+                                        // A continuation cancelled before or during this resume drops the value and
+                                        // runs the handler instead, so the finished file goes with it.
+                                        continuation.resume(MediaCompressorResult(File(path).toUri(), contentType, size)) { _, _, _ -> deleteOutput(path) }
                                     }
 
-                                    // Show compression result
-                                    if (originalSize > 0 && size > 0) {
-                                        val sizeLabel = formatFileSize(applicationContext, size)
-                                        val percentLabel =
-                                            if (reductionPercent >= 0) "-$reductionPercent%" else "+${-reductionPercent}%"
+                                    override fun onFailure(
+                                        index: Int,
+                                        failureMessage: String,
+                                    ) {
                                         applicationContext.notifyUser(
-                                            "Video compressed: $sizeLabel ($percentLabel)",
+                                            "Video compression failed: $failureMessage",
+                                            LogLevel.ERROR,
                                         )
+                                        continuation.resume(null)
                                     }
 
-                                    Log.d(LOG_TAG) {
-                                        "Compression success: Original [$originalSize] -> " +
-                                            "Compressed [$size] ($reductionPercent% reduction)"
+                                    override fun onCancelled(index: Int) {
+                                        Log.w(LOG_TAG, "Video compression cancelled")
+                                        continuation.resume(null)
                                     }
-
-                                    if (continuation.isActive) {
-                                        continuation.resume(
-                                            MediaCompressorResult(Uri.fromFile(File(path)), contentType, size),
-                                        )
-                                    }
-                                }
-
-                                override fun onFailure(
-                                    index: Int,
-                                    failureMessage: String,
-                                ) {
-                                    applicationContext.notifyUser(
-                                        "Video compression failed: $failureMessage",
-                                        LogLevel.ERROR,
-                                    )
-                                    if (continuation.isActive) continuation.resume(null)
-                                }
-
-                                override fun onCancelled(index: Int) {
-                                    Log.w(LOG_TAG, "Video compression cancelled")
-                                    if (continuation.isActive) continuation.resume(null)
-                                }
-                            },
-                    )
+                                },
+                        )
+                    // The timeout or a cancelled post stops this encode (and only this one: the
+                    // handle covers one start() call, so sibling uploads keep compressing). Runs at
+                    // once if the continuation is already cancelled; a no-op once the batch finished.
+                    // The library sends exactly one terminal callback per video, and a resume on a
+                    // cancelled continuation is a no-op, so no callback above needs an isActive guard.
+                    continuation.invokeOnCancellation { handle.cancel() }
                 }
             }
 
         return result ?: MediaCompressorResult(uri, contentType, null)
+    }
+
+    private fun deleteOutput(path: String) {
+        File(path).deleteOrWarn(LOG_TAG, "compressed output")
     }
 
     private fun Context.getFileSize(uri: Uri): Long =
@@ -324,12 +262,13 @@ object VideoCompressionHelper {
     private fun getVideoInfo(
         uri: Uri,
         context: Context,
+        pixelAspectRatio: Float?,
     ): VideoInfo? {
         var retriever: MediaMetadataRetriever? = null
         return try {
             retriever = MediaMetadataRetriever()
             retriever.setDataSource(context, uri)
-            val width = retriever.prepareVideoWidth()
+            val width = retriever.prepareVideoWidth()?.let { displayWidth(it, pixelAspectRatio) }
             val height = retriever.prepareVideoHeight()
             val rotation = retriever.prepareRotation() ?: 0
 

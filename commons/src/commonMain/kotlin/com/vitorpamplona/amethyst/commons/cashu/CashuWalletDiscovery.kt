@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.cashu
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -137,9 +139,10 @@ class CashuWalletDiscovery(
         // are walked back to the oldest event.
         val filters =
             listOf(
-                Filter(
+                ExplainedFilter(
                     kinds = listOf(CashuWalletEvent.KIND, NutzapInfoEvent.KIND),
                     authors = listOf(pubKey),
+                    purpose = SubPurpose.WALLET,
                 ),
             )
 

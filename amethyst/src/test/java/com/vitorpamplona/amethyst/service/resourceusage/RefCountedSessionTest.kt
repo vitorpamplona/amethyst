@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.resourceusage
 
+import com.vitorpamplona.amethyst.commons.service.resourceusage.RefCountedSession
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -40,13 +40,17 @@ fun ParagraphState.isBlankLine(): Boolean = words.all { it is RegularTextSegment
 
 /**
  * Drops the one blank line that directly follows a paragraph ending in a block (see
- * [rendersAsBlock]). The block already ends its row, so the `\n\n` the author typed to separate
- * the URL from the next sentence would otherwise render as an extra empty text line under the
- * card, doubling the gap. Standalone image paragraphs get the same treatment in [GalleryParser].
+ * [rendersAsBlock]), and the one that directly precedes a paragraph starting with one. A block
+ * keeps its own even margin above and below, so the `\n\n` an author types to set a URL apart
+ * from its sentences would otherwise add an empty text line on that side only: a picture in the
+ * middle of a post sat three times farther from the paragraph above it than from the one below.
+ * Standalone image paragraphs get the same treatment after them in [GalleryParser].
+ *
+ * Only one blank line goes on each side: a second one the author typed still shows.
  *
  * Returns [paragraphs] itself when nothing is dropped.
  */
-fun dropBlankLineAfterBlocks(
+fun dropBlankLinesAroundBlocks(
     paragraphs: List<ParagraphState>,
     canPreview: Boolean,
 ): List<ParagraphState> {
@@ -54,12 +58,9 @@ fun dropBlankLineAfterBlocks(
 
     for (i in paragraphs.indices) {
         val paragraph = paragraphs[i]
-        val previous = paragraphs.getOrNull(i - 1)
         val drop =
-            previous != null &&
-                paragraph.isBlankLine() &&
-                !previous.isBlankLine() &&
-                rendersAsBlock(previous.words.last(), canPreview)
+            paragraph.isBlankLine() &&
+                (endsWithBlock(paragraphs.getOrNull(i - 1), canPreview) || startsWithBlock(paragraphs.getOrNull(i + 1), canPreview))
 
         if (drop) {
             if (result == null) result = ArrayList<ParagraphState>(paragraphs.size).apply { addAll(paragraphs.subList(0, i)) }
@@ -70,3 +71,13 @@ fun dropBlankLineAfterBlocks(
 
     return result ?: paragraphs
 }
+
+private fun endsWithBlock(
+    paragraph: ParagraphState?,
+    canPreview: Boolean,
+): Boolean = paragraph != null && !paragraph.isBlankLine() && rendersAsBlock(paragraph.words.last(), canPreview)
+
+private fun startsWithBlock(
+    paragraph: ParagraphState?,
+    canPreview: Boolean,
+): Boolean = paragraph != null && !paragraph.isBlankLine() && rendersAsBlock(paragraph.words.first(), canPreview)

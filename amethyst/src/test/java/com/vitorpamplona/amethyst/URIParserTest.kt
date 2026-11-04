@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst
 
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.ui.connectedAppRoute
-import com.vitorpamplona.amethyst.commons.ui.isConnectedAppRoute
-import com.vitorpamplona.amethyst.commons.ui.urlRoute
+import com.vitorpamplona.amethyst.commons.model.navigation.uri.connectedAppRoute
+import com.vitorpamplona.amethyst.commons.model.navigation.uri.isConnectedAppRoute
+import com.vitorpamplona.amethyst.commons.model.navigation.uri.urlRoute
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

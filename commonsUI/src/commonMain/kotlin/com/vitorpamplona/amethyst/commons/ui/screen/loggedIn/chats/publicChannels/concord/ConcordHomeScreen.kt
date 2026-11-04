@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberConcordImageModel
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.observeChatPreviewText
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.RefreshConcordDirectInvites
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.concordPendingDirectInvites
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
@@ -121,8 +122,8 @@ fun ConcordHomeScreen(
     // the stock relays for users who actually use Concord.
     LaunchedEffect(Unit) { accountViewModel.importConcordCommunities() }
 
-    // Direct Invites (CORD-05 §6): one inbox sweep per visit, kept out of the lazy list so it does
-    // not re-run each time the invites scroll back into view.
+    // Direct Invites (CORD-05 §6): one stock-relay sweep per visit, kept out of the lazy list so it
+    // does not re-run each time the invites scroll back into view.
     RefreshConcordDirectInvites(accountViewModel)
     val invites by account.concord.pendingConcordDirectInvites.collectAsStateWithLifecycle()
 
@@ -439,11 +440,13 @@ private fun ConcordChannelRow(
             val event = note?.event
             val author = note?.author
             val preview: String? =
-                if (author != null && event != null) {
+                if (note == null || event == null) {
+                    null
+                } else if (author != null) {
                     val authorName by observeUserName(author, accountViewModel)
-                    "$authorName: ${event.content.take(80)}"
+                    "$authorName: ${observeChatPreviewText(note, 80)}"
                 } else {
-                    event?.content?.take(80)
+                    observeChatPreviewText(note, 80)
                 }
             preview?.let {
                 Text(

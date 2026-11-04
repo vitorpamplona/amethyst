@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
@@ -105,7 +106,7 @@ object SearchCommand {
                 .map { ev ->
                     val parsed =
                         try {
-                            Output.mapper.readTree(ev.content)
+                            CliJson.parse(ev.content)
                         } catch (_: Exception) {
                             null
                         }

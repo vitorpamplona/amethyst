@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accent_color
+import com.vitorpamplona.amethyst.commons.resources.accent_color_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.account_settings
 import com.vitorpamplona.amethyst.commons.resources.active_subs_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.active_subs_title
@@ -46,6 +48,8 @@ import com.vitorpamplona.amethyst.commons.resources.compose_settings
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_title
 import com.vitorpamplona.amethyst.commons.resources.danger_zone
+import com.vitorpamplona.amethyst.commons.resources.devtools_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.devtools_title
 import com.vitorpamplona.amethyst.commons.resources.drawer_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings
 import com.vitorpamplona.amethyst.commons.resources.event_sync_search_keywords
@@ -73,6 +77,8 @@ import com.vitorpamplona.amethyst.commons.resources.ots_explorer_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.ots_explorer_settings
 import com.vitorpamplona.amethyst.commons.resources.payment_targets
 import com.vitorpamplona.amethyst.commons.resources.payment_targets_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.privacy_lock_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.privacy_lock_title
 import com.vitorpamplona.amethyst.commons.resources.privacy_options
 import com.vitorpamplona.amethyst.commons.resources.privacy_options_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.profile_badges_search_keywords
@@ -108,6 +114,8 @@ import com.vitorpamplona.amethyst.commons.resources.vanish_history
 import com.vitorpamplona.amethyst.commons.resources.vanish_history_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.video_player_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings
+import com.vitorpamplona.amethyst.commons.resources.web_of_trust
+import com.vitorpamplona.amethyst.commons.resources.web_of_trust_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.zaps
 import com.vitorpamplona.amethyst.commons.resources.zaps_search_keywords
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -118,7 +126,9 @@ import org.jetbrains.compose.resources.StringResource
 
 /**
  * Assembles the full settings catalog. Not composable: actions close over [nav],
- * [uriHandler], and [onResetMarmot]; conditional rows are included via [hasPrivateKey].
+ * [uriHandler], and [onResetMarmot]; conditional rows are included via [hasPrivateKey], and a row
+ * whose screen this front end doesn't have ([canOpen] false: Resource usage on desktop) is left out.
+ * A null [onResetMarmot] drops that row, for a menu with no confirmation dialog to show.
  * The blank-query render of this catalog must match the legacy hardcoded screen.
  */
 fun buildSettingsCatalog(
@@ -126,7 +136,9 @@ fun buildSettingsCatalog(
     uriHandler: UriHandler,
     hasPrivateKey: Boolean,
     legal: SettingsCategory?,
-    onResetMarmot: () -> Unit,
+    onResetMarmot: (() -> Unit)?,
+    canOpen: (Route) -> Boolean = { true },
+    hasKeyStorage: Boolean = false,
 ): List<SettingsCategory> {
     // Most rows are a symbol icon + a keyword blob that navigates to a route. This local
     // helper collapses that shape to one line per row and makes a mismatched keyword/route
@@ -136,17 +148,21 @@ fun buildSettingsCatalog(
         symbol: MaterialSymbol,
         keywordsRes: StringResource,
         route: Route,
-    ) = SettingsEntry(
-        titleRes = titleRes,
-        icon = SettingsIcon.Symbol(symbol),
-        keywordsRes = keywordsRes,
-    ) { nav.nav(route) }
+    ) = if (!canOpen(route)) {
+        null
+    } else {
+        SettingsEntry(
+            titleRes = titleRes,
+            icon = SettingsIcon.Symbol(symbol),
+            keywordsRes = keywordsRes,
+        ) { nav.nav(route) }
+    }
 
     val account =
         SettingsCategory(
             titleRes = Res.string.account_settings,
             entries =
-                listOf(
+                listOfNotNull(
                     SettingsEntry(
                         titleRes = Res.string.relay_setup,
                         icon = SettingsIcon.Painter(Res.drawable.relays, 4),
@@ -162,6 +178,7 @@ fun buildSettingsCatalog(
                     symEntry(Res.string.messages_settings, MaterialSymbols.Mail, Res.string.messages_settings_search_keywords, Route.MessagesSettings),
                     symEntry(Res.string.bottom_bar_settings, MaterialSymbols.Dashboard, Res.string.bottom_bar_search_keywords, Route.BottomBarSettings),
                     symEntry(Res.string.drawer_settings, MaterialSymbols.AutoMirrored.ViewList, Res.string.drawer_search_keywords, Route.DrawerSettings),
+                    symEntry(Res.string.accent_color, MaterialSymbols.Circle, Res.string.accent_color_search_keywords, Route.AccentColorSettings),
                     symEntry(Res.string.video_player_settings, MaterialSymbols.VideoSettings, Res.string.video_player_search_keywords, Route.VideoPlayerSettings),
                     symEntry(Res.string.audio_visualizer_settings, MaterialSymbols.MusicNote, Res.string.audio_visualizer_search_keywords, Route.AudioVisualizerSettings),
                     symEntry(Res.string.now_playing_settings, MaterialSymbols.MusicNote, Res.string.now_playing_search_keywords, Route.NowPlayingSettings),
@@ -170,6 +187,8 @@ fun buildSettingsCatalog(
                     symEntry(Res.string.payment_targets, MaterialSymbols.Payment, Res.string.payment_targets_search_keywords, Route.EditPaymentTargets),
                     symEntry(Res.string.bolt12_offers, MaterialSymbols.Payment, Res.string.bolt12_offers_search_keywords, Route.EditBolt12Offers),
                     symEntry(Res.string.security_filters, MaterialSymbols.Security, Res.string.security_filters_search_keywords, Route.SecurityFilters),
+                    symEntry(Res.string.privacy_lock_title, MaterialSymbols.Lock, Res.string.privacy_lock_search_keywords, Route.PrivacyLockSettings),
+                    symEntry(Res.string.web_of_trust, MaterialSymbols.Shield, Res.string.web_of_trust_search_keywords, Route.WebOfTrust),
                     symEntry(Res.string.translations, MaterialSymbols.Translate, Res.string.translations_search_keywords, Route.UserSettings),
                     symEntry(Res.string.napplet_permissions_title, MaterialSymbols.Apps, Res.string.napplet_connected_apps_search_keywords, Route.ConnectedApps),
                     symEntry(Res.string.relay_auth_settings_title, MaterialSymbols.Lock, Res.string.relay_auth_search_keywords, Route.RelayAuthSettings),
@@ -189,7 +208,7 @@ fun buildSettingsCatalog(
         SettingsCategory(
             titleRes = Res.string.app_settings,
             entries =
-                listOf(
+                listOfNotNull(
                     SettingsEntry(
                         titleRes = Res.string.privacy_options,
                         icon = SettingsIcon.Painter(Res.drawable.ic_tor, 1),
@@ -206,6 +225,7 @@ fun buildSettingsCatalog(
                     symEntry(Res.string.namecoin_settings, MaterialSymbols.Security, Res.string.namecoin_search_keywords, Route.NamecoinSettings),
                     symEntry(Res.string.active_subs_title, MaterialSymbols.CloudSync, Res.string.active_subs_search_keywords, Route.ActiveSubscriptions),
                     symEntry(Res.string.resource_usage_title, MaterialSymbols.Bolt, Res.string.resource_usage_search_keywords, Route.ResourceUsage),
+                    symEntry(Res.string.devtools_title, MaterialSymbols.Code, Res.string.devtools_search_keywords, Route.DevTools),
                 ),
         )
 
@@ -215,7 +235,9 @@ fun buildSettingsCatalog(
             isDanger = true,
             entries =
                 buildList {
-                    if (hasPrivateKey) {
+                    // Also where the desktop keeps keys: an account that loaded without its key
+                    // (key file locked, keychain refused) must still reach Unlock and Try again.
+                    if (hasPrivateKey || hasKeyStorage) {
                         add(
                             SettingsEntry(
                                 titleRes = Res.string.backup_keys,
@@ -224,6 +246,8 @@ fun buildSettingsCatalog(
                                 isDanger = true,
                             ) { nav.nav(Route.AccountBackup) },
                         )
+                    }
+                    if (hasPrivateKey) {
                         add(
                             SettingsEntry(
                                 titleRes = Res.string.request_to_vanish,
@@ -241,15 +265,17 @@ fun buildSettingsCatalog(
                             isDanger = true,
                         ) { nav.nav(Route.VanishEvents) },
                     )
-                    add(
-                        SettingsEntry(
-                            titleRes = Res.string.reset_marmot_state,
-                            icon = SettingsIcon.Symbol(MaterialSymbols.DeleteSweep),
-                            keywordsRes = Res.string.reset_marmot_search_keywords,
-                            isDanger = true,
-                            onClick = onResetMarmot,
-                        ),
-                    )
+                    if (onResetMarmot != null) {
+                        add(
+                            SettingsEntry(
+                                titleRes = Res.string.reset_marmot_state,
+                                icon = SettingsIcon.Symbol(MaterialSymbols.DeleteSweep),
+                                keywordsRes = Res.string.reset_marmot_search_keywords,
+                                isDanger = true,
+                                onClick = onResetMarmot,
+                            ),
+                        )
+                    }
                 },
         )
 

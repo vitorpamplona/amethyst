@@ -83,6 +83,12 @@ class PerRelayLoadTracker(
         this.scope = scope
     }
 
+    /** Drops everything and the scope [bind] gave, so this tracker no longer holds on to it. */
+    fun unbind() {
+        reset()
+        scope = null
+    }
+
     fun isInFlight(relay: NormalizedRelayUrl) = inFlight.contains(relay)
 
     fun count() = inFlight.size

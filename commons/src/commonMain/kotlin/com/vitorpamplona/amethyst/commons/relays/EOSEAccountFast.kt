@@ -37,10 +37,22 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  * keeps a `typealias` for source compatibility.
  */
 class EOSEAccountFast<T : Any>(
-    cacheSize: Int = 20,
+    private val cacheSize: Int = 20,
 ) {
     private val users: LruCache<T, EOSERelayList> = LruCache(cacheSize)
     private val lock = KmpLock()
+
+    /**
+     * Sizes the cache to the [liveKeys] the caller tracks right now plus [cacheSize] recently dropped
+     * ones, growing for a feed's whole author list and shrinking back once it is gone. A fixed cap
+     * below the live count evicts live keys, which are then asked for again and evict others in turn.
+     */
+    fun fitTo(liveKeys: Int) {
+        val target = liveKeys + cacheSize
+        lock.withLock {
+            if (users.maxSize() != target) users.resize(target)
+        }
+    }
 
     fun addOrUpdate(
         user: T,

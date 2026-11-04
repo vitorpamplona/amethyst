@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.fasterxml.jackson.databind.JsonNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -38,7 +37,7 @@ class JsonContractTest {
     private fun jsonOf(r: CliResult): JsonNode {
         assertEquals(0, r.exit, "expected success, stderr: ${r.stderr}")
         assertEquals(1, r.stdoutLines.size, "expected exactly one stdout line, got: ${r.stdout}")
-        return Output.mapper.readTree(r.stdoutLines.single())
+        return JsonNode.parse(r.stdoutLines.single())
     }
 
     private fun assertSnakeCaseKeys(node: JsonNode) {
@@ -94,7 +93,7 @@ class JsonContractTest {
                 .trim()
                 .lines()
                 .last()
-        val json = Output.mapper.readTree(line)
+        val json = JsonNode.parse(line)
         assertTrue(json.has("id_ok") || json.has("error"), "verify should report id_ok/signature_ok or a structured error: $json")
     }
 

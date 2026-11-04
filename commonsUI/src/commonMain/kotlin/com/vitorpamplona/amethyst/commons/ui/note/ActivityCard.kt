@@ -48,6 +48,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.wallet_sats
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
 
 /**
@@ -179,7 +182,7 @@ fun ActivityAmountRow(
             color = tint,
         )
         Text(
-            text = "sats",
+            text = stringRes(Res.string.wallet_sats),
             style = MaterialTheme.typography.titleSmall,
             color = tint,
             modifier = Modifier.padding(bottom = 6.dp),

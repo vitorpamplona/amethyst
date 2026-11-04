@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.resources.target_language
 import com.vitorpamplona.amethyst.commons.resources.translate_to
 import com.vitorpamplona.amethyst.commons.resources.translate_to_description
 import com.vitorpamplona.amethyst.commons.resources.user_preferences
+import com.vitorpamplona.amethyst.commons.ui.components.LocalTranslationPlatform
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
@@ -250,6 +251,7 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
         .collectAsStateWithLifecycle()
     var showAddPicker by remember { mutableStateOf(false) }
     val allLanguages = remember { getAllLanguagesSorted() }
+    val translationPlatform = LocalTranslationPlatform.current
 
     val availableToAdd =
         remember(selectedLanguages, allLanguages) {
@@ -305,6 +307,7 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
                 languages = availableToAdd,
                 onSelect = { locale ->
                     accountViewModel.addDontTranslateFrom(locale.language)
+                    translationPlatform.onLanguageBlocked(locale.language, accountViewModel)
                     showAddPicker = false
                 },
             )

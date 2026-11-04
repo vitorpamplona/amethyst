@@ -26,6 +26,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
@@ -50,6 +51,7 @@ import java.io.File
  * the test controls rather than races: [advanceUntilIdle] is the only thing that lets the coroutine
  * [FavoriteAppsRegistry.init] launches actually run.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class FavoriteAppsRegistryTest {
     @get:Rule
     val folder = TemporaryFolder()

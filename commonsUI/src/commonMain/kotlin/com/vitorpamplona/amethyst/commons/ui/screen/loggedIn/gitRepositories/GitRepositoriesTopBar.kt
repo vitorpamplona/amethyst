@@ -33,12 +33,8 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedDefinition
 import com.vitorpamplona.amethyst.commons.feeds.TopNavFilterState
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.git_repositories_search_close
-import com.vitorpamplona.amethyst.commons.resources.git_repositories_search_open
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -54,30 +50,12 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
 /**
- * Top bar for the ngit repositories discovery screen.
- *
- * Two search affordances live side-by-side in the actions row:
- *
- *  1. A **repository filter** (magnifier-with-a-plus icon) that toggles
- *     an inline text field over the loaded feed. This is the ngit-specific
- *     search — it matches the fields NIP-34 announcements carry: name,
- *     identifier, description, hashtags, clone/web/relay URLs, and
- *     maintainer pubkeys. It filters what the user is already looking
- *     at without touching relays.
- *
- *  2. The **generic Nostr search** (plain magnifier) that navigates to
- *     the global [Route.Search] screen, matching the affordance on
- *     every other top-level screen.
- *
- * Splitting them this way makes it obvious which magnifier does what: the
- * inline one narrows the current list, the outbound one opens the fleet-
- * wide search that also queries people, notes, hashtags, etc.
+ * Top bar for the ngit repositories discovery screen: the list picker, and a search button that
+ * opens the full search already narrowed to `kind:git`.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GitRepositoriesTopBar(
-    isSearchOpen: Boolean,
-    onToggleSearch: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -101,24 +79,6 @@ fun GitRepositoriesTopBar(
         },
         navigationIcon = { TopBarNavigationIcon(accountViewModel, nav) },
         actions = {
-            IconButton(onClick = onToggleSearch) {
-                Icon(
-                    symbol =
-                        if (isSearchOpen) {
-                            MaterialSymbols.Close
-                        } else {
-                            MaterialSymbols.FilterAlt
-                        },
-                    contentDescription =
-                        stringRes(
-                            if (isSearchOpen) {
-                                Res.string.git_repositories_search_close
-                            } else {
-                                Res.string.git_repositories_search_open
-                            },
-                        ),
-                )
-            }
             IconButton(onClick = { nav.nav(searchRouteFor(SearchSeed.ofKinds(GitRepositoryEvent.KIND))) }) {
                 SearchIcon(modifier = Size22Modifier, MaterialTheme.colorScheme.placeholderText)
             }

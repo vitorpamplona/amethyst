@@ -16,20 +16,18 @@ plugins {
     alias(libs.plugins.androidxBaselineProfile)
 }
 
+// providers.exec rather than ProcessBuilder: Gradle deprecated starting external processes at
+// configuration time outside its provider API (an error from Gradle 11), and this way the
+// configuration cache also tracks the command's output as a build input.
 fun getCurrentBranch(workingDir: java.io.File): String =
     try {
-        val process =
-            ProcessBuilder("git", "rev-parse", "--abbrev-ref", "HEAD")
-                .directory(workingDir)
-                .redirectErrorStream(true)
-                .start()
-        val branch =
-            process.inputStream
-                .bufferedReader()
-                .use { it.readText() }
-                .trim()
-        val exitCode = process.waitFor()
-        if (exitCode != 0) "unknown" else branch
+        val git =
+            providers.exec {
+                commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
+                this.workingDir = workingDir
+                isIgnoreExitValue = true
+            }
+        if (git.result.get().exitValue != 0) "unknown" else git.standardOutput.asText.get().trim()
     } catch (e: Exception) {
         println("Could not determine git branch: ${e.message}")
         "unknown"
@@ -137,7 +135,7 @@ android {
                 .get()
                 .toInt()
         versionName = generateVersionName(libs.versions.app.get(), rootDir)
-        buildConfigField("String", "RELEASE_NOTES_ID", "\"6c9081869be345f39bb73f91b0890fa603f55fccf32d9bccc34c4b01c292952d\"")
+        buildConfigField("String", "RELEASE_NOTES_ID", "\"bcaae03cfea84ac9f8f045202a3b8ee643c9fd51c9c674a87acadd4a03e16046\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -285,10 +283,8 @@ android {
         }
     }
 
-    // TODO: remove this when lightcompressor uses one MP4 parser only
     packaging {
         resources {
-            pickFirsts.add("builddef.lst")
             pickFirsts.add("META-INF/LICENSE.md")
             pickFirsts.add("META-INF/LICENSE-notice.md")
         }
@@ -511,7 +507,7 @@ ksp {
 
 // TODO: until google merges and unifiedpush updates https://github.com/tink-crypto/tink-java-apps/pull/5
 configurations.all {
-    val tink = "com.google.crypto.tink:tink-android:1.23.0"
+    val tink = "com.google.crypto.tink:tink-android:1.24.0"
     resolutionStrategy {
         force(tink)
         dependencySubstitution {
@@ -579,14 +575,16 @@ dependencies {
     debugImplementation(libs.androidx.tracing.perfetto)
     debugImplementation(libs.androidx.tracing.perfetto.binary)
 
-    implementation(project(":quartz"))
+    implementation(libs.quartz)
+    implementation(libs.marmot)
+    implementation(libs.cordn)
     implementation(project(":commons"))
     implementation(project(":commonsUI"))
     implementation(project(":nestsClient"))
-    // Agent text stream previews: the raw-QUIC binding plus the QUIC
+    // Agent text stream previews: marmot-kmp's raw-QUIC binding plus the QUIC
     // stack under it (for the certificate validator it requires).
-    implementation(project(":marmotQuic"))
-    implementation(project(":quic"))
+    implementation(libs.marmot.quic)
+    implementation(libs.quic)
     implementation(project(":nappletHost"))
     // Compose Multiplatform resources runtime, so app-side screens that share a
     // string with a commons renderer can read commons' generated `Res` directly
@@ -618,9 +616,6 @@ dependencies {
 
     // Needs this to open gallery / image upload
     implementation(libs.androidx.fragment.ktx)
-
-    // Navigation
-    implementation(libs.androidx.navigation.compose)
 
     // Material 3 Design
     implementation(libs.androidx.material3)

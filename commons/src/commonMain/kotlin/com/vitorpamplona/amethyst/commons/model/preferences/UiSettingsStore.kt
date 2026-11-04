@@ -34,7 +34,9 @@ import com.vitorpamplona.amethyst.commons.model.ConnectivityType
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
+import com.vitorpamplona.amethyst.commons.model.NoteLayoutType
 import com.vitorpamplona.amethyst.commons.model.ProfileGalleryType
+import com.vitorpamplona.amethyst.commons.model.SpellCheckType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.UiSettings
 import com.vitorpamplona.quartz.utils.Log
@@ -131,6 +133,11 @@ class UiSettingsStore(
         val UI_SHOW_ONCHAIN_WALLET = booleanPreferencesKey("ui.show_onchain_wallet")
         val UI_SHOW_PAYTO_ZAP_CHIP = booleanPreferencesKey("ui.show_payto_zap_chip")
         val UI_SEARCH_ENGINE = stringPreferencesKey("ui.search_engine")
+        val UI_DECK_MODE = booleanPreferencesKey("ui.deck_mode")
+        val UI_SPELL_CHECK = stringPreferencesKey("ui.spell_check")
+        val UI_NOTE_LAYOUT = stringPreferencesKey("ui.note_layout")
+        val UI_DOWNLOAD_TRANSLATION_MODELS = stringPreferencesKey("ui.download_translation_models")
+        val UI_HIDE_WALLET_BALANCES = booleanPreferencesKey("ui.hide_wallet_balances")
 
         /**
          * Every setting's default matches what the old `getBoolean(key, default)`
@@ -176,6 +183,17 @@ class UiSettingsStore(
                 showOnchainWallet = preferences[UI_SHOW_ONCHAIN_WALLET] ?: true,
                 showPayToZapChip = preferences[UI_SHOW_PAYTO_ZAP_CHIP] ?: true,
                 searchEngine = preferences[UI_SEARCH_ENGINE] ?: SearchEngines.DEFAULT.id,
+                deckMode = preferences[UI_DECK_MODE] ?: false,
+                spellCheck =
+                    preferences[UI_SPELL_CHECK]?.let { name -> SpellCheckType.entries.firstOrNull { it.name == name } }
+                        ?: SpellCheckType.AUTOMATIC,
+                noteLayout =
+                    preferences[UI_NOTE_LAYOUT]?.let { name -> NoteLayoutType.entries.firstOrNull { it.name == name } }
+                        ?: NoteLayoutType.AUTHOR_COLUMN,
+                automaticallyDownloadTranslationModels =
+                    preferences[UI_DOWNLOAD_TRANSLATION_MODELS]?.let { name -> ConnectivityType.entries.firstOrNull { it.name == name } }
+                        ?: ConnectivityType.WIFI_ONLY,
+                hideWalletBalances = preferences[UI_HIDE_WALLET_BALANCES] ?: false,
             )
         }
 
@@ -219,6 +237,11 @@ class UiSettingsStore(
             preferences[UI_SHOW_ONCHAIN_WALLET] = sharedSettings.showOnchainWallet
             preferences[UI_SHOW_PAYTO_ZAP_CHIP] = sharedSettings.showPayToZapChip
             preferences[UI_SEARCH_ENGINE] = sharedSettings.searchEngine
+            preferences[UI_DECK_MODE] = sharedSettings.deckMode
+            preferences[UI_SPELL_CHECK] = sharedSettings.spellCheck.name
+            preferences[UI_NOTE_LAYOUT] = sharedSettings.noteLayout.name
+            preferences[UI_DOWNLOAD_TRANSLATION_MODELS] = sharedSettings.automaticallyDownloadTranslationModels.name
+            preferences[UI_HIDE_WALLET_BALANCES] = sharedSettings.hideWalletBalances
         }
 
         /**

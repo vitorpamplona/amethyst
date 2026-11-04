@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.crypto.verifyId
 import com.vitorpamplona.quartz.nip01Core.crypto.verifySignature
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.utils.EventFactory
@@ -53,16 +52,6 @@ class EventBenchmark {
             val event = (OptimizedJsonMapper.fromJsonToMessage(reqResponseEvent) as EventMessage).event
             assertTrue(event.verify())
         }
-    }
-
-    @Test
-    fun parseREQTree() {
-        benchmarkRule.measureRepeated { JacksonMapper.mapper.readTree(reqResponseEvent) }
-    }
-
-    @Test
-    fun parseREQTree2() {
-        benchmarkRule.measureRepeated { JacksonMapper.mapper.readTree(reqResponseEvent2) }
     }
 
     @Test

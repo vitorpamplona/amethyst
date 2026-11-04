@@ -61,7 +61,7 @@ jobs:
         # Windows users get that until either the runner image gains WiX or
         # jpackage learns the WiX 4+ CLI.
         include:
-          - { os: macos-14,         arch: arm64, family: macos,          tasks: "packageReleaseDmg" }
+          - { os: macos-15,         arch: arm64, family: macos,          tasks: "packageReleaseDmg" }
           - { os: windows-latest,   arch: x64,   family: windows,        tasks: "packageReleaseMsi createReleaseDistributable" }
           - { os: windows-11-arm,   arch: arm64, family: windows,        tasks: "createReleaseDistributable" }
           - { os: ubuntu-latest,    arch: x64,   family: linux,          tasks: "packageReleaseDeb packageReleaseRpm" }
@@ -77,8 +77,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      # Linux legs build on the JetBrains Runtime: jlink/jpackage bundle the JDK Gradle runs on,
+      # and only JBR's AWT can draw natively on Wayland (WLToolkit; see
+      # desktopApp/.../platform/WaylandDisplay.kt). macOS and Windows keep Temurin.
+      - name: Set up JDK 21 (JetBrains Runtime)
+        if: startsWith(matrix.family, 'linux')
+        uses: ./.github/actions/setup-jbr
+
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        if: ${{ !startsWith(matrix.family, 'linux') }}
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -116,8 +124,9 @@ jobs:
         if: matrix.family == 'linux-portable'
         run: |
           set -euo pipefail
-          # appimagetool 1.9.0 validates the .desktop file via desktop-file-validate.
-          sudo apt-get update && sudo apt-get install -y desktop-file-utils
+          # appimagetool 1.9.0 validates the .desktop file via desktop-file-validate, and writes the
+          # AppImage's .zsync (delta updates) only when zsyncmake is installed.
+          sudo apt-get update && sudo apt-get install -y desktop-file-utils zsync
           # Map runner arch → upstream AppImage suffix (x86_64 / aarch64).
           case "${{ matrix.arch }}" in
             x64)   TOOL_ARCH=x86_64 ; EXPECTED_SHA="$APPIMAGETOOL_SHA256_X86_64" ;;
@@ -148,7 +157,7 @@ jobs:
             set -euo pipefail
             sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder
             flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-            FDO_VER=$(grep -E "^runtime-version:" desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.Desktop.yml | cut -d"'" -f2)
+            FDO_VER=$(grep -E "^runtime-version:" desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.Amethyst.yml | cut -d"'" -f2)
             flatpak install --user --noninteractive flathub \
               "org.freedesktop.Platform//${FDO_VER}" \
               "org.freedesktop.Sdk//${FDO_VER}"
@@ -227,9 +236,19 @@ jobs:
           fi
           echo "notarization ticket stapled OK"
 
-      # jpackage pins libicu to the build host's version (libicu74 on
-      # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
-      - name: Relax libicu dependency in .deb
+      # A Linux build packaged on a stock JDK still runs, but only through XWayland. Fail instead
+      # of shipping that: the bundled runtime must carry JBR's Wayland toolkit.
+      - name: Verify the bundled runtime draws on Wayland (Linux legs)
+        if: startsWith(matrix.family, 'linux')
+        run: |
+          set -euo pipefail
+          found=$(find desktopApp/build/compose/binaries/main-release -path '*/lib/runtime/lib/libawt_wlawt.so' -print -quit)
+          [[ -n "$found" ]] || { echo "::error::the bundled runtime has no Wayland toolkit (libawt_wlawt.so); build on the JetBrains Runtime"; exit 1; }
+          echo "Wayland toolkit bundled: $found"
+
+      # jpackage pins libicu and the t64-renamed libs (libasound2t64, ...) to the
+      # build host (ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
+      - name: Relax build-host-pinned deps in .deb
         if: matrix.family == 'linux'
         run: |
           set -euo pipefail
@@ -249,6 +268,36 @@ jobs:
           set -euo pipefail
           chmod +x scripts/add-deb-libegl-dep.sh
           scripts/add-deb-libegl-dep.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
+      # The media player (kdroidFilter) drives the system GStreamer from a native library
+      # it unpacks at runtime, which jpackage's dependency scan never sees. Without the
+      # plugins every video fails with "Failed to create native player". The .rpm gets the
+      # same from desktopApp/build.gradle.kts.
+      - name: Add GStreamer deps to .deb
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/add-deb-gstreamer-deps.sh
+          scripts/add-deb-gstreamer-deps.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
+      # The bundled JBR loads libxkbcommon (the keyboard on Wayland) with dlopen, which jpackage's
+      # dependency scan never sees. See scripts/add-deb-wayland-deps.sh.
+      - name: Add Wayland deps to .deb
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/add-deb-wayland-deps.sh
+          scripts/add-deb-wayland-deps.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
+      # Ships the menu entry in /usr/share/applications with StartupWMClass (docks match the
+      # window's WM_CLASS to it) instead of registering it from postinst with xdg-desktop-menu,
+      # which fails on systems without menu directories. Also sets the .deb's compression (xz).
+      - name: Fix desktop entry in .deb
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/fix-deb-desktop-entry.sh
+          scripts/fix-deb-desktop-entry.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
 
       - name: Build portable archives (windows + linux-portable)
         if: matrix.family == 'windows' || matrix.family == 'linux-portable'
@@ -276,34 +325,64 @@ jobs:
           set -euo pipefail
           VER="${{ steps.ver.outputs.version }}"
           PKG="desktopApp/packaging/flatpak"
-          APP_ID="com.vitorpamplona.amethyst.Desktop"
+          APP_ID="com.vitorpamplona.amethyst.Amethyst"
           OUT="desktopApp/build/flatpak"
           # AppImage-style arch names for the bundle filename.
           case "${{ matrix.arch }}" in
-            x64)   BUNDLE_ARCH=x86_64  ; GST_TRIPLET=x86_64-linux-gnu   ;;
-            arm64) BUNDLE_ARCH=aarch64 ; GST_TRIPLET=aarch64-linux-gnu  ;;
+            x64)   BUNDLE_ARCH=x86_64  ;;
+            arm64) BUNDLE_ARCH=aarch64 ;;
             *)     echo "::error::unsupported arch for Flatpak: ${{ matrix.arch }}"; exit 1 ;;
           esac
-          # Rewrite the arch-specific GStreamer plugin path in the manifest
-          # (checked-in default is x86_64-linux-gnu). Idempotent — the sed only
-          # matches the original triplet.
-          sed -i "s|/usr/lib/x86_64-linux-gnu/gstreamer-1.0|/usr/lib/${GST_TRIPLET}/gstreamer-1.0|g" \
-            "${PKG}/${APP_ID}.yml"
-          # Inject the AppStream <release> entry for this build (the checked-in
-          # metainfo deliberately carries none — CI is the source of truth).
-          sed -i "s|<releases>|<releases>\n    <release version=\"${VER}\" date=\"$(date -u +%F)\" />|" \
-            "${PKG}/${APP_ID}.metainfo.xml"
+          # The checked-in metainfo carries the release history (Flathub reads
+          # it from the source tree). A tag missing from it gets a bare entry in
+          # this bundle only, plus a warning to fix the source tree. Dry runs
+          # (0.0.0-dryrun) inject nothing, so the history stays in order.
+          if [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]] && \
+             ! grep -q "<release version=\"${VER}\"" "${PKG}/${APP_ID}.metainfo.xml"; then
+            echo "::warning file=${PKG}/${APP_ID}.metainfo.xml::no <release version=\"${VER}\"> entry; add it to the source tree (RELEASE_OPS.md pre-tag checklist)"
+            sed -i "s|<releases>|<releases>\n    <release version=\"${VER}\" date=\"$(date -u +%F)\" />|" \
+              "${PKG}/${APP_ID}.metainfo.xml"
+          fi
           mkdir -p "$OUT"
+          # Branch `stable`, as on Flathub: flatpak's default is `master`, and Orchard
+          # 0.3.0+ refuses any bundle whose ref is not app/<id>/<arch>/stable.
           flatpak-builder --user --force-clean --disable-rofiles-fuse \
+            --default-branch=stable \
             --state-dir="${OUT}/.flatpak-builder" \
             --repo="${OUT}/repo" \
             "${OUT}/build-dir" \
             "${PKG}/${APP_ID}.yml"
           flatpak build-bundle "${OUT}/repo" \
             "${OUT}/Amethyst-${VER}-${BUNDLE_ARCH}.flatpak" \
-            "$APP_ID" \
+            "$APP_ID" stable \
             --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
           ls -la "$OUT"
+
+      # Every packaged build proves the OS keyring works in what ships, not only in development:
+      # ProGuard stripping a class, a jar signature it broke, a sandbox permission the Flatpak lacks
+      # all showed up only here. See commons/plans/2026-10-12-desktop-key-storage.md.
+      - name: Install a keyring session (Linux legs)
+        if: startsWith(matrix.family, 'linux')
+        run: sudo apt-get update && sudo apt-get install -y gnome-keyring dbus
+
+      - name: Keyring self-test (packaged app)
+        run: |
+          set -euo pipefail
+          APP=desktopApp/build/compose/binaries/main-release/app
+          case "${{ matrix.family }}" in
+            macos)   BIN="$APP/Amethyst.app/Contents/MacOS/Amethyst" ;;
+            windows) BIN="$APP/Amethyst/Amethyst.exe" ;;
+            *)       BIN="$APP/Amethyst/bin/Amethyst" ;;
+          esac
+          [[ -f "$BIN" ]] || { echo "::error::no packaged app at $BIN"; find "$APP" -maxdepth 3 | head -40; exit 1; }
+          bash scripts/keyring-self-test.sh "$BIN"
+
+      - name: Keyring self-test (Flatpak bundle, linux-portable only)
+        if: matrix.family == 'linux-portable'
+        run: |
+          set -euo pipefail
+          flatpak install --user -y --noninteractive desktopApp/build/flatpak/*.flatpak
+          bash scripts/keyring-self-test.sh flatpak run com.vitorpamplona.amethyst.Amethyst
 
       - name: Collect + rename assets
         run: |
@@ -384,7 +463,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-14,         arch: arm64, family: macos,   tasks: "amyImage" }
+          - { os: macos-15,         arch: arm64, family: macos,   tasks: "amyImage" }
           - { os: ubuntu-latest,    arch: x64,   family: linux,   tasks: "amyImage jpackageDeb jpackageRpm" }
           - { os: ubuntu-24.04-arm, arch: arm64, family: linux,   tasks: "amyImage jpackageDeb jpackageRpm" }
           # Windows legs: only amyImage. .deb/.rpm are Linux-only jpackage types
@@ -405,7 +484,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -535,9 +614,9 @@ jobs:
             exit 1
           fi
 
-      # jpackage pins libicu to the build host's version (libicu74 on
-      # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
-      - name: Relax libicu dependency in .deb
+      # jpackage pins libicu and the t64-renamed libs (libasound2t64, ...) to the
+      # build host (ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
+      - name: Relax build-host-pinned deps in .deb
         if: matrix.family == 'linux'
         run: |
           set -euo pipefail
@@ -632,7 +711,7 @@ jobs:
   # no-JRE jvm bundle (linux):   geode-<ver>-jvm.tar.gz for the Homebrew formula
   #
   # Unlike build-cli there is no "no Compose UI" assertion — geode depends only on
-  # :quartz and never pulls the Compose render stack. The GHCR Docker image is a
+  # quartz and never pulls the Compose render stack. The GHCR Docker image is a
   # separate job (docker-geode) below.
   #
   # Asset naming: geode-<version>-<family>-<arch>.<ext>. See scripts/asset-name.sh.
@@ -642,7 +721,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-14,         arch: arm64, family: macos,   tasks: "geodeImage" }
+          - { os: macos-15,         arch: arm64, family: macos,   tasks: "geodeImage" }
           - { os: ubuntu-latest,    arch: x64,   family: linux,   tasks: "geodeImage jpackageDeb jpackageRpm" }
           - { os: ubuntu-24.04-arm, arch: arm64, family: linux,   tasks: "geodeImage jpackageDeb jpackageRpm" }
           # Windows legs: geodeImage only. The .deb/.rpm are Linux-only; MSI is
@@ -662,7 +741,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -801,9 +880,9 @@ jobs:
             exit 1
           fi
 
-      # jpackage pins libicu to the build host's version (libicu74 on
-      # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
-      - name: Relax libicu dependency in .deb
+      # jpackage pins libicu and the t64-renamed libs (libasound2t64, ...) to the
+      # build host (ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
+      - name: Relax build-host-pinned deps in .deb
         if: matrix.family == 'linux'
         run: |
           set -euo pipefail
@@ -953,7 +1032,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -1150,11 +1229,3 @@ jobs:
           draft: false
           fail_on_unmatched_files: true
           generate_release_notes: true
-
-      - name: Publish Quartz Lib
-        run: ./gradlew publishAllPublicationsToMavenCentral --no-configuration-cache
-        env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}

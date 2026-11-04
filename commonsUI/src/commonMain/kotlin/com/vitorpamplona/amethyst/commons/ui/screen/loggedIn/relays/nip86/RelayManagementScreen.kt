@@ -78,6 +78,8 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.relayClient.searchCommand.UserSearchDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relays.nip86.PubkeyUser
+import com.vitorpamplona.amethyst.commons.relays.nip86.RelayManagementViewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_management_add
 import com.vitorpamplona.amethyst.commons.resources.relay_management_allow
@@ -103,6 +105,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_management_error
 import com.vitorpamplona.amethyst.commons.resources.relay_management_event_id_hex
 import com.vitorpamplona.amethyst.commons.resources.relay_management_ip_address
 import com.vitorpamplona.amethyst.commons.resources.relay_management_kind_number
+import com.vitorpamplona.amethyst.commons.resources.relay_management_kind_row
 import com.vitorpamplona.amethyst.commons.resources.relay_management_loading
 import com.vitorpamplona.amethyst.commons.resources.relay_management_moderation_queue
 import com.vitorpamplona.amethyst.commons.resources.relay_management_no_allowed_events
@@ -126,6 +129,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_pubkeys
 import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_settings
 import com.vitorpamplona.amethyst.commons.resources.relay_management_title
 import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.AboutDisplay
@@ -1016,7 +1020,7 @@ private fun KindEntryCard(
             val name = if (nameResId != null) stringRes(nameResId) else (KindNames.nameFor(kind) ?: "")
 
             Text(
-                "Kind $kind: $name",
+                stringRes(Res.string.relay_management_kind_row, kind, name),
                 style = MaterialTheme.typography.bodyMedium,
                 fontFamily = FontFamily.Monospace,
             )
@@ -1143,7 +1147,7 @@ private fun UserSearchDialog(
                         selectedUser = null
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
+                    SpellCheckedOutlinedTextField(
                         value = reasonValue,
                         onValueChange = { reasonValue = it },
                         label = { Text(stringRes(Res.string.relay_management_reason_optional)) },
@@ -1306,7 +1310,7 @@ private fun HexInputDialog(
                     singleLine = true,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = reasonValue,
                     onValueChange = { reasonValue = it },
                     label = { Text(stringRes(Res.string.relay_management_reason_optional)) },

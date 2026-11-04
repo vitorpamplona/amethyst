@@ -31,22 +31,27 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
-import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
-import com.vitorpamplona.amethyst.commons.marmot.MarmotPublisher
-import com.vitorpamplona.amethyst.commons.marmot.MarmotSyncPolicy
-import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
+import com.vitorpamplona.amethyst.commons.relays.dialableRelays
+import com.vitorpamplona.marmot.RecipientRelayFetcher
+import com.vitorpamplona.marmot.client.MarmotManager
+import com.vitorpamplona.marmot.client.MarmotPublisher
+import com.vitorpamplona.marmot.client.MarmotSyncPolicy
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PageRetryBackoff
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPoolWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.streamAllPagesFromPoolWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
@@ -71,6 +76,8 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayObserver
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayReachabilityStore
+import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -80,7 +87,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import java.lang.management.ManagementFactory
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Per-invocation wiring. Each CLI run constructs a Context, does its work,
@@ -153,12 +162,9 @@ class Context(
             // and keep connectTimeout tight-ish so an unreachable relay frees its
             // slot fast. This is orthogonal to REQ concurrency (that runs on
             // already-open sockets, bounded by AdaptiveRelayLimiter), so it can't
-            // trip a relay's REQ rate-limit — it only speeds connection setup. The
-            // executor thread pool is unbounded on demand, so raising maxRequests
-            // just lets more of those short-lived handshakes proceed at once
-            // (1 platform thread per in-flight handshake — ~1k is fine on a JVM,
-            // 10k is not). Sized against the process FD budget: every pending
-            // handshake and every open socket is one file descriptor. 7s
+            // trip a relay's REQ rate-limit — it only speeds connection setup.
+            // Sized against the process FD budget: every pending handshake and
+            // every open socket is one file descriptor. 7s
             // (not 5s): a 5s cap struck too many merely-busy relays as connect
             // failures — the crawl treats a connect *timeout* as retryable anyway,
             // but the extra headroom lets slow-but-alive relays finish the handshake.
@@ -172,8 +178,16 @@ class Context(
             // stale-while-revalidate positives, 10-min negative TTL, persisted
             // across runs via [dnsStore].
             .dns(surgeDns)
+            // Virtual threads: OkHttp runs each websocket's reader loop inside its
+            // call, so every open relay socket holds a dispatcher thread for life,
+            // and the default executor starts each as a platform thread inside the
+            // caller of newWebSocket — a mass dial then serializes behind
+            // Thread.start. OkHttp 5 locks with ReentrantLock, so a reader blocked in
+            // a socket read unmounts instead of pinning its carrier. Thread dumps:
+            // `jcmd <pid> Thread.print` omits virtual threads; use
+            // `jcmd <pid> Thread.dump_to_file -format=json <file>`.
             .dispatcher(
-                Dispatcher().apply {
+                Dispatcher(Executors.newVirtualThreadPerTaskExecutor()).apply {
                     maxRequests = maxParallelHandshakes
                     maxRequestsPerHost = 16
                 },
@@ -292,7 +306,7 @@ class Context(
         com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client(
             fetcher =
                 com.vitorpamplona.quartz.nip05DnsIdentifiers
-                    .OkHttpNip05Fetcher { _ -> okhttp },
+                    .OkHttpNip05Fetcher(okHttpClient = { _ -> okhttp }),
         )
 
     /**
@@ -302,7 +316,7 @@ class Context(
      */
     suspend fun relayInfo(relay: NormalizedRelayUrl): Nip11RelayInformation? =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatchingCancellable {
                 val request =
                     Request
                         .Builder()
@@ -414,8 +428,34 @@ class Context(
         (signer as? NostrSignerRemote)?.let {
             it.openSubscription()
             it.connect()
+            askToSwitchRelays(it)
         }
         prepared = true
+    }
+
+    /**
+     * NIP-46 asks clients to send `switch_relays` once connected, so a signer that moved can say so.
+     * amy runs once per command, so it asks at most once a [SWITCH_RELAYS_INTERVAL_SECONDS] and
+     * waits [SWITCH_RELAYS_TIMEOUT_MS]: a signer from before the method may never answer it. A
+     * refusal or no answer changes nothing; a new relay list is saved for the next run.
+     */
+    private suspend fun askToSwitchRelays(remote: NostrSignerRemote) {
+        val bunker = identity.bunker ?: return
+        val now = TimeUtils.now()
+        val checkedAt = bunker.relaysCheckedAt
+        if (checkedAt != null && now - checkedAt < SWITCH_RELAYS_INTERVAL_SECONDS) return
+
+        val moved =
+            try {
+                withTimeoutOrNull(SWITCH_RELAYS_TIMEOUT_MS) { remote.switchRelays() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                System.err.println("[nip46] remote signer did not take switch_relays: ${e.message}")
+                null
+            }
+        if (moved != null) System.err.println("[nip46] remote signer moved to ${moved.joinToString { it.url }}")
+        dataDir.updateBunkerRelays(remote.relays.map { it.url }, now)
     }
 
     /**
@@ -497,12 +537,13 @@ class Context(
      * [outboxRelays] when no kind:10051 has been seen — the same fallback the
      * Android app uses for KeyPackage discovery.
      *
-     * `allRelays()`, not `relays()`: the filtered accessor drops local-network
-     * entries because someone else's list is attacker-supplied input, but this
-     * is a list we published ourselves. Reading it filtered made a deliberately
-     * configured local relay look like no configuration at all, and the
-     * publisher then fell back to a default relay set the operator never chose
-     * — sending a KeyPackage somewhere they did not pick.
+     * `allRelays()`: this is a list we published ourselves, so every entry
+     * counts. Someone else's list is read through `dialableRelays()`
+     * (commons `relays/OthersRelays.kt`), which drops their local relays.
+     * Reading our own filtered made a deliberately configured local relay look
+     * like no configuration at all, and the publisher then fell back to a
+     * default relay set the operator never chose — sending a KeyPackage
+     * somewhere they did not pick.
      */
     suspend fun keyPackageRelays(): Set<NormalizedRelayUrl> =
         keyPackageRelaysOf(identity.pubKeyHex)?.allRelays()?.takeIf { it.isNotEmpty() }?.toSet()
@@ -537,11 +578,14 @@ class Context(
      * defaults (DefaultNIP65RelaySet + DefaultDMRelayList). The defaults are
      * what every fresh Amethyst account publishes to first, so they're the
      * most reliable place to find a stranger's replaceable events even when
-     * we and they have completely disjoint relay configurations.
+     * we and they have completely disjoint relay configurations. Our own
+     * relays include the NIP-65 read set: replies and mentions of us land
+     * there, so a bare event id someone hands us is often only there.
      */
     suspend fun bootstrapRelays(): Set<NormalizedRelayUrl> =
         buildSet {
             addAll(anyRelays())
+            addAll(nip65ReadRelays())
             addAll(DefaultNIP65RelaySet)
             addAll(DefaultDMRelayList)
         }
@@ -606,14 +650,16 @@ class Context(
      * `auth-required` CLOSED is kept pending rather than treated as terminal: the
      * NIP-42 responder answers the challenge and the client re-fires this same
      * subscription (`syncFilters`), so the post-auth events are collected instead of
-     * returning empty. If auth never satisfies it, the relay simply falls through to
-     * the [idleTimeoutMs]. Needed for Concord planes, whose kind-1059 wraps are served
+     * returning empty. On by default, as in quartz: a relay.nostr.build REQ (`auth-required:
+     * authenticate with AUTH before subscribing`) otherwise came back empty in ~4 s even with
+     * an account to answer the challenge, while a challenge nobody can answer still ends in
+     * the short AUTH grace. Needed too for Concord planes, whose kind-1059 wraps are served
      * only to a connection authenticated as the derived stream key.
      */
     suspend fun drain(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         idleTimeoutMs: Long = 8_000,
-        pendingOnAuthRequired: Boolean = false,
+        pendingOnAuthRequired: Boolean = true,
     ): List<Pair<NormalizedRelayUrl, Event>> = drainResult(filters, idleTimeoutMs, pendingOnAuthRequired).events
 
     /**
@@ -631,7 +677,7 @@ class Context(
     suspend fun drainResult(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         idleTimeoutMs: Long = 8_000,
-        pendingOnAuthRequired: Boolean = false,
+        pendingOnAuthRequired: Boolean = true,
     ): FetchAllResult =
         client.fetchAllWithHooks(
             filters = filters,
@@ -656,17 +702,53 @@ class Context(
      * the limit, so an unbounded filter pages that relay's entire matching history.
      * A `search` filter is fetched as a single relevance-ranked page (see
      * [com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages]).
+     * [onRelayResult] receives each relay's [PagedFetchResult], including the reason a
+     * relay refused the walk. A non-null [resumeBackoff] asks a walk its connection ended
+     * again from where it got to (quartz's `fetchAllPagesResuming`), telling [onRelayResume].
      */
     suspend fun drainAllPages(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         idleTimeoutMs: Long = 30_000,
         maxConcurrentRelays: Int = 8,
+        onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
+        resumeBackoff: PageRetryBackoff? = null,
+        onRelayResume: ((relay: NormalizedRelayUrl, attempt: Int, last: PagedFetchResult) -> Unit)? = null,
     ): List<Pair<NormalizedRelayUrl, Event>> =
         client.fetchAllPagesFromPoolWithHooks(
             filters = filters,
             idleTimeoutMs = idleTimeoutMs,
             maxConcurrentRelays = maxConcurrentRelays,
+            onRelayResult = onRelayResult,
+            resumeBackoff = resumeBackoff,
+            onRelayResume = onRelayResume,
         ) { _, event -> verifyAndStore(event) }
+
+    /**
+     * [drainAllPages] for a walk too large to hold: the same paging, verify+store and
+     * cross-relay dedup, but each accepted event is handed to [onEvent] as it arrives and
+     * then dropped — only the dedup set's ids stay in memory. Events come in arrival order
+     * (several relays page at once, so their events interleave), not sorted. A slow [onEvent]
+     * holds the walks back. Returns how many were accepted. [cache] false verifies without
+     * storing, for an export too large for the local store.
+     */
+    suspend fun streamAllPages(
+        filters: Map<NormalizedRelayUrl, List<Filter>>,
+        idleTimeoutMs: Long = 30_000,
+        maxConcurrentRelays: Int = 8,
+        onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
+        cache: Boolean = true,
+        resumeBackoff: PageRetryBackoff? = null,
+        onRelayResume: ((relay: NormalizedRelayUrl, attempt: Int, last: PagedFetchResult) -> Unit)? = null,
+        onEvent: (relay: NormalizedRelayUrl, event: Event) -> Unit,
+    ): Int =
+        client.streamAllPagesFromPoolWithHooks(
+            filters = filters,
+            idleTimeoutMs = idleTimeoutMs,
+            maxConcurrentRelays = maxConcurrentRelays,
+            onRelayResult = onRelayResult,
+            resumeBackoff = resumeBackoff,
+            onRelayResume = onRelayResume,
+        ) { relay, event -> (if (cache) verifyAndStore(event) else event.verify()).also { if (it) onEvent(relay, event) } }
 
     /**
      * Publish [request] to [relays], then wait for the FIRST event matching [responseFilter]
@@ -811,10 +893,12 @@ class Context(
         val kp = keyPackageRelaysOf(pubKey)
         val nip65 = relaysOf(pubKey)
         if (dm == null && kp == null && nip65 == null) return null
-        val dmInbox = dm?.relays().orEmpty()
+        // Someone else's lists: only the relays we may dial. A recipient whose DM inbox is all
+        // local relays reads as withheld rather than as having no list.
+        val dmInbox = dm?.dialableRelays().orEmpty()
         return RecipientRelayFetcher.Lists(
             dmInbox = dmInbox,
-            keyPackage = kp?.relays().orEmpty(),
+            keyPackage = kp?.dialableRelays().orEmpty(),
             nip65 = nip65,
             dmInboxWithheld = dmInbox.isEmpty() && dm?.allRelays().orEmpty().isNotEmpty(),
         )
@@ -865,6 +949,7 @@ class Context(
             drain = { filters, timeoutMs -> drain(filters, timeoutMs) },
             publish = { event, relayList -> publish(event, relayList) },
             log = { System.err.println("[cli] $it") },
+            publishAndConfirm = { event, relayList -> publish(event, relayList).values.any { it.accepted } },
         )
     }
 
@@ -938,6 +1023,12 @@ class Context(
     }
 
     companion object {
+        /** How often a bunker account asks its signer `switch_relays`: once a day. */
+        private const val SWITCH_RELAYS_INTERVAL_SECONDS = 24 * 60 * 60L
+
+        /** How long that one question may hold up a command. */
+        private const val SWITCH_RELAYS_TIMEOUT_MS = 10_000L
+
         /** FDs reserved for everything that isn't a relay socket (store, jars, pipes, DNS). */
         private const val FD_RESERVE = 256L
 
@@ -955,8 +1046,8 @@ class Context(
         /**
          * Concurrent WS-upgrade handshakes (OkHttp Dispatcher.maxRequests): a quarter
          * of the FD budget, so pending dials can never crowd out the sockets already
-         * held open (warm pool, drains, parked subs). Also bounds the transient
-         * platform threads OkHttp spawns — one per in-flight handshake.
+         * held open (warm pool, drains, parked subs). It is not a thread budget: the
+         * dispatcher runs on virtual threads, so in-flight calls cost no platform thread.
          */
         val maxParallelHandshakes: Int =
             ((maxFileDescriptors - FD_RESERVE) / 4).coerceIn(64, 1024).toInt()

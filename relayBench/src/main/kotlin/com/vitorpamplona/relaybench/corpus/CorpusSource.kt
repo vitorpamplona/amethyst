@@ -20,13 +20,10 @@
  */
 package com.vitorpamplona.relaybench.corpus
 
-import com.fasterxml.jackson.core.JsonFactory
-import com.fasterxml.jackson.core.JsonToken
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.relaybench.BenchJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -131,14 +128,10 @@ object CorpusSource {
             pushback.unread(first)
             return if (first.toChar() == '[') {
                 // One huge JSON array — stream element by element.
-                val mapper = ObjectMapper()
-                val parser = JsonFactory().createParser(pushback)
-                parser.codec = mapper
-                check(parser.nextToken() == JsonToken.START_ARRAY)
                 val events = ArrayList<Event>(1 shl 18)
-                while (events.size < readCap && parser.nextToken() == JsonToken.START_OBJECT) {
-                    val node = parser.readValueAsTree<JsonNode>()
-                    toEvent(node)?.let { events.add(it) }
+                BenchJson.forEachArrayObject(pushback.bufferedReader()) { json ->
+                    runCatching { OptimizedJsonMapper.fromJson(json) }.getOrNull()?.let { events.add(it) }
+                    events.size < readCap
                 }
                 events
             } else {
@@ -153,19 +146,6 @@ object CorpusSource {
             }
         }
     }
-
-    private fun toEvent(node: JsonNode): Event? =
-        runCatching {
-            Event(
-                id = node["id"].asText(),
-                pubKey = node["pubkey"].asText(),
-                createdAt = node["created_at"].asLong(),
-                kind = node["kind"].asInt(),
-                tags = node["tags"].map { tag -> tag.map { it.asText() }.toTypedArray() }.toTypedArray(),
-                content = node["content"].asText(),
-                sig = node["sig"]?.asText() ?: "",
-            )
-        }.getOrNull()
 
     fun prepare(
         raw: List<Event>,

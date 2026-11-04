@@ -21,9 +21,12 @@
 package com.vitorpamplona.amethyst.desktop.tor
 
 import com.vitorpamplona.amethyst.commons.tor.ITorManager
+import com.vitorpamplona.amethyst.commons.tor.TOR_STUCK_AFTER_MS
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.tor.stuckAfter
 import com.vitorpamplona.amethyst.commons.util.restrictToOwner
+import com.vitorpamplona.amethyst.desktop.app.DesktopInstance
 import com.vitorpamplona.quartz.utils.Log
 import io.matthewnelson.kmp.tor.resource.exec.tor.ResourceLoaderTorExec
 import io.matthewnelson.kmp.tor.runtime.Action.Companion.startDaemonAsync
@@ -39,6 +42,9 @@ import io.matthewnelson.kmp.tor.runtime.core.TorEvent
 import io.matthewnelson.kmp.tor.runtime.core.config.TorOption
 import io.matthewnelson.kmp.tor.runtime.core.ctrl.TorCmd
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -66,6 +72,16 @@ class DesktopTorManager(
         _status
             .map { it.socksPort }
             .stateIn(scope, SharingStarted.Eagerly, null)
+
+    /**
+     * Tor has been starting for a minute without a SOCKS port, or failed to start. A network that
+     * blocks Tor leaves the daemon connecting forever without an error, so only the wait tells the
+     * user why the relays routed through Tor never answer.
+     */
+    val stuck: StateFlow<Boolean> =
+        _status
+            .stuckAfter(TOR_STUCK_AFTER_MS)
+            .stateIn(scope, SharingStarted.Eagerly, false)
 
     private val runtime: TorRuntime by lazy {
         TorRuntime.Builder(desktopEnvironment()) {
@@ -105,6 +121,14 @@ class DesktopTorManager(
                 },
             )
 
+            // A daemon that fails or exits (a bad config, a folder another daemon holds) otherwise
+            // leaves the status at Connecting with nothing in the log.
+            observerStatic(
+                RuntimeEvent.ERROR,
+                OnEvent.Executor.Immediate,
+                OnEvent { error -> Log.w(TAG, "Tor runtime error", error) },
+            )
+
             // Suppress verbose logging to prevent relay hostname leaks
             required(TorEvent.ERR)
             required(TorEvent.WARN)
@@ -130,11 +154,12 @@ class DesktopTorManager(
                                 started = true
                                 break
                             } catch (e: Exception) {
+                                currentCoroutineContext().ensureActive()
                                 if (attempt < 3) {
-                                    Log.d("DesktopTorManager") { "Start attempt $attempt failed, retrying..." }
-                                    kotlinx.coroutines.delay(1000L * attempt)
+                                    Log.d(TAG) { "Start attempt $attempt failed, retrying..." }
+                                    delay(1000L * attempt)
                                 } else {
-                                    Log.e("DesktopTorManager", "Failed to start Tor after 3 attempts", e)
+                                    Log.e(TAG, "Failed to start Tor after 3 attempts", e)
                                     _status.value = TorServiceStatus.Error(e.message ?: "Unknown error")
                                 }
                             }
@@ -178,6 +203,8 @@ class DesktopTorManager(
 
     /** Call from shutdown hook to stop Tor synchronously. Waits for daemon exit. */
     fun stopSync() {
+        // Never started (Tor off, the default): nothing to wait a second for on every quit.
+        if (_status.value == TorServiceStatus.Off) return
         try {
             runtime.stopDaemonSync()
             // Wait for daemon process to fully exit
@@ -188,11 +215,14 @@ class DesktopTorManager(
     }
 
     companion object {
+        private const val TAG = "DesktopTorManager"
+
         private fun desktopEnvironment(): TorRuntime.Environment {
-            val appDir = torDataDirectory()
+            // Tor locks its data directory: a second copy of the app gets a folder of its own.
+            val appDir = DesktopInstance.ownFolder(DesktopInstance.PerCopyFolder.TOR)
             appDir.mkdirs()
             // Owner-only (700) — Tor state includes onion keys.
-            appDir.restrictToOwner("DesktopTorManager")
+            appDir.restrictToOwner(TAG)
 
             return TorRuntime.Environment.Builder(
                 workDirectory = appDir.resolve("work"),

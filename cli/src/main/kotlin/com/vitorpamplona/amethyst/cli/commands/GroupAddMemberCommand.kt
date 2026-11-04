@@ -24,8 +24,8 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
-import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+import com.vitorpamplona.marmot.RecipientRelayFetcher
+import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageFetcher
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
@@ -85,20 +85,20 @@ object GroupAddMemberCommand {
 
                 // KeyPackage discovery: the invitee's kind:10002 write set is
                 // the rule now; their kind:10051 is a legacy hint and our
-                // bootstrap pool a last-resort fallback.
-                val kpRelays =
-                    KeyPackageFetcher.fetchRelaysFor(
-                        targetKeyPackageRelays = recipient.keyPackage,
-                        targetOutbox = recipient.nip65Write(),
-                        myOutbox = seed,
-                    )
-                val kpEvent =
-                    KeyPackageFetcher.fetchKeyPackage(
+                // bootstrap pool a last-resort fallback. Newest valid
+                // kind:30443, else newest valid legacy kind:443 (White
+                // Noise's MDK still publishes 443).
+                val lookup =
+                    KeyPackageFetcher.fetchForInvite(
                         client = ctx.client,
                         targetPubKey = pub,
-                        relays = kpRelays,
+                        targetOutbox = recipient.nip65Write(),
+                        myOutbox = seed,
+                        targetKeyPackageRelays = recipient.keyPackage,
                         idleTimeoutMs = 10_000,
                     )
+                val kpRelays = lookup.relays
+                val kpEvent = lookup.keyPackage
                 if (kpEvent == null) {
                     report.add(mapOf("pubkey" to pub, "status" to "no_key_package"))
                     continue

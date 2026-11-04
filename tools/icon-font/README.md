@@ -25,7 +25,7 @@ Measured on the uniform-corpus macrobenchmark (SM-T220, three arms, 0.2% noise f
     pip install fonttools
     python3 tools/icon-font/build_icon_font.py <icons-dir> <out.ttf> <out.kt>
 
-See the "Amethyst's own icons are also a font" section of `.claude/CLAUDE.md` for the
+See the "Amethyst's own icons are also a font" section of `AGENTS.md` for the
 mandatory regeneration step and why both outputs must be committed together.
 
 ## How it works

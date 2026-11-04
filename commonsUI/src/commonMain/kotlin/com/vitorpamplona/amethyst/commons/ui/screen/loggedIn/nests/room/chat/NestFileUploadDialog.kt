@@ -91,7 +91,7 @@ fun NestFileUploadDialog(
         upload = {
             nestScreenModel.upload(
                 onError = accountViewModel.toastManager::toast,
-                uploader = accountViewModel.host.mediaUploader,
+                uploader = accountViewModel.mediaUploader,
                 onceUploaded = onUpload,
             )
 

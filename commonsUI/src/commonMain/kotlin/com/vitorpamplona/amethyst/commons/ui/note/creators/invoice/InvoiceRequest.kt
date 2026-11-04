@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.resources.lightning_tips
 import com.vitorpamplona.amethyst.commons.resources.note_to_receiver
 import com.vitorpamplona.amethyst.commons.resources.send_sats
 import com.vitorpamplona.amethyst.commons.resources.thank_you_so_much
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
@@ -97,7 +98,7 @@ fun InvoiceRequest(
         var message by remember { mutableStateOf("") }
         var amount by remember { mutableLongStateOf(1000L) }
 
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             label = { Text(text = stringRes(Res.string.note_to_receiver)) },
             modifier = Modifier.fillMaxWidth(),
             value = message,

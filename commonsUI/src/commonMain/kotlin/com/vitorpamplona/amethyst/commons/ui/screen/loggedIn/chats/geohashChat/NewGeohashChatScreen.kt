@@ -24,11 +24,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -59,15 +61,39 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geocache_use_my_location
+import com.vitorpamplona.amethyst.commons.resources.geohash_level_block
+import com.vitorpamplona.amethyst.commons.resources.geohash_level_building
+import com.vitorpamplona.amethyst.commons.resources.geohash_level_city
+import com.vitorpamplona.amethyst.commons.resources.geohash_level_continent
+import com.vitorpamplona.amethyst.commons.resources.geohash_level_neighborhood
+import com.vitorpamplona.amethyst.commons.resources.geohash_level_province
+import com.vitorpamplona.amethyst.commons.resources.geohash_level_region
+import com.vitorpamplona.amethyst.commons.resources.geohash_new_enter_geohash
+import com.vitorpamplona.amethyst.commons.resources.geohash_new_enter_hint
+import com.vitorpamplona.amethyst.commons.resources.geohash_new_near_me
+import com.vitorpamplona.amethyst.commons.resources.geohash_new_near_me_hint
+import com.vitorpamplona.amethyst.commons.resources.geohash_new_pick_on_map
+import com.vitorpamplona.amethyst.commons.resources.geohash_new_your_channels
+import com.vitorpamplona.amethyst.commons.resources.geohash_teleport_title
+import com.vitorpamplona.amethyst.commons.resources.join
+import com.vitorpamplona.amethyst.commons.resources.leave
+import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_input_hint
+import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_locating
+import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_location_unavailable
+import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_title
 import com.vitorpamplona.amethyst.commons.ui.components.rememberCoarseLocationPermission
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
+import org.jetbrains.compose.resources.StringResource
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
@@ -94,7 +120,7 @@ fun NewGeohashChatScreen(
     Scaffold(
         topBar = {
             TopBarExtensibleWithBackButton(
-                title = { Text("New location channel") },
+                title = { Text(stringRes(Res.string.new_geohash_chat_title)) },
                 popBack = nav::popBack,
             )
         },
@@ -215,7 +241,7 @@ private fun YourChannelsSection(
     if (joined.isEmpty()) return
 
     Column {
-        SectionHeader(MaterialSymbols.Groups, "Your channels")
+        SectionHeader(MaterialSymbols.Groups, stringRes(Res.string.geohash_new_your_channels))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             joined.sorted().forEach { cell ->
                 LocationCard(
@@ -223,7 +249,7 @@ private fun YourChannelsSection(
                     subtitle = { LoadCityName(geohashStr = cell) { SubtitleText(it) } },
                     onClick = { nav.nav(Route.GeohashChat(cell)) },
                     trailing = {
-                        TextButton(onClick = { accountViewModel.unfollowGeohash(cell) }) { Text("Leave") }
+                        TextButton(onClick = { accountViewModel.unfollowGeohash(cell) }) { Text(stringRes(Res.string.leave)) }
                     },
                 )
             }
@@ -237,14 +263,14 @@ private fun ManualEntrySection(onOpen: (String) -> Unit) {
     val valid = remember(text) { GeoHash.decode(text.trim().lowercase()) != null }
 
     Column {
-        SectionHeader(MaterialSymbols.TravelExplore, "Enter a geohash")
+        SectionHeader(MaterialSymbols.TravelExplore, stringRes(Res.string.geohash_new_enter_geohash))
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(12.dp)) {
                 Text(
-                    "Anyone in the same geohash cell shares the channel.",
+                    stringRes(Res.string.geohash_new_enter_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp),
@@ -255,7 +281,7 @@ private fun ManualEntrySection(onOpen: (String) -> Unit) {
                         onValueChange = { text = it },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("e.g. u4pruyd") },
+                        placeholder = { Text(stringRes(Res.string.new_geohash_chat_input_hint)) },
                         isError = text.isNotBlank() && !valid,
                     )
                     FilledTonalButton(
@@ -263,7 +289,7 @@ private fun ManualEntrySection(onOpen: (String) -> Unit) {
                         onClick = { onOpen(text) },
                         modifier = Modifier.padding(start = 8.dp),
                     ) {
-                        Text("Join")
+                        Text(stringRes(Res.string.join))
                     }
                 }
             }
@@ -274,7 +300,7 @@ private fun ManualEntrySection(onOpen: (String) -> Unit) {
 @Composable
 private fun NearMeSection(onOpen: (String) -> Unit) {
     Column {
-        SectionHeader(MaterialSymbols.Explore, "Near me")
+        SectionHeader(MaterialSymbols.Explore, stringRes(Res.string.geohash_new_near_me))
 
         val permission = rememberCoarseLocationPermission()
         val locationSource = LocalAppServices.current.deviceLocation
@@ -289,14 +315,15 @@ private fun NearMeSection(onOpen: (String) -> Unit) {
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Text(
-                        "Find channels for your area — from the whole region down to your block.",
+                        stringRes(Res.string.geohash_new_near_me_hint),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 12.dp),
                     )
                     FilledTonalButton(onClick = { permission.launchRequest() }) {
                         SymbolIcon(symbol = MaterialSymbols.LocationOn, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text("  Use my location")
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringRes(Res.string.geocache_use_my_location))
                     }
                 }
             }
@@ -322,10 +349,10 @@ private fun NearMeSection(onOpen: (String) -> Unit) {
             }
 
             LocationResult.Loading ->
-                Text("Locating…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringRes(Res.string.new_geohash_chat_locating), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             LocationResult.LackPermission ->
-                Text("Location unavailable.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringRes(Res.string.new_geohash_chat_location_unavailable), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -356,9 +383,9 @@ private fun TeleportCard(onClick: () -> Unit) {
                 }
             }
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text("Teleport", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(stringRes(Res.string.geohash_teleport_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Pick any place on the map",
+                    stringRes(Res.string.geohash_new_pick_on_map),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
@@ -372,13 +399,16 @@ private fun TeleportCard(onClick: () -> Unit) {
     }
 }
 
-fun GeohashChannelLevel.label(): String =
+@Composable
+fun GeohashChannelLevel.label(): String = stringRes(labelRes())
+
+fun GeohashChannelLevel.labelRes(): StringResource =
     when (this) {
-        GeohashChannelLevel.CONTINENT -> "Continent"
-        GeohashChannelLevel.REGION -> "Region"
-        GeohashChannelLevel.PROVINCE -> "Province"
-        GeohashChannelLevel.CITY -> "City"
-        GeohashChannelLevel.NEIGHBORHOOD -> "Neighborhood"
-        GeohashChannelLevel.BLOCK -> "Block"
-        GeohashChannelLevel.BUILDING -> "Building"
+        GeohashChannelLevel.CONTINENT -> Res.string.geohash_level_continent
+        GeohashChannelLevel.REGION -> Res.string.geohash_level_region
+        GeohashChannelLevel.PROVINCE -> Res.string.geohash_level_province
+        GeohashChannelLevel.CITY -> Res.string.geohash_level_city
+        GeohashChannelLevel.NEIGHBORHOOD -> Res.string.geohash_level_neighborhood
+        GeohashChannelLevel.BLOCK -> Res.string.geohash_level_block
+        GeohashChannelLevel.BUILDING -> Res.string.geohash_level_building
     }

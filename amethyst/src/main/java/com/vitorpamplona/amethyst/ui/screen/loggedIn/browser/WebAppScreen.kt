@@ -460,6 +460,10 @@ private fun EmbeddedPageUi(
                         onPageInfoDismiss()
                         controller.clearSiteData()
                     },
+                    onClearAllSiteData = {
+                        onPageInfoDismiss()
+                        controller.clearAllSiteData()
+                    },
                     modifier = Modifier.widthIn(max = 560.dp),
                 )
             }

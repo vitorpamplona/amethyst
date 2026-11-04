@@ -297,7 +297,8 @@ private fun resolveRoadEventPoint(
     longitude: Double?,
     geohashes: List<String>,
 ): Pair<Double, Double>? {
-    if (latitude != null && longitude != null) return latitude to longitude
+    // A tag's "NaN" or "Infinity" parses as a number; no map can stand a pin on it.
+    if (latitude != null && longitude != null && latitude in -90.0..90.0 && longitude in -180.0..180.0) return latitude to longitude
 
     val finest = geohashes.maxByOrNull { it.length } ?: return null
     val decoded = runCatching { finest.toGeoHash() }.getOrNull() ?: return null

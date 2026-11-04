@@ -645,12 +645,9 @@
     <string name="wallet_connect_connect_app">Yhdistä lompakko</string>
     <string name="see_relay_feed">Näytä relay-syöte</string>
     <string name="pledge_amount_in_sats">Luvattu määrä satseissa</string>
-    <string name="poll_option_description">Vaihtoehdon kuvaus</string>
     <string name="poll_zap_value_min">Vähimmäiszap</string>
     <string name="poll_zap_value_max">Enimmäiszap</string>
     <string name="poll_consensus_threshold">Konsensus</string>
-    <string name="poll_closing_date_time">Äänestyksen päättymispäivä ja -aika</string>
-    <string name="poll_closing_in">Äänestys päättyy %1$s kuluttua</string>
     <string name="looking_for_event">Etsitään tapahtumaa %1$s</string>
     <string name="send_zap">Lähetä zap</string>
     <string name="custom_zaps_add_a_message">Lisää julkinen viesti</string>
@@ -699,7 +696,6 @@
     <string name="uploading_state_hashing">Tiivistetään</string>
     <string name="uploading_state_finished">Valmis</string>
     <string name="uploading_state_error">Virhe</string>
-    <string name="connect_via_tor1">Säädä</string>
     <string name="connect_via_tor2">Tor-asetukset</string>
     <string name="yes">Kyllä</string>
     <string name="no">Ei</string>
@@ -775,7 +771,6 @@
     <string name="show_sensitive_content_explainer">Näyttää varoitusviestin kun julkaisun tekijä on merkinnyt sen arkaluonteiseksi</string>
     <string name="max_hashtag_limit_title">Enimmäismäärä hashtageja per julkaisu</string>
     <string name="max_hashtag_limit_explainer">Piilottaa julkaisut, joissa on enemmän hashtageja kuin tämä raja. Aseta 0 poistaaksesi käytöstä</string>
-    <string name="new_reaction_symbol">Uusi reaktiosymboli</string>
     <string name="zapraiser">Zapkerääjä</string>
     <string name="zapraiser_explainer">Lisää tavoitesumma satseina tämän viestin tukemiseksi. Tuettavat asiakkaat voivat näyttää tämän edistymispalkkina tuen kannustamiseksi</string>
     <string name="zapraiser_target_amount_in_sats">Tavoitesumma satseina</string>
@@ -918,9 +913,7 @@
     <string name="created_at">Luotu</string>
     <string name="guidelines">Ohjeet</string>
     <string name="moderators">Moderaattorit</string>
-    <string name="login_with_external_signer">Kirjaudu sisään Amberilla</string>
     <string name="status_update">Päivitä tilaasi</string>
-    <string name="poll_zap_value_min_max_explainer">Äänet painotetaan zappin määrän perusteella. Voit asettaa minimimäärän roskapostin välttämiseksi ja maksimimäärän suurten zappereiden estämiseksi. Käytä samaa määrää molemmissa kentissä, jotta jokainen ääni arvostetaan samalla määrällä. Jätä se tyhjäksi hyväksyäksesi minkä tahansa määrän.</string>
     <string name="error_dialog_talk_to_user">Viesti käyttäjälle</string>
     <string name="error_dialog_talk_to_user_name">Viesti %1$s</string>
     <string name="error_dialog_button_ok">Ok</string>
@@ -1438,7 +1431,6 @@
     <string name="closing_time">Sulkemisaika</string>
     <string name="confirm">Vahvista</string>
     <string name="next">Seuraava</string>
-    <string name="add_poll_option_button">Lisää äänestysvaihtoehto-painike</string>
     <string name="go_back">Palaa takaisin</string>
     <string name="approve">Hyväksy</string>
     <string name="connected">Yhdistetty</string>
@@ -1446,13 +1438,9 @@
     <string name="poll_submit">Lähetä</string>
     <string name="poll_view_results">Näytä tulokset</string>
     <string name="restart">Käynnistä uudelleen</string>
-    <string name="chess_accept">Hyväksy</string>
-    <string name="chess_decline">Hylkää</string>
     <string name="new_chess_game">Uusi shakkipeli</string>
     <string name="chess_loading_game">Ladataan peliä…</string>
     <string name="chess_game_not_found">Peliä ei löydy</string>
-    <string name="chess_game_waiting">Tämä peli on ehkä päättynyt tai odottaa vastustajaa.</string>
-    <string name="chess_game_id">Pelin tunnus: %1$s…</string>
     <string name="badge_and_n_others"> ja %1$d muuta</string>
     <string name="remove_language">Poista %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Aloita loistavalla syötteellä seuraamalla samoja ihmisiä kuin joku, johon luotat.</string>
@@ -2392,7 +2380,6 @@
     <string name="media_added_to_profile_gallery">Media lisätty profiilegalleriaasi</string>
     <string name="media_download_has_started_toast">Median lataus on aloitettu…</string>
     <string name="media_servers">Mediapalvelimet</string>
-    <string name="media_too_big_for_nip95">Media on liian suuri NIP-95:lle</string>
     <string name="messages_cant_upload_explainer">Lisää ensin viestin kohde</string>
     <string name="messages_cant_upload_title">Ei voi ladata</string>
     <string name="messages_new_message_subject">Aihe</string>
@@ -2621,7 +2608,6 @@
     <string name="poll_author_no_vote">Äänestyksen luojat eivät voi äänestää omissa äänestyksissään.</string>
     <string name="poll_is_closed_explainer">Äänestys on suljettu uusilta ääniltä</string>
     <string name="poll_multiple_choice">Useita valintoja</string>
-    <string name="poll_option_index">Vaihtoehto %1$s</string>
     <string name="poll_single_choice">Yksi valinta</string>
     <string name="poll_unable_to_vote">Ei voi äänestää</string>
     <string name="polls">Äänestykset</string>
@@ -2876,7 +2862,6 @@
     <string name="upload_error_title">Latausvirhe</string>
     <string name="upload_error_voice_message_exception">Ääniviesti epäonnistui: %1$s</string>
     <string name="upload_error_voice_message_failed">Ääniviesti epäonnistui ladata</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 ei tue ääniviestiä vielä</string>
     <string name="uptime">%1$d% käytettävyys</string>
     <string name="use_internal_tor">Aktiivinen Tor-moottori</string>
     <string name="use_internal_tor_explainer">Käytä sisäistä versiota tai Orbotia</string>
@@ -2931,4 +2916,8 @@
          what leaves the device; the fork strings say why the old phone stops. -->
     <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
 </resources>

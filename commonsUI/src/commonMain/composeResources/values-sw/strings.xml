@@ -647,12 +647,9 @@
     <string name="wallet_connect_connect_app">Unganisha Pochi</string>
     <string name="see_relay_feed">Angalia Mtiririko wa Relay</string>
     <string name="pledge_amount_in_sats">Kiasi cha Ahadi katika Sats</string>
-    <string name="poll_option_description">Maelezo ya chaguo cha kura</string>
     <string name="poll_zap_value_min">Kima cha Chini cha Zaps</string>
     <string name="poll_zap_value_max">Kima cha Juu cha Zaps</string>
     <string name="poll_consensus_threshold">Uamuzi</string>
-    <string name="poll_closing_date_time">Tarehe &amp; Wakati wa Kufunga Kura</string>
-    <string name="poll_closing_in">Kura inafungwa ndani ya %1$s</string>
     <string name="looking_for_event">Inatafuta Tukio %1$s</string>
     <string name="send_zap">Tuma Zap</string>
     <string name="custom_zaps_add_a_message">Ongeza ujumbe wa umma</string>
@@ -701,7 +698,6 @@
     <string name="uploading_state_hashing">Inafanya hashing</string>
     <string name="uploading_state_finished">Imekamilika</string>
     <string name="uploading_state_error">Hitilafu</string>
-    <string name="connect_via_tor1">Badilisha</string>
     <string name="connect_via_tor2">Mipangilio ya Tor</string>
     <string name="yes">Ndio</string>
     <string name="no">Hapana</string>
@@ -777,7 +773,6 @@
     <string name="show_sensitive_content_explainer">Inaonyesha ujumbe wa onyo mwandishi wa chapisho alipoitaja kama nyeti</string>
     <string name="max_hashtag_limit_title">Kiwango cha juu cha hashtag kwa chapisho</string>
     <string name="max_hashtag_limit_explainer">Huficha machapisho yenye hashtag zaidi ya kikomo hiki. Weka 0 ili kuzima</string>
-    <string name="new_reaction_symbol">Alama Mpya ya Majibu</string>
     <string name="zapraiser">Mzushi wa Zaps</string>
     <string name="zapraiser_explainer">Inaongeza kiasi lengwa cha sats kwa chapisho hili. Wateja wanaosaidia wanaweza kuonyesha hii kama bar ya maendeleo ili kuhimiza michango</string>
     <string name="zapraiser_target_amount_in_sats">Kiasi Lengo katika Sats</string>
@@ -920,9 +915,7 @@
     <string name="created_at">Imetengenezwa saa</string>
     <string name="guidelines">Miongozo</string>
     <string name="moderators">Wasimamizi</string>
-    <string name="login_with_external_signer">Ingia na Amber</string>
     <string name="status_update">Sasisha hali yako</string>
-    <string name="poll_zap_value_min_max_explainer">Kura zina uzito kulingana na kiasi cha zap. Unaweza kuweka kiasi cha chini ili kuepuka wahasibu na kiasi cha juu ili kuepuka wahasibu wakubwa kuchukua kura ya maoni. Tumia kiasi sawa katika sehemu zote mbili ili kuhakikisha kila kura inathaminiwa kwa kiasi sawa. Acha tupu ili kukubali kiasi chochote.</string>
     <string name="error_dialog_talk_to_user">Tuma ujumbe kwa mtumiaji</string>
     <string name="error_dialog_talk_to_user_name">Ujumbe %1$s</string>
     <string name="error_dialog_button_ok">Sawa</string>
@@ -1434,7 +1427,6 @@
     <string name="closing_time">Wakati wa Kufunga</string>
     <string name="confirm">Thibitisha</string>
     <string name="next">Ijayo</string>
-    <string name="add_poll_option_button">Ongeza kitufe cha chaguo la kura</string>
     <string name="go_back">Rudi Nyuma</string>
     <string name="approve">Idhini</string>
     <string name="connected">Imeunganishwa</string>
@@ -1442,13 +1434,9 @@
     <string name="poll_submit">Wasilisha</string>
     <string name="poll_view_results">Tazama matokeo</string>
     <string name="restart">Anzisha upya</string>
-    <string name="chess_accept">Kubali</string>
-    <string name="chess_decline">Kataa</string>
     <string name="new_chess_game">Mchezo Mpya wa Sataranji</string>
     <string name="chess_loading_game">Inapakia mchezo…</string>
     <string name="chess_game_not_found">Mchezo Haukupatikana</string>
-    <string name="chess_game_waiting">Mchezo huu unaweza kuwa umekwisha au unasubiri mpinzani.</string>
-    <string name="chess_game_id">Kitambulisho cha Mchezo: %1$s…</string>
     <string name="badge_and_n_others"> na wengine %1$d</string>
     <string name="remove_language">Ondoa %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Anza na maudhui mazuri kwa kufuata watu wanaofuatwa na mtu unayemwamini.</string>
@@ -2397,7 +2385,6 @@
     <string name="media_added_to_profile_gallery">Media imeongezwa kwenye Matunzio yako ya Wasifu</string>
     <string name="media_download_has_started_toast">Upakuaji wa maudhui umeanza…</string>
     <string name="media_servers">Seva za Media</string>
-    <string name="media_too_big_for_nip95">Media ni kubwa sana kwa NIP-95</string>
     <string name="messages_cant_upload_explainer">Ingiza marudio ya ujumbe kwanza</string>
     <string name="messages_cant_upload_title">Haiwezi Kupakia</string>
     <string name="messages_new_message_subject">Somo</string>
@@ -2629,7 +2616,6 @@
     <string name="poll_author_no_vote">Waandishi wa kura hawawezi kupiga kura kwenye kura zao wenyewe.</string>
     <string name="poll_is_closed_explainer">Kura imefungwa kwa kura mpya</string>
     <string name="poll_multiple_choice">Chaguzi nyingi</string>
-    <string name="poll_option_index">Chaguo %1$s</string>
     <string name="poll_single_choice">Chaguo moja</string>
     <string name="poll_unable_to_vote">Haiwezekani kupiga kura</string>
     <string name="polls">Kura</string>
@@ -2881,7 +2867,6 @@
     <string name="upload_error_title">Hitilafu ya Upakiaji</string>
     <string name="upload_error_voice_message_exception">Upakiaji wa sauti umeshindwa: %1$s</string>
     <string name="upload_error_voice_message_failed">Imeshindwa kupakia ujumbe wa sauti</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 haijatarajiwa kwa ujumbe wa sauti bado</string>
     <string name="uptime">%1$d% wakati wa uendeshaji</string>
     <string name="use_internal_tor">Injini ya Tor Inayofanya Kazi</string>
     <string name="use_internal_tor_explainer">Tumia toleo la ndani au Orbot</string>
@@ -2935,4 +2920,8 @@
          what leaves the device; the fork strings say why the old phone stops. -->
     <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
 </resources>

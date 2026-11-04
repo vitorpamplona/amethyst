@@ -23,13 +23,11 @@ package com.vitorpamplona.amethyst.commons.ui.layouts
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.window.layout.FoldingFeature
 import com.google.accompanist.adaptive.FoldAwareConfiguration
 import com.google.accompanist.adaptive.HorizontalTwoPaneStrategy
 import com.google.accompanist.adaptive.TwoPane
@@ -41,20 +39,26 @@ actual fun HorizontalTwoPane(
     second: @Composable () -> Unit,
     splitFraction: Float,
     modifier: Modifier,
+    onDividerDrag: ((deltaDp: Float) -> Unit)?,
 ) {
     // Fold detection needs an Activity window. Without one (a preview, a ComposeView hosted
     // elsewhere) there is no fold to avoid, so split the width plainly.
     val activity = LocalContext.current.findActivity()
     if (activity == null) {
-        Row(modifier) {
-            Box(Modifier.weight(splitFraction).fillMaxHeight()) { first() }
-            Box(Modifier.weight(1f - splitFraction).fillMaxHeight()) { second() }
-        }
+        ProportionalTwoPane(first, second, splitFraction, modifier, onDividerDrag)
+        return
+    }
+
+    val displayFeatures = calculateDisplayFeatures(activity)
+
+    // Without a fold, a resizable split is the plain one with its splitter; along a fold the
+    // hinge decides where the panes meet.
+    if (onDividerDrag != null && displayFeatures.none { it is FoldingFeature }) {
+        ProportionalTwoPane(first, second, splitFraction, modifier, onDividerDrag)
         return
     }
 
     val strategy = remember(splitFraction) { HorizontalTwoPaneStrategy(splitFraction = splitFraction) }
-    val displayFeatures = calculateDisplayFeatures(activity)
 
     TwoPane(
         first = first,

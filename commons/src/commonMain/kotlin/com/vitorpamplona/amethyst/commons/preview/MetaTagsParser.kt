@@ -157,6 +157,18 @@ object MetaTagsParser {
         }
 
     /**
+     * Whether [input] holds the `</head>` that [parse] stops at: one in markup, not in a script, a
+     * style, a comment or a title, where a byte search would also find it.
+     */
+    fun reachesHeadEnd(input: String): Boolean {
+        val s = TagScanner(input)
+        while (!s.exhausted()) {
+            if (s.nextTag() == TagKind.HEAD_END) return true
+        }
+        return false
+    }
+
+    /**
      * Whether a `rel` names an icon: one of its space-separated tokens is `icon` or an
      * `apple-touch-icon` variant. `mask-icon` is deliberately not one -- it is Safari's monochrome
      * pinned-tab silhouette, which renders as a black blob anywhere else.

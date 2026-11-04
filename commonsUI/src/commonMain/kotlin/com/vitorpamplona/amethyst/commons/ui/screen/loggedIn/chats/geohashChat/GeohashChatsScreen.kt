@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -64,6 +65,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_empty_description
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_empty_title
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_explore_nearby
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_intro_description
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_intro_title
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_open
+import com.vitorpamplona.amethyst.commons.resources.leave
 import com.vitorpamplona.amethyst.commons.resources.location_channels
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
@@ -190,13 +198,13 @@ private fun LocationChannelsHero() {
             }
             Column(Modifier.padding(start = 16.dp)) {
                 Text(
-                    "Chat by location",
+                    stringRes(Res.string.geohash_chats_intro_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                 )
                 Text(
-                    "Anonymous, ephemeral rooms shared with everyone in the same map cell. Interoperable with Bitchat.",
+                    stringRes(Res.string.geohash_chats_intro_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.9f),
                     modifier = Modifier.padding(top = 4.dp),
@@ -266,7 +274,7 @@ private fun LocationPin() {
 /** A subtle "City · Palo Alto" subtitle: the named precision level (from the cell length) then the resolved place. */
 @Composable
 private fun LevelAndCity(cell: String) {
-    val level = remember(cell) { GeohashChannelLevel.forChars(cell.length)?.label() }
+    val level = GeohashChannelLevel.forChars(cell.length)?.label()
     LoadCityName(geohashStr = cell) { city ->
         val text = if (level != null) "$level · $city" else city
         Text(
@@ -294,14 +302,14 @@ private fun LocationChannelMenu(
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text("Open") },
+                text = { Text(stringRes(Res.string.geohash_chats_open)) },
                 onClick = {
                     expanded = false
                     onOpen()
                 },
             )
             DropdownMenuItem(
-                text = { Text("Leave") },
+                text = { Text(stringRes(Res.string.leave)) },
                 onClick = {
                     expanded = false
                     onLeave()
@@ -345,14 +353,14 @@ private fun EmptyLocationChannels(
         }
         Spacer(Modifier.height(20.dp))
         Text(
-            "No location channels yet",
+            stringRes(Res.string.geohash_chats_empty_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "Join a room for your city, neighborhood, or block — or teleport anywhere on the map.",
+            stringRes(Res.string.geohash_chats_empty_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -360,7 +368,8 @@ private fun EmptyLocationChannels(
         Spacer(Modifier.height(24.dp))
         FilledTonalButton(onClick = onExplore) {
             SymbolIcon(symbol = MaterialSymbols.Explore, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text("  Explore nearby")
+            Spacer(Modifier.width(8.dp))
+            Text(stringRes(Res.string.geohash_chats_explore_nearby))
         }
     }
 }

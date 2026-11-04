@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+import com.vitorpamplona.marmot.RecipientRelayFetcher
+import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageFetcher
 
 object KeyPackageCommands {
     val USAGE: String =
@@ -53,12 +53,15 @@ object KeyPackageCommands {
     private suspend fun publish(dataDir: DataDir): Int {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val relays = ctx.keyPackageRelays().ifEmpty { ctx.outboxRelays() }.ifEmpty { ctx.anyRelays() }
+            // NIP-65 write set plus any legacy kind:10051, as the rotation path publishes.
+            val relays = KeyPackageFetcher.publishRelaysFor(ctx.outboxRelays(), ctx.keyPackageRelays()).ifEmpty { ctx.anyRelays() }
             if (relays.isEmpty()) return Output.error("no_relays", "configure relays first")
 
             val event = ctx.marmot.generateKeyPackageEvent(relays.toList())
             val ack = ctx.publish(event, relays)
             RawEventSupport.publishGuard(ack, event.id)?.let { return it }
+            // Confirmed by a relay: starts the grace period of any bundle this displaced.
+            ctx.marmot.confirmKeyPackagePublished(event)
             Output.emit(
                 mapOf(
                     "event_id" to event.id,
@@ -88,21 +91,21 @@ object KeyPackageCommands {
             val recipient =
                 ctx.cachedRelayListsOf(targetHex)
                     ?: RecipientRelayFetcher.fetchRelayLists(ctx.client, targetHex, seed)
-            val relays =
-                KeyPackageFetcher.fetchRelaysFor(
-                    targetKeyPackageRelays = recipient.keyPackage,
-                    targetOutbox = recipient.nip65Write(),
-                    myOutbox = seed,
-                )
-            val event =
-                KeyPackageFetcher.fetchKeyPackage(
+            // The one `group add` would invite with: newest valid kind:30443,
+            // else newest valid legacy kind:443.
+            val lookup =
+                KeyPackageFetcher.fetchForInvite(
                     client = ctx.client,
                     targetPubKey = targetHex,
-                    relays = relays,
+                    targetOutbox = recipient.nip65Write(),
+                    myOutbox = seed,
+                    targetKeyPackageRelays = recipient.keyPackage,
                     idleTimeoutMs = 10_000,
                 )
+            val relays = lookup.relays
+            val event = lookup.keyPackage
             if (event == null) {
-                return Output.error("not_found", "no KeyPackage for $targetHex on ${relays.size} relay(s)")
+                return Output.error("not_found", "no valid KeyPackage for $targetHex on ${relays.size} relay(s)")
             }
             Output.emit(
                 mapOf(

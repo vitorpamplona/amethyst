@@ -26,6 +26,10 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.podcasts.V4VSplitEditorState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_save_failed_title
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_message
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_title
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -79,7 +83,7 @@ class EditPodcastShowViewModel : ViewModel() {
 
     val strippingFailureConfirmation = SuspendableConfirmation()
     val selectedServer = mutableStateOf<ServerName?>(null)
-    val mediaQualitySlider = mutableStateOf(1)
+    val mediaQualitySlider = mutableStateOf(CompressorQuality.defaultSliderPosition)
     val stripMetadata = mutableStateOf(true)
 
     /** Editable value-for-value split for the show. */
@@ -136,8 +140,8 @@ class EditPodcastShowViewModel : ViewModel() {
         val server = selectedServer.value
         if (coverOrch != null && server == null) {
             accountViewModel.toastManager.toast(
-                "No upload server selected",
-                "Pick a media server in settings before uploading.",
+                Res.string.upload_no_server_title,
+                Res.string.upload_no_server_message,
             )
             return
         }
@@ -167,7 +171,7 @@ class EditPodcastShowViewModel : ViewModel() {
                 server = server,
                 quality = CompressorQuality.fromSlider(mediaQualitySlider.value),
                 stripMetadata = stripMetadata.value,
-                uploader = accountViewModel.host.mediaUploader,
+                uploader = accountViewModel.mediaUploader,
             )
 
         isSending.value = true
@@ -203,8 +207,9 @@ class EditPodcastShowViewModel : ViewModel() {
                 _completionEvents.tryEmit(Unit)
             } catch (t: Throwable) {
                 accountViewModel.toastManager.toast(
-                    "Failed to save podcast",
+                    Res.string.podcast_show_save_failed_title,
                     t.message ?: t::class.simpleName ?: "",
+                    t,
                 )
             } finally {
                 withContext(Dispatchers.Main.immediate) { isSending.value = false }

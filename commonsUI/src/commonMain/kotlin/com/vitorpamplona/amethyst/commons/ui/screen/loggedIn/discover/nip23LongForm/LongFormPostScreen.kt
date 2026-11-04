@@ -75,6 +75,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -89,6 +90,9 @@ import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive
 import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive_explainer
 import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
+import com.vitorpamplona.amethyst.commons.resources.long_form_post_add_tag
+import com.vitorpamplona.amethyst.commons.resources.long_form_post_remove_header_image
+import com.vitorpamplona.amethyst.commons.resources.long_form_post_remove_tag
 import com.vitorpamplona.amethyst.commons.resources.markdown_edit
 import com.vitorpamplona.amethyst.commons.resources.markdown_preview
 import com.vitorpamplona.amethyst.commons.resources.new_long_form_post
@@ -100,7 +104,7 @@ import com.vitorpamplona.amethyst.commons.resources.your_article_title
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
@@ -108,6 +112,7 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -243,7 +248,7 @@ private fun MarkdownPostScreenBody(
                     isUploading = postViewModel.isUploadingCoverImage,
                     accountViewModel = accountViewModel,
                     onImageSelected = {
-                        postViewModel.uploadCoverImage(it, accountViewModel.host.mediaUploader, onError = accountViewModel.toastManager::toast)
+                        postViewModel.uploadCoverImage(it, accountViewModel.mediaUploader, onError = accountViewModel.toastManager::toast)
                     },
                     onClear = {
                         postViewModel.coverImageUrl = ""
@@ -254,7 +259,7 @@ private fun MarkdownPostScreenBody(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Title field — large, borderless
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = postViewModel.title,
                     onValueChange = {
                         postViewModel.title = it
@@ -294,7 +299,7 @@ private fun MarkdownPostScreenBody(
                     modifier = Modifier.padding(start = Size10dp, top = 8.dp),
                 )
 
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = postViewModel.summary,
                     onValueChange = {
                         postViewModel.summary = it
@@ -428,7 +433,8 @@ private fun MarkdownPostScreenBody(
                                 focusedBorderColor = Color.Transparent,
                                 unfocusedBorderColor = Color.Transparent,
                             ),
-                        outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+                        spellCheck = true,
+                        outputTransformation = rememberUrlUserTagOutputTransformation(),
                         keyboardOptions =
                             KeyboardOptions.Default.copy(
                                 capitalization = KeyboardCapitalization.Sentences,
@@ -495,7 +501,7 @@ private fun MarkdownPostScreenBody(
                             accountViewModel.account.settings.defaultFileServer,
                             isUploading = postViewModel.mediaUploadTracker.isUploading,
                             onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata, convertGifToMp4 ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader, useH265, stripMetadata, convertGifToMp4)
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.mediaUploader, useH265, stripMetadata, convertGifToMp4)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,
@@ -632,7 +638,7 @@ private fun BannerImageArea(
             ) {
                 Icon(
                     MaterialSymbols.Close,
-                    contentDescription = "Remove header image",
+                    contentDescription = stringRes(Res.string.long_form_post_remove_header_image),
                     tint = Color.White,
                 )
             }
@@ -728,7 +734,7 @@ private fun TagInputSection(
         ) {
             Icon(
                 MaterialSymbols.Add,
-                contentDescription = "Add tag",
+                contentDescription = stringRes(Res.string.long_form_post_add_tag),
             )
         }
     }
@@ -748,7 +754,7 @@ private fun TagInputSection(
                     trailingIcon = {
                         Icon(
                             MaterialSymbols.Close,
-                            contentDescription = "Remove $tag",
+                            contentDescription = stringRes(Res.string.long_form_post_remove_tag, tag),
                             modifier = Modifier.size(16.dp),
                         )
                     },
@@ -798,6 +804,10 @@ private fun MarkdownBottomRowActions(postViewModel: LongFormPostViewModel) {
                 postViewModel.selectImage(it)
             },
         )
+
+        DrawingButton(postViewModel.accountViewModel, enabled = !postViewModel.isUploadingImage && !postViewModel.isUploadingFile) { drawing, alt ->
+            postViewModel.uploadDrawing(drawing, alt, postViewModel.accountViewModel.toastManager::toast)
+        }
 
         ForwardZapToButton(postViewModel.wantsForwardZapTo) {
             postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo

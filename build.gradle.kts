@@ -62,9 +62,9 @@ allprojects {
     apply(plugin = "com.diffplug.spotless")
 
     if (project === rootProject) {
-        spotless {
-            predeclareDeps()
-        }
+        // Declaring a format on `spotlessPredeclare` is what turns predeclaration on (resolving
+        // the formatter deps from the root project's repositories); the old
+        // `spotless { predeclareDeps() }` switch is deprecated and did nothing more.
         configure<SpotlessExtensionPredeclare> {
             kotlin {
                 ktlint("1.7.1")
@@ -95,6 +95,14 @@ allprojects {
 }
 
 subprojects {
+    // mockk attaches its agent at runtime, which appends to the boot class path, and a JVM on the
+    // default class-data-sharing archive then prints "Sharing is only supported for boot loader
+    // classes because bootstrap classpath has been appended" in every test run that mocks.
+    // Test JVMs gain nothing measurable from CDS, so they run without it.
+    tasks.withType<Test>().configureEach {
+        jvmArgs("-Xshare:off")
+    }
+
     afterEvaluate {
         // The Kotlin Multiplatform plugin never registers a plain `test` task: it creates one
         // task per target (jvmTest, androidUnitTest, linuxX64Test, ...) plus the `allTests`
@@ -111,10 +119,9 @@ subprojects {
         // pre-push hook and CI already run for these modules, so the alias matches the coverage
         // they expect rather than inventing a third definition of "the tests".
         //
-        // The flip side: a KMP module's non-JVM targets stay outside `test`. :quartz's
-        // androidHostTest source set (~3.9k tests) is the big one - nothing runs it today and it
-        // is red on main, so aliasing onto allTests would have turned `test` red for everyone
-        // rather than fixing anything. Tracked in CLAUDE.md's Build Commands section.
+        // The flip side: a KMP module's non-JVM targets stay outside `test` (CI names the ones
+        // it runs, like :commonsUI:testAndroidHostTest). quartz, whose androidHostTest suite was
+        // the reason this is not allTests, now lives in vitorpamplona/quartz.
         if (plugins.hasPlugin("org.jetbrains.kotlin.multiplatform") &&
             tasks.findByName("test") == null &&
             tasks.findByName("jvmTest") != null
@@ -126,17 +133,11 @@ subprojects {
             }
         }
 
-        try {
-            tasks.named("preBuild") {
-                dependsOn("spotlessApply")
-            }
-        } catch (ignored: UnknownTaskException) {
-            tasks.matching {
-                it.name.startsWith("pre") && it.name.endsWith("Build")
-            }.configureEach {
-                dependsOn("spotlessApply")
-            }
-        }
+        // Formatting is not part of the build. spotlessApply used to hang off every module's
+        // preBuild, which put ktlint in front of every compile (about 3 min of a cold build) and
+        // had the build rewrite its own sources while it ran. The pre-commit hook and CI's lint
+        // job run spotlessCheck, and the agents' hooks run spotlessApply; by hand it is
+        // `./gradlew spotlessApply`.
     }
 }
 
@@ -169,9 +170,12 @@ if (sonarEnabled) {
 val installGitHook = tasks.register<Copy>("installGitHook") {
     val dotGit = File(rootProject.rootDir, ".git")
     val hooksDir: File = if (dotGit.isFile) {
-        // Git worktree: .git is a file with "gitdir: <path>"
+        // Git worktree: .git is a file with "gitdir: <path>". Git reads hooks from the main
+        // repository's .git/hooks, which the worktree's gitdir names in its `commondir` file;
+        // a hook copied into the worktree's own gitdir never runs.
         val gitDir = File(dotGit.readText().trim().replace("gitdir: ", ""))
-        File(gitDir, "hooks")
+        val commonDir = File(gitDir, "commondir").takeIf { it.isFile }?.let { gitDir.resolve(it.readText().trim()).normalize() } ?: gitDir
+        File(commonDir, "hooks")
     } else {
         File(dotGit, "hooks")
     }

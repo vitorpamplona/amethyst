@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.about_us
@@ -60,11 +61,11 @@ import com.vitorpamplona.amethyst.commons.resources.public_chat_relays_title
 import com.vitorpamplona.amethyst.commons.resources.public_chat_title
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.LoadPublicChatChannel
@@ -260,7 +261,7 @@ private fun ChannelMetadataScaffold(
 
 @Composable
 private fun Description(postViewModel: ChannelMetadataViewModel) {
-    OutlinedTextField(
+    SpellCheckedOutlinedTextField(
         label = { Text(text = stringRes(Res.string.description)) },
         modifier = Modifier.fillMaxWidth(),
         value = postViewModel.channelDescription.value,

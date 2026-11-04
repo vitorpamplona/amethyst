@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadDecryptedContentOrNull
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioFromIMeta
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAudioFromIMeta
 import com.vitorpamplona.amethyst.commons.ui.note.types.getAudioMetaWithWaveform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -79,7 +79,10 @@ fun RenderRegularTextNote(
                         fontSize = jumboEmojiFontSize(jumboCount),
                     )
                 } else {
-                    val tags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+                    // Marmot custom emoji are encrypted attachments of the message, not URLs to fetch.
+                    val marmotTags = rememberMarmotRenderTags(note, accountViewModel)
+                    val ownTags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+                    val tags = marmotTags ?: ownTags
 
                     // Some NIP-C7/Concord clients (e.g. Ditto/Soapbox Armada) attach an image purely as a
                     // NIP-92 `imeta` tag and leave the content empty. The shared renderer only shows media

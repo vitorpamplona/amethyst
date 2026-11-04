@@ -20,44 +20,10 @@
  */
 package com.vitorpamplona.amethyst.desktop.platform
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
-import com.vitorpamplona.amethyst.desktop.ui.theme.AmethystSpacing
-import com.vitorpamplona.amethyst.desktop.ui.theme.LocalIsDarkTheme
-import com.vitorpamplona.amethyst.desktop.ui.theme.LocalSpacing
-
-/**
- * Wraps content in a [MaterialTheme] tuned for the host OS: native fonts, accent
- * color, surface tones, and shape rounding all match what the user sees in their
- * other apps.
- *
- * Pair this with [applyNativeWindowChrome] inside the [androidx.compose.ui.window.Window]
- * scope to also get native title-bar treatment (transparent title bar with
- * traffic-light inset on macOS).
- */
-@Composable
-fun PlatformMaterialTheme(
-    isDark: Boolean,
-    content: @Composable () -> Unit,
-) {
-    val colorScheme = remember(isDark) { PlatformColorScheme.resolve(isDark) }
-    CompositionLocalProvider(
-        LocalSpacing provides AmethystSpacing(),
-        LocalIsDarkTheme provides isDark,
-    ) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = PlatformTypography.current,
-            shapes = PlatformShapes.current,
-            content = content,
-        )
-    }
-}
 
 /**
  * Inset to apply at the top of window content so it doesn't underlap the macOS
@@ -67,6 +33,14 @@ fun PlatformMaterialTheme(
  */
 val titleBarInsetTop: Dp
     get() = if (PlatformInfo.isMacOS) 28.dp else 0.dp
+
+/**
+ * Room to leave at the start of a top bar that shares the macOS traffic lights' row, once
+ * `applyNativeWindowChrome` has made the title bar transparent: the three buttons and their margins.
+ * 0 dp on other platforms, whose title bar sits above the content.
+ */
+val trafficLightsInsetStart: Dp
+    get() = if (PlatformInfo.isMacOS) 72.dp else 0.dp
 
 /**
  * Applies platform-specific native window chrome.

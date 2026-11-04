@@ -150,6 +150,7 @@ class MoqLiteNestsListener internal constructor(
             ok = synthesizedOk(handle.ok),
             objects = mapped,
             unsubscribeAction = { handle.unsubscribe() },
+            broadcastEndedCountProbe = { handle.broadcastEndedCount },
         )
     }
 

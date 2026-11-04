@@ -95,6 +95,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 /** One connected NIP-46 remote-signer client, with everything the row needs to render. */
@@ -138,7 +139,7 @@ fun Nip46ConnectedAppsScreen(
     var refreshKey by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(refreshKey) {
-        items = withContext(Dispatchers.Default) { loadNip46Apps(services, signerPubKey) }
+        items = withContext(Dispatchers.IO) { loadNip46Apps(services, signerPubKey) }
     }
 
     Scaffold(

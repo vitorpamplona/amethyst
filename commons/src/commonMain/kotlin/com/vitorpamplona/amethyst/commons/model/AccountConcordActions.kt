@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultDmIndexerRelays
 import com.vitorpamplona.amethyst.commons.model.ConcordInviteResult
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.filter
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.chats.ConcordDirectInviteNote
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
@@ -47,8 +48,13 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordKickNotice
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordPinDutyScheduler
 import com.vitorpamplona.amethyst.commons.model.concord.DirectInviteAcceptPlan
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
+import com.vitorpamplona.amethyst.commons.relays.dialableRelays
 import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
+import com.vitorpamplona.crypto.random.RandomInstance
+import com.vitorpamplona.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList.withControlRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
@@ -91,7 +97,6 @@ import com.vitorpamplona.quartz.concord.cord06Rekey.ReceivedRefounding
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
-import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -110,9 +115,9 @@ import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
@@ -185,6 +190,14 @@ private val HEX64 = Regex("^[0-9a-f]{64}$")
 class AccountConcordActions(
     private val account: Account,
 ) {
+    /**
+     * For this class's reads. Most go out as plain filters through the one-shot helpers — some on the
+     * 15-minute invite sweep and the control-plane sync, which run with the app backgrounded — and
+     * tagging them here is what lets those relays say why they are connected. Publishes stay on
+     * [Account.client]: tagging only touches REQ/COUNT, and a publish is attributed by the outbox.
+     */
+    private val concordClient = account.client.taggedAs(SubPurpose.COMMUNITY_CHATS)
+
     /**
      * Add a joined Concord community (secret-bearing entry) to the private Community List (kind 33302)
      * list, and announce a self-signed Guestbook JOIN so this member is visible to
@@ -388,7 +401,7 @@ class AccountConcordActions(
         // timeout). Treating the second as "no list yet" is precisely how a read-merge-write wipes
         // the signer_sk of every link it failed to read, so the two must be told apart.
         val result =
-            account.client.fetchAllWithHooks(
+            concordClient.fetchAllWithHooks(
                 filters = relays.associateWith { listOf(filter) },
             ) { _, _ -> true }
 
@@ -430,7 +443,7 @@ class AccountConcordActions(
         // and never reports acceptance — so a `runCatching { publish(); true }` is true whenever
         // local signing worked, and every caller's "did the record land?" gate becomes decorative.
         val landed =
-            runCatching {
+            runCatchingCancellable {
                 account.client.publishAndConfirm(ConcordInviteListEvent.create(account.signer, merged, TimeUtils.now()), publishTo)
             }.onFailure { Log.w("Concord", "invite list publish failed", it) }.getOrDefault(false)
         return if (landed) merged else null
@@ -512,18 +525,18 @@ class AccountConcordActions(
         // user-visible Refounding, and a serial fetch per link makes a removal take time linear in
         // how many links the creator ever minted, each able to wait out its own idle timeout.
         val byAuthor = links.associateBy { it.signerPubKeyHex().lowercase() }
-        val wraps = account.client.fetchAll(filters = relays.associateWith { listOf(ConcordActions.bundlesFilter(byAuthor.keys.toList())) })
+        val wraps = concordClient.fetchAll(filters = relays.associateWith { listOf(ConcordActions.bundlesFilter(byAuthor.keys.toList())) })
         val wrapsByAuthor = wraps.groupBy { it.pubKey.lowercase() }
 
         return coroutineScope {
             byAuthor
                 .map { (author, link) ->
                     async {
-                        runCatching {
+                        runCatchingCancellable {
                             val token = link.token.hexToByteArray()
                             // Classify per coordinate, never over the pooled set: one link's newer
                             // revocation tombstone must not decide another link's status.
-                            val current = ConcordActions.classifyInvite(wrapsByAuthor[author].orEmpty(), author, token) as? InviteBundleStatus.Live ?: return@runCatching false
+                            val current = ConcordActions.classifyInvite(wrapsByAuthor[author].orEmpty(), author, token) as? InviteBundleStatus.Live ?: return@runCatchingCancellable false
                             val moved =
                                 current.invite.copy(
                                     communityRoot = entry.root,
@@ -790,7 +803,7 @@ class AccountConcordActions(
         if (relays.isEmpty()) return ConcordInviteResult.NotReachable
 
         val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
-        val wraps = account.client.fetchAll(filters = filters)
+        val wraps = concordClient.fetchAll(filters = filters)
 
         // Resolve the coordinate per CORD-05 §2 (newest wins; a vsk=9 tombstone revokes even over a
         // stale openable copy) so we honour revocation and can tell the user *why* a link won't open
@@ -889,7 +902,7 @@ class AccountConcordActions(
         // and the bundle's own list is the one that goes stale.
         val joinRelays = bundle.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) } + relays
         val planeWraps = mutableListOf<Event>()
-        account.client.fetchAllPagesFromPool(
+        concordClient.fetchAllPagesFromPool(
             filters = joinRelays.associateWith { listOf(ConcordActions.planeFilter(joinKeys.address)) },
         ) { event, _ -> planeWraps.add(event) }
         val joinEditions = ConcordActions.controlEditions(planeWraps, joinKeys)
@@ -937,8 +950,8 @@ class AccountConcordActions(
     // ---- CORD-05 §6 Direct Invites ---------------------------------------------
 
     /**
-     * The Direct Invite inbox: wraps from the dedicated sweep ([refreshConcordDirectInvites]) and
-     * from the NIP-17 giftwrap pipeline land here, parked until the user accepts or declines.
+     * The Direct Invite inbox: wraps the account's gift-wrap subscription delivers (the NIP-17 inbox,
+     * or its invite-only filter when NIP-17 is off) land here, parked until the user accepts or declines.
      */
     val directInviteInbox =
         ConcordDirectInviteInbox(
@@ -1014,26 +1027,23 @@ class AccountConcordActions(
             .stateIn(account.scope, SharingStarted.Eagerly, emptyList())
 
     /**
-     * Where this account scans for Direct Invites — where senders deliver them (CORD-05 §6): our DM
-     * inbox relays (kind 10050, plus the NIP-65 read and private/local relays the DM feed already
-     * reads), plus the stock Concord set.
+     * The stock Concord relays a Direct Invite sender falls back to when it can't find our relay lists
+     * (none published, or none reachable — CORD-05 §6). We can't know which case a sender hit, so they
+     * are swept too: an account with no published kind 10050 otherwise never received Armada's invites.
+     * Our DM relays are left out — the account's gift-wrap subscription already reads invites there.
      */
-    private fun concordDirectInviteScanRelays(): Set<NormalizedRelayUrl> =
-        // Our inbox relays AND the stock set, always: a sender that could not find our relay lists
-        // (none published, or none reachable) delivers to the stock set (CORD-05 §6), and we can't
-        // know which case a sender hit. Sweeping only our DM relays missed every invite from such a
-        // sender; Armada's to an account with no published kind 10050 never arrived.
-        account.dmRelays.flow.value + ConcordActions.directInviteDeliveryRelays(null)
+    private fun concordDirectInviteStockRelays(): Set<NormalizedRelayUrl> = ConcordActions.directInviteDeliveryRelays(null) - account.dmRelays.flow.value
 
     private val directInviteSweep = Mutex()
 
     /**
-     * Runs a Direct Invite sweep ([refreshConcordDirectInvites]) in the account's scope, unless one
-     * is already running. It used to run in the invite list's composition, which the hub replaces
-     * the moment its communities load, so every sweep was cancelled before a relay answered and no
-     * invite delivered to the stock set ever arrived.
+     * Runs a Direct Invite sweep of the stock relays ([refreshConcordDirectInvites]) in the account's
+     * scope, unless one is already running or Concord is turned off in Settings › Messages. Runs in the
+     * account's scope because the hub leaves composition whenever it swaps layouts, which cancelled a
+     * sweep launched there before any relay answered.
      */
     fun requestConcordDirectInviteSweep() {
+        if (!account.chatFeedToggles.isEnabled(ChatFeedType.CONCORD)) return
         account.scope.launch {
             if (!directInviteSweep.tryLock()) return@launch
             try {
@@ -1049,31 +1059,41 @@ class AccountConcordActions(
     }
 
     /**
-     * Sweeps our inbox relays for Direct Invite wraps
+     * One-shot sweep of the stock Concord relays for Direct Invite wraps
      * (`{"kinds":[1059],"#p":[me],"#k":["3313"]}` since the inbox cursor, rewound by NIP-59's backdate
-     * window) and offers each to the inbox. Returns how many new invites were parked. Read-only: it
-     * decrypts, it never joins or contacts a community's relays.
+     * window), offering each to the inbox. A periodic fetch rather than a live subscription, so an
+     * account that never gets an invite there doesn't hold those connections open. Returns how many new
+     * invites were parked. Read-only: it decrypts, it never joins or contacts a community's relays.
      */
     suspend fun refreshConcordDirectInvites(): Int {
-        val relays = concordDirectInviteScanRelays()
+        val relays = concordDirectInviteStockRelays()
         if (relays.isEmpty()) return 0
         val before = directInviteInbox.pending.value.keys
         val filter = ConcordActions.directInvitesFilter(account.signer.pubKey, directInviteInbox.since())
-        val wraps = account.client.fetchAll(filters = relays.associateWith { listOf(filter) })
+        val wraps = concordClient.fetchAll(filters = relays.associateWith { listOf(filter) })
         wraps.distinctBy { it.id }.forEach { directInviteInbox.offer(it) }
-        drainConcordCatchUps()
         return (directInviteInbox.pending.value.keys - before).size
     }
+
+    // Two triggers drain (an invite parking, a revision tick); without this both could adopt the same
+    // catch-up at once and race their read-modify-write of the community entry.
+    private val catchUpDrain = Mutex()
 
     /**
      * Adopts, without a click, every parked catch-up the held fold says is exactly the delivery a
      * Grant prescribes (Armada `judgeCatchUp`, [ConcordInviteVend.judgeCatchUp]): a staff sender, a
      * recipient who isn't banned, and only live Private Channels our Roles entitle us to. Consent
-     * came from the Grant. Anything else waits for a manual Accept. Runs after an inbox sweep and on
-     * the revision tick (a Grant folding late turns a waiting catch-up adoptable).
+     * came from the Grant. Anything else waits for a manual Accept. Runs whenever the inbox parks an
+     * invite and on the revision tick (a Grant folding late turns a waiting catch-up adoptable), one
+     * pass at a time.
      */
-    internal suspend fun drainConcordCatchUps() {
+    internal suspend fun drainConcordCatchUps() = catchUpDrain.withLock { drainConcordCatchUpsLocked() }
+
+    private suspend fun drainConcordCatchUpsLocked() {
         if (!account.isWriteable()) return
+        // Invites still park while Concord is off (the NIP-17 inbox delivers them, and dropping one would
+        // lose it for good), but nothing is adopted until it is back on.
+        if (!account.chatFeedToggles.isEnabled(ChatFeedType.CONCORD)) return
         val me = account.signer.pubKey
         val now = TimeUtils.nowMillis()
         for (opened in directInviteInbox.pending.value.values) {
@@ -1103,7 +1123,7 @@ class AccountConcordActions(
      */
     private suspend fun concordDirectInviteDeliveryRelays(recipient: HexKey): Set<NormalizedRelayUrl> {
         val user = account.cache.getOrCreateUser(recipient)
-        val dmInbox = user.dmInboxRelayList()?.relays().orEmpty()
+        val dmInbox = user.dmInboxRelayList()?.dialableRelays().orEmpty()
         val cached =
             if (dmInbox.isNotEmpty() || user.authorRelayList() != null) {
                 RecipientRelayFetcher.Lists(dmInbox = dmInbox, keyPackage = emptyList(), nip65 = user.authorRelayList())
@@ -1113,7 +1133,7 @@ class AccountConcordActions(
         val lists =
             cached ?: run {
                 val seed = DefaultDmIndexerRelays.RELAYS.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) } + account.outboxRelays.flow.value
-                RecipientRelayFetcher.fetchRelayLists(account.client, recipient, seed)
+                RecipientRelayFetcher.fetchRelayLists(account.client.taggedAs(SubPurpose.RELAY_LISTS), recipient, seed)
             }
         return ConcordActions.directInviteDeliveryRelays(lists)
     }
@@ -1387,14 +1407,6 @@ class AccountConcordActions(
     fun isConcordEditable(target: Event): Boolean = (target is ChatEvent || target is CommentEvent) && target.pubKey == account.signer.pubKey
 
     /**
-     * The Concord channel [note] belongs to: its own gatherer for a message or thread reply, else
-     * (a reaction, a delete) the channel of the note it points at. Null when it is not Concord.
-     */
-    fun concordChannelOf(note: Note): ConcordChannel? =
-        note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
-            ?: note.replyTo?.firstNotNullOfOrNull { target -> target.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } }
-
-    /**
      * Delete my own Concord rumors [notes] (messages, thread replies, reactions) in [channel] the
      * way CORD-01 prescribes: a kind-5 rumor with `e` + `k` tags, sealed (20013) and wrapped on the
      * channel's own plane, so only the community sees it. Never a signed kind 5 or a NIP-17 delete,
@@ -1431,20 +1443,6 @@ class AccountConcordActions(
         // author knows their own pins, so when they may write pins they publish it immediately.
         if (sent) omitDeletedConcordPins(channel.channelId.communityId, channelIdHex, mine.mapTo(HashSet()) { it.id })
         return sent
-    }
-
-    /**
-     * Toggle my [reaction] on Concord message [note]: retract my existing reactions of that content
-     * with an in-channel delete, else add it ([reactToConcordMessage]). Returns false when nothing
-     * was sent.
-     */
-    suspend fun toggleConcordReaction(
-        note: Note,
-        reaction: String,
-    ): Boolean {
-        val channel = concordChannelOf(note) ?: return false
-        val mine = note.allReactionsOfContentByAuthor(account.userProfile(), reaction)
-        return if (mine.isNotEmpty()) deleteConcordRumors(channel, mine) else reactToConcordMessage(note, reaction)
     }
 
     /**
@@ -2405,7 +2403,7 @@ class AccountConcordActions(
                     .map { relay ->
                         async {
                             val events = ArrayList<Event>()
-                            val result = runCatching { account.client.fetchAllPages(relay, listOf(filter)) { events.add(it) } }.getOrNull()
+                            val result = runCatchingCancellable { concordClient.fetchAllPages(relay, listOf(filter)) { events.add(it) } }.getOrNull()
                             if (result?.end == PagedFetchResult.End.DRAINED) events else null
                         }
                     }.awaitAll()
@@ -2685,7 +2683,7 @@ class AccountConcordActions(
             if (relays.isEmpty()) continue
 
             val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
-            val wraps = account.client.fetchAll(filters = filters)
+            val wraps = concordClient.fetchAll(filters = filters)
             // Only a live bundle counts: an expired/revoked link is not a rotation we missed.
             val bundle = (ConcordActions.classifyInvite(wraps, parsed.linkSignerPubKey, parsed.fragment.token) as? InviteBundleStatus.Live)?.invite ?: continue
 
@@ -2943,7 +2941,7 @@ class AccountConcordActions(
         for (root in (listOf(entry.root) + entry.heldRoots.map { it.key }).distinct()) {
             for (epoch in 1L..MAX_PROBED_CHANNEL_EPOCH) window[ConcordChannelRekey.address(root.hexToByteArray(), channelId, epoch).publicKeyHex] = epoch
         }
-        val seen = runCatching { account.client.fetchAll(filters = relays.associateWith { listOf(ConcordActions.planeFilterFor(window.keys.toList())) }) }.getOrDefault(emptyList())
+        val seen = runCatching { concordClient.fetchAll(filters = relays.associateWith { listOf(ConcordActions.planeFilterFor(window.keys.toList())) }) }.getOrDefault(emptyList())
         val highest = seen.mapNotNull { window[it.pubKey] }.maxOrNull() ?: 0
         return if (highest >= MAX_PROBED_CHANNEL_EPOCH) null else highest
     }
@@ -3104,7 +3102,7 @@ class AccountConcordActions(
             (parsed.fragment.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } + account.outboxRelays.flow.value).toSet()
         if (relays.isEmpty()) return null
         val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
-        val wraps = account.client.fetchAll(filters = filters)
+        val wraps = concordClient.fetchAll(filters = filters)
         // Resolved like a join (newest per coordinate, signer-verified): a revoked link previews as
         // nothing, never as the stale bundle a relay still serves. An expired one still renders.
         return when (val status = ConcordActions.classifyInvite(wraps, parsed.linkSignerPubKey, parsed.fragment.token)) {
@@ -3142,7 +3140,7 @@ class AccountConcordActions(
         val filter = Filter(kinds = listOf(ConcordCommunityListFragmentEvent.KIND, ConcordCommunityListEvent.KIND), authors = listOf(account.signer.pubKey))
         // Stock relays like relay.ditto.pub can be slow (~10–20s to first response), so give
         // the fetch a generous window to drain every relay before we pick the newest copy.
-        val events = account.client.fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 30_000L)
+        val events = concordClient.fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 30_000L)
         val fragments = events.filterIsInstance<ConcordCommunityListFragmentEvent>()
         val legacy = events.filterIsInstance<ConcordCommunityListEvent>().maxByOrNull { it.createdAt }
         Log.d("Concord") {
@@ -3203,7 +3201,7 @@ class AccountConcordActions(
             }
         if (filters.isEmpty()) return
         val byRelay = filters.groupBy { it.relay }.mapValues { (_, group) -> group.map { it.filter } }
-        account.client.fetchAll(filters = byRelay, idleTimeoutMs = 20_000L)
+        concordClient.fetchAll(filters = byRelay, idleTimeoutMs = 20_000L)
     }
 
     /**
@@ -3250,7 +3248,7 @@ class AccountConcordActions(
                                 val wraps = ArrayList<Event>()
                                 val end =
                                     try {
-                                        account.client.fetchAllPages(relay, listOf(ConcordActions.planeFilterFor(authors.toList()))) { wraps.add(it) }.end
+                                        concordClient.fetchAllPages(relay, listOf(ConcordActions.planeFilterFor(authors.toList()))) { wraps.add(it) }.end
                                     } catch (e: CancellationException) {
                                         throw e
                                     } catch (e: Exception) {

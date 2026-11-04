@@ -32,6 +32,7 @@ import coil3.gif.isAnimatedHeif
 import coil3.gif.isAnimatedWebP
 import coil3.gif.isGif
 import coil3.request.Options
+import com.vitorpamplona.amethyst.commons.service.images.hasSubThresholdGifFrameDelay
 import okio.BufferedSource
 import okio.buffer
 

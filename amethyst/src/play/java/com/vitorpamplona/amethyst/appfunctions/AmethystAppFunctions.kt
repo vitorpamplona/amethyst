@@ -33,12 +33,13 @@ import com.vitorpamplona.amethyst.commons.actions.ZapActions
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.home.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
-import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.commons.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
-import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -47,7 +48,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCon
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
@@ -66,6 +66,7 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -144,7 +145,7 @@ class AmethystAppFunctions {
         // routed to the relays we originally queried — caller still gets a
         // coherent result rather than events mixed across accounts.
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchProfilesResult.empty()
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.SEARCH, ASSISTANT)
 
         // SearchRelayListState's flow already resolves to a concrete relay
         // set: NIP-44-decrypted private entries + public entries, or the
@@ -208,7 +209,7 @@ class AmethystAppFunctions {
                 .orEmpty()
         if (claim.isEmpty()) return false
         val parsed = Nip05Id.parse(claim) ?: return false
-        return runCatching {
+        return runCatchingCancellable {
             !Amethyst.instance.nip05Client.verify(parsed, meta.pubKey)
         }.getOrElse {
             // verify() throws IllegalStateException on network / parse
@@ -397,6 +398,7 @@ class AmethystAppFunctions {
                 limit = limit,
             )
         return Amethyst.instance.client
+            .taggedAs(SubPurpose.HOME_FEED, ASSISTANT)
             .fetchAll(
                 filters = relays.associateWith { listOf(filter) },
                 idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
@@ -428,7 +430,7 @@ class AmethystAppFunctions {
         val pubkey = decodeUserOrThrow(user)
 
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchNotesResult.empty()
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.USER_PROFILE, ASSISTANT)
 
         val targetWriteRelays =
             account.cache
@@ -507,7 +509,7 @@ class AmethystAppFunctions {
         }
 
         // Cache miss: drain bootstrap relays for the latest kind:0.
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.USER_PROFILE, ASSISTANT)
         val relays =
             account.homeRelays.flow.value
                 .ifEmpty { DefaultNIP65RelaySet }
@@ -556,7 +558,7 @@ class AmethystAppFunctions {
         val cappedLimit = limit.coerceIn(1, 100)
 
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchNotesResult.empty()
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.TAG_FEED, ASSISTANT)
         val relays =
             account.homeRelays.flow.value
                 .ifEmpty { DefaultNIP65RelaySet }
@@ -629,7 +631,7 @@ class AmethystAppFunctions {
     ): SearchNotesResult {
         val cappedLimit = limit.coerceIn(1, 100)
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchNotesResult.empty()
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.ACCOUNT_DATA, ASSISTANT)
         val relays =
             account.homeRelays.flow.value
                 .ifEmpty { DefaultNIP65RelaySet }
@@ -672,7 +674,7 @@ class AmethystAppFunctions {
     ): SearchNotesResult {
         val cappedLimit = limit.coerceIn(1, 100)
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchNotesResult.empty()
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.NOTIFICATIONS, ASSISTANT)
         val relays =
             account.homeRelays.flow.value
                 .ifEmpty { DefaultNIP65RelaySet }
@@ -720,7 +722,7 @@ class AmethystAppFunctions {
         }
         val cappedLimit = limit.coerceIn(1, 100)
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchNotesResult.empty()
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.THREAD, ASSISTANT)
         val relays =
             account.homeRelays.flow.value
                 .ifEmpty { DefaultNIP65RelaySet }
@@ -767,7 +769,7 @@ class AmethystAppFunctions {
         hoursBack: Int = 24,
     ): ZapsReceivedResult {
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return ZapsReceivedResult.empty()
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.NOTIFICATIONS, ASSISTANT)
         val relays =
             account.homeRelays.flow.value
                 .ifEmpty { DefaultNIP65RelaySet }
@@ -853,7 +855,7 @@ class AmethystAppFunctions {
         limit: Int = 20,
     ): DmsResult {
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return DmsResult.empty()
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.DIRECT_MESSAGES, ASSISTANT)
         val cappedHours = hoursBack.coerceIn(1, 24 * 7)
         val cappedLimit = limit.coerceIn(1, 100)
         val peerPub = peer?.takeIf { it.isNotBlank() }?.let { decodeUserOrThrow(it) }
@@ -942,7 +944,7 @@ class AmethystAppFunctions {
             ) ?: return SearchNotesResult.empty()
 
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchNotesResult.empty()
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.SEARCH, ASSISTANT)
         val relays = account.searchRelayList.flow.value
         if (relays.isEmpty()) return SearchNotesResult.empty()
 
@@ -975,7 +977,7 @@ class AmethystAppFunctions {
     ): LiveStreamsResult {
         val cappedLimit = limit.coerceIn(1, 50)
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return LiveStreamsResult.empty()
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.DISCOVER_FEED, ASSISTANT)
         val relays =
             account.homeRelays.flow.value
                 .ifEmpty { DefaultNIP65RelaySet }
@@ -1106,7 +1108,7 @@ class AmethystAppFunctions {
         if (relays.isEmpty()) throw AppFunctionInvalidArgumentException("account has no outbox relays configured")
 
         val currentList = account.kind3FollowList.getFollowListEvent()
-        if (currentList != null && currentList.isTaggedUser(target)) {
+        if (currentList != null && currentList.isFollowing(target)) {
             return WriteResult.unchanged()
         }
 
@@ -1154,7 +1156,7 @@ class AmethystAppFunctions {
         if (relays.isEmpty()) throw AppFunctionInvalidArgumentException("account has no outbox relays configured")
 
         val currentList = account.kind3FollowList.getFollowListEvent()
-        if (currentList == null || !currentList.isTaggedUser(target)) {
+        if (currentList == null || !currentList.isFollowing(target)) {
             return WriteResult.unchanged()
         }
 
@@ -1224,7 +1226,7 @@ class AmethystAppFunctions {
         requireInProcessSigner(account.signer)
         verifyExpectedRecipient(account, recipientPub, expectedDisplayName, requireFollow)
 
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.RELAY_LISTS, ASSISTANT)
         val result = DmActions.buildTextDm(account.signer, recipientPub, body)
 
         // One wrap per recipient — for a 1:1 DM that's two (the recipient's
@@ -1375,7 +1377,7 @@ class AmethystAppFunctions {
         sats: Long,
         comment: String,
     ): ZapResult {
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.PROFILE_METADATA, ASSISTANT)
 
         // Pull the recipient's kind:0 — needs lnAddress to receive the zap.
         val metadata =
@@ -1586,7 +1588,7 @@ class AmethystAppFunctions {
                     "Event $eventId is referenced locally but its content hasn't been observed yet.",
                 )
 
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.PROFILE_METADATA, ASSISTANT)
         val totalMsats = ZapActions.satsToMillisats(cappedSats)
 
         // Lookups for the split resolver — first try the local cache,
@@ -1627,7 +1629,7 @@ class AmethystAppFunctions {
             requests.map { req ->
                 val shareSats = req.amountMillisats / 1000
                 val invoiceResult =
-                    runCatching {
+                    runCatchingCancellable {
                         fetchInvoiceOrThrow(
                             lnAddress = req.recipient.lnAddress,
                             sats = shareSats,
@@ -2021,7 +2023,7 @@ class AmethystAppFunctions {
         val filter = SearchActions.searchNotesFilter(query, limit = cappedLimit) ?: return SearchNotesResult.empty()
 
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchNotesResult.empty()
-        val client = Amethyst.instance.client
+        val client = Amethyst.instance.client.taggedAs(SubPurpose.SEARCH, ASSISTANT)
 
         val relays = account.searchRelayList.flow.value
         if (relays.isEmpty()) return SearchNotesResult.empty()
@@ -2086,6 +2088,9 @@ class AmethystAppFunctions {
     }
 
     companion object {
+        /** Detail on every relay request made for a system assistant, so its traffic is told apart from the app's own. */
+        private const val ASSISTANT = "Assistant"
+
         /**
          * 6-second fetch window. App Functions invocations are user-initiated
          * foreground requests in the Gemini UI — anything beyond a few seconds

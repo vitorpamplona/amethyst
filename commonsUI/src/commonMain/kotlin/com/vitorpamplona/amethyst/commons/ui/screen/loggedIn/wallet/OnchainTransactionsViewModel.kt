@@ -24,6 +24,10 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.onchain_transactions_load_failed
+import com.vitorpamplona.amethyst.commons.resources.onchain_transactions_load_more_failed
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.TransactionFilter
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -34,6 +38,8 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -195,7 +201,8 @@ class OnchainTransactionsViewModel : ViewModel() {
                 lastSeenTxid = rows.lastOrNull { it.confirmations > 0 }?.txid
                 _hasMoreTransactions.value = lastSeenTxid != null
             } catch (t: Throwable) {
-                _error.value = t.message ?: "Failed to load transactions"
+                currentCoroutineContext().ensureActive()
+                _error.value = t.message ?: loadStringRes(Res.string.onchain_transactions_load_failed)
                 _hasMoreTransactions.value = false
             } finally {
                 _isLoading.value = false
@@ -219,7 +226,8 @@ class OnchainTransactionsViewModel : ViewModel() {
                     lastSeenTxid = rows.lastOrNull { it.confirmations > 0 }?.txid ?: seen
                 }
             } catch (t: Throwable) {
-                _error.value = t.message ?: "Failed to load more transactions"
+                currentCoroutineContext().ensureActive()
+                _error.value = t.message ?: loadStringRes(Res.string.onchain_transactions_load_more_failed)
             } finally {
                 _isLoadingMore.value = false
             }

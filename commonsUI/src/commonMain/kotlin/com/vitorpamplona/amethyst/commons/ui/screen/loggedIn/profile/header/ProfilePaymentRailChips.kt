@@ -191,9 +191,6 @@ private fun RailAndTargetChips(
         nav.nav(Route.SendPayment(baseUser.pubkeyHex, method.routeKey))
     }
 
-    // The BOLT12 offer whose pay/copy dialog is open, if any.
-    var bolt12DialogOffer by remember { mutableStateOf<String?>(null) }
-
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -232,22 +229,7 @@ private fun RailAndTargetChips(
             }
         }
 
-        bolt12Offers.forEach { offer ->
-            ProfilePaymentChip(
-                color = BitcoinOrange,
-                label = stringRes(Res.string.bolt12_lightning_offer),
-                detail = remember(offer) { abbreviateBolt12Offer(offer) },
-                copyValue = offer,
-                onClick = { bolt12DialogOffer = offer },
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.Bolt,
-                    contentDescription = null,
-                    tint = BitcoinOrange,
-                    modifier = Size16Modifier,
-                )
-            }
-        }
+        bolt12Offers.forEach { offer -> Bolt12OfferChip(offer, accountViewModel) }
 
         if (onchainAvailable) {
             ProfilePaymentChip(
@@ -289,12 +271,39 @@ private fun RailAndTargetChips(
             PaymentTargetChip(baseUser, target, accountViewModel, nav)
         }
     }
+}
 
-    bolt12DialogOffer?.let { offer ->
+/**
+ * A BOLT12 offer as a payment chip: tapping opens the pay/copy dialog, long-pressing copies it.
+ * Shared by the profile's payment rail and the BOLT12 offer list card in the feed.
+ */
+@Composable
+fun Bolt12OfferChip(
+    offer: String,
+    accountViewModel: AccountViewModel,
+) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    ProfilePaymentChip(
+        color = BitcoinOrange,
+        label = stringRes(Res.string.bolt12_lightning_offer),
+        detail = remember(offer) { abbreviateBolt12Offer(offer) },
+        copyValue = offer,
+        onClick = { showDialog = true },
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Bolt,
+            contentDescription = null,
+            tint = BitcoinOrange,
+            modifier = Size16Modifier,
+        )
+    }
+
+    if (showDialog) {
         Bolt12OffersDialog(
             offers = listOf(offer),
             accountViewModel = accountViewModel,
-            onDismiss = { bolt12DialogOffer = null },
+            onDismiss = { showDialog = false },
         )
     }
 }

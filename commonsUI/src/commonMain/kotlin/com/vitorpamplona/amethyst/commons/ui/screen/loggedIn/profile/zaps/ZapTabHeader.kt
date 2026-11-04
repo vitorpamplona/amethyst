@@ -24,9 +24,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.profile.zaps.dal.UserProfileZapsViewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.zaps
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel

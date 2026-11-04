@@ -51,6 +51,7 @@ import android.os.Build
 object LocationProviderLadder {
     // Compile-time String constants, inlined by the compiler, so naming
     // FUSED_PROVIDER (added in API 31) is safe on older runtimes.
+    @Suppress("InlinedApi")
     private val FULL_LADDER =
         listOf(
             LocationManager.FUSED_PROVIDER,

@@ -8,6 +8,9 @@
     "  Keys match case-insensitively against the Crowdin username; a numeric key",
     "  matches the Crowdin user id.",
     "",
+    "ignore: Crowdin usernames never credited, such as the maintainer account",
+    "  that uploads machine translations and key removals. Hand-kept.",
+    "",
     "sinceLastTag: a rolling snapshot of who has translated since the last release",
     "  tag. Each entry is { user, languages }. Refreshed on every --seed run; do",
     "  not hand-edit. The changelog '## Translations' block is generated offline",
@@ -75,183 +78,18 @@
     "crowdin.pretended462": "",
     "rchk": ""
   },
+  "ignore": [
+    "vitorpamplona"
+  ],
   "sinceLastTag": {
-    "tag": "v1.17.0",
-    "since": "2026-10-05T15:39:33-04:00",
+    "tag": "v1.20.0",
+    "since": "2026-10-24T16:25:42-04:00",
     "translators": [
       {
-        "user": "raj2516",
-        "languages": [
-          "Hindi"
-        ]
-      },
-      {
-        "user": "vitorpamplona",
-        "languages": []
-      },
-      {
-        "user": "greenart7c3",
-        "languages": []
-      },
-      {
-        "user": "eru-desu",
-        "languages": []
-      },
-      {
-        "user": "ZZoltan",
-        "languages": []
-      },
-      {
-        "user": "naked",
-        "languages": []
-      },
-      {
-        "user": "Pgds",
-        "languages": []
-      },
-      {
-        "user": "REMOVED_USER",
-        "languages": []
-      },
-      {
-        "user": "sandro.curzi.88",
-        "languages": []
-      },
-      {
-        "user": "vazw",
-        "languages": []
-      },
-      {
         "user": "Bardesss",
-        "languages": []
-      },
-      {
-        "user": "anthony-robin",
-        "languages": []
-      },
-      {
-        "user": "Pextar",
-        "languages": []
-      },
-      {
-        "user": "Holdenjp",
-        "languages": []
-      },
-      {
-        "user": "ra5pvt1n",
-        "languages": []
-      },
-      {
-        "user": "John..doe",
-        "languages": []
-      },
-      {
-        "user": "petrikaj",
-        "languages": []
-      },
-      {
-        "user": "Turiz",
-        "languages": []
-      },
-      {
-        "user": "xgabrirossx",
-        "languages": []
-      },
-      {
-        "user": "adhrasreoshiathoi",
-        "languages": []
-      },
-      {
-        "user": "davotoula",
-        "languages": []
-      },
-      {
-        "user": "crackadoo",
-        "languages": []
-      },
-      {
-        "user": "BitByBit21",
-        "languages": []
-      },
-      {
-        "user": "csavastel",
-        "languages": []
-      },
-      {
-        "user": "vietnamstr",
-        "languages": []
-      },
-      {
-        "user": "Luxvitae",
-        "languages": []
-      },
-      {
-        "user": "Yonle",
-        "languages": []
-      },
-      {
-        "user": "thetranslator8",
-        "languages": []
-      },
-      {
-        "user": "ismailsudirman83",
-        "languages": []
-      },
-      {
-        "user": "Stella2023",
-        "languages": []
-      },
-      {
-        "user": "6x",
-        "languages": []
-      },
-      {
-        "user": "LeonusDH",
-        "languages": []
-      },
-      {
-        "user": "liizzzz",
-        "languages": []
-      },
-      {
-        "user": "munich4182",
-        "languages": []
-      },
-      {
-        "user": "REMOVED_USER",
-        "languages": []
-      },
-      {
-        "user": "rodrigohenrik",
-        "languages": []
-      },
-      {
-        "user": "flobstr",
-        "languages": []
-      },
-      {
-        "user": "Maxblake",
-        "languages": []
-      },
-      {
-        "user": "cxplay",
-        "languages": []
-      },
-      {
-        "user": "VASHvic",
-        "languages": []
-      },
-      {
-        "user": "hlcbump",
-        "languages": []
-      },
-      {
-        "user": "StellarStoic",
-        "languages": []
-      },
-      {
-        "user": "D4rkFIow",
-        "languages": []
+        "languages": [
+          "Dutch"
+        ]
       },
       {
         "user": "summoner001",
@@ -260,56 +98,28 @@
         ]
       },
       {
+        "user": "raj2516",
+        "languages": [
+          "Hindi"
+        ]
+      },
+      {
+        "user": "StellarStoic",
+        "languages": [
+          "Slovenian"
+        ]
+      },
+      {
         "user": "fiddleway",
-        "languages": []
-      },
-      {
-        "user": "Awiteb",
-        "languages": []
-      },
-      {
-        "user": "hypnotichemionus3",
-        "languages": []
-      },
-      {
-        "user": "Coool",
-        "languages": []
-      },
-      {
-        "user": "hypnotichemionus4",
-        "languages": []
+        "languages": [
+          "Uzbek"
+        ]
       },
       {
         "user": "maxblake2015",
-        "languages": []
-      },
-      {
-        "user": "eiie7",
-        "languages": []
-      },
-      {
-        "user": "SeriousREC",
-        "languages": []
-      },
-      {
-        "user": "markkks",
-        "languages": []
-      },
-      {
-        "user": "helokuntzer",
-        "languages": []
-      },
-      {
-        "user": "Kevin_1",
-        "languages": []
-      },
-      {
-        "user": "crowdin.pretended462",
-        "languages": []
-      },
-      {
-        "user": "rchk",
-        "languages": []
+        "languages": [
+          "Polish"
+        ]
       }
     ]
   }

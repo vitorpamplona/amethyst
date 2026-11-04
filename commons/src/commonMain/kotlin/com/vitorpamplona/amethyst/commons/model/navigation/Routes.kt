@@ -39,6 +39,7 @@ sealed interface MediaFeedRoute {
     val message: String?
 }
 
+@Serializable
 sealed class Route {
     @Serializable object Home : Route()
 
@@ -68,6 +69,8 @@ sealed class Route {
     @Serializable object Communities : Route()
 
     @Serializable object NewCommunity : Route()
+
+    @Serializable object NewGitRepository : Route()
 
     @Serializable data class EditCommunity(
         val kind: Int,
@@ -365,6 +368,45 @@ sealed class Route {
         val trackAddress: String,
     ) : Route()
 
+    /** The user's drss.io folders and lists: the river's read list, the write list, and their tree. */
+    @Serializable object DrssLists : Route()
+
+    /** drss.io's listening queue: the episodes the user is part way through, then the river's. */
+    @Serializable object DrssListen : Route()
+
+    /** The user's drss.io listening history, by day, and the feeds they hear most. */
+    @Serializable object DrssHistory : Route()
+
+    /** Follow [pubKeyHex], usually a feed's bot, into one of the follow sets drss writes to. */
+    @Serializable
+    data class DrssFollowInto(
+        val pubKeyHex: HexKey,
+    ) : Route()
+
+    /** Save the article at [articleAddress] into one of the collections drss writes to. */
+    @Serializable
+    data class DrssSaveTo(
+        val articleAddress: String,
+    ) : Route()
+
+    /** Add the event [eventId] to one of the user's older drss collections (kind 30102). */
+    @Serializable
+    data class DrssCollectTo(
+        val eventId: HexKey,
+    ) : Route()
+
+    /** Record which feed the user found through the article at [articleAddress], drss.io's provenance. */
+    @Serializable
+    data class DrssRecordProvenance(
+        val articleAddress: String,
+    ) : Route()
+
+    /** Edit the user's drss.io show at [showAddress]. */
+    @Serializable
+    data class DrssShowEdit(
+        val showAddress: String,
+    ) : Route()
+
     @Serializable object Chess : Route()
 
     @Serializable object Wallet : Route()
@@ -457,6 +499,18 @@ sealed class Route {
     }
 
     @Serializable object SecurityFilters : Route()
+
+    @Serializable object PrivacyLockSettings : Route()
+
+    /** The feeds the user built for Home: list, create, edit, delete. */
+    @Serializable object CustomFeeds : Route()
+
+    /** Creates a custom feed, or edits the one with [id]. */
+    @Serializable data class EditCustomFeed(
+        val id: String? = null,
+    ) : Route()
+
+    @Serializable object WebOfTrust : Route()
 
     @Serializable object BlockedUsers : Route()
 
@@ -573,6 +627,8 @@ sealed class Route {
 
     @Serializable object AudioVisualizerSettings : Route()
 
+    @Serializable object AccentColorSettings : Route()
+
     @Serializable object BottomBarSettings : Route()
 
     @Serializable object DrawerSettings : Route()
@@ -626,6 +682,33 @@ sealed class Route {
 
     @Serializable object EventSync : Route()
 
+    /** Developer tools hub: NIP-19 converter, event inspector, kind crawler, relay console. */
+    @Serializable object DevTools : Route()
+
+    @Serializable data class DevToolsNip19(
+        val input: String? = null,
+    ) : Route()
+
+    /** [noteKey] is a cached note's id or address, pre-filled into the inspector. */
+    @Serializable data class DevToolsEventInspector(
+        val noteKey: String? = null,
+    ) : Route()
+
+    @Serializable object DevToolsKinds : Route()
+
+    /** Kind lookup for one [kind]: its name and how clients encode it, sampled from relays. */
+    @Serializable data class DevToolsKindUsage(
+        val kind: Int,
+    ) : Route()
+
+    @Serializable data class DevToolsEventFinder(
+        val eventId: HexKey,
+    ) : Route()
+
+    @Serializable data class DevToolsRelayConsole(
+        val url: String? = null,
+    ) : Route()
+
     @Serializable object RequestToVanish : Route()
 
     @Serializable object VanishEvents : Route()
@@ -638,7 +721,14 @@ sealed class Route {
 
     @Serializable object EditNestsServers : Route()
 
-    @Serializable object CordnLink : Route()
+    /**
+     * The "what does this cordn link point at" screen. [link] pre-fills it
+     * when the screen opens from a deep link or a scanned QR code: a bare
+     * `cordn1…` or a cordn.net share link, as `CordnLinkInspection` reads it.
+     */
+    @Serializable data class CordnLink(
+        val link: String? = null,
+    ) : Route()
 
     /**
      * One cordn room.
@@ -750,6 +840,11 @@ sealed class Route {
     ) : Route()
 
     @Serializable data class PollResults(
+        val noteId: String,
+    ) : Route()
+
+    /** Every relay of a relay-list event (NIP-65, NIP-17, NIP-51 sets and lists…), in a lazy list. */
+    @Serializable data class RelayListMembers(
         val noteId: String,
     ) : Route()
 

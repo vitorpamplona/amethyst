@@ -123,8 +123,8 @@ cli/src/main/kotlin/com/vitorpamplona/amethyst/cli/
                                #   `--help` and the README are kept in sync with.
 ```
 
-**Dependencies:** `:quartz` + `:commons` (+ `:geode` for `amy serve`) +
-kotlinx-coroutines + OkHttp + Jackson. **No Android, no Compose.** Amy
+**Dependencies:** quartz (`libs.quartz`) + `:commons` (+ `:geode` for `amy serve`) +
+kotlinx-coroutines + kotlinx-serialization + OkHttp + SnakeYAML. **No Android, no Compose.** Amy
 compiles on any JDK 21 host. Never add a Gradle dependency on `:amethyst`
 or `:desktopApp`.
 
@@ -166,11 +166,12 @@ Before writing anything, answer three questions:
 
 ### 2. Extract from Android
 
-The single most important recurring task for Amy's growth. Most
-Amethyst features today live in `amethyst/src/main/java/…/model/` or
-`…/service/` with Android-only imports (`Context`, `SharedPreferences`,
-`WorkManager`, `Log`, `Bitmap`). Amy cannot call those directly — they
-have to move.
+The single most important recurring task for Amy's growth. Most domain
+logic already lives in `commons/` (`Account`, `LocalCache`, the feeds and
+ViewModels), but some still sits in `amethyst/src/main/java/…/service/` or
+`…/model/` with Android-only imports (`Context`, `SharedPreferences`,
+`WorkManager`, `android.util.Log`, `Bitmap`). Amy cannot call those
+directly — they have to move.
 
 1. Identify the class in `amethyst/` (e.g. `ReactionPost.kt`).
 2. List its Android dependencies.
@@ -185,9 +186,10 @@ have to move.
 5. Update the Android caller to use the new location. Add a JVM test.
 6. Only now, add the `cli/commands/…` file that calls it.
 
-**What to keep in `amethyst/`:** screens, navigation, Android-specific
-side-effects (notifications, background services, camera, Intents).
-Everything else is a candidate to move.
+**What to keep in `amethyst/`:** Android-specific side-effects
+(notifications, background services, camera, Intents) and the actuals of
+shared ports. Screens and navigation are shared UI in `commonsUI/`, which
+amy never depends on. Everything else is a candidate to move to `commons/`.
 
 ### 3. Command file template
 
@@ -198,6 +200,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 
 object NoteCommands {
     // The per-group usage text. `amy note --help` prints it; keep it in
@@ -220,7 +223,7 @@ object NoteCommands {
         args.rejectUnknown()                           // --typo → bad_args, exit 2
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val event = com.vitorpamplona.amethyst.commons.note.buildTextNote(ctx.signer, text)
+            val event = ctx.signer.sign(TextNoteEvent.build(text))
             val ack = ctx.publish(event, relays.ifEmpty { ctx.outboxRelays() })
             RawEventSupport.publishGuard(ack, event.id)?.let { return it }  // all-rejected → `rejected`, exit 1
             Output.emit(
@@ -274,6 +277,7 @@ contract.
   `rejected_by`: a list of `{relay, reason}` objects, because the relay's
   NIP-01 OK reason (`blocked: …`, `rate-limited: …`, a connect error, or
   `no response within timeout`) is the answer to "why didn't it post".
+  A `rate-limited:` refusal that stated its back-off adds `retry_after_ms`.
 - Lists of events under a plural key (`"messages"`, `"members"`); each
   item converges on `event_id` / `author` / `created_at` / `content`
   (+ domain extras). `author` is reserved for the key that signed an
@@ -301,9 +305,19 @@ contract.
   `http_error`, `bad_response`, `not_found`, `exists`, `read_only`,
   `no_identity`, `bad_account`, `signer_error`, `decrypt_failed`.
 - **Relay routing:** `no_relays`, `no_dm_relays`, `no_inbox_relays`,
-  `no_servers`, `servers_unreachable`, `relay_error`, `sync_error`.
+  `no_servers`, `servers_unreachable`, `relay_error`, `sync_error`,
+  `no_relay_served` (`fetch`: every queried relay CLOSED the REQ, refused it for
+  auth, could not be reached, or stayed silent past `--timeout`, and
+  nothing arrived; payload carries `relay_errors`), `incomplete` (`fetch
+  --paginate`: a walk delivered events and then gave up; what arrived is still
+  written, and the payload carries `count`, `out`, `incomplete_relays` and
+  `relay_errors`).
 - **Groups:** `not_member` (you aren't in the group / group unknown),
   `target_not_member` (the *other* user isn't).
+- **Chess:** `not_your_turn` (a move by a player out of turn, by a
+  spectator, or after the game ended), `illegal_move`, `not_a_player` (you
+  hold no seat, and cannot take one, in that game), `no_draw_offer` (nothing
+  to accept), `not_waiting` / `too_early` (no game to claim, or not yet).
 - **Cashu:** `no_wallet`, `no_mint`, `insufficient_funds`,
   `mint_unreachable`, `mint_http_<status>`, `mint_proofs_spent`,
   `mint_quote_gone`, `nutzap_locked_to_wrong_key`, `invoice_failed`.
@@ -496,6 +510,11 @@ events.
 │   ├── aliases.json                     # local name → npub map (init writes a self-entry)
 │   ├── cashu.json                       # NIP-60 NUT-13 counters: {"keyset_counters":{"<id>":<long>}}
 │   ├── concord.json                     # Concord community secrets (ConcordStore)
+│   ├── wot/                             # `amy trust`: the NIP-85 network index, the apps' format
+│   │   ├── network-v2.bin               #   the index (TrustNetworkStore)
+│   │   ├── network-ids-v2.bin           #   event ids + tombstones, read only by syncs
+│   │   ├── partial-network*-v2.bin      #   a cut-off first download, resumed by the next
+│   │   └── observers/<hex>/             #   `--observer` networks, same layout, read-only
 │   └── marmot/
 │       ├── keypackages.bundle           # MLS KeyPackage bundles (NostrSignerInternal)
 │       └── groups/

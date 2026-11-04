@@ -27,6 +27,9 @@ import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.UserNip05Cac
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusCache
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.UserCardsCache
+import com.vitorpamplona.amethyst.commons.relays.dialableReadRelays
+import com.vitorpamplona.amethyst.commons.relays.dialableRelays
+import com.vitorpamplona.amethyst.commons.relays.dialableWriteRelays
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.util.withLock
@@ -37,7 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapMintTag
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -110,7 +113,7 @@ class User(
 
     fun pubkey() = Hex.decode(pubkeyHex)
 
-    fun pubkeyNpub() = pubkey().toNpub()
+    fun pubkeyNpub() = NPub.create(pubkeyHex)
 
     fun pubkeyDisplayHex() = pubkeyNpub().toShortDisplay(5)
 
@@ -143,13 +146,22 @@ class User(
 
     fun toNProfile() = NProfile.create(pubkeyHex, relayHints())
 
-    fun outboxRelays() = authorRelayList()?.writeRelaysNorm()
+    // Every relay accessor below reads this user's lists as SOMEONE ELSE's data: they feed the
+    // sockets we open to reach this user, and the hints we write into events for others to dial.
+    // A local relay in another user's list names their machine, so it is filtered out here (see
+    // relays/OthersRelays.kt). The account's own lists are read unfiltered by its own states.
 
-    fun relayHints() = outboxRelays()?.take(3) ?: relays?.mostUsed()?.take(3) ?: emptyList()
+    fun outboxRelays() = authorRelayList()?.dialableWriteRelays()
 
-    fun inboxRelays() = authorRelayList()?.readRelaysNorm()
+    /**
+     * Up to three relays where others can find this user, for the hints we write into our own
+     * events and nprofiles. Never a local relay, the same rule as [bestRelayHint].
+     */
+    fun relayHints() = outboxRelays()?.take(3) ?: relays?.mostUsedDialable()?.take(3) ?: emptyList()
 
-    fun dmInboxRelays() = dmInboxRelayList()?.relays()?.ifEmpty { null } ?: inboxRelays()
+    fun inboxRelays() = authorRelayList()?.dialableReadRelays()
+
+    fun dmInboxRelays() = dmInboxRelayList()?.dialableRelays()?.ifEmpty { null } ?: inboxRelays()
 
     /**
      * Strict variant of [dmInboxRelays] that returns ONLY the user's NIP-17
@@ -167,19 +179,20 @@ class User(
      * Returns `null` when the recipient has no published kind:10050 (or an
      * empty one) — callers treat this as "unreachable via NIP-17".
      */
-    fun dmInboxRelaysStrict() = dmInboxRelayList()?.relays()?.ifEmpty { null }
+    fun dmInboxRelaysStrict() = dmInboxRelayList()?.dialableRelays()?.ifEmpty { null }
 
-    fun bestRelayHint() = authorRelayList()?.writeRelaysNorm()?.firstOrNull() ?: mostUsedNonLocalRelay()
+    /** The one relay hint for this user that we write into a `p` tag: never a local relay. */
+    fun bestRelayHint() = outboxRelays()?.firstOrNull() ?: mostUsedDialableRelay()
 
     fun allUsedRelaysOrNull() = relays?.allOrNull()
 
     fun allUsedRelays() = relays?.allOrNull() ?: emptySet()
 
-    fun mostUsedNonLocalRelay() = relays?.mostUsedNonLocalRelay()
+    fun mostUsedDialableRelay() = relays?.mostUsedDialableRelay()
 
     fun toPTag() = PTag(pubkeyHex, bestRelayHint())
 
-    fun toNostrUri() = "nostr:${toNProfile()}"
+    fun toNostrUri() = NProfile.createNostrUri(pubkeyHex, relayHints())
 
     fun toBestDisplayName(): String = metadataOrNull()?.bestName() ?: pubkeyDisplayHex()
 

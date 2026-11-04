@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.layouts
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
@@ -32,9 +29,5 @@ actual fun HorizontalTwoPane(
     second: @Composable () -> Unit,
     splitFraction: Float,
     modifier: Modifier,
-) {
-    Row(modifier) {
-        Box(Modifier.weight(splitFraction).fillMaxHeight()) { first() }
-        Box(Modifier.weight(1f - splitFraction).fillMaxHeight()) { second() }
-    }
-}
+    onDividerDrag: ((deltaDp: Float) -> Unit)?,
+) = ProportionalTwoPane(first, second, splitFraction, modifier, onDividerDrag)

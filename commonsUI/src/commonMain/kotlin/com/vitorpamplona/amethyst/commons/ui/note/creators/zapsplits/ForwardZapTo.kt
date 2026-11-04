@@ -45,7 +45,7 @@ import com.vitorpamplona.amethyst.commons.resources.zap_split_explainer
 import com.vitorpamplona.amethyst.commons.resources.zap_split_search_and_add_user
 import com.vitorpamplona.amethyst.commons.resources.zap_split_search_and_add_user_placeholder
 import com.vitorpamplona.amethyst.commons.resources.zap_split_title
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
@@ -135,7 +135,7 @@ fun ForwardZapTo(
             state = postViewModel.forwardZapToEditting,
             onTextChanged = postViewModel::onForwardZapTextChanged,
             inputTransformation = MentionPreservingInputTransformation,
-            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+            outputTransformation = rememberUrlUserTagOutputTransformation(),
             label = { Text(text = stringRes(Res.string.zap_split_search_and_add_user)) },
             modifier = Modifier.fillMaxWidth(),
             placeholder = {

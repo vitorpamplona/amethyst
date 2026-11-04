@@ -35,6 +35,9 @@ fun filterGiftWrapsToPubkey(
     since: Long?,
     until: Long? = null,
     limit: Int? = null,
+    kinds: List<Int> = listOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND),
+    purpose: SubPurpose = SubPurpose.DIRECT_MESSAGES,
+    purposeDetail: String? = null,
 ): List<RelayBasedFilter> {
     if (pubkey.isNullOrEmpty()) return emptyList()
 
@@ -43,8 +46,9 @@ fun filterGiftWrapsToPubkey(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.DIRECT_MESSAGES,
-                    kinds = listOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND),
+                    purpose = purpose,
+                    purposeDetail = purposeDetail,
+                    kinds = kinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     // A gift wrap's outer created_at is randomized up to 2 days before the real
                     // message time, so widen the lower bound by 2 days to catch wraps for messages

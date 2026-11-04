@@ -68,7 +68,7 @@ Desktop app only supports nsec/npub login. Quartz has a **complete, verified** N
 ```
 User pastes bunker URI → validate format → generate ephemeral keypair
 → create NostrSignerRemote via fromBunkerUri() → call connect() over relays
-→ remote signer (nsec.app/Amber) approves → validate secret if present
+→ remote signer (Amber or a web signer) approves → validate secret if present
 → receive user pubkey → call switch_relays → update relay set if changed
 → AccountState.LoggedIn with NostrSignerRemote as signer
 → all sign/encrypt ops proxy transparently through remote signer
@@ -78,7 +78,7 @@ User pastes bunker URI → validate format → generate ephemeral keypair
 ### Research Insight: NIP-46 Spec Compliance
 - **Secret validation**: If bunker URI contains `secret=`, client MUST validate the secret returned by `connect` response matches. If no secret in URI, skip validation.
 - **`switch_relays`**: "Compliant clients should send a `switch_relays` request immediately upon establishing a connection." Remote signer replies with updated relay list or null.
-- **Auth URL**: Remote signer may respond with `{"result": "auth_url", "error": "<URL>"}` — client should display URL to user for confirmation (e.g., nsec.app web confirmation).
+- **Auth URL**: Remote signer may respond with `{"result": "auth_url", "error": "<URL>"}` — client should display URL to user for confirmation (e.g., a web signer's confirmation page).
 
 ## Step 0: Prerequisite Tasks (Blocking)
 
@@ -357,7 +357,7 @@ RemoteSignerManager.launchWaitAndParse():
 - `TimedOut` → throw `TimedOutException`
 - `ReceivedButCouldNotPerform` → throw `CouldNotPerformException`
 
-**Auth URL edge case:** If remote signer needs web confirmation (nsec.app pattern), it returns `auth_url` response. Quartz doesn't handle this natively — **document as known limitation for v1**. Most bunker signers (Amber, local nsecBunker) don't use auth_url.
+**Auth URL edge case:** If remote signer needs web confirmation (the web signer pattern), it returns `auth_url` response. Quartz doesn't handle this natively — **document as known limitation for v1**. Most bunker signers (Amber, local nsecBunker) don't use auth_url.
 
 #### `saveBunkerAccount(ephemeralPrivKeyHex: String)`
 
@@ -633,7 +633,7 @@ Simple `AlertDialog`:
 
 ## Known Limitations (v1)
 
-1. **Auth URL flow** — nsec.app may return `auth_url` response requiring web confirmation. Not handled in v1. Most signers (Amber, local bunkers) don't use this.
+1. **Auth URL flow** — a web signer may return `auth_url` response requiring web confirmation. Not handled in v1. Most signers (Amber, local bunkers) don't use this.
 2. **`decryptZapEvent()`** — Not implemented in quartz's `NostrSignerRemote`. Zap decryption will fail for bunker accounts.
 3. **`deriveKey()`** — Not implemented. NIP-06 key derivation won't work for bunker accounts.
 4. **Single account** — Only one bunker OR one internal account at a time. Multi-account is a separate PR.
@@ -670,7 +670,7 @@ Simple `AlertDialog`:
 
 | Aspect | `bunker://` (remote-signer-initiated) | `nostrconnect://` (client-initiated) |
 |--------|---------------------------------------|--------------------------------------|
-| Who generates URI | Remote signer (nsec.app, Amber) | Desktop client |
+| Who generates URI | Remote signer (Amber, a web signer) | Desktop client |
 | Who scans/pastes | Desktop user pastes into app | User pastes into their signer app |
 | Secret | Optional | **Required** (client generates) |
 | Permissions | Not specified in URI | Client requests via `perms=` param |
@@ -698,7 +698,7 @@ nostrconnect://<client-pubkey>?relay=wss://relay1.example.com&relay=wss://relay2
 3. Builds `nostrconnect://` URI with connected relay URLs + perms + secret
 4. Displays:
    - **QR code** (primary — user scans with phone signer)
-   - **Copyable text** (fallback — user pastes into web signer like nsec.app)
+   - **Copyable text** (fallback — user pastes into a web signer)
    - **"Waiting for signer to connect..."** status with spinner
 5. Desktop subscribes to kind 24133 events on specified relays, filtered to ephemeral pubkey
 6. User scans QR / pastes URI into their signer app
@@ -716,7 +716,7 @@ nostrconnect://<client-pubkey>?relay=wss://relay1.example.com&relay=wss://relay2
 **AccountManager.loginWithNostrConnect(client: INostrClient): Pair<String, Job>**
 1. Generate ephemeral `KeyPair()` + `NostrSignerInternal`
 2. Generate random secret (16 hex chars)
-3. Get connected relay URLs from relay manager (+ add `wss://relay.nsec.app` as fallback NIP-46 relay)
+3. Get connected relay URLs from relay manager (+ add `wss://relay.signer.example` as fallback NIP-46 relay)
 4. Build `nostrconnect://` URI string with `name=Amethyst+Desktop&perms=sign_event,nip44_encrypt,nip44_decrypt`
 5. Subscribe to kind 24133 events on specified relays, filtered to ephemeral pubkey
 6. Return (URI string, waiting Job)

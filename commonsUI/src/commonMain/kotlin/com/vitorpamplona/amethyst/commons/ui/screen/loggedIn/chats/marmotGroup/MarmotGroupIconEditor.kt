@@ -38,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupImage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.marmot_add_photo
 import com.vitorpamplona.amethyst.commons.resources.marmot_change_photo
@@ -51,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupIconUrl
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.marmot.client.MarmotGroupImage
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
@@ -60,7 +60,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * icon is [removeRequested], or the group's current (decrypted) avatar. Tapping the
  * avatar opens the system photo picker; a text button below removes the current icon.
  * All selection state is hoisted so the parent screen can turn it into a
- * [com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconChange]
+ * [com.vitorpamplona.marmot.client.MarmotGroupIconChange]
  * at save time.
  */
 @Composable

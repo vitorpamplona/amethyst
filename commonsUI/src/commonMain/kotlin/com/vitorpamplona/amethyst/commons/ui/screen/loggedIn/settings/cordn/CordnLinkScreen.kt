@@ -43,9 +43,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.cordn.CordnLinkInspection
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.cordn.ui.SettingsFormBlock
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -67,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_link_request_sent
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_scan
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_section_input
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_title
+import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
@@ -74,7 +74,10 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSe
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CoordinatorIdentityRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.cordn.client.CordnLinkInspection
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
@@ -82,7 +85,7 @@ import org.jetbrains.compose.resources.stringResource
  * "Someone sent me a `cordn1…` link" — what it points at, and what following it
  * would cost.
  *
- * This screen exists because of §8 of `quartz/plans/2026-09-17-cordn-interop.md`:
+ * This screen exists because of §8 of cordn-kmp's `cordn/plans/2026-09-17-cordn-interop.md`:
  * a cordn group and a Marmot group look the same and are not the same, and the
  * moment the difference can still change a decision is **before** joining. A
  * link is where that moment happens, so the disclosure lives here rather than
@@ -101,9 +104,11 @@ import org.jetbrains.compose.resources.stringResource
 fun CordnLinkScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
+    /** A link this screen was opened with (a deep link or a scanned QR code), inspected on arrival. */
+    initialLink: String? = null,
 ) {
-    var input by remember { mutableStateOf("") }
-    var inspection by remember { mutableStateOf<CordnLinkInspection?>(null) }
+    var input by remember { mutableStateOf(initialLink.orEmpty()) }
+    var inspection by remember { mutableStateOf(initialLink?.let { CordnLinkInspection.of(it) }) }
     var requestState by remember { mutableStateOf<String?>(null) }
     var requesting by remember { mutableStateOf(false) }
     val runtime = accountViewModel.account.cordnRuntime
@@ -111,7 +116,7 @@ fun CordnLinkScreen(
     val requestFailed = stringRes(Res.string.cordn_link_request_failed)
     val asked = stringRes(Res.string.cordn_link_request_sent)
     var scanning by remember { mutableStateOf(false) }
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.cordn_link_title), nav) },
@@ -160,9 +165,11 @@ fun CordnLinkScreen(
                         }
                         OutlinedButton(
                             onClick = {
-                                clipboard.getText()?.text?.let {
-                                    input = it
-                                    inspection = CordnLinkInspection.of(it)
+                                scope.launch {
+                                    clipboard.getText()?.let {
+                                        input = it
+                                        inspection = CordnLinkInspection.of(it)
+                                    }
                                 }
                             },
                         ) {
@@ -263,6 +270,7 @@ fun CordnLinkScreen(
                                             runtime.requestToJoin(coordinator, result.ref.gid)
                                             asked
                                         } catch (e: Exception) {
+                                            currentCoroutineContext().ensureActive()
                                             e.message ?: requestFailed
                                         }
                                     requesting = false

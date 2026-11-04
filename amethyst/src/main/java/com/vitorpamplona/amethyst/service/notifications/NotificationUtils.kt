@@ -37,6 +37,7 @@ import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
 import androidx.core.app.RemoteInput
+import androidx.core.content.ContextCompat
 import androidx.core.content.LocusIdCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.IconCompat
@@ -46,6 +47,7 @@ import coil3.asDrawable
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_mark_read_label
 import com.vitorpamplona.amethyst.commons.resources.app_notification_me
@@ -55,6 +57,8 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.min
@@ -213,6 +217,23 @@ object NotificationUtils {
     // ---------------------------------------------------------------------
     // Standard notification (BigText, or BigPicture when [bigPictureUrl] set)
     // ---------------------------------------------------------------------
+
+    /** Posts a [NotificationMessage] built by a shared composer, on its topic's channel. */
+    suspend fun NotificationManager.postStandard(
+        message: NotificationMessage,
+        applicationContext: Context,
+    ) = postStandard(
+        category = message.topic.category(),
+        id = message.id,
+        messageTitle = message.title,
+        messageBody = message.body,
+        time = message.time,
+        pictureUrl = message.pictureUrl,
+        uri = message.uri,
+        applicationContext = applicationContext,
+        bigPictureUrl = message.bigPictureUrl,
+        badgeUrl = message.badgeUrl,
+    )
 
     suspend fun NotificationManager.postStandard(
         category: NotificationCategory,
@@ -597,6 +618,7 @@ object NotificationUtils {
                 val result = imageLoader.execute(request)
                 (result.image?.asDrawable(applicationContext.resources) as? BitmapDrawable)?.bitmap
             } catch (_: Exception) {
+                currentCoroutineContext().ensureActive()
                 null
             }
         }
@@ -798,3 +820,5 @@ object NotificationUtils {
             else -> NotificationCompat.PRIORITY_DEFAULT
         }
 }
+
+internal fun Context.notificationManager(): NotificationManager = ContextCompat.getSystemService(this, NotificationManager::class.java) as NotificationManager

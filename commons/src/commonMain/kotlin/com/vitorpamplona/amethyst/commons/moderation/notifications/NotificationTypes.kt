@@ -23,7 +23,18 @@ package com.vitorpamplona.amethyst.commons.moderation.notifications
 import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.StateFlow
 
-enum class NotifKind { ZAP, DM, REPLY, MENTION, REPOST, REACTION, FOLLOW }
+enum class NotifKind {
+    ZAP,
+    DM,
+    REPLY,
+    MENTION,
+    REPOST,
+    REACTION,
+    FOLLOW,
+
+    /** A calendar reminder. Its switch is in the calendar settings, not among these toggles. */
+    CALENDAR,
+}
 
 @Immutable
 data class KindToggles(
@@ -45,6 +56,7 @@ data class KindToggles(
             NotifKind.REPOST -> repost
             NotifKind.REACTION -> reaction
             NotifKind.FOLLOW -> follow
+            NotifKind.CALENDAR -> true
         }
 
     fun with(
@@ -59,6 +71,7 @@ data class KindToggles(
             NotifKind.REPOST -> copy(repost = v)
             NotifKind.REACTION -> copy(reaction = v)
             NotifKind.FOLLOW -> copy(follow = v)
+            NotifKind.CALENDAR -> this
         }
 }
 

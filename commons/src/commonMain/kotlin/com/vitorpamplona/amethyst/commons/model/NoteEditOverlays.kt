@@ -22,13 +22,15 @@ package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
+import com.vitorpamplona.quartz.buzz.stream.buzzOnBehalfOf
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
-import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
-import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /*
@@ -70,10 +72,7 @@ fun Note.buzzEffectiveAuthor(): HexKey? {
     val event = event ?: return author?.pubkeyHex
     val relayKey = inGatherers?.firstNotNullOfOrNull { (it as? RelayGroupChannel)?.event?.pubKey }
     if (relayKey != null && event.pubKey == relayKey) {
-        event.tags.firstOrNull { it.size > 1 && it[0] == "actor" && Hex.isHex64(it[1]) }?.let { return it[1] }
-        if (event.tags.any { it.size > 1 && it[0] == "h" }) {
-            event.tags.firstOrNull { it.size > 1 && it[0] == "p" && Hex.isHex64(it[1]) }?.let { return it[1] }
-        }
+        event.tags.buzzOnBehalfOf()?.let { return it }
     }
     return event.pubKey
 }
@@ -122,24 +121,23 @@ fun Note.latestBuzzEdit(users: (HexKey) -> User? = LocalCache::getUserIfExists):
 }
 
 /**
- * The kind-1009 Marmot edit overlaying this message, or null.
- *
- * Marmot fixes both halves of this rule in `foundation/application-messages.md`
- * ("Message edits"): only the original author's account may replace a message,
- * and the latest `created_at` wins with the event id breaking a tie. The
- * tie-break is not decoration — two devices of one account can stamp the same
- * second, and without it two readers would render different text for the same
- * message forever.
- *
- * Authorship is by ACCOUNT, which is what `author?.pubkeyHex` already is for a
- * Marmot inner event: a second device of the same account holds a different MLS
- * leaf but the same account key, and may edit its own account's message.
+ * The kind-1009 Marmot edit overlaying this message, or null: Marmot's rule
+ * ([MarmotMessageEdit.isAuthorized], [MarmotMessageEdit.selectOverlay]), so every
+ * client shows the same text. Only the original author's account may replace a
+ * message, and the latest `created_at` wins with the event id breaking a tie.
  */
 fun Note.latestMarmotEdit(): Note? {
+    // Only a kind-9 chat message is editable; MDK ignores an edit naming anything else.
+    if (event?.kind != ChatEvent.KIND) return null
     val authorHex = author?.pubkeyHex ?: return null
-    return edits
-        .filter { it.author?.pubkeyHex == authorHex && it.event?.kind == MarmotAppEvent.KIND_EDIT }
-        .maxWithOrNull(compareBy({ it.createdAt() ?: 0L }, { it.idHex }))
+    val candidates =
+        edits.mapNotNull { note ->
+            val event = note.event?.takeIf { it.kind == MarmotAppEvent.KIND_EDIT } ?: return@mapNotNull null
+            val edit = MarmotMessageEdit.fromAppEvent(MarmotAppEvent.fromEvent(event)) ?: return@mapNotNull null
+            if (MarmotMessageEdit.isAuthorized(edit, authorHex)) edit to note else null
+        }
+    val winner = MarmotMessageEdit.selectOverlay(candidates.map { it.first }) ?: return null
+    return candidates.first { it.first === winner }.second
 }
 
 /** The kind-3302 Concord edit overlaying this message, or null — author-only, newest by CORD-02 §4 send time. */

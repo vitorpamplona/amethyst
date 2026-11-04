@@ -778,6 +778,8 @@ class EmbeddedWebAppController(
 
     fun clearSiteData() = send(NappletBrowserContract.MSG_CLEAR_SITE_DATA) {}
 
+    fun clearAllSiteData() = send(NappletBrowserContract.MSG_CLEAR_ALL_SITE_DATA) {}
+
     fun requestPageInfo() {
         pageCertificate.value = null
         send(NappletBrowserContract.MSG_PAGE_INFO_REQUEST) {}

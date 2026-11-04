@@ -20,43 +20,12 @@
  */
 package com.vitorpamplona.amethyst
 
+import com.vitorpamplona.amethyst.commons.keystorage.PrivateKeyVault
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
+import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorageVault
 import com.vitorpamplona.quartz.utils.Log
-
-/**
- * The narrow slice of a key store this needs.
- *
- * An interface rather than [SecureKeyStorage] directly so the decision logic
- * below — which store wins, what happens when one fails — is testable without
- * an AndroidKeyStore, which no unit test can reach.
- */
-interface PrivateKeyVault {
-    /** The stored key, or null only when genuinely absent. Throws when the store cannot be read. */
-    suspend fun get(npub: String): String?
-
-    suspend fun save(
-        npub: String,
-        privKeyHex: String,
-    )
-
-    suspend fun delete(npub: String)
-}
-
-/** [PrivateKeyVault] over the real [SecureKeyStorage]. */
-class SecureKeyStorageVault(
-    private val storage: SecureKeyStorage,
-) : PrivateKeyVault {
-    override suspend fun get(npub: String): String? = storage.getPrivateKeyOrThrow(npub)
-
-    override suspend fun save(
-        npub: String,
-        privKeyHex: String,
-    ) = storage.savePrivateKey(npub, privKeyHex)
-
-    override suspend fun delete(npub: String) {
-        storage.deletePrivateKey(npub)
-    }
-}
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Moves account private keys off `androidx.security.crypto` without ever
@@ -180,6 +149,7 @@ class AccountKeyStore(
         try {
             vault.delete(npub)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w(TAG, "Could not delete the private key for $npub from the current store", e)
         }
     }

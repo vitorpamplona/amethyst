@@ -1,0 +1,36 @@
+{
+  "description": "Push-boundary checks shared with Claude Code (.claude/settings.json). The scripts live in tools/agent-hooks/ and decide for themselves whether a call is a git push.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$|create_pull_request$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(git rev-parse --show-toplevel)/tools/agent-hooks/pre-push-spotless.sh\"",
+            "timeout": 180,
+            "statusMessage": "Checking Kotlin formatting before push"
+          },
+          {
+            "type": "command",
+            "command": "\"$(git rev-parse --show-toplevel)/tools/agent-hooks/pre-push-orphan-strings.sh\"",
+            "timeout": 30,
+            "statusMessage": "Checking orphaned translations before push"
+          },
+          {
+            "type": "command",
+            "command": "\"$(git rev-parse --show-toplevel)/tools/agent-hooks/pre-push-compose-escaping.sh\"",
+            "timeout": 30,
+            "statusMessage": "Checking Compose string escaping before push"
+          },
+          {
+            "type": "command",
+            "command": "\"$(git rev-parse --show-toplevel)/tools/agent-hooks/pre-push-agent-config.sh\"",
+            "timeout": 30,
+            "statusMessage": "Checking Claude/Codex agent config before push"
+          }
+        ]
+      }
+    ]
+  }
+}

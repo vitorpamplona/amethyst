@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.chats.rooms.datasource
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.chatrooms.filterNip04DMsFromMe
 import com.vitorpamplona.amethyst.commons.relayClient.chatrooms.filterNip04DMsToMe
@@ -69,7 +70,7 @@ class ChatroomListNip04HistorySubAssembler(
     ): List<RelayBasedFilter>? {
         val user = user(key)
         if (!key.account.isWriteable()) return emptyList()
-        if (!key.account.settings.isChatFeedEnabled(ChatFeedType.NIP04)) return emptyList()
+        if (!key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP04)) return emptyList()
         val homeRelays = key.account.homeRelays.flow.value
         val dmRelays = key.account.dmRelays.flow.value
         val armed = pager.armedRelays((homeRelays + dmRelays).toSet())
@@ -97,10 +98,34 @@ class ChatroomListNip04HistorySubAssembler(
         }
     }
 
+    override val watchedChatFeeds = setOf(ChatFeedType.NIP04)
+
+    // The toggle flipped: let the pager drop (or restore) its relays before the filters rebuild.
+    override fun onChatFeedsToggled() {
+        pager.onEnabledChanged()
+        invalidateFilters()
+    }
+
+    override fun endSub(
+        key: User,
+        subId: String,
+    ) {
+        super.endSub(key, subId)
+        // The subscription is gone: let go of what the app-wide pager holds for it.
+        pager.unbind(key)
+    }
+
     override fun newSub(key: ChatroomListState): Subscription {
         // Repoint the single-active orchestrator at this account's rooms-list NIP-04 cursors (on its
         // ChatroomList) and the relays it fans out to, refreshing the flows from the restored progress.
-        pager.bind(key.account.chatroomList.nip04History, key.account.scope) { allRelays(key.account) }
+        // With NIP-04 turned off in Settings › Messages the pager neither advances nor shows relays.
+        pager.bind(
+            key.account.chatroomList.nip04History,
+            key.account.scope,
+            isEnabled = { key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP04) },
+            owner = user(key),
+        ) { allRelays(key.account) }
+
         return requestNewSubscription(historyListener(key))
     }
 

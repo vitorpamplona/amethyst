@@ -643,12 +643,9 @@
     <string name="wallet_connect_connect_app">ウォレットを接続</string>
     <string name="see_relay_feed">relayフィードを見る</string>
     <string name="pledge_amount_in_sats">誓約額 (sats)</string>
-    <string name="poll_option_description">投票の選択肢の説明</string>
     <string name="poll_zap_value_min">最小ザップ額</string>
     <string name="poll_zap_value_max">最大ザップ額</string>
     <string name="poll_consensus_threshold">コンセンサス</string>
-    <string name="poll_closing_date_time">投票終了日時</string>
-    <string name="poll_closing_in">投票は%1$s後に終了</string>
     <string name="looking_for_event">イベント %1$s を探しています</string>
     <string name="send_zap">Zapを送信</string>
     <string name="custom_zaps_add_a_message">公開メッセージを追加</string>
@@ -697,7 +694,6 @@
     <string name="uploading_state_hashing">ハッシュ化中</string>
     <string name="uploading_state_finished">完了</string>
     <string name="uploading_state_error">エラー</string>
-    <string name="connect_via_tor1">調整</string>
     <string name="connect_via_tor2">Tor設定</string>
     <string name="yes">はい</string>
     <string name="no">いいえ</string>
@@ -771,7 +767,6 @@
     <string name="max_hashtag_limit_title">投稿あたりの最大ハッシュタグ数</string>
     <string name="max_hashtag_limit_explainer">このしきい値を超えるハッシュタグを含む投稿を非表示にします。0 に設定すると無効</string>
     <string name="security_unlimited">∞</string>
-    <string name="new_reaction_symbol">新しいリアクションシンボル</string>
     <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">この投稿の目標募金額を追加します。サポートするクライアントは、寄付を促すためにこれをプログレスバーとして表示することができます</string>
     <string name="zapraiser_target_amount_in_sats">目標募金額 (sats)</string>
@@ -917,9 +912,7 @@
     <string name="created_at">作成日時</string>
     <string name="guidelines">ガイドライン</string>
     <string name="moderators">モデレーター</string>
-    <string name="login_with_external_signer">Amber でログイン</string>
     <string name="status_update">ステータスを更新</string>
-    <string name="poll_zap_value_min_max_explainer">投票は zap 金額によって重み付けされます。スパマーを避けるために最低金額を、大口 zapper が投票を独占するのを防ぐために最高金額を設定できます。すべての投票を同じ価値にするには両方のフィールドに同じ金額を入力してください。任意の金額を受け入れるには空白のままにしてください。</string>
     <string name="error_dialog_talk_to_user">ユーザーにメッセージを送る</string>
     <string name="error_dialog_talk_to_user_name">%1$s にメッセージを送る</string>
     <string name="error_dialog_button_ok">OK</string>
@@ -1449,7 +1442,6 @@
     <string name="closing_time">終了時刻</string>
     <string name="confirm">確認</string>
     <string name="next">次へ</string>
-    <string name="add_poll_option_button">投票オプションボタンを追加</string>
     <string name="go_back">戻る</string>
     <string name="approve">承認</string>
     <string name="connected">接続済み</string>
@@ -1457,13 +1449,9 @@
     <string name="poll_submit">送信</string>
     <string name="poll_view_results">結果を表示</string>
     <string name="restart">再起動</string>
-    <string name="chess_accept">承諾</string>
-    <string name="chess_decline">拒否</string>
     <string name="new_chess_game">新しいチェスゲーム</string>
     <string name="chess_loading_game">ゲームを読み込み中…</string>
     <string name="chess_game_not_found">ゲームが見つかりません</string>
-    <string name="chess_game_waiting">このゲームは終了したか、対戦相手を待っている可能性があります。</string>
-    <string name="chess_game_id">ゲーム ID: %1$s…</string>
     <string name="badge_and_n_others"> および他 %1$d 名</string>
     <string name="remove_language">%1$s を削除</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">信頼できる人と同じ人をフォローして、素晴らしいフィードから始めましょう。</string>
@@ -2435,7 +2423,6 @@
     <string name="media_added_to_profile_gallery">プロフィールギャラリーにメディアを追加しました</string>
     <string name="media_download_has_started_toast">メディアのダウンロードを開始しました…</string>
     <string name="media_servers">メディアサーバー</string>
-    <string name="media_too_big_for_nip95">メディアがNIP-95には大きすぎます</string>
     <string name="messages_cant_upload_explainer">先にメッセージの宛先を入力してください</string>
     <string name="messages_cant_upload_title">アップロードできません</string>
     <string name="messages_new_message_subject">件名</string>
@@ -2664,7 +2651,6 @@
     <string name="poll_consensus_threshold_percent">（0〜100）%</string>
     <string name="poll_is_closed_explainer">この投票は新規票を受け付けていません</string>
     <string name="poll_multiple_choice">複数選択</string>
-    <string name="poll_option_index">選択肢%1$s</string>
     <string name="poll_single_choice">単一選択</string>
     <string name="poll_unable_to_vote">投票できません</string>
     <string name="polls">投票</string>
@@ -2914,7 +2900,6 @@
     <string name="upload_error_title">アップロードエラー</string>
     <string name="upload_error_voice_message_exception">ボイスのアップロードに失敗しました: %1$s</string>
     <string name="upload_error_voice_message_failed">ボイスメッセージのアップロードに失敗しました</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 はボイスメッセージにまだ対応していません</string>
     <string name="uptime">%1$d%稼働率</string>
     <string name="use_internal_tor">Tor エンジンを有効化</string>
     <string name="use_internal_tor_explainer">内蔵版または Orbot を使用</string>

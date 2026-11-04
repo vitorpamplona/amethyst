@@ -66,6 +66,9 @@ import com.vitorpamplona.amethyst.commons.resources.download_to_phone
 import com.vitorpamplona.amethyst.commons.resources.picture_in_picture
 import com.vitorpamplona.amethyst.commons.resources.share_or_save
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.AnimatedOverflowMenuButton
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.FullScreenButton
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.MuteButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.PinBottomIconSize

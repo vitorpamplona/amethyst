@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -49,8 +50,6 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
-import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
-import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
@@ -75,9 +74,8 @@ import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawingIntoText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -86,19 +84,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.hasGeohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
-import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
@@ -193,9 +188,6 @@ open class CommentPostViewModel :
     private var appliedSignature: String? = null
 
     val iMetaAttachments = IMetaAttachments()
-    var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(
-        emptyList(),
-    )
 
     var notifying by mutableStateOf<List<User>?>(null)
 
@@ -559,7 +551,7 @@ open class CommentPostViewModel :
         (replyingTo?.event as? ZapReceiptEvent)?.let { zap ->
             zapSenderToNotify(zap)?.let { sender ->
                 notifying = ((notifying ?: emptyList()) + sender).distinct()
-                if (!draftEvent.tags.mapNotNull(PTag::parseKey).contains(sender.pubkeyHex)) {
+                if (!draftEvent.replyAuthorKeys().contains(sender.pubkeyHex)) {
                     mutedNotifies = mutedNotifies + sender.pubkeyHex
                 }
             }
@@ -578,17 +570,6 @@ open class CommentPostViewModel :
 
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
-        val extraNotesToBroadcast = mutableListOf<Event>()
-
-        if (nip95attachments.isNotEmpty()) {
-            val usedImages = template.tags.taggedQuoteIds().toSet()
-            nip95attachments.forEach {
-                if (usedImages.contains(it.second.id)) {
-                    extraNotesToBroadcast.add(it.first)
-                    extraNotesToBroadcast.add(it.second)
-                }
-            }
-        }
 
         // captured before cancel() resets the chip
         val chosenPow = powOverride
@@ -641,11 +622,11 @@ open class CommentPostViewModel :
                         // (NIP-13 recommendation), starting from the moment a worker
                         // picks the job up rather than when it was queued.
                         val mined = PoWMiner.mine(template, anonSigner.pubKey, powDifficulty, accountViewModel.account.powMinerWorkers(), isActive, TimeUtils::now)
-                        accountViewModel.account.signAnonymouslyAndBroadcast(mined, extraNotesToBroadcast, anonSigner)
+                        accountViewModel.account.signAnonymouslyAndBroadcast(mined, anonymousSigner = anonSigner)
                         accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
                     }
             if (!enqueued) {
-                accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonSigner)
+                accountViewModel.account.signAnonymouslyAndBroadcast(template, anonymousSigner = anonSigner)
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
         } else if (replyGroupId != null) {
@@ -658,8 +639,8 @@ open class CommentPostViewModel :
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
         } else {
-            accountViewModel.account.sendMined(template, PoWReplay.Broadcast(extraNotesToBroadcast), chosenPow) { readyTemplate ->
-                accountViewModel.account.signAndComputeBroadcast(readyTemplate, extraNotesToBroadcast)
+            accountViewModel.account.sendMined(template, PoWReplay.Broadcast(), chosenPow) { readyTemplate ->
+                accountViewModel.account.signAndComputeBroadcast(readyTemplate)
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
         }
@@ -670,14 +651,8 @@ open class CommentPostViewModel :
         if (text.isBlank() || text.trim() == appliedSignature) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
-            val attachments = mutableSetOf<Event>()
-            nip95attachments.forEach {
-                attachments.add(it.first)
-                attachments.add(it.second)
-            }
-
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
     }
 
@@ -693,6 +668,7 @@ open class CommentPostViewModel :
 
         val emojis = account.emoji.findEmojiTags(tagger.message)
         val urls = findURLs(tagger.message)
+        iMetaAttachments.awaitLinkedImages()
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
@@ -782,6 +758,18 @@ open class CommentPostViewModel :
         return template
     }
 
+    /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the comment. */
+    fun uploadDrawing(
+        drawing: RenderedDrawing,
+        alt: String?,
+        onError: (title: String, message: String) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val signer = if (wantsAnonymousPost) anonymousSigner() else null
+            uploadDrawingIntoText(drawing, alt, account, accountViewModel.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message, urlPreviews, signer)
+        }
+    }
+
     fun upload(
         alt: String?,
         contentWarningReason: String?,
@@ -789,18 +777,11 @@ open class CommentPostViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         uploader: MediaUploader,
-        stripMetadata: Boolean = true,
+        useH265: Boolean,
+        stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
     ) {
-        try {
-            uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, stripMetadata)
-        } catch (_: SignerExceptions.ReadOnlyException) {
-            viewModelScope.launch {
-                onError(
-                    loadStringRes(Res.string.read_only_user),
-                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
-                )
-            }
-        }
+        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
     }
 
     fun uploadUnsafe(
@@ -810,7 +791,9 @@ open class CommentPostViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         uploader: MediaUploader,
-        stripMetadata: Boolean = true,
+        useH265: Boolean,
+        stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
@@ -825,8 +808,10 @@ open class CommentPostViewModel :
                     server,
                     account,
                     uploader,
+                    useH265 = useH265,
                     stripMetadata = stripMetadata,
                     onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                    convertGifToMp4 = convertGifToMp4,
                     forcedSigner = if (wantsAnonymousPost) anonymousSigner() else null,
                 )
 
@@ -834,15 +819,7 @@ open class CommentPostViewModel :
                 val urls =
                     results.successful.mapNotNull { state ->
                         val uploaded = state.result
-                        if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                            val nip95 = account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, alt, contentWarningReason)
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
-
-                            note?.let {
-                                "nostr:" + it.toNEvent()
-                            }
-                        } else if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
                             val iMeta =
                                 IMetaTagBuilder(uploaded.url)
                                     .apply {
@@ -1006,7 +983,7 @@ open class CommentPostViewModel :
         val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
+            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
         message.replaceCurrentWord(wordToInsert)

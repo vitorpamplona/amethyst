@@ -20,15 +20,21 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.LocalTextStyle
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,50 +43,96 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.highlights.HighlightQuote
+import com.vitorpamplona.amethyst.commons.model.highlights.HighlightSourceLabels
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_article
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_book
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_comment
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_doi
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_isan
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_isbn
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_more_from
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_movie
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_note
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_paper
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_picture
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_podcast
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_podcast_episode
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_video
+import com.vitorpamplona.amethyst.commons.resources.highlight_source_wiki
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
-import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.CreateClickableTextWithEmoji
-import com.vitorpamplona.amethyst.commons.ui.components.RenderUserAsClickableText
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
+import com.vitorpamplona.amethyst.commons.ui.components.SiteIcon
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.commons.ui.components.measureSpaceWidth
+import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTranslation
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.HighlightQuoteIndent
 import com.vitorpamplona.amethyst.commons.ui.note.HighlightQuoteSpacing
 import com.vitorpamplona.amethyst.commons.ui.note.HighlightedQuote
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.DisplayExternalId
+import com.vitorpamplona.amethyst.commons.ui.note.platform.rememberUrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
+import com.vitorpamplona.quartz.drss.clips.clipRangeMillis
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
-import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
+import com.vitorpamplona.quartz.nip73ExternalIds.books.BookId
+import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
+import com.vitorpamplona.quartz.nip73ExternalIds.movies.MovieId
+import com.vitorpamplona.quartz.nip73ExternalIds.papers.PaperId
+import com.vitorpamplona.quartz.nip73ExternalIds.podcasts.PodcastEpisodeId
+import com.vitorpamplona.quartz.nip73ExternalIds.podcasts.PodcastFeedId
+import com.vitorpamplona.quartz.nip73ExternalIds.podcasts.PodcastPublisherId
+import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
+import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip84Highlights.parse.TextFragmentParser
-import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.Rfc3986
+import com.vitorpamplona.quartz.nip84Highlights.parse.UrlTrackerCleaner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -112,6 +164,7 @@ fun RenderHighlight(
         textFragmentSuffix = selector?.suffix,
         postAddress = noteEvent.inPostAddress(),
         postVersion = noteEvent.inPostVersion(),
+        clipRange = remember(noteEvent) { noteEvent.clipRangeMillis() },
         makeItShort = makeItShort,
         canPreview = canPreview,
         quotesLeft = quotesLeft,
@@ -183,6 +236,7 @@ fun DisplayHighlight(
     postAddress: Address?,
     postVersion: ETag?,
     makeItShort: Boolean,
+    clipRange: LongRange? = null,
     externalId: ExternalId? = null,
     externalIdText: String? = null,
     canPreview: Boolean,
@@ -207,51 +261,17 @@ fun DisplayHighlight(
         Spacer(Modifier.height(HighlightQuoteSpacing))
     }
 
-    val quote =
-        remember(highlight, context, textFragmentPrefix) {
-            HighlightQuote.of(highlight, context, textFragmentPrefix)
-        }
-
-    TranslatableRichTextViewer(
-        content = quote.text,
-        id = quote.text,
-        // Indented like the attribution, so the "Auto-translated from …" line sits under the
-        // quote text rather than under the bar.
-        translationMessageModifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 5.dp, start = HighlightQuoteIndent),
-        accountViewModel = accountViewModel,
-    ) { shown ->
-        // A translation rewrites the passage, so the original offsets stop locating anything.
-        // Translate the quote too and re-find it inside the translated context — ML Kit works
-        // sentence by sentence, so a quote that is one or more whole sentences comes back the
-        // same either way. HighlightQuote.of degrades to the quote alone when the two
-        // translations don't line up, which beats marking a span the reader never highlighted.
-        val translatedQuote = rememberTranslation(highlight, accountViewModel)
-
-        val display =
-            remember(shown, translatedQuote, quote) {
-                if (shown == quote.text) quote else HighlightQuote.of(translatedQuote, shown)
-            }
-
-        HighlightedQuote(
-            text = display.text,
-            highlight = display.marked,
-            modifier = Modifier.fillMaxWidth(),
-        )
+    if (clipRange != null && highlight.isBlank()) {
+        // A drss.io audio clip without its transcript: the range stands in for the quote.
+        DrssClipLabel(clipRange, Modifier.padding(start = HighlightQuoteIndent))
+    } else {
+        DisplayHighlightQuote(highlight, context, textFragmentPrefix, accountViewModel)
     }
 
     Spacer(Modifier.height(HighlightQuoteSpacing))
 
-    val spaceWidth = measureSpaceWidth(textStyle = LocalTextStyle.current)
-
     // Indented to sit under the quote text, not under the quote bar.
-    FlowRow(
-        modifier = Modifier.padding(start = HighlightQuoteIndent),
-        horizontalArrangement = Arrangement.spacedBy(spaceWidth),
-        verticalArrangement = Arrangement.Center,
-    ) {
+    Box(modifier = Modifier.padding(start = HighlightQuoteIndent)) {
         DisplayQuoteAuthor(
             highlightQuote = highlight,
             authorHex = authorHex,
@@ -325,33 +345,48 @@ private fun DisplayQuoteAuthor(
     when {
         addressable != null -> {
             addressable?.let {
-                DisplayEntryForNote(it, userBase, accountViewModel, nav)
+                HighlightSourceFromNote(it, userBase, accountViewModel, nav)
             }
         }
 
         version != null -> {
             version?.let {
-                DisplayEntryForNote(it, userBase, accountViewModel, nav)
+                HighlightSourceFromNote(it, userBase, accountViewModel, nav)
             }
         }
 
         // NIP-84: `r` may be a URL or any text naming the source; only a web address is a link.
         baseUrl != null && HighlightEvent.isUrlReference(baseUrl) -> {
-            val url =
-                remember(baseUrl, highlightQuote, textFragmentPrefix, textFragmentSuffix) {
-                    TextFragmentParser.buildUrl(HttpUrlFormatter.addSchemeIfNeeded(baseUrl), highlightQuote, textFragmentPrefix, textFragmentSuffix)
-                }
-
-            DisplayEntryForAUrl(url, userBase, accountViewModel, nav)
+            HighlightSourceFromUrl(baseUrl, highlightQuote, textFragmentPrefix, textFragmentSuffix, userBase, accountViewModel, nav)
         }
 
-        // A NIP-73 source (`i` tag): a book, paper, podcast episode...
-        externalId != null -> {
+        // The same web page named through NIP-73 gets the same row as an `r` one.
+        externalId is UrlId -> {
+            HighlightSourceFromUrl(externalId.url, highlightQuote, textFragmentPrefix, textFragmentSuffix, userBase, accountViewModel, nav)
+        }
+
+        // Places and topics already have their own navigable chips.
+        externalId is GeohashId || externalId is HashtagId -> {
             DisplayEntryForExternalId(externalId, userBase, accountViewModel, nav)
         }
 
+        // A NIP-73 work (`i` tag): a book, paper, podcast episode, movie...
+        externalId != null -> {
+            HighlightSourceFromExternalId(externalId, userBase, accountViewModel, nav)
+        }
+
         baseUrl != null || externalIdText != null -> {
-            DisplayEntryForText(baseUrl ?: externalIdText ?: "", userBase, accountViewModel, nav)
+            HighlightSourceRow(
+                title = baseUrl ?: externalIdText ?: "",
+                onTitleClick = null,
+                icon = { SourceSymbol(MaterialSymbols.FormatQuote) },
+                byline =
+                    if (userBase == null) {
+                        null
+                    } else {
+                        { userBase?.let { DisplayEntryForUser(it, accountViewModel, nav) } }
+                    },
+            )
         }
 
         userBase != null -> {
@@ -379,45 +414,278 @@ fun DisplayEntryForUser(
     )
 }
 
+/**
+ * The one shape every highlight source takes: a small icon, the source's title on its own line
+ * (tappable when there is somewhere to go), and a muted byline underneath -- the site, the kind
+ * of work, the author. It replaces a row of `Author - medium.com` fragments that wrapped
+ * unpredictably and said little about what was highlighted.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DisplayEntryForNote(
+private fun HighlightSourceRow(
+    title: String,
+    onTitleClick: (() -> Unit)?,
+    icon: @Composable () -> Unit,
+    byline: (@Composable () -> Unit)?,
+) {
+    Row(verticalAlignment = Alignment.Top) {
+        Box(modifier = SourceIconModifier, contentAlignment = Alignment.Center) { icon() }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            if (onTitleClick != null) {
+                ClickableTextPrimary(text = title, maxLines = 2, onClick = onTitleClick)
+            } else {
+                Text(text = title, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+
+            if (byline != null) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    byline()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SourceSymbol(symbol: MaterialSymbol) {
+    Icon(
+        symbol = symbol,
+        contentDescription = null,
+        modifier = Modifier.fillMaxSize(),
+        tint = MaterialTheme.colorScheme.placeholderText,
+    )
+}
+
+@Composable
+private fun BylineText(text: String) {
+    Text(
+        text = text,
+        color = MaterialTheme.colorScheme.placeholderText,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+@Composable
+private fun BylineDot() {
+    Text(text = "\u00B7", color = MaterialTheme.colorScheme.placeholderText, maxLines = 1)
+}
+
+/**
+ * A web page. The title is the page's OpenGraph title when previews are on and the fetch worked,
+ * else the words in its URL, else the site. Tapping the title opens the page scrolled to the
+ * passage (text fragment); tapping the site opens the in-app page that gathers every note and
+ * highlight about this URL.
+ */
+@Composable
+private fun HighlightSourceFromUrl(
+    pageUrl: String,
+    highlightQuote: String,
+    textFragmentPrefix: String?,
+    textFragmentSuffix: String?,
+    userBase: User?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val absoluteUrl = remember(pageUrl) { HttpUrlFormatter.addSchemeIfNeeded(pageUrl) }
+    val passageUrl =
+        remember(absoluteUrl, highlightQuote, textFragmentPrefix, textFragmentSuffix) {
+            TextFragmentParser.buildUrl(absoluteUrl, highlightQuote, textFragmentPrefix, textFragmentSuffix)
+        }
+    // The URL page gathers notes by the page's address: without the `utm_`/`fbclid` noise a
+    // highlighter's copy-paste often carries, which comments on the same page don't share.
+    val pageRoute = remember(absoluteUrl) { Route.Url(UrlTrackerCleaner.clean(absoluteUrl).substringBefore('#')) }
+    val site = remember(absoluteUrl) { HighlightSourceLabels.siteFromUrl(absoluteUrl) }
+    val slugTitle = remember(absoluteUrl) { HighlightSourceLabels.titleFromUrl(absoluteUrl) }
+
+    // Fetching the preview reaches out to the third-party page: only when the user allows it.
+    val previewInfo =
+        if (LocalMediaCapture.current != null || accountViewModel.settings.showUrlPreview()) {
+            (rememberUrlPreviewState(absoluteUrl, accountViewModel) as? UrlPreviewState.Loaded)?.previewInfo
+        } else {
+            null
+        }
+
+    val previewTitle =
+        remember(previewInfo) {
+            previewInfo?.title?.ifBlank { null }?.let { HighlightSourceLabels.cleanTitle(it, previewInfo.siteName) }
+        }
+
+    val title = previewTitle ?: slugTitle ?: site ?: absoluteUrl
+    // The site already is the title when nothing better was found: don't say it twice.
+    val siteLabel = site?.takeIf { it != title }
+    val pageAuthor = previewInfo?.author?.ifBlank { null }
+
+    val uriHandler = LocalUriHandler.current
+
+    HighlightSourceRow(
+        title = title,
+        onTitleClick = { runCatching { uriHandler.openUri(passageUrl) } },
+        icon = {
+            SiteIcon(previewInfo?.iconUrlFullPath, Modifier.fillMaxSize()) {
+                SourceSymbol(MaterialSymbols.Language)
+            }
+        },
+        byline =
+            if (siteLabel == null && userBase == null && pageAuthor == null) {
+                null
+            } else {
+                {
+                    if (siteLabel != null) {
+                        val description = stringRes(Res.string.highlight_source_more_from, siteLabel)
+                        Text(
+                            text = siteLabel,
+                            color = MaterialTheme.colorScheme.placeholderText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier =
+                                Modifier
+                                    .semantics { contentDescription = description }
+                                    .clickable { nav.nav(pageRoute) },
+                        )
+                    }
+
+                    // A nostr author outranks the page's own byline: it is a profile.
+                    if (userBase != null) {
+                        if (siteLabel != null) BylineDot()
+                        DisplayEntryForUser(userBase, accountViewModel, nav)
+                    } else if (pageAuthor != null) {
+                        if (siteLabel != null) BylineDot()
+                        BylineText(pageAuthor)
+                    }
+                }
+            },
+    )
+}
+
+/**
+ * A nostr event: an article, a wiki page, a note, a video... Titled by its `title`/`subject`, or
+ * by its `d` tag while the event is still loading (or when it has no title), else by its kind.
+ * An `a` source knows its kind and author before the event arrives, so the row is never empty.
+ */
+@Composable
+private fun HighlightSourceFromNote(
     note: Note,
     userBase: User?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val noteState by observeNote(note, accountViewModel)
+    val event = noteState.note.event
+    val address = (note as? AddressableNote)?.address
 
-    val author = userBase ?: noteState.note.author
+    val author = userBase ?: noteState.note.author ?: address?.let { rememberUser(it.pubKeyHex) }
 
-    if (author != null) {
-        RenderUserAsClickableText(author, null, accountViewModel, nav)
+    // Any event's tags will do: NIP-84 can quote a wiki page or a video as well as an article.
+    val tagTitle = remember(event) { event?.tags?.firstTagValueFor("title", "subject")?.ifBlank { null } }
+    val slugTitle = remember(address) { address?.dTag?.let { HighlightSourceLabels.titleFromSlug(it) } }
+
+    val kind = event?.kind ?: address?.kind
+    val kindLabel = kind?.let { sourceKindLabel(it) }
+
+    val title = tagTitle ?: slugTitle ?: kindLabel
+
+    if (title == null) {
+        // An `e` source that hasn't loaded: its kind is unknown, so the author is all there is.
+        author?.let { DisplayEntryForUser(it, accountViewModel, nav) }
+        return
     }
 
-    val noteEvent = noteState.note.event as? BaseThreadedEvent ?: return
+    HighlightSourceRow(
+        title = title,
+        onTitleClick = { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } },
+        icon = { SourceSymbol(kindSymbol(kind)) },
+        byline =
+            if ((kindLabel == null || kindLabel == title) && author == null) {
+                null
+            } else {
+                {
+                    val shownKind = kindLabel?.takeIf { it != title }
+                    if (shownKind != null) BylineText(shownKind)
 
-    // A real title/subject from an article or wiki page describes the source well. `alt`
-    // (NIP-31) is deliberately excluded: it's accessibility fallback text, not a caption, and
-    // clients such as Jumble fill it with a generic "This event was published by …" line that
-    // has nothing to do with the highlighted passage.
-    val description = remember(noteEvent) { noteEvent.tags.firstTagValueFor("title", "subject") }
+                    if (author != null) {
+                        if (shownKind != null) BylineDot()
+                        DisplayEntryForUser(author, accountViewModel, nav)
+                    }
+                }
+            },
+    )
+}
 
-    Text("-", maxLines = 1)
+/** A NIP-73 work that isn't a web page: a book, paper, podcast or movie. */
+@Composable
+private fun HighlightSourceFromExternalId(
+    externalId: ExternalId,
+    userBase: User?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val title =
+        when (externalId) {
+            is BookId -> stringRes(Res.string.highlight_source_isbn, externalId.isbn)
+            is PaperId -> stringRes(Res.string.highlight_source_doi, externalId.doi)
+            is MovieId -> stringRes(Res.string.highlight_source_isan, externalId.isan)
+            is PodcastEpisodeId -> stringRes(Res.string.highlight_source_podcast_episode)
+            is PodcastFeedId, is PodcastPublisherId -> stringRes(Res.string.highlight_source_podcast)
+            else -> externalId.toScope()
+        }
 
-    if (description != null) {
-        ClickableTextPrimary(
-            text = description,
-            onClick = { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } },
-        )
-    } else {
-        // No title to show — name the source by its event kind (e.g. "Note", "Blogs") rather
-        // than a raw @note1… id, and keep it clickable through to the source event.
-        val kindName = kindName(noteEvent.kind)
-        ClickableTextPrimary(
-            text = kindName,
-            onClick = { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } },
-        )
-    }
+    val kindLabel =
+        when (externalId) {
+            is BookId -> stringRes(Res.string.highlight_source_book)
+            is PaperId -> stringRes(Res.string.highlight_source_paper)
+            is MovieId -> stringRes(Res.string.highlight_source_movie)
+            else -> null
+        }
+
+    val symbol =
+        when (externalId) {
+            is BookId -> MaterialSymbols.MenuBook
+            is PaperId -> MaterialSymbols.Science
+            is MovieId -> MaterialSymbols.Movie
+            is PodcastEpisodeId, is PodcastFeedId, is PodcastPublisherId -> MaterialSymbols.Podcasts
+            else -> MaterialSymbols.Public
+        }
+
+    // Where to go: the NIP-73 hint when the event carries one, else doi.org for a paper -- the
+    // DOI's own resolver. Nothing for the rest: no other id has a neutral home to send it to.
+    val target =
+        remember(externalId) {
+            externalId.hint()?.takeIf { HighlightEvent.isUrlReference(it) }?.let(HttpUrlFormatter::addSchemeIfNeeded)
+                ?: (externalId as? PaperId)?.let { "https://doi.org/" + it.doi }
+        }
+
+    val uriHandler = LocalUriHandler.current
+
+    HighlightSourceRow(
+        title = title,
+        onTitleClick =
+            if (target != null) {
+                { runCatching { uriHandler.openUri(target) } }
+            } else {
+                null
+            },
+        icon = { SourceSymbol(symbol) },
+        byline =
+            if (kindLabel == null && userBase == null) {
+                null
+            } else {
+                {
+                    if (kindLabel != null) BylineText(kindLabel)
+
+                    if (userBase != null) {
+                        if (kindLabel != null) BylineDot()
+                        DisplayEntryForUser(userBase, accountViewModel, nav)
+                    }
+                }
+            },
+    )
 }
 
 @Composable
@@ -427,53 +695,96 @@ fun DisplayEntryForExternalId(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (userBase != null) {
-        DisplayEntryForUser(userBase, accountViewModel, nav)
-        Text("-", maxLines = 1)
-    }
-    DisplayExternalId(externalId, accountViewModel, nav)
-}
-
-/** A source named in plain text (a non-URL `r` tag, or an `i` value no NIP-73 parser knows). */
-@Composable
-fun DisplayEntryForText(
-    source: String,
-    userBase: User?,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    if (userBase != null) {
-        DisplayEntryForUser(userBase, accountViewModel, nav)
-        Text("-", maxLines = 1)
-    }
-    Text(source, maxLines = 2, overflow = TextOverflow.Ellipsis)
-}
-
-@Composable
-fun DisplayEntryForAUrl(
-    url: String,
-    userBase: User?,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    if (userBase != null) {
-        DisplayEntryForUser(userBase, accountViewModel, nav)
-    }
-
-    val validatedUrl =
-        remember(url) {
-            try {
-                Rfc3986.host(url)
-            } catch (_: Exception) {
-                Log.w("Note Compose") { "Invalid URI: $url" }
-                null
-            }
-        }
-
-    validatedUrl?.let { host ->
+    Row(verticalAlignment = Alignment.CenterVertically) {
         if (userBase != null) {
-            Text("-", maxLines = 1)
+            DisplayEntryForUser(userBase, accountViewModel, nav)
+            Spacer(Modifier.width(4.dp))
+            Text("\u00B7", maxLines = 1)
+            Spacer(Modifier.width(4.dp))
         }
-        ClickableUrlOrBlossom(urlText = host, url = url)
+        DisplayExternalId(externalId, accountViewModel, nav)
+    }
+}
+
+/**
+ * What one event of [kind] is called, singular: "Article", not the "Blogs" a relay's kind filter
+ * lists. Kinds without a singular name here fall back to the catalog's label.
+ */
+@Composable
+private fun sourceKindLabel(kind: Int): String =
+    when (kind) {
+        TextNoteEvent.KIND -> stringRes(Res.string.highlight_source_note)
+        LongFormContentEvent.KIND -> stringRes(Res.string.highlight_source_article)
+        WikiArticleEvent.KIND -> stringRes(Res.string.highlight_source_wiki)
+        PictureEvent.KIND -> stringRes(Res.string.highlight_source_picture)
+        VideoNormalEvent.KIND, VideoShortEvent.KIND, AddressableNormalVideoEvent.KIND, AddressableShortVideoEvent.KIND ->
+            stringRes(Res.string.highlight_source_video)
+        CommentEvent.KIND -> stringRes(Res.string.highlight_source_comment)
+        else -> kindName(kind)
+    }
+
+private fun kindSymbol(kind: Int?): MaterialSymbol =
+    when (kind) {
+        LongFormContentEvent.KIND, WikiArticleEvent.KIND -> MaterialSymbols.AutoMirrored.Article
+        PictureEvent.KIND -> MaterialSymbols.Image
+        VideoNormalEvent.KIND, VideoShortEvent.KIND, AddressableNormalVideoEvent.KIND, AddressableShortVideoEvent.KIND -> MaterialSymbols.Videocam
+        else -> MaterialSymbols.Description
+    }
+
+/** The cached user for [pubKeyHex], created in the background when it isn't cached yet. */
+@Composable
+private fun rememberUser(pubKeyHex: String): User? {
+    var user by remember(pubKeyHex) { mutableStateOf(LocalCache.getUserIfExists(pubKeyHex)) }
+    if (user == null) {
+        LaunchedEffect(pubKeyHex) {
+            user = LocalCache.checkGetOrCreateUser(pubKeyHex)
+        }
+    }
+    return user
+}
+
+// Sized to the first line of body text, so the icon sits beside the title.
+private val SourceIconModifier = Modifier.padding(top = 2.dp).size(18.dp)
+
+@Composable
+private fun DisplayHighlightQuote(
+    highlight: String,
+    context: String?,
+    textFragmentPrefix: String?,
+    accountViewModel: AccountViewModel,
+) {
+    val quote =
+        remember(highlight, context, textFragmentPrefix) {
+            HighlightQuote.of(highlight, context, textFragmentPrefix)
+        }
+
+    TranslatableRichTextViewer(
+        content = quote.text,
+        id = quote.text,
+        // Indented like the attribution, so the "Auto-translated from …" line sits under the
+        // quote text rather than under the bar.
+        translationMessageModifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 5.dp, start = HighlightQuoteIndent),
+        accountViewModel = accountViewModel,
+    ) { shown ->
+        // A translation rewrites the passage, so the original offsets stop locating anything.
+        // Translate the quote too and re-find it inside the translated context — ML Kit works
+        // sentence by sentence, so a quote that is one or more whole sentences comes back the
+        // same either way. HighlightQuote.of degrades to the quote alone when the two
+        // translations don't line up, which beats marking a span the reader never highlighted.
+        val translatedQuote = rememberTranslation(highlight, accountViewModel)
+
+        val display =
+            remember(shown, translatedQuote, quote) {
+                if (shown == quote.text) quote else HighlightQuote.of(translatedQuote, shown)
+            }
+
+        HighlightedQuote(
+            text = display.text,
+            highlight = display.marked,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

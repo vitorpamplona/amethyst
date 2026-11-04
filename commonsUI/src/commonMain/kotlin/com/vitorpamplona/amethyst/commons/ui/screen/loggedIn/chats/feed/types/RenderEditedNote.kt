@@ -66,8 +66,10 @@ fun RenderEditedNote(
         RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
         return
     }
-    // Custom emoji + mentions live on the edit's own tags, so render against those.
-    val tags = remember(editNote.event) { editNote.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+    // Custom emoji + mentions live on the edit's own tags, so render against those. In a
+    // Marmot group an emoji tag names one of the edit's attachments, as in a message.
+    val ownTags = remember(editNote.event) { editNote.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+    val tags = rememberMarmotRenderTags(editNote, accountViewModel) ?: ownTags
 
     Column {
         TranslatableRichTextViewer(

@@ -131,7 +131,7 @@ fun ChannelFileUploadDialog(
         upload = {
             channelScreenModel.upload(
                 onError = accountViewModel.toastManager::toast,
-                uploader = accountViewModel.host.mediaUploader,
+                uploader = accountViewModel.mediaUploader,
                 onceUploaded = onUpload,
             )
 

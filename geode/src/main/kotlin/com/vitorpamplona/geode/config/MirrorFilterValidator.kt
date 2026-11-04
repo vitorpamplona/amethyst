@@ -20,8 +20,9 @@
  */
 package com.vitorpamplona.geode.config
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ObjectNode
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 
 /**
  * Strict boot-time check for a `[[mirror]].filter` JSON string. The
@@ -42,8 +43,6 @@ object MirrorFilterValidator {
     /** Keys whose value must be a JSON array. */
     private val ARRAY_KEYS = setOf("ids", "authors", "kinds")
 
-    private val mapper = ObjectMapper()
-
     /**
      * Throws [IllegalArgumentException] when [json] is not a JSON object,
      * carries an unrecognized top-level key, or gives a list-typed field
@@ -55,21 +54,21 @@ object MirrorFilterValidator {
     ) {
         val node =
             try {
-                mapper.readTree(json)
+                Json.parseToJsonElement(json)
             } catch (e: Exception) {
                 throw IllegalArgumentException("[[mirror]] filter for $url is not valid JSON: $json", e)
             }
-        require(node is ObjectNode) {
+        require(node is JsonObject) {
             "[[mirror]] filter for $url must be a JSON object (a NIP-01 filter), got: $json"
         }
-        node.fieldNames().forEach { field ->
+        node.keys.forEach { field ->
             val isTagKey = field.length > 1 && (field[0] == '#' || field[0] == '&')
             require(field in KNOWN_KEYS || isTagKey) {
                 "[[mirror]] filter for $url has unknown key \"$field\" — a NIP-01 filter uses " +
                     "ids/authors/kinds/since/until/limit/search or #tag/&tag"
             }
             if (field in ARRAY_KEYS || isTagKey) {
-                require(node.get(field).isArray) {
+                require(node[field] is JsonArray) {
                     "[[mirror]] filter for $url: \"$field\" must be a JSON array"
                 }
             }

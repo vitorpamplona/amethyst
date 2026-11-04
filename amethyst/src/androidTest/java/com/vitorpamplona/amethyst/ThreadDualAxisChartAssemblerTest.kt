@@ -31,14 +31,14 @@ import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
-import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.ThreadFeedFilter
 import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
@@ -62,7 +62,7 @@ class ThreadDualAxisChartAssemblerTest {
 
         val client =
             NostrClient(
-                OkHttpWebSocket.Builder(
+                BasicOkHttpWebSocket.Builder(
                     httpClient = {
                         OkHttpClient
                             .Builder()
@@ -175,7 +175,7 @@ class ThreadDualAxisChartAssemblerTest {
     fun threadOrderTest() =
         runBlocking {
             val eventArray =
-                JacksonMapper.mapper.readValue<List<Event>>(db, JacksonMapper.eventListTypeInstance) + Event.fromJson(header)
+                OptimizedJsonMapper.fromJsonToEventList(db) + Event.fromJson(header)
 
             var counter = 0
             eventArray.forEach {

@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.state
 
-import androidx.collection.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.util.cache.AsyncCachedState
 
 // On a cache hit, short-circuit with a remembered State<V?> and skip the produceState coroutine.
 // Only on a miss do we launch the suspending update.
@@ -62,32 +62,4 @@ fun <K : Any, V : Any> produceCachedStateAsync(
         }
     }
     return state
-}
-
-interface AsyncCachedState<K : Any, V : Any> {
-    fun cached(k: K): V?
-
-    suspend fun update(k: K): V?
-}
-
-abstract class GenericBaseCacheAsync<K : Any, V : Any>(
-    capacity: Int,
-) : AsyncCachedState<K, V> {
-    private val cache = LruCache<K, V>(capacity)
-
-    override fun cached(k: K): V? = cache[k]
-
-    override suspend fun update(k: K): V? {
-        cache[k]?.let { return it }
-
-        val newValue = compute(k)
-
-        if (newValue != null) {
-            cache.put(k, newValue)
-        }
-
-        return newValue
-    }
-
-    abstract suspend fun compute(key: K): V?
 }

@@ -39,6 +39,8 @@ class MutedAuthorsByOutboxTopNavFilter(
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey) = pubkey in authors
 
+    override fun outboxAuthors(): Set<HexKey> = authors
+
     override fun match(noteEvent: Event): Boolean =
         if (noteEvent is LiveActivitiesEvent) {
             noteEvent.participantsIntersect(authors)

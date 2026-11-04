@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.model.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.authorRouteFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.notifications.MultiSetCard
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserAssertionsScore
@@ -88,7 +89,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.ExpandableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.DisplayBlankAuthor
 import com.vitorpamplona.amethyst.commons.ui.note.FollowingIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.WatchAuthorWithBlank
 import com.vitorpamplona.amethyst.commons.ui.note.WatchUserFollows
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteDropDownMenu
+import com.vitorpamplona.amethyst.commons.ui.note.hovercard.UserHoverCardAnchor
 import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
@@ -113,11 +114,11 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding
-import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifierWithPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.commons.ui.theme.profile35dpModifier
+import com.vitorpamplona.amethyst.commons.util.customEmojiUrlOrNull
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
@@ -297,18 +298,16 @@ fun RenderLikeGallery(
 ) {
     if (likeEvents.isNotEmpty()) {
         Row(Modifier.fillMaxWidth()) {
-            Box(
-                modifier = NotificationIconModifier,
-            ) {
-                val modifier = remember { Modifier.align(Alignment.TopEnd) }
+            GalleryIconColumn(NotificationIconModifier) { iconAlignment ->
+                val modifier = remember(iconAlignment) { Modifier.align(iconAlignment) }
 
-                if (reactionType.startsWith(":")) {
-                    val noStartColon = reactionType.removePrefix(":")
-                    val url = noStartColon.substringAfter(":")
+                // A bare `:shortcode:` (its event had no emoji tag) has no image: it falls to the text branch.
+                val renderable =
+                    remember(reactionType) {
+                        reactionType.customEmojiUrlOrNull()?.let { persistentListOf(CustomEmoji.ImageUrlType(it)) }
+                    }
 
-                    val renderable =
-                        persistentListOf(CustomEmoji.ImageUrlType(url))
-
+                if (renderable != null) {
                     InLineIconRenderer(
                         renderable,
                         style = SpanStyle(color = Color.White),
@@ -410,7 +409,9 @@ fun DecryptAndRenderZapGallery(
 ) {
     @Suppress("ProduceStateDoesNotAssignValue")
     val zapEvents by
-        produceState(initialValue = accountViewModel.cachedDecryptAmountMessageInGroup(multiSetCard.zapEvents)) {
+        // Keyed on the zaps: a late zap can join a card without changing its list key, and the
+        // gallery has to decrypt the new list rather than keep showing the first one.
+        produceState(initialValue = accountViewModel.cachedDecryptAmountMessageInGroup(multiSetCard.zapEvents), multiSetCard.zapEvents) {
             accountViewModel.decryptAmountMessageInGroup(multiSetCard.zapEvents) { value = it }
         }
 
@@ -425,11 +426,9 @@ fun RenderZapGallery(
     nav: INav,
 ) {
     Row(Modifier.fillMaxWidth()) {
-        Box(
-            modifier = WidthAuthorPictureModifier,
-        ) {
+        GalleryIconColumn { iconAlignment ->
             ZappedIcon(
-                modifier = Modifier.size(Size25dp).align(Alignment.TopEnd),
+                modifier = Modifier.size(Size25dp).align(iconAlignment),
             )
         }
 
@@ -465,16 +464,15 @@ fun RenderNutzapGallery(
         }
 
     Row(Modifier.fillMaxWidth()) {
-        Box(
-            // Reuse the reaction galleries' icon column (55dp wide with a 5dp end
-            // inset) so the cashu glyph lines up with the like/boost icons above
-            // it, instead of sitting flush-right like the lightning ZappedIcon.
-            modifier = NotificationIconModifier,
-        ) {
+        // Indented, reuse the reaction galleries' icon column (55dp wide with a
+        // 5dp end inset) so the cashu glyph lines up with the like/boost icons
+        // above it, instead of sitting flush-right like the lightning ZappedIcon.
+        // Full width centres every gallery's icon in the same 35dp slot.
+        GalleryIconColumn(NotificationIconModifier) { iconAlignment ->
             Icon(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(Res.string.nutzap),
-                modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
+                modifier = Modifier.size(Size20dp).align(iconAlignment),
                 // Tint the monochrome cashu outline brand orange so the nutzap
                 // gallery matches the lightning ZappedIcon in RenderZapGallery.
                 tint = BitcoinOrange,
@@ -494,11 +492,9 @@ fun RenderBoostGallery(
     Row(
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Box(
-            modifier = NotificationIconModifierSmaller,
-        ) {
+        GalleryIconColumn(NotificationIconModifierSmaller) { iconAlignment ->
             RepostedIcon(
-                modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
+                modifier = Modifier.size(Size20dp).align(iconAlignment),
             )
         }
 
@@ -515,11 +511,9 @@ fun RenderBoostGallery(
     Row(
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Box(
-            modifier = NotificationIconModifierSmaller,
-        ) {
+        GalleryIconColumn(NotificationIconModifierSmaller) { iconAlignment ->
             RepostedIcon(
-                modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
+                modifier = Modifier.size(Size20dp).align(iconAlignment),
             )
         }
 
@@ -533,14 +527,14 @@ fun MapZaps(
     accountViewModel: AccountViewModel,
     content: @Composable (ImmutableList<ZapAmountCommentNotification>) -> Unit,
 ) {
-    var zapEvents by
-        remember(zaps) {
-            mutableStateOf<ImmutableList<ZapAmountCommentNotification>>(persistentListOf())
+    // Starts from what is already decrypted, not an empty list: the card is rebuilt every time the
+    // feed comes back on screen, and an empty first frame grows the card once the zaps arrive,
+    // which animateItem() then plays as a slide of every card below it.
+    @Suppress("ProduceStateDoesNotAssignValue")
+    val zapEvents by
+        produceState(initialValue = accountViewModel.cachedDecryptAmountMessageInGroup(zaps), zaps) {
+            accountViewModel.decryptAmountMessageInGroup(zaps) { value = it }
         }
-
-    LaunchedEffect(key1 = zaps) {
-        accountViewModel.decryptAmountMessageInGroup(zaps) { zapEvents = it }
-    }
 
     content(zapEvents)
 }
@@ -645,6 +639,7 @@ private fun DisplayAuthorCommentAndAmount(
         WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
             authorComment.user,
             accountViewModel,
+            nav,
         )
         authorComment.amount?.let { CrossfadeToDisplayAmount(it) }
     }
@@ -754,18 +749,30 @@ private fun BoxedAuthor(
             WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
                 author,
                 accountViewModel,
+                nav,
             )
         }
     }
 }
 
+/**
+ * A gallery face. With [nav], resting the mouse on it opens the author's [UserHoverCardAnchor]
+ * card, as faces in the feed do.
+ */
 @Composable
 fun WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
     author: User?,
     accountViewModel: AccountViewModel,
+    nav: INav? = null,
 ) {
     if (author != null) {
-        WatchUserMetadataAndFollowsAndRenderUserProfilePicture(author, accountViewModel)
+        if (nav != null) {
+            UserHoverCardAnchor(author, accountViewModel, nav, Size35Modifier) {
+                WatchUserMetadataAndFollowsAndRenderUserProfilePicture(author, accountViewModel)
+            }
+        } else {
+            WatchUserMetadataAndFollowsAndRenderUserProfilePicture(author, accountViewModel)
+        }
     } else {
         DisplayBlankAuthor(Size35dp, accountViewModel = accountViewModel)
     }

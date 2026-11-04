@@ -58,10 +58,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
-import com.vitorpamplona.amethyst.commons.cordn.CoordinatorHealth
-import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorDiscovery
-import com.vitorpamplona.amethyst.commons.cordn.DiscoveredCoordinator
 import com.vitorpamplona.amethyst.commons.cordn.ui.SettingsFormBlock
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -122,9 +118,14 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.coor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.client.CoordinatorHealth
+import com.vitorpamplona.cordn.spec00Coordinator.CoordinatorServerInfo
+import com.vitorpamplona.cordn.spec00Coordinator.CordnCoordinatorDiscovery
+import com.vitorpamplona.cordn.spec00Coordinator.DiscoveredCoordinator
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /**
@@ -367,7 +368,7 @@ private fun CoordinatorCard(
         ) {
             OutlinedButton(onClick = {
                 scope.launch {
-                    info = runCatching { runtime.serverInfo(config.pubKey) }.getOrNull()
+                    info = runCatchingCancellable { runtime.serverInfo(config.pubKey) }.getOrNull()
                     infoChecked = true
                 }
             }) {
@@ -501,6 +502,7 @@ private fun DiscoverCoordinators(
                 try {
                     result = runtime.discover(accountViewModel.account.outboxRelays.flow.value)
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     error = e.message ?: failed
                 } finally {
                     busy = false
@@ -675,13 +677,7 @@ private fun AddCoordinator(runtime: CordnRuntime) {
 
     val config =
         remember(pubKeyInput, relaysInput, labelInput) {
-            val pubKey = decodePublicKeyAsHexOrNull(pubKeyInput.trim())
-            val relays = relaysInput.lines().mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
-            if (pubKey == null || relays.isEmpty()) {
-                null
-            } else {
-                CoordinatorConfig(pubKey, relays, CoordinatorConfig.Origin.MANUAL, labelInput.trim().ifEmpty { null })
-            }
+            CoordinatorConfig.fromInput(pubKeyInput, relaysInput, labelInput)
         }
 
     OutlinedTextField(
@@ -734,6 +730,7 @@ private fun AddCoordinator(runtime: CordnRuntime) {
                     relaysInput = ""
                     labelInput = ""
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     error = e.message ?: failed
                 } finally {
                     busy = false

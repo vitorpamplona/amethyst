@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims.Companion.D
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims.Companion.NO_PROXY
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NappletProxyClaimsTest {
@@ -80,5 +81,30 @@ class NappletProxyClaimsTest {
         assertEquals(9150, claims.claim(other, 9150).torPort)
         // Re-claiming moves an owner to the end, making its port the latest.
         assertEquals(9050, claims.claim(torTab, 9050).torPort)
+    }
+
+    @Test
+    fun aTorClaimWithoutAPortBlocksInsteadOfGoingDirect() {
+        claims.claim(openTab, NO_PROXY)
+        val route = claims.claim(torTab, NappletProxyClaims.TOR_NOT_READY)
+        assertTrue(route.blocked)
+        assertFalse(route.usesTor)
+    }
+
+    @Test
+    fun aKnownTorPortWinsOverOneThatIsNotReady() {
+        claims.claim(torTab, NappletProxyClaims.TOR_NOT_READY)
+        val route = claims.claim(openTab, 9050)
+        assertEquals(9050, route.torPort)
+        assertFalse(route.blocked)
+    }
+
+    @Test
+    fun emptyOnlyWhenNoSurfaceClaims() {
+        assertTrue(claims.isEmpty())
+        claims.claim(openTab, NO_PROXY)
+        assertFalse(claims.isEmpty())
+        claims.release(openTab)
+        assertTrue(claims.isEmpty())
     }
 }

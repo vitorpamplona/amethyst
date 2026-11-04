@@ -163,19 +163,13 @@ private fun CategoryScores(categories: ImmutableList<CategoryRatingTag>) {
                 // The category is publisher-chosen free text, not a translatable label, so it is
                 // shown as published — tidied of separators, never mapped through a string table
                 // that would silently drop every value nobody enumerated.
-                text = "${humanizeCategory(rating.category!!)} ${(rating.value * 100).roundToInt()}%",
+                text = "${readableToken(rating.category!!)} ${(rating.value * 100).roundToInt()}%",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.grayText,
             )
         }
     }
 }
-
-private fun humanizeCategory(category: String): String =
-    category
-        .replace('-', ' ')
-        .replace('_', ' ')
-        .replaceFirstChar { if (it.isLowerCase()) it.titlecaseChar() else it }
 
 @Preview
 @Composable

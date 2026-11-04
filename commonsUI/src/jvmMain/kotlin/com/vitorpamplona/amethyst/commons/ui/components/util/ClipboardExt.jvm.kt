@@ -56,3 +56,6 @@ actual suspend fun Clipboard.hasText(): Boolean =
             false
         }
     }
+
+// No system flag to mark a clip sensitive here: an ordinary copy.
+actual suspend fun Clipboard.setSensitiveText(text: String) = setText(text)

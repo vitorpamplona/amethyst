@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.uploads.hls
 
-import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import java.io.File
 
 /**

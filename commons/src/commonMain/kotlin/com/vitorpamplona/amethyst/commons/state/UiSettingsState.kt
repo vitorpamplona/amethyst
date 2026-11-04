@@ -39,84 +39,34 @@ class UiSettingsState(
     val isMobileOrMeteredConnection: StateFlow<Boolean>,
     val scope: CoroutineScope,
 ) {
-    val showProfilePictures =
+    val showProfilePictures = connectivityState(uiSettingsFlow.automaticallyShowProfilePictures)
+
+    val showUrlPreview = connectivityState(uiSettingsFlow.automaticallyShowUrlPreview)
+
+    val startVideoPlayback = connectivityState(uiSettingsFlow.automaticallyStartPlayback)
+
+    val showImages = connectivityState(uiSettingsFlow.automaticallyShowImages)
+
+    /** When the on-device translator may download a language model, on the current connection. */
+    val translationModelDownloads: StateFlow<ModelDownloads> =
         combine(
-            uiSettingsFlow.automaticallyShowProfilePictures,
+            uiSettingsFlow.automaticallyDownloadTranslationModels,
             isMobileOrMeteredConnection,
-        ) { showProfilePictures, isOnMobileOrMeteredConnection ->
-            when (showProfilePictures) {
-                ConnectivityType.WIFI_ONLY -> !isOnMobileOrMeteredConnection
-                ConnectivityType.NEVER -> false
-                ConnectivityType.ALWAYS -> true
-            }
+        ) { choice, isOnMobileOrMeteredConnection ->
+            ModelDownloads.of(choice, isOnMobileOrMeteredConnection)
         }.stateIn(
             scope,
             SharingStarted.Eagerly,
-            when (uiSettingsFlow.automaticallyShowProfilePictures.value) {
-                ConnectivityType.WIFI_ONLY -> !isMobileOrMeteredConnection.value
-                ConnectivityType.NEVER -> false
-                ConnectivityType.ALWAYS -> true
-            },
+            ModelDownloads.of(uiSettingsFlow.automaticallyDownloadTranslationModels.value, isMobileOrMeteredConnection.value),
         )
 
-    val showUrlPreview =
-        combine(
-            uiSettingsFlow.automaticallyShowUrlPreview,
-            isMobileOrMeteredConnection,
-        ) { automaticallyShowUrlPreview, isOnMobileOrMeteredConnection ->
-            when (automaticallyShowUrlPreview) {
-                ConnectivityType.WIFI_ONLY -> !isOnMobileOrMeteredConnection
-                ConnectivityType.NEVER -> false
-                ConnectivityType.ALWAYS -> true
-            }
+    private fun connectivityState(choice: StateFlow<ConnectivityType>): StateFlow<Boolean> =
+        combine(choice, isMobileOrMeteredConnection) { type, isOnMobileOrMeteredConnection ->
+            type.allows(isOnMobileOrMeteredConnection)
         }.stateIn(
             scope,
             SharingStarted.Eagerly,
-            when (uiSettingsFlow.automaticallyShowUrlPreview.value) {
-                ConnectivityType.WIFI_ONLY -> !isMobileOrMeteredConnection.value
-                ConnectivityType.NEVER -> false
-                ConnectivityType.ALWAYS -> true
-            },
-        )
-
-    val startVideoPlayback =
-        combine(
-            uiSettingsFlow.automaticallyStartPlayback,
-            isMobileOrMeteredConnection,
-        ) { automaticallyStartPlayback, isOnMobileOrMeteredConnection ->
-            when (automaticallyStartPlayback) {
-                ConnectivityType.WIFI_ONLY -> !isOnMobileOrMeteredConnection
-                ConnectivityType.NEVER -> false
-                ConnectivityType.ALWAYS -> true
-            }
-        }.stateIn(
-            scope,
-            SharingStarted.Eagerly,
-            when (uiSettingsFlow.automaticallyStartPlayback.value) {
-                ConnectivityType.WIFI_ONLY -> !isMobileOrMeteredConnection.value
-                ConnectivityType.NEVER -> false
-                ConnectivityType.ALWAYS -> true
-            },
-        )
-
-    val showImages =
-        combine(
-            uiSettingsFlow.automaticallyShowImages,
-            isMobileOrMeteredConnection,
-        ) { automaticallyShowImages, isOnMobileOrMeteredConnection ->
-            when (automaticallyShowImages) {
-                ConnectivityType.WIFI_ONLY -> !isOnMobileOrMeteredConnection
-                ConnectivityType.NEVER -> false
-                ConnectivityType.ALWAYS -> true
-            }
-        }.stateIn(
-            scope,
-            SharingStarted.Eagerly,
-            when (uiSettingsFlow.automaticallyShowImages.value) {
-                ConnectivityType.WIFI_ONLY -> !isMobileOrMeteredConnection.value
-                ConnectivityType.NEVER -> false
-                ConnectivityType.ALWAYS -> true
-            },
+            choice.value.allows(isMobileOrMeteredConnection.value),
         )
 
     fun modernGalleryStyle() =
@@ -157,4 +107,24 @@ class UiSettingsState(
             )
 
     fun showImages() = showImages.value
+}
+
+/** Whether a model download may start now and, if it may, whether it must stay on unmetered networks. */
+enum class ModelDownloads {
+    ANY_NETWORK,
+    UNMETERED_ONLY,
+    NONE,
+    ;
+
+    companion object {
+        fun of(
+            choice: ConnectivityType,
+            isOnMobileOrMeteredConnection: Boolean,
+        ): ModelDownloads =
+            when {
+                !choice.allows(isOnMobileOrMeteredConnection) -> NONE
+                choice == ConnectivityType.WIFI_ONLY -> UNMETERED_ONLY
+                else -> ANY_NETWORK
+            }
+    }
 }

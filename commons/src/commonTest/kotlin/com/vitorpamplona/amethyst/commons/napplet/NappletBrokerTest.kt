@@ -34,12 +34,14 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.commons.napplet.permissions.PermissionDecision
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
+import com.vitorpamplona.amethyst.commons.napplet.protocol.toSignerOp
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
@@ -47,6 +49,7 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -336,6 +339,45 @@ class NappletBrokerTest {
             return answer
         }
     }
+
+    @Test
+    fun aParanoidSignatureAsksOnceNotTwice() =
+        runTest {
+            // Under PARANOID the capability ledger is empty, so a signature used to ask twice: a
+            // generic "this site wants to use Relays" prompt, then the signer prompt with the event.
+            // The signer prompt alone decides now.
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            signerLedger.setPolicy("napplet:${signer.pubKey}:${applet.coordinate}", AppSignerPolicy.PARANOID)
+            val capabilityPrompt = ScriptedPrompt(GrantState.ALLOW_ONCE)
+            val opPrompt = ScriptedSignerPrompt(SignerOpGrant.AllowOnce)
+            val broker =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = capabilityPrompt,
+                    relay = RecordingRelay(),
+                    signerLedger = signerLedger,
+                    signerConsentPrompt = opPrompt,
+                )
+
+            val sign = NappletRequest.SignEvent(kind = 22242, tags = arrayOf(arrayOf("challenge", "x")), content = "", createdAt = 1)
+            assertIs<NappletResponse.Published>(broker.handle(applet, sign, allDeclared))
+            assertEquals(0, capabilityPrompt.calls)
+            assertEquals(1, opPrompt.calls)
+
+            // Declining in that one prompt still refuses.
+            val denying =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = capabilityPrompt,
+                    relay = RecordingRelay(),
+                    signerLedger = signerLedger,
+                    signerConsentPrompt = ScriptedSignerPrompt(SignerOpGrant.DenyOnce),
+                )
+            assertIs<NappletResponse.Denied>(denying.handle(applet, sign, allDeclared))
+            assertEquals(0, capabilityPrompt.calls)
+        }
 
     @Test
     fun revokingAnAppDropsItsLiveSessionSignerGrants() =
@@ -690,6 +732,60 @@ class NappletBrokerTest {
             assertIs<NappletResponse.Unsupported>(broker.handle(applet, NappletRequest.UploadBlob(ByteArray(0), "image/png"), allDeclared))
         }
 
+    private class FakeUpload(
+        private val server: Boolean = true,
+        override val maxBytes: Long = 4,
+    ) : NappletUploadGateway {
+        var uploads = 0
+
+        override suspend fun hasServer() = server
+
+        override suspend fun upload(
+            bytes: ByteArray,
+            contentType: String,
+            filename: String?,
+        ): NappletUploadResult {
+            uploads++
+            return NappletUploadResult("https://blossom.example/h$uploads", "h$uploads", bytes.size.toLong(), contentType)
+        }
+    }
+
+    private fun uploadBroker(
+        prompt: NappletConsentPrompt,
+        upload: NappletUploadGateway,
+    ) = NappletBroker(signer = signer, ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()), consentPrompt = prompt, upload = upload)
+
+    @Test
+    fun uploadFollowsNapUpload() =
+        runTest {
+            val gateway = FakeUpload()
+            val broker = uploadBroker(ScriptedPrompt(GrantState.ALLOW_ALWAYS), gateway)
+
+            val done = broker.handle(applet, NappletRequest.UploadBlob(byteArrayOf(1, 2), "image/png"), allDeclared)
+            assertIs<NappletResponse.Uploaded>(done)
+            assertEquals("h1", done.uploadId)
+            assertTrue(done.updatedAt > 0)
+            // The status of its own upload, and nobody else's.
+            assertEquals(done, broker.handle(applet, NappletRequest.UploadStatus("h1"), allDeclared))
+            val other = NappletIdentity(authorPubKey = "bb".repeat(32), identifier = "other")
+            assertIs<NappletResponse.Failed>(broker.handle(other, NappletRequest.UploadStatus("h1"), allDeclared))
+
+            // Refused before anything is sent: another rail, too many bytes.
+            assertEquals("unsupported rail", (broker.handle(applet, NappletRequest.UploadBlob(byteArrayOf(1), "image/png", rail = "nip96"), allDeclared) as NappletResponse.Failed).reason)
+            assertEquals("file too large", (broker.handle(applet, NappletRequest.UploadBlob(ByteArray(5), "image/png"), allDeclared) as NappletResponse.Failed).reason)
+            assertEquals(1, gateway.uploads)
+        }
+
+    @Test
+    fun uploadWithoutAServerSaysSoAndInfoNeverPrompts() =
+        runTest {
+            val prompt = ScriptedPrompt(GrantState.ALLOW_ONCE)
+            val broker = uploadBroker(prompt, FakeUpload(server = false))
+            assertEquals(NappletResponse.UploadInfo(enabled = false, maxBytes = 4), broker.handle(applet, NappletRequest.UploadInfo, allDeclared))
+            assertEquals(0, prompt.calls, "info is advisory introspection")
+            assertEquals("no server configured", (broker.handle(applet, NappletRequest.UploadBlob(byteArrayOf(1), "image/png"), allDeclared) as NappletResponse.Failed).reason)
+        }
+
     @Test
     fun resourceInfoAndTypedFailuresFollowTheCurrentNapContract() =
         runTest {
@@ -830,6 +926,33 @@ class NappletBrokerTest {
         }
 
     @Test
+    fun anEncryptedPublishIsJudgedByTheKindItSigns() =
+        runTest {
+            // Allowed to encrypt is not allowed to replace the follow list: the event published is
+            // a kind 3 either way, so it asks as a plain kind-3 publish does.
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            signerLedger.setPolicy("napplet:${signer.pubKey}:${applet.coordinate}", AppSignerPolicy.REASONABLE)
+            val opPrompt = ScriptedSignerPrompt(SignerOpGrant.DenyOnce)
+            val relay = RecordingRelay()
+            val broker =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS),
+                    relay = relay,
+                    signerLedger = signerLedger,
+                    signerConsentPrompt = opPrompt,
+                )
+
+            val peer = NostrSignerInternal(KeyPair("44".repeat(32).hexToByteArray()))
+            val response =
+                broker.handle(applet, NappletRequest.PublishEncrypted(3, arrayOf(arrayOf("p", peer.pubKey)), "{}", peer.pubKey, "nip44"), allDeclared)
+            assertIs<NappletResponse.Denied>(response)
+            assertEquals(1, opPrompt.calls)
+            assertTrue(relay.published.isEmpty())
+        }
+
+    @Test
     fun aDeclinedDecryptReturnsNoPlaintext() =
         runTest {
             val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
@@ -947,5 +1070,209 @@ class NappletBrokerTest {
             assertEquals(1, opPrompt.calls)
             broker.handle(applet, NappletRequest.Nip44Decrypt(bob.pubKey, bob.nip44Encrypt("b", signer.pubKey)), allDeclared)
             assertEquals(2, opPrompt.calls)
+        }
+
+    private val inlineApplet = applet.copy(inline = true, instanceId = "card-1")
+
+    @Test
+    fun anAppInsideANoteNeverAsksTheUser() =
+        runTest {
+            val asks = NappletInlineAsks()
+            val prompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS)
+            val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore())
+            val broker = NappletBroker(signer = signer, ledger = ledger, consentPrompt = prompt, inlineAsks = asks)
+
+            assertIs<NappletResponse.Denied>(broker.handle(inlineApplet, NappletRequest.GetPublicKey, allDeclared))
+            assertEquals(0, prompt.calls)
+            // Nothing is held against the app: opening it asks as usual.
+            assertEquals(PermissionDecision.ASK, ledger.decide(applet, NappletCapability.IDENTITY))
+            assertTrue(asks.asked("card-1").first())
+            assertEquals(false, asks.asked("card-2").first())
+
+            assertEquals(NappletResponse.PublicKey(signer.pubKey), broker.handle(applet, NappletRequest.GetPublicKey, allDeclared))
+            assertEquals(1, prompt.calls)
+        }
+
+    @Test
+    fun anAppInsideANoteKeepsWhatTheUserGranted() =
+        runTest {
+            val asks = NappletInlineAsks()
+            val prompt = ScriptedPrompt(GrantState.DENY)
+            val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore())
+            ledger.record(applet, NappletCapability.IDENTITY, GrantState.ALLOW_ALWAYS)
+            val broker = NappletBroker(signer = signer, ledger = ledger, consentPrompt = prompt, inlineAsks = asks)
+
+            assertEquals(NappletResponse.PublicKey(signer.pubKey), broker.handle(inlineApplet, NappletRequest.GetPublicKey, allDeclared))
+            assertEquals(0, prompt.calls)
+            assertEquals(false, asks.asked("card-1").first())
+        }
+
+    @Test
+    fun anAppInsideANoteNeitherConnectsNorSignsWithoutTheUser() =
+        runTest {
+            val asks = NappletInlineAsks()
+            val connect = ScriptedConnectPrompt(AppConnectResult.Connected(AppSignerPolicy.REASONABLE))
+            val opPrompt = ScriptedSignerPrompt(SignerOpGrant.AllowOnce)
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            val broker =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ONCE),
+                    relay = RecordingRelay(),
+                    signerLedger = signerLedger,
+                    nostrConnectPrompt = connect,
+                    signerConsentPrompt = opPrompt,
+                    inlineAsks = asks,
+                )
+            val sign = NappletRequest.SignEvent(kind = 1, tags = emptyArray(), content = "hi", createdAt = 1)
+
+            // Not connected yet: the first-connect dialog would show.
+            assertIs<NappletResponse.Denied>(broker.handle(inlineApplet, sign, allDeclared))
+            assertEquals(0, connect.calls)
+
+            // Connected, but every signature asks the user: still nothing shows.
+            signerLedger.setPolicy("napplet:${signer.pubKey}:${applet.coordinate}", AppSignerPolicy.PARANOID)
+            assertIs<NappletResponse.Denied>(broker.handle(inlineApplet, sign, allDeclared))
+            assertEquals(0, opPrompt.calls)
+            assertTrue(asks.asked("card-1").first())
+        }
+
+    private class FakeOutbox(
+        private val read: OutboxRead = OutboxRead(emptyList()),
+        private val delivery: (Event) -> OutboxDelivery = { OutboxDelivery(mapOf(RelayUrlNormalizer.normalize("wss://mine.example.com") to true)) },
+    ) : NappletOutboxGateway {
+        val published = mutableListOf<Event>()
+        var publishedTo: Triple<Boolean, List<String>, List<String>>? = null
+
+        override suspend fun getEvent(
+            eventId: HexKey,
+            author: HexKey?,
+            relayHints: List<String>,
+            timeoutMs: Long?,
+        ) = read
+
+        override suspend fun query(
+            filters: List<Filter>,
+            authors: List<HexKey>,
+            relayHints: List<String>,
+            timeoutMs: Long?,
+        ) = read
+
+        override suspend fun subscriptionRelays(
+            filters: List<Filter>,
+            authors: List<HexKey>,
+            relayHints: List<String>,
+        ) = setOf(RelayUrlNormalizer.normalize("wss://author.example.com"))
+
+        override suspend fun publish(
+            event: Event,
+            toOutbox: Boolean,
+            toInboxes: List<HexKey>,
+            relays: List<String>,
+        ): OutboxDelivery {
+            published += event
+            publishedTo = Triple(toOutbox, toInboxes, relays)
+            return delivery(event)
+        }
+
+        override suspend fun plan(
+            authors: List<HexKey>,
+            write: Boolean,
+        ) = OutboxRelayPlan(listOf("wss://author.example.com/"), OutboxRelayPlan.Source.NIP65)
+    }
+
+    private fun template(kind: Int = 30078) = NappletRequest.Publish(kind, arrayOf(arrayOf("d", "save")), "state")
+
+    @Test
+    fun anOutboxPublishIsSignedOnceAndDecidedAsTheEventItSigns() =
+        runTest {
+            val outbox = FakeOutbox()
+            val opPrompt = ScriptedSignerPrompt(SignerOpGrant.AllowOnce)
+            val shown = mutableListOf<NappletRequest>()
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            signerLedger.setPolicy("napplet:${signer.pubKey}:${applet.coordinate}", AppSignerPolicy.PARANOID)
+            val broker =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ONCE),
+                    signerLedger = signerLedger,
+                    signerConsentPrompt =
+                        NostrSignerConsentPrompt { identity, op, request ->
+                            shown += request
+                            opPrompt.request(identity, op, request)
+                        },
+                    outbox = outbox,
+                )
+
+            val request = NappletRequest.OutboxPublish(template(), toOutbox = false, toInboxes = listOf("bb".repeat(32)), relays = listOf("wss://x.example.com"))
+            val response = broker.handle(applet, request, allDeclared)
+
+            assertIs<NappletResponse.OutboxPublished>(response)
+            assertTrue(response.ok)
+            assertEquals(1, outbox.published.size)
+            assertEquals(signer.pubKey, outbox.published.single().pubKey)
+            assertEquals(30078, outbox.published.single().kind)
+            assertEquals(Triple(false, listOf("bb".repeat(32)), listOf("wss://x.example.com")), outbox.publishedTo)
+            // The signer prompt saw the event itself, as for relay.publish.
+            assertEquals(listOf<NappletRequest>(template()), shown)
+            assertEquals(NostrSignerOp.SignKind(30078), request.toSignerOp())
+        }
+
+    @Test
+    fun anOutboxPublishThatReachedNoneOrMissedAnInboxIsNotOk() =
+        runTest {
+            val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore())
+            val nowhere = FakeOutbox(delivery = { OutboxDelivery(mapOf(RelayUrlNormalizer.normalize("wss://mine.example.com") to false)) })
+            val refused = NappletBroker(signer = signer, ledger = ledger, consentPrompt = ScriptedPrompt(GrantState.ALLOW_ONCE), outbox = nowhere).handle(applet, NappletRequest.OutboxPublish(template()), allDeclared)
+            assertIs<NappletResponse.OutboxPublished>(refused)
+            assertEquals(false, refused.ok)
+            assertEquals("publish failed", refused.error)
+
+            val missing = FakeOutbox(delivery = { OutboxDelivery(mapOf(RelayUrlNormalizer.normalize("wss://mine.example.com") to true), listOf("cc".repeat(32))) })
+            val partial = NappletBroker(signer = signer, ledger = ledger, consentPrompt = ScriptedPrompt(GrantState.ALLOW_ONCE), outbox = missing).handle(applet, NappletRequest.OutboxPublish(template(1), toInboxes = listOf("cc".repeat(32))), allDeclared)
+            assertIs<NappletResponse.OutboxPublished>(partial)
+            assertEquals(false, partial.ok)
+            assertEquals("relay list unavailable", partial.error)
+        }
+
+    @Test
+    fun outboxReadsAskOnceAndCheckWhatTheyReturn() =
+        runTest {
+            val bob = NostrSignerInternal(KeyPair())
+            val note = bob.sign<Event>(1, 1, emptyArray(), "hi")
+            val other = bob.sign<Event>(2, 1, emptyArray(), "other")
+            val prompt = ScriptedPrompt(GrantState.ALLOW_SESSION)
+            val outbox = FakeOutbox(read = OutboxRead(listOf(OutboxEvent(other, listOf("wss://bob.example.com/")), OutboxEvent(note)), incomplete = true))
+            val broker = NappletBroker(signer = signer, ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()), consentPrompt = prompt, outbox = outbox)
+
+            // getEvent never hands back an event that isn't the one asked for.
+            val found = broker.handle(applet, NappletRequest.OutboxGetEvent(note.id), allDeclared)
+            assertIs<NappletResponse.OutboxFound>(found)
+            assertEquals(note.id, found.found?.event?.id)
+            val absent = broker.handle(applet, NappletRequest.OutboxGetEvent("dd".repeat(32)), allDeclared)
+            assertIs<NappletResponse.OutboxFound>(absent)
+            assertNull(absent.found)
+            assertEquals("not found", absent.error)
+
+            val queried = broker.handle(applet, NappletRequest.OutboxQuery(listOf(Filter(authors = listOf(bob.pubKey))), limit = 1), allDeclared)
+            assertIs<NappletResponse.OutboxEvents>(queried)
+            assertEquals(listOf(other.id), queried.events.map { it.event.id })
+            assertTrue(queried.incomplete)
+
+            assertEquals(1, prompt.calls)
+        }
+
+    @Test
+    fun outboxIsDeniedWhenNotDeclaredAndUnsupportedWithoutAGateway() =
+        runTest {
+            val prompt = ScriptedPrompt(GrantState.ALLOW_ONCE)
+            val withGateway = NappletBroker(signer = signer, ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()), consentPrompt = prompt, outbox = FakeOutbox())
+            assertIs<NappletResponse.Denied>(withGateway.handle(applet, NappletRequest.OutboxQuery(listOf(Filter())), setOf(NappletCapability.RELAY)))
+            assertEquals(0, prompt.calls)
+
+            val without = NappletBroker(signer = signer, ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()), consentPrompt = prompt)
+            assertIs<NappletResponse.Unsupported>(without.handle(applet, NappletRequest.OutboxQuery(listOf(Filter())), allDeclared))
         }
 }

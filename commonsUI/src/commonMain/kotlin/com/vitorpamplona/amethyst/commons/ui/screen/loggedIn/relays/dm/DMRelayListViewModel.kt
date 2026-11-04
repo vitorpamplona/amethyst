@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 @Stable
 class DMRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<NormalizedRelayUrl>? = account.dmRelayList.getDMRelayList()?.relays()
+    override fun getRelayList(): List<NormalizedRelayUrl>? = account.dmRelayList.getDMRelayList()?.allRelays()
 
     override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
         account.saveDMRelayList(urlList)

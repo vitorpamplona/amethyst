@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_favorite_remove
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_find
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_forward
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_full_screen
+import com.vitorpamplona.amethyst.commons.resources.browser_pill_info_site_data
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_other_browser
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_permission_camera
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_permission_location
@@ -105,6 +106,7 @@ fun pillSymbolFor(action: Action): MaterialSymbol? =
         Action.TOR -> null
         Action.ACCESS_INFO -> MaterialSymbols.Shield
         Action.SITE_SETTINGS -> MaterialSymbols.Tune
+        Action.SITE_DATA -> MaterialSymbols.Cookie
         Action.CONSOLE -> MaterialSymbols.Code
     }
 
@@ -131,6 +133,7 @@ fun pillLabelFor(
         Action.TOR -> Res.string.browser_pill_tor_title
         Action.ACCESS_INFO -> Res.string.browser_pill_access
         Action.SITE_SETTINGS -> Res.string.browser_pill_site_settings
+        Action.SITE_DATA -> Res.string.browser_pill_info_site_data
         Action.CONSOLE -> Res.string.browser_pill_console
     }
 

@@ -55,8 +55,6 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestio
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
-import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
-import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
@@ -86,8 +84,6 @@ import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
-import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -96,7 +92,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
@@ -205,7 +200,6 @@ open class ChannelNewMessageViewModel :
     val strippingFailureConfirmation = SuspendableConfirmation()
 
     val iMetaAttachments = IMetaAttachments()
-    var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
     val message = TextFieldState()
     var urlPreview by mutableStateOf<String?>(null)
@@ -485,14 +479,13 @@ open class ChannelNewMessageViewModel :
             pubKeyHex = keyPair.pubKey.toHexKey()
         }
 
+        // Bitchat mines 8 bits by default; cap the effort so a slow device still sends.
+        // PoWMiner.mine moves itself onto its own mining threads.
+        val started = TimeSource.Monotonic.markNow()
         val mined =
-            withContext(Dispatchers.Default) {
-                // Bitchat mines 8 bits by default; cap the effort so a slow device still sends.
-                val started = TimeSource.Monotonic.markNow()
-                runCatching {
-                    PoWMiner.mine(template, pubKeyHex, 8, account.powMinerWorkers(), isActive = { started.elapsedNow() < 2.seconds })
-                }.getOrDefault(template)
-            }
+            runCatching {
+                PoWMiner.mine(template, pubKeyHex, 8, account.powMinerWorkers(), isActive = { started.elapsedNow() < 2.seconds })
+            }.getOrDefault(template)
 
         runCatching { account.signWithAndSendPrivately(mined, signer, relays) }
     }
@@ -501,14 +494,8 @@ open class ChannelNewMessageViewModel :
         if (message.text.toString().isBlank()) {
             account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
-            val attachments = mutableSetOf<Event>()
-            nip95attachments.forEach {
-                attachments.add(it.first)
-                attachments.add(it.second)
-            }
-
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
     }
 
@@ -531,16 +518,7 @@ open class ChannelNewMessageViewModel :
         uploader: MediaUploader,
         onceUploaded: suspend () -> Unit,
     ) {
-        try {
-            uploadUnsafe(onError, uploader, onceUploaded)
-        } catch (_: SignerExceptions.ReadOnlyException) {
-            viewModelScope.launch {
-                onError(
-                    loadStringRes(Res.string.read_only_user),
-                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
-                )
-            }
-        }
+        uploadUnsafe(onError, uploader, onceUploaded)
     }
 
     fun uploadUnsafe(
@@ -571,13 +549,7 @@ open class ChannelNewMessageViewModel :
                 val urls =
                     results.successful.mapNotNull { upload ->
                         val uploaded = upload.result
-                        if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                            val nip95 = account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, uploadState.caption, uploadState.contentWarningReason)
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
-
-                            note?.toNostrUri()
-                        } else if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
                             iMetaAttachments.add(uploaded, uploadState.caption, uploadState.contentWarningReason)
 
                             uploaded.url
@@ -1082,7 +1054,7 @@ open class ChannelNewMessageViewModel :
         val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
+            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
         message.replaceCurrentWord(wordToInsert)

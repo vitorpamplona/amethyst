@@ -26,6 +26,13 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.music.musicFormatTagFor
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.music_track_no_audio_url
+import com.vitorpamplona.amethyst.commons.resources.music_track_send_failed_title
+import com.vitorpamplona.amethyst.commons.resources.podcast_audio_upload_failed_title
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_message
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_title
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.AudioFileMetadata
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
@@ -112,7 +119,7 @@ class NewMusicTrackViewModel : ViewModel() {
     val selectedServer = mutableStateOf<ServerName?>(null)
 
     // 0 = Low, 1 = Medium, 2 = High, 3 = UNCOMPRESSED — matches Badge's slider semantics.
-    val mediaQualitySlider = mutableStateOf(1)
+    val mediaQualitySlider = mutableStateOf(CompressorQuality.defaultSliderPosition)
     val stripMetadata = mutableStateOf(true)
 
     /** Stable d-tag for the addressable: null = create-new, non-null = edit-existing. */
@@ -229,8 +236,8 @@ class NewMusicTrackViewModel : ViewModel() {
         val server = selectedServer.value
         if (server == null) {
             accountViewModel.toastManager.toast(
-                "No upload server selected",
-                "Pick a media server in settings before uploading.",
+                Res.string.upload_no_server_title,
+                Res.string.upload_no_server_message,
             )
             return
         }
@@ -249,7 +256,7 @@ class NewMusicTrackViewModel : ViewModel() {
                 quality = CompressorQuality.fromSlider(mediaQualitySlider.value),
                 stripMetadata = stripMetadata.value,
                 loadedEvent = loadedEvent,
-                uploader = accountViewModel.host.mediaUploader,
+                uploader = accountViewModel.mediaUploader,
             )
 
         isSending.value = true
@@ -259,19 +266,22 @@ class NewMusicTrackViewModel : ViewModel() {
         // and the toast still fires on completion.
         accountViewModel.launchSigner {
             try {
-                val (newCoverUrl, newAudioUrl) = performParallelUploads(snapshot, accountViewModel)
+                val (newCover, newAudio) = performParallelUploads(snapshot, accountViewModel)
+                val newCoverUrl = newCover?.url
+                val newAudioUrl = newAudio?.url
 
                 val finalCoverUrl = newCoverUrl ?: snapshot.existingCoverUrl
                 val finalAudioUrl = newAudioUrl ?: snapshot.existingAudioUrl
                 if (finalAudioUrl.isBlank()) {
                     accountViewModel.toastManager.toast(
-                        "Audio upload failed",
-                        "No audio URL ended up available for the published track.",
+                        Res.string.podcast_audio_upload_failed_title,
+                        Res.string.music_track_no_audio_url,
                     )
                     return@launchSigner
                 }
 
-                publishEvent(snapshot, finalCoverUrl, finalAudioUrl)
+                // A fresh upload says what it is, so readers don't have to open an `.mp4` to find out.
+                publishEvent(snapshot, finalCoverUrl, finalAudioUrl, newAudio?.mimeType?.let(::musicFormatTagFor))
 
                 // Remember the server + strip-metadata choice so the user doesn't have to
                 // re-pick them on the next track.
@@ -292,8 +302,9 @@ class NewMusicTrackViewModel : ViewModel() {
                 _completionEvents.tryEmit(Unit)
             } catch (t: Throwable) {
                 accountViewModel.toastManager.toast(
-                    "Failed to send music track",
+                    Res.string.music_track_send_failed_title,
                     t.message ?: t::class.simpleName.orEmpty(),
+                    t,
                 )
             } finally {
                 withContext(Dispatchers.Main.immediate) { isSending.value = false }
@@ -328,13 +339,13 @@ class NewMusicTrackViewModel : ViewModel() {
      * independent: if cover fails, audio still completes (and vice versa); the first
      * failure throws and propagates out through the catch in [saveAndPublish].
      *
-     * Returns `(coverUrl?, audioUrl?)`. A null means "no orchestrator was provided for
+     * Returns `(cover?, audio?)`. A null means "no orchestrator was provided for
      * that slot" (the caller falls back to the existing URL from the snapshot).
      */
     private suspend fun performParallelUploads(
         snapshot: SendSnapshot,
         accountViewModel: AccountViewModel,
-    ): Pair<String?, String?> =
+    ): Pair<UploadedFile?, UploadedFile?> =
         coroutineScope {
             val deferreds =
                 listOf(
@@ -353,7 +364,7 @@ class NewMusicTrackViewModel : ViewModel() {
         orch: MultiOrchestrator,
         snapshot: SendSnapshot,
         kind: String,
-    ): String {
+    ): UploadedFile {
         val res =
             orch.upload(
                 alt = snapshot.title.ifBlank { null },
@@ -369,19 +380,25 @@ class NewMusicTrackViewModel : ViewModel() {
         if (!res.allGood) {
             throw UploadException(kind, formatUploadErrors(res.errors))
         }
-        return firstUploadedUrl(res.successful)
+        return firstUploadedFile(res.successful)
             ?: throw UploadException(kind, "Server didn't return a URL for the uploaded $kind.")
     }
+
+    /** Where an upload landed, and what it was before upload (Blossom may relabel an M4A `video/mp4`). */
+    private class UploadedFile(
+        val url: String,
+        val mimeType: String?,
+    )
 
     private class UploadException(
         kind: String,
         details: String,
     ) : Exception("$kind upload failed: $details")
 
-    private fun firstUploadedUrl(successful: List<UploadingState.Finished>): String? =
+    private fun firstUploadedFile(successful: List<UploadingState.Finished>): UploadedFile? =
         successful
             .firstNotNullOfOrNull { it.result as? UploadOrchestrator.OrchestratorResult.ServerResult }
-            ?.url
+            ?.let { UploadedFile(it.url, it.mimeTypeBeforeEncryption ?: it.fileHeader.mimeType) }
 
     private suspend fun formatUploadErrors(errors: List<UploadingState.Error>): String =
         errors
@@ -393,6 +410,7 @@ class NewMusicTrackViewModel : ViewModel() {
         snapshot: SendSnapshot,
         coverUrl: String?,
         audioUrl: String,
+        format: String?,
     ) {
         val existing = snapshot.loadedEvent
         val template =
@@ -406,6 +424,7 @@ class NewMusicTrackViewModel : ViewModel() {
                     image = coverUrl,
                     album = snapshot.album,
                     duration = snapshot.duration,
+                    format = format,
                 )
             } else {
                 MusicTrackEvent.build(
@@ -416,6 +435,7 @@ class NewMusicTrackViewModel : ViewModel() {
                     image = coverUrl,
                     album = snapshot.album,
                     duration = snapshot.duration,
+                    format = format,
                 )
             }
 

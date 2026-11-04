@@ -90,7 +90,7 @@ class PrivacyLockStateTest {
     fun cold_start_with_lock_enabled_seeds_to_locked() =
         runTest {
             val settings = FakeSettings(lockEnabled = true)
-            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             assertEquals(LockState.Locked, state.state.value)
         }
 
@@ -98,7 +98,7 @@ class PrivacyLockStateTest {
     fun cold_start_with_lock_disabled_seeds_to_disabled() =
         runTest {
             val settings = FakeSettings(lockEnabled = false)
-            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             assertEquals(LockState.Disabled, state.state.value)
         }
 
@@ -106,7 +106,7 @@ class PrivacyLockStateTest {
     fun unlock_success_transitions_to_unlocked_and_idle_timer_fires() =
         runTest {
             val settings = FakeSettings(lockEnabled = true, timer = InactivityTimer.OneMin)
-            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             state.onUnlockSuccess()
             assertEquals(LockState.Unlocked, state.state.value)
             advanceTimeBy(InactivityTimer.OneMin.millis!! + 1_000L)
@@ -117,7 +117,7 @@ class PrivacyLockStateTest {
     fun leave_route_locks_immediately() =
         runTest {
             val settings = FakeSettings(lockEnabled = true, timer = InactivityTimer.OneHour)
-            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             state.onUnlockSuccess()
             assertEquals(LockState.Unlocked, state.state.value)
             state.onLeaveRoute()
@@ -128,7 +128,7 @@ class PrivacyLockStateTest {
     fun toggling_lock_off_transitions_to_disabled() =
         runTest(UnconfinedTestDispatcher()) {
             val settings = FakeSettings(lockEnabled = true)
-            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             state.onUnlockSuccess()
             assertEquals(LockState.Unlocked, state.state.value)
             settings.setLockEnabled(false)
@@ -139,7 +139,7 @@ class PrivacyLockStateTest {
     fun never_timer_does_not_fire() =
         runTest {
             val settings = FakeSettings(lockEnabled = true, timer = InactivityTimer.Never)
-            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             state.onUnlockSuccess()
             advanceTimeBy(InactivityTimer.OneHour.millis!! * 2)
             assertEquals(LockState.Unlocked, state.state.value)
@@ -149,7 +149,7 @@ class PrivacyLockStateTest {
     fun user_interaction_resets_idle_timer() =
         runTest {
             val settings = FakeSettings(lockEnabled = true, timer = InactivityTimer.OneMin)
-            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             state.onUnlockSuccess()
             advanceTimeBy(InactivityTimer.OneMin.millis!! - 1_000L)
             state.onUserInteraction()
@@ -163,7 +163,7 @@ class PrivacyLockStateTest {
     fun credential_unavailable_disables_lock() =
         runTest {
             val settings = FakeSettings(lockEnabled = true)
-            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             state.onCredentialUnavailable()
             assertEquals(LockState.Disabled, state.state.value)
             assertEquals(false, settings.lockEnabled.value)
@@ -177,7 +177,7 @@ class PrivacyLockStateTest {
             // and we want to stay Unlocked so the user isn't kicked to the lock
             // screen right after enabling.
             val settings = FakeSettings(lockEnabled = false)
-            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             assertEquals(LockState.Disabled, state.state.value)
             state.onUnlockSuccess()
             assertEquals(LockState.Unlocked, state.state.value)
@@ -187,7 +187,7 @@ class PrivacyLockStateTest {
     fun failed_attempts_below_threshold_do_not_trip_lockout() =
         runTest {
             val settings = FakeSettings(lockEnabled = true)
-            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             val now = 1_000_000L
             repeat(PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES - 1) {
                 assertEquals(null, state.onFailedUnlockAttempt(now))
@@ -203,7 +203,7 @@ class PrivacyLockStateTest {
     fun fifth_failure_trips_base_lockout() =
         runTest {
             val settings = FakeSettings(lockEnabled = true)
-            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             val now = 1_000_000L
             repeat(PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES) {
                 state.onFailedUnlockAttempt(now)
@@ -216,7 +216,7 @@ class PrivacyLockStateTest {
     fun lockout_doubles_and_caps_at_maximum() =
         runTest {
             val settings = FakeSettings(lockEnabled = true)
-            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             val now = 1_000_000L
             // 5th failure → base (30s)
             repeat(PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES) { state.onFailedUnlockAttempt(now) }
@@ -234,7 +234,7 @@ class PrivacyLockStateTest {
     fun unlock_success_clears_backoff_state() =
         runTest {
             val settings = FakeSettings(lockEnabled = true)
-            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val state = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             val now = 1_000_000L
             repeat(PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES) { state.onFailedUnlockAttempt(now) }
             assertTrue(settings.lockedUntilEpochMs.value != null)
@@ -250,7 +250,7 @@ class PrivacyLockStateTest {
     fun two_scopes_have_independent_lock_state() =
         runTest(UnconfinedTestDispatcher()) {
             val settings = FakeSettings(lockEnabled = true)
-            val messages = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val messages = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             val wallet = PrivacyLockState(LockScope.Wallet, settings, backgroundScope)
             assertEquals(LockState.Locked, messages.state.value)
             assertEquals(LockState.Locked, wallet.state.value)
@@ -268,7 +268,7 @@ class PrivacyLockStateTest {
     fun failed_unlock_counter_is_shared_across_scopes() =
         runTest {
             val settings = FakeSettings(lockEnabled = true)
-            val messages = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val messages = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             val wallet = PrivacyLockState(LockScope.Wallet, settings, backgroundScope)
             val now = 1_000_000L
             // Three failures on Messages, two on Wallet → shared counter hits 5
@@ -290,7 +290,7 @@ class PrivacyLockStateTest {
     fun clearing_password_cascades_to_disable_the_master_lock() =
         runTest(UnconfinedTestDispatcher()) {
             val settings = FakeSettings(lockEnabled = true, password = "salt\$hash")
-            val messages = PrivacyLockState(LockScope.Messages, settings, backgroundScope)
+            val messages = PrivacyLockState(LockScope.Messages, settings, backgroundScope) { testScheduler.currentTime }
             val wallet = PrivacyLockState(LockScope.Wallet, settings, backgroundScope)
             assertEquals(LockState.Locked, messages.state.value)
             assertEquals(LockState.Locked, wallet.state.value)

@@ -26,7 +26,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
-import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCache
+import com.vitorpamplona.amethyst.commons.util.cache.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.video.normalizeStreamMimeType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers

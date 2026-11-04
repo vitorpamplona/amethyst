@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.profile.ui.FollowButton
 import com.vitorpamplona.amethyst.commons.profile.ui.ListButton
 import com.vitorpamplona.amethyst.commons.profile.ui.UnfollowButton
@@ -46,9 +47,9 @@ import com.vitorpamplona.amethyst.commons.resources.follow
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_follow
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_unfollow
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.ui.components.LocalReadOnlyPreview
 import com.vitorpamplona.amethyst.commons.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.ShowUserButton
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
@@ -76,8 +77,11 @@ fun UserCompose(
             AboutDisplay(baseUser, accountViewModel)
         },
         trailingContent = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                UserActionOptions(baseUser, accountViewModel, nav)
+            // A read-only preview (a signer consent prompt) shows who is on a list, not what to do.
+            if (!LocalReadOnlyPreview.current) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    UserActionOptions(baseUser, accountViewModel, nav)
+                }
             }
         },
     )

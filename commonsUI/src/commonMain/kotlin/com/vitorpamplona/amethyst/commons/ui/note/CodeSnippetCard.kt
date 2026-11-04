@@ -40,6 +40,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.code_snippet_default_name
+import com.vitorpamplona.amethyst.commons.resources.code_snippet_deps
+import com.vitorpamplona.amethyst.commons.resources.code_snippet_language_snippet
+import com.vitorpamplona.amethyst.commons.resources.code_snippet_license
+import com.vitorpamplona.amethyst.commons.resources.code_snippet_runtime
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
@@ -50,11 +57,9 @@ import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 @Composable
 fun CodeSnippetCard(noteEvent: CodeSnippetEvent) {
     val name =
-        remember(noteEvent) {
-            noteEvent.snippetName()
-                ?: noteEvent.language()?.let { "$it snippet" }
-                ?: "Code Snippet"
-        }
+        noteEvent.snippetName()
+            ?: noteEvent.language()?.let { stringRes(Res.string.code_snippet_language_snippet, it) }
+            ?: stringRes(Res.string.code_snippet_default_name)
     val language = remember(noteEvent) { noteEvent.language() ?: noteEvent.extension() }
     val description = remember(noteEvent) { noteEvent.snippetDescription() }
     val codePreview =
@@ -141,11 +146,9 @@ fun CodeSnippetCard(noteEvent: CodeSnippetEvent) {
 @Composable
 fun RenderCodeSnippetHeaderForThread(noteEvent: CodeSnippetEvent) {
     val name =
-        remember(noteEvent) {
-            noteEvent.snippetName()
-                ?: noteEvent.language()?.let { "$it snippet" }
-                ?: "Code Snippet"
-        }
+        noteEvent.snippetName()
+            ?: noteEvent.language()?.let { stringRes(Res.string.code_snippet_language_snippet, it) }
+            ?: stringRes(Res.string.code_snippet_default_name)
     val language = remember(noteEvent) { noteEvent.language() ?: noteEvent.extension() }
     val description = remember(noteEvent) { noteEvent.snippetDescription() }
     val license = remember(noteEvent) { noteEvent.license() }
@@ -216,7 +219,7 @@ fun RenderCodeSnippetHeaderForThread(noteEvent: CodeSnippetEvent) {
         license?.let {
             Spacer(modifier = StdVertSpacer)
             Text(
-                text = "License: $it",
+                text = stringRes(Res.string.code_snippet_license, it),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -224,7 +227,7 @@ fun RenderCodeSnippetHeaderForThread(noteEvent: CodeSnippetEvent) {
 
         runtime?.let {
             Text(
-                text = "Runtime: $it",
+                text = stringRes(Res.string.code_snippet_runtime, it),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -232,7 +235,7 @@ fun RenderCodeSnippetHeaderForThread(noteEvent: CodeSnippetEvent) {
 
         if (deps.isNotEmpty()) {
             Text(
-                text = "Deps: ${deps.joinToString(", ")}",
+                text = stringRes(Res.string.code_snippet_deps, deps.joinToString(", ")),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

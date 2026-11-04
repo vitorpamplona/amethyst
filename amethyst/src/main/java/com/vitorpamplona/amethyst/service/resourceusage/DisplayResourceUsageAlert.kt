@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.collectMemorySnapshot
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_alert_message
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_alert_not_now
@@ -45,8 +46,8 @@ import com.vitorpamplona.amethyst.commons.resources.resource_usage_reason_conn_t
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_reason_reconnects
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_reason_wakelock
 import com.vitorpamplona.amethyst.commons.service.crashreports.DEV_REPORT_PUBKEY
+import com.vitorpamplona.amethyst.commons.service.resourceusage.ResourceUsageAlerts
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel

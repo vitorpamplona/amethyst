@@ -23,10 +23,12 @@ package com.vitorpamplona.amethyst.commons.relays.ui
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurposeGroup
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cordn_groups_title
 import com.vitorpamplona.amethyst.commons.resources.kind_follow_list
 import com.vitorpamplona.amethyst.commons.resources.kind_profile
 import com.vitorpamplona.amethyst.commons.resources.marmot_group
 import com.vitorpamplona.amethyst.commons.resources.nests
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_title
 import com.vitorpamplona.amethyst.commons.resources.public_chat
 import com.vitorpamplona.amethyst.commons.resources.relay_explain_account_data
 import com.vitorpamplona.amethyst.commons.resources.relay_explain_community_chats
@@ -105,6 +107,7 @@ object SubPurposeLabels {
             SubPurpose.NUTZAP_INBOX -> Res.string.relay_purpose_nutzap_inbox
             SubPurpose.MINT_DIRECTORY -> Res.string.relay_purpose_mint_directory
             SubPurpose.NWC -> Res.string.relay_purpose_nwc
+            SubPurpose.SIGNER -> Res.string.nip46_signer_title
             // messages — always on
             SubPurpose.NOTIFICATIONS -> Res.string.route_notifications
             SubPurpose.DIRECT_MESSAGES -> Res.string.relay_purpose_dm_inbox
@@ -115,6 +118,7 @@ object SubPurposeLabels {
             SubPurpose.LIVE_CHAT -> Res.string.relay_purpose_live_chat
             SubPurpose.COMMUNITY_CHATS -> Res.string.relay_purpose_community_chats
             SubPurpose.ENCRYPTED_GROUPS -> Res.string.marmot_group
+            SubPurpose.COORDINATOR_GROUPS -> Res.string.cordn_groups_title
             SubPurpose.LIVE_ROOMS -> Res.string.nests
             // feeds
             SubPurpose.HOME_FEED -> Res.string.relay_purpose_home_feed

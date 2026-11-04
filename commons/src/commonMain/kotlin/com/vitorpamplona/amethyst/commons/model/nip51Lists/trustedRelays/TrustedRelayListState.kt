@@ -74,6 +74,13 @@ class TrustedRelayListState(
                 settings.backupTrustedRelayList?.let { decryptionCache.cachedRelays(it) } ?: emptySet(),
             )
 
+    /** The list with [relay] added, or null when it is already there. */
+    suspend fun addRelay(relay: NormalizedRelayUrl): TrustedRelayListEvent? {
+        val current = normalizeTrustedRelayListWithBackup(trustedListNote)
+        if (relay in current) return null
+        return saveRelayList(current.toList() + relay)
+    }
+
     suspend fun saveRelayList(trustedRelays: List<NormalizedRelayUrl>): TrustedRelayListEvent {
         val relayListForTrusted = getTrustedRelayList()
 

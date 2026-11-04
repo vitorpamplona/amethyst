@@ -44,9 +44,9 @@ import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.OfflineFlag
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.commons.ui.components.CheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
-import com.vitorpamplona.amethyst.commons.ui.note.platform.LikeReaction
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ZapReaction
+import com.vitorpamplona.amethyst.commons.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.commons.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp

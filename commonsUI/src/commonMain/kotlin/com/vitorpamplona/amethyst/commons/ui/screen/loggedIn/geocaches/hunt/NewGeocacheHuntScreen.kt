@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.geocaches.hunt.NewGeocacheHuntViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
@@ -63,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_new_publish
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
 import com.vitorpamplona.amethyst.commons.resources.route_edit_geocache_hunt
 import com.vitorpamplona.amethyst.commons.resources.route_new_geocache_hunt
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -98,7 +100,7 @@ fun NewGeocacheHuntScreen(
     val scope = rememberCoroutineScope()
 
     remember(editKind, editPubKeyHex, editDTag, seedCache) {
-        model.init(accountViewModel)
+        model.init(accountViewModel.account)
         if (editKind != null && editPubKeyHex != null && editDTag != null) {
             model.loadForEdit(editKind, editPubKeyHex, editDTag)
         }
@@ -142,7 +144,7 @@ fun NewGeocacheHuntScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = model.title.value,
                 onValueChange = { model.title.value = it },
                 label = { Text(stringRes(Res.string.geocache_hunt_title)) },
@@ -150,7 +152,7 @@ fun NewGeocacheHuntScreen(
                 singleLine = true,
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = model.description.value,
                 onValueChange = { model.description.value = it },
                 label = { Text(stringRes(Res.string.geocache_hunt_description)) },

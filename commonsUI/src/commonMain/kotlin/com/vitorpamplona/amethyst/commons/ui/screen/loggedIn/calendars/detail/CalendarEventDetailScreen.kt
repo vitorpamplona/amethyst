@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.IcsExport
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
+import com.vitorpamplona.amethyst.commons.model.toNostrUriOrFallback
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
@@ -94,10 +95,11 @@ import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
+import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
 import com.vitorpamplona.amethyst.commons.ui.note.types.CalendarRsvpRow
+import com.vitorpamplona.amethyst.commons.ui.note.types.calendarTimeZoneLine
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.formatCalendarRange
@@ -111,7 +113,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -119,6 +120,7 @@ import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
@@ -217,14 +219,7 @@ fun CalendarEventDetailScreen(
                         }
                         val shareTitle = stringRes(Res.string.calendar_share_nostr_title)
                         IconButton(onClick = {
-                            val naddr =
-                                NAddress.create(
-                                    targetAddress.kind,
-                                    targetAddress.pubKeyHex,
-                                    targetAddress.dTag,
-                                    null,
-                                )
-                            textSharer.share("nostr:$naddr", null, shareTitle)
+                            textSharer.share(targetAddress.toNostrUriOrFallback(null, null), null, shareTitle)
                         }) {
                             Icon(
                                 symbol = MaterialSymbols.AutoMirrored.Send,
@@ -346,6 +341,15 @@ private fun EventBody(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
+        }
+        (event as? CalendarTimeSlotEvent)?.let { timed ->
+            calendarTimeZoneLine(timed.start(), timed.startTzId())?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         val relative = rememberRelativeTimeLabel(view, note.idHex)
         relative?.let {
@@ -868,7 +872,7 @@ private fun rememberRsvpsFor(targetAddress: Address): State<List<CalendarRSVPEve
                     all
                         .filter { it.calendarEventAddress() == targetAddress }
                         .sortedByDescending { it.createdAt }
-                }.flowOn(Dispatchers.Default)
+                }.flowOn(Dispatchers.IO)
         }
 
     return rsvps.collectAsStateWithLifecycle(emptyList())
@@ -884,7 +888,7 @@ private fun rememberCalendarsContaining(targetAddress: Address): State<List<Cale
                     all
                         .filter { it.calendarEventAddresses().contains(targetAddress) }
                         .sortedByDescending { it.createdAt }
-                }.flowOn(Dispatchers.Default)
+                }.flowOn(Dispatchers.IO)
         }
 
     return calendars.collectAsStateWithLifecycle(emptyList())

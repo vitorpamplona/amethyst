@@ -40,11 +40,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.notifications.MessageSetCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.ic_dm
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteDropDownMenu
@@ -79,12 +79,9 @@ fun MessageSetCompose(
     val columnModifier =
         remember(backgroundColor.value) {
             Modifier
+                .fillMaxWidth()
                 .background(backgroundColor.value)
-                .padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 10.dp,
-                ).combinedClickable(
+                .combinedClickable(
                     onClick = {
                         scope.launch {
                             routeFor(
@@ -94,7 +91,11 @@ fun MessageSetCompose(
                         }
                     },
                     onLongClick = enablePopup,
-                ).fillMaxWidth()
+                ).padding(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 10.dp,
+                )
         }
 
     Column(columnModifier) {

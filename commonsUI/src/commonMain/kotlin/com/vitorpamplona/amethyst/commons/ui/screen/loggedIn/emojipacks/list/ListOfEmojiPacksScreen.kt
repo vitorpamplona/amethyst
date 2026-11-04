@@ -87,8 +87,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
@@ -319,7 +319,7 @@ private fun EmojiListToggleRow(
             ) { selectionNote ->
                 selectionNote?.let { usersEmojiList ->
                     val hasAddedThis by observeNoteAndMap(usersEmojiList, accountViewModel) {
-                        usersEmojiList.event?.isTaggedAddressableNote(packNote.idHex)
+                        (usersEmojiList.event as? EmojiListEvent)?.hasEmojiPack(packNote.idHex)
                     }
                     val isAdded = hasAddedThis == true
                     M3ActionRow(

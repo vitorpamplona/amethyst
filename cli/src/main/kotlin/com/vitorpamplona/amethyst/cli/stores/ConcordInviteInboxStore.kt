@@ -20,13 +20,14 @@
  */
 package com.vitorpamplona.amethyst.cli.stores
 
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.SecureFileIO
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteInbox
+import kotlinx.serialization.Serializable
 import java.io.File
 
 /** amy's bookkeeping for Concord Direct Invites (CORD-05 §6): the wrap ids the user declined. */
+@Serializable
 data class StoredInviteInbox(
     val declined: List<String> = emptyList(),
 )
@@ -41,7 +42,7 @@ class ConcordInviteInboxStore(
 ) {
     fun load(): StoredInviteInbox =
         if (file.exists()) {
-            runCatching { Output.mapper.readValue<StoredInviteInbox>(file.readText()) }.getOrDefault(StoredInviteInbox())
+            runCatching { CliJson.files.decodeFromString<StoredInviteInbox>(file.readText()) }.getOrDefault(StoredInviteInbox())
         } else {
             StoredInviteInbox()
         }
@@ -53,6 +54,6 @@ class ConcordInviteInboxStore(
         if (wrapId in current.declined) return
         // Bounded like the app's store: the newest declines are kept, a long-expired one is not worth a line.
         val next = (current.declined + wrapId).takeLast(ConcordDirectInviteInbox.DECLINED_CAP)
-        SecureFileIO.writeTextAtomic(file, Output.mapper.writeValueAsString(current.copy(declined = next)))
+        SecureFileIO.writeTextAtomic(file, CliJson.files.encodeToString(current.copy(declined = next)))
     }
 }

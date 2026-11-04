@@ -32,8 +32,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -146,7 +146,7 @@ fun UserReplyReaction(model: NotificationSummaryState) {
     Text(
         showCounts,
         fontWeight = FontWeight.Bold,
-        fontSize = 18.sp,
+        fontSize = summaryCountSize(),
     )
 }
 
@@ -157,7 +157,7 @@ fun UserBoostReaction(model: NotificationSummaryState) {
     Text(
         boosts,
         fontWeight = FontWeight.Bold,
-        fontSize = 18.sp,
+        fontSize = summaryCountSize(),
     )
 }
 
@@ -168,7 +168,7 @@ fun UserLikeReaction(model: NotificationSummaryState) {
     Text(
         text = reactions,
         fontWeight = FontWeight.Bold,
-        fontSize = 18.sp,
+        fontSize = summaryCountSize(),
     )
 }
 
@@ -178,6 +178,13 @@ fun UserZapReaction(model: NotificationSummaryState) {
     Text(
         amount,
         fontWeight = FontWeight.Bold,
-        fontSize = 18.sp,
+        fontSize = summaryCountSize(),
     )
 }
+
+/**
+ * The counts' size: 9/8 of the body text, so 18sp under the phone's type scale and smaller under the
+ * desktop's, which sizes its body text like the OS's own apps.
+ */
+@Composable
+private fun summaryCountSize(): TextUnit = MaterialTheme.typography.bodyLarge.fontSize * 1.125f

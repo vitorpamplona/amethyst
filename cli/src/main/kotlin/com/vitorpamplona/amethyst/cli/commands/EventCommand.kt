@@ -20,13 +20,16 @@
  */
 package com.vitorpamplona.amethyst.cli.commands
 
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * `amy event --kind N [--content TEXT] [--tags JSON] [--created-at TS]
@@ -72,9 +75,7 @@ object EventCommand {
             try {
                 args
                     .flag("tags")
-                    ?.let { Output.mapper.readValue<List<List<String>>>(it) }
-                    ?.map { it.toTypedArray() }
-                    ?.toTypedArray()
+                    ?.let { parseTags(it) }
                     ?: emptyArray()
             } catch (e: Exception) {
                 return Output.error("bad_args", "--tags must be a JSON array of string arrays: ${e.message}")
@@ -87,7 +88,7 @@ object EventCommand {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val signed: Event = ctx.signer.sign(createdAt, kind, tags, content)
-            val eventNode = Output.mapper.readTree(signed.toJson())
+            val eventNode = CliJson.parse(signed.toJson())
 
             if (!wantPublish) {
                 Output.emit(mapOf("event" to eventNode, "published" to false))
@@ -109,4 +110,22 @@ object EventCommand {
             return 0
         }
     }
+}
+
+/**
+ * `--tags`: a JSON array of string arrays. A number or boolean inside a tag reads as its text,
+ * as Jackson's scalar coercion did; anything else fails the flag.
+ */
+private fun parseTags(json: String): Array<Array<String>> {
+    val root = CliJson.parse(json) as? JsonArray ?: throw IllegalArgumentException("not an array")
+    return root
+        .map { tag ->
+            val parts = tag as? JsonArray ?: throw IllegalArgumentException("a tag is not an array")
+            parts
+                .map { part ->
+                    val p = part as? JsonPrimitive
+                    if (p == null || p is JsonNull) throw IllegalArgumentException("a tag entry is not a string")
+                    p.content
+                }.toTypedArray()
+        }.toTypedArray()
 }

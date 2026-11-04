@@ -37,7 +37,6 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
-import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
@@ -185,7 +184,7 @@ class NostrSignerPermissionLedger(
          * Most of these are *public, non-destructive content* — an event the user creates and could
          * delete afterwards, in the same risk class as the original kind 1/6/7 set (notes, reposts,
          * reactions, pictures, videos, voice, public/live/relay chat, threads, polls, comments,
-         * highlights, code snippets, file metadata, reports, torrents, long-form articles, wiki, status).
+         * highlights, code snippets, file metadata, torrents, long-form articles, wiki, status).
          * Some are *addressable* (long-form 30023, wiki 30818, video 34235/34236): re-signing
          * with the same `d` tag replaces the app's own prior version at that address — an accepted
          * trade-off, since an app that can already post arbitrary notes could do equal reputational harm.
@@ -207,6 +206,10 @@ class NostrSignerPermissionLedger(
          * contacts 3, relay/mute/bookmark lists are replaceable — a bad write can wipe settings),
          * delete content (kind 5), or leak private data. Notable exclusions that stay ASK:
          *  - **nutzap** (9321) — publishing one *is* the payment (it carries spendable ecash proofs).
+         *  - **reports** (1984) — a public accusation against *another person*, and web-of-trust apps
+         *    (Brainstorm) fold reports into that person's trust score. One tap in an app's menu
+         *    published a spam report with no prompt; it must be asked, like the other actions that
+         *    touch someone else.
          *  - **NIP-98 HTTP auth** (27235) — authorizes an arbitrary HTTP request as the user, including
          *    destructive/admin calls (NIP-96 blob deletes, NIP-86 relay management); blast radius is too
          *    broad to auto-approve.
@@ -239,7 +242,6 @@ class NostrSignerPermissionLedger(
                 VoiceReplyEvent.KIND, // 1244 — voice replies
                 LiveActivitiesChatMessageEvent.KIND, // 1311 — live-stream chat (sibling of kind 42)
                 CodeSnippetEvent.KIND, // 1337 — NIP-C0 code snippets (additive public content)
-                ReportEvent.KIND, // 1984 — NIP-56 content/spam reports (moderation flag)
                 TorrentEvent.KIND, // 2003 — NIP-35 torrent announcements (additive public content)
                 TorrentCommentEvent.KIND, // 2004 — NIP-35 torrent comments
                 HighlightEvent.KIND, // 9802 — highlighted snippets shared publicly

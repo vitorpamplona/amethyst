@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.layouts
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -41,15 +42,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.vitorpamplona.amethyst.commons.ui.components.LocalZoomViewport
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomViewport
+import com.vitorpamplona.amethyst.commons.ui.feeds.BackToTopButton
+import com.vitorpamplona.amethyst.commons.ui.feeds.BackToTopState
+import com.vitorpamplona.amethyst.commons.ui.feeds.LocalBackToTop
 import com.vitorpamplona.amethyst.commons.ui.insets.rememberSafeImeInsets
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import kotlinx.coroutines.launch
@@ -57,6 +69,8 @@ import kotlinx.coroutines.launch
 private enum class DisappearingSlot { Top, Bottom, Content, Fab }
 
 private val FabEdgePadding = 16.dp
+
+private val FabStackSpacing = 12.dp
 
 /**
  * A scaffold whose top and bottom bars slide away while the content scrolls and come back on the
@@ -79,6 +93,10 @@ fun DisappearingScaffold(
     mainContent: @Composable (padding: PaddingValues) -> Unit,
 ) {
     val state = rememberDisappearingBarState()
+
+    // Feed lists inside report to this, and a back-to-top button stacks over the floating button.
+    // Not for chats: their list runs bottom-up, so its "top" is the newest message.
+    val backToTop = if (isInvertedLayout) null else remember { BackToTopState() }
 
     // Callers pin the chrome (e.g. large screens) through allowBarHide: bars never slide away on
     // scroll, and the immersive status-bar hiding stays off.
@@ -148,6 +166,7 @@ fun DisappearingScaffold(
             topBar = topBar,
             bottomBar = bottomBar,
             floatingButton = floatingButton,
+            backToTop = backToTop,
             imeInsets = imeInsets,
             mainContent = mainContent,
         )
@@ -160,11 +179,14 @@ private fun ScaffoldLayout(
     topBar: (@Composable () -> Unit)?,
     bottomBar: (@Composable () -> Unit)?,
     floatingButton: (@Composable () -> Unit)?,
+    backToTop: BackToTopState?,
     imeInsets: WindowInsets,
     mainContent: @Composable (padding: PaddingValues) -> Unit,
 ) {
     val navBarInsets = WindowInsets.navigationBars
-    SubcomposeLayout { constraints ->
+    val outerViewport = LocalZoomViewport.current
+    val viewport = remember(state, outerViewport) { UncoveredContentViewport(state, outerViewport) }
+    SubcomposeLayout(Modifier.onPlaced { viewport.coordinates = it }) { constraints ->
         val layoutWidth = constraints.maxWidth
         val layoutHeight = constraints.maxHeight
         val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
@@ -230,6 +252,8 @@ private fun ScaffoldLayout(
                 CompositionLocalProvider(
                     LocalDisappearingScaffoldPadding provides contentPadding,
                     LocalDisappearingBarState provides state,
+                    LocalZoomViewport provides viewport,
+                    LocalBackToTop provides backToTop,
                 ) {
                     mainContent(contentPadding)
                 }
@@ -238,10 +262,20 @@ private fun ScaffoldLayout(
             )
 
         val fabPlaceable =
-            floatingButton?.let { fab ->
+            if (floatingButton != null || backToTop != null) {
                 subcompose(DisappearingSlot.Fab) {
-                    FloatingButtonHolder(state = state) { fab() }
+                    FloatingButtonHolder(state = state) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(FabStackSpacing),
+                        ) {
+                            if (backToTop != null) BackToTopButton(backToTop)
+                            floatingButton?.invoke()
+                        }
+                    }
                 }.firstOrNull()?.measure(looseConstraints)
+            } else {
+                null
             }
 
         val fabEdgePx = FabEdgePadding.roundToPx()
@@ -256,6 +290,28 @@ private fun ScaffoldLayout(
                 fabPlaceable.place(x, yBase)
             }
         }
+    }
+}
+
+/**
+ * The content area minus what the bars, drawn over it, cover right now: the content is laid out
+ * under them (it scrolls behind the bars), so nothing else clips a thumbnail at their edge. Read
+ * when a media viewer opens or closes so it grows out of, and shrinks into, only what was showing.
+ */
+private class UncoveredContentViewport(
+    private val state: DisappearingBarState,
+    private val outer: ZoomViewport?,
+) : ZoomViewport {
+    var coordinates: LayoutCoordinates? = null
+
+    override fun boundsInWindow(): Rect? {
+        val coordinates = coordinates?.takeIf { it.isAttached } ?: return outer?.boundsInWindow()
+        val content = Rect(coordinates.positionInWindow(), coordinates.size.toSize())
+        // Offsets run from -limit (bar hidden) to 0 (bar fully shown).
+        val topCovered = (state.topHeightLimit + state.topHeightOffset).coerceAtLeast(0f)
+        val bottomCovered = (state.bottomHeightLimit + state.bottomHeightOffset).coerceAtLeast(0f)
+        val uncovered = Rect(content.left, content.top + topCovered, content.right, content.bottom - bottomCovered)
+        return outer?.boundsInWindow()?.intersect(uncovered) ?: uncovered
     }
 }
 

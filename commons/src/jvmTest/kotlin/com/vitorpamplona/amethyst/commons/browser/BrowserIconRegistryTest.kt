@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.browser
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -38,6 +39,7 @@ import java.io.File
  * The favicon store's disk behaviour. Untestable while it was an Android `object` taking a `Context`
  * for its `filesDir`; taking `iconDir: () -> Path` is what opens it up.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class BrowserIconRegistryTest {
     @get:Rule
     val folder = TemporaryFolder()

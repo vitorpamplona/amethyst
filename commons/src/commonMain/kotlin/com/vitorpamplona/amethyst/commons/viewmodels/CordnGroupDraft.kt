@@ -24,7 +24,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorDiscovery
+import com.vitorpamplona.cordn.spec00Coordinator.CordnCoordinatorDiscovery
+import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
@@ -127,7 +128,7 @@ class CordnGroupDraft : ViewModel() {
      * Empty in egalitarian mode and the creator plus their choices otherwise --
      * never the choices alone, for the reason on [coAdmins].
      */
-    fun adminPubKeys(creator: HexKey): List<HexKey> = if (egalitarian) emptyList() else listOf(creator) + coAdmins.filterNot { it == creator }
+    fun adminPubKeys(creator: HexKey): List<HexKey> = CordnGroupMetadata.adminsForNewGroup(creator, coAdmins, egalitarian)
 
     /** Forgets the draft, so the next new group does not start as this one. */
     fun clear() {

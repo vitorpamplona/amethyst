@@ -24,6 +24,7 @@ import com.vitorpamplona.nestsclient.moq.MoqSession.Companion.client
 import com.vitorpamplona.nestsclient.moq.MoqSession.Companion.server
 import com.vitorpamplona.nestsclient.transport.WebTransportBidiStream
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -566,7 +567,7 @@ class MoqSession private constructor(
                     reasonPhrase = "no publisher for that namespace+name",
                     trackAlias = msg.trackAlias,
                 )
-            runCatching { writeMutex.withLock { controlStream.write(MoqCodec.encode(err)) } }
+            runCatchingCancellable { writeMutex.withLock { controlStream.write(MoqCodec.encode(err)) } }
             return
         }
 
@@ -577,7 +578,7 @@ class MoqSession private constructor(
                 groupOrder = 0,
                 contentExists = false,
             )
-        runCatching { writeMutex.withLock { controlStream.write(MoqCodec.encode(ok)) } }
+        runCatchingCancellable { writeMutex.withLock { controlStream.write(MoqCodec.encode(ok)) } }
     }
 
     private suspend fun handleInboundUnsubscribe(msg: Unsubscribe) {
@@ -849,7 +850,7 @@ class MoqSession private constructor(
                             payload = payload,
                         ),
                     )
-                runCatching { transport.sendDatagram(datagram) }
+                runCatchingCancellable { transport.sendDatagram(datagram) }
                     .onSuccess { anySent = true }
             }
             // Roll the objectId back if the entire fan-out failed (e.g.
@@ -964,8 +965,20 @@ class SubscribeHandle internal constructor(
     val ok: SubscribeOk,
     val objects: Flow<MoqObject>,
     private val unsubscribeAction: suspend () -> Unit,
+    private val broadcastEndedCountProbe: () -> Long = { 0L },
 ) {
     suspend fun unsubscribe() = unsubscribeAction()
+
+    /**
+     * How many times this session has seen the subscribed broadcast's
+     * announce go `Ended` (moq-lite), read live. Each `Ended` is a
+     * publisher session going away, so a rise between two subscriptions
+     * means the later one is served by a new publisher session, whose
+     * groups may restart at 0. Always 0 for transports without announces,
+     * and on the handle `connectReconnectingNestsListener` returns, which
+     * outlives the publisher sessions it follows.
+     */
+    val broadcastEndedCount: Long get() = broadcastEndedCountProbe()
 }
 
 /** Thrown when the peer violates the MoQ-transport state machine. */

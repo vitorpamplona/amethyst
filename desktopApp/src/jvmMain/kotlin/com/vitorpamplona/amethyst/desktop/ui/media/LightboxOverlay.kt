@@ -27,6 +27,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -43,12 +44,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -58,12 +54,15 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -71,19 +70,30 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.close
+import com.vitorpamplona.amethyst.commons.resources.lightbox_copy_url
+import com.vitorpamplona.amethyst.commons.resources.lightbox_more_options
+import com.vitorpamplona.amethyst.commons.resources.lightbox_open_in_browser
+import com.vitorpamplona.amethyst.commons.resources.lightbox_previous
+import com.vitorpamplona.amethyst.commons.resources.next
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomTransition
+import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionContainer
+import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionLayer
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
+import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.awt.Desktop
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.File
-import java.net.URI
-
-val LocalWindowState = compositionLocalOf<androidx.compose.ui.window.WindowState?> { null }
 
 val LocalAwtWindow = compositionLocalOf<java.awt.Window?> { null }
 
@@ -117,8 +127,13 @@ fun LightboxOverlay(
     initialFullscreen: Boolean = false,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    transition: ZoomTransition? = null,
+    onIndexChanged: (Int) -> Unit = {},
 ) {
     var currentIndex by remember { mutableIntStateOf(initialIndex.coerceIn(0, urls.lastIndex)) }
+    // The viewer's transition closes into the thumbnail of the media on screen.
+    val currentOnIndexChanged by rememberUpdatedState(onIndexChanged)
+    LaunchedEffect(currentIndex) { currentOnIndexChanged(currentIndex) }
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     var menuExpanded by remember { mutableStateOf(false) }
@@ -211,12 +226,20 @@ fun LightboxOverlay(
             Modifier.fillMaxSize()
         }
 
+    // With a transition the media grows out of its thumbnail while the backdrop and the controls
+    // fade in alongside, and the reverse on the way out.
+    val backdrop = if (viewMode == ViewMode.FULLSCREEN) Color.Black else Color.Black.copy(alpha = 0.9f)
+    val fadeWithTransition = Modifier.graphicsLayer { alpha = transition?.progress ?: 1f }
+
     Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(if (viewMode == ViewMode.FULLSCREEN) Color.Black else Color.Black.copy(alpha = 0.9f))
+                .then(if (transition != null) Modifier.zoomTransitionContainer(transition) else Modifier)
+                .drawBehind { drawRect(backdrop.copy(alpha = backdrop.alpha * (transition?.progress ?: 1f))) }
                 .focusRequester(focusRequester)
+                // A focus target, or requestFocus() finds none and Escape and the arrows never arrive.
+                .focusable()
                 .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                     when (event.key) {
@@ -264,66 +287,54 @@ fun LightboxOverlay(
                     if (viewMode != ViewMode.FULLSCREEN) onDismiss()
                 },
     ) {
-        // Main content — video or image
-        if (isVideo) {
-            Box(
-                modifier =
-                    contentModifier.clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) {
-                        // Consume clicks so backdrop dismiss doesn't fire
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                DesktopVideoPlayer(
-                    url = currentUrl,
-                    autoPlay = true,
-                    initialSeekPosition = if (currentIndex == initialIndex) initialSeekPosition else 0f,
-                    viewMode = viewMode,
-                    onViewModeChange = { newMode ->
-                        viewMode = newMode
-                    },
+        // Main content — video or image, in the layer that grows out of the thumbnail
+        Box(Modifier.fillMaxSize().then(if (transition != null) Modifier.zoomTransitionLayer(transition) else Modifier)) {
+            if (isVideo) {
+                Box(
                     modifier =
-                        if (viewMode == ViewMode.DEFAULT) {
-                            Modifier.widthIn(max = 1200.dp)
-                        } else {
-                            Modifier
+                        contentModifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {
+                            // Consume clicks so backdrop dismiss doesn't fire
                         },
-                    trailingControls = {
-                        MoreOptionsMenu(
-                            menuExpanded = menuExpanded,
-                            onExpandMenu = { menuExpanded = true },
-                            onDismissMenu = { menuExpanded = false },
-                            onSave = { triggerSave() },
-                            onCopyUrl = { copyUrlToClipboard(urls[currentIndex]) },
-                            onOpenInBrowser = {
-                                Desktop.getDesktop().browse(URI(urls[currentIndex]))
-                            },
-                        )
-                    },
-                )
-            }
-        } else {
-            // Hover tooltip shows the full Blossom URL; single-click
-            // copies it to the clipboard + triggers the snackbar.
-            val tooltipState = rememberTooltipState(isPersistent = false)
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above, 8.dp),
-                tooltip = {
-                    PlainTooltip {
-                        Text(
-                            currentUrl,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                },
-                state = tooltipState,
-                modifier = contentModifier,
-            ) {
+                    contentAlignment = Alignment.Center,
+                ) {
+                    DesktopVideoPlayer(
+                        url = currentUrl,
+                        autoPlay = true,
+                        initialSeekPosition = if (currentIndex == initialIndex) initialSeekPosition else 0f,
+                        viewMode = viewMode,
+                        onViewModeChange = { newMode ->
+                            viewMode = newMode
+                        },
+                        modifier =
+                            (
+                                if (viewMode == ViewMode.DEFAULT) {
+                                    Modifier.widthIn(max = 1200.dp)
+                                } else {
+                                    Modifier
+                                }
+                            ).onGloballyPositioned { transition?.onMediaPositioned(it, null) },
+                        trailingControls = {
+                            MoreOptionsMenu(
+                                menuExpanded = menuExpanded,
+                                onExpandMenu = { menuExpanded = true },
+                                onDismissMenu = { menuExpanded = false },
+                                onSave = { triggerSave() },
+                                onCopyUrl = { copyUrlToClipboard(urls[currentIndex]) },
+                                onOpenInBrowser = {
+                                    DesktopBrowser.open(urls[currentIndex])
+                                },
+                            )
+                        },
+                    )
+                }
+            } else {
                 ZoomableImage(
                     url = currentUrl,
-                    onTap = { copyUrlToClipboard(currentUrl) },
+                    modifier = contentModifier,
+                    onMediaPositioned = transition?.let { it::onMediaPositioned },
                 )
             }
         }
@@ -451,7 +462,7 @@ fun LightboxOverlay(
         // Hidden in fullscreen to keep the view immersive
         if (!isVideo && viewMode != ViewMode.FULLSCREEN) {
             Box(
-                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                modifier = Modifier.align(Alignment.BottomEnd).then(fadeWithTransition).padding(16.dp),
             ) {
                 MoreOptionsMenu(
                     menuExpanded = menuExpanded,
@@ -460,21 +471,26 @@ fun LightboxOverlay(
                     onSave = { triggerSave() },
                     onCopyUrl = { copyUrlToClipboard(urls[currentIndex]) },
                     onOpenInBrowser = {
-                        Desktop.getDesktop().browse(URI(urls[currentIndex]))
+                        DesktopBrowser.open(urls[currentIndex])
                     },
                 )
             }
         }
 
-        // Close button (top-left) — hidden in fullscreen
+        // Close button (top-left) — hidden in fullscreen. Below macOS's window buttons: the viewer
+        // covers the whole window, title bar included.
         if (viewMode != ViewMode.FULLSCREEN) {
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .then(fadeWithTransition)
+                        .padding(start = 8.dp, top = titleBarInsetTop + 8.dp, end = 8.dp, bottom = 8.dp),
             ) {
                 Icon(
                     MaterialSymbols.Close,
-                    contentDescription = "Close",
+                    contentDescription = stringRes(Res.string.close),
                     tint = Color.White,
                     modifier = Modifier.size(32.dp),
                 )
@@ -490,6 +506,7 @@ fun LightboxOverlay(
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
+                        .then(fadeWithTransition)
                         .padding(16.dp)
                         .background(Color.Black.copy(alpha = 0.5f), MaterialTheme.shapes.large)
                         .padding(horizontal = 16.dp, vertical = 6.dp),
@@ -501,11 +518,11 @@ fun LightboxOverlay(
             if (currentIndex > 0) {
                 IconButton(
                     onClick = { currentIndex-- },
-                    modifier = Modifier.align(Alignment.CenterStart).padding(16.dp),
+                    modifier = Modifier.align(Alignment.CenterStart).then(fadeWithTransition).padding(16.dp),
                 ) {
                     Icon(
                         MaterialSymbols.AutoMirrored.ArrowBack,
-                        contentDescription = "Previous",
+                        contentDescription = stringRes(Res.string.lightbox_previous),
                         tint = Color.White,
                         modifier = Modifier.size(48.dp),
                     )
@@ -515,11 +532,11 @@ fun LightboxOverlay(
             if (currentIndex < urls.lastIndex) {
                 IconButton(
                     onClick = { currentIndex++ },
-                    modifier = Modifier.align(Alignment.CenterEnd).padding(16.dp),
+                    modifier = Modifier.align(Alignment.CenterEnd).then(fadeWithTransition).padding(16.dp),
                 ) {
                     Icon(
                         MaterialSymbols.AutoMirrored.ArrowForward,
-                        contentDescription = "Next",
+                        contentDescription = stringRes(Res.string.next),
                         tint = Color.White,
                         modifier = Modifier.size(48.dp),
                     )
@@ -542,7 +559,7 @@ private fun MoreOptionsMenu(
         IconButton(onClick = onExpandMenu, modifier = Modifier.size(32.dp)) {
             Icon(
                 MaterialSymbols.MoreVert,
-                contentDescription = "More options",
+                contentDescription = stringRes(Res.string.lightbox_more_options),
                 tint = Color.White,
                 modifier = Modifier.size(20.dp),
             )
@@ -553,7 +570,7 @@ private fun MoreOptionsMenu(
             onDismissRequest = onDismissMenu,
         ) {
             DropdownMenuItem(
-                text = { Text("Save") },
+                text = { Text(stringRes(Res.string.save)) },
                 leadingIcon = { Icon(MaterialSymbols.Save, contentDescription = null) },
                 onClick = {
                     onDismissMenu()
@@ -561,7 +578,7 @@ private fun MoreOptionsMenu(
                 },
             )
             DropdownMenuItem(
-                text = { Text("Copy URL") },
+                text = { Text(stringRes(Res.string.lightbox_copy_url)) },
                 leadingIcon = { Icon(MaterialSymbols.ContentCopy, contentDescription = null) },
                 onClick = {
                     onDismissMenu()
@@ -569,7 +586,7 @@ private fun MoreOptionsMenu(
                 },
             )
             DropdownMenuItem(
-                text = { Text("Open in Browser") },
+                text = { Text(stringRes(Res.string.lightbox_open_in_browser)) },
                 leadingIcon = { Icon(MaterialSymbols.OpenInBrowser, contentDescription = null) },
                 onClick = {
                     onDismissMenu()

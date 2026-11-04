@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.desktop.service.scheduledposts
 
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.channels.FileChannel
@@ -62,7 +64,7 @@ object ScheduledPostLock {
      * result, or `null` if the lock could not be acquired (someone else is
      * draining) — in which case [block] is never invoked.
      */
-    fun <T> withDrainLock(block: () -> T): T? {
+    suspend fun <T> withDrainLock(block: suspend () -> T): T? {
         // In-process fast path: bail if another thread in this JVM already holds it.
         if (!inProcessBusy.compareAndSet(false, true)) {
             Log.d(TAG) { "Drain skipped: another thread in this process holds the lock" }
@@ -87,6 +89,7 @@ object ScheduledPostLock {
 
             return block()
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to acquire scheduled-post drain lock", e)
             return null
         } finally {

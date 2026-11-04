@@ -64,12 +64,21 @@ abstract class LevelFeedViewModel(
      */
     val collapsedReplies = mutableStateMapOf<String, Boolean>()
 
-    fun isCollapsed(idHex: String): Boolean = collapsedReplies[idHex] == true
+    /**
+     * Whether a reply is collapsed: the user's own choice when they made one (true or false),
+     * otherwise [collapsedByDefault] (replies from outside the Web of Trust network start
+     * collapsed).
+     */
+    fun isCollapsed(
+        idHex: String,
+        collapsedByDefault: Set<String> = emptySet(),
+    ): Boolean = collapsedReplies[idHex] ?: (idHex in collapsedByDefault)
 
-    fun toggleCollapsed(idHex: String) {
-        if (collapsedReplies.remove(idHex) == null) {
-            collapsedReplies[idHex] = true
-        }
+    fun toggleCollapsed(
+        idHex: String,
+        collapsedByDefault: Set<String> = emptySet(),
+    ) {
+        collapsedReplies[idHex] = !isCollapsed(idHex, collapsedByDefault)
         // Collapsing is an explicit interaction, so stop the thread from auto-scrolling
         // to the focused note afterwards.
         hasDragged.value = true

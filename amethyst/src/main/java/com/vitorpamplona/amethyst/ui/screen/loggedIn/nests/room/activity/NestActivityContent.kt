@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.nests.datasource.NestRoomFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
@@ -53,6 +54,9 @@ import com.vitorpamplona.amethyst.commons.resources.nest_unjoinable_body
 import com.vitorpamplona.amethyst.commons.resources.nest_unjoinable_title
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.lifecycle.NestPresencePublisher
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.lifecycle.NestRoomEventCollectors
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.screen.NestPipScreen
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
@@ -64,12 +68,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.AutoCo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.LeaveOnKick
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.LeaveOnRoomClosed
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.NestForegroundServiceLifecycle
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.NestPresencePublisher
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.NestRoomEventCollectors
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.PipBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.rememberNestViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen.NestFullScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen.NestPipScreen
 import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -338,7 +339,7 @@ private fun NestActivityBody(
     // action and a swipe-dismiss while in PIP — invoke this so the
     // speaker handle close (releases AudioRecord and clears the
     // system mic indicator) and the listener close run on
-    // cleanupScope/GlobalScope before the activity destruction
+    // cleanupScope (the application scope) before the activity destruction
     // queue eats viewModelScope.
     val activity = LocalActivity.current as? NestActivity
     DisposableEffect(activity, viewModel) {
@@ -355,6 +356,8 @@ private fun NestActivityBody(
         event = event,
         ui = ui,
         handRaised = handRaised,
+        // The leave event must outlive both this screen and the account (logout cancels its scope).
+        leaveScope = Amethyst.instance.applicationIOScope,
     )
 
     // Back gesture while connected = minimize to PIP rather than tearing

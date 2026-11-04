@@ -21,29 +21,24 @@
 package com.vitorpamplona.amethyst.commons.ui.note.platform
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.platform.LocalUriHandler
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
-import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
-import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonCallbacks
-import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonConfig
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.CalendarRsvpCard
-import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
@@ -77,10 +72,29 @@ interface NotePlatform {
     fun ZoomableImageDialog(
         imageUrl: BaseMediaContent,
         allImages: ImmutableList<BaseMediaContent>,
-        sourceBounds: Rect?,
+        source: ZoomSourceAnchor?,
         onDismiss: () -> Unit,
         accountViewModel: AccountViewModel,
     ) {}
+
+    /**
+     * The full-screen PDF reader, opened from a card that shows its own cover instead of the
+     * inline first-page preview [ZoomableContentView] draws. With no reader, opens the file in
+     * the system's handler.
+     */
+    @Composable
+    fun PdfViewerDialog(
+        content: MediaUrlPdf,
+        onDismiss: () -> Unit,
+        accountViewModel: AccountViewModel,
+    ) {
+        val uriHandler = LocalUriHandler.current
+        LaunchedEffect(content.url) {
+            // The handler throws when no app takes the link; the dialog closes either way.
+            runCatching { uriHandler.openUri(content.url) }
+            onDismiss()
+        }
+    }
 
     @Composable
     fun GifVideoView(
@@ -93,6 +107,20 @@ interface NotePlatform {
         onDialog: (() -> Unit)?,
         accountViewModel: AccountViewModel,
         thumbhash: String?,
+    ) {}
+
+    /**
+     * An animated image (a GIF) drawn the way a still is: filling [modifier], looping, silent, with
+     * no player controls. [onError] runs when it cannot be drawn, so the caller can move to a
+     * fallback URL.
+     */
+    @Composable
+    fun AnimatedImage(
+        url: String,
+        contentDescription: String?,
+        contentScale: ContentScale,
+        modifier: Modifier,
+        onError: () -> Unit,
     ) {}
 
     @Composable
@@ -159,6 +187,33 @@ interface NotePlatform {
         accountViewModel: AccountViewModel,
     ) {}
 
+    /**
+     * The videos a feed is about to show, most wanted first: on screen or just below it. A platform
+     * whose player only opens a video once it is the one playing can open these ahead, so they start
+     * at once. [owner] is the feed asking (each keeps its own list); an empty list releases its
+     * videos. Not composable: feed prefetchers call it from a coroutine. Android needs none of this:
+     * every video card on its feed already prepares a player, and [prefetchVideos] covers what comes next.
+     */
+    fun warmVideos(
+        owner: Any,
+        urls: List<String>,
+        accountViewModel: AccountViewModel,
+    ) {}
+
+    /**
+     * The videos below the viewport that no card shows yet, nearest first, for a platform whose
+     * players open a video as soon as its card is composed: it can download their first bytes ahead,
+     * so the player reads the start from disk. The card right below the screen is left out: the lazy
+     * list has already composed it, so its player is loading it. HLS never comes here, nor do grid
+     * feeds, whose cells show a still frame and open no player. [owner] is the feed asking; an empty
+     * list withdraws its videos. Not composable: feed prefetchers call it from a coroutine.
+     */
+    fun prefetchVideos(
+        owner: Any,
+        urls: List<String>,
+        accountViewModel: AccountViewModel,
+    ) {}
+
     // Places
 
     @Composable
@@ -173,40 +228,53 @@ interface NotePlatform {
         zoom: Double?,
     ) {}
 
-    /** Resolves [geohashStr] to a place name for [content], showing [onLoading] meanwhile. */
+    /**
+     * Resolves [geohashStr] to a place name for [content], showing [onLoading] meanwhile. Without a
+     * geocoder, the place name the app already knows, or else the geohash itself.
+     */
     @Composable
     fun LoadCityName(
         geohashStr: String,
         onLoading: (@Composable () -> Unit)?,
         content: @Composable (String) -> Unit,
-    ) {}
+    ) {
+        content(LocalAppServices.current.cachedPlaceName(geohashStr) ?: geohashStr)
+    }
 
     // Audio
 
+    /**
+     * A note's own media through the full player: a video, or an audio file that plays in the
+     * video frame. [coverUri] shows as the thumb until it plays; [waveform] draws the bars of an
+     * audio file that has them. The player links back to [note]. [isAudio] is what the event says
+     * the media is (true for an audio kind, false for a music video, null when it doesn't say), for
+     * a platform that draws audio and video differently and can't tell from the URL.
+     */
     @Composable
-    fun RenderAudioHeader(
-        note: Note,
+    fun NoteMediaView(
+        mediaUri: String,
+        isAudio: Boolean?,
+        title: String?,
+        coverUri: String?,
+        waveform: WaveformData?,
         contentScale: ContentScale,
+        note: Note,
         accountViewModel: AccountViewModel,
-        nav: INav,
     ) {}
 
+    /**
+     * The inline audio strip of a music track (kind 36787), drawn right under its cover:
+     * [audioUrl] plays here, and [borderModifier] shapes the strip so it reads as one unit
+     * with the cover above it.
+     */
     @Composable
-    fun RenderAudioTrack(
+    fun MusicTrackAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
         note: Note,
-        contentScale: ContentScale,
+        borderModifier: Modifier,
         accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderMusicTrack(
-        note: Note,
-        makeItShort: Boolean,
-        canPreview: Boolean,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
     ) {}
 
     @Composable
@@ -219,18 +287,24 @@ interface NotePlatform {
         accountViewModel: AccountViewModel,
     ) {}
 
+    /**
+     * An episode's audio that remembers where the listener is: [audioUrl] plays from
+     * [startAtSeconds] when given, at [speed], and the player reports its playhead to [onPlayhead]
+     * about once a second while it is shown. It obeys [control]'s seeks, plays and pauses. The
+     * player links back to [note], the episode.
+     */
     @Composable
-    fun RenderVoiceTrack(
+    fun EpisodeAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
+        image: String?,
         note: Note,
+        startAtSeconds: Long?,
+        speed: Float,
+        control: EpisodeControl,
+        onPlayhead: (EpisodePlayhead) -> Unit,
         accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderAudioFromIMeta(
-        note: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
     ) {}
 
     @Composable
@@ -244,30 +318,17 @@ interface NotePlatform {
         nav: INav,
     ) {}
 
-    // Chess
-
+    /**
+     * A playable audio clip that belongs to no [Note], such as a voice message in an MLS group
+     * whose messages never enter the cache: [mediaUrl] plays with [waveform]'s bars when given.
+     */
     @Composable
-    fun RenderChessGame(
-        note: Note,
-        backgroundColor: MutableState<Color>,
+    fun RenderAudioPlayer(
+        mediaUrl: String,
+        title: String?,
+        mimeType: String?,
+        waveform: WaveformData?,
         accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderLiveChessChallenge(
-        note: Note,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderLiveChessGameEnd(
-        note: Note,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
     ) {}
 
     // Git
@@ -323,134 +384,7 @@ interface NotePlatform {
         nav: INav,
     ) {}
 
-    // Calendar
-
-    /**
-     * A NIP-52 RSVP with the appointment it answers merged into its frame. Draws the bare
-     * [com.vitorpamplona.amethyst.commons.ui.note.CalendarRsvpCard] by default: the appointment
-     * half still uses the platform's calendar formatting.
-     */
-    @Composable
-    fun RenderCalendarRSVPEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {
-        val event = baseNote.event as? CalendarRSVPEvent ?: return
-        CalendarRsvpCard(event)
-    }
-
-    // Meeting rooms (audio spaces)
-
-    @Composable
-    fun RenderMeetingSpaceEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderMeetingRoomEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderMeetingRoomPresence(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    // Napplets and nsites
-
-    @Composable
-    fun RenderRootNappletEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderNamedNappletEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderRootSiteEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderNamedSiteEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
     // Reactions, zaps and editing
-
-    @Composable
-    fun ReactionsRow(
-        baseNote: Note,
-        showReactionDetail: Boolean,
-        addPadding: Boolean,
-        editState: State<GenericLoadable<EditState>>?,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun LikeReaction(
-        baseNote: Note,
-        grayTint: Color,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-        iconSize: Dp,
-        heartSizeModifier: Modifier,
-        iconFontSize: TextUnit,
-        showCounter: Boolean,
-    ) {}
-
-    @Composable
-    fun ZapReaction(
-        baseNote: Note,
-        grayTint: Color,
-        accountViewModel: AccountViewModel,
-        iconSize: Dp,
-        iconSizeModifier: Modifier,
-        animationModifier: Modifier,
-        showCounter: Boolean,
-        nav: INav,
-    ) {}
-
-    /** A labelled zap button for [baseNote]'s author, outside a reactions row (DVMs, donations). */
-    @Composable
-    fun ReusableZapButton(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-        config: ZapButtonConfig,
-        callbacks: ZapButtonCallbacks,
-    ) {}
-
-    /**
-     * The user's zap presets as rail-aware amount chips that zap [note] straight away (the chat
-     * long-press sheet). [onOnchainRequest] hands an on-chain amount to the caller's dialog.
-     */
-    @Composable
-    fun QuickZapAmountRow(
-        note: Note,
-        onDismiss: () -> Unit,
-        onOnchainRequest: (Long?) -> Unit,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
 
     /**
      * The microphone button: records a voice message (up to [maxDurationSeconds]) and hands the
@@ -460,6 +394,22 @@ interface NotePlatform {
     fun RecordVoiceButton(
         onVoiceTaken: (RecordingResult) -> Unit,
         maxDurationSeconds: Int?,
+    ) {}
+
+    /** Whether [RecordAudioBox] can record here; callers offer a text alternative when it cannot. */
+    val canRecordAudio: Boolean get() = false
+
+    /**
+     * Records a voice message behind a caller-drawn trigger: [content] gets whether it is
+     * recording, the elapsed seconds and a stop action, and the finished recording goes to
+     * [onRecordTaken]. Platforms without a recorder draw nothing, so no dead button shows.
+     */
+    @Composable
+    fun RecordAudioBox(
+        modifier: Modifier,
+        onRecordTaken: (RecordingResult) -> Unit,
+        maxDurationSeconds: Int?,
+        content: @Composable (isRecording: Boolean, elapsedSeconds: Int, onStop: () -> Unit) -> Unit,
     ) {}
 
     /**
@@ -474,16 +424,6 @@ interface NotePlatform {
         onReRecord: ((RecordingResult) -> Unit)?,
         isUploading: Boolean,
         modifier: Modifier,
-    ) {}
-
-    /** The editor for a new version of [edit], shown while [versionLookingAt] is on screen. */
-    @Composable
-    fun EditPostView(
-        onClose: () -> Unit,
-        edit: Note,
-        versionLookingAt: Note?,
-        accountViewModel: AccountViewModel,
-        nav: INav,
     ) {}
 
     /** Draws nothing: previews, and front ends still wiring their pieces. */

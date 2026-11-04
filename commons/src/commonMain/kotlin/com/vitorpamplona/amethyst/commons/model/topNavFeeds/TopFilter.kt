@@ -131,4 +131,11 @@ sealed class TopFilter(
     class InterestSet(
         @Contextual val address: Address,
     ) : TopFilter("InterestSet/${address.toValue()}")
+
+    /** A feed the user built (authors, hashtags, kinds, relays), stored with the account by [id]. */
+    @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.CustomFeed")
+    class CustomFeed(
+        val id: String,
+    ) : TopFilter("CustomFeed/$id")
 }

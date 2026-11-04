@@ -25,15 +25,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -41,27 +43,27 @@ import com.vitorpamplona.amethyst.commons.model.latestBuzzEdit
 import com.vitorpamplona.amethyst.commons.model.latestConcordEdit
 import com.vitorpamplona.amethyst.commons.model.latestMarmotEdit
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.commons.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.commons.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.DisplayCommentScope
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioFromIMeta
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.datasources.PreloadThreadForReply
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
-import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
@@ -83,11 +85,17 @@ enum class ReplyRenderType {
  * translation cache stores the result under. The copy-text menus look their translation up by
  * the same function — keying on the raw body instead would miss the entry for every
  * subject-carrying note and silently copy the untranslated text.
+ *
+ * A kind-30041 publication section is the other text whose screen string differs from its
+ * content: it renders (and translates) the markdown its AsciiDoc body converts to, so that is
+ * what this returns for one.
  */
 fun displayedNoteText(
     note: Note,
     body: String,
 ): String {
+    (note.event as? PublicationContentEvent)?.let { return publicationSectionMarkdown(it) }
+
     val subject = (note.event as? TextNoteEvent)?.subject()?.ifBlank { null }
     return if (subject != null && !body.contains(subject, ignoreCase = true)) {
         "$subject\n\n$body"
@@ -119,7 +127,7 @@ fun RenderTextEvent(
         val canShowReply by
             remember(note) {
                 derivedStateOf {
-                    noteEvent is BaseThreadedEvent && !makeItShort && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
+                    noteEvent is BaseThreadedEvent && !makeItShort && (note.replyTo != null || noteEvent.mentionKeys().isNotEmpty())
                 }
             }
 
@@ -153,7 +161,8 @@ fun RenderTextEvent(
             }
         } else if (!makeItShort && noteEvent is CommentEvent) {
             // No in-cache parent note: this comment answers a scope rather than a note.
-            DisplayCommentScope(noteEvent, accountViewModel, nav)
+            // What a comment answers is context, like a quote: its card keeps the margin.
+            ProvideMediaBleed(0.dp) { DisplayCommentScope(noteEvent, accountViewModel, nav) }
         }
     }
 
@@ -237,17 +246,16 @@ fun RenderTextEvent(
 /** The newest in-place edit of a chat message (Concord, Buzz or Marmot), recomposing as edits land. */
 @Composable
 fun observeChatMessageEdit(note: Note): Note? {
-    // Resolved once per note, not on every recomposition: produceState's initialValue argument is
-    // re-evaluated each time this runs, and these feeds recompose a lot.
-    val initial = remember(note) { note.latestChatEdit() }
-    val latest by
-        produceState(initialValue = initial, note.idHex) {
-            note
-                .flow()
-                .edits.stateFlow
-                .collect { value = note.latestChatEdit() }
-        }
-    return latest
+    // State keyed by the note, not produceState: produceState's state outlives a key change,
+    // so a row reused for another note showed that note's previous edit until the first emission.
+    val latest = remember(note) { mutableStateOf(note.latestChatEdit()) }
+    LaunchedEffect(note) {
+        note
+            .flow()
+            .edits.stateFlow
+            .collect { latest.value = note.latestChatEdit() }
+    }
+    return latest.value
 }
 
 private fun Note.latestChatEdit(): Note? = latestConcordEdit() ?: latestBuzzEdit() ?: latestMarmotEdit()

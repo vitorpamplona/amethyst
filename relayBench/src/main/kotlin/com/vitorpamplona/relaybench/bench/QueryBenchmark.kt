@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.relaybench.bench
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.relaybench.BenchJson
 import com.vitorpamplona.relaybench.NostrSocket
 import com.vitorpamplona.relaybench.Percentiles
 import com.vitorpamplona.relaybench.Scenario
+import com.vitorpamplona.relaybench.asText
+import com.vitorpamplona.relaybench.get
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -46,8 +48,6 @@ import okhttp3.OkHttpClient
  * would invalidate the speed comparison).
  */
 object QueryBenchmark {
-    private val mapper = jacksonObjectMapper()
-
     data class ScenarioResult(
         val scenario: Scenario,
         val eventsPerRound: Int,
@@ -148,7 +148,7 @@ object QueryBenchmark {
                     events++
                     continue
                 }
-                val node = runCatching { mapper.readTree(raw) }.getOrNull() ?: continue
+                val node = runCatching { BenchJson.parse(raw) }.getOrNull() ?: continue
                 val type = node[0]?.asText()
                 if ((type == "EOSE" || type == "CLOSED") && node[1]?.asText() == subId) break
             }

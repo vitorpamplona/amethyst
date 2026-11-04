@@ -26,6 +26,7 @@ import com.vitorpamplona.nestsclient.trace.NestsTrace
 import com.vitorpamplona.nestsclient.trace.jsonStr
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import com.vitorpamplona.quic.Varint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -34,11 +35,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * moq-lite (Lite-03) session for both listener and publisher roles.
@@ -113,6 +117,13 @@ class MoqLiteSession internal constructor(
      * session scope is cancelled.
      */
     private var announceWatchJob: Job? = null
+
+    /**
+     * Pumps of the announce bidis [announce] opened, guarded by [state]. They run on the caller's
+     * scope, which outlives this session across token recycles and reconnects, so [close] cancels
+     * them instead of waiting for the transport to end their streams.
+     */
+    private val announcePumps = mutableListOf<Job>()
 
     /**
      * Active publishers on this session. moq-lite models a broadcast as
@@ -216,6 +227,19 @@ class MoqLiteSession internal constructor(
                     // see an end-of-flow.
                 }
             }
+        // A close() that ran while this pump was starting has already taken the list: cancel the
+        // pump here, or nothing would.
+        val cancelNow =
+            state.withLock {
+                if (closed) {
+                    true
+                } else {
+                    announcePumps.removeAll { it.isCompleted }
+                    announcePumps += pump
+                    false
+                }
+            }
+        if (cancelNow) pump.cancel()
         return MoqLiteAnnouncesHandle(
             updates = updates,
             close = {
@@ -457,6 +481,7 @@ class MoqLiteSession internal constructor(
                     ok = resp.ok,
                     frames = frames.consumeAsFlow(),
                     unsubscribeAction = { unsubscribe(id) },
+                    broadcastEndedCountProbe = { broadcastEndedCounts[broadcast] ?: 0L },
                 )
             }
         }
@@ -469,6 +494,13 @@ class MoqLiteSession internal constructor(
      * blocking other state-mutating operations.
      */
     private val announceWatchLock = Mutex()
+
+    /**
+     * `Ended` announces seen per broadcast suffix, behind
+     * [SubscribeHandle.broadcastEndedCount]. Written by the announce pump,
+     * read without suspending by handle probes on other coroutines.
+     */
+    private val broadcastEndedCounts = ConcurrentHashMap<String, Long>()
 
     /**
      * Open the shared announce-watch bidi *synchronously* (and
@@ -534,6 +566,12 @@ class MoqLiteSession internal constructor(
                         "\"hops\":${update.hops}"
                 }
                 if (update.status != MoqLiteAnnounceStatus.Ended) return@collect
+                // Count it before anything else. The relay usually FINs the
+                // subscribe bidi in the same instant, which closes `frames`
+                // on its own path, so a subscription can end before this
+                // runs; the count is what tells the next subscription that
+                // the publisher session behind the old one is gone.
+                broadcastEndedCounts.merge(update.suffix, 1L, Long::plus)
                 val targets =
                     state.withLock {
                         subscriptionsBySubscribeId.values
@@ -1140,7 +1178,7 @@ class MoqLiteSession internal constructor(
                             // of FINing without writing anything,
                             // which left the subscriber's ABR
                             // estimator with no signal.
-                            runCatching {
+                            runCatchingCancellable {
                                 bidi.write(MoqLiteCodec.encodeProbe(MoqLiteProbe(bitrate = NESTS_AUDIO_BITRATE_HINT_BPS), version))
                                 bidi.finish()
                             }
@@ -1288,11 +1326,14 @@ class MoqLiteSession internal constructor(
         closed = true
         val toClose: List<ListenerSubscription>
         val publishersToClose: List<PublisherStateImpl>
+        val announcePumpsToCancel: List<Job>
         state.withLock {
             toClose = subscriptionsBySubscribeId.values.toList()
             subscriptionsBySubscribeId.clear()
             publishersToClose = activePublishers.toList()
             activePublishers.clear()
+            announcePumpsToCancel = announcePumps.toList()
+            announcePumps.clear()
         }
         for (sub in toClose) {
             runCatching { sub.bidi.finish() }
@@ -1303,6 +1344,8 @@ class MoqLiteSession internal constructor(
         }
         groupPump?.cancelAndJoin()
         bidiPump?.cancelAndJoin()
+        announceWatchJob?.cancel()
+        announcePumpsToCancel.forEach { it.cancel() }
         runCatching { transport.close() }
     }
 
@@ -1442,7 +1485,7 @@ class MoqLiteSession internal constructor(
             // bidi pump's per-bidi coroutine if it's slow (e.g. a
             // catalog send blocked on transport backpressure).
             hookToFire?.let { hook ->
-                scope.launch { runCatching { hook.invoke() } }
+                scope.launch { runCatchingCancellable { hook.invoke() } }
             }
         }
 
@@ -1510,6 +1553,7 @@ class MoqLiteSession internal constructor(
                     // not-muted" silently masked publisher disconnects.
                     runCatching { group.uni.finish() }
                     currentGroup = null
+                    currentCoroutineContext().ensureActive()
                     return false
                 }
             }

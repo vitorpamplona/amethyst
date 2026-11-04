@@ -80,7 +80,21 @@ If **every** targeted relay refuses the event, amy reports
 `error: rejected` and exits 1 — a total rejection never exits 0.
 
 `amy notes feed` reads recent kind:1 notes from your follows; `--limit N`
-caps the count, `--author npub1…` narrows to one user.
+caps the count, `--author npub1…` narrows to one user, `--hashtag nostr`
+reads a topic.
+
+Interacting with an existing note takes its id, `note1…`, `nevent1…` or
+`naddr1…`:
+
+```text
+$ amy notes reply nevent1qq… "agreed"
+$ amy notes react nevent1qq…              # a like; --content 🤙 for an emoji
+$ amy notes repost note1…
+$ amy notes quote nevent1qq… "worth reading"
+$ amy notes thread nevent1qq…             # the whole conversation, depth-first
+$ amy delete note1…                       # NIP-09, your own events only
+$ amy notifications --type reply,mention
+```
 
 ### 2. Send a direct message
 
@@ -241,9 +255,10 @@ Two amy processes can talk: one **hosts** a bunker with its local key; the other
 | Command | What it does |
 |---|---|
 | `amy bunker [--relay URL[,URL…]] [--secret S] [--timeout SECS]` | Run a NIP-46 remote signer for the active local-key account. Prints a `bunker://…` URI, then services sign / nip04 / nip44 / get_public_key / ping requests until interrupted (or `--timeout`). |
-| `amy login bunker://PUBKEY?relay=…&secret=…` | Log in through a bunker (signer advertises). Mints a local transport keypair; the account then acts as PUBKEY and every signing/encryption call is delegated to the remote signer. Percent-encoded relay params are decoded. |
+| `amy login bunker://PUBKEY?relay=…&secret=…` | Log in through a bunker (signer advertises). Mints a local transport keypair, connects, and asks the bunker which account it signs for (`get_public_key`): the account is that key, which for most signers is not PUBKEY (their transport key). Every signing/encryption call is delegated to the remote signer. A bunker that can't answer fails the login with `signer_error` and saves nothing. Percent-encoded relay params are decoded. |
 | `amy bunker connect nostrconnect://…` | Client-initiated (NostrConnect) flow, signer side: ack a client's offer (echo its secret) and service its requests. |
-| `amy login --nostrconnect [--relay URL[,URL…]] [--name N] [--timeout SECS]` | Client-initiated flow, client side: print a `nostrconnect://` offer, wait for a signer to connect, then persist a bunker account that acts as the signer's key. |
+| `amy login name@domain [--read-only] [--timeout SECS]` | Log in from a NIP-05 address. When the domain's `nostr.json` advertises a NIP-46 signer for it (`nip46`, either the `nip46[<pubkey>]` relays or the `name=_` announcement), amy logs in through that signer: it connects with no secret, or opens the signer's `nostrconnect_url` page with a `nostrconnect://` code (printed to stderr, like any page to approve). The signer's account must be the address's key, or the login fails with `signer_error`. Without a signer, or with `--read-only`, the address logs in read-only as before. Output adds `nip05`. |
+| `amy login --nostrconnect [--relay URL[,URL…]] [--name N] [--perms P] [--timeout SECS]` | Client-initiated flow, client side: print a `nostrconnect://` offer, wait for a signer that answers with its secret, ask it which account it signs for (`get_public_key`), then persist a bunker account for that key. `timeout` when no signer answers, `signer_error` when one answers but won't say. |
 
 The flows were verified against the real [`nak`](https://github.com/fiatjaf/nak)
 binary during development — `amy login bunker://` ⇄ `nak bunker`, `nak event
@@ -252,7 +267,9 @@ connect` (amy signs, event authored by nak's key). A scripted nak harness
 under `cli/tests/` is still pending, so treat these as dev-verified, not
 CI-pinned.
 
-Supports `connect` (secret-checked), `get_public_key`, `get_relays`, `sign_event`, `nip04_encrypt/decrypt`, `nip44_encrypt/decrypt`, `ping`. When a bunker answers with an `auth_url` challenge, amy prints the authorization URL to stderr and keeps waiting for the real response (open the URL in a browser to authorize).
+Supports `connect` (secret-checked), `get_public_key`, `get_relays`, `sign_event`, `nip04_encrypt/decrypt`, `nip44_encrypt/decrypt`, `ping`, `switch_relays` and `logout`. When a bunker answers with an `auth_url` challenge, amy prints the authorization URL to stderr and keeps waiting for the real response (open the URL in a browser to authorize).
+
+A bunker account asks its signer `switch_relays` at most once a day, right after the connect handshake (waiting at most 10 s), and saves a new relay list into `identity.json` for the next run. `amy logoff` sends the signer `logout` before deleting the account (`--offline` skips it).
 
 Example (two terminals, shared `$HOME`):
 
@@ -273,6 +290,7 @@ amy --account bob event --kind 1 --content "signed remotely"   # authored by ali
 | `amy event --kind N [--content TEXT] [--tags JSON] [--created-at TS]` | Build + sign an arbitrary event with the active account. Prints the signed event. `--tags` is a JSON array-of-arrays, e.g. `'[["t","nostr"],["e","<id>"]]'`. |
 | `amy event … --publish` / `--relay URL[,URL…]` | As above, then broadcast (to the outbox, or to the given relays). |
 | `amy publish [EVENT-JSON] [--relay URL[,URL…]]` | Broadcast a pre-made signed event (verified first). Reads stdin when the argument is omitted or `-`. |
+| `amy publish --file PATH --relay URL [--in-flight N] [--skip N] [--take N] [--no-verify] [--progress SECS] [--timeout SECS]` | Stream a file of signed events, one JSON event per line (gzipped when PATH ends in `.gz`, stdin for `-`), to one relay with up to `--in-flight` (default 512) awaiting their `OK` at once: a backfill, a migration, or an ingest benchmark. Events that fail to parse or verify are counted and never sent (`--no-verify` skips the client-side check); the rest go out as the lines were read, never re-serialized. Prints `sent`, `accepted`, `duplicate` (NIP-01's `OK true duplicate:`), `refused` with `refused_reasons` by message, `unanswered`, `events_per_sec` and `mb_per_sec` up to the last answer, and the OK round trip's `ok_ms` percentiles; `--progress SECS` adds a stderr line per interval. A relay silent for `--timeout` (default 30s) with events outstanding ends the run: those count as `unanswered`, `stalled` is true and the exit is 1. |
 
 ### Queries
 
@@ -280,7 +298,9 @@ Filter flags are shared by `fetch` and `subscribe`: `--kind K[,K]`, `--author U[
 
 | Command | What it does |
 |---|---|
-| `amy fetch [filter flags] [--timeout SECS]` | One-shot query — collect until every relay sends EOSE or goes silent for `--timeout` (default 8s — an **idle window**, reset by every arriving event, so a slow-but-streaming relay is never cut off; a wall-clock ceiling of 10x the window still bounds a relay that trickles forever), dedupe, sort newest-first, print and exit. `--limit` defaults to 100. |
+| `amy fetch [filter flags] [--timeout SECS]` | One-shot query — collect until every relay sends EOSE or goes silent for `--timeout` (default 8s — an **idle window**, reset by every arriving event, so a slow-but-streaming relay is never cut off; a wall-clock ceiling of 10x the window still bounds a relay that trickles forever), dedupe, sort newest-first, print and exit. `--limit` defaults to 100. A relay that refuses the REQ is never silent: its `CLOSED` reason (e.g. relay.zapstore.dev's `filters are too vague` for a `limit` above ~50), an auth refusal, or its connect error lands in `relay_errors` (`{url: {reason, message}}`, reason `closed`/`auth_required`/`unreachable`, or `timeout` for a relay that never sent EOSE within `--timeout`) with a warning on stderr when another relay did serve; when no relay served the request it fails with `no_relay_served`, whose error carries the same `relay_errors`. |
+| `amy fetch [filter flags] --paginate [--limit N]` | Walk each relay page by page on `until` cursors (alias `--all`) instead of stopping at its per-REQ cap, deduping across relays. `--limit N` caps the **walk**: each `REQ` asks for what is still missing, so a relay that serves it all answers in one page, and one that refuses a large `limit` outright (purplepag.es: `limit too high: 50000 (max 500)`) is re-asked at the max it states, or at half, and paged at that; the walk stops at N, newest-first as above. A relay that throttles by shrinking its pages and then answering an empty page or a CLOSED (relay.damus.io: `read bandwidth budget exhausted`) is re-asked at the same cursor after a 2 s / 5 s / 10 s backoff before that answer is believed. **`--limit 0` streams**: the whole matching history is written out event by event as it arrives, so memory stays flat however large the walk — and the order is **arrival order** (several relays page at once, so their events interleave; each relay's own pages come newest-first), *not* sorted. A slow consumer (`\| jq`, a slow pipe) holds the walk back rather than letting it buffer. The output keeps the same shape (one JSON object on one line under `--json`), with `count` and `relay_errors` written after the `events` array; sort downstream if order matters (`jq '.events \| sort_by(-.created_at)'`). A `search` with words is not paged: NIP-50 hits are relevance-ranked, so the walk takes each relay's first page. A search of only `key:value` extensions (`--search include:spam`, search.brainstorm.world's access token) has nothing to rank and pages like any filter, except `observer:<pubkey>`, which ranks by web of trust and gets one page. Any relay read only one page deep, for a ranked search or because it ignores `until`, is listed under `unpaged_relays` with a stderr warning; to download every match from it, use `amy sync --relay URL` with the same filter flags. **A walk survives its connection**: when a relay hangs up mid-walk (relay.ditto.pub does every few hundred thousand events) or goes silent for `--timeout`, amy waits 2 s / 5 s / 10 s / 30 s / 60 s and asks again from the oldest event it has, dropping the repeats of that second; the waits reset whenever a re-ask delivers something new, and a stall that outlasts them ends the walk with the relay in `relay_errors` (reason `unreachable`, or `timeout` when it went silent; a relay silent from the start fails the fetch with `no_relay_served` instead of an empty success). A relay silent before its first event is not waited on; one that hangs up before it is asked once more, after 2 s. A deep walk (ten pages or more) that ends on an empty page is quietly asked once more from its cursor before that is believed, since a relay can answer a deep page empty while it still holds events below it. Each re-ask after a dropped or silent connection is a `warning:` on stderr, and their counts per relay come back as `resumes`. **A walk that delivered events and then gave up** (refused, unreachable or silent past its re-asks) fails with `incomplete` (exit 1) **after** writing what arrived — the events on stdout, or the `--out` file plus its summary — so a partial export is never taken for a full one; the error names each such relay with the count it delivered (`incomplete_relays`) and repeats `count`, `out` and `relay_errors`, so a rerun can resume with `--until`. |
+| `amy fetch [filter flags] --paginate --limit 0 --out FILE` | The same streamed walk written to FILE, one JSON event per line (gzipped when FILE ends in `.gz`): the shape `amy publish --file` reads back. Events are verified but not added to the local store, since an export is the walk too large for it; stdout carries only the summary (`count`, `out`, `relay_errors`, `unpaged_relays`). A connection the relay drops does not end the export: see `--paginate` above. |
 | `amy fetch CODE [--timeout SECS]` | Code mode — pass a single `nevent`/`naddr`/`nprofile`/`npub`/`note` or `name@domain`. Resolves relays the outbox way: the hints embedded in the code **plus** the author's NIP-65 write relays (draining their kind:10002 on a cache miss), exactly how the app opens a shared link. |
 | `amy subscribe [filter flags] [--timeout SECS]` | Live stream — print each matching event as it arrives (NDJSON under `--json`). Runs until `--timeout` SECS or until interrupted. |
 | `amy count [filter flags] [--timeout SECS]` | NIP-45 COUNT — per-relay match counts, no event download. |
@@ -303,7 +323,7 @@ default search relays.
 |---|---|
 | `amy encrypt --to USER [TEXT] [--nip04]` | NIP-44 (default) or NIP-04 encrypt with the active account's key. Reads stdin when TEXT is omitted or `-`. USER accepts npub/nprofile/hex/NIP-05. |
 | `amy decrypt --from USER [CIPHERTEXT] [--nip04]` | Inverse of `encrypt`. |
-| `amy gift wrap --to USER [EVENT-JSON] [--relay …]` | NIP-59: seal a signed inner event for USER and wrap it in a kind:1059 gift wrap. Prints the wrap; `--relay` also broadcasts it. |
+| `amy gift wrap --to USER [EVENT-JSON] [--relay …] [--no-backdate]` | NIP-59: seal a signed inner event for USER and wrap it in a kind:1059 gift wrap. Prints the wrap; `--relay` also broadcasts it. The seal and the wrap are each dated at random up to two days in the past; `--no-backdate` dates both now. |
 | `amy gift unwrap [GIFTWRAP-JSON]` | Decrypt + unseal a kind:1059 wrap addressed to the active account; prints the inner event. |
 
 ### Git (NIP-34)
@@ -398,10 +418,20 @@ alias of `--d`; `--d` selects a named site/napplet, else the root one.
 | `amy nsite publish DIR --server URL[,URL] [--d ID] [--relay URL[,URL]] [--title T] [--description D] [--source URL] [--icon URL]` | Upload a directory to Blossom and broadcast its NIP-5A manifest, including the `x` aggregate hash so it is self-verifying. |
 | `amy nsite serve AUTHOR [--d ID] [--port N] [--server URL[,URL]] [--relay URL[,URL]] [--timeout SECS]` | Fetch the manifest and serve it over a local HTTP server (sha256-verified per request) so you can open it in a browser. |
 | `amy nsite list AUTHOR [--relay URL[,URL]] [--timeout SECS]` | Enumerate an author's sites: the root and every named one, latest per identifier. |
-| `amy napplet fetch AUTHOR [--d ID] [--path P] …` | Like `nsite fetch`, plus NIP-5D verification: recompute + check the `x` aggregate hash and report the napplet's `requires` capabilities. `--snapshot EVENT-ID` pins a kind:5129 immutable snapshot by event id. |
-| `amy napplet publish DIR --server URL[,URL] [--requires identity,relay,…] [--d ID] [--relay URL[,URL]] [--title T] [--description D] [--source URL] [--icon URL]` | Upload a napplet directory and broadcast its NIP-5D manifest (kind:15129 root / 35129 named) with the `x` aggregate hash and the `requires` capability tags the shell gates on. |
-| `amy napplet serve AUTHOR [--d ID] [--port N] …` | Fetch + aggregate-verify the manifest and serve its static content over local HTTP. |
+| `amy napplet fetch AUTHOR [--d ID] [--path P] …` | Verify the single `/index.html` artifact against the signed `x` hash and report required `R` and optional `O` domains. `--snapshot EVENT-ID` pins a kind:5129 immutable snapshot by event id. |
+| `amy releases publish DIR --version X.Y.Z [--only desktop\|android\|flatpak] [--listing] [--zapstore-yaml F] [--blossom URL] [--android-flavor googleplay\|fdroid] [--android-abis A[,A]\|all] [--notes-file F] [--url-base URL] [--relay URL[,URL]] [--dry-run] [--any-key]` | Publish a release on Nostr (NIP-82) for every app with files in DIR: the `amethyst-desktop-<version>-*` files for the desktop app's updater, and the APKs for Zapstore, tag for tag as `zsp` did (checked with apksig; `version_code`, SDK range, ABIs, `apk_certificate_hash`, `variant`, `supported_nip` from `zapstore.yaml`), and the `linux-*.flatpak` bundles for Orchard (0.2+), each checked by the ref in its header and named by URL and sha256. One signed kind:3063 asset per file and the kind:30063 release naming them; `--listing` adds the kind:32267 app; `--blossom` mirrors the APKs and the listing's images. Refuses any key but Amethyst's unless `--any-key`; `--dry-run` signs and prints, uploading nothing. |
+| `amy chess challenge [--opponent USER] [--color white\|black] [--relay URL …]` | Open a Jester (kind:30) chess game, or challenge USER directly (filed under jesterui's private reference and `p`-tagged); prints `game_id`. |
+| `amy chess show GAME_ID` | The game as the app sees it: `white`, `black`, `my_color`, `status` (`open`/`in_progress`/`finished`), `result`, `termination`, `to_move`, `your_turn`, `plies`, `moves`, `fen`, `draw_offered_by` (the colour whose draw offer stands), `claimable_at` (when you may claim a game your opponent stopped playing). |
+| `amy chess move GAME_ID FROM TO [--offer-draw]` / `amy chess resign GAME_ID` | Play a move (`e2 e4`; promote with `e7 e8q`), optionally offering a draw with it, or resign, built by the same commons code as the app's board. A move on an open seat takes it. |
+| `amy chess accept-draw GAME_ID` / `amy chess claim GAME_ID` | Accept the opponent's standing draw offer (a move declines it), or claim the game once your opponent has been silent on their move for three days. |
+| `amy chess play GAME_ID [--engine random\|minimax] [--depth N] [--seed N] [--max-plies N] [--think-ms MS] [--timeout SECS]` | A bot plays your side to the end (or `--max-plies`), waiting for each of its moves to come back from the relays. For testing the app against: see `cli/tests/chess/`. |
+| `amy napplet publish FILE-OR-DIR --server URL[,URL] --description D [--requires identity,relay,…] [--optional theme,…] [--d ID] [--relay URL[,URL]] [--title T] [--source URL] [--icon HASH --icon-mime MIME]` | Upload one self-contained `index.html` and publish its artifact hash, plain-text description and `R`/`O` domains (kind:15129 root / 35129 named). A directory must contain only that root file. |
+| `amy napplet serve AUTHOR [--d ID] [--port N] …` | Fetch the manifest and serve its hash-verified HTML artifact over local HTTP. |
 | `amy napplet list AUTHOR [--relay URL[,URL]] [--timeout SECS]` | Enumerate an author's napplets, latest per identifier. |
+
+NIP-5D migration: legacy path-aggregate manifests must be bundled into one `index.html` and republished with a nonempty description. `--icon` now takes an already uploaded SHA-256 plus `--icon-mime` (`image/png`, `image/jpeg`, or `image/webp`). Optional `--archetypes feed,…` and `--intents "napplet:feed/edit filters relays"` preserve discovery metadata.
+
+**JSON contract change:** napplet list/fetch/publish use `artifact_sha256` instead of `aggregate_sha256`; fetch no longer emits `aggregate_verified` (the fetched bytes are still hash verified). `requires` contains `R` domains and `optional` contains `O` domains on list/fetch. A manifest that is not valid NIP-5D (not exactly one lowercase `x`, an empty description, a missing or empty `d` on 35129, a `d` on 15129/5129, or lineage outside a 5129) returns `invalid_manifest` instead of `aggregate_mismatch`, and `list` leaves it out. `publish` refuses flags that would build one (non-bare `--requires`/`--optional` domains, an empty `--d`, a non-origin `--server`, a bad `--icon` or `--source`) before uploading anything. NIP-5A output is unchanged.
 
 ### Blossom blobs (NIP-B7)
 
@@ -413,6 +443,26 @@ alias of `--d`; `--d` selects a named site/napplet, else the root one.
 | `amy blossom delete HASH --server URL` | Delete a blob you own (BUD-02). |
 | `amy blossom check --server URL HASH[,HASH]` | HEAD-check the server has each blob; exit 1 if any is missing. |
 | `amy blossom mirror --server URL SOURCE-URL` | Ask the server to mirror a blob from SOURCE-URL (BUD-04). |
+
+### Custom emoji packs (NIP-30)
+
+Your kind:30030 emoji packs and kind:10030 emoji list, built by the same commons
+`EmojiPackActions` the app's emoji-pack screens use. Every edit fetches the pack's
+freshest version from your outbox first. PACK is your pack's `d` tag, or for the read
+verbs and `use`/`unuse` any pack as `naddr1…` or `30030:<pubkey>:<d>`.
+
+| Command | What it does |
+|---|---|
+| `amy emoji pack list [USER]` | A user's packs (default: yours) with title, counts, `naddr`. |
+| `amy emoji pack show PACK` | One pack's metadata and emojis; your own private emojis are decrypted. |
+| `amy emoji pack create --title T [--description D] [--image URL] [--d DTAG]` | Publish a new pack (`exists` if you already have that `d` tag). |
+| `amy emoji pack edit PACK [--title T] [--description D] [--image URL]` | Change metadata; an empty value clears the field. |
+| `amy emoji pack delete PACK` | NIP-09 deletion request for your pack. |
+| `amy emoji add PACK SHORTCODE URL [--private] [--replace]` | Add one emoji (`--private`: NIP-44 encrypted in the content). A shortcode already there is skipped; `--replace` swaps its url. |
+| `amy emoji remove PACK SHORTCODE[,SHORTCODE…] [--private]` | Remove emojis by shortcode. |
+| `amy emoji import PACK SOURCE [--private] [--replace] [--server URL] [--dry-run]` | Bulk add in one new version of the pack. SOURCE is a folder of images (recursive), a `.zip` of images, one image, or a text list of `shortcode url` lines. Images upload to `--server` or the first server of your kind:10063 Blossom list and are named after the file (`party parrot.gif` → `party_parrot`, repeats get `_2`); shortcodes already in the pack are skipped before uploading. Uploads run four at a time; a failed one is reported under `failed` and doesn't stop the rest. Images over 10 MB are listed in `too_large`; a folder or `.zip` is read up to 2,000 images (256 MB of them), with `truncated: true` past that; a `.zip` over 128 MB is refused. |
+| `amy emoji list` | The packs (and loose emojis) in your kind:10030 emoji list. |
+| `amy emoji use PACK` / `amy emoji unuse PACK` | Add / remove a pack, yours or anyone's, to / from your emoji list. |
 
 ### Cashu wallet (NIP-60 / NIP-61)
 
@@ -478,14 +528,22 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy whoami` | Print the active account's name + npub. |
 | `amy use NAME` / `--clear` / no-arg | Pin / clear / inspect the active account. |
 | `amy status` | Who is signed in and what each account has saved. Per account: the profile name/NIP-05 amy holds locally, the npub, how it signs (local key — keychain/passphrase/plaintext — NIP-46 bunker, or read-only), and its local footprint: follows, NIP-65 relays (with the read/write split) and NIP-17 DM inbox, own events in the store, contacts, Marmot groups + messages, a Marmot key package, Concord communities, a Cashu wallet, DM sync cursor. Warns up front when **no account is selected** (a stale `current` pin, or several accounts and no pin) — the state that makes every other command fail — and reports the machine-level GrapeRank operator key. Whatever an account doesn't have is left out, so a fresh one is four lines. Built for the returning user: no keychain prompt, no network. (Event-store size and backend: `amy store stat`.) |
-| `amy logoff [--yes] [--keep-events]` | Log off an account: delete its key + backend secret, the whole `~/.amy/<account>/` directory (run-state, aliases, cashu counters, Marmot state), the `current` pin if it points here, and the account's events (authored + `#p`-addressed) in the shared store. `--keep-events` leaves the shared cache alone. Destructive and irreversible — requires `--yes`; without it, prints a dry run and exits 2. |
+| `amy logoff [--yes] [--keep-events] [--offline]` | Log off an account: delete its key + backend secret, the whole `~/.amy/<account>/` directory (run-state, aliases, cashu counters, Marmot state), the `current` pin if it points here, and the account's events (authored + `#p`-addressed) in the shared store. `--keep-events` leaves the shared cache alone. A NIP-46 bunker account first sends its signer `logout` (bounded to 15 s, best effort; `signer_notified` in the output, `notify_signer` in the dry run); `--offline` skips it, and a transport key that needs a passphrase with no TTY skips it with a warning. Destructive and irreversible — requires `--yes`; without it, prints a dry run and exits 2. |
 
 ### Social
 
 | Command | What it does |
 |---|---|
 | `amy notes post TEXT [--relay URL] [--pow BITS [--pow-timeout SECS]]` | Publish a kind:1 short text note; `--pow` mines a NIP-13 proof of work into it first, using all cores (blocks while mining, exit 124 on timeout with nothing published; `--json` adds `pow`, `pow_target`, `pow_millis`). |
-| `amy notes feed [--author USER \| --following] [--limit N]` | Read recent kind:1 notes (yours, one user's, or your follow set). |
+| `amy notes feed [--author USER \| --following \| --hashtag TAG] [--limit N]` | Read recent kind:1 notes (yours, one user's, your follow set, or anyone's under a hashtag). Each note carries the shared renderer's `author_name`, `reply_to`, `root`, `mentions`, `quotes`, `hashtags`, `media`. |
+| `amy notes show EVENT [--raw] [--refresh]` | Render one event of any kind through the shared commons renderer: author (with cached/fetched profile), body split into spans (text, link, image, hashtag, user/event mention, payment tokens), reply/root refs, mentions, quotes, media, content warning, and kind-specific `details` (profile, follows, reaction, repost + verified embedded copy, zap, relay list, deletion, long-form). EVENT is a 64-hex id, `note1`, `nevent1` or `naddr1`; cache-first. `--raw` adds the signed event JSON. |
+| `amy notes thread EVENT [--limit N]` | The whole conversation EVENT belongs to: the root plus every NIP-10 reply and NIP-22 comment, loaded, ordered and indented by the app's own thread code (`depth`, `parent_ids`, `is_focus`; `missing` counts referenced notes no relay returned) and rendered. |
+| `amy notes reply EVENT TEXT` | Reply: a NIP-10 kind:1 (marked `root`/`reply` + the parent's `p` chain) to a kind:1, a NIP-22 kind:1111 comment to any other kind — and to a top-level kind:1 posted from Amethyst, exactly as the app does. Text is tagged like the app's composer (`p`/`q`/`t`/`r`). |
+| `amy notes quote EVENT [TEXT]` | NIP-18 quote post: kind:1 ending in `nostr:nevent…` (`naddr…` for addressable events) with a `q` tag and the quoted author's `p`. |
+| `amy notes react EVENT [--content +\|-\|EMOJI]` | NIP-25 reaction (default `+`). |
+| `amy notes repost EVENT` | NIP-18 repost: kind:6 for a kind:1, kind:16 for anything else. |
+| `amy delete EVENT…` (also `notes delete`) | NIP-09 deletion requests for your own events, any kind; sent to your outbox, every relay a target was seen on, and everywhere the target was routed when published (e.g. the inboxes a reply notified). Refuses events signed by someone else (`forbidden`). Over 200 targets are split into several kind:5s; all are published, and if only some are refused it exits 1 with `partial` and the per-event results. The interaction verbs and `delete` exit 1 with `read_only` up front on an npub-only account. |
+| `amy notifications [--type reply,mention,reaction,repost,zap] [--limit N] [--since TS] [--until TS]` | What others did that involves you, newest first, each with a `type` and the actor in `from` (the zapper for zaps). Reactions and reposts count only when they target your own note. DMs are `amy dm list`. |
 | `amy profile show [USER]` | Print kind:0 metadata. USER accepts npub/nprofile/hex/NIP-05; defaults to self. |
 | `amy profile edit --name … --about … --picture URL …` | Patch and re-publish your kind:0. |
 | `amy follow USER` / `amy unfollow USER` | Add/remove USER from your kind:3 contact list (fetches the freshest list first). |
@@ -501,6 +559,11 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy graperank register [PROVIDER] [--service KIND:TAG] [--relay URL]` | Declare a NIP-85 provider in your kind:10040 so clients can discover it (default: self as the `30382:rank` provider). |
 | `amy graperank unregister PROVIDER [--service KIND:TAG] [--relay URL]` | The inverse of `register`: remove matching entries (public + private) from your kind:10040 and re-publish it. `--service`/`--relay` narrow the match; without them every entry for that provider key is dropped. |
 | `amy graperank providers [USER]` | List a user's declared NIP-85 trusted providers (public + your own private entries). |
+| `amy trust sync [--update\|--full\|--redownload] [--observer USER] [--min-score N] [--timeout SECS]` | The consumer side of NIP-85, as the apps keep it: download your `30382:rank` provider's cards into a local index (`~/.amy/<account>/wot/`, the apps' file format), checking every signature. Without a flag it runs whatever is due: the first download, a small update, or the weekly NIP-77 full check. `--observer` syncs another user's network, read-only. `--min-score` is 0..100 (default 5; amy does not read the apps' synced setting yet). `--timeout` bounds the kind:10040 lookup, not the download. Progress on stderr; `entries`, `passing`, `received`, `invalid`, `elapsed_ms` on stdout. `undecryptable` when the private part of your list cannot be read. |
+| `amy trust status [--observer USER] [--min-score N]` | The local index with no network: provider, entries, how many pass the minimum score, last update and full check, what is due (`due`: `update`, `full_check`, `download` or null), file sizes, load time. |
+| `amy trust check USER… [--observer USER] [--min-score N] [--timeout SECS]` | Known or stranger, and why (`self`, `follow`, `trusted`, `below_min_score`, `not_in_network`, `no_network`): the rule behind the DM tabs, Curated notifications and collapsed replies, plus rank, followers and hops. |
+| `amy trust setup brainstorm [--private] [--timeout SECS]` | Brainstorm's guided sign-up (challenge login, score request), then publishes the kind:10040 rows Brainstorm serves you with (`rows`: rank, followers, hops, …), replacing rows of the same names and keeping every other entry. `provider` is the service key, `onboarding` the provider id. Refuses (`timeout`) when no relay answers for your current list, rather than overwrite it. Any other provider: `amy graperank register`. |
+| `amy trust copy USER [--private] [--timeout SECS]` | Copies USER's public kind:10040 rows into yours (same-name rows and the old score provider replaced), so the network shows as USER sees it. `amy trust copy _@brainstorm.world` is Brainstorm's default view. |
 | `amy fof get USER` | Follows-of-follows social proof: how many accounts you follow also follow USER. Single-hop, cheap — **not** the computed web of trust (that's `graperank`). Read from the local store; run `fof sync` first to freshen it. |
 | `amy fof list [--threshold N] [--limit N]` | Rank accounts by that social-proof score — who's most-followed inside your network (discovery). Defaults: `--threshold 1`, `--limit 50`. |
 | `amy fof sync [--timeout SECS]` | Pull your follows' latest kind:3 from the index relays so the next `get`/`list` is current. (`amy wot …` remains as a deprecation alias for all three.) |
@@ -948,6 +1011,18 @@ the exit code**: `bad_args` → 2, `timeout` → 124, every other code → 1.
 Notable error codes (the full canonical list is in
 [DEVELOPMENT.md](./DEVELOPMENT.md)):
 
+- **`no_relay_served`** (exit 1) — `amy fetch` got nothing because every
+  queried relay `CLOSED` the request, refused it for auth, could not be
+  reached, or stayed silent past `--timeout`. The payload's `relay_errors` maps each relay to `{reason, message}`,
+  the relay's own words — so an empty result is never mistaken for an empty
+  relay. With some relays serving, the fetch succeeds and still reports the
+  refusers under `relay_errors`. A plain fetch reports a relay that never sent
+  EOSE within `--timeout` the same way, with reason `timeout`.
+- **`incomplete`** (exit 1) — an `amy fetch --paginate` walk delivered events
+  and then gave up (refused, unreachable, or silent past its re-asks). What
+  arrived is still written (stdout, or `--out`); the error carries `count`,
+  `out`, `incomplete_relays` (relay → events it delivered) and `relay_errors`,
+  so a script never mistakes a partial export for a full one.
 - **`rejected`** (exit 1) — a publish was refused by **every** targeted
   relay **and at least one relay actually answered `OK false`**; the payload
   carries `event_id` + `rejected_by`. When every failure is transport-level

@@ -20,12 +20,18 @@
  */
 package com.vitorpamplona.relaybench.corpus
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.relaybench.BenchJson
 import com.vitorpamplona.relaybench.NostrSocket
+import com.vitorpamplona.relaybench.asInt
+import com.vitorpamplona.relaybench.asLong
+import com.vitorpamplona.relaybench.asText
+import com.vitorpamplona.relaybench.get
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import okhttp3.OkHttpClient
 import java.io.File
 import java.io.FileWriter
@@ -56,8 +62,6 @@ object CorpusDownloader {
     private const val PAGE_LIMIT = 500
     private const val PAGE_TIMEOUT_MS = 45_000L
     private const val MAX_CONSECUTIVE_FAILURES = 10
-
-    private val mapper = jacksonObjectMapper()
 
     fun download(
         relayUrls: List<String>,
@@ -91,7 +95,7 @@ object CorpusDownloader {
         if (spill.exists()) {
             spill.useLines { lines ->
                 lines.filter { it.isNotBlank() }.forEach { line ->
-                    runCatching { mapper.readTree(line) }
+                    runCatching { BenchJson.parse(line) }
                         .getOrNull()
                         ?.get("id")
                         ?.asText()
@@ -99,7 +103,7 @@ object CorpusDownloader {
                 }
             }
             if (checkpoint.exists()) {
-                runCatching { mapper.readTree(checkpoint.readText()) }.getOrNull()?.properties()?.forEach { (url, until) ->
+                (runCatching { BenchJson.parse(checkpoint.readText()) }.getOrNull() as? JsonObject)?.forEach { (url, until) ->
                     cursors[url] = until.asLong()
                 }
             }
@@ -178,7 +182,7 @@ object CorpusDownloader {
 
         fun saveCheckpoint() {
             until?.let { cursors[url] = it }
-            runCatching { checkpoint.writeText(mapper.writeValueAsString(cursors)) }
+            runCatching { checkpoint.writeText(Json.encodeToString<Map<String, Long>>(cursors)) }
         }
 
         try {
@@ -276,7 +280,7 @@ object CorpusDownloader {
             if (!socket.req(subId, filter.toJson())) return@withTimeoutOrNull null
             val page = ArrayList<PagedEvent>(filter.limit ?: PAGE_LIMIT)
             for (raw in socket.incoming) {
-                val node = runCatching { mapper.readTree(raw) }.getOrNull() ?: continue
+                val node = runCatching { BenchJson.parse(raw) }.getOrNull() ?: continue
                 when (node[0]?.asText()) {
                     "EVENT" ->
                         if (node[1]?.asText() == subId) {

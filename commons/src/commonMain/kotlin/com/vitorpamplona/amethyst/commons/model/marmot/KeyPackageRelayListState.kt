@@ -57,7 +57,8 @@ class KeyPackageRelayListState(
 
     fun normalizeKeyPackageRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
         val event = note.event as? KeyPackageRelayListEvent ?: settings.backupKeyPackageRelayList
-        return event?.relays()?.toSet() ?: emptySet()
+        // The account's own list: a local relay the user configured is theirs.
+        return event?.allRelays()?.toSet() ?: emptySet()
     }
 
     val flow =

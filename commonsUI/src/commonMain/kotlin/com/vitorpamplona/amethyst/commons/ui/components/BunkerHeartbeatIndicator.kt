@@ -41,6 +41,11 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bunker_heartbeat_connected
+import com.vitorpamplona.amethyst.commons.resources.bunker_heartbeat_connected_ago
+import com.vitorpamplona.amethyst.commons.resources.bunker_heartbeat_disconnected
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,14 +63,14 @@ fun BunkerHeartbeatIndicator(
             is SignerConnectionState.Connected -> {
                 if (lastPingTimeSec != null) {
                     val agoSeconds = TimeUtils.now() - lastPingTimeSec
-                    "Bunker connected \u2014 last pinged ${agoSeconds}s ago"
+                    stringRes(Res.string.bunker_heartbeat_connected_ago, agoSeconds)
                 } else {
-                    "Bunker connected"
+                    stringRes(Res.string.bunker_heartbeat_connected)
                 }
             }
 
             is SignerConnectionState.Disconnected -> {
-                "Bunker disconnected"
+                stringRes(Res.string.bunker_heartbeat_disconnected)
             }
         }
 
@@ -93,7 +98,7 @@ fun BunkerHeartbeatIndicator(
                     )
                 Icon(
                     MaterialSymbols.Favorite,
-                    contentDescription = "Bunker connected",
+                    contentDescription = stringRes(Res.string.bunker_heartbeat_connected),
                     tint = Color(0xFF4CAF50),
                     modifier =
                         Modifier.size(20.dp).graphicsLayer {
@@ -106,7 +111,7 @@ fun BunkerHeartbeatIndicator(
             is SignerConnectionState.Disconnected -> {
                 Icon(
                     MaterialSymbols.FavoriteBorder,
-                    contentDescription = "Bunker disconnected",
+                    contentDescription = stringRes(Res.string.bunker_heartbeat_disconnected),
                     tint = Color(0xFFF44336),
                     modifier = Modifier.size(20.dp),
                 )

@@ -27,7 +27,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,7 +45,6 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -73,13 +71,21 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.commons.birdstar.ui.RenderBirdDetection
-import com.vitorpamplona.amethyst.commons.birdstar.ui.RenderBirdex
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeEditDraftTo
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.listingStatus
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ClassifiedsOpenMarketsDetails
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ListingStatusBadge
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.RenderProductCollection
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.expand
@@ -91,18 +97,17 @@ import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.resources.send_a_direct_message
 import com.vitorpamplona.amethyst.commons.resources.send_the_seller_a_message
 import com.vitorpamplona.amethyst.commons.resources.thread_collapsed_reply_count
+import com.vitorpamplona.amethyst.commons.resources.thread_reply_outside_network
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedTextField
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeEditDraftTo
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.ui.note.CheckAndDisplayEditStatus
 import com.vitorpamplona.amethyst.commons.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.commons.ui.note.DisplayDraft
@@ -117,13 +122,11 @@ import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveDraftEvent
+import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.RenderApproveButton
-import com.vitorpamplona.amethyst.commons.ui.note.RenderCashuMint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderCodeSnippetHeaderForThread
 import com.vitorpamplona.amethyst.commons.ui.note.RenderDraft
-import com.vitorpamplona.amethyst.commons.ui.note.RenderFedimint
-import com.vitorpamplona.amethyst.commons.ui.note.RenderMintRecommendation
-import com.vitorpamplona.amethyst.commons.ui.note.RenderRepost
+import com.vitorpamplona.amethyst.commons.ui.note.RenderNoteRow
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
@@ -143,116 +146,28 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.DisplayCommentScope
 import com.vitorpamplona.amethyst.commons.ui.note.observeEdits
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioHeader
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioTrack
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitIssueEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPatchEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestUpdateEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitRepositoryEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderMusicTrack
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderNamedSiteEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderRootSiteEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderVoiceTrack
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.note.types.BadgeDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayBlockedRelayList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayBroadcastRelayList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayContactList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayDMRelayList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayFavoriteRelayList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayIndexerRelayList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayNIP65RelayList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayPeopleList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayProxyRelayList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayRelaySet
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplaySearchRelayList
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayStarterPack
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayTrustedRelayList
+import com.vitorpamplona.amethyst.commons.ui.note.types.DrssEpisodeAudio
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
-import com.vitorpamplona.amethyst.commons.ui.note.types.FileMetadataDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.types.FileStorageHeaderDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.types.LongFormPublishedAndReadingTime
+import com.vitorpamplona.amethyst.commons.ui.note.types.LongFormTopicChips
 import com.vitorpamplona.amethyst.commons.ui.note.types.MAX_THREAD_SECTIONS
-import com.vitorpamplona.amethyst.commons.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.PublicationHeader
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAppDefinition
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAppRecommendation
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestation
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestationRequest
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorProficiency
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorRecommendation
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBallot
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBlossomPieceIndex
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBolt12Zap
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBookshelfDirectory
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCalendarDateSlotEvent
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCalendarTimeSlotEvent
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChat
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChatMessageEncryptedFile
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCitation
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCyberspaceBag
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEmojiPack
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEntityRating
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFhirResource
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFundraiser
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocache
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocacheFoundLog
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitStatusEvent
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGoal
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHighlight
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderInteractiveStory
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLearningResource
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveActivityChatMessage
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMusicPlaylist
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNutzap
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderOnchainZap
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPinListEvent
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPodcastEpisode
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPodcastMetadata
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPoll
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPostApproval
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPredictionMarket
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPrivateMessage
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderProfileCard
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPs1Save
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPublicMessage
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPublicationSection
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderReaction
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayAddMember
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayAuth
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayDiscovery
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayJoinRequest
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayLeaveRequest
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayMembershipList
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayRemoveMember
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayReview
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventConfirmation
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventReport
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoAvatar
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoObject
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoShard
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSoftwareApplication
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSoftwareAsset
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSoftwareRelease
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTextEvent
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTextModificationEvent
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTorrent
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTorrentComment
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderZapPoll
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderZapReceipt
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
-import com.vitorpamplona.amethyst.commons.ui.note.types.VideoDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.RenderDListItem
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.isDListItemPage
+import com.vitorpamplona.amethyst.commons.ui.note.types.estimateReadingMinutes
 import com.vitorpamplona.amethyst.commons.ui.note.types.observeZapSender
+import com.vitorpamplona.amethyst.commons.ui.note.types.publishedAtWorthShowing
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelHeader
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.PodcastTrailerListItem
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.WorkoutDisplay
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -277,133 +192,32 @@ import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.LevelFeedViewModel
-import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
-import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
-import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
-import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoShardEvent
-import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
-import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
-import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
-import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
-import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
-import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.ballots.BallotEvent
-import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
-import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
+import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
-import com.vitorpamplona.quartz.experimental.citations.CitationEvent
-import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
-import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
-import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
-import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
-import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
-import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
-import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
-import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
-import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
-import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
-import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
-import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
-import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
-import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
-import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
-import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
-import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
-import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
-import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
-import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
-import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
-import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
-import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
-import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
-import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
-import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
-import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
-import com.vitorpamplona.quartz.nip43RelayMembers.joinRequest.RelayJoinRequestEvent
-import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequestEvent
-import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
-import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
-import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.PinListEvent
-import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
-import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
-import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
-import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
-import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
-import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
-import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
-import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
-import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
-import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
-import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
-import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
-import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
-import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
-import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
-import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
-import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
-import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
-import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
-import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
-import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
-import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
-import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
-import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import com.vitorpamplona.quartz.utils.parseBigDecimalOrNull
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -444,14 +258,23 @@ fun RenderThreadFeed(
     val items by loaded.feed.collectAsStateWithLifecycle()
     val levels by viewModel.levelCacheFlow.collectAsStateWithLifecycle()
 
+    // Replies whose author is outside the Web of Trust network start collapsed. Empty while no
+    // network is active, so threads look exactly as before for users without one.
+    val verdicts by accountViewModel.account.trustVerdicts
+        .collectAsStateWithLifecycle()
+    val outsideNetwork =
+        remember(items, levels, verdicts, noteId) {
+            if (!verdicts.isActive) emptySet() else outOfNetworkReplies(items.list, levels, noteId, verdicts)
+        }
+
     // Hides every descendant of a collapsed reply and counts how many were hidden. The feed is
     // ordered depth-first, so a note's descendants are the contiguous items that follow it with a
     // strictly deeper reply level.
     val visible by
-        remember(items, levels) {
+        remember(items, levels, outsideNetwork) {
             derivedStateOf {
                 val full = items.list
-                if (viewModel.collapsedReplies.isEmpty()) {
+                if (viewModel.collapsedReplies.isEmpty() && outsideNetwork.isEmpty()) {
                     VisibleThread(full, emptyMap())
                 } else {
                     val result = ArrayList<Note>(full.size)
@@ -469,7 +292,7 @@ fun RenderThreadFeed(
                         collapsedAncestorId = null
                         result.add(note)
 
-                        if (viewModel.isCollapsed(note.idHex)) {
+                        if (viewModel.isCollapsed(note.idHex, outsideNetwork)) {
                             hideDeeperThan = level
                             collapsedAncestorId = note.idHex
                         }
@@ -520,12 +343,15 @@ fun RenderThreadFeed(
             contentType = { index, item ->
                 when {
                     index == 0 -> "master"
-                    viewModel.isCollapsed(item.idHex) -> "collapsed"
+                    viewModel.isCollapsed(item.idHex, outsideNetwork) -> "collapsed"
                     else -> "reply"
                 }
             },
         ) { index, item ->
-            val level = viewModel.levelFlowForItem(item).collectAsStateWithLifecycle(0)
+            // Remembered per item: a fresh flow on every recomposition restarted the collector each
+            // time, and starting from 0 drew every reply un-indented for a frame.
+            val levelFlow = remember(item) { viewModel.levelFlowForItem(item) }
+            val level = levelFlow.collectAsStateWithLifecycle(viewModel.levelCacheFlow.value[item] ?: 0)
 
             val modifier =
                 Modifier
@@ -549,12 +375,13 @@ fun RenderThreadFeed(
                         nav = nav,
                     )
                 }
-            } else if (viewModel.isCollapsed(item.idHex)) {
+            } else if (viewModel.isCollapsed(item.idHex, outsideNetwork)) {
                 CollapsedNoteCompose(
                     baseNote = item,
                     modifier = modifier,
                     hiddenReplyCount = visible.hiddenCounts[item.idHex] ?: 0,
-                    onExpand = { viewModel.toggleCollapsed(item.idHex) },
+                    outsideNetwork = item.idHex in outsideNetwork,
+                    onExpand = { viewModel.toggleCollapsed(item.idHex, outsideNetwork) },
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -569,7 +396,7 @@ fun RenderThreadFeed(
                 // drafts: those open the edit-draft screen so the post can be resumed, matching
                 // the behavior everywhere else a draft is tapped.
                 val onClick =
-                    remember(item) {
+                    remember(item, outsideNetwork) {
                         {
                             if (item.isDraft()) {
                                 nav.nav {
@@ -578,7 +405,7 @@ fun RenderThreadFeed(
                                     }
                                 }
                             } else {
-                                viewModel.toggleCollapsed(item.idHex)
+                                viewModel.toggleCollapsed(item.idHex, outsideNetwork)
                             }
                         }
                     }
@@ -604,6 +431,97 @@ fun RenderThreadFeed(
 }
 
 /**
+ * Replies (by id) whose author is outside the Web of Trust network: they start collapsed. The
+ * thread's root, its author, the focused note and the replies above it are never included (a
+ * collapsed reply hides everything under it, which would hide the note the user opened), nor
+ * is a reply that the root's author or someone in the network answered; neither are follows or
+ * the user (see [TrustVerdicts]).
+ */
+private fun outOfNetworkReplies(
+    thread: List<Note>,
+    levels: Map<Note, Int>,
+    focusedNoteId: String,
+    verdicts: TrustVerdicts,
+): Set<String> {
+    val root = thread.firstOrNull() ?: return emptySet()
+    val rootAuthor = root.author?.pubkeyHex
+    val keepOpen = focusedNoteAndAncestors(thread, levels, focusedNoteId)
+    val answered =
+        knownReplyBelow(thread, levels) { reply ->
+            val author = reply.author?.pubkeyHex
+            author != null && (author == rootAuthor || verdicts.explain(author).isKnown == true)
+        }
+    val result = HashSet<String>()
+    for (i in 1 until thread.size) {
+        val note = thread[i]
+        if (note.idHex in keepOpen) continue
+        // Levels are computed off the main thread and can trail the list: a reply with none yet
+        // cannot be placed (it may be above the focused note), so it is judged once it has one.
+        if (levels[note] == null) continue
+        val author = note.author?.pubkeyHex ?: continue
+        if (author == rootAuthor) continue
+        if (!answered[i] && verdicts.isOutside(author)) result.add(note.idHex)
+    }
+    return result
+}
+
+/**
+ * For each item of [thread], whether a [known] reply is anywhere under it. Collapsing a
+ * reply hides everything under it, which would hide their part of the conversation. The thread
+ * is depth-first: the replies under a note are the items after it at a deeper level. One
+ * backwards pass: the stack holds the subtrees already seen, nearest on top, each with whether
+ * a known author is in it; a note owns the ones deeper than itself.
+ */
+internal fun knownReplyBelow(
+    thread: List<Note>,
+    levels: Map<Note, Int>,
+    known: (Note) -> Boolean,
+): BooleanArray {
+    val result = BooleanArray(thread.size)
+    val stackLevels = IntArray(thread.size)
+    val stackKnown = BooleanArray(thread.size)
+    var top = 0
+    for (i in thread.indices.reversed()) {
+        val level = levels[thread[i]] ?: continue
+        var below = false
+        while (top > 0 && stackLevels[top - 1] > level) {
+            top--
+            below = below || stackKnown[top]
+        }
+        result[i] = below
+        stackLevels[top] = level
+        stackKnown[top] = below || known(thread[i])
+        top++
+    }
+    return result
+}
+
+/**
+ * The focused note and every reply above it. The thread is depth-first, so its ancestors are
+ * the earlier items each at a shallower level than the last one found.
+ */
+internal fun focusedNoteAndAncestors(
+    thread: List<Note>,
+    levels: Map<Note, Int>,
+    focusedNoteId: String,
+): Set<String> {
+    val focused = thread.indexOfFirst { it.idHex == focusedNoteId }
+    if (focused < 0) return setOf(focusedNoteId)
+    val result = HashSet<String>()
+    result.add(focusedNoteId)
+    var level = levels[thread[focused]] ?: return result
+    for (i in focused - 1 downTo 0) {
+        val candidate = levels[thread[i]] ?: continue
+        if (candidate < level) {
+            result.add(thread[i].idHex)
+            level = candidate
+            if (level <= 0) break
+        }
+    }
+    return result
+}
+
+/**
  * Holds the thread items currently visible after collapsing, plus, for each collapsed reply id,
  * the number of descendant replies that were hidden underneath it.
  */
@@ -623,6 +541,7 @@ private fun CollapsedNoteCompose(
     baseNote: Note,
     modifier: Modifier,
     hiddenReplyCount: Int,
+    outsideNetwork: Boolean = false,
     onExpand: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -643,16 +562,36 @@ private fun CollapsedNoteCompose(
             Spacer(modifier = Modifier.width(10.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                NoteUsernameDisplay(baseNote, accountViewModel = accountViewModel)
+                NoteUsernameDisplay(baseNote, accountViewModel = accountViewModel, nav = nav)
 
-                LoadDecryptedContent(baseNote, accountViewModel) { body ->
-                    Text(
-                        text = body,
-                        color = MaterialTheme.colorScheme.placeholderText,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                if (outsideNetwork) {
+                    // No preview: a reply collapsed for being outside the network is often spam.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            symbol = MaterialSymbols.Shield,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.placeholderText,
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = stringRes(Res.string.thread_reply_outside_network),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                } else {
+                    LoadDecryptedContent(baseNote, accountViewModel) { body ->
+                        Text(
+                            text = body,
+                            color = MaterialTheme.colorScheme.placeholderText,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                 }
             }
 
@@ -782,7 +721,7 @@ private fun FullBleedNoteCompose(
                     if (zapSender != null) {
                         UsernameDisplay(zapSender, Modifier.weight(1f), accountViewModel = accountViewModel)
                     } else {
-                        NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel)
+                        NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel, nav = nav)
                     }
 
                     if (isDraft) {
@@ -866,9 +805,11 @@ private fun FullBleedNoteCompose(
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        // Keep in sync with hasThreadHeader(): these kinds get a thread-only header here and a
+        // plain text body below instead of their feed card.
         when (noteEvent) {
             is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
-            is LongFormContentEvent -> RenderLongFormHeaderForThread(noteEvent, baseNote, accountViewModel)
+            is LongFormContentEvent -> RenderLongFormHeaderForThread(noteEvent, baseNote, accountViewModel, nav)
             is ThreadEvent -> RenderThreadHeaderForThread(noteEvent)
             is WikiArticleEvent -> RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
             is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
@@ -879,9 +820,10 @@ private fun FullBleedNoteCompose(
             modifier = PaddingHorizontal12Modifier,
         ) {
             Column {
-                if (noteEvent is MetadataEvent) {
-                    RenderProfileCard(baseNote, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is ChannelCreateEvent) {
+                // Only what the thread view draws differently from the feed is listed here. Every
+                // other kind goes through the feed's own per-kind dispatch (RenderNoteRow), so a
+                // kind that gets a card there gets it here too instead of falling back to text.
+                if (noteEvent is ChannelCreateEvent) {
                     PublicChatChannelHeader(
                         channelHex = noteEvent.id,
                         sendToChannel = true,
@@ -897,263 +839,24 @@ private fun FullBleedNoteCompose(
                             nav = nav,
                         )
                     }
-                } else if (noteEvent is VideoEvent) {
-                    VideoDisplay(baseNote, makeItShort = false, canPreview = true, backgroundColor = backgroundColor, ContentScale.FillWidth, accountViewModel = accountViewModel, nav = nav)
-                } else if (noteEvent is PictureEvent) {
-                    PictureDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, PaddingValues(vertical = Size5dp), backgroundColor, accountViewModel = accountViewModel, nav)
-                } else if (noteEvent is WorkoutRecordEvent) {
-                    WorkoutDisplay(baseNote, backgroundColor, canPreview = true, quotesLeft = 3, accountViewModel = accountViewModel, nav = nav)
-                } else if (noteEvent is BaseVoiceEvent) {
-                    RenderVoiceTrack(baseNote, accountViewModel, nav)
-                } else if (noteEvent is FileMetadataEvent) {
-                    FileMetadataDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, accountViewModel = accountViewModel)
-                } else if (noteEvent is FileStorageHeaderEvent) {
-                    FileStorageHeaderDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, accountViewModel = accountViewModel)
-                } else if (noteEvent is FollowSetEvent) {
-                    DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is StarterPackEvent) {
+                    // The full pack here; the feed shows the short card.
                     DisplayStarterPack(baseNote, false, accountViewModel, nav)
-                } else if (noteEvent is ContactListEvent) {
-                    DisplayContactList(baseNote, accountViewModel, nav)
-                } else if (noteEvent is AudioTrackEvent) {
-                    RenderAudioTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
-                } else if (noteEvent is AudioHeaderEvent) {
-                    RenderAudioHeader(baseNote, ContentScale.FillWidth, accountViewModel, nav)
-                } else if (noteEvent is MusicTrackEvent) {
-                    RenderMusicTrack(baseNote, makeItShort = false, canPreview = true, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is MusicPlaylistEvent) {
-                    RenderMusicPlaylist(baseNote, makeItShort = false, canPreview = true, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is PodcastEpisodeEvent) {
-                    RenderPodcastEpisode(baseNote, makeItShort = false, canPreview = true, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is Podcasting20EpisodeEvent) {
-                    RenderPodcastEpisode(baseNote, makeItShort = false, canPreview = true, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is Podcasting20TrailerEvent) {
-                    PodcastTrailerListItem(baseNote, accountViewModel, nav)
-                } else if (noteEvent is PodcastMetadataEvent) {
-                    RenderPodcastMetadata(baseNote, makeItShort = false, canPreview = true, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is AppSpecificDataEvent && noteEvent.dTag() == Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG) {
-                    // kind:30078 is overloaded; only the Podcasting-2.0 show-metadata variant renders as a podcast card.
-                    RenderPodcastMetadata(baseNote, makeItShort = false, canPreview = true, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is CommunityPostApprovalEvent) {
-                    RenderPostApproval(
-                        baseNote,
-                        quotesLeft = 3,
-                        backgroundColor,
-                        accountViewModel,
-                        nav,
-                    )
-                } else if (noteEvent is PinListEvent) {
-                    RenderPinListEvent(
-                        baseNote,
-                        backgroundColor,
-                        accountViewModel,
-                        nav,
-                    )
-                } else if (noteEvent is EmojiPackEvent) {
-                    RenderEmojiPack(
-                        baseNote,
-                        true,
-                        backgroundColor,
-                        accountViewModel,
-                    )
-                } else if (noteEvent is RelaySetEvent) {
-                    DisplayRelaySet(
-                        baseNote,
-                        backgroundColor,
-                        accountViewModel,
-                        nav,
-                    )
-                } else if (noteEvent is DmRelayListEvent) {
-                    DisplayDMRelayList(baseNote, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is ChatMessageEncryptedFileHeaderEvent) {
-                    RenderChatMessageEncryptedFile(
-                        baseNote,
-                        false,
-                        canPreview,
-                        3,
-                        backgroundColor,
-                        editState,
-                        accountViewModel,
-                        nav,
-                    )
-                } else if (noteEvent is AttestationEvent) {
-                    RenderAttestation(baseNote, 3, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is AttestationRequestEvent) {
-                    RenderAttestationRequest(baseNote, 3, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is AttestorRecommendationEvent) {
-                    RenderAttestorRecommendation(baseNote, 3, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is AttestorProficiencyEvent) {
-                    RenderAttestorProficiency(baseNote, 3, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is AdvertisedRelayListEvent) {
-                    DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is ZapReceiptEvent) {
-                    RenderZapReceipt(baseNote, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
-                } else if (noteEvent is NutzapEvent) {
-                    RenderNutzap(baseNote, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
-                } else if (noteEvent is OnchainZapEvent) {
-                    RenderOnchainZap(baseNote, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
-                } else if (noteEvent is Bolt12ZapEvent) {
-                    RenderBolt12Zap(baseNote, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
-                } else if (noteEvent is ReactionEvent) {
-                    RenderReaction(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is SearchRelayListEvent) {
-                    DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is BlockedRelayListEvent) {
-                    DisplayBlockedRelayList(baseNote, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is ProxyRelayListEvent) {
-                    DisplayProxyRelayList(baseNote, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is TrustedRelayListEvent) {
-                    DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is FavoriteRelayListEvent) {
-                    DisplayFavoriteRelayList(baseNote, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is IndexerRelayListEvent) {
-                    DisplayIndexerRelayList(baseNote, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is BroadcastRelayListEvent) {
-                    DisplayBroadcastRelayList(baseNote, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is FhirResourceEvent) {
-                    RenderFhirResource(baseNote, accountViewModel, nav)
-                } else if (noteEvent is GitRepositoryEvent) {
-                    RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
-                } else if (noteEvent is RootSiteEvent) {
-                    RenderRootSiteEvent(baseNote, accountViewModel, nav)
-                } else if (noteEvent is NamedSiteEvent) {
-                    RenderNamedSiteEvent(baseNote, accountViewModel, nav)
-                } else if (noteEvent is InteractiveStoryBaseEvent) {
-                    RenderInteractiveStory(
-                        baseNote,
-                        makeItShort = false,
-                        canPreview = true,
-                        quotesLeft = 3,
-                        backgroundColor = backgroundColor,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                } else if (noteEvent is GitPatchEvent) {
-                    RenderGitPatchEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
-                } else if (noteEvent is GitIssueEvent) {
-                    RenderGitIssueEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
-                } else if (noteEvent is GitPullRequestEvent) {
-                    RenderGitPullRequestEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
-                } else if (noteEvent is GitPullRequestUpdateEvent) {
-                    RenderGitPullRequestUpdateEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
-                } else if (noteEvent is GitStatusEvent) {
-                    RenderGitStatusEvent(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is AppDefinitionEvent) {
-                    RenderAppDefinition(baseNote, accountViewModel, nav)
-                } else if (noteEvent is AppRecommendationEvent) {
-                    RenderAppRecommendation(baseNote, accountViewModel, nav)
-                } else if (noteEvent is SoftwareApplicationEvent) {
-                    RenderSoftwareApplication(baseNote, accountViewModel, nav)
-                } else if (noteEvent is SoftwareAssetEvent) {
-                    RenderSoftwareAsset(baseNote, accountViewModel, nav)
                 } else if (noteEvent is ReleaseArtifactSetEvent && noteEvent.isNip82SoftwareRelease()) {
-                    RenderSoftwareRelease(baseNote, accountViewModel, nav)
+                    // A plain NIP-51 release set has nothing extra to show here, so it takes the feed's list card.
+                    RenderSoftwareRelease(baseNote, backgroundColor, accountViewModel, nav, expanded = true)
+                } else if (noteEvent is ProductCollectionEvent) {
+                    // The collection's page: more of its products and shipping than a feed card.
+                    RenderProductCollection(baseNote, false, accountViewModel, nav, isPage = true)
+                } else if (isDListItemPage(noteEvent)) {
+                    // The item's own page: a concept with a view of its own draws it (tier three).
+                    RenderDListItem(baseNote, 3, backgroundColor, accountViewModel, nav, isPage = true)
                 } else if (noteEvent is DraftWrapEvent) {
                     RenderDraft(baseNote, 3, ReplyRenderType.FULL, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is HighlightEvent) {
-                    RenderHighlight(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is EntityRatingEvent) {
-                    RenderEntityRating(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is PublicationContentEvent) {
-                    RenderPublicationSection(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is RelayReviewEvent) {
-                    RenderRelayReview(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is CitationEvent) {
-                    // One branch for kinds 31/32/33, matching the feed: they are one idea aimed at
-                    // three sorts of source.
-                    RenderCitation(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is LearningResourceEvent) {
-                    RenderLearningResource(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is BookshelfDirectoryEvent) {
-                    RenderBookshelfDirectory(baseNote, accountViewModel, nav)
-                } else if (noteEvent is BlossomPieceIndexEvent) {
-                    RenderBlossomPieceIndex(baseNote, accountViewModel)
                 } else if (noteEvent is PublicationIndexEvent) {
-                    // Belongs here rather than in the header `when` above: a 30040 has no content,
-                    // so the generic body would add nothing but a duplicate of the topics this
-                    // card already shows.
                     // Uncapped here: the thread view is where a publication is actually read,
                     // so the whole table of contents is listed rather than a feed-sized taste.
                     PublicationHeader(noteEvent, baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav, MAX_THREAD_SECTIONS)
-                } else if (noteEvent is PublicMessageEvent) {
-                    RenderPublicMessage(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is CalendarTimeSlotEvent) {
-                    RenderCalendarTimeSlotEvent(baseNote, accountViewModel, nav)
-                } else if (noteEvent is CalendarDateSlotEvent) {
-                    RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
-                } else if (noteEvent is ZapGoalEvent) {
-                    RenderGoal(baseNote, accountViewModel, nav)
-                } else if (noteEvent is FundraiserEvent) {
-                    RenderFundraiser(baseNote, makeItShort = false, accountViewModel, nav)
-                } else if (noteEvent is BirdexEvent) {
-                    RenderBirdex(baseNote)
-                } else if (noteEvent is BirdDetectionEvent) {
-                    RenderBirdDetection(baseNote)
-                } else if (noteEvent is SnoObjectEvent) {
-                    RenderSnoObject(baseNote, accountViewModel)
-                } else if (noteEvent is SnoAvatarEvent) {
-                    RenderSnoAvatar(baseNote, accountViewModel)
-                } else if (noteEvent is SnoShardEvent) {
-                    RenderSnoShard(baseNote, accountViewModel)
-                } else if (noteEvent is CyberspaceBagEvent) {
-                    RenderCyberspaceBag(baseNote, accountViewModel)
-                } else if (noteEvent is Ps1SaveEvent) {
-                    RenderPs1Save(baseNote)
-                } else if (noteEvent is GeocacheListingEvent) {
-                    RenderGeocache(baseNote, accountViewModel)
-                } else if (noteEvent is GeocacheFoundLogEvent) {
-                    RenderGeocacheFoundLog(baseNote, accountViewModel)
-                } else if (noteEvent is RoadEventReportEvent) {
-                    RenderRoadEventReport(baseNote)
-                } else if (noteEvent is RoadEventConfirmationEvent) {
-                    RenderRoadEventConfirmation(baseNote)
-                } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
-                    RenderRepost(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is RelayDiscoveryEvent) {
-                    RenderRelayDiscovery(baseNote, accountViewModel, nav)
-                } else if (noteEvent is RelayMembershipListEvent) {
-                    RenderRelayMembershipList(baseNote, accountViewModel, nav)
-                } else if (noteEvent is RelayAddMemberEvent) {
-                    RenderRelayAddMember(baseNote, accountViewModel, nav)
-                } else if (noteEvent is RelayRemoveMemberEvent) {
-                    RenderRelayRemoveMember(baseNote, accountViewModel, nav)
-                } else if (noteEvent is RelayJoinRequestEvent) {
-                    RenderRelayJoinRequest(baseNote, accountViewModel, nav)
-                } else if (noteEvent is RelayLeaveRequestEvent) {
-                    RenderRelayLeaveRequest(baseNote, accountViewModel, nav)
-                } else if (noteEvent is RelayAuthEvent) {
-                    RenderRelayAuth(baseNote, accountViewModel, nav)
-                } else if (noteEvent is TextNoteModificationEvent) {
-                    RenderTextModificationEvent(
-                        note = baseNote,
-                        makeItShort = false,
-                        canPreview = true,
-                        quotesLeft = 3,
-                        backgroundColor,
-                        accountViewModel,
-                        nav,
-                    )
-                } else if (noteEvent is ZapPollEvent) {
-                    RenderZapPoll(
-                        baseNote,
-                        false,
-                        canPreview,
-                        quotesLeft = 3,
-                        unPackReply = ReplyRenderType.NONE,
-                        backgroundColor,
-                        accountViewModel,
-                        nav,
-                    )
-                } else if (noteEvent is CashuMintEvent) {
-                    RenderCashuMint(noteEvent)
-                } else if (noteEvent is FedimintEvent) {
-                    RenderFedimint(noteEvent)
-                } else if (noteEvent is MintRecommendationEvent) {
-                    RenderMintRecommendation(noteEvent)
-                } else if (noteEvent is PredictionMarketEvent) {
-                    RenderPredictionMarket(baseNote, makeItShort = false, accountViewModel)
-                } else if (noteEvent is BallotEvent) {
-                    RenderBallot(baseNote, accountViewModel)
                 } else if (noteEvent is ChatEvent) {
                     RenderChat(
                         note = baseNote,
@@ -1164,71 +867,6 @@ private fun FullBleedNoteCompose(
                         backgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
                         nav = nav,
-                    )
-                } else if (noteEvent is PollEvent) {
-                    RenderPoll(
-                        note = baseNote,
-                        makeItShort = false,
-                        canPreview = canPreview,
-                        quotesLeft = 3,
-                        backgroundColor = backgroundColor,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                } else if (noteEvent is EncryptedDmEvent) {
-                    RenderPrivateMessage(
-                        baseNote,
-                        false,
-                        canPreview,
-                        3,
-                        backgroundColor,
-                        accountViewModel,
-                        nav,
-                    )
-                } else if (noteEvent is ChannelMessageEvent) {
-                    RenderChannelMessage(
-                        baseNote,
-                        false,
-                        canPreview,
-                        3,
-                        backgroundColor,
-                        editState,
-                        accountViewModel,
-                        nav,
-                    )
-                } else if (noteEvent is LiveActivitiesChatMessageEvent) {
-                    RenderLiveActivityChatMessage(
-                        baseNote,
-                        false,
-                        canPreview,
-                        3,
-                        backgroundColor,
-                        editState,
-                        accountViewModel,
-                        nav,
-                    )
-                } else if (noteEvent is MeetingSpaceEvent) {
-                    RenderMeetingSpaceEvent(baseNote, accountViewModel, nav)
-                } else if (noteEvent is MeetingRoomEvent) {
-                    RenderMeetingRoomEvent(baseNote, accountViewModel, nav)
-                } else if (noteEvent is TorrentEvent) {
-                    RenderTorrent(
-                        baseNote,
-                        backgroundColor,
-                        accountViewModel,
-                        nav,
-                    )
-                } else if (noteEvent is TorrentCommentEvent) {
-                    RenderTorrentComment(
-                        baseNote,
-                        false,
-                        canPreview,
-                        quotesLeft = 3,
-                        unPackReply = ReplyRenderType.NONE,
-                        backgroundColor,
-                        editState,
-                        accountViewModel,
-                        nav,
                     )
                 } else if (noteEvent is CommentEvent) {
                     // A comment that answers a scope rather than a note has no in-cache parent, so
@@ -1247,7 +885,9 @@ private fun FullBleedNoteCompose(
                         accountViewModel,
                         nav,
                     )
-                } else {
+                } else if (hasThreadHeader(noteEvent)) {
+                    // The header above already drew the card's title/cover/summary; the body is the
+                    // full text, not the feed card, which would repeat that header.
                     RenderTextEvent(
                         baseNote,
                         false,
@@ -1258,6 +898,18 @@ private fun FullBleedNoteCompose(
                         editState,
                         accountViewModel,
                         nav,
+                    )
+                } else {
+                    RenderNoteRow(
+                        baseNote = baseNote,
+                        backgroundColor = backgroundColor,
+                        makeItShort = false,
+                        canPreview = canPreview,
+                        quotesLeft = 3,
+                        unPackReply = ReplyRenderType.NONE,
+                        editState = editState,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
                     )
                 }
             }
@@ -1276,6 +928,18 @@ private fun FullBleedNoteCompose(
         ReactionsRow(baseNote, showReactionDetail = true, addPadding = true, editState = editState, accountViewModel = accountViewModel, nav = nav)
     }
 }
+
+/**
+ * The kinds the master note gives a thread-only header (the `when` above its body). Their body is
+ * the plain text renderer, not their feed card, which would draw that header a second time.
+ */
+private fun hasThreadHeader(event: Event) =
+    event is BadgeDefinitionEvent ||
+        event is LongFormContentEvent ||
+        event is ThreadEvent ||
+        event is WikiArticleEvent ||
+        event is ClassifiedsEvent ||
+        event is CodeSnippetEvent
 
 @Composable
 private fun RenderApprovalIfNeeded(
@@ -1337,6 +1001,7 @@ private fun RenderClassifiedsReaderForThread(
         }
     val price = remember(noteEvent) { noteEvent.price() }
     val location = remember(noteEvent) { noteEvent.location() }
+    val status = remember(noteEvent) { noteEvent.listingStatus() }
 
     Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         Column {
@@ -1364,6 +1029,10 @@ private fun RenderClassifiedsReaderForThread(
                         style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.weight(1f),
                     )
+                }
+                status?.let {
+                    Spacer(Modifier.width(5.dp))
+                    ListingStatusBadge(it)
                 }
             }
 
@@ -1418,6 +1087,8 @@ private fun RenderClassifiedsReaderForThread(
                 }
             }
 
+            ClassifiedsOpenMarketsDetails(noteEvent, accountViewModel, nav)
+
             Row(
                 Modifier
                     .padding(start = 20.dp, end = 20.dp, bottom = 5.dp, top = 15.dp)
@@ -1464,7 +1135,7 @@ private fun RenderClassifiedsReaderForThread(
 
                 var message by remember { mutableStateOf(TextFieldValue(msg)) }
 
-                TextField(
+                SpellCheckedTextField(
                     value = message,
                     onValueChange = { message = it },
                     keyboardOptions =
@@ -1512,7 +1183,13 @@ private fun RenderLongFormHeaderForThread(
     noteEvent: LongFormContentEvent,
     note: Note,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
+    // The author row above already shows created_at; repeat a date only when published_at differs.
+    val publishedAt = remember(noteEvent) { publishedAtWorthShowing(noteEvent.publishedAt(), noteEvent.createdAt) }
+    val readingMinutes = remember(noteEvent) { estimateReadingMinutes(noteEvent.content) }
+    val topics = remember(noteEvent) { noteEvent.topics().distinct().toImmutableList() }
+
     Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         noteEvent.image()?.let {
             MyAsyncImage(
@@ -1555,6 +1232,20 @@ private fun RenderLongFormHeaderForThread(
                     color = MaterialTheme.colorScheme.grayText,
                 )
             }
+
+        Spacer(modifier = StdVertSpacer)
+        LongFormPublishedAndReadingTime(publishedAt, readingMinutes)
+
+        // A podcast episode plays here from where the user left it, and keeps their place.
+        if (note is AddressableNote) {
+            Spacer(modifier = StdVertSpacer)
+            DrssEpisodeAudio(note, noteEvent, accountViewModel)
+        }
+
+        if (topics.isNotEmpty()) {
+            Spacer(modifier = StdVertSpacer)
+            LongFormTopicChips(topics, nav)
+        }
     }
 }
 

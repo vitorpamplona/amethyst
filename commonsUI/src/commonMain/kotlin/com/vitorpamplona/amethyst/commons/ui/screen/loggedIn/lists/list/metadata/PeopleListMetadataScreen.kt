@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.resources.people_list_title
 import com.vitorpamplona.amethyst.commons.resources.picture_url
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -210,7 +211,7 @@ fun PeopleListMetadataTopBar(
 
 @Composable
 private fun Description(postViewModel: PeopleListMetadataViewModel) {
-    OutlinedTextField(
+    SpellCheckedOutlinedTextField(
         label = { Text(text = stringRes(Res.string.follow_set_creation_desc_label)) },
         modifier = Modifier.fillMaxWidth(),
         value = postViewModel.description.value,

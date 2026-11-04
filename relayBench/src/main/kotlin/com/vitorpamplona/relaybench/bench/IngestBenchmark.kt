@@ -20,11 +20,14 @@
  */
 package com.vitorpamplona.relaybench.bench
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.relaybench.BenchJson
 import com.vitorpamplona.relaybench.NostrSocket
 import com.vitorpamplona.relaybench.Percentiles
+import com.vitorpamplona.relaybench.asBoolean
+import com.vitorpamplona.relaybench.asText
+import com.vitorpamplona.relaybench.get
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
@@ -35,6 +38,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.Serializable
 import okhttp3.OkHttpClient
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -55,8 +59,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * from first send to last OK.
  */
 object IngestBenchmark {
-    private val mapper = jacksonObjectMapper()
-
+    @Serializable
     data class VisibilityResult(
         val okLatency: Percentiles,
         val visibleLatency: Percentiles,
@@ -65,6 +68,7 @@ object IngestBenchmark {
         val rejected: Int,
     )
 
+    @Serializable
     data class ThroughputResult(
         val events: Int,
         val accepted: Int,
@@ -143,7 +147,7 @@ object IngestBenchmark {
                 val okAt =
                     async {
                         for (raw in publisher.incoming) {
-                            val node = runCatching { mapper.readTree(raw) }.getOrNull() ?: continue
+                            val node = runCatching { BenchJson.parse(raw) }.getOrNull() ?: continue
                             if (node[0]?.asText() == "OK" && node[1]?.asText() == event.id) {
                                 return@async Pair(System.nanoTime(), node[2]?.asBoolean() == true)
                             }
@@ -159,7 +163,7 @@ object IngestBenchmark {
                             prober.req(subId, """{"ids":["${event.id}"]}""")
                             var foundAt = 0L
                             for (raw in prober.incoming) {
-                                val node = runCatching { mapper.readTree(raw) }.getOrNull() ?: continue
+                                val node = runCatching { BenchJson.parse(raw) }.getOrNull() ?: continue
                                 if (node[1]?.asText() != subId) continue
                                 when (node[0]?.asText()) {
                                     "EVENT" -> foundAt = System.nanoTime()
@@ -234,7 +238,7 @@ object IngestBenchmark {
                         for (raw in socket.incoming) {
                             // Fast-path: only OK frames matter here.
                             if (!raw.startsWith("[\"OK\"")) continue
-                            val node = runCatching { mapper.readTree(raw) }.getOrNull() ?: continue
+                            val node = runCatching { BenchJson.parse(raw) }.getOrNull() ?: continue
                             if (node[2]?.asBoolean() == true) accepted.incrementAndGet() else rejected.incrementAndGet()
                             inFlight.release()
                             if (++acked == slice.size) break

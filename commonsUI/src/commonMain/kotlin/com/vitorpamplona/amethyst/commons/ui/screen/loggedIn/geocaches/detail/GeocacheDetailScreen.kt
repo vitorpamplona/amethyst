@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_navigate
 import com.vitorpamplona.amethyst.commons.resources.geocache_needs_maintenance
 import com.vitorpamplona.amethyst.commons.resources.geocache_no_logs
 import com.vitorpamplona.amethyst.commons.resources.geocache_photos_section
+import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
 import com.vitorpamplona.amethyst.commons.resources.route_geocache_detail
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -426,8 +427,9 @@ private fun GeocacheNavigateRow(
     name: String,
 ) {
     val uriHandler = LocalUriHandler.current
+    val unnamedLabel = stringRes(Res.string.geocache_unnamed)
     OutlinedButton(onClick = {
-        val label = name.ifBlank { "Geocache" }
+        val label = name.ifBlank { unnamedLabel }
         runCatching {
             uriHandler.openUri("geo:$latitude,$longitude?q=$latitude,$longitude($label)")
         }

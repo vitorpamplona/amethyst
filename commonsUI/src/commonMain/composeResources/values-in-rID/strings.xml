@@ -640,12 +640,9 @@
     <string name="wallet_connect_connect_app">Hubungkan Dompet</string>
     <string name="see_relay_feed">Lihat Feed Relay</string>
     <string name="pledge_amount_in_sats">Jumlah Ikrar dalam Sat</string>
-    <string name="poll_option_description">Deskripsi Opsi Poll</string>
     <string name="poll_zap_value_min">Minimum Zap</string>
     <string name="poll_zap_value_max">Maximum Zap</string>
     <string name="poll_consensus_threshold">Konsensus</string>
-    <string name="poll_closing_date_time">Tanggal &amp; Waktu Penutupan Polling</string>
-    <string name="poll_closing_in">Polling ditutup dalam %1$s</string>
     <string name="looking_for_event">Mencari Event %1$s</string>
     <string name="send_zap">Kirim Zap</string>
     <string name="custom_zaps_add_a_message">Tambahkan pesan publik</string>
@@ -692,7 +689,6 @@
     <string name="uploading_state_downloading">Mengunduh</string>
     <string name="uploading_state_finished">Selesai</string>
     <string name="uploading_state_error">Galat</string>
-    <string name="connect_via_tor1">Sesuaikan</string>
     <string name="connect_via_tor2">Pengaturan Tor</string>
     <string name="yes">Ya</string>
     <string name="no">Tidak</string>
@@ -768,7 +764,6 @@
     <string name="show_sensitive_content_explainer">Menampilkan pesan peringatan saat penulis postingan menandainya sebagai sensitif</string>
     <string name="max_hashtag_limit_title">Jumlah tagar maksimum per postingan</string>
     <string name="max_hashtag_limit_explainer">Menyembunyikan postingan dengan lebih banyak tagar dari batas ini. Setel ke 0 untuk menonaktifkan</string>
-    <string name="new_reaction_symbol">Simbol Reaksi Baru</string>
     <string name="zapraiser">Penggalan dana Zap</string>
     <string name="zapraiser_explainer">Menambahkan jumlah target sats yang ingin dikumpulkan untuk postingan ini. Klien yang mendukung mungkin menunjukkan hal ini sebagai indikator kemajuan dalam memberi insentif pada donasi</string>
     <string name="zapraiser_target_amount_in_sats">Target Jumlah dalam Sat</string>
@@ -909,9 +904,7 @@
     <string name="created_at">Dibuat di</string>
     <string name="guidelines">Panduan</string>
     <string name="moderators">Moderator</string>
-    <string name="login_with_external_signer">Login dengan Amber</string>
     <string name="status_update">Perbarui status anda</string>
-    <string name="poll_zap_value_min_max_explainer">Suara ditimbang berdasarkan jumlah zap. Anda dapat menetapkan jumlah minimum untuk menghindari spammer dan jumlah maksimum untuk menghindari zappers besar mengambil alih jajak pendapat. Gunakan jumlah yang sama di kedua kolom untuk memastikan setiap suara bernilai sama. Biarkan kosong untuk menerima jumlah berapa pun.</string>
     <string name="error_dialog_talk_to_user">Kirim pesan ke Pengguna</string>
     <string name="error_dialog_talk_to_user_name">Pesan %1$s</string>
     <string name="zap_split_title">Pisah dan alihkan Zap</string>
@@ -1421,7 +1414,6 @@
     <string name="closing_time">Waktu Penutupan</string>
     <string name="confirm">Konfirmasi</string>
     <string name="next">Berikutnya</string>
-    <string name="add_poll_option_button">Tambah tombol pilihan polling</string>
     <string name="go_back">Kembali</string>
     <string name="approve">Setujui</string>
     <string name="connected">Terhubung</string>
@@ -1429,13 +1421,9 @@
     <string name="poll_submit">Kirim</string>
     <string name="poll_view_results">Lihat hasil</string>
     <string name="restart">Mulai ulang</string>
-    <string name="chess_accept">Terima</string>
-    <string name="chess_decline">Tolak</string>
     <string name="new_chess_game">Permainan Catur Baru</string>
     <string name="chess_loading_game">Memuat permainan…</string>
     <string name="chess_game_not_found">Permainan Tidak Ditemukan</string>
-    <string name="chess_game_waiting">Permainan ini mungkin sudah berakhir atau menunggu lawan.</string>
-    <string name="chess_game_id">ID Permainan: %1$s…</string>
     <string name="badge_and_n_others"> dan %1$d lainnya</string>
     <string name="remove_language">Hapus %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Mulai dengan feed yang bagus dengan mengikuti orang-orang yang sama seperti seseorang yang Anda percaya.</string>
@@ -2339,7 +2327,6 @@
     <string name="media_added_to_profile_gallery">Media ditambahkan ke Galeri Profil Anda</string>
     <string name="media_download_has_started_toast">Unduhan media telah dimulai…</string>
     <string name="media_servers">Server Media</string>
-    <string name="media_too_big_for_nip95">Media terlalu besar untuk NIP-95</string>
     <string name="messages_cant_upload_explainer">Masukkan tujuan pesan terlebih dahulu</string>
     <string name="messages_cant_upload_title">Tidak Dapat Mengunggah</string>
     <string name="messages_new_message_subject">Subjek</string>
@@ -2559,7 +2546,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Poll ditutup</string>
     <string name="poll_multiple_choice">Pilihan ganda</string>
-    <string name="poll_option_index">Opsi %1$s</string>
     <string name="poll_single_choice">Pilihan tunggal</string>
     <string name="poll_unable_to_vote">Tidak dapat memilih</string>
     <string name="polls">Polling</string>
@@ -2804,7 +2790,6 @@
     <string name="upload_error_title">Kesalahan Unggahan</string>
     <string name="upload_error_voice_message_exception">Unggahan suara gagal: %1$s</string>
     <string name="upload_error_voice_message_failed">Gagal mengunggah pesan suara</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 belum didukung untuk pesan suara</string>
     <string name="use_internal_tor">Mesin Tor Aktif</string>
     <string name="use_internal_tor_explainer">Gunakan versi internal atau Orbot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Pengguna belum mengatur alamat lightning untuk menerima sat</string>
@@ -2857,4 +2842,8 @@
          what leaves the device; the fork strings say why the old phone stops. -->
     <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
 </resources>

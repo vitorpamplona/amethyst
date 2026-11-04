@@ -71,10 +71,12 @@ object RawEventSupport {
      * so a total rejection stops a `set -e` script instead of exiting 0.
      * The error carries each relay's own reason (the NIP-01 OK message, a
      * connect error, or a timeout note) — the answer to "why didn't it post".
+     * [extra] adds fields to that error, e.g. what a multi-event command already published.
      */
     fun publishGuard(
         ack: Map<NormalizedRelayUrl, PublishResult>,
         eventId: String,
+        extra: Map<String, Any?> = emptyMap(),
     ): Int? {
         if (ack.isEmpty() || ack.any { it.value.accepted }) return null
         // `rejected` means a relay actually answered `OK false`. When every
@@ -86,13 +88,13 @@ object RawEventSupport {
             Output.error(
                 "rejected",
                 "no relay accepted event $eventId",
-                extra = mapOf("event_id" to eventId, "rejected_by" to rejectedBy(ack)),
+                extra = mapOf("event_id" to eventId, "rejected_by" to rejectedBy(ack)) + extra,
             )
         } else {
             Output.error(
                 "timeout",
                 "no relay answered for event $eventId (all unreachable or silent)",
-                extra = mapOf("event_id" to eventId, "rejected_by" to rejectedBy(ack)),
+                extra = mapOf("event_id" to eventId, "rejected_by" to rejectedBy(ack)) + extra,
             )
         }
     }
@@ -101,7 +103,8 @@ object RawEventSupport {
      * The canonical relay-ack projection every publishing command emits:
      * `published_to` is the flat list of accepting relay URLs; `rejected_by`
      * is a list of `{relay, reason}` objects so a partial failure explains
-     * itself. Use `Output.emit(mapOf(…) + RawEventSupport.ackFields(ack))`.
+     * itself, plus `retry_after_ms` when the relay refused as `rate-limited:`
+     * and stated its NIP-01 back-off. Use `Output.emit(mapOf(…) + RawEventSupport.ackFields(ack))`.
      */
     fun ackFields(ack: Map<NormalizedRelayUrl, PublishResult>): Map<String, Any?> =
         mapOf(
@@ -109,10 +112,13 @@ object RawEventSupport {
             "rejected_by" to rejectedBy(ack),
         )
 
-    private fun rejectedBy(ack: Map<NormalizedRelayUrl, PublishResult>): List<Map<String, String>> =
+    private fun rejectedBy(ack: Map<NormalizedRelayUrl, PublishResult>): List<Map<String, Any>> =
         ack
             .filterValues { !it.accepted }
-            .map { (relay, result) -> mapOf("relay" to relay.url, "reason" to result.message) }
+            .map { (relay, result) ->
+                val entry = mapOf<String, Any>("relay" to relay.url, "reason" to result.message)
+                result.retryAfterMs?.let { entry + ("retry_after_ms" to it) } ?: entry
+            }
 
     /**
      * Resolve where to publish: the explicit `--relay` set when given,

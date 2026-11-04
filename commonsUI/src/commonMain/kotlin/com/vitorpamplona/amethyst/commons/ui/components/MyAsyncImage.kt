@@ -60,20 +60,27 @@ fun MyAsyncImage(
     onError: (@Composable () -> Unit)?,
 ) {
     if (isAnimatedMediaUrl(imageUrl)) {
-        GifVideoView(
-            videoUri = imageUrl,
-            contentDescription = contentDescription,
-            dimensions = null,
-            blurhash = null,
-            roundedCorner = contentScale == ContentScale.Crop,
-            contentScale = contentScale,
-            onDialog = null,
-            accountViewModel = accountViewModel,
-            thumbhash = null,
-        )
+        // Same slot as a still: the caller's modifiers size and shape it (a banner, a thumbnail),
+        // so the GIF neither spills out of its slot nor picks up corners the still would not have.
+        Box(mainImageModifier) {
+            Box(loadedImageModifier) {
+                GifVideoView(
+                    videoUri = imageUrl,
+                    contentDescription = contentDescription,
+                    dimensions = null,
+                    blurhash = null,
+                    roundedCorner = false,
+                    contentScale = contentScale,
+                    onDialog = null,
+                    accountViewModel = accountViewModel,
+                    thumbhash = null,
+                )
+            }
+        }
     } else {
         val ratio = MediaAspectRatioCache.get(imageUrl)
-        val showImage = remember { mutableStateOf(accountViewModel.settings.showImages()) }
+        val capture = LocalMediaCapture.current
+        val showImage = remember { mutableStateOf(capture != null || accountViewModel.settings.showImages()) }
 
         CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center) {
             if (it) {
@@ -86,6 +93,7 @@ fun MyAsyncImage(
                     val state by painter.state.collectAsState()
                     when (state) {
                         is AsyncImagePainter.State.Loading -> {
+                            ReportCaptureLoading()
                             if (ratio != null) {
                                 Box(loadedImageModifier.aspectRatio(ratio), contentAlignment = Alignment.Center) {
                                     LoadingAnimation(Size40dp, Size6dp)

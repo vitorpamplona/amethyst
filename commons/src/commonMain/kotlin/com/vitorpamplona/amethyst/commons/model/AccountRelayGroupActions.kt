@@ -28,6 +28,8 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
@@ -194,7 +196,7 @@ class AccountRelayGroupActions(
         // the connection with a pendingOnAuthRequired read so the auth coordinator completes the
         // handshake, then retry the publish on the now-authed socket. Mirrors the amy CLI fix.
         if (channelId == null && results.values.any { !it.accepted && it.message.contains("auth-required", ignoreCase = true) }) {
-            account.client.fetchAllWithHooks(
+            account.client.taggedAs(SubPurpose.RELAY_GROUPS).fetchAllWithHooks(
                 filters = mapOf(relay to listOf(Filter(kinds = listOf(DmOpenEvent.KIND), limit = 1))),
                 idleTimeoutMs = 8_000,
                 pendingOnAuthRequired = true,
@@ -223,7 +225,7 @@ class AccountRelayGroupActions(
     suspend fun refreshBuzzHuddleLiveness(channel: RelayGroupChannel) {
         val filter = HuddleLivenessEvent.filter(listOf(channel.groupId.id))
         val now = TimeUtils.now()
-        account.client.fetchAll(channel.groupId.relayUrl, filter, idleTimeoutMs = 8_000).forEach { event ->
+        account.client.taggedAs(SubPurpose.RELAY_GROUPS, "Huddle liveness").fetchAll(channel.groupId.relayUrl, filter, idleTimeoutMs = 8_000).forEach { event ->
             if (event !is HuddleLivenessEvent || event.channelId() != channel.groupId.id) return@forEach
             event.sessionId()?.let { BuzzHuddleLivenessState.record(channel.groupId.id, it, now) }
         }

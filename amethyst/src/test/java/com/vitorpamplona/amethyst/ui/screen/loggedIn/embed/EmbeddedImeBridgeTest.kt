@@ -73,13 +73,14 @@ class EmbeddedImeBridgeTest {
         val event =
             parseImeEvent(
                 """{"type":"ime.focus","inputType":"email","enterKeyHint":"send","multiline":true,
-                   "readOnly":true,"text":"gm","selStart":1,"selEnd":2,
+                   "readOnly":true,"hasNext":true,"text":"gm","selStart":1,"selEnd":2,
                    "geom":{"l":1,"t":2,"r":3,"b":4,"sx":5,"sb":6,"ex":7,"eb":8,"vw":360}}""",
             ) as ImeEvent.Focus
         assertEquals("email", event.inputType)
         assertEquals("send", event.enterKeyHint)
         assertTrue(event.multiline)
         assertTrue(event.readOnly)
+        assertTrue(event.hasNext)
         assertEquals("gm", event.text)
         assertEquals(1, event.selStart)
         assertEquals(2, event.selEnd)
@@ -93,6 +94,7 @@ class EmbeddedImeBridgeTest {
         assertEquals("", event.enterKeyHint)
         assertFalse(event.multiline)
         assertFalse(event.readOnly)
+        assertFalse(event.hasNext)
         assertEquals("", event.text)
         assertEquals(0, event.selStart)
         assertEquals(0, event.selEnd)

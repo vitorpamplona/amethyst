@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
+import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletIncRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
@@ -31,6 +32,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -211,9 +213,9 @@ class NappletSdkConformanceTest {
             NappletRequest.ResourceBytesMany(listOf("https://x", "data:text/plain,hi")),
             NappletProtocolJson.decodeRequest("""{"type":"resource.bytesMany","id":"2","urls":["https://x","data:text/plain,hi"]}"""),
         )
-        // The host emits base64 bytes + mime; shell.html rebuilds the Blob the SDK expects.
+        // The wire carries canonical base64; the web binding rebuilds the Blob.
         val o = result("resource.bytes", NappletResponse.Bytes("Hi".encodeToByteArray(), "text/plain"))
-        assertEquals("SGk=", o["bytes"]?.jsonPrimitive?.content)
+        assertEquals("SGk=", o["blob"]?.jsonPrimitive?.content)
         assertEquals("text/plain", o["mime"]?.jsonPrimitive?.content)
     }
 
@@ -258,19 +260,43 @@ class NappletSdkConformanceTest {
         assertEquals("image/png", up.contentType)
         assertEquals("a.png", up.filename)
 
-        // UploadResult: { ok, uploadId, status, url?, sha256?, ... }
-        val o = result("upload.upload", NappletResponse.Uploaded("https://b/abc", "abc", 2L, "image/png"))
+        // NAP-UPLOAD: upload.upload.result{ result: UploadResult{ ok, uploadId, status, rail, url, sha256, nip94 } }
+        val o = result("upload.upload", NappletResponse.Uploaded("https://b/abc", "abc", 2L, "image/png"))["result"]!!.jsonObject
         assertEquals("https://b/abc", o["url"]?.jsonPrimitive?.content)
         assertEquals("abc", o["sha256"]?.jsonPrimitive?.content)
-        assertTrue(o.containsKey("uploadId"))
-        assertEquals("completed", o["status"]?.jsonPrimitive?.content)
+        assertEquals("abc", o["uploadId"]?.jsonPrimitive?.content)
+        assertEquals("complete", o["status"]?.jsonPrimitive?.content)
+        assertEquals("blossom", o["rail"]?.jsonPrimitive?.content)
+        assertTrue(o["nip94"]!!.jsonArray.any { it.jsonArray[0].jsonPrimitive.content == "x" && it.jsonArray[1].jsonPrimitive.content == "abc" })
+
+        // upload.status.result carries the same record as `status`, with updatedAt.
+        val status = result("upload.status", NappletResponse.Uploaded("https://b/abc", "abc", updatedAt = 7))["status"]!!.jsonObject
+        assertEquals(7L, status["updatedAt"]?.jsonPrimitive?.content?.toLong())
+
+        // upload.info.result{ info: { rails: [{ rail, enabled, returns }], maxBytes } }
+        val info = result("upload.info", NappletResponse.UploadInfo(enabled = true, maxBytes = 10))["info"]!!.jsonObject
+        assertEquals(
+            "blossom",
+            info["rails"]!!
+                .jsonArray[0]
+                .jsonObject["rail"]
+                ?.jsonPrimitive
+                ?.content,
+        )
+        assertEquals(10L, info["maxBytes"]?.jsonPrimitive?.content?.toLong())
+
+        // No upload created: a top-level error string only.
+        val tooLarge = result("upload.upload", NappletResponse.Failed("file too large"))
+        assertEquals("file too large", tooLarge["error"]?.jsonPrimitive?.content)
+        assertFalse(tooLarge.containsKey("result"))
     }
 
     // ---------- still-open gaps ----------
 
     @Test
-    fun gapIncIsNotModeled() {
-        // inter-napplet comms (inc.emit / inc.subscribe / inc.event) are not modeled. Audit ➖.
+    fun incIsTheBusNotTheBroker() {
+        // NAP-INC goes to the host's inc bus, never to the broker: the broker decodes no inc.* request.
         assertNull(NappletProtocolJson.decodeRequest("""{"type":"inc.emit","topic":"t"}"""))
+        assertEquals(NappletIncRequest.Emit("t", null), NappletProtocolJson.decodeIncRequest("""{"type":"inc.emit","topic":"t"}"""))
     }
 }

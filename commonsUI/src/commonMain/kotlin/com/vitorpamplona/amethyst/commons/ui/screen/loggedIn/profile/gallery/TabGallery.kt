@@ -25,10 +25,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.profile.gallery.dal.UserProfileGalleryFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.SaveableGridFeedState
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.gallery.dal.UserProfileGalleryFeedViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable

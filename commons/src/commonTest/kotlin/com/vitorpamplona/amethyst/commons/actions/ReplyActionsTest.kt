@@ -26,9 +26,12 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplit
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -101,5 +104,26 @@ class ReplyActionsTest {
             assertTrue(reply.id.length == 64, "reply id must be a 32-byte hex")
             assertTrue(reply.sig.length == 128, "reply must be signed (64-byte sig hex)")
             assertEquals("thanks", reply.content)
+        }
+
+    @Test
+    fun replyDoesNotNotifyZapSplitBeneficiaries() =
+        runTest {
+            val beneficiary = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
+            val parent =
+                aliceSigner.sign(
+                    TextNoteEvent.build("forwarding my zaps") {
+                        zapSplit(ZapSplitSetup(beneficiary, null, 1.0))
+                    },
+                )
+            // The split beneficiary is a linked key of the parent (for relay hints)...
+            assertTrue(beneficiary in parent.linkedPubKeys())
+
+            val reply = ReplyActions.replyTo(EventHintBundle(parent, null), "nice", bobSigner)
+
+            // ...but not a participant in the thread, so the reply must not `p`-tag them.
+            val pubKeys = reply.tags.mapNotNull(PTag::parseKey)
+            assertFalse(beneficiary in pubKeys, "reply must not notify the parent's zap-split beneficiaries")
+            assertTrue(parent.pubKey in pubKeys)
         }
 }

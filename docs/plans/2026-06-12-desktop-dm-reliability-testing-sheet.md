@@ -74,7 +74,7 @@ The branch ships:
 
 ## B. Manual desktop verification (human required)
 
-**Pre-step:** `./gradlew :desktopApp:run` on the worktree. Use at least two test accounts: one nsec, one bunker (`bunker://...` from nsec.app or Amber).
+**Pre-step:** `./gradlew :desktopApp:run` on the worktree. Use at least two test accounts: one nsec, one bunker (`bunker://...` from Amber or another NIP-46 signer).
 
 ### B1: AUTH end-to-end — tier 1 (own DM-inbox relay)
 | # | Step | Expected | Pass? | Notes |
@@ -162,7 +162,7 @@ The branch ships:
 |---|------|----------|-------|-------|
 | B10.1 | Log in with a NIP-46 bunker account | bunker connected | | |
 | B10.2 | Send a 5-recipient group DM | NIP17Factory caps at 4 concurrent bunker RPCs | | |
-| B10.3 | Inspect bunker request timing (nsec.app / Amber log) | At most 4 in-flight at any moment | | |
+| B10.3 | Inspect bunker request timing (Amber log) | At most 4 in-flight at any moment | | |
 | B10.4 | Compare to a 5-recipient group DM with a local nsec account | local-nsec runs all 5 in parallel; no semaphore overhead | | |
 | B10.5 | Verify DM still delivers correctly to all recipients | functional parity | | |
 

@@ -55,10 +55,26 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.geohashChat.GeohashChatViewModel
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserPicture
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.close
+import com.vitorpamplona.amethyst.commons.resources.geohash_chat_nickname_description
+import com.vitorpamplona.amethyst.commons.resources.geohash_chat_nickname_placeholder
+import com.vitorpamplona.amethyst.commons.resources.geohash_chat_nickname_title
+import com.vitorpamplona.amethyst.commons.resources.geohash_chat_no_relays
+import com.vitorpamplona.amethyst.commons.resources.geohash_chat_post_as_me
+import com.vitorpamplona.amethyst.commons.resources.geohash_chat_post_as_self_body
+import com.vitorpamplona.amethyst.commons.resources.geohash_chat_post_as_self_title
+import com.vitorpamplona.amethyst.commons.resources.geohash_chat_posting_anonymously
+import com.vitorpamplona.amethyst.commons.resources.geohash_chat_posting_as_yourself
+import com.vitorpamplona.amethyst.commons.resources.geohash_chat_relays_title
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.rememberCoarseLocationPermission
@@ -78,10 +94,10 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalCha
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatShowSelfAuthorName
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatSuppressGeohash
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -190,21 +206,20 @@ private fun GeohashChatRoom(
     if (showPostAsSelfWarning) {
         AlertDialog(
             onDismissRequest = { showPostAsSelfWarning = false },
-            title = { Text("Post as your real account?") },
+            title = { Text(stringRes(Res.string.geohash_chat_post_as_self_title)) },
             text = {
                 Text(
-                    "Location chat is anonymous by default. If you post as yourself, messages here are " +
-                        "signed with your Nostr identity and publicly reveal that you were at this location.",
+                    stringRes(Res.string.geohash_chat_post_as_self_body),
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
                     newMessageModel.geohashPostAsSelf = true
                     showPostAsSelfWarning = false
-                }) { Text("Post as me") }
+                }) { Text(stringRes(Res.string.geohash_chat_post_as_me)) }
             },
             dismissButton = {
-                TextButton(onClick = { showPostAsSelfWarning = false }) { Text("Cancel") }
+                TextButton(onClick = { showPostAsSelfWarning = false }) { Text(stringRes(Res.string.cancel)) }
             },
         )
     }
@@ -314,7 +329,7 @@ private fun GeohashIdentityAvatar(
             RobohashFallbackAsyncImage(
                 robot = accountViewModel.userProfile().pubkeyHex,
                 model = picture,
-                contentDescription = "Posting as yourself — tap to go anonymous, long-press for a nickname",
+                contentDescription = stringRes(Res.string.geohash_chat_posting_as_yourself),
                 modifier = avatarModifier,
                 loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
                 loadRobohash = LocalDisplaySettings.current.loadRobohash,
@@ -327,7 +342,7 @@ private fun GeohashIdentityAvatar(
             ) {
                 SymbolIcon(
                     symbol = MaterialSymbols.PersonOff,
-                    contentDescription = "Posting anonymously — tap to post as yourself, long-press for a nickname",
+                    contentDescription = stringRes(Res.string.geohash_chat_posting_anonymously),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(20.dp),
                 )
@@ -370,14 +385,14 @@ private fun GeohashNicknameDialog(
                 // Persist the global handle so it survives app restarts (see GeohashChatIdentityState).
                 accountViewModel.account.geohashIdentity.setNickname(trimmed)
                 onDismiss()
-            }) { Text("Save") }
+            }) { Text(stringRes(Res.string.save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        title = { Text("Nickname") },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) } },
+        title = { Text(stringRes(Res.string.geohash_chat_nickname_title)) },
         text = {
             Column {
                 Text(
-                    "Shown next to your messages in this location channel. Leave blank to stay unnamed.",
+                    stringRes(Res.string.geohash_chat_nickname_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -385,7 +400,7 @@ private fun GeohashNicknameDialog(
                     value = text,
                     onValueChange = { text = it },
                     singleLine = true,
-                    placeholder = { Text("e.g. river-otter") },
+                    placeholder = { Text(stringRes(Res.string.geohash_chat_nickname_placeholder)) },
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
             }
@@ -453,6 +468,8 @@ private fun GeohashChatTopBar(
         },
         // Search this cell rather than everywhere: the box opens holding `geo:<geohash>`.
         actions = { SearchTopBarAction(SearchSeed.byGeohash(geohash), nav) },
+        // Hidden in a list/detail screen's detail pane, where there is nothing to go back to.
+        showBackButton = nav.canPop(),
         popBack = nav::popBack,
     )
 }
@@ -466,8 +483,8 @@ private fun GeohashRelayListDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
-        title = { Text("Relays for #$geohash") },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.close)) } },
+        title = { Text(stringRes(Res.string.geohash_chat_relays_title, geohash)) },
         text = {
             Column(
                 Modifier.verticalScroll(rememberScrollState()),
@@ -475,7 +492,7 @@ private fun GeohashRelayListDialog(
             ) {
                 if (relays.isEmpty()) {
                     Text(
-                        "No relays configured for this cell.",
+                        stringRes(Res.string.geohash_chat_no_relays),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

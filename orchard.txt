@@ -1,0 +1,5 @@
+# Orchard repository proof (https://github.com/Letdown2491/orchard): Orchard
+# shows this repository's link as verified on any listing signed by a key named
+# here. One key per line (npub or hex). This is Amethyst's key, the one that
+# signs the Orchard and Zapstore listings (RELEASE_OPS.md § Nostr releases).
+npub142gywvjkq0dv6nupggyn2euhx4nduwc7yz5f24ah9rpmunr2s39se3xrj0

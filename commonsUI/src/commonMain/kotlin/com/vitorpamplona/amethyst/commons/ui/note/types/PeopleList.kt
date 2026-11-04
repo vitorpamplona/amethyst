@@ -36,6 +36,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -56,7 +57,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
 import com.vitorpamplona.amethyst.commons.ui.note.getGradient
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -103,7 +103,9 @@ fun DisplayPeopleList(
     }
 
     LaunchedEffect(noteEvent) {
-        accountViewModel.loadUsers(noteEvent.taggedUserIds()) {
+        // publicUsersIdSet() is insertion-ordered, so the list keeps the event's tag order
+        // (minus duplicate members).
+        accountViewModel.loadUsers(noteEvent.publicUsersIdSet().toList()) {
             members = it
         }
     }
@@ -111,16 +113,19 @@ fun DisplayPeopleList(
     Box {
         FlowRow(modifier = Modifier.padding(top = 5.dp)) {
             toMembersShow.forEach { user ->
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    UserCompose(
-                        user,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                // Keyed so a row keeps its own user's follow state when a newer list shifts the members.
+                key(user.pubkeyHex) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        UserCompose(
+                            user,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
 
-                    HorizontalDivider(
-                        thickness = DividerThickness,
-                    )
+                        HorizontalDivider(
+                            thickness = DividerThickness,
+                        )
+                    }
                 }
             }
         }

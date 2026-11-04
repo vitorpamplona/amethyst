@@ -23,13 +23,21 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.pm.ActivityInfo
 import android.os.Build
 import android.view.Window
+import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.media3.common.C
+import androidx.media3.common.ColorInfo
+import androidx.media3.common.Player
+import androidx.media3.common.Tracks
+import androidx.media3.common.util.UnstableApi
 import coil3.BitmapImage
 import coil3.Image
 import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
 import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
+import com.vitorpamplona.amethyst.service.playback.composable.rememberTracksState
 import java.util.WeakHashMap
 
 /**
@@ -87,6 +95,17 @@ private fun Window.applyHdr(requests: HdrRequests) {
 fun Image.hasGainmap(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && (this as? BitmapImage)?.bitmap?.hasGainmap() == true
 
 /**
+ * Whether the video track the player is actually rendering carries an HDR transfer (HLG or PQ).
+ * Only selected tracks count: an adaptive stream can offer an HDR rendition the selector skipped.
+ */
+@OptIn(UnstableApi::class)
+fun Tracks.hasSelectedHdrVideo(): Boolean =
+    groups.any { group ->
+        group.type == C.TRACK_TYPE_VIDEO &&
+            (0 until group.length).any { group.isTrackSelected(it) && ColorInfo.isTransferHdr(group.getTrackFormat(it).colorInfo) }
+    }
+
+/**
  * Puts the hosting window (the dialog's own window inside a `Dialog`) into HDR mode while this
  * is in composition and [image] carries a gain map, so an Ultra HDR photo shows its highlights.
  * A [fullscreen] image gets the display's full HDR range; a feed card is capped.
@@ -95,8 +114,31 @@ fun Image.hasGainmap(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.U
 fun RequestHdrFor(
     image: Image,
     fullscreen: Boolean,
+) = RequestHdr(wantsHdr = remember(image) { image.hasGainmap() }, fullscreen = fullscreen)
+
+/**
+ * Puts the hosting window into HDR mode while the video track [player] renders carries an HDR
+ * transfer (HLG or PQ), following quality switches and item changes. Only worth calling when the
+ * player draws into a `SurfaceView`: a `TextureView`'s GL copy flattens HDR frames to SDR, so the
+ * window mode would change and the picture would not. That is the fullscreen viewer, on its own
+ * window, so the request is for the display's full HDR range.
+ */
+@Composable
+fun RequestHdrFor(player: Player) {
+    val wantsHdr by rememberTracksState(player) { it.hasSelectedHdrVideo() }
+    RequestHdr(wantsHdr = wantsHdr, fullscreen = true)
+}
+
+/**
+ * The shared core: holds one HDR request on the hosting window while in composition and
+ * [wantsHdr]; the window goes back to its original mode once the last request leaves.
+ */
+@Composable
+private fun RequestHdr(
+    wantsHdr: Boolean,
+    fullscreen: Boolean,
 ) {
-    if (!remember(image) { image.hasGainmap() }) return
+    if (!wantsHdr) return
     val window = getDialogWindow() ?: getActivityWindow() ?: return
     val headroom = if (fullscreen) HdrRequests.UNCAPPED else HdrRequests.FEED_HEADROOM
 

@@ -14,5 +14,29 @@
     "carmin777": "npub1y9tpxsfnccnnvg7kanqa8wsyxuu2z72wxr2hd3m29psac3dkucdqmm7p4e",
     "jeremyd": "npub10npj3gydmv40m70ehemmal6vsdyfl7tewgvz043g54p0x23y0s8qzztl5h",
     "jlopp": "npub17u5dneh8qjp43ecfxr6u5e9sjamsmxyuekrg2nlxrrk6nj9rsyrqywt4tp"
-  }
+  },
+  "aliases": {
+    "vitor@vitorpamplona.com": "vitorpamplona",
+    "david.kaspar@gmail.com": "davotoula",
+    "robert.nagy@swanbitcoin.com": "nrobi144",
+    "m@localhost": "mstrofnone",
+    "m@ms-macbook-pro.local": "mstrofnone",
+    "m@testls.bit": "mstrofnone",
+    "m@mstrofnone": "mstrofnone",
+    "mstrofnone@example.com": "mstrofnone",
+    "mstrofnone@nostr": "mstrofnone",
+    "mstrofnone@protonmail.com": "mstrofnone",
+    "carmim777": "carmin777",
+    "greenart7c3@proton.me": "greenart7c3",
+    "dergigi@pm.me": "dergigi",
+    "alex@alexgleason.me": "alexgleason",
+    "jameson.lopp@gmail.com": "jlopp",
+    "4072+jeremyd@users.noreply.github.com": "jeremyd"
+  },
+  "ignore": [
+    "Claude",
+    "noreply@anthropic.com",
+    "Crowdin Bot",
+    "support+bot@crowdin.com"
+  ]
 }

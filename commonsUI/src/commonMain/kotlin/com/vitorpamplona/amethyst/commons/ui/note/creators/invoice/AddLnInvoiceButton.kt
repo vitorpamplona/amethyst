@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_bitcoin_invoice
 import com.vitorpamplona.amethyst.commons.resources.cancel_bitcoin_invoice
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
@@ -37,23 +38,25 @@ fun AddLnInvoiceButton(
     isLnInvoiceActive: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        onClick = { onClick() },
-    ) {
-        if (!isLnInvoiceActive) {
-            Icon(
-                symbol = MaterialSymbols.CurrencyBitcoin,
-                contentDescription = stringRes(id = Res.string.add_bitcoin_invoice),
-                modifier = Size20Modifier,
-                tint = MaterialTheme.colorScheme.onBackground,
-            )
-        } else {
-            Icon(
-                symbol = MaterialSymbols.CurrencyBitcoin,
-                contentDescription = stringRes(id = Res.string.cancel_bitcoin_invoice),
-                modifier = Size20Modifier,
-                tint = BitcoinOrange,
-            )
+    HoverTooltip(stringRes(if (isLnInvoiceActive) Res.string.cancel_bitcoin_invoice else Res.string.add_bitcoin_invoice)) {
+        IconButton(
+            onClick = { onClick() },
+        ) {
+            if (!isLnInvoiceActive) {
+                Icon(
+                    symbol = MaterialSymbols.CurrencyBitcoin,
+                    contentDescription = stringRes(id = Res.string.add_bitcoin_invoice),
+                    modifier = Size20Modifier,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            } else {
+                Icon(
+                    symbol = MaterialSymbols.CurrencyBitcoin,
+                    contentDescription = stringRes(id = Res.string.cancel_bitcoin_invoice),
+                    modifier = Size20Modifier,
+                    tint = BitcoinOrange,
+                )
+            }
         }
     }
 }

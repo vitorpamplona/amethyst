@@ -70,7 +70,7 @@ class SecureKeyStorageOrThrowTest {
         override fun getPassword(
             service: String,
             account: String,
-        ): String = map[service to account] ?: throw PasswordAccessException("no entry")
+        ): String = map[service to account] ?: throw PasswordAccessException("No stored credentials match $service account: $account")
 
         override fun setPassword(
             service: String,
@@ -193,6 +193,16 @@ class SecureKeyStorageOrThrowTest {
                         e.message?.contains("refused", ignoreCase = true) == true,
                 )
             }
+        }
+
+    @Test
+    fun `non-mac keyring miss returns null`() =
+        runBlocking {
+            if (System.getProperty("os.name").orEmpty().startsWith("Mac")) return@runBlocking
+            val storage = newStorage()
+            // Windows and the Secret Service report a missing item as an exception; it is still absence.
+            storage.keyringFactory = { StaticKeyring(emptyMap()) }
+            assertNull(storage.getPrivateKeyOrThrow("npub1missing"))
         }
 
     @Test

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,9 +34,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -45,7 +42,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -64,15 +60,13 @@ import com.vitorpamplona.amethyst.commons.resources.encrypt_files_label
 import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.file_server_description
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_explainer
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_medium
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_description
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoUploadControls
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
@@ -82,6 +76,9 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.SettingSwitchItem
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.MediaQualitySlider
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.VideoCompressionNeedsFfmpegHint
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.VideoHdrHint
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -187,7 +184,7 @@ private fun ImageVideoPostChat(
         )
     }
 
-    OutlinedTextField(
+    SpellCheckedOutlinedTextField(
         label = { Text(text = stringRes(Res.string.content_description)) },
         modifier = Modifier.fillMaxWidth().padding(top = 3.dp).height(150.dp),
         maxLines = 10,
@@ -241,7 +238,8 @@ private fun ImageVideoPostChat(
         }
     }
 
-    if (fileUploadState.multiOrchestrator?.hasCompressible() == true) {
+    val controls = VideoUploadControls(fileUploadState.multiOrchestrator, accountViewModel.mediaUploader.videoCompression, fileUploadState.mediaQualitySlider)
+    if (controls.showsSlider) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(Size5dp),
@@ -260,28 +258,17 @@ private fun ImageVideoPostChat(
             )
         }
 
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text =
-                        when (fileUploadState.mediaQualitySlider) {
-                            0 -> stringRes(Res.string.media_compression_quality_low)
-                            1 -> stringRes(Res.string.media_compression_quality_medium)
-                            2 -> stringRes(Res.string.media_compression_quality_high)
-                            3 -> stringRes(Res.string.media_compression_quality_uncompressed)
-                            else -> stringRes(Res.string.media_compression_quality_medium)
-                        },
-                    modifier = Modifier.align(Alignment.Center),
-                )
-            }
+        MediaQualitySlider(
+            position = fileUploadState.mediaQualitySlider,
+            onPositionChange = { fileUploadState.mediaQualitySlider = it },
+            media = fileUploadState.multiOrchestrator,
+            uploader = accountViewModel.mediaUploader,
+        )
+    }
 
-            Slider(
-                value = fileUploadState.mediaQualitySlider.toFloat(),
-                onValueChange = { fileUploadState.mediaQualitySlider = it.toInt() },
-                valueRange = 0f..3f,
-                steps = 2,
-            )
-        }
+    VideoCompressionNeedsFfmpegHint(controls)
+    if (controls.videoWillBeCompressed) {
+        VideoHdrHint(fileUploadState.multiOrchestrator, accountViewModel.mediaUploader, useH265 = false, offersH265 = false)
     }
 
     SettingSwitchItem(

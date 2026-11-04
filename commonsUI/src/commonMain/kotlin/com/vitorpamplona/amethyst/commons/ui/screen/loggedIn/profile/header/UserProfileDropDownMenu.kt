@@ -47,7 +47,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
-import com.vitorpamplona.amethyst.commons.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.commons.ui.note.externalLinkForUser
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -66,12 +65,9 @@ fun UserProfileDropDownMenu(
     val isNicknameDialogOpen = remember { mutableStateOf(false) }
 
     if (isNicknameDialogOpen.value) {
-        // keeps the account's selected emoji packs loaded for the : autocomplete
-        WatchAndLoadMyEmojiList(accountViewModel)
         EditNicknameDialog(
             user = user,
-            userAssertions = accountViewModel.account.userAssertions,
-            onSave = { petName, summary -> accountViewModel.updateUserAssertionPetName(user, petName, summary) },
+            accountViewModel = accountViewModel,
             onDismiss = { isNicknameDialogOpen.value = false },
         )
     }

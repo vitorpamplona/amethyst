@@ -72,7 +72,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -92,6 +91,8 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.buzz.WorkflowDefOption
+import com.vitorpamplona.amethyst.commons.buzz.WorkflowRunBoardViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -157,6 +158,8 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_triggered_toas
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_view_pr
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_waiting_for_approval
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_waiting_on
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
@@ -271,7 +274,7 @@ fun WorkflowRunBoardScreen(
     }
 
     if (composing) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
         NewRunSheet(
             sheetState = sheetState,
             definitions = definitions,
@@ -844,7 +847,7 @@ private fun NewRunSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = task,
                     onValueChange = { task = it },
                     label = { Text(stringRes(Res.string.buzz_workflow_task_label)) },

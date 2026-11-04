@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.BleedingMedia
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
@@ -138,35 +139,39 @@ fun VideoDisplay(
         ) {
             if (isYouTube) {
                 val uri = LocalUriHandler.current
-                Row(
-                    modifier = Modifier.clickable { runCatching { uri.openUri(imeta.url) } },
-                ) {
-                    image?.let {
-                        MyAsyncImage(
-                            imageUrl = it,
-                            contentDescription =
-                                stringRes(
-                                    Res.string.preview_card_image_for,
-                                    it,
-                                ),
-                            contentScale = ContentScale.FillWidth,
-                            mainImageModifier = Modifier,
-                            loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
-                            accountViewModel = accountViewModel,
-                            onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel) },
-                            onError = { DefaultImageHeader(note, accountViewModel) },
-                        )
-                    } ?: run {
-                        DefaultImageHeader(note, accountViewModel)
+                BleedingMedia { roundedCorner ->
+                    Row(
+                        modifier = Modifier.clickable { runCatching { uri.openUri(imeta.url) } },
+                    ) {
+                        image?.let {
+                            MyAsyncImage(
+                                imageUrl = it,
+                                contentDescription =
+                                    stringRes(
+                                        Res.string.preview_card_image_for,
+                                        it,
+                                    ),
+                                contentScale = ContentScale.FillWidth,
+                                mainImageModifier = Modifier,
+                                loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth(),
+                                accountViewModel = accountViewModel,
+                                onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel) },
+                                onError = { DefaultImageHeader(note, accountViewModel) },
+                            )
+                        } ?: run {
+                            DefaultImageHeader(note, accountViewModel)
+                        }
                     }
                 }
             } else {
-                ZoomableContentView(
-                    content = content,
-                    roundedCorner = true,
-                    contentScale = contentScale,
-                    accountViewModel = accountViewModel,
-                )
+                BleedingMedia { roundedCorner ->
+                    ZoomableContentView(
+                        content = content,
+                        roundedCorner = roundedCorner,
+                        contentScale = contentScale,
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
 
             title?.let {

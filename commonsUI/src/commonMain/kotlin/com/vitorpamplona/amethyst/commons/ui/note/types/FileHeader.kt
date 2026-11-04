@@ -24,14 +24,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.BleedingMedia
 import com.vitorpamplona.amethyst.commons.ui.components.FileAttachmentCard
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.commons.ui.note.WebxdcCard
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip31Alts.alt
@@ -55,12 +58,14 @@ fun FileMetadataDisplay(
         if (content == null) {
             FileMetadataAttachmentCard(event, fullUrl, mimeType)
         } else {
-            ZoomableContentView(
-                content = content,
-                roundedCorner = roundedCorner,
-                contentScale = contentScale,
-                accountViewModel = accountViewModel,
-            )
+            BleedingMedia(roundedCorner = roundedCorner, enabled = content !is MediaUrlPdf) { rounded ->
+                ZoomableContentView(
+                    content = content,
+                    roundedCorner = rounded,
+                    contentScale = contentScale,
+                    accountViewModel = accountViewModel,
+                )
+            }
         }
     }
 }
@@ -133,6 +138,12 @@ fun FileMetadataAttachmentCard(
     url: String,
     mimeType: String?,
 ) {
+    val webxdc = remember(event, url) { WebxdcApp.from(url) { name -> event.tags.firstOrNull { it.size > 1 && it[0] == name }?.get(1) } }
+    if (webxdc != null) {
+        WebxdcCard(webxdc, event.id, event.pubKey)
+        return
+    }
+
     val description = remember(event) { event.fileDescription() }
     val sizeInBytes = remember(event) { event.size()?.toLong() }
 

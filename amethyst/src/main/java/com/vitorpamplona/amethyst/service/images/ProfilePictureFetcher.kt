@@ -101,7 +101,7 @@ class ProfilePictureFetcher(
         private val networkClient: (url: String) -> Call.Factory,
         private val backgroundScope: CoroutineScope,
         // Shared with every other network-backed factory on this ImageLoader --
-        // see the note in ImageLoaderSetup.setup(). Avatars repeat constantly
+        // see the note in buildAmethystImageLoader(). Avatars repeat constantly
         // down a feed, so this is where a per-request instance cost the most:
         // every row holding the same author's picture downloaded it again.
         concurrentRequestStrategy: ConcurrentRequestStrategy,

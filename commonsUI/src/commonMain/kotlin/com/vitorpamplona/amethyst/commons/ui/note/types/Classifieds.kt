@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,7 +40,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.listingStatus
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ListingStatusBadge
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -47,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -91,7 +98,8 @@ fun RenderClassifieds(
             noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null }
         }
     val price = remember(noteEvent) { noteEvent.price() }
-    val location = remember(noteEvent) { noteEvent.location() }
+    val location = remember(noteEvent) { noteEvent.location()?.ifBlank { null } }
+    val status = remember(noteEvent) { noteEvent.listingStatus() }
 
     Row(
         modifier =
@@ -132,6 +140,11 @@ fun RenderClassifieds(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
+                }
+
+                status?.let {
+                    Spacer(Modifier.width(5.dp))
+                    ListingStatusBadge(it)
                 }
 
                 price?.let {
@@ -175,6 +188,28 @@ fun RenderClassifieds(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
+                }
+            }
+
+            location?.let {
+                Row(
+                    Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.grayText,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.grayText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
 

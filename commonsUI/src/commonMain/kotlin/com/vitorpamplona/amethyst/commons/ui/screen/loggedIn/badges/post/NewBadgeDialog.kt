@@ -41,7 +41,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -73,11 +72,7 @@ import com.vitorpamplona.amethyst.commons.resources.badge_upload_image_hint
 import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.file_server_description
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_explainer
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_medium
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
 import com.vitorpamplona.amethyst.commons.resources.new_badge
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_description
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
@@ -85,12 +80,14 @@ import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDial
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.SettingSwitchItem
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.MediaQualitySlider
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -145,7 +142,7 @@ fun NewBadgeDialog(
                     },
                     onPost = {
                         postViewModel.upload(
-                            accountViewModel.host.mediaUploader,
+                            accountViewModel.mediaUploader,
                             onSuccess = onClose,
                             onError = accountViewModel.toastManager::toast,
                         )
@@ -283,7 +280,7 @@ private fun BadgeFormFields(
 
     Spacer(modifier = Modifier.height(12.dp))
 
-    OutlinedTextField(
+    SpellCheckedOutlinedTextField(
         value = postViewModel.description,
         onValueChange = { postViewModel.description = it },
         label = { Text(stringRes(Res.string.badge_description_label)) },
@@ -342,28 +339,12 @@ private fun BadgeFormFields(
         )
     }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text =
-                    when (postViewModel.mediaQualitySlider) {
-                        0 -> stringRes(Res.string.media_compression_quality_low)
-                        1 -> stringRes(Res.string.media_compression_quality_medium)
-                        2 -> stringRes(Res.string.media_compression_quality_high)
-                        3 -> stringRes(Res.string.media_compression_quality_uncompressed)
-                        else -> stringRes(Res.string.media_compression_quality_medium)
-                    },
-                modifier = Modifier.align(Alignment.Center),
-            )
-        }
-
-        Slider(
-            value = postViewModel.mediaQualitySlider.toFloat(),
-            onValueChange = { postViewModel.mediaQualitySlider = it.toInt() },
-            valueRange = 0f..3f,
-            steps = 2,
-        )
-    }
+    MediaQualitySlider(
+        position = postViewModel.mediaQualitySlider,
+        onPositionChange = { postViewModel.mediaQualitySlider = it },
+        media = postViewModel.multiOrchestrator,
+        uploader = accountViewModel.mediaUploader,
+    )
 
     SettingSwitchItem(
         title = Res.string.strip_metadata_label,

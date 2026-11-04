@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_button_add
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_button_remove
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 @Composable
@@ -38,15 +39,17 @@ fun ScheduleAtButton(
     isActive: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = onClick) {
-        Icon(
-            symbol = MaterialSymbols.Schedule,
-            contentDescription =
-                stringRes(
-                    if (isActive) Res.string.schedule_post_button_remove else Res.string.schedule_post_button_add,
-                ),
-            modifier = Modifier.size(20.dp),
-            tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
-        )
+    HoverTooltip(stringRes(if (isActive) Res.string.schedule_post_button_remove else Res.string.schedule_post_button_add)) {
+        IconButton(onClick = onClick) {
+            Icon(
+                symbol = MaterialSymbols.Schedule,
+                contentDescription =
+                    stringRes(
+                        if (isActive) Res.string.schedule_post_button_remove else Res.string.schedule_post_button_add,
+                    ),
+                modifier = Modifier.size(20.dp),
+                tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+            )
+        }
     }
 }

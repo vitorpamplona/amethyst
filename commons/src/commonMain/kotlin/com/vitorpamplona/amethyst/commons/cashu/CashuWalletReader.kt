@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 
 /**
  * Pure, stateless projection of a stream of NIP-60 / NIP-61 / NIP-87 events
@@ -94,7 +95,7 @@ class CashuWalletReader(
                 is CashuMintQuoteEvent -> quoteEvents.getOrPut(event.id) { event }
                 is NutzapEvent -> nutzapEvents.getOrPut(event.id) { event }
                 is MintRecommendationEvent -> {
-                    val key = event.dTag() ?: event.id
+                    val key = event.dTag().ifEmpty { event.id }
                     val current = recommendationEvents[key]
                     if (current == null || event.createdAt > current.createdAt) recommendationEvents[key] = event
                 }
@@ -104,7 +105,7 @@ class CashuWalletReader(
 
         val mints =
             walletEvent?.let { evt ->
-                runCatching { evt.mints(signer) }
+                runCatchingCancellable { evt.mints(signer) }
                     .onFailure { Log.w("CashuWalletReader") { "Failed to decrypt wallet mints: ${it.message}" } }
                     .getOrNull()
             } ?: emptyList()
@@ -130,7 +131,7 @@ class CashuWalletReader(
         val out = HashMap<HexKey, TokenContent>()
         events.forEach { evt ->
             val content =
-                runCatching { evt.tokenContent(signer) }
+                runCatchingCancellable { evt.tokenContent(signer) }
                     .onFailure { Log.w("CashuWalletReader") { "Failed to decrypt token ${evt.id.take(8)}: ${it.message}" } }
                     .getOrNull()
             if (content != null) out[evt.id] = content
@@ -170,9 +171,8 @@ class CashuWalletReader(
             val destroyedQuoteIds =
                 history
                     .asSequence()
-                    .flatMap { it.tags.asSequence() }
-                    .filter { it.size >= 4 && it[0] == "e" && it[3] == "destroyed" }
-                    .map { it[1] }
+                    .flatMap { it.destroyedReferences() }
+                    .map { it.eventId }
                     .toSet()
 
             return quotes

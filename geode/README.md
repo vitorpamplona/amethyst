@@ -7,7 +7,7 @@ protocol plus NIP-11 (info doc), NIP-42 (AUTH), NIP-45 (COUNT), NIP-50
 NIP-FE (REQ/COUNT/EVENT over plain HTTP), stores events in SQLite (or a filesystem backend), and can mirror upstream
 relays strfry-router style.
 
-geode depends only on `:quartz` — no Android, no Compose. `amy serve` (the
+geode depends only on quartz — no Android, no Compose. `amy serve` (the
 Amethyst CLI) embeds the same engine in-process.
 
 ## Install
@@ -32,7 +32,7 @@ docker run -d --name geode -p 7447:7447 \
 ```
 
 with `in_memory = false` and `file = "/var/lib/geode/events.db"` in your
-`geode.toml`. Pin a version (`:1.16.0`) instead of `:latest` for reproducible
+`geode.toml`. Pin a version (`:1.20.0`) instead of `:latest` for reproducible
 deploys. To build the image yourself, from the repo root:
 
 ```bash
@@ -47,7 +47,7 @@ it — a minimal JRE is bundled, so no system Java is required. It installs to
 `/opt/geode/` with the launcher at `/opt/geode/bin/geode`.
 
 ```bash
-sudo dpkg -i geode-1.16.0-linux-x64.deb    # or: sudo rpm -i geode-1.16.0-linux-x64.rpm
+sudo dpkg -i geode-1.20.0-linux-x64.deb    # or: sudo rpm -i geode-1.20.0-linux-x64.rpm
 ```
 
 To run it as a managed service, wire up the shipped systemd unit
@@ -69,7 +69,7 @@ formula: [`packaging/homebrew/geode-relay.rb`](packaging/homebrew/geode-relay.rb
 Download `geode-<version>-<os>-<arch>.tar.gz`, unpack, and run:
 
 ```bash
-tar xzf geode-1.16.0-linux-x64.tar.gz
+tar xzf geode-1.20.0-linux-x64.tar.gz
 ./geode/bin/geode --config geode/share/geode/config.example.toml
 ```
 
@@ -98,7 +98,8 @@ geode --version
 Key sections: `[info]` (NIP-11 doc), `[network]` (bind + thread pools),
 `[database]` (SQLite path/tuning), `[options]` (AUTH / verify / search),
 `[authorization]` (allow/deny lists), `[[mirror]]` (upstream mirroring),
-`[http]` (NIP-FE limits), `[admin]` (NIP-86 management), `[identity]` (the
+`[http]` (NIP-FE limits), `[rate_limits]` (per-client EVENT and REQ rates),
+`[admin]` (NIP-86 management), `[identity]` (the
 relay's own key, NIP-11 `self`) and `[membership]` (NIP-43). See the example
 file for every knob.
 
@@ -126,6 +127,26 @@ Streamed answers are gzipped for clients that send `Accept-Encoding: gzip`
 (`curl --compressed`), sync-flushed so events still arrive as they are found;
 `[http].gzip = false` turns it off. Quartz's `HttpRelayClient` does all of this
 for clients, over OkHttp via `OkHttpRelayTransport` or any `HttpRelayTransport`.
+
+### Rate limits
+
+`[rate_limits]` caps how many EVENTs and REQs (COUNTs, NEG-OPENs) one client may
+send a minute, with a burst on top. The client is its address, or the one a
+trusted proxy reports (`[http].trusted_proxies`), and its allowance is shared by
+all its sockets and HTTP commands. Past it, the command is refused as NIP-01
+`rate-limited:` and the frame states how long to back off, in milliseconds
+(nostr-protocol/nips#2498):
+
+```
+["OK","<id>",false,"rate-limited: too many events, slow down","1500"]
+["CLOSED","sub","rate-limited: too many subscriptions opened, slow down","1500"]
+```
+
+The back-off is exactly when the client's next token is due, so a client that
+waits it out is let through. Over HTTP the same refusal is a `429` with
+`Retry-After` set to it, rounded up to seconds. Quartz's `NostrClient` (Amethyst,
+`amy`) honors it: it holds that relay's REQs or EVENTs until the back-off passes,
+reconnects included, then sends them one per back-off.
 
 ## Membership (NIP-43)
 

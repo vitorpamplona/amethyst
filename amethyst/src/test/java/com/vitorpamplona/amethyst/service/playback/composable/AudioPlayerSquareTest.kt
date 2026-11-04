@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable
 
+import com.vitorpamplona.amethyst.commons.ui.playback.audioSquareSide
+import com.vitorpamplona.amethyst.commons.ui.playback.shouldSquareAudioPlayer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

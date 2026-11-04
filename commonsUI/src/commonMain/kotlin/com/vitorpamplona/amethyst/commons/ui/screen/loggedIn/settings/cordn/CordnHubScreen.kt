@@ -114,7 +114,7 @@ fun CordnHubScreen(
                 }
                 SettingsDivider()
                 HubEntry(MaterialSymbols.Link, Res.string.cordn_hub_link, Res.string.cordn_hub_link_desc) {
-                    nav.nav(Route.CordnLink)
+                    nav.nav(Route.CordnLink())
                 }
             }
 

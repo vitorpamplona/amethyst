@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.pow_option_default_on
 import com.vitorpamplona.amethyst.commons.resources.pow_option_off
 import com.vitorpamplona.amethyst.commons.resources.pow_settings_title
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.pow.deviceHashesPerSecond
 import com.vitorpamplona.amethyst.commons.ui.pow.formatApproxDuration
@@ -83,32 +84,34 @@ fun PowOverrideButton(
     val isActive = effectiveDifficulty != null && effectiveDifficulty > 0
 
     Box {
-        IconButton(onClick = { expanded = true }) {
-            Box(
-                Modifier
-                    .height(20.dp)
-                    .width(23.dp),
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.Manufacturing,
-                    contentDescription = stringRes(Res.string.pow_settings_title),
-                    modifier = Modifier.size(18.dp).align(Alignment.BottomStart),
-                    tint =
-                        if (isActive) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                        },
-                )
-                if (isActive) {
-                    Text(
-                        text = effectiveDifficulty.toString(),
-                        fontSize = 9.sp,
-                        lineHeight = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.align(Alignment.TopEnd),
+        HoverTooltip(stringRes(Res.string.pow_settings_title)) {
+            IconButton(onClick = { expanded = true }) {
+                Box(
+                    Modifier
+                        .height(20.dp)
+                        .width(23.dp),
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.Manufacturing,
+                        contentDescription = stringRes(Res.string.pow_settings_title),
+                        modifier = Modifier.size(18.dp).align(Alignment.BottomStart),
+                        tint =
+                            if (isActive) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                            },
                     )
+                    if (isActive) {
+                        Text(
+                            text = effectiveDifficulty.toString(),
+                            fontSize = 9.sp,
+                            lineHeight = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.align(Alignment.TopEnd),
+                        )
+                    }
                 }
             }
         }

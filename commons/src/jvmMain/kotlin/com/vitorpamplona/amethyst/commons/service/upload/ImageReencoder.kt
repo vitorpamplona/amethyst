@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.service.upload
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionException.EncodeFailed
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionException.InputTooLarge
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionException.UnsupportedFormat
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
@@ -51,6 +53,7 @@ import kotlin.coroutines.coroutineContext
  * keeps the peak heap footprint to a single in-flight BufferedImage.
  */
 object ImageReencoder {
+    private const val TAG = "ImageReencoder"
     private const val DEFAULT_MAX_INPUT_PIXELS = 50L * 1_000_000L
 
     /**
@@ -67,22 +70,44 @@ object ImageReencoder {
                 ?: DEFAULT_MAX_INPUT_PIXELS
 
     /**
-     * CPU-bound work runs on `Default` (not `IO`). The serial cap
-     * keeps memory bounded — only one BufferedImage in flight at any
-     * given moment, regardless of how many callers fan in.
+     * Runs on a one-thread view of `IO`, not `Default`: each job reads the
+     * source file and writes a temp file around the decode/encode, and a
+     * `Default` worker blocked on disk is one fewer core for everything
+     * else. The serial cap keeps memory bounded — only one BufferedImage
+     * in flight at any given moment, regardless of how many callers fan in.
      */
     @Suppress("OPT_IN_USAGE")
-    private val compressionDispatcher = Dispatchers.Default.limitedParallelism(1)
+    private val compressionDispatcher = Dispatchers.IO.limitedParallelism(1)
 
     /**
      * Re-encode a file from disk.
      *
+     * @param tempFile makes the file the output is written to, in [AmethystTempDir] by default.
      * @throws CompressionException on any failure that the caller
      *   should surface in a fail-loud dialog.
      */
     suspend fun reencode(
         source: File,
-        quality: CompressionQuality,
+        quality: ImageCompressionTarget,
+        tempFile: () -> File = { AmethystTempDir.createTempFile("amethyst_compress_", ".jpg") },
+    ): ReencodeResult {
+        // withContext hands its result back cancellably: a cancellation that lands during the
+        // (uncancellable) encode drops the finished file along with the result, so its path is
+        // kept out here to delete it.
+        var written: File? = null
+        return try {
+            reencodeOnDispatcher(source, quality, tempFile) { written = it }
+        } catch (e: CancellationException) {
+            written?.deleteOrWarn(TAG, "cancelled re-encode")
+            throw e
+        }
+    }
+
+    private suspend fun reencodeOnDispatcher(
+        source: File,
+        quality: ImageCompressionTarget,
+        tempFile: () -> File,
+        onWritten: (File) -> Unit,
     ): ReencodeResult =
         withContext(compressionDispatcher) {
             coroutineContext.ensureActive()
@@ -99,7 +124,10 @@ object ImageReencoder {
             }
             // 2) Decode with the pre-decode pixel guard + subsampling.
             coroutineContext.ensureActive()
-            val img = decodeWithGuard(source, quality.maxDim)
+            // The output carries no EXIF, so a camera's orientation tag is applied to the pixels;
+            // without it a phone photo would upload on its side.
+            val orientation = if (format is ImageFormat.Jpeg) ExifOrientation.read(source) else ExifOrientation.NORMAL
+            val img = ExifOrientation.apply(decodeWithGuard(source, quality.maxDim), orientation)
             // 3) Resize only when source exceeds the target box —
             //    Thumbnailator otherwise upscales by default.
             coroutineContext.ensureActive()
@@ -114,12 +142,13 @@ object ImageReencoder {
                 }
             // 4) Encode JPEG to a temp file, preserving ICC where possible.
             coroutineContext.ensureActive()
-            val temp = AmethystTempDir.createTempFile("amethyst_compress_", ".jpg")
+            val temp = tempFile()
             try {
                 encodeJpeg(finalImage, temp, quality.jpegQuality)
+                onWritten(temp)
                 ReencodeResult.Reencoded(temp)
             } catch (t: Throwable) {
-                withContext(NonCancellable) { temp.delete() }
+                withContext(NonCancellable) { temp.deleteOrWarn(TAG, "failed re-encode") }
                 throw if (t is CompressionException) t else EncodeFailed(t)
             }
         }

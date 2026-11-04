@@ -23,6 +23,7 @@
 package com.vitorpamplona.amethyst.commons.relayClient.event.watchers
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.rooms.isInRoom
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -34,10 +35,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bidConfirmation.BidConfirmationEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
@@ -85,6 +91,12 @@ val RootScopedRepliesKinds =
         // `e` at all (see the spec's PR Update example), so this filter is the
         // only engagement route to a PR's revision chain.
         GitPullRequestUpdateEvent.KIND,
+        // Nostr CI Workflow Results (9842) and Progress markers (39842) name the PR / patch they
+        // ran for in `E` (NIP-22 trigger context), so the CI badge rides this fan-out as it does on
+        // gitworkshop. Job Results (9841) are left out on purpose: they carry log tails and are
+        // fetched by id only when someone opens the runs sheet.
+        CiWorkflowResultEvent.KIND,
+        CiWorkflowProgressEvent.KIND,
     )
 
 val RepliesAndReactionsKinds2 =
@@ -104,8 +116,14 @@ val RepliesAndReactionsKinds2 =
         GitStatusAppliedEvent.KIND,
         GitStatusClosedEvent.KIND,
         GitStatusDraftEvent.KIND,
+        // NIP-34 cover notes (1624) point at their issue / patch / PR with a lowercase root `e`.
+        GitCoverNoteEvent.KIND,
         PollResponseEvent.KIND,
         ZapPollEvent.KIND,
+        // NIP-15 bids and the merchant's confirmations name the auction VERSION by its id (`e`),
+        // so an auction card watching that version note fetches them here: its highest bid.
+        BidEvent.KIND,
+        BidConfirmationEvent.KIND,
     )
 
 fun filterRepliesAndReactionsToNotes(
@@ -118,6 +136,11 @@ fun filterRepliesAndReactionsToNotes(
     val perRelayEventIds =
         mapOfSet {
             events.forEach { note ->
+                // A private message (a room's, or a NIP-17 rumor) gets its reactions and replies
+                // inside its own conversation, never from relays; asking for them would hand the
+                // relays the private message's id.
+                if (note.isPrivateRumor() || note.isInRoom()) return@forEach
+
                 note.relayUrlsForReactions().forEach { relay ->
                     add(relay, note.idHex)
                 }

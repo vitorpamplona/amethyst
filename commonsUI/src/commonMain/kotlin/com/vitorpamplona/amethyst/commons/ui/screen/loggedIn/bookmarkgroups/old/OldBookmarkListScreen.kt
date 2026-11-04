@@ -44,6 +44,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.bookmarkgroups.old.dal.OldBookmarkPrivateFeedViewModel
+import com.vitorpamplona.amethyst.commons.bookmarkgroups.old.dal.OldBookmarkPublicFeedViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -63,8 +65,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarP
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.RefresheableFeedView
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.bookmarkgroups.old.dal.OldBookmarkPrivateFeedViewModel
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.bookmarkgroups.old.dal.OldBookmarkPublicFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel

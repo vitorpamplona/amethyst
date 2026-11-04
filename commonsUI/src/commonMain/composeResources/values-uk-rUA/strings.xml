@@ -656,12 +656,9 @@
     <string name="wallet_connect_connect_app">Підключити гаманець</string>
     <string name="see_relay_feed">Переглянути стрічку relay</string>
     <string name="pledge_amount_in_sats">Сума внеску в sat</string>
-    <string name="poll_option_description">Опис варіанту</string>
     <string name="poll_zap_value_min">Мінімальний зап</string>
     <string name="poll_zap_value_max">Максимальний зап</string>
     <string name="poll_consensus_threshold">Консенсус</string>
-    <string name="poll_closing_date_time">Дата &amp; час закінчення опитування</string>
-    <string name="poll_closing_in">Опитування закривається через %1$s</string>
     <string name="looking_for_event">Пошук події %1$s</string>
     <string name="send_zap">Надіслати зап</string>
     <string name="custom_zaps_add_a_message">Додати публічне повідомлення</string>
@@ -710,7 +707,6 @@
     <string name="uploading_state_hashing">Хешування</string>
     <string name="uploading_state_finished">Готово</string>
     <string name="uploading_state_error">Помилка</string>
-    <string name="connect_via_tor1">Налаштувати</string>
     <string name="connect_via_tor2">Налаштування Tor</string>
     <string name="yes">Так</string>
     <string name="no">Ні</string>
@@ -786,7 +782,6 @@
     <string name="show_sensitive_content_explainer">Показує попередження, коли автор посту позначив його як чутливий</string>
     <string name="max_hashtag_limit_title">Максимальна кількість хештегів у пості</string>
     <string name="max_hashtag_limit_explainer">Приховує пости з більшою кількістю хештегів, ніж цей ліміт. Встановіть 0, щоб вимкнути</string>
-    <string name="new_reaction_symbol">Новий символ реакції</string>
     <string name="zapraiser_explainer">Додає цільову суму сат, яку потрібно отримати для цієї посади. Клієнти, які підтримують, можуть відображати це як індикатор прогресу, щоб стимулювати пожертвування</string>
     <string name="zapraiser_target_amount_in_sats">Цільова сума в sats</string>
     <string name="sats_to_complete">Zapraiser на %1$s. %2$s sats до мети</string>
@@ -929,9 +924,7 @@
     <string name="created_at">Створено в</string>
     <string name="guidelines">Правила</string>
     <string name="moderators">Модератори</string>
-    <string name="login_with_external_signer">Увійти з Amber</string>
     <string name="status_update">Оновіть свій статус</string>
-    <string name="poll_zap_value_min_max_explainer">Голоси зважуються відповідно до суми зап. Ви можете встановити мінімальну суму, щоб уникнути спамерів, та максимальну, щоб великі заппери не домінували в опитуванні. Введіть однакову суму в обох полях, щоб кожен голос мав однакову вагу. Залиште порожнім, щоб приймати будь-яку суму.</string>
     <string name="error_dialog_talk_to_user">Написати користувачу</string>
     <string name="error_dialog_talk_to_user_name">Повідомити %1$s</string>
     <string name="error_dialog_button_ok">ОК</string>
@@ -1443,7 +1436,6 @@
     <string name="closing_time">Час закриття</string>
     <string name="confirm">Підтвердити</string>
     <string name="next">Далі</string>
-    <string name="add_poll_option_button">Кнопка додавання варіанту опитування</string>
     <string name="go_back">Назад</string>
     <string name="approve">Схвалити</string>
     <string name="connected">Підключено</string>
@@ -1451,13 +1443,9 @@
     <string name="poll_submit">Надіслати</string>
     <string name="poll_view_results">Переглянути результати</string>
     <string name="restart">Перезапустити</string>
-    <string name="chess_accept">Прийняти</string>
-    <string name="chess_decline">Відхилити</string>
     <string name="new_chess_game">Нова шахова партія</string>
     <string name="chess_loading_game">Завантаження гри…</string>
     <string name="chess_game_not_found">Гру не знайдено</string>
-    <string name="chess_game_waiting">Ця гра могла завершитися або очікує на суперника.</string>
-    <string name="chess_game_id">ID гри: %1$s…</string>
     <string name="badge_and_n_others"> та %1$d інших</string>
     <string name="remove_language">Видалити %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Почніть з чудової стрічки, підписавшись на тих самих людей, що й хтось, кому ви довіряєте.</string>
@@ -2411,7 +2399,6 @@
     <string name="media_added_to_profile_gallery">Медіа додано до вашої галереї профілю</string>
     <string name="media_download_has_started_toast">Завантаження медіа розпочато…</string>
     <string name="media_servers">Медіасервери</string>
-    <string name="media_too_big_for_nip95">Медіафайл занадто великий для NIP-95</string>
     <string name="messages_cant_upload_explainer">Спочатку введіть адресу отримувача повідомлення</string>
     <string name="messages_cant_upload_title">Неможливо завантажити</string>
     <string name="messages_new_message_subject">Тема</string>
@@ -2667,7 +2654,6 @@
     <string name="poll_author_no_vote">Автор опитування не може голосувати</string>
     <string name="poll_is_closed_explainer">Опитування закрито для нових голосів</string>
     <string name="poll_multiple_choice">Кілька відповідей</string>
-    <string name="poll_option_index">Варіант %1$s</string>
     <string name="poll_single_choice">Одна відповідь</string>
     <string name="poll_unable_to_vote">Неможливо проголосувати</string>
     <string name="polls">Опитування</string>
@@ -2934,7 +2920,6 @@
     <string name="upload_error_title">Помилка завантаження</string>
     <string name="upload_error_voice_message_exception">Помилка завантаження голосу: %1$s</string>
     <string name="upload_error_voice_message_failed">Не вдалося завантажити голосове повідомлення</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 ще не підтримується для голосових повідомлень</string>
     <string name="uptime">%1$d% доступності</string>
     <string name="use_internal_tor">Активний рушій Tor</string>
     <string name="use_internal_tor_explainer">Використовувати вбудовану версію або Orbot</string>
@@ -2989,4 +2974,8 @@
          what leaves the device; the fork strings say why the old phone stops. -->
     <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
 </resources>

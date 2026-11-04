@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
+import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals

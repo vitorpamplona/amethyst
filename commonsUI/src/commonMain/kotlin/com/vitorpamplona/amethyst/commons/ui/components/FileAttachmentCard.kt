@@ -91,7 +91,7 @@ fun FileAttachmentCard(
 /**
  * The icon + title + subtitle row shared by every card that stands in for a file it can't
  * render inline: this one and the PDF placeholder/skeleton in
- * the Android app's `PdfPreviewCard`.
+ * `PdfPreviewCard`.
  */
 @Composable
 fun FileAttachmentRow(

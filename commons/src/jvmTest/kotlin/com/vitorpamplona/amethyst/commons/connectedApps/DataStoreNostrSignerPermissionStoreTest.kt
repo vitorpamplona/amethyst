@@ -22,10 +22,14 @@ package com.vitorpamplona.amethyst.commons.connectedApps
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import kotlinx.coroutines.test.runTest
 import okio.Path.Companion.toOkioPath
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -74,5 +78,42 @@ class DataStoreNostrSignerPermissionStoreTest {
                 listOf("nsp_0011223344556677", "nsp_deadbeefdeadbeef"),
                 subject.names("nsp_").sorted(),
             )
+        }
+
+    /**
+     * A pairing check for a key that was never paired must not open a store: every distinct key a
+     * stranger sends would otherwise leave a DataStore and its scope open for the life of the process.
+     */
+    @Test
+    fun readingAnUnknownCoordinateOpensNoStore() =
+        runTest {
+            val stores = stores()
+            val subject = DataStoreNostrSignerPermissionStore(stores)
+            val unknown = "nip46:aaaa:bbbb"
+            val name = DataStoreNostrSignerPermissionStore.nameFor(unknown)
+
+            assertNull(subject.loadPolicy(unknown))
+            assertNull(subject.loadOpDecision(unknown, NostrSignerOp.Encrypt))
+            assertNull(subject.loadLastUsed(unknown))
+            assertTrue(subject.allOpDecisions(unknown).isEmpty())
+            assertFalse(stores.isOpen(name))
+
+            subject.storePolicy(unknown, AppSignerPolicy.REASONABLE)
+            assertEquals(AppSignerPolicy.REASONABLE, subject.loadPolicy(unknown))
+            assertTrue(stores.isOpen(name))
+        }
+
+    /** A store written earlier (e.g. before an app restart) is found by its file, not only when open. */
+    @Test
+    fun aCoordinateWrittenBeforeIsReadBackAfterRelease() =
+        runTest {
+            val stores = stores()
+            val subject = DataStoreNostrSignerPermissionStore(stores)
+            val known = "nip46:aaaa:cccc"
+
+            subject.storePolicy(known, AppSignerPolicy.REASONABLE)
+            stores.release(DataStoreNostrSignerPermissionStore.nameFor(known))
+
+            assertEquals(AppSignerPolicy.REASONABLE, subject.loadPolicy(known))
         }
 }

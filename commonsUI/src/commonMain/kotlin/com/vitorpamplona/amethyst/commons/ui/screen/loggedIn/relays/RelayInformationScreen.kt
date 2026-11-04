@@ -56,6 +56,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -125,6 +126,10 @@ import com.vitorpamplona.amethyst.commons.resources.relay_filter_limit
 import com.vitorpamplona.amethyst.commons.resources.relay_filter_since
 import com.vitorpamplona.amethyst.commons.resources.relay_filter_until
 import com.vitorpamplona.amethyst.commons.resources.relay_groups_button
+import com.vitorpamplona.amethyst.commons.resources.relay_info_filter_count
+import com.vitorpamplona.amethyst.commons.resources.relay_info_filter_number
+import com.vitorpamplona.amethyst.commons.resources.relay_info_filter_search
+import com.vitorpamplona.amethyst.commons.resources.relay_latency_title
 import com.vitorpamplona.amethyst.commons.resources.relay_members
 import com.vitorpamplona.amethyst.commons.resources.relay_monitor_ms
 import com.vitorpamplona.amethyst.commons.resources.relay_monitor_network
@@ -168,6 +173,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.KindChip
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.RelayLatencyCard
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.datasource.RelayInfoNip66FilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
@@ -288,6 +294,12 @@ fun RelayInformationBody(
     val activeCounts = remember(relay) { accountViewModel.account.client.activeCounts(relay) }
     val activeOutbox = remember(relay) { accountViewModel.account.client.activeOutboxCache(relay) }
 
+    val healthStore = accountViewModel.host.relayHealth
+    val latencySnapshots = healthStore?.latencySnapshots?.collectAsState()
+    val slowRelays = healthStore?.slowRelays?.collectAsState()
+    val latency = latencySnapshots?.value?.get(relay)?.takeIf { it.samples.isNotEmpty() }
+    val slow = slowRelays?.value?.get(relay)
+
     val usedBy =
         remember(relay) {
             accountViewModel.account.declaredFollowsPerUsingRelay.value[relay]?.mapNotNull { hex ->
@@ -355,6 +367,11 @@ fun RelayInformationBody(
         if (atLeastOneSoftware) {
             item { SectionHeader(stringRes(Res.string.software)) }
             item { SoftwareCard(relayInfo) }
+        }
+
+        if (latency != null) {
+            item { SectionHeader(stringRes(Res.string.relay_latency_title)) }
+            item { RelayLatencyCard(latency, slow) }
         }
 
         if (discoveryEvents.isNotEmpty()) {
@@ -494,7 +511,7 @@ private fun FilterVisual(
     ) {
         Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                text = "filter ${index + 1}",
+                text = stringRes(Res.string.relay_info_filter_number, index + 1),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             )
@@ -604,7 +621,7 @@ private fun FilterVisual(
                 filter.search?.let { search ->
                     if (search.isNotEmpty()) {
                         FilterAttributeChip(
-                            text = "🔍 ${search.take(20)}${if (search.length > 20) "…" else ""}",
+                            text = stringRes(Res.string.relay_info_filter_search, search.take(20) + if (search.length > 20) "…" else ""),
                             color = MaterialTheme.colorScheme.primaryContainer,
                             textColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
@@ -652,7 +669,7 @@ private fun SubscriptionCard(
                     )
                 }
                 Text(
-                    text = "${filters.size}f",
+                    text = stringRes(Res.string.relay_info_filter_count, filters.size),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 )

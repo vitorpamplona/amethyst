@@ -56,7 +56,9 @@ import com.vitorpamplona.amethyst.commons.resources.about_me
 import com.vitorpamplona.amethyst.commons.resources.avatar_url
 import com.vitorpamplona.amethyst.commons.resources.banner_url
 import com.vitorpamplona.amethyst.commons.resources.clink_offer_label
+import com.vitorpamplona.amethyst.commons.resources.collapse
 import com.vitorpamplona.amethyst.commons.resources.display_name
+import com.vitorpamplona.amethyst.commons.resources.expand
 import com.vitorpamplona.amethyst.commons.resources.github
 import com.vitorpamplona.amethyst.commons.resources.github_proof_url_template
 import com.vitorpamplona.amethyst.commons.resources.lightning_address
@@ -65,6 +67,12 @@ import com.vitorpamplona.amethyst.commons.resources.mastodon
 import com.vitorpamplona.amethyst.commons.resources.mastodon_proof_url_template
 import com.vitorpamplona.amethyst.commons.resources.my_display_name
 import com.vitorpamplona.amethyst.commons.resources.my_name
+import com.vitorpamplona.amethyst.commons.resources.new_user_metadata_banner_hint
+import com.vitorpamplona.amethyst.commons.resources.new_user_metadata_lightning_address_hint
+import com.vitorpamplona.amethyst.commons.resources.new_user_metadata_nip05_hint
+import com.vitorpamplona.amethyst.commons.resources.new_user_metadata_picture_hint
+import com.vitorpamplona.amethyst.commons.resources.new_user_metadata_pronouns_hint
+import com.vitorpamplona.amethyst.commons.resources.new_user_metadata_website_hint
 import com.vitorpamplona.amethyst.commons.resources.nip_05
 import com.vitorpamplona.amethyst.commons.resources.profile
 import com.vitorpamplona.amethyst.commons.resources.pronouns
@@ -74,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.resources.twitter_proof_url_template
 import com.vitorpamplona.amethyst.commons.resources.username
 import com.vitorpamplona.amethyst.commons.resources.website_url
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -174,7 +183,7 @@ fun NewUserMetadataScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     label = { Text(text = stringRes(Res.string.about_me)) },
                     modifier = Modifier.fillMaxWidth().height(100.dp),
                     value = postViewModel.about.value,
@@ -201,7 +210,7 @@ fun NewUserMetadataScreen(
                     onValueChange = { postViewModel.picture.value = it },
                     placeholder = {
                         Text(
-                            text = "https://mywebsite.com/me.jpg",
+                            text = stringRes(Res.string.new_user_metadata_picture_hint),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -211,7 +220,7 @@ fun NewUserMetadataScreen(
                             tint = MaterialTheme.colorScheme.placeholderText,
                             modifier = Modifier.padding(start = 5.dp),
                         ) {
-                            postViewModel.uploadForPicture(it, accountViewModel.host.mediaUploader, onError = accountViewModel.toastManager::toast)
+                            postViewModel.uploadForPicture(it, accountViewModel.mediaUploader, onError = accountViewModel.toastManager::toast)
                         }
                     },
                     singleLine = true,
@@ -226,7 +235,7 @@ fun NewUserMetadataScreen(
                     onValueChange = { postViewModel.banner.value = it },
                     placeholder = {
                         Text(
-                            text = "https://mywebsite.com/mybanner.jpg",
+                            text = stringRes(Res.string.new_user_metadata_banner_hint),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -236,7 +245,7 @@ fun NewUserMetadataScreen(
                             tint = MaterialTheme.colorScheme.placeholderText,
                             modifier = Modifier.padding(start = 5.dp),
                         ) {
-                            postViewModel.uploadForBanner(it, accountViewModel.host.mediaUploader, onError = accountViewModel.toastManager::toast)
+                            postViewModel.uploadForBanner(it, accountViewModel.mediaUploader, onError = accountViewModel.toastManager::toast)
                         }
                     },
                     singleLine = true,
@@ -251,7 +260,7 @@ fun NewUserMetadataScreen(
                     onValueChange = { postViewModel.nip05.value = it },
                     placeholder = {
                         Text(
-                            text = "_@mywebsite.com",
+                            text = stringRes(Res.string.new_user_metadata_nip05_hint),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -267,7 +276,7 @@ fun NewUserMetadataScreen(
                     onValueChange = { postViewModel.website.value = it },
                     placeholder = {
                         Text(
-                            text = "https://mywebsite.com",
+                            text = stringRes(Res.string.new_user_metadata_website_hint),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -283,7 +292,7 @@ fun NewUserMetadataScreen(
                     onValueChange = { postViewModel.pronouns.value = it },
                     placeholder = {
                         Text(
-                            text = "they/them, ...",
+                            text = stringRes(Res.string.new_user_metadata_pronouns_hint),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -299,7 +308,7 @@ fun NewUserMetadataScreen(
                     onValueChange = { postViewModel.lnAddress.value = it },
                     placeholder = {
                         Text(
-                            text = "me@mylightningnode.com",
+                            text = stringRes(Res.string.new_user_metadata_lightning_address_hint),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -413,7 +422,7 @@ private fun ExpandableSection(
         )
         Icon(
             symbol = if (expanded.value) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-            contentDescription = if (expanded.value) "Collapse" else "Expand",
+            contentDescription = if (expanded.value) stringRes(Res.string.collapse) else stringRes(Res.string.expand),
             tint = MaterialTheme.colorScheme.placeholderText,
         )
     }

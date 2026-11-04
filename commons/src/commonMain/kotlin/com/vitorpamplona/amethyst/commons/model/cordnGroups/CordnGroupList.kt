@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.cordnGroups
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

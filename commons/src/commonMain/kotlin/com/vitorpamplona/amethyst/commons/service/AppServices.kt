@@ -29,17 +29,26 @@ import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_SETTINGS_STORE
 import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPanelCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
+import com.vitorpamplona.cordn.client.CordnBlobStore
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 /**
  * App-wide stores that outlive any one account and that screens read directly: the favorites
@@ -66,6 +75,32 @@ interface AppServices {
 
     /** Whether the embedded Tor service has fully bootstrapped, so Tor-routed relays can answer. */
     val torBootstrapped: Flow<Boolean>
+
+    /**
+     * Tor's state for display: off, still connecting (including a proxy that is bound but still
+     * downloading its directory), or ready.
+     */
+    val torStatus: Flow<TorServiceStatus> get() = flowOf(TorServiceStatus.Off)
+
+    /**
+     * Tor has been failing to carry traffic for [com.vitorpamplona.amethyst.commons.tor.TOR_STUCK_AFTER_MS]
+     * or more, so the relays routed through it are stuck rather than slow. Lives with the Tor service
+     * rather than in a screen, so the wait is measured from when Tor stopped working, not from when
+     * the screen opened.
+     */
+    val torStuck: Flow<Boolean> get() = flowOf(false)
+
+    /** Device-wide drawer state: which headings the user folded away. Never synced. */
+    val drawerSectionCollapsePrefs: DrawerSectionCollapsePreferences
+
+    /** Device-wide widths the user dragged the panes of a wide window to. Never synced. */
+    val paneWidthPrefs: PaneWidthPreferences
+
+    /** Device-wide state of the docked notification panel of a wide window: folded away to its bell or expanded. Never synced. */
+    val notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences
+
+    /** Posts scheduled for later, across every account on this device. */
+    val scheduledPostStore: ScheduledPostStore
 
     /** The app's preference files, one DataStore per name. */
     val appStores: AppPreferenceStores
@@ -110,9 +145,31 @@ interface AppServices {
     /** The app-wide BUD-04 mirror sweep, which keeps running while the user navigates. */
     val blossomMirrorQueue: BlossomMirrorQueue
 
+    /**
+     * The Blossom-backed store a Cordn migration hands documents through, uploading to [servers]
+     * (empty when it only fetches).
+     */
+    fun cordnBlobStore(servers: List<String>): CordnBlobStore
+
     /** The place name already reverse-geocoded for [geohash], or null when none is cached yet. */
     fun cachedPlaceName(geohash: String): String? = null
 
     /** A new on-device alt-text suggester for image uploads, or null where the platform has none. */
     fun createAltTextSuggester(): AltTextSuggester? = null
+
+    /** NIP-42 relay authentication for every logged-in account, and the prompt bus its dialog reads. */
+    val authCoordinator: AuthCoordinator
+
+    /** The proof-of-work publish queue, whose mining jobs the broadcast banner shows. */
+    val powPublishQueue: PoWPublishQueue
+
+    /** The stack trace the last crash left behind, removed as it is read; null when there is none. */
+    suspend fun takeCrashReport(): String? = null
+
+    /**
+     * A crash report the user already chose to send, removed as it is read; null when there is none.
+     * The desktop sets it when the user picks "Send to developers" in its crash window: the app opens
+     * the report's DM draft right away instead of asking again.
+     */
+    fun takeCrashReportToSend(): String? = null
 }

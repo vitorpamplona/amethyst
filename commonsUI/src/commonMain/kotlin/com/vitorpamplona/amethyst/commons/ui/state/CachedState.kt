@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.state
 
-import androidx.collection.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.util.cache.CachedState
 
 // On a cache hit (the common case during scroll for things like Bech32 link previews),
 // short-circuit with a remembered State<V?> and skip the produceState coroutine entirely.
@@ -63,32 +63,4 @@ fun <K : Any, V : Any> produceCachedState(
         }
     }
     return state
-}
-
-interface CachedState<K : Any, V : Any> {
-    fun cached(k: K): V?
-
-    suspend fun update(k: K): V?
-}
-
-abstract class GenericBaseCache<K : Any, V : Any>(
-    capacity: Int,
-) : CachedState<K, V> {
-    private val cache = LruCache<K, V>(capacity)
-
-    override fun cached(k: K): V? = cache[k]
-
-    override suspend fun update(k: K): V? {
-        cache[k]?.let { return it }
-
-        val v = compute(k)
-
-        if (v != null) {
-            cache.put(k, v)
-        }
-
-        return v
-    }
-
-    abstract suspend fun compute(key: K): V?
 }

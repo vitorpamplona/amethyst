@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.resources.upload_no_image_url_returned
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -75,7 +76,7 @@ class NewBadgeModel : ViewModel() {
     val strippingFailureConfirmation = SuspendableConfirmation()
 
     // 0 = Low, 1 = Medium, 2 = High, 3 = UNCOMPRESSED
-    var mediaQualitySlider by mutableIntStateOf(1)
+    var mediaQualitySlider by mutableIntStateOf(CompressorQuality.defaultSliderPosition)
 
     var stripMetadata by mutableStateOf(true)
 
@@ -117,16 +118,7 @@ class NewBadgeModel : ViewModel() {
         onSuccess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
-        try {
-            uploadUnsafe(uploader, onSuccess, onError)
-        } catch (e: SignerExceptions.ReadOnlyException) {
-            viewModelScope.launch {
-                onError(
-                    loadStringRes(Res.string.read_only_user),
-                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
-                )
-            }
-        }
+        uploadUnsafe(uploader, onSuccess, onError)
     }
 
     @OptIn(ExperimentalUuidApi::class)
@@ -174,7 +166,7 @@ class NewBadgeModel : ViewModel() {
             if (uploaded == null) {
                 onError(
                     loadStringRes(Res.string.failed_to_upload_media_no_details),
-                    "Upload succeeded but no image URL was returned by the server.",
+                    loadStringRes(Res.string.upload_no_image_url_returned),
                 )
                 isUploading = false
                 return@launch
@@ -183,17 +175,31 @@ class NewBadgeModel : ViewModel() {
             val imageUrl = uploaded.url
             val dimensions = uploaded.fileHeader.dim
 
-            myAccount.sendBadgeDefinition(
-                badgeId = Uuid.random().toString(),
-                name = name.trim(),
-                imageUrl = imageUrl,
-                imageDim = dimensions,
-                description = description.trim().ifBlank { null },
-                // NIP-58 thumb is optional; we emit it pointing at the same
-                // uploaded asset so clients that only honor the thumb tag also
-                // see the badge image.
-                thumbs = listOf(ThumbTag(imageUrl, dimensions)),
-            )
+            try {
+                myAccount.sendBadgeDefinition(
+                    badgeId = Uuid.random().toString(),
+                    name = name.trim(),
+                    imageUrl = imageUrl,
+                    imageDim = dimensions,
+                    description = description.trim().ifBlank { null },
+                    // NIP-58 thumb is optional; we emit it pointing at the same
+                    // uploaded asset so clients that only honor the thumb tag also
+                    // see the badge image.
+                    thumbs = listOf(ThumbTag(imageUrl, dimensions)),
+                )
+            } catch (_: SignerExceptions.ReadOnlyException) {
+                onError(
+                    loadStringRes(Res.string.read_only_user),
+                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
+                )
+                isUploading = false
+                return@launch
+            } catch (_: SignerExceptions) {
+                // The user rejected it in their signer, or the signer was unavailable: nothing was
+                // published, so keep the form open instead of reporting success.
+                isUploading = false
+                return@launch
+            }
 
             myAccount.settings.changeDefaultFileServer(serverToUse)
             myAccount.settings.changeStripLocationOnUpload(stripMetadata)

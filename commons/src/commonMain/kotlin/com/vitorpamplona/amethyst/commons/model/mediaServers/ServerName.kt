@@ -29,9 +29,12 @@ data class ServerName(
     val type: ServerType = ServerType.Blossom,
 )
 
+/**
+ * The upload protocols this version speaks. NIP-95 (files embedded in events) is no longer
+ * offered: a saved default of that type reads as unknown and falls back to the first default.
+ */
 enum class ServerType {
     Blossom,
-    NIP95,
     NIP96,
 
     /**

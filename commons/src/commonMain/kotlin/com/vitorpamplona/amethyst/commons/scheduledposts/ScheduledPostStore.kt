@@ -114,8 +114,8 @@ class ScheduledPostStore(
      * publishAtSec <= now is flipped to PUBLISHING and returned. A concurrent
      * claim from another worker will see those posts as PUBLISHING and skip them.
      *
-     * This all-accounts overload is used by the Android worker, which publishes on
-     * behalf of every loaded account in a single pass.
+     * This all-accounts overload is used by Desktop's headless `--publish-scheduled`
+     * run, which publishes on behalf of every account in a single pass.
      */
     suspend fun claimDuePosts(nowSec: Long): List<ScheduledPost> =
         mutex.withLock {

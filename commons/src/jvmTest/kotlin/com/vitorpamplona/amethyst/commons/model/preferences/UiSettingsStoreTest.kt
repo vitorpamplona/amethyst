@@ -31,6 +31,8 @@ import com.vitorpamplona.amethyst.commons.model.BooleanType
 import com.vitorpamplona.amethyst.commons.model.ConnectivityType
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
+import com.vitorpamplona.amethyst.commons.model.NoteLayoutType
+import com.vitorpamplona.amethyst.commons.model.SpellCheckType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.UiSettings
 import kotlinx.coroutines.test.runTest
@@ -72,6 +74,8 @@ class UiSettingsStoreTest {
             assertEquals(AccentColorType.PURPLE, settings.accentColor)
             assertEquals(FontSizeType.NORMAL, settings.fontSize)
             assertEquals("", settings.composeSignature)
+            assertEquals(NoteLayoutType.AUTHOR_COLUMN, settings.noteLayout)
+            assertEquals(ConnectivityType.WIFI_ONLY, settings.automaticallyDownloadTranslationModels)
 
             // Not a constant, and not the data class default either: UiSettings()
             // says ALWAYS, but a store with no feature set reads SIMPLIFIED, and
@@ -139,6 +143,10 @@ class UiSettingsStoreTest {
                     showProfileBadges = false,
                     showOnchainWallet = false,
                     showPayToZapChip = false,
+                    spellCheck = SpellCheckType.BUILT_IN,
+                    noteLayout = NoteLayoutType.EDGE_TO_EDGE,
+                    automaticallyDownloadTranslationModels = ConnectivityType.ALWAYS,
+                    hideWalletBalances = true,
                 )
 
             store.save(settings)

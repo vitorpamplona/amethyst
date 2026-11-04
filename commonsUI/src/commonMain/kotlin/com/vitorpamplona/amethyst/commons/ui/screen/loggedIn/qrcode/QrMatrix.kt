@@ -33,7 +33,8 @@ class QrMatrix(
 }
 
 /**
- * Encodes [contents] (UTF-8, error correction Q) into its module grid, or null when this
- * platform has no encoder yet or the payload does not fit a QR code.
+ * Encodes [contents] (UTF-8, error correction Q, falling back to M then L for payloads too long
+ * for Q) into its module grid, or null when this platform has no encoder yet or the payload does
+ * not fit a QR code at all.
  */
 expect fun encodeQrMatrix(contents: String): QrMatrix?

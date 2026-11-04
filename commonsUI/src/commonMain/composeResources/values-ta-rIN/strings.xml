@@ -652,12 +652,9 @@
     <string name="wallet_connect_connect_app">பணப்பை இணை</string>
     <string name="see_relay_feed">Relay ஊட்டத்தை காண்க</string>
     <string name="pledge_amount_in_sats">உறுதிமொழி தொகை (ஸாட்களில்)</string>
-    <string name="poll_option_description">(வாக்குத்) தெரிவின் விளக்கம்</string>
     <string name="poll_zap_value_min">குறைந்தளவு ஜாப்</string>
     <string name="poll_zap_value_max">அதிகளவு ஜாப்</string>
     <string name="poll_consensus_threshold">ஒருமித்த கருத்து</string>
-    <string name="poll_closing_date_time">வாக்கெடுப்பு முடிவு தேதி &amp; நேரம்</string>
-    <string name="poll_closing_in">வாக்கெடுப்பு %1$s இல் முடிகிறது</string>
     <string name="looking_for_event">நிகழ்வு %1$s ஐத் தேடி</string>
     <string name="send_zap">Zap அனுப்பு</string>
     <string name="custom_zaps_add_a_message">ஒரு பொது செய்தியைச் சேர்க்கவும்</string>
@@ -706,7 +703,6 @@
     <string name="uploading_state_hashing">ஹேஷ் செய்கிறது</string>
     <string name="uploading_state_finished">முடிந்தது</string>
     <string name="uploading_state_error">பிழை</string>
-    <string name="connect_via_tor1">சரிசெய்</string>
     <string name="connect_via_tor2">Tor அமைப்புகள்</string>
     <string name="yes">ஆம்</string>
     <string name="no">இல்லை</string>
@@ -782,7 +778,6 @@
     <string name="show_sensitive_content_explainer">இடுகையின் ஆசிரியர் அதை உணர்திறன் உள்ளடக்கமாக குறிக்கும்போது எச்சரிக்கை செய்தி காட்டுகிறது</string>
     <string name="max_hashtag_limit_title">ஒரு இடுகைக்கு அதிகபட்ச ஹேஷ்டேக்குகள்</string>
     <string name="max_hashtag_limit_explainer">இந்த வரம்பை விட அதிக ஹேஷ்டேக்குகள் உள்ள இடுகைகளை மறைக்கிறது. முடக்க 0 ஐ அமைக்கவும்</string>
-    <string name="new_reaction_symbol">புதிய ரியாக்ஷன் குறி</string>
     <string name="zapraiser">ஜாப்-திரட்டுதல்</string>
     <string name="zapraiser_explainer">இந்த குறிப்புடன் திரட்டுவதற்கான ஸாட்ஸ் இலக்குத் தொகை சேர்க்கப்படும். இப்பயன்பாட்டுள்ள கிளயண்ட்டுகள் ஜாப்-களை ஊக்குவிக்க ப்ரோக்ரேஸ் பார் மூலம் காண்பிக்கலாம்</string>
     <string name="zapraiser_target_amount_in_sats">ஸாட்ஸ் இலக்குத் தொகை</string>
@@ -924,9 +919,7 @@
     <string name="created_at">உருவாக்கப்பட்ட நேரம்</string>
     <string name="guidelines">வழிகாட்டுதல்கள்</string>
     <string name="moderators">மதிப்பாளர்கள்</string>
-    <string name="login_with_external_signer">Amber மூலம் உள்நுழை</string>
     <string name="status_update">உங்கள் நிலையை புதுப்பி</string>
-    <string name="poll_zap_value_min_max_explainer">வாக்குகள் Zap தொகையால் எடை கொடுக்கப்படுகின்றன. ஸ்பாமர்களை தவிர்க்க குறைந்தபட்ச தொகையை மற்றும் பெரிய Zap செய்பவர்கள் வாக்கெடுப்பை கைப்பற்றுவதை தடுக்க அதிகபட்ச தொகையை அமைக்கலாம். ஒவ்வொரு வாக்கும் சம மதிப்புடையதாக இருக்க இரண்டு புலங்களிலும் ஒரே தொகையை உள்ளிடவும். எந்த தொகையையும் ஏற்க காலியாக விடவும்.</string>
     <string name="error_dialog_talk_to_user">பயனரிடம் செய்தி அனுப்பு</string>
     <string name="error_dialog_talk_to_user_name">%1$s க்கு செய்தி அனுப்பு</string>
     <string name="error_dialog_button_ok">சரி</string>
@@ -1437,7 +1430,6 @@
     <string name="closing_time">மூடும் நேரம்</string>
     <string name="confirm">உறுதிப்படுத்து</string>
     <string name="next">அடுத்து</string>
-    <string name="add_poll_option_button">வாக்கெடுப்பு விருப்பம் சேர் பொத்தான்</string>
     <string name="go_back">திரும்பு</string>
     <string name="approve">அனுமதி</string>
     <string name="connected">இணைக்கப்பட்டது</string>
@@ -1445,13 +1437,9 @@
     <string name="poll_submit">சமர்ப்பி</string>
     <string name="poll_view_results">முடிவுகளைக் காண்</string>
     <string name="restart">மறுதொடக்கம்</string>
-    <string name="chess_accept">ஏற்கவும்</string>
-    <string name="chess_decline">மறுக்கவும்</string>
     <string name="new_chess_game">புதிய சதுரங்க விளையாட்டு</string>
     <string name="chess_loading_game">விளையாட்டை ஏற்றுகிறது…</string>
     <string name="chess_game_not_found">விளையாட்டு கண்டுபிடிக்கப்படவில்லை</string>
-    <string name="chess_game_waiting">இந்த விளையாட்டு முடிந்திருக்கலாம் அல்லது எதிரியுக்காக காத்திருக்கிறது.</string>
-    <string name="chess_game_id">விளையாட்டு ID: %1$s…</string>
     <string name="badge_and_n_others"> மற்றும் %1$d பேர்</string>
     <string name="remove_language">%1$s-ஐ அகற்று</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">நீங்கள் நம்பும் ஒருவரைப் போலவே அதே நபர்களை follow செய்வதன் மூலம் சிறந்த ஊட்டத்தைத் தொடங்குங்கள்.</string>
@@ -2386,7 +2374,6 @@
     <string name="media_added_to_profile_gallery">உங்கள் சுயவிவர கேலரியில் மீடியா சேர்க்கப்பட்டது</string>
     <string name="media_download_has_started_toast">மீடியா பதிவிறக்கம் தொடங்கியது…</string>
     <string name="media_servers">மீடியா சேவையகங்கள்</string>
-    <string name="media_too_big_for_nip95">NIP-95-க்கு மீடியா மிகவும் பெரியது</string>
     <string name="messages_cant_upload_explainer">முதலில் செய்தியின் இலக்கை உள்ளிடவும்</string>
     <string name="messages_cant_upload_title">பதிவேற்ற முடியவில்லை</string>
     <string name="messages_new_message_subject">பொருள்</string>
@@ -2617,7 +2604,6 @@
     <string name="poll_author_no_vote">வாக்கெடுப்பை உருவாக்கியோர் தங்கள் சொந்த வாக்கெடுப்பில் வாக்களிக்க முடியாது.</string>
     <string name="poll_is_closed_explainer">வாக்கெடுப்பு புதிய வாக்குகளுக்கு மூடப்பட்டது</string>
     <string name="poll_multiple_choice">பல தேர்வுகள்</string>
-    <string name="poll_option_index">விருப்பம் %1$s</string>
     <string name="poll_single_choice">ஒற்றை தேர்வு</string>
     <string name="poll_unable_to_vote">வாக்களிக்க முடியவில்லை</string>
     <string name="polls">வாக்கெடுப்புகள்</string>
@@ -2869,7 +2855,6 @@
     <string name="upload_error_title">பதிவேற்ற பிழை</string>
     <string name="upload_error_voice_message_exception">குரல் பதிவேற்றம் தோல்வியடைந்தது: %1$s</string>
     <string name="upload_error_voice_message_failed">குரல் செய்தியை பதிவேற்ற தோல்வியடைந்தது</string>
-    <string name="upload_error_voice_message_nip95_not_supported">குரல் செய்திகளுக்கு NIP-95 இன்னும் ஆதரிக்கப்படவில்லை</string>
     <string name="uptime">%1$d% இயக்க நேரம்</string>
     <string name="use_internal_tor">செயலில் Tor எஞ்சின்</string>
     <string name="use_internal_tor_explainer">உள்ளமைக்கப்பட்ட பதிப்பு அல்லது Orbot பயன்படுத்தவும்</string>
@@ -2924,4 +2909,8 @@
          what leaves the device; the fork strings say why the old phone stops. -->
     <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
 </resources>

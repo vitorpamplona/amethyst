@@ -20,10 +20,25 @@ pluginManagement {
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    // The groups only JitPack builds (straight from GitHub). Google and Maven Central never have
+    // them, so they are told not to be asked: Gradle tried both first, for 404s, and when a
+    // rate-limited Central answered one with a 429 it disabled Central for the rest of the build
+    // and every other dependency failed to resolve. A JitPack group missing here still resolves,
+    // only through those wasted lookups first; mavenLocal() keeps serving a locally published fork.
+    val jitpackOnly =
+        listOf(
+            "cc.ekblad", // cli's TOML parser, 4koma
+            "cc.ekblad.konbini", // 4koma's parser combinators
+            "com.github.UnifiedPush",
+            "com.github.davotoula",
+            "com.github.lincollincol",
+            "com.github.rikkahub.jlatexmath-android",
+            "com.github.vitorpamplona.compose-richtext",
+        )
     repositories {
         mavenLocal()
-        google()
-        mavenCentral()
+        google { content { jitpackOnly.forEach { excludeGroup(it) } } }
+        mavenCentral { content { jitpackOnly.forEach { excludeGroup(it) } } }
         maven { url = uri("https://jitpack.io") }
     }
 }
@@ -33,16 +48,92 @@ include(":amethyst")
 include(":nappletHost")
 include(":benchmark")
 include(":baselineprofile")
-include(":quartz")
 include(":geode")
 include(":commons")
 include(":commonsUI")
-include(":quic")
 include(":nestsClient")
-include(":marmotQuic")
 include(":desktopApp")
 include(":cli")
 include(":relayBench")
-include(":marmotBench")
-include(":quic-interop")
-project(":quic-interop").projectDir = file("quic/interop")
+
+// quartz lives in its own repo (vitorpamplona/quartz) and comes from Maven Central, like crypto
+// and quic below. To change it alongside the app, point Gradle at a local checkout and it builds
+// that checkout instead of the published artifact, for every module and for the libraries' own
+// dependency on it:
+//   ./gradlew -PquartzDir=../quartz :commons:jvmTest
+providers.gradleProperty("quartzDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.quartz:quartz")).using(project(":quartz"))
+        }
+    }
+}
+
+// The MLS bindings live in their own repos, built on quartz: Marmot (vitorpamplona/marmot-kmp) and
+// cordn (vitorpamplona/cordn-kmp). To change one alongside the app, build a local checkout:
+//   ./gradlew -PquartzDir=../quartz -PmarmotKmpDir=../marmot-kmp :commons:jvmTest
+providers.gradleProperty("marmotKmpDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.marmot:marmot")).using(project(":marmot"))
+            substitute(module("com.vitorpamplona.marmot:marmot-quic")).using(project(":marmot-quic"))
+        }
+    }
+}
+
+//   ./gradlew -PquartzDir=../quartz -PcordnKmpDir=../cordn-kmp :commons:jvmTest
+providers.gradleProperty("cordnKmpDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.cordn:cordn")).using(project(":cordn"))
+        }
+    }
+}
+
+// crypto-kmp lives in its own repo (vitorpamplona/crypto-kmp) and reaches this build through
+// quartz. To change it alongside quartz and the app, point Gradle at a local checkout:
+//   ./gradlew -PquartzDir=../quartz -PcryptoKmpDir=../crypto-kmp :commons:jvmTest
+providers.gradleProperty("cryptoKmpDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.crypto:crypto")).using(project(":crypto"))
+        }
+    }
+}
+
+// quic lives in its own repo (vitorpamplona/quic-kmp) and comes from Maven Central. To change
+// it alongside nestsClient or marmot-quic, point Gradle at a local checkout and it builds that
+// checkout instead of the published artifact:
+//   ./gradlew -PquicKmpDir=../quic-kmp :nestsClient:jvmTest
+providers.gradleProperty("quicKmpDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.quic:quic")).using(project(":quic"))
+        }
+    }
+}
+
+// The fantasy-console cart runtime lives in its own repo (vitorpamplona/kiko-kmp) and comes from
+// Maven Central. To change it alongside the cart player in commons and commonsUI, build a local checkout:
+//   ./gradlew -PkikoKmpDir=../kiko-kmp :commons:jvmTest
+providers.gradleProperty("kikoKmpDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.kiko:kiko")).using(project(":kiko"))
+            substitute(module("com.vitorpamplona.kiko:kiko-player")).using(project(":kiko-player"))
+            substitute(module("com.vitorpamplona.kiko:kiko-compose")).using(project(":kiko-compose"))
+        }
+    }
+}
+
+// The MLS engine lives in its own repo (vitorpamplona/mls-kmp) and comes from Maven Central, like
+// quic, and reaches this build through marmot and cordn. To change it alongside Marmot or cordn, build a
+// local checkout instead of the artifact:
+//   ./gradlew -PquartzDir=../quartz -PmlsKmpDir=../mls-kmp :commons:jvmTest
+providers.gradleProperty("mlsKmpDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.mls:mls")).using(project(":mls"))
+        }
+    }
+}

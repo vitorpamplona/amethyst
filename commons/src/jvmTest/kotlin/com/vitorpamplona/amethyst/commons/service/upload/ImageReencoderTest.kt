@@ -65,6 +65,21 @@ class ImageReencoderTest {
         }
 
     @Test
+    fun reencodesEachComposerStepToItsSize() =
+        runTest {
+            // The shared composer's steps reach the re-encoder as plain targets.
+            val src = makeJpeg(3000, 4000)
+            for (maxDim in listOf(640, 1280, 1920, 2560)) {
+                val reencoded = assertIs<ReencodeResult.Reencoded>(ImageReencoder.reencode(src, ImageSizeTarget(maxDim, 0.8f)))
+                track(reencoded.file)
+                val decoded = ImageIO.read(reencoded.file)
+                // Portrait: the height is the longer edge.
+                assertEquals(maxDim, decoded.height)
+                assertEquals(maxDim * 3 / 4, decoded.width)
+            }
+        }
+
+    @Test
     fun reencodesJpegAtMedium() =
         runTest {
             val src = makeJpeg(2000, 1500)

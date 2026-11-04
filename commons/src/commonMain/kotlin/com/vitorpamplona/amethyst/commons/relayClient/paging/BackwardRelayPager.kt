@@ -76,6 +76,10 @@ data class PagingStatus(
  *    relay callbacks here via [onEvent] / [onEose] / [onClosed] / [onCannotConnect], then re-issues
  *    its filter after [advance] / [advanceAll] return true.
  *  - **Which scope's cursors + which relays.** Supplied together by [bind].
+ *  - **Whether the scope may load at all.** The `isEnabled` gate passed to [bind] (e.g. the user turned
+ *    the protocol off in Settings › Messages). While it is false the pager refuses to advance and reports
+ *    [PagingStatus.exhausted] with no relays, so no window-limit marker or spinner asks for pages that
+ *    would never be requested. The owner calls [onEnabledChanged] when the gate flips.
  *
  * ### Done vs stalled (read [exhausted] with care)
  * A relay is **done** once it answers an empty page (gap-proof: nothing older). A relay that won't
@@ -109,6 +113,14 @@ class BackwardRelayPager(
     @Volatile
     private var relaysFor: () -> Collection<NormalizedRelayUrl>? = { null }
 
+    @Volatile
+    private var isEnabled: () -> Boolean = { true }
+
+    // Who the current binding is for (see [bind]'s `owner`), so [unbind] from an ended subscription
+    // leaves a binding a newer subscription made alone.
+    @Volatile
+    private var boundOwner: Any? = null
+
     // Relays not advancing for the active scope (auth CLOSE / unreachable / silent). Transient: cleared
     // and recomputed on each [bind]; a stalled relay is kept (its sub stays open) and retried on advance.
     private val stalledRelays = ConcurrentSet<NormalizedRelayUrl>()
@@ -135,22 +147,47 @@ class BackwardRelayPager(
 
     /**
      * Repoints to a scope (call on subscribe / when the active scope changes): its persistent
-     * [scopeCursors] (held on the caller's scope object), the [scope] for the silence watchdog, and the
-     * [relaysForScope] lookup. Resets the transient orchestration (in-flight, stalled) and recomputes
+     * [scopeCursors] (held on the caller's scope object), the [scope] for the silence watchdog, the
+     * [isEnabled] gate (false = this scope must not load at all) and the [relaysForScope] lookup. Resets the transient orchestration (in-flight, stalled) and recomputes
      * the display flows from the bound cursors — so a previously-paged scope restores its progress
      * instead of restarting.
+     *
+     * [owner] names the subscription this binding serves (the owner's subscription key: its user, or
+     * its id), for [unbind] when that subscription ends.
      */
     fun bind(
         scopeCursors: RelayLoadingCursors,
         scope: CoroutineScope,
+        isEnabled: () -> Boolean = { true },
+        owner: Any = scopeCursors,
         relaysForScope: () -> Collection<NormalizedRelayUrl>?,
     ) {
         cursors = scopeCursors
         relaysFor = relaysForScope
+        this.isEnabled = isEnabled
+        boundOwner = owner
         loadTracker.bind(scope)
         loadTracker.reset()
         stalledRelays.clear()
         publishStatus()
+    }
+
+    /**
+     * Lets go of the scope bound for [owner], when the subscription it served ended. The pager lives as
+     * long as the app, and what a binding holds (the cursors, the relay lookup and the gate, which
+     * capture the account or the conversation, and the account's scope) would otherwise stay reachable
+     * after the account logs out or the conversation closes, until some other scope is bound. A binding
+     * made since for another owner is left alone. The cursors keep their progress for the next [bind].
+     */
+    fun unbind(owner: Any) {
+        if (boundOwner != owner) return
+        boundOwner = null
+        cursors = null
+        relaysFor = { null }
+        isEnabled = { true }
+        loadTracker.unbind()
+        stalledRelays.clear()
+        _status.value = PagingStatus()
     }
 
     /**
@@ -161,6 +198,21 @@ class BackwardRelayPager(
      * scope identity (one per `Chatroom`/`ChatroomList`), so reference identity is the check.
      */
     fun isBoundTo(c: RelayLoadingCursors): Boolean = c === cursors
+
+    /**
+     * Re-reads the bound scope's `isEnabled` gate after it flipped. Turning it off also drops the
+     * in-flight and stalled tracking: the owner's REQ goes away with the gate, so those pages will never
+     * settle and would otherwise leave the spinner up until the silence watchdog fires. The pager itself
+     * keeps the cursors; turning a DM protocol off also unloads its messages, and ChatFeedToggles resets
+     * the cursors then, so turning it back on pages again from the newest.
+     */
+    fun onEnabledChanged() {
+        if (!isEnabled()) {
+            loadTracker.reset()
+            stalledRelays.clear()
+        }
+        publishStatus()
+    }
 
     // --- Filter building support: the caller assembles the actual REQ from these. ---
 
@@ -181,6 +233,7 @@ class BackwardRelayPager(
 
     /** Steps every not-done, not-in-flight relay of the active scope one page. For a scope too small to scroll. */
     fun advanceAll(): Boolean {
+        if (!isEnabled()) return false
         val relays = relaysFor() ?: return false
         var any = false
         relays.forEach { if (arm(it)) any = true }
@@ -189,8 +242,9 @@ class BackwardRelayPager(
     }
 
     // Moves one relay's cursor to its next page and marks it in-flight. Returns false if it can't advance
-    // (no scope bound, unknown relay, already fetching, or already done). Caller batches the recompute.
+    // (scope disabled, no scope bound, unknown relay, already fetching, or already done). Caller batches the recompute.
     private fun arm(relay: NormalizedRelayUrl): Boolean {
+        if (!isEnabled()) return false
         val c = cursors ?: return false
         val relays = relaysFor() ?: return false
         if (relay !in relays) return false
@@ -202,12 +256,16 @@ class BackwardRelayPager(
     }
 
     // --- Subscription callbacks: the owner forwards these from its SubscriptionListener. ---
+    // All of them are dropped while the scope is disabled: the owner resets the cursors when it turns
+    // the scope off, and a page still in flight at that moment would otherwise land on the fresh
+    // cursors — an empty one marking the relay done for good, a short one pinning its reached point.
 
     /** Records one delivered event for [relay] (a sign of life + a page tally entry). */
     fun onEvent(
         relay: NormalizedRelayUrl,
         createdAt: Long,
     ) {
+        if (!isEnabled()) return
         loadTracker.onActivity()
         cursors?.onEvent(relay, createdAt)
         stalledRelays.remove(relay)
@@ -215,6 +273,7 @@ class BackwardRelayPager(
 
     /** Finalizes [relay]'s page on EOSE. @return true if this EOSE is the one that marked it done. */
     fun onEose(relay: NormalizedRelayUrl): Boolean {
+        if (!isEnabled()) return false
         val c = cursors ?: return false
         stalledRelays.remove(relay)
         c.onEose(relay)
@@ -229,6 +288,7 @@ class BackwardRelayPager(
         relay: NormalizedRelayUrl,
         message: String,
     ) {
+        if (!isEnabled()) return
         loadTracker.onSettled(relay)
         markStalled(relay, "CLOSED: $message")
         publishStatus()
@@ -239,6 +299,7 @@ class BackwardRelayPager(
         relay: NormalizedRelayUrl,
         message: String,
     ) {
+        if (!isEnabled()) return
         loadTracker.onSettled(relay)
         markStalled(relay, "cannot connect: $message")
         publishStatus()
@@ -270,6 +331,11 @@ class BackwardRelayPager(
      * early-return), so a transient empty relay set never flips it spuriously.
      */
     private fun publishStatus() {
+        if (!isEnabled()) {
+            // A disabled scope has nothing reachable and no relays to show.
+            _status.value = PagingStatus(exhausted = true)
+            return
+        }
         val c = cursors
         val relays = relaysFor() ?: emptySet()
         val floor = floor()

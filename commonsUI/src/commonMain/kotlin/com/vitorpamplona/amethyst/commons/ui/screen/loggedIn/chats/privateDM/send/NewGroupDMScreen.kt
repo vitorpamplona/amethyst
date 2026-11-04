@@ -61,10 +61,13 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.drawing_open
 import com.vitorpamplona.amethyst.commons.resources.messages_cant_upload_explainer
 import com.vitorpamplona.amethyst.commons.resources.messages_cant_upload_title
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject
@@ -74,7 +77,7 @@ import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to_capt
 import com.vitorpamplona.amethyst.commons.resources.private_message
 import com.vitorpamplona.amethyst.commons.resources.record_a_video
 import com.vitorpamplona.amethyst.commons.resources.take_a_picture
-import com.vitorpamplona.amethyst.commons.resources.upload_image
+import com.vitorpamplona.amethyst.commons.resources.upload_media
 import com.vitorpamplona.amethyst.commons.resources.write_a_message
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
@@ -85,7 +88,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePictureButton
@@ -96,7 +99,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.ContentSensitivityExplainer
@@ -110,6 +112,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.location.AddGeoHashBu
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeoHashPostSection
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.MessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.PrepareLinkedImageMetadata
 import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.PreviewUrl
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
@@ -292,7 +295,7 @@ fun GroupDMScreenContent(
                             onAdd = { _, server, _, _, _, _, _ ->
                                 postViewModel.uploadAndHold(
                                     accountViewModel.toastManager::toast,
-                                    accountViewModel.host.mediaUploader,
+                                    accountViewModel.mediaUploader,
                                     onceUploaded = { },
                                 )
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
@@ -365,6 +368,8 @@ fun DisplayPreviews(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    PrepareLinkedImageMetadata(postViewModel.urlPreviews, postViewModel.iMetaAttachments, accountViewModel)
+
     val urlPreviews by postViewModel.urlPreviews.results.collectAsStateWithLifecycle(emptyList())
 
     if (postViewModel.uploadsWaitingToBeSent.isNotEmpty() || urlPreviews.isNotEmpty()) {
@@ -426,7 +431,7 @@ private fun BottomRowActions(
             ) {
                 Icon(
                     symbol = MaterialSymbols.AddPhotoAlternate,
-                    contentDescription = stringRes(id = Res.string.upload_image),
+                    contentDescription = stringRes(id = Res.string.upload_media),
                     modifier = Modifier.height(25.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -465,6 +470,26 @@ private fun BottomRowActions(
                 Icon(
                     symbol = MaterialSymbols.Videocam,
                     contentDescription = stringRes(id = Res.string.record_a_video),
+                    modifier = Modifier.height(22.dp),
+                    tint = MaterialTheme.colorScheme.placeholderText,
+                )
+            }
+        }
+
+        // Like the camera, it waits for a room: a drawing goes out as a file message to its members.
+        if (room != null) {
+            DrawingButton(accountViewModel, enabled = !postViewModel.isUploadingImage && !postViewModel.isUploadingFile) { drawing, alt ->
+                postViewModel.uploadDrawing(drawing, alt, accountViewModel.toastManager::toast)
+            }
+        } else {
+            IconButton(
+                onClick = {
+                    accountViewModel.toastManager.toast(Res.string.messages_cant_upload_title, Res.string.messages_cant_upload_explainer)
+                },
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Draw,
+                    contentDescription = stringRes(id = Res.string.drawing_open),
                     modifier = Modifier.height(22.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -550,10 +575,9 @@ fun SendDirectMessageTo(
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
+                spellCheck = true,
                 outputTransformation =
-                    UrlUserTagOutputTransformation(
-                        MaterialTheme.colorScheme.primary,
-                    ),
+                    rememberUrlUserTagOutputTransformation(),
                 colors =
                     OutlinedTextFieldDefaults.colors(
                         unfocusedBorderColor = Color.Transparent,
@@ -585,10 +609,9 @@ fun SendDirectMessageTo(
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
+                spellCheck = true,
                 outputTransformation =
-                    UrlUserTagOutputTransformation(
-                        MaterialTheme.colorScheme.primary,
-                    ),
+                    rememberUrlUserTagOutputTransformation(),
                 colors =
                     OutlinedTextFieldDefaults.colors(
                         unfocusedBorderColor = Color.Transparent,

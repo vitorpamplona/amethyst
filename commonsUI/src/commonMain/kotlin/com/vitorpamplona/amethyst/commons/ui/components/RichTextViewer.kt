@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserDisplayNickname
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
@@ -74,8 +75,8 @@ import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
+import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
@@ -118,6 +119,7 @@ fun RichTextViewer(
 
     Column(modifier = modifier) {
         if (remember(content) { CachedRichTextParser.isMarkdown(content) }) {
+            // Markdown hands the bleed only to the media on its top-level lines, not to lists or quotes.
             platform.Markdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
             return@Column
         }
@@ -146,6 +148,7 @@ fun RichTextViewer(
                 state = state,
                 canPreview = canPreview,
                 quotesLeft = quotesLeft,
+                authorPubKey = authorPubKey,
             )
         }
     }

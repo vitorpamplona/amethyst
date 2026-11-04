@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.commons.model.topNavFeeds
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.relays.dialableRelays
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isDialableFromOthers
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
@@ -48,8 +50,9 @@ class UsingRelayUnwrapper {
                 if (authorHex != null) {
                     val relays =
                         when (val noteEvent = outboxNote.note.event) {
-                            is AdvertisedRelayListEvent -> noteEvent.relaysNorm()
-                            is DmRelayListEvent -> noteEvent.relays()
+                            // Other users' lists: only the relays we may dial for them.
+                            is AdvertisedRelayListEvent -> noteEvent.relaysNorm().filter { it.isDialableFromOthers() }
+                            is DmRelayListEvent -> noteEvent.dialableRelays()
                             else -> emptySet()
                         }
 

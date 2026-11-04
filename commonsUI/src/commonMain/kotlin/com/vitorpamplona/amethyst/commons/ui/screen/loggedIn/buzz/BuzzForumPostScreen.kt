@@ -31,7 +31,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_forum_body_label
 import com.vitorpamplona.amethyst.commons.resources.buzz_forum_new_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_forum_post_action
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -55,6 +55,8 @@ import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -89,7 +91,7 @@ fun BuzzForumPostScreen(
                     .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = body,
                 onValueChange = {
                     body = it
@@ -144,6 +146,7 @@ fun BuzzForumPostScreen(
                             nav.popBack()
                         } catch (e: Exception) {
                             isPosting = false
+                            currentCoroutineContext().ensureActive()
                             error = "Failed to post: ${e.message ?: e::class.simpleName}"
                         }
                     }

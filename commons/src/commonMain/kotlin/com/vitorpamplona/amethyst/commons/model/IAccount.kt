@@ -115,6 +115,13 @@ interface IAccount {
     /** Set of followed user pubkeys (for feed ordering/highlighting) */
     fun followingKeySet(): Set<String>
 
+    /**
+     * The Web of Trust provider's score for [pubkey] (1..100), or null when it has none or no
+     * network is loaded. Lists of people sort on it after follows: the ones you follow, then the
+     * highest scores, then everyone else.
+     */
+    fun trustRankOf(pubkey: String): Int? = null
+
     fun isHidden(user: User): Boolean
 
     /** Chatroom list for private DM conversations */

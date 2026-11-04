@@ -63,6 +63,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.geocaches.log.LogGeocacheFindViewModel
+import com.vitorpamplona.amethyst.commons.geocaches.log.ScanOutcome
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -85,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_log_your_log
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
 import com.vitorpamplona.amethyst.commons.resources.route_log_geocache_find
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -124,7 +127,7 @@ fun LogGeocacheFindScreen(
     val scope = rememberCoroutineScope()
 
     remember(address) {
-        model.init(accountViewModel, address)
+        model.init(accountViewModel.account, address)
         true
     }
 
@@ -136,7 +139,7 @@ fun LogGeocacheFindScreen(
         GallerySelectSingle(imagesOnly = true) { media ->
             pickingPhoto = false
             if (media != null) {
-                scope.launch { model.uploadImage(media.uri, media.mimeType, accountViewModel.host.mediaUploader) }
+                scope.launch { model.uploadImage(media.uri, media.mimeType, accountViewModel.mediaUploader) }
             }
         }
     }
@@ -198,7 +201,7 @@ fun LogGeocacheFindScreen(
                 }
             }
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = model.message.value,
                 onValueChange = { model.message.value = it },
                 modifier = Modifier.fillMaxWidth(),

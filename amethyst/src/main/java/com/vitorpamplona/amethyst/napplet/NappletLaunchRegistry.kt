@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.napplet
 import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.RandomInstance
 
 /**
  * Main-process registry that binds a sandbox launch to its **trusted** identity + declared capability
@@ -69,11 +69,29 @@ object NappletLaunchRegistry {
     // LruCache is internally synchronized and access-ordered — the same
     // touch-on-resolve + evict-eldest-beyond-cap semantics the old access-ordered
     // LinkedHashMap + @Synchronized pair provided, without JVM-only APIs.
-    private val sessions = LruCache<String, Session>(MAX_SESSIONS)
+    private val sessions = EvictionReporting()
 
     // Browser tokens live apart: a page mints one per origin it touches, so a site cycling through
     // subdomains (a.x.com, b.x.com, …) could otherwise push every open napplet's token out of the cache.
-    private val browserSessions = LruCache<String, Session>(MAX_SESSIONS)
+    private val browserSessions = EvictionReporting()
+
+    /**
+     * Told each token the cap pushed out: a surface that never gave its token back (its process
+     * crashed) leaves what the main process keeps per token, and this is when that can go.
+     */
+    @Volatile
+    var onEvicted: ((token: String) -> Unit)? = null
+
+    private class EvictionReporting : LruCache<String, Session>(MAX_SESSIONS) {
+        override fun entryRemoved(
+            evicted: Boolean,
+            key: String,
+            oldValue: Session,
+            newValue: Session?,
+        ) {
+            if (evicted) NappletLaunchRegistry.onEvicted?.invoke(key)
+        }
+    }
 
     fun register(
         identity: NappletIdentity,
@@ -82,7 +100,8 @@ object NappletLaunchRegistry {
         browserOrigin: Boolean = false,
     ): String {
         val token = RandomInstance.bytes(32).toHexKey()
-        (if (browserOrigin) browserSessions else sessions).put(token, Session(identity.copy(instanceId = token), declared, accountPubKey))
+        // An inline run in a note comes with the instance id its note follows; any other gets the token.
+        (if (browserOrigin) browserSessions else sessions).put(token, Session(identity.copy(instanceId = identity.instanceId ?: token), declared, accountPubKey))
         return token
     }
 

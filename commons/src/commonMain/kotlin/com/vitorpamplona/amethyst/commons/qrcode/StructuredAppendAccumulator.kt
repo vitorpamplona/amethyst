@@ -50,9 +50,17 @@ class StructuredAppendAccumulator(
      * Feeds one decoded part in.
      *
      * Returns the joined payload once every part has been seen, or null while the sequence is
-     * still incomplete. A part from a different sequence, or one arriving after [timeoutMs] of
-     * silence, restarts the accumulation rather than corrupting it — someone who gives up
-     * halfway and points the camera at a different code should not get a splice of the two.
+     * still incomplete. A part from a different sequence, one arriving after [timeoutMs] of
+     * silence, or one that disagrees with the part already held at its index restarts the
+     * accumulation rather than corrupting it — someone who gives up halfway and points the camera
+     * at a different code should not get a splice of the two.
+     *
+     * The id alone cannot tell two sequences apart: for QR it is the one-byte parity of the whole
+     * message, so two different 3-part codes share an id one time in 256. A conflicting part at
+     * an index catches that (both posters in view). The parity itself is deliberately not
+     * enforced on the joined text: it is taken over encoded bytes the decoded text no longer
+     * shows, generators disagree on it, and rejecting a fully captured code on a disagreement
+     * would make it unreadable with nothing to tell the user why.
      */
     fun add(
         result: ScanResult,
@@ -63,6 +71,13 @@ class StructuredAppendAccumulator(
         val id = result.sequenceId
         val stale = nowMs - lastUpdateMs > timeoutMs
         if (id != sequenceId || expected != result.sequenceSize || stale) {
+            reset()
+            sequenceId = id
+            expected = result.sequenceSize
+        }
+
+        val held = parts[result.sequenceIndex]
+        if (held != null && held != result.text) {
             reset()
             sequenceId = id
             expected = result.sequenceSize
@@ -85,6 +100,14 @@ class StructuredAppendAccumulator(
         reset()
         return joined.toString()
     }
+
+    /**
+     * Whether [part] belongs to the sequence being collected. False while idle.
+     *
+     * Lets a caller with several sequences in view feed only one of them: feeding parts of two
+     * sequences in turn makes each restart the other, and neither ever completes.
+     */
+    fun isCurrentSequence(part: ScanResult): Boolean = expected != 0 && part.sequenceId == sequenceId && part.sequenceSize == expected
 
     /**
      * Drops a half-captured sequence whose parts stopped arriving, and says whether it did.

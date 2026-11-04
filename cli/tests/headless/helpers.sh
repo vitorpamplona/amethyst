@@ -95,6 +95,23 @@ short_socket_path() {
   printf '%s/%s.sock' "$dir" "$(basename "$(dirname "$path")")"
 }
 
+# An IPv4 amy routes to: not loopback, RFC 1918 or link-local — the ranges
+# RelayUrlNormalizer.isLocalHost drops from other people's relay lists.
+is_routable_ipv4() {
+  [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 1
+  case "$1" in 0.*|10.*|127.*|169.254.*|192.168.*) return 1 ;; esac
+  [[ ! $1 =~ ^172\.(1[6-9]|2[0-9]|3[01])\. ]]
+}
+
+# The first routable IPv4 on any interface.
+detect_routing_host() {
+  local addr
+  for addr in $( { hostname -I 2>/dev/null; ip -4 -o addr show 2>/dev/null | awk '{print $4}'; ifconfig 2>/dev/null | awk '/inet /{print $2}'; } | tr ' ' '\n' | sed 's#/.*##'); do
+    is_routable_ipv4 "$addr" && { printf '%s\n' "$addr"; return 0; }
+  done
+  return 1
+}
+
 # --- embedded relay (amy serve → geode) --------------------------------------
 # Every relay-backed harness talks to ONE loopback relay, and that relay is
 # `amy serve` — i.e. geode, the relay this repo ships — booted from the amy
@@ -105,11 +122,11 @@ short_socket_path() {
 #
 # Callers set (before sourcing or at least before calling):
 #   AMY_BIN      amy launcher (built via `./gradlew :cli:installDist`)
-#   RELAY_HOST   host clients connect to. The harnesses use 127.0.0.2 for
-#                parity with each other; note that Quartz's isLocalHost()
-#                treats all of 127.0.0.0/8 as loopback, so it does NOT
-#                survive the NIP-17 / NIP-65 relay-list parsers any better
-#                than 127.0.0.1 does.
+#   RELAY_HOST   host clients connect to. Quartz's isLocalHost() treats all
+#                of 127.0.0.0/8 as loopback, so a relay there does not survive
+#                the NIP-17 / NIP-65 relay-list parsers (see is_routable_ipv4).
+#                Harnesses whose checks read another account's lists pick a
+#                routable address with detect_routing_host.
 #   RELAY_BIND   optional bind address; defaults to $RELAY_HOST. Set to
 #                0.0.0.0 when a device on the LAN must reach the relay.
 #   RELAY_PORT   listen port

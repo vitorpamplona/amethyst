@@ -32,6 +32,9 @@ import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
+import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
+import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -41,14 +44,16 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
@@ -83,17 +88,27 @@ val UserProfilePostKinds2 =
         BirdexEvent.KIND,
         EntityRatingEvent.KIND,
         PublicationIndexEvent.KIND,
+        EbookEvent.KIND,
+        MagazineEvent.KIND,
+        MagazineIssueEvent.KIND,
     )
 
 // NIP-5A nsites (15128/35128) and NIP-5D napplets (15129/35129) the user publishes, surfaced in
-// the profile "Apps" tab. Fetching them only populates the cache; execution stays sandboxed.
+// the profile "Apps" tab, plus the NIP-34 git repository announcements (30617) behind the
+// profile "Repos" tab. Fetching them only populates the cache; execution stays sandboxed.
 val UserProfileAppKinds =
     listOf(
         RootSiteEvent.KIND,
         NamedSiteEvent.KIND,
         RootNappletEvent.KIND,
         NamedNappletEvent.KIND,
+        GitRepositoryEvent.KIND,
     )
+
+// The user's Jester chess events (kind 30), for the games they ended. Relays cannot filter on
+// the content, so this takes their latest moves and the profile keeps only the endings. Never
+// bare kind 30 without an author: NKBIP-03 shares the kind.
+val UserProfileChessKinds = listOf(JesterProtocol.KIND)
 
 fun filterUserProfilePosts(
     cache: ICacheProvider,
@@ -136,6 +151,17 @@ fun filterUserProfilePosts(
                         kinds = UserProfileAppKinds,
                         authors = listOf(user.pubkeyHex),
                         limit = 50,
+                        since = since?.get(relay)?.time,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    ExplainedFilter(
+                        purpose = SubPurpose.USER_PROFILE,
+                        kinds = UserProfileChessKinds,
+                        authors = listOf(user.pubkeyHex),
+                        limit = 100,
                         since = since?.get(relay)?.time,
                     ),
             ),

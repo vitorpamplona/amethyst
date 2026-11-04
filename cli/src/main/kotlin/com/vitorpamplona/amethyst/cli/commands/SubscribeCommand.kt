@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
@@ -87,7 +88,7 @@ object SubscribeCommand {
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        if (event.verify()) Output.emit(Output.mapper.readTree(event.toJson()))
+                        if (event.verify()) Output.emit(CliJson.parse(event.toJson()))
                     }
                 }
 

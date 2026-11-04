@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.Context
 import android.net.Uri
 import android.os.Looper
+import com.davotoula.lightcompressor.CompressionHandle
 import com.davotoula.lightcompressor.VideoCompressor
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
@@ -113,7 +114,7 @@ class MediaCompressorTest {
             val uri = mockk<Uri>()
             val contentType = "video"
 
-            every { VideoCompressor.start(any(), any(), any(), any(), any(), any()) } returns Unit
+            every { VideoCompressor.start(any(), any(), any(), any(), any(), any()) } returns mockk<CompressionHandle>(relaxed = true)
 
             // Execution
             MediaCompressor().compress(

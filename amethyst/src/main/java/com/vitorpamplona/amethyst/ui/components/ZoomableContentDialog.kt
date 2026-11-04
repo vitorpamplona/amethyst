@@ -27,9 +27,6 @@ import android.os.Looper
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
@@ -52,22 +49,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.util.lerp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
@@ -89,10 +79,19 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.localJavaFile
+import com.vitorpamplona.amethyst.commons.ui.components.LocalZoomSourceGroup
 import com.vitorpamplona.amethyst.commons.ui.components.SlidingCarousel
+import com.vitorpamplona.amethyst.commons.ui.components.ViewerBackButton
+import com.vitorpamplona.amethyst.commons.ui.components.ViewerControlsRow
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
 import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewerControlsVisibility
+import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomTransition
+import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceFor
+import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionContainer
+import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionLayer
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.video.isHlsMedia
@@ -101,8 +100,6 @@ import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import net.engawapg.lib.zoomable.ZoomState
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
@@ -111,67 +108,32 @@ import net.engawapg.lib.zoomable.zoomable
 fun ZoomableImageDialog(
     imageUrl: BaseMediaContent,
     allImages: ImmutableList<BaseMediaContent> = listOf(imageUrl).toImmutableList(),
-    sourceBounds: Rect? = null,
+    source: ZoomSourceAnchor? = null,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
+    sourceCornerRadius: Dp = 0.dp,
 ) {
-    // Animation progress: 0f = at source position/size, 1f = fullscreen.
-    val progress = remember { Animatable(0f) }
-    var isExiting by remember { mutableStateOf(false) }
+    val pagerState: PagerState =
+        rememberPagerState(initialPage = allImages.indexOf(imageUrl).coerceAtLeast(0)) { allImages.size }
 
-    // Natural layout bounds of the currently-visible image/video inside the dialog.
-    // Used as the "target" of the grow animation so the image itself — not the dialog
-    // viewport — aligns with the tapped thumbnail at progress = 0.
-    var imageBounds by remember { mutableStateOf<Rect?>(null) }
+    // The grow-from-thumbnail transition, shared with the desktop viewer. It closes into the
+    // thumbnail of the media on screen, not the one tapped: after paging to another image, that
+    // one's own thumbnail, or a fade when the note doesn't show it.
+    val group = LocalZoomSourceGroup.current
+    val transition =
+        rememberZoomTransition(
+            source = { zoomSourceFor(allImages.getOrNull(pagerState.currentPage), imageUrl, source, group) },
+            sourceCornerRadius = sourceCornerRadius,
+            onDismissed = onDismiss,
+        )
 
     // ZoomState of the currently-visible image, hoisted from RenderImageOrVideo so the
     // grow/shrink animation can read live scale/offset and start the exit from the
     // image's actual on-screen bounds when the user has zoomed in.
     var currentZoomState by remember { mutableStateOf<ZoomState?>(null) }
 
-    // Start the enter animation as soon as valid image bounds are available. Without
-    // this gate, the animation can begin before onGloballyPositioned has reported real
-    // bounds and the graphicsLayer falls back to its alpha-only branch.
-    LaunchedEffect(Unit) {
-        snapshotFlow { imageBounds }
-            .filter { it != null && it.width > 0f && it.height > 0f }
-            .first()
-        progress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-        )
-    }
-
-    LaunchedEffect(isExiting) {
-        if (isExiting) {
-            progress.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
-            )
-            onDismiss()
-        }
-    }
-
-    val dismissWithAnimation: () -> Unit = { if (!isExiting) isExiting = true }
-    val progressProvider: () -> Float = { progress.value }
-
-    // Accept the first set of valid bounds unconditionally. Subsequent updates are
-    // only accepted while the progress Animatable is idle, so a layout change
-    // mid-transition (e.g. an async image finishing loading, or a pager settling)
-    // can't re-target the transform and cause a hiccup.
-    val updateImageBounds: (Rect) -> Unit = { newBounds ->
-        if (newBounds.width > 0f && newBounds.height > 0f) {
-            val current = imageBounds
-            if (current == null) {
-                imageBounds = newBounds
-            } else if (!progress.isRunning && current != newBounds) {
-                imageBounds = newBounds
-            }
-        }
-    }
-
     Dialog(
-        onDismissRequest = dismissWithAnimation,
+        onDismissRequest = transition::dismiss,
         properties =
             DialogProperties(
                 usePlatformDefaultWidth = true,
@@ -219,19 +181,16 @@ fun ZoomableImageDialog(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .graphicsLayer { alpha = progressProvider() },
+                        .graphicsLayer { alpha = transition.progress },
             ) {}
 
             DialogContent(
                 allImages = allImages,
                 imageUrl = imageUrl,
-                sourceBounds = sourceBounds,
-                imageBounds = { imageBounds },
-                onImageBoundsChanged = updateImageBounds,
+                pagerState = pagerState,
+                transition = transition,
                 currentZoomState = { currentZoomState },
                 onZoomStateChanged = { currentZoomState = it },
-                progress = progressProvider,
-                onDismiss = dismissWithAnimation,
                 accountViewModel = accountViewModel,
             )
         }
@@ -242,16 +201,15 @@ fun ZoomableImageDialog(
 private fun DialogContent(
     allImages: ImmutableList<BaseMediaContent>,
     imageUrl: BaseMediaContent,
-    sourceBounds: Rect?,
-    imageBounds: () -> Rect?,
-    onImageBoundsChanged: (Rect) -> Unit,
+    pagerState: PagerState,
+    transition: ZoomTransition,
     currentZoomState: () -> ZoomState?,
     onZoomStateChanged: (ZoomState) -> Unit,
-    progress: () -> Float,
-    onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    val pagerState: PagerState = rememberPagerState { allImages.size }
+    val onContentPositioned: (LayoutCoordinates, Float?) -> Unit = transition::onMediaPositioned
+    val onDismiss: () -> Unit = transition::dismiss
+
     val sharePopupExpanded = remember { mutableStateOf(false) }
     val controllerVisible = rememberViewerControlsVisibility(holdOpen = sharePopupExpanded.value)
 
@@ -271,7 +229,7 @@ private fun DialogContent(
                         controllerVisible.value = !controllerVisible.value
                     }
                 },
-            ),
+            ).zoomTransitionContainer(transition),
         Alignment.TopCenter,
     ) {
         // Transformed image/video container. Only this layer scales & translates so the
@@ -280,55 +238,7 @@ private fun DialogContent(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .graphicsLayer {
-                        val src = sourceBounds
-                        val img = imageBounds()
-                        if (src != null && img != null && src.hasArea() && img.hasArea()) {
-                            // Account for user-applied zoom: the exit animation must start from
-                            // the visible bounds, not the unzoomed layout bounds — otherwise
-                            // dismissing a zoomed-in image jumps.
-                            val zoomed = img.zoomedBy(currentZoomState())
-                            // Uniform scale so non-square images keep their aspect ratio during
-                            // the grow animation. The image covers the source rect; the overflow
-                            // is clipped below.
-                            val startScale = coverScale(src, zoomed)
-                            val p = progress()
-                            val scale = lerp(startScale, 1f, p)
-                            val tx = lerp(src.center.x - startScale * zoomed.center.x, 0f, p)
-                            val ty = lerp(src.center.y - startScale * zoomed.center.y, 0f, p)
-
-                            transformOrigin = TransformOrigin(0f, 0f)
-                            scaleX = scale
-                            scaleY = scale
-                            translationX = tx
-                            translationY = ty
-
-                            if (p < 1f) {
-                                // The thumbnail may be a crop of the image (e.g. a square gallery
-                                // cell showing a 4:3 photo). Clip to a window that morphs from the
-                                // thumbnail's rect into the whole viewport, so the transition opens
-                                // from and closes into exactly what was on screen. The viewport (not
-                                // the measured image) is the end state so there is nothing to snap
-                                // when the clip turns off at p = 1, where pager neighbours must show.
-                                // Window coordinates, mapped back into this layer's pre-transform
-                                // space. A layer outline, not a draw-phase clip, so animating it
-                                // doesn't re-record the pager's display list every frame.
-                                shape =
-                                    RectClipShape(
-                                        Rect(
-                                            left = (lerp(src.left, 0f, p) - tx) / scale,
-                                            top = (lerp(src.top, 0f, p) - ty) / scale,
-                                            right = (lerp(src.right, size.width, p) - tx) / scale,
-                                            bottom = (lerp(src.bottom, size.height, p) - ty) / scale,
-                                        ),
-                                    )
-                                clip = true
-                            }
-                        } else {
-                            // No source bounds: fall back to a plain fade.
-                            alpha = progress()
-                        }
-                    },
+                    .zoomTransitionLayer(transition, currentZoomState),
         ) {
             if (allImages.size > 1) {
                 SlidingCarousel(
@@ -343,8 +253,8 @@ private fun DialogContent(
                                 isFiniteHeight = true,
                                 controllerVisible = controllerVisible,
                                 accountViewModel = accountViewModel,
-                                onContentBoundsChanged =
-                                    if (isCurrent) onImageBoundsChanged else null,
+                                onContentPositioned =
+                                    if (isCurrent) onContentPositioned else null,
                                 onZoomStateChanged =
                                     if (isCurrent) onZoomStateChanged else null,
                             )
@@ -359,7 +269,7 @@ private fun DialogContent(
                         isFiniteHeight = true,
                         controllerVisible = controllerVisible,
                         accountViewModel = accountViewModel,
-                        onContentBoundsChanged = onImageBoundsChanged,
+                        onContentPositioned = onContentPositioned,
                         onZoomStateChanged = onZoomStateChanged,
                     )
                 }
@@ -371,7 +281,7 @@ private fun DialogContent(
             enter = fadeIn(),
             exit = fadeOut(),
             // Also fade with the grow animation so controls appear/disappear alongside it.
-            modifier = Modifier.graphicsLayer { alpha = progress().coerceIn(0f, 1f) },
+            modifier = Modifier.graphicsLayer { alpha = transition.progress.coerceIn(0f, 1f) },
         ) {
             ViewerControlsRow {
                 ViewerBackButton(onDismiss)
@@ -468,37 +378,13 @@ internal suspend fun saveMediaToGallery(
     }
 }
 
-private fun Rect.hasArea() = width > 0f && height > 0f
-
-/**
- * The image's on-screen bounds after the user's pinch zoom: the zoomable scales
- * uniformly around the layout center, then offsets.
- */
-private fun Rect.zoomedBy(zoom: ZoomState?): Rect {
-    val zScale = zoom?.scale ?: 1f
-    val halfWidth = width * zScale / 2f
-    val halfHeight = height * zScale / 2f
-    val centerX = center.x + (zoom?.offsetX ?: 0f)
-    val centerY = center.y + (zoom?.offsetY ?: 0f)
-    return Rect(centerX - halfWidth, centerY - halfHeight, centerX + halfWidth, centerY + halfHeight)
-}
-
-/** Uniform scale at which [image] covers [source] in both dimensions. */
-private fun coverScale(
-    source: Rect,
-    image: Rect,
-): Float = maxOf(source.width / image.width, source.height / image.height)
-
-/** Clips a layer to a fixed [rect] in its own coordinates, regardless of the layer's size. */
-private class RectClipShape(
-    private val rect: Rect,
-) : Shape {
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density,
-    ): Outline = Outline.Rectangle(rect)
-}
+// A video's measured shape beats its `dim` (see MediaAspectRatioCache.videoRatio); images have none.
+private fun BaseMediaContent.aspectRatioOrNull(): Float? =
+    when (this) {
+        is MediaUrlContent -> MediaAspectRatioCache.videoRatio(url, dim?.aspectRatioOrNull())
+        is MediaPreloadedContent -> localJavaFile?.let { MediaAspectRatioCache.videoRatio(it.toUri().toString(), dim?.aspectRatioOrNull()) } ?: dim?.aspectRatioOrNull()
+        else -> dim?.aspectRatioOrNull()
+    }
 
 @Composable
 private fun RenderImageOrVideo(
@@ -507,7 +393,7 @@ private fun RenderImageOrVideo(
     isFiniteHeight: Boolean,
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
-    onContentBoundsChanged: ((Rect) -> Unit)? = null,
+    onContentPositioned: ((LayoutCoordinates, aspectRatio: Float?) -> Unit)? = null,
     onZoomStateChanged: ((ZoomState) -> Unit)? = null,
 ) {
     val contentScale =
@@ -518,10 +404,10 @@ private fun RenderImageOrVideo(
         }
 
     val rowModifier =
-        if (onContentBoundsChanged != null) {
+        if (onContentPositioned != null) {
             Modifier
                 .fillMaxWidth()
-                .onGloballyPositioned { onContentBoundsChanged(it.boundsInWindow()) }
+                .onGloballyPositioned { onContentPositioned(it, content.aspectRatioOrNull()) }
         } else {
             Modifier.fillMaxWidth()
         }
@@ -566,7 +452,7 @@ private fun RenderImageOrVideo(
                         Modifier.fillMaxWidth()
                     }
 
-                val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(content.url)
+                val ratio = MediaAspectRatioCache.videoRatio(content.url, content.dim?.aspectRatioOrNull())
                 val modifier =
                     if (ratio != null) {
                         Modifier.aspectRatio(ratio)
@@ -627,7 +513,7 @@ private fun RenderImageOrVideo(
                     }
 
                 content.localJavaFile?.let {
-                    val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(it.toUri().toString())
+                    val ratio = MediaAspectRatioCache.videoRatio(it.toUri().toString(), content.dim?.aspectRatioOrNull())
 
                     val modifier =
                         if (ratio != null) {

@@ -45,7 +45,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.commons.ui.components.collectContentWarningReasons
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
+import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.note.types.FileMetadataAttachmentCard
 import com.vitorpamplona.amethyst.commons.ui.note.types.toMediaContent
@@ -72,6 +72,9 @@ fun FileMetadataCardCompose(
         // Image content
         FileMetadataCardImage(baseNote, event, backgroundColor, accountViewModel)
 
+        // Title and content
+        FileMetadataCardCaption(event)
+
         // Reactions row
         ReactionsRow(
             baseNote = baseNote,
@@ -81,9 +84,6 @@ fun FileMetadataCardCompose(
             accountViewModel = accountViewModel,
             nav = nav,
         )
-
-        // Title and content
-        FileMetadataCardCaption(event)
     }
 }
 
@@ -125,7 +125,8 @@ private fun FileMetadataCardImage(
     }
 
     val isImage = content is MediaUrlImage
-    val ratio = dimensions?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(fullUrl)
+    // A video's measured shape beats its `dim`, which can be wrong (see MediaAspectRatioCache.videoRatio).
+    val ratio = MediaAspectRatioCache.videoRatio(fullUrl, dimensions?.aspectRatioOrNull())
 
     ContentWarningGate(
         isSensitive = isSensitive,

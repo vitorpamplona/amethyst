@@ -40,10 +40,10 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensible
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.LocalCurrentExternalScope
 import com.vitorpamplona.amethyst.commons.ui.note.platform.rememberUrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.screen.RefresheableFeedView
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.url.dal.UrlFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.url.datasource.UrlFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthWithHorzPadding
+import com.vitorpamplona.amethyst.commons.url.dal.UrlFeedViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 

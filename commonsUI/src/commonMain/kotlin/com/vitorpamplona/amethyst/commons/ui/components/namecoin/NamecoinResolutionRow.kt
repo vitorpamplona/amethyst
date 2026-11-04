@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -49,11 +50,26 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_badge
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_invalid_identifier
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_malformed_pubkey
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_malformed_record
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_no_nostr_field
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_no_record
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_resolving
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_servers_unreachable
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_timeout
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_unknown_error
+import com.vitorpamplona.amethyst.commons.search.SearchSegment
+import com.vitorpamplona.amethyst.commons.search.SearchTokenizer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
@@ -81,22 +97,33 @@ fun mapOutcomeToResolveState(outcome: NamecoinResolveOutcome): NamecoinResolveSt
         is NamecoinResolveOutcome.NameNotFound -> NamecoinResolveState.NotFound
 
         is NamecoinResolveOutcome.NoNostrField ->
-            NamecoinResolveState.Error("${outcome.name} is registered but has no Nostr pubkey")
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.NoNostrField(outcome.name))
 
         is NamecoinResolveOutcome.MalformedRecord ->
             // Surface the parser detail verbatim so the publisher of the
             // broken record can locate the bad byte
             // (kotlinx.serialization includes a column number).
-            NamecoinResolveState.Error("${outcome.name} record is malformed: ${outcome.error}")
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.MalformedRecord(outcome.name, outcome.error))
 
         is NamecoinResolveOutcome.ServersUnreachable ->
-            NamecoinResolveState.Error("ElectrumX servers unreachable — check your connection or try again")
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.ServersUnreachable)
 
         is NamecoinResolveOutcome.InvalidIdentifier ->
-            NamecoinResolveState.Error("Invalid Namecoin identifier")
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.InvalidIdentifier)
 
         NamecoinResolveOutcome.Timeout ->
-            NamecoinResolveState.Error("Resolution timed out — servers may be slow, try again")
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.Timeout)
+    }
+
+@Composable
+private fun NamecoinResolveState.Reason.text(): String =
+    when (this) {
+        is NamecoinResolveState.Reason.NoNostrField -> stringRes(Res.string.namecoin_resolution_no_nostr_field, name)
+        is NamecoinResolveState.Reason.MalformedRecord -> stringRes(Res.string.namecoin_resolution_malformed_record, name, detail)
+        NamecoinResolveState.Reason.ServersUnreachable -> stringRes(Res.string.namecoin_resolution_servers_unreachable)
+        NamecoinResolveState.Reason.InvalidIdentifier -> stringRes(Res.string.namecoin_resolution_invalid_identifier)
+        NamecoinResolveState.Reason.Timeout -> stringRes(Res.string.namecoin_resolution_timeout)
+        is NamecoinResolveState.Reason.Other -> message ?: stringRes(Res.string.namecoin_resolution_unknown_error)
     }
 
 /**
@@ -125,14 +152,40 @@ fun looksLikeNamecoinIdentifier(raw: String): Boolean {
 }
 
 /**
+ * The single Namecoin term [searchInput] asks to resolve, or null when
+ * the field holds anything but one bare identifier.
+ *
+ * The search field speaks the search token language
+ * ([com.vitorpamplona.amethyst.commons.search.SearchTokenizer]): a seeded
+ * chip — the `kind:git ` the Git Repositories search icon pre-populates,
+ * an author filter, a date bound — is a segment of its own, separate
+ * from the word typed after it. Gating on the raw string glued the
+ * segments together, so `kind:git mstrofnone.bit` was looked up as
+ * `d/kind:git mstrofnone` and the row reported "No record for
+ * kind:git mstrofnone.bit", a record nobody asked for, on top of the
+ * actual search results. Only a lone plain word ([SearchSegment.Text])
+ * that itself passes [looksLikeNamecoinIdentifier] is resolved; a
+ * compound query is a search, not a lookup, and the row stays out of
+ * its way.
+ */
+fun namecoinLookupTerm(searchInput: String): String? {
+    val trimmed = searchInput.trim().removePrefix("@")
+    if (trimmed.isEmpty() || trimmed.any(Char::isWhitespace)) return null
+    if (SearchTokenizer.tokenize(trimmed).singleOrNull() !is SearchSegment.Text) return null
+    return trimmed.takeIf(::looksLikeNamecoinIdentifier)
+}
+
+/**
  * Inline Namecoin resolution indicator + result row. Designed to be
  * mounted alongside any text input whose local-cache prefix search can
  * race ahead of an on-chain `.bit` lookup (the onchain-zap recipient
  * field and the global search bar both have this race).
  *
  * Behaviour:
- *  - Renders nothing when [searchInput] is not a Namecoin-shaped
- *    identifier (`.bit`, `d/<name>`, or `id/<name>`).
+ *  - Renders nothing when [searchInput] is not one bare Namecoin-shaped
+ *    identifier (`.bit`, `d/<name>`, or `id/<name>`) — see
+ *    [namecoinLookupTerm], which keeps seeded search chips like
+ *    `kind:git ` out of the lookup.
  *  - Shows a small spinner row ("Resolving on Namecoin…") while the
  *    ElectrumX lookup is in flight (after a 300 ms debounce to match
  *    typical input-field debounce intervals).
@@ -159,21 +212,20 @@ fun NamecoinResolutionRow(
     onUserResolved: (User) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val trimmed = remember(searchInput) { searchInput.trim().removePrefix("@") }
-    if (!looksLikeNamecoinIdentifier(trimmed)) return
+    val term = remember(searchInput) { namecoinLookupTerm(searchInput) } ?: return
 
     var state by remember { mutableStateOf<NamecoinResolveState?>(null) }
     val resolver = LocalAppServices.current.namecoinResolver
 
-    LaunchedEffect(trimmed) {
+    LaunchedEffect(term) {
         // Match UserSuggestionState's 300 ms debounce so we don't fire a
         // lookup on every keystroke.
         delay(300)
         state = NamecoinResolveState.Loading
         val outcome =
             withContext(Dispatchers.IO) {
-                runCatching {
-                    resolver.resolveDetailed(trimmed)
+                runCatchingCancellable {
+                    resolver.resolveDetailed(term)
                 }.getOrElse {
                     NamecoinResolveOutcome.ServersUnreachable(
                         it.message ?: it::class.simpleName ?: "Lookup error",
@@ -190,10 +242,10 @@ fun NamecoinResolutionRow(
     Column(modifier = modifier) {
         Spacer(Modifier.size(8.dp))
         when (val s = state) {
-            null, NamecoinResolveState.Loading -> ResolvingChip(trimmed)
-            is NamecoinResolveState.Resolved -> ResolvedRow(trimmed, s, accountViewModel, onUserResolved)
-            NamecoinResolveState.NotFound -> FailedRow("No record for $trimmed on Namecoin.")
-            is NamecoinResolveState.Error -> FailedRow(s.message)
+            null, NamecoinResolveState.Loading -> ResolvingChip(term)
+            is NamecoinResolveState.Resolved -> ResolvedRow(term, s, accountViewModel, onUserResolved)
+            NamecoinResolveState.NotFound -> FailedRow(stringRes(Res.string.namecoin_resolution_no_record, term))
+            is NamecoinResolveState.Error -> FailedRow(s.reason.text())
         }
     }
 }
@@ -216,7 +268,7 @@ private fun ResolvingChip(query: String) {
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = "Resolving $query on Namecoin…",
+                text = stringRes(Res.string.namecoin_resolution_resolving, query),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -242,8 +294,7 @@ private fun ResolvedRow(
         }
     if (user == null) {
         FailedRow(
-            "${state.result.namecoinName} record is malformed: " +
-                "pubkey ${state.result.pubkey} is not a valid hex key",
+            stringRes(Res.string.namecoin_resolution_malformed_pubkey, state.result.namecoinName, state.result.pubkey),
         )
         return
     }
@@ -306,7 +357,7 @@ private fun NamecoinBadge() {
                 modifier = Modifier.size(14.dp),
             )
             Text(
-                text = "Namecoin",
+                text = stringRes(Res.string.namecoin_resolution_badge),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                 fontWeight = FontWeight.SemiBold,
@@ -333,12 +384,16 @@ private fun FailedRow(message: String) {
                 tint = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.size(18.dp),
             )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.background(MaterialTheme.colorScheme.errorContainer),
-            )
+            // Selectable so the diagnostic (server detail, parser column, name)
+            // can be copied into a bug report or checked against another client.
+            SelectionContainer {
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.errorContainer),
+                )
+            }
         }
     }
 }

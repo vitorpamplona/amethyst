@@ -36,6 +36,32 @@ class BlossomPaymentException(
 ) : RuntimeException("Payment required by $server: ${payment.reason ?: "402 Payment Required"}")
 
 /**
+ * Thrown when a Blossom server refuses an upload because it already holds an image it finds
+ * perceptually identical: nostr.download answers 409 with `X-Identical-Media` naming that blob.
+ * [existingHash] is a different blob (other bytes, the same picture as far as the server can
+ * tell), and the server will not take this one, so the caller either uses that copy or moves on.
+ */
+class BlossomIdenticalMediaException(
+    val server: String,
+    val existingHash: HexKey,
+    val reason: String?,
+) : RuntimeException("$server already holds an identical image, $existingHash" + (reason?.let { ": $it" } ?: "")) {
+    companion object {
+        const val IDENTICAL_MEDIA_HEADER = "X-Identical-Media"
+
+        /** The blob a refusal names: a 409 whose [header] is a sha256, or null for any other answer. */
+        fun existingHashOf(
+            status: Int,
+            header: String?,
+        ): HexKey? {
+            if (status != 409) return null
+            val hash = header?.trim()?.lowercase() ?: return null
+            return hash.takeIf { it.length == 64 && it.all { c -> c in '0'..'9' || c in 'a'..'f' } }
+        }
+    }
+}
+
+/**
  * Thrown by [BlossomClient.mirror] when a server does not implement the BUD-04
  * `/mirror` endpoint. Blossom has no capability-discovery mechanism (BUD-04 defines
  * none), so the only reliable signal is the status of the `PUT /mirror` itself:

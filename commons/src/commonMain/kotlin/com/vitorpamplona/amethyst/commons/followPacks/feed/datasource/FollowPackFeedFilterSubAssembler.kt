@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
+import com.vitorpamplona.quartz.utils.mapOfSet
 
 class FollowPackFeedFilterSubAssembler(
     client: INostrClient,
@@ -38,30 +39,39 @@ class FollowPackFeedFilterSubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         if (keys.isEmpty()) return emptyList()
-        return keys.flatMap {
-            val followPack = it.followPack.event
-            if (followPack is StarterPackEvent) {
-                val filter =
-                    if (it.account.proxyRelayList.flow.value
-                            .isEmpty()
-                    ) {
-                        AllUserFollowsByOutboxTopNavFilter(
-                            authors = followPack.followIdSet(),
-                            defaultRelays = it.account.defaultGlobalRelays.flow,
-                            blockedRelays = it.account.blockedRelayList.flow,
-                        ).startValue(it.account.cache)
-                    } else {
-                        AllUserFollowsByProxyTopNavFilter(
-                            authors = followPack.followIdSet(),
-                            proxyRelays = it.account.proxyRelayList.flow.value,
-                        ).startValue(it.account.cache)
-                    }
 
-                filterHomePostsByAuthors(filter, since, null, null)
-            } else {
-                emptyList()
+        val authorSets =
+            keys.mapNotNull {
+                val followPack = it.followPack.event as? StarterPackEvent ?: return@mapNotNull null
+                if (it.account.proxyRelayList.flow.value
+                        .isEmpty()
+                ) {
+                    AllUserFollowsByOutboxTopNavFilter(
+                        authors = followPack.followIdSet(),
+                        defaultRelays = it.account.defaultGlobalRelays.flow,
+                        blockedRelays = it.account.blockedRelayList.flow,
+                    ).startValue(it.account.cache)
+                } else {
+                    AllUserFollowsByProxyTopNavFilter(
+                        authors = followPack.followIdSet(),
+                        proxyRelays = it.account.proxyRelayList.flow.value,
+                    ).startValue(it.account.cache)
+                }
             }
-        }
+
+        // One cursor per relay is shared by every follow pack opened on it: a relay whose set of
+        // authors grows is asked for the newcomers' history from scratch.
+        val relaySince =
+            sinceDroppingGrownRelays(
+                mapOfSet {
+                    authorSets.forEach { authorSet ->
+                        authorSet.set.forEach { (relay, filter) -> filter.authors.forEach { add(relay, it) } }
+                    }
+                },
+                since,
+            )
+
+        return authorSets.flatMap { filterHomePostsByAuthors(it, relaySince, null, null) }
     }
 
     override fun distinct(key: FollowPackFeedQueryState) = key.followPack.idHex

@@ -5,7 +5,7 @@ embedded relay (`amy serve`, i.e. **geode**, the relay this repo ships), live
 public servers, or no relay at all, depending on the suite. No suite depends on
 an external relay binary or a Rust toolchain for its relay: every relay-backed
 harness boots geode from the `amy` binary it already built, so the relay under
-test is the same server code that runs in production. Eleven directories:
+test is the same server code that runs in production. Twelve directories:
 
 ```
 cli/tests/
@@ -16,6 +16,9 @@ cli/tests/
 │   └── blossom-live.sh
 ├── cache/                 # local-store-as-cache semantics (profile show
 │   └── cache-headless.sh  #   cache/refresh, store stat) vs embedded `amy serve`
+├── chess/                 # Jester chess: scripted mate, refused moves, bot vs
+│   ├── chess-headless.sh  #   bot, direct challenge vs embedded `amy serve`
+│   └── chess-ui.sh        # bots vs the desktop app on a local relay (watch/play)
 ├── clink/                 # CLINK pointer decode — local-only, no relay
 │   └── clink-headless.sh
 ├── dm/                    # NIP-17 DM interop (amy ↔ amy) vs embedded `amy serve`
@@ -33,6 +36,10 @@ cli/tests/
 │   ├── tests-extras.sh             # tests 09, 10, 12, 13
 │   ├── tests-media.sh              # tests 20-29 (avatar, edits, deletions,
 │   │                               #   media v2, retention, disband)
+├── emoji/                 # NIP-30 emoji packs: create/add/import (folder, zip,
+│   └── emoji-headless.sh  #   list) vs embedded `amy serve` + a throwaway Blossom server
+├── notes/                 # social loop (post/show/feed/reply/react/repost/quote/
+│   └── notes-headless.sh  #   thread/notifications/delete) vs embedded `amy serve`
 ├── nests/                 # Audio-rooms interop (Amethyst ↔ nostrnests.com)
 │   ├── nests-interop.sh            # 47-test manual harness
 │   └── README.md                   # operator brief + per-test matrix
@@ -75,6 +82,29 @@ Suite notes:
 - **`cache/cache-headless.sh`** proves the local store is the source of
   truth for reads: `profile show` served from cache vs `--refresh`, and
   `store stat` reporting the right histogram, vs the embedded `amy serve` relay.
+- **`emoji/emoji-headless.sh`** drives `amy emoji` between two accounts
+  against `amy serve`, with `marmot/blossom-server.py` as the Blossom server:
+  pack create/list (and `exists` on a reused `d` tag), public and private
+  `add` with skip/`--replace`, `import` from a folder (file-name shortcodes,
+  `_2` for repeats, existing shortcodes skipped before upload, `--dry-run`),
+  from a `.zip` (non-images and `__MACOSX/` ignored, the blob really on the
+  server) and from a `shortcode url` list; the other account reads the pack
+  without its private emojis, `use`s and `unuse`s it, and can't edit it; then
+  `remove`, `pack edit` and `pack delete`.
+- **`notes/notes-headless.sh`** runs the core social loop between two
+  accounts in separate `$HOME`s against `amy serve`: `notes post` (with `t`
+  tagging) → `notes show` / `notes feed --hashtag` from the other account →
+  `reply` / `react` / `repost` / `quote` → `notes thread` laid out from the
+  leaf → the author's `notifications` (reply, reaction, repost, quote-as-mention,
+  `--type` narrowing) → `delete` refused for someone else's note, honoured by
+  the relay for your own. A second section runs two more relays on a
+  non-private IPv4 (amy drops loopback/RFC 1918 relays from other people's
+  lists, so routing needs one; auto-detected, or `--routing-host IP`) and
+  checks the outbox model: replies, reactions, reposts and mentions reach the
+  other account's inbox relay, deletions reach both relays, a NIP-25 reaction
+  to a reply is a notification, and a reply deleted while one relay was down
+  stays out of the thread when that relay comes back. Without such an address
+  the section is skipped; `sudo ip addr add 192.0.2.2/32 dev lo` provides one.
 - **`relaygroup/relaygroup-headless.sh`** runs NIP-29 create/message/join/
   list/browse against an embedded relay (`amy serve`, which boots geode) —
   no external relay binary. geode doesn't sign 39000-39003, so browse/info
@@ -179,7 +209,7 @@ ancestor). Override with `MDK_PIN=<sha>` to test another MDK.
 > These harnesses previously targeted `marmot-protocol/whitenoise-rs`, which was
 > archived on 2026-08-05 pinned to `mdk-core 0.8.0`. Testing against it meant
 > testing against a frozen MIP-era client. The reference moved into `mdk`, and
-> so did we — see `quartz/plans/2026-09-08-marmot-spec-resync.md` for what that
+> so did we — see marmot-kmp's `marmot/plans/2026-09-08-marmot-spec-resync.md` for what that
 > change exposed.
 
 ## What gets tested
@@ -212,13 +242,19 @@ ancestor). Override with `MDK_PIN=<sha>` to test another MDK.
 | dm-05 | File message reference mode round-trip (kind:15 with manual key/nonce) |
 | dm-06 | `dm list --since` filters out older messages (window-slide past the newest event returns 0) |
 
-**Relay binding note:** the DM harness binds the loopback relay to
-`127.0.0.2` (not `127.0.0.1`) because Quartz's `RelayTag.parse` rejects
-localhost URLs via `isLocalHost()` — so `ws://127.0.0.1` in a kind:10050
-event is silently stripped during recipient-relay resolution, which
-would make strict-mode DM sends spuriously fail. `127.0.0.2` is still
-pure loopback and isn't matched by that filter. Override with
-`--host 127.0.0.5` etc. if `127.0.0.2` is taken.
+**Relay binding note:** Quartz's `RelayTag.parse` drops loopback, RFC 1918
+and link-local relays (`isLocalHost()`, all of `127.0.0.0/8` included) from
+other people's relay lists, so a kind:10050 inbox on such a relay never
+reaches A's recipient-relay resolution and strict-mode sends fail with
+`no_dm_relays`. The DM harness therefore runs its relay on the first IPv4
+outside those ranges it finds on an interface, or on `--host IP`. Without
+one it falls back to `127.0.0.2` and records dm-01/02/05/06 as skipped
+(dm-03/04 still run). Any host can provide an address on loopback:
+
+```bash
+sudo ip addr add 192.0.2.2/32 dev lo     # Linux
+sudo ifconfig lo0 alias 192.0.2.2 up     # macOS
+```
 
 **macOS:** Linux answers every `127.0.0.0/8` address on `lo`; macOS only
 answers `127.0.0.1` until you add an alias, once per boot:

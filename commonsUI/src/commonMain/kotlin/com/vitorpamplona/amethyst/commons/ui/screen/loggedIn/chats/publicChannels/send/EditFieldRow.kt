@@ -54,7 +54,7 @@ import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.chat_composer_hint
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPickerButton
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentListOf
@@ -214,19 +215,23 @@ fun EditFieldRow(
                 }
             },
             leadingIcon = {
-                SelectFromGallery(
-                    isUploading = channelScreenModel.isUploadingImage,
-                    tint = MaterialTheme.colorScheme.placeholderText,
-                    modifier = Modifier.height(32.dp).padding(start = 2.dp),
-                    onImageChosen = channelScreenModel::pickedMedia,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SelectFromGallery(
+                        isUploading = channelScreenModel.isUploadingImage,
+                        tint = MaterialTheme.colorScheme.placeholderText,
+                        modifier = Modifier.height(32.dp).padding(start = 2.dp),
+                        onImageChosen = channelScreenModel::pickedMedia,
+                    )
+                    EmojiPickerButton(channelScreenModel.emojiSuggestions?.emojiPacks, channelScreenModel.message, tint = MaterialTheme.colorScheme.placeholderText)
+                }
             },
             colors =
                 TextFieldDefaults.colors(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
-            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+            spellCheck = true,
+            outputTransformation = rememberUrlUserTagOutputTransformation(),
         )
     }
 }

@@ -65,6 +65,29 @@ abstract class SingleSubEoseManager<T>(
         latestEOSEs.remove(relay)
     }
 
+    /** What [sinceDroppingGrownRelays] remembers each relay's filters last covered. */
+    private val keysPerRelay = MergedAuthorTracker()
+
+    /**
+     * [clearEoseFor] on every relay whose set of keys in [current] gained a member since the last
+     * assembly, and [since] without those relays, for the filters being assembled right now — the
+     * map handed in is a copy-on-write snapshot, so clearing the cursor alone would not reach them.
+     *
+     * For subclasses that serve several entities (profiles, communities, repositories, …) from this
+     * one subscription: the second one opened on a relay would otherwise be asked only for what is
+     * newer than the first one's EOSE, and its history would never be requested at all.
+     */
+    protected fun sinceDroppingGrownRelays(
+        current: Map<NormalizedRelayUrl, Collection<String>>,
+        since: SincePerRelayMap?,
+    ): SincePerRelayMap? {
+        // Every relay goes through gainedAuthors, so each one's set is recorded, grown or not.
+        val grown = current.filter { (relay, keys) -> keysPerRelay.gainedAuthors(relay, keys) }.keys
+        if (grown.isEmpty()) return since
+        grown.forEach(::clearEoseFor)
+        return since?.filterKeys { it !in grown }?.toMutableMap()
+    }
+
     open fun newEose(
         relay: NormalizedRelayUrl,
         time: Long,

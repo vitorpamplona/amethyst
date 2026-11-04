@@ -31,11 +31,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -70,6 +75,10 @@ fun ChatRowTypeIcon(
  * kind: the relay a NIP-29 group lives on, the Concord community a channel belongs to, the cordn
  * coordinator. No fill — it reads as a caption of the title, not as a second title. Capped at
  * [ChatLabelMaxWidth] with a middle ellipsis so it never crowds the room name out.
+ *
+ * When [onClick] is set, only a tap that lands on the label itself reaches it. The whole row opens the
+ * chat, which is what a tap almost always means; Compose would otherwise grow this ~16dp-tall target
+ * to the 48dp minimum touch size, and that slop covers the room name and the preview line around it.
  */
 @Composable
 fun ChatRowLabel(
@@ -78,14 +87,29 @@ fun ChatRowLabel(
     contentDescription: String? = null,
     onClick: (() -> Unit)? = null,
 ) {
+    if (onClick == null) {
+        ChatRowLabelContent(symbol, text, contentDescription, Modifier)
+    } else {
+        val viewConfiguration = LocalViewConfiguration.current
+        val exactTouchTarget = remember(viewConfiguration) { ExactTouchTargetViewConfiguration(viewConfiguration) }
+        CompositionLocalProvider(LocalViewConfiguration provides exactTouchTarget) {
+            ChatRowLabelContent(symbol, text, contentDescription, Modifier.clip(MaterialTheme.shapes.small).clickable(onClick = onClick))
+        }
+    }
+}
+
+@Composable
+private fun ChatRowLabelContent(
+    symbol: MaterialSymbol,
+    text: String,
+    contentDescription: String?,
+    clickModifier: Modifier,
+) {
     val color = MaterialTheme.colorScheme.placeholderText
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(3.dp),
-        modifier =
-            Modifier
-                .widthIn(max = ChatLabelMaxWidth)
-                .then(if (onClick != null) Modifier.clip(MaterialTheme.shapes.small).clickable(onClick = onClick) else Modifier),
+        modifier = Modifier.widthIn(max = ChatLabelMaxWidth).then(clickModifier),
     ) {
         Icon(
             symbol = symbol,
@@ -102,6 +126,16 @@ fun ChatRowLabel(
             overflow = TextOverflow.MiddleEllipsis,
         )
     }
+}
+
+/**
+ * The platform's [ViewConfiguration] minus the minimum-touch-target expansion, so a pointer target
+ * small enough to sit inside a larger clickable only accepts taps within its own bounds.
+ */
+private class ExactTouchTargetViewConfiguration(
+    base: ViewConfiguration,
+) : ViewConfiguration by base {
+    override val minimumTouchTargetSize: DpSize get() = DpSize.Zero
 }
 
 /**

@@ -138,6 +138,9 @@ class RelayGroupChannel(
     @Volatile
     private var allMembers: Set<HexKey> = emptySet()
 
+    /** Members and admins, as of the last roster event. */
+    fun memberKeys(): Set<HexKey> = allMembers
+
     private fun recomputeAllMembers() {
         allMembers = if (admins.isEmpty()) members else members + admins.mapTo(HashSet()) { it.pubKey }
         // Who is in the channel decides which names collide there.
@@ -313,11 +316,14 @@ class RelayGroupChannel(
      */
     fun toNAddr(): String? {
         val relaySelf = event?.pubKey ?: return null
-        return NAddress.create(GroupMetadataEvent.KIND, relaySelf, groupId.id, groupId.relayUrl)
+        return NAddress.createOrNull(GroupMetadataEvent.KIND, relaySelf, groupId.id, groupId.relayUrl)
     }
 
     /** Number of known members (admins are members too). */
     fun memberCount(): Int = allMembers.size
+
+    /** Whether the relay-signed roster (39001/39002) has arrived, so [membershipOf] reflects the relay. */
+    fun hasRoster(): Boolean = membersUpdatedAt > 0 || adminsUpdatedAt > 0
 
     /** Every known member and admin. The set is replaced, never mutated, when the roster changes. */
     fun allMemberKeys(): Set<HexKey> = allMembers

@@ -91,6 +91,21 @@
 #
 # secp256k1-kmp is already covered by the `-keep class fr.acinq.secp256k1.**`
 # rule mirrored from mobile above.
+# JCEF (Chromium for napplets): libjcef.so calls back into org.cef.* by name, for handlers,
+# callbacks and the native-side fields of browsers and requests; jcefmaven reads its bundle
+# metadata through gson. None of it may be stripped or renamed.
+-keep class org.cef.** { *; }
+-keep class me.friwi.jcefmaven.** { *; }
+-keep class com.jogamp.** { *; }
+-dontwarn org.cef.**
+-dontwarn com.jogamp.**
+-dontwarn me.friwi.jcefmaven.**
+# jcefmaven unpacks its bundle with commons-compress (tar + gzip only); the xz, brotli, zstd and
+# pack200 (ASM) codecs it can also reach are optional and absent. JOGL's NEWT can drive SWT and
+# JavaFX windows; JCEF's windowed browser uses neither.
+-dontwarn org.apache.commons.compress.**
+-dontwarn jogamp.**
+
 -keep class androidx.sqlite.** { *; }
 -keepclassmembers class androidx.sqlite.** {
     native <methods>;
@@ -100,6 +115,31 @@
 -keepclassmembers class pt.davidafsilva.apple.** {
     native <methods>;
 }
+
+# java-keyring's Linux backend: the Secret Service (GNOME Keyring, KWallet's
+# Secret Service) over D-Bus, through de.swiesend:secret-service
+# (org.freedesktop.secret) and dbus-java (org.freedesktop.dbus). Shrinking
+# breaks it three ways (the signed hkdf jar it also needs is handled in
+# build.gradle.kts, after the ProGuard task):
+#   - dbus-java finds its socket transport through ServiceLoader
+#     (META-INF/services/...ITransportProvider -> NativeTransportProvider), so
+#     shrink saw no caller and emptied the transport jar. With no transport the
+#     backend failed to open, java-keyring reported no backend at all, and every
+#     Linux release build fell back to the console-password file store, which a
+#     GUI app cannot answer: no keyring prompt, and no key kept.
+#   - D-Bus calls go through reflective proxies of the remote interfaces, and
+#     structs are (de)serialised from their fields by reflection.
+#   - java-keyring builds each backend by reflection (getConstructor()).
+-keep class com.github.javakeyring.** { *; }
+-keep class org.freedesktop.dbus.** { *; }
+-keep class org.freedesktop.secret.** { *; }
+# SimpleCollection also talks to GNOME Keyring's own D-Bus interface (creating and
+# unlocking a collection), a reflective proxy like the ones above.
+-keep class org.gnome.keyring.** { *; }
+
+# Rodio (nucleus.rodio, behind composemediaplayer-audio): the native player reports playback
+# events and errors back through JNI callbacks that shrinking would see as unused.
+-keep class dev.nucleusframework.rodio.** { *; }
 
 # kmp-tor — loads native Tor daemon via JNI reflection
 -keep class io.matthewnelson.** { *; }
@@ -131,20 +171,6 @@
 -dontoptimize
 
 # ============================================================================
-# Desktop-only: Jackson — mobile module does not ship Jackson on Android
-# ============================================================================
-# Jackson uses reflection extensively at construction time (ObjectMapper,
-# JsonMapper, SerializationConfig, DeserializationConfig). The
-# `-keep enum **` rule above already covers `values()`/`valueOf()`; this
-# block also keeps the annotation/databind/core/kotlin-module classes
-# intact and silences value-class MethodHandle warnings.
--keep class com.fasterxml.jackson.databind.** { *; }
--keep class com.fasterxml.jackson.annotation.** { *; }
--keep class com.fasterxml.jackson.core.** { *; }
--keep class com.fasterxml.jackson.module.kotlin.** { *; }
--dontwarn com.fasterxml.jackson.module.kotlin.**
-
-# ============================================================================
 # Desktop-only: full JNA — mobile narrows JNA because Android has no AWT
 # ============================================================================
 # On desktop we run a real JVM with AWT, so VLCj / kmp-tor / etc. can use
@@ -159,6 +185,22 @@
 -dontwarn com.sun.jna.internal.Cleaner$*
 
 # ============================================================================
+# Desktop-only: Lucene Hunspell — the built-in spell checker
+# ============================================================================
+# lucene-core picks implementations at runtime (MethodHandles lookups of the
+# multi-release Panama classes, SPI for codecs), which shrinking cannot see.
+# The Hunspell path is small, but kept whole so a release build cannot drop
+# what only reflection reaches. The vector API is an incubator module the
+# packaged runtime does not include; Lucene falls back without it.
+-keep class org.apache.lucene.** { *; }
+-dontwarn org.apache.lucene.**
+-dontwarn jdk.incubator.vector.**
+# lucene-analysis-common also bundles the Snowball stemmers, which spell
+# checking never reaches; shrinking drops them, so their MethodHandle use
+# needs no keep.
+-dontwarn org.tartarus.snowball.**
+
+# ============================================================================
 # Desktop-only: VLCj — discovery providers loaded via ServiceLoader
 # ============================================================================
 # VLCj enumerates implementations of
@@ -171,6 +213,44 @@
 -keepclassmembers class * implements uk.co.caprica.vlcj.factory.discovery.provider.DiscoveryProvider {
     public <init>(...);
 }
+
+# ============================================================================
+# Desktop-only: kdroidfilter ComposeMediaPlayer — JNI natives registered
+# from the bundled Swift dylib's JNI_OnLoad via a fixed RegisterNatives
+# table. Shrink sees no Java callsites for some natives (e.g. nGetVolume)
+# and strips the declarations, so RegisterNatives fails with
+# NoSuchMethodError during System.load() at first video init on macOS.
+# ============================================================================
+-keep class io.github.kdroidfilter.** { *; }
+-keepclassmembers class io.github.kdroidfilter.** {
+    native <methods>;
+}
+
+# Any library can bind its natives from JNI_OnLoad with RegisterNatives, which
+# fails for the whole table when one declaration is missing, and shrink cannot
+# see those callers. Keep every native of every class that is kept anyway; the
+# declarations cost nothing. verifyJniNativesSurviveProguard checks it holds.
+-keepclassmembers class * {
+    native <methods>;
+}
+
+# ============================================================================
+# Desktop-only: vico charts — Kotlin interface default-method super-calls.
+# MutableCartesianMeasuringContext implements both MeasuringContext and
+# CartesianMeasuringContext (which extends it), and its getPixels()/isLtr()
+# bodies are `invokespecial MeasuringContext.<default>` calls. The JVM
+# requires an invokespecial interface-method target to be a *direct*
+# superinterface of the class — but shrink prunes the "redundant" direct
+# MeasuringContext implements edge (reachable via CartesianMeasuringContext),
+# producing bytecode the verifier rejects at class-load time:
+#   java.lang.VerifyError: Bad invokespecial instruction: interface method
+#   reference is in an indirect superinterface
+# on the first notifications-chart composition. Confirmed by diffing the
+# proguarded bundle against the pristine com.patrykandpatrick.vico:
+# compose-desktop:3.3.1 artifact. Package-wide keep pins the hierarchy;
+# which edge the shrinker deems redundant can shift with any vico bump.
+# ============================================================================
+-keep class com.patrykandpatrick.vico.** { *; }
 
 # ============================================================================
 # Desktop-only: OkHttp / Conscrypt / BouncyCastle / OpenJSSE / Graal
@@ -202,7 +282,30 @@
 -dontwarn org.slf4j.**
 
 # ============================================================================
+# Desktop-only: PDFBox (PDF rendering) and its commons-logging
+# ============================================================================
+# PDFBox logs through Apache commons-logging, which ships adapters for log4j 1/2, Avalon,
+# LogKit and servlet containers. None of those are on our classpath; commons-logging only
+# uses an adapter whose backend it finds at runtime, and otherwise falls back to
+# java.util.logging. It discovers the implementation by class name, so keep it whole.
+-keep class org.apache.commons.logging.** { *; }
+-dontwarn org.apache.commons.logging.**
+-dontwarn org.apache.avalon.**
+-dontwarn org.apache.log.**
+-dontwarn org.apache.log4j.**
+-dontwarn org.apache.logging.log4j.**
+-dontwarn javax.servlet.**
+-dontwarn jakarta.servlet.**
+# IOUtils unmaps buffers through MethodHandle.invokeExact, a signature-polymorphic call
+# ProGuard cannot resolve against the library class.
+-dontwarn org.apache.pdfbox.io.IOUtils
+
+# ============================================================================
 # Kotlin 2.3 stdlib stubs — compile-time classes with no JVM runtime class
 # ============================================================================
 -dontwarn kotlin.concurrent.atomics.**
 -dontwarn kotlin.jvm.internal.EnhancedNullability
+
+# apksig is left out of the desktop app (build.gradle.kts): only the CLI's release publishing
+# (commons' ApkInspector, kept by the com.vitorpamplona.amethyst.** rule) refers to it.
+-dontwarn com.android.apksig.**

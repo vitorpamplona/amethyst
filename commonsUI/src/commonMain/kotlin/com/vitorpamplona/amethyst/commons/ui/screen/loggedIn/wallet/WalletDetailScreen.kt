@@ -30,10 +30,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -57,16 +58,20 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.wallet
+import com.vitorpamplona.amethyst.commons.resources.wallet_hide_balances
+import com.vitorpamplona.amethyst.commons.resources.wallet_no_transactions
 import com.vitorpamplona.amethyst.commons.resources.wallet_receive
 import com.vitorpamplona.amethyst.commons.resources.wallet_sats
 import com.vitorpamplona.amethyst.commons.resources.wallet_send
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions
+import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_view_all
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+
+private const val TRANSACTION_PREVIEW_COUNT = 5
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,14 +86,17 @@ fun WalletDetailScreen(
 
     val balance by walletViewModel.balanceSats.collectAsState()
     val walletAlias by walletViewModel.walletAlias.collectAsState()
-    val isLoading by walletViewModel.isLoading.collectAsState()
     val error by walletViewModel.error.collectAsState()
+    val allTransactions by walletViewModel.filteredTransactions.collectAsState()
     val wallets by walletViewModel.wallets.collectAsState()
+    val hideBalance by accountViewModel.settings.uiSettingsFlow.hideWalletBalances
+        .collectAsState()
     val walletName = wallets.firstOrNull { it.id == walletId }?.name ?: stringRes(Res.string.wallet)
 
     LaunchedEffect(walletId) {
         walletViewModel.fetchBalance()
         walletViewModel.fetchInfo()
+        walletViewModel.fetchTransactions()
     }
 
     Scaffold(
@@ -103,6 +111,22 @@ fun WalletDetailScreen(
                         )
                     }
                 },
+                actions = {
+                    IconButton(onClick = {
+                        accountViewModel.settings.uiSettingsFlow.hideWalletBalances
+                            .tryEmit(!hideBalance)
+                    }) {
+                        Icon(
+                            symbol =
+                                if (hideBalance) {
+                                    MaterialSymbols.Visibility
+                                } else {
+                                    MaterialSymbols.VisibilityOff
+                                },
+                            contentDescription = stringRes(Res.string.wallet_hide_balances),
+                        )
+                    }
+                },
             )
         },
     ) { padding ->
@@ -111,14 +135,21 @@ fun WalletDetailScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(24.dp),
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Balance display
-            if (isLoading && balance == null) {
-                CircularProgressIndicator(modifier = Modifier.size(48.dp))
+            if (hideBalance) {
+                Text(
+                    text = BALANCE_DOTS,
+                    fontSize = 48.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            } else if (balance == null) {
+                BalanceDots(pulsing = true)
             } else {
                 val formattedBalance =
                     remember(balance) {
@@ -130,12 +161,12 @@ fun WalletDetailScreen(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
-                Text(
-                    text = stringRes(Res.string.wallet_sats),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
+            Text(
+                text = stringRes(Res.string.wallet_sats),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             // Error
             if (error != null) {
@@ -147,7 +178,7 @@ fun WalletDetailScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Action buttons
             Row(
@@ -194,9 +225,39 @@ fun WalletDetailScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
-            // Transactions button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringRes(Res.string.wallet_transactions),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            if (allTransactions.isEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = stringRes(Res.string.wallet_no_transactions),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                allTransactions.take(TRANSACTION_PREVIEW_COUNT).forEach { tx ->
+                    TransactionItem(
+                        tx = tx,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             OutlinedButton(
                 onClick = { nav.nav(Route.WalletTransactions(walletId)) },
                 modifier =
@@ -211,7 +272,7 @@ fun WalletDetailScreen(
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringRes(Res.string.wallet_transactions))
+                Text(stringRes(Res.string.wallet_transactions_view_all))
             }
 
             Spacer(modifier = Modifier.height(24.dp))

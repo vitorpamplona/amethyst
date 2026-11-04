@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.moderation.notifications
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -192,6 +194,7 @@ class NucleusNotificationDispatcher(
                         }
                     }
                 } catch (_: Throwable) {
+                    currentCoroutineContext().ensureActive()
                     _permission.value
                 }
             }

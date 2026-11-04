@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache.Re
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
@@ -109,8 +110,10 @@ class PollResultsUiState(
  *
  * Reads the live tally off the poll [Note] — no second cache — and turns it into rows the UI can
  * render without doing set arithmetic in composition. Every rebuild after the first runs on
- * [computeContext] (Default): a busy poll emits one tally per vote consumed, and re-sorting thousands
- * of voters that many times on the UI thread would drop frames for the whole drain. The only
+ * [computeContext]: a busy poll emits one tally per vote consumed, and re-sorting thousands of
+ * voters that many times on the UI thread would drop frames for the whole drain. It is IO, not
+ * Default, because the rebuild reads [User]s and calls the account's mute check, both of which can
+ * wait on locks, and Default has only one thread per core. The only
  * interactive state is [selectedOption], which scopes the voter list without touching the summary.
  *
  * Muting is applied here rather than in the tally: a muted voter still counts toward the totals
@@ -126,7 +129,7 @@ class PollResultsViewModel(
     hiddenChanges: Flow<Any?>,
     private val loader: PollResponseLoader? = null,
     // Injected so tests can drive both on the test scheduler; production never passes them.
-    private val computeContext: CoroutineContext = Dispatchers.Default,
+    private val computeContext: CoroutineContext = Dispatchers.IO,
     private val loadContext: CoroutineContext = Dispatchers.IO,
 ) : ViewModel() {
     companion object {
@@ -152,7 +155,7 @@ class PollResultsViewModel(
             viewModelScope.launch(loadContext) {
                 val poll = awaitPollEvent()
                 completeness.value = CompletenessState(running = true)
-                val report = runCatching { loader.load(poll) }.getOrNull()
+                val report = runCatchingCancellable { loader.load(poll) }.getOrNull()
                 completeness.value = CompletenessState(running = false, report = report)
             }
         }

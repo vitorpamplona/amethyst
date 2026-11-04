@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.images
 
+import com.vitorpamplona.amethyst.commons.service.images.hasSubThresholdGifFrameDelay
 import okio.Buffer
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

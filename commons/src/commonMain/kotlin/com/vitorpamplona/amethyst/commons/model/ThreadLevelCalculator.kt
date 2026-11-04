@@ -60,6 +60,13 @@ object ThreadLevelCalculator {
 
         val noteAuthor = note.author
 
+        val rootSignature =
+            LevelSignature(
+                signature = "/" + formattedDateTime(createdAt) + note.idHex.substring(0, 8) + ";",
+                createdAt = createdAt,
+                author = noteAuthor,
+            )
+
         if (
             note.event is RepostEvent ||
             note.event is GenericRepostEvent ||
@@ -67,12 +74,12 @@ object ThreadLevelCalculator {
             replyTo == null ||
             replyTo.isEmpty()
         ) {
-            return LevelSignature(
-                signature = "/" + formattedDateTime(createdAt) + note.idHex.substring(0, 8) + ";",
-                createdAt = createdAt,
-                author = noteAuthor,
-            )
+            return rootSignature
         }
+
+        // Reply links can form a cycle (two articles `a`-tagging each other, an article tagging
+        // itself): a note met again while its own signature is being computed reads as a root.
+        cachedSignatures[note] = rootSignature
 
         val parent =
             (
@@ -134,6 +141,8 @@ object ThreadLevelCalculator {
             return 0
         }
 
+        // A cycle in the reply links reads the note being computed as a root instead of recursing forever.
+        cachedLevels[note] = 0
         val thisLevel =
             replyTo.maxOf {
                 cachedLevels[it] ?: replyLevel(it, cachedLevels)

@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routeForUser
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05VerifState
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
@@ -64,7 +65,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.WatchAuthor
@@ -81,10 +81,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.nip05
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.firstTaggedAddress
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
-import com.vitorpamplona.quartz.nip01Core.tags.people.firstTaggedUserId
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
 import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -194,7 +191,9 @@ fun RotateStatuses(
     DisplayStatus(statuses[indexToDisplay], accountViewModel, nav)
 
     if (statuses.size > 1) {
-        LaunchedEffect(Unit) {
+        // Keyed like the index above: a new list gets a new index, and a loop still holding the
+        // old one would rotate a state nobody reads while this one stayed on its first status.
+        LaunchedEffect(statuses) {
             while (true) {
                 delay(10.seconds)
                 indexToDisplay = (indexToDisplay + 1) % statuses.size
@@ -260,9 +259,9 @@ fun DisplayStatus(
         text,
         event.dTag(),
         event.firstTaggedUrl()?.ifBlank { null },
-        event.firstTaggedAddress(),
-        event.firstTaggedEvent(),
-        event.firstTaggedUserId(),
+        event.referencedAddressId()?.let { Address.parse(it) },
+        event.referencedEventId(),
+        event.referencedProfile(),
         emojis,
         accountViewModel,
         nav,
@@ -275,7 +274,7 @@ fun DisplayStatusInner(
     type: String,
     url: String?,
     nostrATag: Address?,
-    nostrETag: ETag?,
+    nostrEventId: HexKey?,
     nostrPTag: String?,
     emojis: ImmutableMap<String, String>,
     accountViewModel: AccountViewModel,
@@ -354,8 +353,8 @@ fun DisplayStatusInner(
             }
         }
 
-        nostrETag != null -> {
-            LoadNote(baseNoteHex = nostrETag.eventId) {
+        nostrEventId != null -> {
+            LoadNote(baseNoteHex = nostrEventId) {
                 if (it != null) {
                     Spacer(modifier = StdHorzSpacer)
                     IconButton(

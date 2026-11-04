@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.user
 
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast
+import com.vitorpamplona.amethyst.commons.relays.dialableWriteRelays
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -42,7 +43,7 @@ fun pickRelaysToLoadUsers(
         users.forEachIndexed { _, key ->
             val tried = (hasTried.since(key)?.keys ?: emptySet()) + cannotConnectRelays
 
-            val outbox = key.authorRelayList()?.writeRelaysNorm()
+            val outbox = key.authorRelayList()?.dialableWriteRelays()
 
             if (!outbox.isNullOrEmpty()) {
                 // If there is a home, get from it.

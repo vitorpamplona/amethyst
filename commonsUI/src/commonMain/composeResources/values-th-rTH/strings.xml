@@ -642,12 +642,9 @@
     <string name="wallet_connect_connect_app">เชื่อมต่อกระเป๋าเงิน</string>
     <string name="see_relay_feed">ดูฟีด relay</string>
     <string name="pledge_amount_in_sats">จำนวนเงินที่นำเข้าในหน่วย sat</string>
-    <string name="poll_option_description">คำอธิบายตัวเลือกในโพลล์</string>
     <string name="poll_zap_value_min">Zap ขั้นต่ำ</string>
     <string name="poll_zap_value_max">Zap สูงสุด</string>
     <string name="poll_consensus_threshold">ฉันทามติ</string>
-    <string name="poll_closing_date_time">วันและเวลาปิดโพล</string>
-    <string name="poll_closing_in">โพลปิดใน %1$s</string>
     <string name="looking_for_event">กำลังมองหา Event %1$s</string>
     <string name="send_zap">ส่ง Zap</string>
     <string name="custom_zaps_add_a_message">เพิ่มในข้อความสาธรณะ</string>
@@ -696,7 +693,6 @@
     <string name="uploading_state_hashing">กำลังแฮช</string>
     <string name="uploading_state_finished">เสร็จสิ้น</string>
     <string name="uploading_state_error">ข้อผิดพลาด</string>
-    <string name="connect_via_tor1">ปรับแต่ง</string>
     <string name="connect_via_tor2">การตั้งค่า Tor</string>
     <string name="yes">ใช่</string>
     <string name="no">ไม่</string>
@@ -772,7 +768,6 @@
     <string name="show_sensitive_content_explainer">แสดงข้อความเตือนเมื่อผู้เขียนโพสต์ทำเครื่องหมายว่าเป็นเนื้อหาที่ละเอียดอ่อน</string>
     <string name="max_hashtag_limit_title">จำนวน hashtag สูงสุดต่อโพสต์</string>
     <string name="max_hashtag_limit_explainer">ซ่อนโพสต์ที่มี hashtag มากกว่าขีดจำกัดนี้ ตั้งเป็น 0 เพื่อปิดใช้งาน</string>
-    <string name="new_reaction_symbol">สัญลักษณ์ Reaction ใหม่</string>
     <string name="zapraiser">ระดมทุน</string>
     <string name="zapraiser_explainer">เพิ่มจํานวนเป้าหมายของ sats ที่จะเพิ่มสําหรับโพสต์นี้ การสนับสนุนไคลเอนต์อาจแสดงสิ่งนี้เป็นแถบความคืบหน้าเพื่อจูงใจการบริจาค</string>
     <string name="zapraiser_target_amount_in_sats">จำนวนเป้าหมายในหน่วย Sats</string>
@@ -915,9 +910,7 @@
     <string name="created_at">สร้างโดย</string>
     <string name="guidelines">แนวปฏิบัติ</string>
     <string name="moderators">ผู้ดูแล</string>
-    <string name="login_with_external_signer">เข้าสู่ระบบด้วย Amber</string>
     <string name="status_update">คุณกำลังทำอะไรอยู่…</string>
-    <string name="poll_zap_value_min_max_explainer">โหวตถูกให้น้ำหนักโดยจำนวน Zaps. คุณสามารถตั้งจำนวนเงินต่ำสุด และจำนวนครั้งสูงสุดในการโหวตเพื่อหลีกเลี่ยงการแสปมผลโพล. ใช้จำนวนเงินที่เท่ากันในทุกหัวข้อเพื่อให้การโหวตเป็นไปอย่างเท่าเทียม ปล่อยช่องว่าง หากต้องการให้โหวตเท่าใดก็ได้</string>
     <string name="error_dialog_talk_to_user">ส่งข้อความ</string>
     <string name="error_dialog_talk_to_user_name">ส่งข้อความถึง %1$s</string>
     <string name="error_dialog_button_ok">ตกลง</string>
@@ -1419,7 +1412,6 @@
     <string name="closing_time">เวลาปิด</string>
     <string name="confirm">ยืนยัน</string>
     <string name="next">ถัดไป</string>
-    <string name="add_poll_option_button">ปุ่มเพิ่มตัวเลือกโหวต</string>
     <string name="go_back">ย้อนกลับ</string>
     <string name="approve">อนุมัติ</string>
     <string name="connected">เชื่อมต่อแล้ว</string>
@@ -1427,13 +1419,9 @@
     <string name="poll_submit">ส่ง</string>
     <string name="poll_view_results">ดูผลลัพธ์</string>
     <string name="restart">เริ่มใหม่</string>
-    <string name="chess_accept">ยอมรับ</string>
-    <string name="chess_decline">ปฏิเสธ</string>
     <string name="new_chess_game">เกมหมากรุกใหม่</string>
     <string name="chess_loading_game">กำลังโหลดเกม…</string>
     <string name="chess_game_not_found">ไม่พบเกม</string>
-    <string name="chess_game_waiting">เกมนี้อาจสิ้นสุดแล้วหรือกำลังรอคู่ต่อสู้</string>
-    <string name="chess_game_id">Game ID: %1$s…</string>
     <string name="badge_and_n_others"> และอีก %1$d คน</string>
     <string name="remove_language">ลบ %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">เริ่มต้นด้วยฟีดที่ยอดเยี่ยมโดยการติดตามผู้คนกลุ่มเดียวกับคนที่คุณไว้วางใจ</string>
@@ -2248,7 +2236,6 @@
     <string name="media_added_to_profile_gallery">เพิ่มสื่อในแกลเลอรีโปรไฟล์ของคุณแล้ว</string>
     <string name="media_download_has_started_toast">เริ่มดาวน์โหลดสื่อแล้ว…</string>
     <string name="media_servers">Media Servers</string>
-    <string name="media_too_big_for_nip95">สื่อชิ้นนี้ใหญ่เกินไปสำหรับ NIP-95</string>
     <string name="messages_cant_upload_explainer">กรุณาระบุปลายทางของข้อความก่อน</string>
     <string name="messages_cant_upload_title">อัปโหลดไม่ได้</string>
     <string name="messages_new_message_subject">ชื่อเรื่อง</string>
@@ -2464,7 +2451,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">โพลปิดรับการลงคะแนนเพิ่มเติม</string>
     <string name="poll_multiple_choice">หลายตัวเลือก</string>
-    <string name="poll_option_index">ตัวเลือก %1$s</string>
     <string name="poll_single_choice">ตัวเลือกเดียว</string>
     <string name="poll_unable_to_vote">ไม่สามารถโหวต</string>
     <string name="polls">โพล</string>
@@ -2709,7 +2695,6 @@
     <string name="upload_error_title">ข้อผิดพลาดในการอัปโหลด</string>
     <string name="upload_error_voice_message_exception">การอัปโหลดเสียงล้มเหลว: %1$s</string>
     <string name="upload_error_voice_message_failed">ไม่สามารถอัปโหลดข้อความเสียงได้</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 ยังไม่รองรับข้อความเสียง</string>
     <string name="uptime">เวลาทำงาน %1$d%</string>
     <string name="use_internal_tor">เครื่องยนต์ Tor ที่ใช้งานอยู่</string>
     <string name="use_internal_tor_explainer">ใช้เวอร์ชันภายในหรือ Orbot</string>
@@ -2765,4 +2750,8 @@
          what leaves the device; the fork strings say why the old phone stops. -->
     <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
 </resources>

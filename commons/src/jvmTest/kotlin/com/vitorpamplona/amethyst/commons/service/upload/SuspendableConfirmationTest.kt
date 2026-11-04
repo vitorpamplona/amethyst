@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -28,6 +29,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SuspendableConfirmationTest {
     @Test
     fun confirmResumesTheWaiterAndClosesTheDialog() =

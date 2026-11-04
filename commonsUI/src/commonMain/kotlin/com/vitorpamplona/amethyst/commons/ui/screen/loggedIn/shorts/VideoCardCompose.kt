@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip71Video.selectVideoTrack
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
@@ -48,17 +50,21 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.commons.ui.components.ContentWarningGate
+import com.vitorpamplona.amethyst.commons.ui.components.LocalShortVideo
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.collectContentWarningReasons
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
+import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.UserCardHeader
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 
 @Composable
 fun VideoCardCompose(
@@ -78,6 +84,9 @@ fun VideoCardCompose(
         // Image content
         VideoCardImage(baseNote, event, backgroundColor, accountViewModel)
 
+        // Title and content
+        VideoCardCaption(baseNote, event, backgroundColor, accountViewModel, nav)
+
         // Reactions row
         ReactionsRow(
             baseNote = baseNote,
@@ -87,9 +96,6 @@ fun VideoCardCompose(
             accountViewModel = accountViewModel,
             nav = nav,
         )
-
-        // Title and content
-        VideoCardCaption(event)
     }
 }
 
@@ -137,12 +143,15 @@ private fun VideoCardImage(
                         authorName = note.author?.toBestDisplayName(),
                         mimeType = imeta.mimeType,
                         thumbhash = imeta.thumbhash,
+                        // The poster the event names (imeta `image`), shown until the video plays.
+                        artworkUri = imeta.image.firstOrNull(),
                     )
                 },
             )
         }
 
-    val ratio = imeta.dimension?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(imeta.url)
+    // A video's measured shape beats its `dim`, which can be wrong (see MediaAspectRatioCache.videoRatio).
+    val ratio = MediaAspectRatioCache.videoRatio(imeta.url, imeta.dimension?.aspectRatioOrNull())
 
     ContentWarningGate(
         isSensitive = isSensitive,
@@ -152,23 +161,38 @@ private fun VideoCardImage(
         modifier = mediaSizingModifier(ratio, ContentScale.FillWidth),
         backdrop = (imeta.thumbhash ?: imeta.blurhash)?.let { { BlurhashBackdrop(imeta.blurhash, content.description, imeta.thumbhash) } },
     ) {
-        ZoomableContentView(
-            content = content,
-            roundedCorner = false,
-            contentScale = ContentScale.FillWidth,
-            accountViewModel = accountViewModel,
-        )
+        CompositionLocalProvider(LocalShortVideo provides (videoEvent is VideoShortEvent || videoEvent is AddressableShortVideoEvent)) {
+            ZoomableContentView(
+                content = content,
+                roundedCorner = false,
+                contentScale = ContentScale.FillWidth,
+                accountViewModel = accountViewModel,
+            )
+        }
     }
 }
 
+/**
+ * The card's title and description. The description goes through [TranslatableRichTextViewer],
+ * like a note's body in [com.vitorpamplona.amethyst.commons.ui.note.types.VideoDisplay], so
+ * `nostr:` mentions, links, hashtags and custom emoji render, and it translates. Previews stay
+ * off: the video is the card's media, and a quoted note or link card under it would bury it.
+ */
 @Composable
-fun VideoCardCaption(videoEvent: VideoEvent) {
+fun VideoCardCaption(
+    note: Note,
+    videoEvent: VideoEvent,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val event = (videoEvent as? Event) ?: return
 
-    val title = videoEvent.title()
-    val content = event.content
+    val title = remember(videoEvent) { videoEvent.title() }
+    // A description that only repeats the title adds nothing.
+    val summary = remember(videoEvent, title) { event.content.ifBlank { null }?.takeIf { it != title } }
 
-    if (title != null || content.isNotBlank()) {
+    if (title != null || summary != null) {
         Column(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
         ) {
@@ -183,13 +207,21 @@ fun VideoCardCaption(videoEvent: VideoEvent) {
                 Spacer(modifier = Modifier.height(2.dp))
             }
 
-            if (content.isNotBlank()) {
-                Text(
-                    text = content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            if (summary != null) {
+                val tags = remember(note) { event.tags.toImmutableListOfLists() }
+                val callbackUri = remember(note) { note.toNostrUri() }
+
+                TranslatableRichTextViewer(
+                    content = summary,
+                    canPreview = false,
+                    quotesLeft = 0,
+                    modifier = Modifier.fillMaxWidth(),
+                    tags = tags,
+                    backgroundColor = backgroundColor,
+                    id = note.idHex,
+                    callbackUri = callbackUri,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
         }

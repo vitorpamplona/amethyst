@@ -646,12 +646,9 @@
     <string name="wallet_connect_connect_app">지갑 연결</string>
     <string name="see_relay_feed">relay 피드 보기</string>
     <string name="pledge_amount_in_sats">Sats 단위 서약 금액</string>
-    <string name="poll_option_description">투표 옵션 설명</string>
     <string name="poll_zap_value_min">최소 zap</string>
     <string name="poll_zap_value_max">최대 zap</string>
     <string name="poll_consensus_threshold">합의</string>
-    <string name="poll_closing_date_time">투표 종료 날짜 &amp; 시간</string>
-    <string name="poll_closing_in">투표가 %1$s 후 종료됩니다</string>
     <string name="looking_for_event">이벤트 %1$s 검색 중</string>
     <string name="send_zap">Zap 전송</string>
     <string name="custom_zaps_add_a_message">공개 메시지 추가</string>
@@ -699,7 +696,6 @@
     <string name="uploading_state_hashing">해싱 중</string>
     <string name="uploading_state_finished">완료</string>
     <string name="uploading_state_error">오류</string>
-    <string name="connect_via_tor1">조정</string>
     <string name="connect_via_tor2">Tor 설정</string>
     <string name="yes">예</string>
     <string name="no">아니오</string>
@@ -775,7 +771,6 @@
     <string name="show_sensitive_content_explainer">게시물 작성자가 민감한 콘텐츠로 표시했을 때 경고 메시지를 표시합니다</string>
     <string name="max_hashtag_limit_title">게시물당 최대 해시태그 수</string>
     <string name="max_hashtag_limit_explainer">이 제한보다 많은 해시태그가 있는 게시물을 숨깁니다. 비활성화하려면 0으로 설정하세요</string>
-    <string name="new_reaction_symbol">새 반응 기호</string>
     <string name="zapraiser_explainer">이 게시물에 모금할 목표 sats 금액을 추가합니다. 지원하는 클라이언트는 기부를 유도하기 위해 이를 진행 표시줄로 표시할 수 있습니다</string>
     <string name="zapraiser_target_amount_in_sats">목표 금액 (sats)</string>
     <string name="sats_to_complete">Zapraiser: %1$s. 목표까지 %2$s sats 남음</string>
@@ -917,9 +912,7 @@
     <string name="created_at">생성 날짜</string>
     <string name="guidelines">가이드라인</string>
     <string name="moderators">관리자</string>
-    <string name="login_with_external_signer">Amber로 로그인</string>
     <string name="status_update">상태 업데이트</string>
-    <string name="poll_zap_value_min_max_explainer">투표는 zap 금액에 따라 가중치가 부여됩니다. 스팸 방지를 위해 최소 금액을, 대규모 zap이 투표를 독점하지 않도록 최대 금액을 설정할 수 있습니다. 두 필드에 같은 금액을 입력하면 모든 투표의 가치를 동일하게 유지할 수 있습니다. 아무 금액이나 허용하려면 비워두세요.</string>
     <string name="error_dialog_talk_to_user">사용자에게 메시지 보내기</string>
     <string name="error_dialog_talk_to_user_name">%1$s에게 메시지 보내기</string>
     <string name="error_dialog_button_ok">확인</string>
@@ -1428,7 +1421,6 @@
     <string name="closing_time">종료 시간</string>
     <string name="confirm">확인</string>
     <string name="next">다음</string>
-    <string name="add_poll_option_button">투표 옵션 추가 버튼</string>
     <string name="go_back">뒤로 가기</string>
     <string name="approve">승인</string>
     <string name="connected">연결됨</string>
@@ -1436,13 +1428,9 @@
     <string name="poll_submit">제출</string>
     <string name="poll_view_results">결과 보기</string>
     <string name="restart">재시작</string>
-    <string name="chess_accept">수락</string>
-    <string name="chess_decline">거절</string>
     <string name="new_chess_game">새 체스 게임</string>
     <string name="chess_loading_game">게임 로딩 중…</string>
     <string name="chess_game_not_found">게임을 찾을 수 없습니다</string>
-    <string name="chess_game_waiting">이 게임은 종료되었거나 상대방을 기다리고 있습니다.</string>
-    <string name="chess_game_id">게임 ID: %1$s…</string>
     <string name="badge_and_n_others"> 외 %1$d명</string>
     <string name="remove_language">%1$s 제거</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">신뢰하는 사람과 같은 사람들을 팔로우하여 훌륭한 피드로 시작하세요.</string>
@@ -2376,7 +2364,6 @@
     <string name="media_added_to_profile_gallery">프로필 갤러리에 미디어가 추가됨</string>
     <string name="media_download_has_started_toast">미디어 다운로드를 시작했습니다…</string>
     <string name="media_servers">미디어 서버</string>
-    <string name="media_too_big_for_nip95">미디어가 NIP-95에 비해 너무 큽니다</string>
     <string name="messages_cant_upload_explainer">먼저 메시지 대상을 입력하세요</string>
     <string name="messages_cant_upload_title">업로드 불가</string>
     <string name="messages_new_message_subject">제목</string>
@@ -2597,7 +2584,6 @@
     <string name="poll_author_no_vote">투표 작성자는 자신의 투표에 참여할 수 없습니다.</string>
     <string name="poll_is_closed_explainer">투표가 새로운 투표를 받지 않습니다</string>
     <string name="poll_multiple_choice">복수 선택</string>
-    <string name="poll_option_index">%1$s번 옵션</string>
     <string name="poll_single_choice">단일 선택</string>
     <string name="poll_unable_to_vote">투표할 수 없습니다</string>
     <string name="polls">투표</string>
@@ -2845,7 +2831,6 @@
     <string name="upload_error_title">업로드 오류</string>
     <string name="upload_error_voice_message_exception">음성 업로드 실패: %1$s</string>
     <string name="upload_error_voice_message_failed">음성 메시지 업로드에 실패했습니다</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95는 아직 음성 메시지를 지원하지 않습니다</string>
     <string name="uptime">%1$d% 업타임</string>
     <string name="use_internal_tor">내장 Tor 엔진</string>
     <string name="use_internal_tor_explainer">내장 버전 또는 Orbot을 사용하세요</string>
@@ -2899,4 +2884,8 @@
          what leaves the device; the fork strings say why the old phone stops. -->
     <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
 </resources>

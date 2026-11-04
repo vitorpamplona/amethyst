@@ -115,9 +115,6 @@ object FollowAction {
     ): Boolean {
         if (currentContactList == null) return false
 
-        // Check if the pubKeyHex is in the contact list's p-tags
-        return currentContactList.tags.any { tag ->
-            tag.size >= 2 && tag[0] == "p" && tag[1] == pubKeyHex
-        }
+        return currentContactList.isFollowing(pubKeyHex)
     }
 }

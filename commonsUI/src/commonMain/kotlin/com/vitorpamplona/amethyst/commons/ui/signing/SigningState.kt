@@ -24,6 +24,12 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.signing_failed
+import com.vitorpamplona.amethyst.commons.resources.signing_operation_failed
+import com.vitorpamplona.amethyst.commons.resources.signing_rejected
+import com.vitorpamplona.amethyst.commons.resources.signing_timed_out
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -118,16 +124,16 @@ class SigningState {
             GlobalSigningStatus.onIdle()
             throw e
         } catch (e: SignerExceptions.TimedOutException) {
-            setError("Signer timed out")
+            setError(loadStringRes(Res.string.signing_timed_out))
             null
         } catch (e: SignerExceptions.ManuallyUnauthorizedException) {
-            setError("Signing rejected")
+            setError(loadStringRes(Res.string.signing_rejected))
             null
         } catch (e: SignerExceptions) {
-            setError(e.message ?: "Signing failed")
+            setError(e.message ?: loadStringRes(Res.string.signing_failed))
             null
         } catch (e: Exception) {
-            setError(e.message ?: "Operation failed")
+            setError(e.message ?: loadStringRes(Res.string.signing_operation_failed))
             null
         }
     }

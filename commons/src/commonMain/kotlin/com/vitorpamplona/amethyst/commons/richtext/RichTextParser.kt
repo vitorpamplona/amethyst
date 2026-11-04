@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.cartridges.CartLinks
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.util.isValidUrl
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
@@ -57,6 +59,7 @@ class RichTextParser {
         description: String?,
         callbackUri: String? = null,
         authorPubKey: String? = null,
+        cartImetas: Map<String, IMetaTag>? = null,
     ): MediaUrlContent? {
         val frags = Nip54InlineMetadata().parse(fullUrl)
 
@@ -81,6 +84,7 @@ class RichTextParser {
                 mimeType = contentType,
                 thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
                 authorPubKey = authorPubKey,
+                cartImetas = cartImetas,
             )
         } else if (kind == MediaContentKind.VIDEO) {
             MediaUrlVideo(
@@ -194,14 +198,15 @@ class RichTextParser {
         authorPubKey: String? = null,
     ): RichTextViewerState {
         val imetas = tags.lists.imetasByUrl()
+        val cartImetas = CartLinks.tagsToKeep(imetas)
         val urlSet = UrlParser().parseValidUrls(content)
 
         val mediaContents =
             urlSet.withScheme.mapNotNull { fullUrl ->
-                createMediaContent(fullUrl, imetas, content, callbackUri, authorPubKey)
+                createMediaContent(fullUrl, imetas, content, callbackUri, authorPubKey, cartImetas)
             } +
                 urlSet.withoutScheme.mapNotNull { fullUrl ->
-                    createMediaContent(fullUrl, imetas, content, callbackUri, authorPubKey)
+                    createMediaContent(fullUrl, imetas, content, callbackUri, authorPubKey, cartImetas)
                 }
 
         val mediaForPager = mediaContents.associateBy { it.url }
@@ -209,6 +214,7 @@ class RichTextParser {
         val imageUrls = mediaForPager.filterValues { it is MediaUrlImage }.keys
         val videoUrls = mediaForPager.filterValues { it is MediaUrlVideo }.keys
         val pdfUrls = mediaForPager.filterValues { it is MediaUrlPdf }.keys
+        val webxdcApps = webxdcApps(urlSet.withScheme, imetas, callbackUri)
 
         val emojiMap = CustomEmoji.createEmojiMap(tags.lists)
 
@@ -216,7 +222,7 @@ class RichTextParser {
 
         val newContent = fixMissingSpaces(content, allUrls)
 
-        val segments = findTextSegments(newContent, imageUrls, videoUrls, pdfUrls, urlSet, emojiMap, tags)
+        val segments = findTextSegments(newContent, imageUrls, videoUrls, pdfUrls, webxdcApps, urlSet, emojiMap, tags)
 
         val mediaForPagerWithBase64 =
             mediaForPager +
@@ -227,7 +233,7 @@ class RichTextParser {
                                 if (it is Base64Segment) {
                                     createMediaContent(it.segmentText, emptyMap(), content, callbackUri)
                                 } else if (it is BlossomUriSegment) {
-                                    createMediaContent(it.segmentText, emptyMap(), content, callbackUri)
+                                    createMediaContent(it.segmentText, imetas, content, callbackUri, cartImetas = cartImetas)
                                 } else {
                                     null
                                 }
@@ -244,11 +250,30 @@ class RichTextParser {
         )
     }
 
+    /**
+     * The webxdc apps among the post's links: typed `application/x-webxdc` by their `imeta`, or a
+     * bare `.xdc` link. Only full URLs: a schemeless `name.xdc` is a word, not an app.
+     */
+    private fun webxdcApps(
+        urls: Set<String>,
+        imetas: Map<String, IMetaTag>,
+        postUri: String?,
+    ): Map<String, WebxdcSegment> {
+        var found: HashMap<String, WebxdcSegment>? = null
+        for (url in urls) {
+            val properties = imetas[url]?.properties
+            val app = WebxdcApp.from(url) { properties?.get(it)?.firstOrNull() } ?: continue
+            (found ?: HashMap<String, WebxdcSegment>().also { found = it })[url] = WebxdcSegment(url, app, postUri)
+        }
+        return found ?: emptyMap()
+    }
+
     private fun findTextSegments(
         content: String,
         images: Set<String>,
         videos: Set<String>,
         pdfs: Set<String>,
+        webxdcs: Map<String, WebxdcSegment>,
         urls: Urls,
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
@@ -280,9 +305,9 @@ class RichTextParser {
                         val prefixLength = nip19OpeningPunctuationLength(token.text)
                         if (prefixLength > 0) {
                             segments.add(RegularTextSegment(token.text.substring(0, prefixLength)))
-                            segments.add(wordIdentifier(token.text.substring(prefixLength), images, videos, pdfs, urls, emojis, tags))
+                            segments.add(wordIdentifier(token.text.substring(prefixLength), images, videos, pdfs, webxdcs, urls, emojis, tags))
                         } else {
-                            segments.add(wordIdentifier(token.text, images, videos, pdfs, urls, emojis, tags))
+                            segments.add(wordIdentifier(token.text, images, videos, pdfs, webxdcs, urls, emojis, tags))
                         }
                     }
                 }
@@ -337,6 +362,7 @@ class RichTextParser {
         images: Set<String>,
         videos: Set<String>,
         pdfs: Set<String>,
+        webxdcs: Map<String, WebxdcSegment>,
         urls: Urls,
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
@@ -375,6 +401,8 @@ class RichTextParser {
             parseNowhereLink(word)?.let { return it }
             return SchemelessUrlSegment(word)
         }
+
+        webxdcs[word]?.let { return it }
 
         if (urls.withScheme.contains(word)) {
             // Concord and Buzz invites are plain https URLs that would otherwise render as bare
@@ -417,6 +445,10 @@ class RichTextParser {
 
         if (word.startsWith("noffer1", true)) {
             (ClinkPointerParser.parse(word) as? NOffer)?.let { return ClinkOfferSegment(word, it) }
+        }
+
+        if (LocalTimestamp.mightContain(word)) {
+            LocalTimestamp.split(word)?.let { return TimestampSegment(word, it) }
         }
 
         if (word.startsWith('#')) return parseHash(word, tags)
@@ -500,7 +532,10 @@ class RichTextParser {
         // drift apart. It is also why [audioExt] is declared first; the compiler rejects the
         // reverse order outright ("Variable 'audioExt' must be initialized"), so this note is
         // intent, not a guard rail.
-        val audioExt = listOf("mp3", "ogg", "wav", "flac", "aac", "opus", "m4a", "f4a")
+        //
+        // `mpga` is what Blossom servers name an `audio/mpeg` upload (podcast episodes, trailers and
+        // tracks), so a bare `.mpga` link plays as the MP3 it is.
+        val audioExt = listOf("mp3", "mpga", "ogg", "wav", "flac", "aac", "opus", "m4a", "f4a")
         val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "m3u8") + audioExt
         val pdfExt = listOf("pdf")
 
@@ -774,6 +809,7 @@ val mimeTypeMap: Map<String, String> =
         "mkv" to "video/x-matroska",
         // Audio
         "mp3" to "audio/mpeg",
+        "mpga" to "audio/mpeg",
         "wav" to "audio/wav",
         "ogg" to "audio/ogg",
         "m4a" to "audio/mp4",

@@ -53,9 +53,9 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_system_member_removed
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatFeedRowRenderer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
-import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotSystemEvent
-import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotSystemType
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotSystemEvent
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotSystemType
 import org.jetbrains.compose.resources.StringResource
 
 /**

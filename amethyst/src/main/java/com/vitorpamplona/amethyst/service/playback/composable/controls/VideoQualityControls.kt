@@ -48,7 +48,7 @@ internal fun castFormatSummary(group: Tracks.Group?): String? {
     var best: Format? = null
     for (i in 0 until group.length) {
         val format = group.getTrackFormat(i)
-        if (best == null || format.width.toLong() * format.height > best!!.width.toLong() * best!!.height) {
+        if (best == null || format.width.toLong() * format.height > best.width.toLong() * best.height) {
             best = format
         }
     }

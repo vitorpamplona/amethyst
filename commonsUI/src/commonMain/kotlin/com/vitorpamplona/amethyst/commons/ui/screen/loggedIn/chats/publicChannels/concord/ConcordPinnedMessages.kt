@@ -41,7 +41,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -78,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.resources.message_edited
 import com.vitorpamplona.amethyst.commons.resources.relay_group_pinned_content_description
 import com.vitorpamplona.amethyst.commons.resources.relay_group_unpin_message
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -90,6 +90,7 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.conflate
@@ -132,9 +133,11 @@ fun rememberConcordChannelPins(
                     account.cache.live.newEventBundles.filter { notes ->
                         val carried = value?.rumorIds ?: return@filter true
                         notes.any { note ->
-                            val event = note.event
-                            (event is DeletionRequestEvent || event is ConcordChatEditEvent) &&
-                                event.tags.any { it.size >= 2 && it[0] == "e" && it[1] in carried }
+                            when (val event = note.event) {
+                                is DeletionRequestEvent -> event.deletesAnyEventIn(carried)
+                                is ConcordChatEditEvent -> event.editedMessageId() in carried
+                                else -> false
+                            }
                         }
                     }
                 merge(session.pinHeads.map { }, session.state.map { }, session.controlDrained.map { }, evidence.map { })
@@ -144,7 +147,7 @@ fun rememberConcordChannelPins(
                         // leaves the list, and nothing else would trigger that re-read. A new trigger
                         // cancels the wait.
                         while (true) {
-                            val pins = withContext(Dispatchers.Default) { account.concord.concordChannelPins(communityId, channelId) }
+                            val pins = withContext(Dispatchers.IO) { account.concord.concordChannelPins(communityId, channelId) }
                             value = pins
                             val now = TimeUtils.now()
                             val next = pins?.nextExpiry(now) ?: break
@@ -246,7 +249,7 @@ fun ConcordPinnedMessagesSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = rememberModalSheetState(skipPartiallyExpanded = true),
     ) {
         Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             Text(

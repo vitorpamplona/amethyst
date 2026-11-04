@@ -65,6 +65,8 @@
       // Run an async napplet call and render pass/fail.
       function check(name, fn) {
         var v = row(name);
+        var domain = name.split('.')[0].split(' ')[0];
+        if (window.napplet && !(domain in window.napplet)) { show(v, true, 'unavailable (optional domain)'); return; }
         try {
           Promise.resolve(fn()).then(function (out) { show(v, true, out === undefined ? 'ok' : out); },
             function (e) { show(v, false, (e && e.message) || String(e)); });
@@ -75,9 +77,12 @@
       function run() {
         if (!window.napplet) { banner.textContent = 'window.napplet is MISSING — shim not injected!'; return; }
 
-        // ---- shell negotiation ----
-        check('shell.supports(identity)', function () { return napplet.shell.supports('identity'); });
-        check('shell.supports(bogus)', function () { return napplet.shell.supports('bogus'); });
+        // Domain presence is available before authored scripts, without a shell handshake.
+        show(row('available domains'), true, Object.keys(napplet));
+        if (napplet.theme) {
+          check('theme.get', function () { return napplet.theme.get(); });
+          napplet.theme.onChanged(function (theme) { flash('theme.changed → ' + JSON.stringify(theme.colors)); });
+        }
 
         // ---- identity (read-only) ----
         check('identity.getPublicKey', function () { return napplet.identity.getPublicKey(); });
@@ -93,7 +98,7 @@
         // identity.onChanged → live push when you switch / log out
         try {
           napplet.identity.onChanged(function (pubkey) { flash('identity.changed → ' + (pubkey || '(logged out)')); });
-          row('identity.onChanged').textContent = 'registered — switch account to fire';
+          row('identity.onChanged').textContent = 'registered — log out the launching account to fire';
         } catch (e) { show(row('identity.onChanged'), false, e.message); }
 
         // ---- relay (read) ----
@@ -121,7 +126,7 @@
         });
 
         // ---- keys: register Ctrl+S, fire via onAction ----
-        try {
+        if (napplet.keys) try {
           napplet.keys.registerAction({ id: 'save', label: 'Save', defaultKey: 'Ctrl+S' }).then(function (reg) {
             show(row('keys.registerAction'), true, reg);
           });

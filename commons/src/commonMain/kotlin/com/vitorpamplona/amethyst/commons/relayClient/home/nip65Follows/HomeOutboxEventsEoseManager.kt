@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.custom.CustomFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
@@ -32,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.home.HomeQueryState
+import com.vitorpamplona.amethyst.commons.relayClient.home.nip01Core.filterHomePostsByCustomFeed
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip01Core.filterHomePostsByGeohashes
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip01Core.filterHomePostsByGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip01Core.filterHomePostsByHashtags
@@ -75,6 +77,7 @@ class HomeOutboxEventsEoseManager(
                 is RelayTopNavPerRelayFilterSet -> filterHomePostsByRelay(feedSettings, since, newThreadSince, repliesSince)
                 is SingleCommunityTopNavPerRelayFilterSet -> filterHomePostsByCommunity(feedSettings, since, newThreadSince)
                 is FavoriteAlgoFeedTopNavPerRelayFilterSet -> filterHomePostsByAlgoFeedIds(feedSettings, since, newThreadSince)
+                is CustomFeedTopNavPerRelayFilterSet -> filterHomePostsByCustomFeed(feedSettings, since, newThreadSince)
                 else -> emptyList()
             }.scopedTo(feedSettings)
 

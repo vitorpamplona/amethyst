@@ -20,27 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.chess
 
-import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds.SingleTopNavFeedSubAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds.TopNavFeedFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds.TopNavFeedQueryState
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
-/**
- * Filter assembler for chess events
- */
+/** The chess lobby's games for the list picked in its top bar. */
 class ChessFilterAssembler(
     client: INostrClient,
-) : ComposeSubscriptionManager<ChessQueryState>() {
-    private val subAssembler = ChessFeedFilterSubAssembler(client, ::allKeys)
-
-    val group = listOf(subAssembler)
-
-    fun setOnChessEvent(callback: ((Event) -> Unit)?) {
-        subAssembler.onChessEvent = callback
-    }
-
-    override fun invalidateKeys() = invalidateFilters()
-
-    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
-
-    override fun destroy() = group.forEach { it.destroy() }
-}
+) : TopNavFeedFilterAssembler<TopNavFeedQueryState>({ keys -> listOf(SingleTopNavFeedSubAssembler(client, keys, ::makeChessFilter)) })

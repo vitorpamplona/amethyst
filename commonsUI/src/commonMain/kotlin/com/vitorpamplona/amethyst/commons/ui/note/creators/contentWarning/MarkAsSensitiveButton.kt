@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_content_warning
 import com.vitorpamplona.amethyst.commons.resources.remove_content_warning
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 @Composable
@@ -43,52 +44,54 @@ fun MarkAsSensitiveButton(
     isActive: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        onClick = { onClick() },
-    ) {
-        Box(
-            Modifier
-                .height(20.dp)
-                .width(23.dp),
+    HoverTooltip(stringRes(if (isActive) Res.string.remove_content_warning else Res.string.add_content_warning)) {
+        IconButton(
+            onClick = { onClick() },
         ) {
-            if (!isActive) {
-                Icon(
-                    symbol = MaterialSymbols.Visibility,
-                    contentDescription = stringRes(Res.string.add_content_warning),
-                    modifier =
-                        Modifier
-                            .size(18.dp)
-                            .align(Alignment.BottomStart),
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
-                Icon(
-                    symbol = MaterialSymbols.Warning,
-                    contentDescription = stringRes(Res.string.add_content_warning),
-                    modifier =
-                        Modifier
-                            .size(10.dp)
-                            .align(Alignment.TopEnd),
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
-            } else {
-                Icon(
-                    symbol = MaterialSymbols.VisibilityOff,
-                    contentDescription = stringRes(id = Res.string.remove_content_warning),
-                    modifier =
-                        Modifier
-                            .size(18.dp)
-                            .align(Alignment.BottomStart),
-                    tint = Color.Red,
-                )
-                Icon(
-                    symbol = MaterialSymbols.Warning,
-                    contentDescription = stringRes(id = Res.string.remove_content_warning),
-                    modifier =
-                        Modifier
-                            .size(10.dp)
-                            .align(Alignment.TopEnd),
-                    tint = Color.Yellow,
-                )
+            Box(
+                Modifier
+                    .height(20.dp)
+                    .width(23.dp),
+            ) {
+                if (!isActive) {
+                    Icon(
+                        symbol = MaterialSymbols.Visibility,
+                        contentDescription = stringRes(Res.string.add_content_warning),
+                        modifier =
+                            Modifier
+                                .size(18.dp)
+                                .align(Alignment.BottomStart),
+                        tint = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Icon(
+                        symbol = MaterialSymbols.Warning,
+                        contentDescription = stringRes(Res.string.add_content_warning),
+                        modifier =
+                            Modifier
+                                .size(10.dp)
+                                .align(Alignment.TopEnd),
+                        tint = MaterialTheme.colorScheme.onBackground,
+                    )
+                } else {
+                    Icon(
+                        symbol = MaterialSymbols.VisibilityOff,
+                        contentDescription = stringRes(id = Res.string.remove_content_warning),
+                        modifier =
+                            Modifier
+                                .size(18.dp)
+                                .align(Alignment.BottomStart),
+                        tint = Color.Red,
+                    )
+                    Icon(
+                        symbol = MaterialSymbols.Warning,
+                        contentDescription = stringRes(id = Res.string.remove_content_warning),
+                        modifier =
+                            Modifier
+                                .size(10.dp)
+                                .align(Alignment.TopEnd),
+                        tint = Color.Yellow,
+                    )
+                }
             }
         }
     }

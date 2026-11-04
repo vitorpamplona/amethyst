@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.commands.BlossomCommands
 import com.vitorpamplona.amethyst.cli.commands.Bolt12Commands
 import com.vitorpamplona.amethyst.cli.commands.BunkerCommand
 import com.vitorpamplona.amethyst.cli.commands.BuzzCommands
+import com.vitorpamplona.amethyst.cli.commands.ChessCommands
 import com.vitorpamplona.amethyst.cli.commands.ConcordCommands
 import com.vitorpamplona.amethyst.cli.commands.CordnCommands
 import com.vitorpamplona.amethyst.cli.commands.CountCommand
@@ -34,7 +35,9 @@ import com.vitorpamplona.amethyst.cli.commands.CyberspaceCommands
 import com.vitorpamplona.amethyst.cli.commands.DebitCommands
 import com.vitorpamplona.amethyst.cli.commands.DecodeCommand
 import com.vitorpamplona.amethyst.cli.commands.DecryptCommand
+import com.vitorpamplona.amethyst.cli.commands.DeleteCommand
 import com.vitorpamplona.amethyst.cli.commands.DmCommands
+import com.vitorpamplona.amethyst.cli.commands.EmojiCommands
 import com.vitorpamplona.amethyst.cli.commands.EncodeCommand
 import com.vitorpamplona.amethyst.cli.commands.EncryptCommand
 import com.vitorpamplona.amethyst.cli.commands.EventCommand
@@ -60,6 +63,7 @@ import com.vitorpamplona.amethyst.cli.commands.NamecoinCommand
 import com.vitorpamplona.amethyst.cli.commands.NappletCommands
 import com.vitorpamplona.amethyst.cli.commands.NipCommand
 import com.vitorpamplona.amethyst.cli.commands.NotesCommands
+import com.vitorpamplona.amethyst.cli.commands.NotificationsCommand
 import com.vitorpamplona.amethyst.cli.commands.NsiteCommands
 import com.vitorpamplona.amethyst.cli.commands.OfferCommands
 import com.vitorpamplona.amethyst.cli.commands.OutboxCommand
@@ -70,6 +74,7 @@ import com.vitorpamplona.amethyst.cli.commands.ProfileCommands
 import com.vitorpamplona.amethyst.cli.commands.PublishCommand
 import com.vitorpamplona.amethyst.cli.commands.RelayCommands
 import com.vitorpamplona.amethyst.cli.commands.RelayGroupCommands
+import com.vitorpamplona.amethyst.cli.commands.ReleasesCommands
 import com.vitorpamplona.amethyst.cli.commands.SearchCommand
 import com.vitorpamplona.amethyst.cli.commands.ServeCommand
 import com.vitorpamplona.amethyst.cli.commands.SnoCommands
@@ -78,6 +83,7 @@ import com.vitorpamplona.amethyst.cli.commands.StoreCommands
 import com.vitorpamplona.amethyst.cli.commands.StreamCommands
 import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
 import com.vitorpamplona.amethyst.cli.commands.SyncCommand
+import com.vitorpamplona.amethyst.cli.commands.TrustCommand
 import com.vitorpamplona.amethyst.cli.commands.UseCommand
 import com.vitorpamplona.amethyst.cli.commands.VerifyCommand
 import com.vitorpamplona.amethyst.cli.commands.ZapCommand
@@ -85,6 +91,8 @@ import com.vitorpamplona.amethyst.cli.commands.cashu.CashuCommands
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuMintCommands
 import com.vitorpamplona.amethyst.cli.commands.route
 import com.vitorpamplona.amethyst.cli.secrets.SecretStore
+import com.vitorpamplona.amethyst.commons.service.QuicLogBridge
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagingDiagnostics
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.runBlocking
@@ -134,7 +142,11 @@ fun runCli(argv: Array<String>): Int {
     // rejection, throttle notices) by default so it doesn't drown a command's
     // own output; --verbose / -v restores full DEBUG. Set before dispatch so
     // even startup logging is gated.
-    Log.minLevel = if (argv.any { it == "--verbose" || it == "-v" }) LogLevel.DEBUG else LogLevel.WARN
+    val verbose = argv.any { it == "--verbose" || it == "-v" }
+    Log.minLevel = if (verbose) LogLevel.DEBUG else LogLevel.WARN
+    QuicLogBridge.install()
+    // --verbose also reports how each relay ordered and repeated a paged walk's events.
+    PagingDiagnostics.enabled = verbose
 
     // Set output mode before dispatch so even argument-parsing errors
     // honour --json.
@@ -299,9 +311,13 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "geochat" -> GeochatCommands.dispatch(dataDir, tail)
         "profile" -> ProfileCommands.dispatch(dataDir, tail)
         "notes" -> NotesCommands.dispatch(dataDir, tail)
+        "delete" -> DeleteCommand.run(dataDir, tail)
+        "notifications" -> NotificationsCommand.run(dataDir, tail)
         "pow" -> PowCommands.dispatch(dataDir, tail)
         "nsite" -> NsiteCommands.dispatch(dataDir, tail)
         "napplet" -> NappletCommands.dispatch(dataDir, tail)
+        "releases" -> ReleasesCommands.dispatch(dataDir, tail)
+        "chess" -> ChessCommands.dispatch(dataDir, tail)
         "store" -> StoreCommands.dispatch(dataDir, tail)
         "follow" -> FollowCommand.follow(dataDir, tail)
         "unfollow" -> FollowCommand.unfollow(dataDir, tail)
@@ -321,6 +337,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "gift" -> GiftCommands.dispatch(dataDir, tail)
         "outbox" -> OutboxCommand.run(dataDir, tail)
         "blossom" -> BlossomCommands.dispatch(dataDir, tail)
+        "emoji" -> EmojiCommands.dispatch(dataDir, tail)
         "sync" -> SyncCommand.run(dataDir, tail)
         "git" -> GitCommands.dispatch(dataDir, tail)
         "admin" -> AdminCommand.run(dataDir, tail)
@@ -330,6 +347,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "podcast20" -> Podcast20Commands.dispatch(dataDir, tail)
         "bunker" -> BunkerCommand.run(dataDir, tail)
         "fof" -> FofCommand.dispatch(dataDir, tail)
+        "trust" -> TrustCommand.dispatch(dataDir, tail)
         // `wot` overclaimed the whole web-of-trust concept for a cheap
         // single-hop follower count; renamed to `fof` (follows-of-follows).
         // Kept as a warning alias — the real WoT engine is `graperank`.
@@ -360,11 +378,13 @@ private fun printVerbList() {
         |  identity:    init create login logoff whoami use status
         |  primitives:  decode encode verify key filter nip kind pow namecoin
         |  events:      event publish fetch subscribe count sync encrypt decrypt gift
-        |  social:      notes profile follow unfollow search zap dm outbox
+        |  social:      notes delete notifications profile follow unfollow search zap dm outbox
         |  groups:      marmot relaygroup concord cordn geochat
         |  relays:      relay admin serve store
-        |  trust:       graperank fof
-        |  media/sites: blossom nsite napplet podcast podcast20 git
+        |  trust:       trust graperank fof
+        |  media/sites: blossom emoji nsite napplet podcast podcast20 git
+        |  releases:    releases
+        |  games:       chess
         |  payments:    cashu offer debit
         |  signing:     bunker
         """.trimMargin(),
@@ -588,16 +608,27 @@ private fun printUsage() {
         |               [--clink-offer NOFFER]
         |               [--timeout SECS]
         |
-        |Notes (NIP-10 kind:1):
+        |Notes (NIP-10 kind:1) and interactions (EVENT = hex | note1 | nevent1 | naddr1):
         |  notes post TEXT [--relay URL]               publish a kind:1 short text note
         |             [--pow BITS [--pow-timeout SECS]] mine a NIP-13 proof of work first
         |                                              (exit 124 on timeout, nothing published)
         |                                              (--relay accepts comma-separated extras)
         |  notes feed [--author USER]                  fetch kind:1 notes
-        |             [--following]                    (default: own; --author: one user;
-        |             [--limit N]                       --following: every contact-list pubkey)
-        |             [--since TS] [--until TS]
+        |             [--following | --hashtag TAG]    (default: own; --author: one user;
+        |             [--limit N]                       --following: every contact-list pubkey;
+        |             [--since TS] [--until TS]         --hashtag: anyone's notes tagged TAG)
         |             [--timeout SECS]
+        |  notes show EVENT [--raw] [--refresh]        render one event of any kind
+        |  notes thread EVENT [--limit N]              the conversation EVENT is in, depth-first
+        |  notes reply EVENT TEXT                      NIP-10 reply (kind:1) / NIP-22 comment (others)
+        |  notes quote EVENT [TEXT]                    NIP-18 quote post
+        |  notes react EVENT [--content +|-|EMOJI]     NIP-25 reaction (default +)
+        |  notes repost EVENT                          NIP-18 repost (kind:6 / kind:16)
+        |  delete EVENT… [--relay URL]                 NIP-09 deletion of your own events
+        |                                              (also `notes delete`)
+        |  notifications [--type reply,mention,…]     replies, mentions, reactions, reposts and zaps
+        |                [--limit N] [--since TS]       aimed at you (types: mention reply reaction
+        |                [--until TS]                   repost zap; DMs are `dm list`)
         |
         |Raw events (build / sign / broadcast):
         |  event --kind N [--content TEXT]             build + sign an arbitrary event with the active
@@ -639,6 +670,20 @@ private fun printUsage() {
         |  blossom delete HASH --server URL             delete a blob you own
         |  blossom check --server URL HASH[,HASH]       HEAD-check blobs exist (fails if any missing)
         |  blossom mirror --server URL SOURCE-URL       ask the server to mirror a blob (BUD-04)
+        |
+        |Custom emoji packs (NIP-30, kind:30030 / 10030):
+        |  emoji pack list [USER]                       a user's emoji packs (default self)
+        |  emoji pack show PACK                         one pack and its emojis (PACK: your d tag,
+        |                                                naddr1…, or 30030:<pubkey>:<d>)
+        |  emoji pack create --title T [--description D] [--image URL] [--d DTAG]
+        |  emoji pack edit PACK [--title T] [--description D] [--image URL]
+        |  emoji pack delete PACK                       NIP-09 delete one of your packs
+        |  emoji add PACK SHORTCODE URL [--private] [--replace]
+        |  emoji remove PACK SHORTCODE[,…] [--private]
+        |  emoji import PACK SOURCE [--private]         bulk add from a folder / .zip of images
+        |      [--replace] [--server URL] [--dry-run]     (uploaded to Blossom, named by file) or a
+        |                                                 `shortcode url` text list
+        |  emoji list | use PACK | unuse PACK           your kind:10030 emoji list
         |
         |Git (NIP-34):
         |  git init [--name N] [--clone URL]            bootstrap a repo from the local git checkout
@@ -708,10 +753,44 @@ private fun printUsage() {
         |  napplet fetch --snapshot EVENT-ID            the kind:15129 root; --snapshot pins a kind:5129
         |        [--path P] …                            immutable snapshot by event id)
         |
+        |Releases (NIP-82: the desktop app's updater, Zapstore and Orchard):
+        |  releases publish DIR --version X.Y.Z          sign + publish the release of every app with
+        |        [--only desktop|android|flatpak]        files in DIR (desktop files; APKs as zsp
+        |        [--listing] [--zapstore-yaml F]         does, apksig-checked; Flatpak bundles for
+        |        [--blossom URL]                         Orchard). Amethyst's key only unless
+        |        [--android-flavor F] [--android-abis A]  --any-key; --dry-run signs + prints
+        |        [--notes-file F] [--url-base URL]       (`amy releases --help` for details)
+        |        [--relay URL[,URL]] [--dry-run] [--any-key]
+        |
+        |Chess (Jester kind:30, as the app plays it):
+        |  chess challenge [--opponent USER]           open (or direct) a game; prints its game_id
+        |        [--color white|black]
+        |  chess show GAME_ID                         players, moves, whose turn, result
+        |  chess move GAME_ID FROM TO                 play a move (e2 e4; promote with e7 e8q)
+        |  chess resign GAME_ID                       resign a game you play
+        |  chess play GAME_ID [--engine random|minimax] [--depth N] [--seed N]
+        |        [--max-plies N] [--think-ms MS]      a bot plays your side until the game ends;
+        |        [--timeout SECS]
+        |                                              takes an open seat by moving in it
+        |
         |Contacts (NIP-02 kind:3):
         |  follow USER [--timeout SECS]               add USER to your contact list
         |  unfollow USER [--timeout SECS]             remove USER from your contact list
         |                                              (USER: npub|nprofile|hex|name@domain)
+        |
+        |Web of Trust network (NIP-85 consumer; files in ~/.amy/<account>/wot/):
+        |  trust sync [--update|--full|--redownload]  download / update / full-check your 30382:rank
+        |    [--observer USER] [--min-score N]         provider's cards into a local index (every
+        |    [--timeout SECS]                          signature checked). Default: whatever is due.
+        |  trust status [--observer USER]             local index: provider, entries, how many pass,
+        |    [--min-score N]                           last sync, what is due, sizes. No network.
+        |  trust check USER… [--observer USER]        known or stranger, and why (the rule behind the
+        |    [--min-score N] [--timeout SECS]          DM tabs, Curated notifications, collapsed replies).
+        |                                              --observer: another user's network, read-only.
+        |  trust setup brainstorm [--private]         Brainstorm sign-up + point your kind:10040 at it.
+        |    [--timeout SECS]                          (Other providers: graperank register.)
+        |  trust copy USER [--private]                copy USER's public kind:10040 rows into yours:
+        |    [--timeout SECS]                          the network as USER sees it (_@brainstorm.world).
         |
         |Web of Trust (GrapeRank):
         |  graperank [OBSERVER]                       crawl + score: subjective trust (0..1) over the

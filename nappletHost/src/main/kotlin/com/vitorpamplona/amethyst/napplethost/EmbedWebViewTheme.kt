@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.napplethost
 
 import android.content.Context
 import android.content.res.Configuration
+import android.os.Build
 import android.view.ContextThemeWrapper
 
 /**
@@ -55,5 +56,13 @@ internal fun nightThemedContext(
         Configuration(base.resources.configuration).apply {
             uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or night
         }
-    return ContextThemeWrapper(base.createConfigurationContext(config), android.R.style.Theme_DeviceDefault_DayNight)
+    // DayNight arrived in API 29, the same release as WebView's dark rendering; older devices get the
+    // plain DeviceDefault theme, which exists there, instead of a resource id they do not have.
+    val theme =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            android.R.style.Theme_DeviceDefault_DayNight
+        } else {
+            android.R.style.Theme_DeviceDefault
+        }
+    return ContextThemeWrapper(base.createConfigurationContext(config), theme)
 }

@@ -41,7 +41,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chess_color_black
+import com.vitorpamplona.amethyst.commons.resources.chess_color_white
+import com.vitorpamplona.amethyst.commons.resources.chess_versus
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import androidx.compose.ui.graphics.Color as ComposeColor
 
 private val ActiveBorderColor = ComposeColor(0xFF4CAF50)
@@ -173,14 +178,14 @@ fun ChessPlayerVsHeader(
                 onClick = onWhiteClick,
             )
             Text(
-                text = "White",
+                text = stringRes(Res.string.chess_color_white),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
         Text(
-            text = "vs",
+            text = stringRes(Res.string.chess_versus),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -199,7 +204,7 @@ fun ChessPlayerVsHeader(
                 onClick = onBlackClick,
             )
             Text(
-                text = "Black",
+                text = stringRes(Res.string.chess_color_black),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

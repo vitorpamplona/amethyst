@@ -32,6 +32,7 @@ import android.webkit.URLUtil
 import android.widget.Toast
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.browser.BrowserDownloadRules
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobHttp
 import com.vitorpamplona.quartz.utils.Log
 import okhttp3.Request
 import java.io.File

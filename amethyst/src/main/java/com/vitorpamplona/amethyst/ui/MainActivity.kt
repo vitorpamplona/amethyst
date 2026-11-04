@@ -26,21 +26,19 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.runtime.CompositionLocalProvider
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.ui.components.LocalWindowViewModelStoreOwner
+import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
+import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
+import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
 import com.vitorpamplona.amethyst.debugState
+import com.vitorpamplona.amethyst.napplet.NappletConsentCoordinator
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.NotificationRelayService
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
-import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -63,17 +61,12 @@ class MainActivity : AppCompatActivity() {
         setContent {
             AmethystTheme {
                 NowProvider {
-                    // The Activity outlives every nav destination: screens that share state
-                    // across destinations (chess lobby + board, the Cordn group draft) keep it here.
-                    CompositionLocalProvider(LocalWindowViewModelStoreOwner provides this) {
-                        AccountScreen(Amethyst.instance.sessionManager)
-                    }
+                    AmethystApp(Amethyst.instance.sessionManager, AndroidAppRoot)
                 }
             }
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onResume() {
         super.onResume()
         isResumed = true
@@ -82,6 +75,13 @@ class MainActivity : AppCompatActivity() {
 
         // starts muted every time
         DEFAULT_MUTED_SETTING.value = true
+
+        // A signer prompt left open when the user went to the launcher sits in its own task, which is
+        // excluded from Recents: coming back through the launcher would otherwise leave it out of reach
+        // while the app that asked waits on it.
+        SignerConsentCoordinator.resurfacePending(this)
+        SignerConnectCoordinator.resurfacePending(this)
+        NappletConsentCoordinator.resurfacePending(this)
 
         // If always-on notifications are enabled but the foreground service couldn't be
         // started from the background during cold-start (Android 12+ restriction), retry
@@ -95,13 +95,11 @@ class MainActivity : AppCompatActivity() {
         isResumed = false
         Log.d("ActivityLifecycle") { "MainActivity.onPause $this" }
 
-        @OptIn(DelicateCoroutinesApi::class)
-        GlobalScope.launch(Dispatchers.IO) {
+        Amethyst.instance.applicationIOScope.launch {
             LanguageTranslatorService.clear()
         }
 
-        @OptIn(DelicateCoroutinesApi::class)
-        GlobalScope.launch(Dispatchers.IO) {
+        Amethyst.instance.applicationIOScope.launch {
             debugState(applicationContext)
             Amethyst.instance.relayReqStats?.printStats()
         }
@@ -111,12 +109,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-
-        // Graph doesn't completely clear.
-        // @OptIn(DelicateCoroutinesApi::class)
-        // GlobalScope.launch(Dispatchers.IO) {
-        //    serviceManager.trimMemory()
-        // }
 
         Log.d("ActivityLifecycle") { "MainActivity.onStop $this" }
     }

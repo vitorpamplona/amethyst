@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -196,7 +197,7 @@ class BootRelayDiagnostics(
         client.addConnectionListener(listener)
         // A coroutine instead of a daemon thread: KMP-portable and finishes after
         // the last scheduled census instead of holding a parked thread.
-        CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             var last = 0L
             dumpAtSeconds.forEach { at ->
                 delay((at - last) * 1000)

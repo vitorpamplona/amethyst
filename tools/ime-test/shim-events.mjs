@@ -28,6 +28,23 @@ const HTML = `<!doctype html><meta charset=utf-8><title>ime</title>
 <div id="ce" contenteditable="true" style="border:1px solid #000;padding:8px">
   <span id="cespan">editable span text</span>
 </div>
+<textarea id="chat" rows="1"></textarea>
+<textarea id="notes" rows="3"></textarea>
+<form id="pf"><input id="n1"><input id="n2"><textarea id="n3"></textarea><input id="n4"></form>
+<div id="search" contenteditable="true" role="combobox" enterkeyhint="search" style="border:1px solid #000;padding:8px"></div>
+<script>
+  // A rich search box (Brainstorm's home): a contenteditable that takes Enter from beforeinput, not keydown.
+  window.searches = []
+  document.getElementById('search').addEventListener('beforeinput', function (e) {
+    if (e.inputType === 'insertParagraph' || e.inputType === 'insertLineBreak') { e.preventDefault(); window.searches.push(this.textContent) }
+  })
+  // A chat composer the way chat apps write one: send on a keydown Enter, cancel the key, then clear the
+  // field by assigning its value (what a framework's state reset does), which fires no input event.
+  window.sentMsgs = []
+  document.getElementById('chat').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sentMsgs.push(this.value); this.value = '' }
+  })
+</script>
 </body>`
 
 const browser = await chromium.launch({ executablePath: CHROMIUM, args: ['--no-sandbox'] })
@@ -164,6 +181,122 @@ await step(
   },
   (m) => (has(m, 'ime.wantkb') ? null : 'no ime.wantkb from inside a contenteditable'),
 )
+
+// Host → page: the mirror's edit, then the keyboard's Enter, exactly as RemoteImeView ships them.
+const hostSet = (text) => page.evaluate((t) => window.__imeIn({ data: JSON.stringify({ type: 'ime.set', text: t, selStart: t.length, selEnd: t.length, composingStart: -1, composingEnd: -1 }) }), text)
+const hostEnter = () => page.evaluate(() => window.__imeIn({ data: JSON.stringify({ type: 'ime.action' }) }))
+
+await step(
+  'Enter in a chat composer sends it instead of adding a line break',
+  async () => {
+    await page.click('#chat')
+    await page.waitForTimeout(150)
+    await drain()
+    await hostSet('hello')
+    await page.waitForTimeout(50)
+    await drain()
+    await hostEnter()
+  },
+  () => null,
+)
+{
+  const [sent, value] = await page.evaluate(() => [window.sentMsgs.slice(), document.getElementById('chat').value])
+  const problem = sent.length !== 1 || sent[0] !== 'hello' ? `page received ${JSON.stringify(sent)} (no keydown Enter reached it)` : value !== '' ? `field kept ${JSON.stringify(value)}` : null
+  results.push(['  ...the page got exactly "hello" and cleared itself', JSON.stringify(sent), problem])
+  if (problem) failures.push(`chat Enter: ${problem}`)
+}
+
+// The page cleared the field by assignment: the host must hear the empty text, or its mirror keeps "hello"
+// and the next keystroke writes it all back.
+await step(
+  'a field the page clears by assigning value is reported to the host',
+  () => page.evaluate(() => { const t = document.getElementById('chat'); t.value = 'draft'; return new Promise((r) => setTimeout(r, 20)) }).then(() => drain()).then(() => page.evaluate(() => { document.getElementById('chat').value = '' })),
+  (m) => {
+    const st = m.filter((x) => x.type === 'ime.state').pop()
+    if (!st) return 'no ime.state — the host never learns the page cleared the field'
+    return st.text === '' ? null : `ime.state carried "${st.text}"`
+  },
+)
+
+await step(
+  'our own edits are not echoed back as page writes',
+  () => hostSet('typed'),
+  (m) => (has(m, 'ime.state') ? 'ime.state echoed the host its own edit' : null),
+)
+
+await step(
+  'Enter in a plain textarea inserts a line break and reports it',
+  async () => {
+    await page.click('#notes')
+    await page.waitForTimeout(150)
+    await drain()
+    await hostSet('one')
+    await page.waitForTimeout(50)
+    await drain()
+    await hostEnter()
+  },
+  (m) => {
+    const st = m.filter((x) => x.type === 'ime.state').pop()
+    if (!st) return 'no ime.state — the host mirror never learns about the line break'
+    return st.text === 'one\n' ? null : `ime.state carried ${JSON.stringify(st.text)}`
+  },
+)
+
+await step(
+  'Enter in a contenteditable search box searches instead of adding a line break',
+  async () => {
+    await page.click('#search')
+    await page.waitForTimeout(150)
+    await drain()
+    await hostSet('Vitor')
+    await page.waitForTimeout(50)
+    await drain()
+    await hostEnter()
+  },
+  () => null,
+)
+{
+  const [searches, text] = await page.evaluate(() => [window.searches.slice(), document.getElementById('search').textContent])
+  const problem = searches.length !== 1 || searches[0] !== 'Vitor' ? `page searched ${JSON.stringify(searches)} (no beforeinput insertParagraph reached it)` : text !== 'Vitor' ? `field became ${JSON.stringify(text)}` : null
+  results.push(['  ...the page searched "Vitor" and the field kept no line break', JSON.stringify(searches), problem])
+  if (problem) failures.push(`search Enter: ${problem}`)
+}
+
+await step(
+  'a form field with another after it offers Next',
+  () => page.click('#n1'),
+  (m) => { const f = find(m, 'ime.focus'); return !f ? 'no ime.focus' : f.hasNext === true ? null : `hasNext=${f.hasNext}` },
+)
+await step(
+  'Next moves focus to the following field',
+  () => page.evaluate(() => window.__imeIn({ data: JSON.stringify({ type: 'ime.next' }) })),
+  (m) => { const f = find(m, 'ime.focus'); return !f ? 'focus did not move' : null },
+)
+{
+  const id = await page.evaluate(() => document.activeElement.id)
+  results.push(['  ...to the second field', id, id === 'n2' ? null : `focused ${id}`])
+  if (id !== 'n2') failures.push(`Next: focused ${id}`)
+}
+await step(
+  'a textarea never offers Next (Enter is a line break)',
+  () => page.click('#n3'),
+  (m) => { const f = find(m, 'ime.focus'); return !f ? 'no ime.focus' : f.hasNext ? 'hasNext on a textarea' : null },
+)
+await step(
+  'the last field in the form offers Go, not Next',
+  () => page.click('#n4'),
+  (m) => { const f = find(m, 'ime.focus'); return !f ? 'no ime.focus' : f.hasNext ? 'hasNext on the last field' : null },
+)
+await step(
+  'Previous moves focus back',
+  () => page.evaluate(() => window.__imeIn({ data: JSON.stringify({ type: 'ime.prev' }) })),
+  () => null,
+)
+{
+  const id = await page.evaluate(() => document.activeElement.id)
+  results.push(['  ...to the textarea before it', id, id === 'n3' ? null : `focused ${id}`])
+  if (id !== 'n3') failures.push(`Previous: focused ${id}`)
+}
 
 console.log(`\nshim: ${SHIM}\n`)
 for (const [name, types, problem] of results) {

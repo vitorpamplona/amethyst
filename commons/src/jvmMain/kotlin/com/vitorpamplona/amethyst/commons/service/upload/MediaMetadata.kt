@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.commons.service.upload
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
 import com.vitorpamplona.amethyst.commons.thumbhash.toThumbhash
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.sha256
+import java.awt.image.BufferedImage
+import java.io.ByteArrayInputStream
 import java.io.File
 import javax.imageio.ImageIO
 
@@ -44,10 +46,18 @@ data class MediaMetadata(
  * in the same package.
  */
 object MediaMetadataReader {
-    fun compute(file: File): MediaMetadata {
-        val bytes = file.readBytes()
+    fun compute(file: File): MediaMetadata = compute(file.readBytes(), guessMimeType(file))
+
+    /**
+     * Same as [compute] for a file already in memory, such as one downloaded from a link.
+     * [fallbackDecoder] reads the images ImageIO cannot (WebP, through Skia on desktop).
+     */
+    fun compute(
+        bytes: ByteArray,
+        mimeType: String,
+        fallbackDecoder: ((ByteArray) -> BufferedImage?)? = null,
+    ): MediaMetadata {
         val hash = sha256(bytes).toHexKey()
-        val mimeType = guessMimeType(file)
         var width: Int? = null
         var height: Int? = null
         var blurhash: String? = null
@@ -55,10 +65,16 @@ object MediaMetadataReader {
 
         if (mimeType.startsWith("image/")) {
             try {
-                val image = ImageIO.read(file)
+                val decoded = runCatching { readForHashes(bytes) }.getOrNull()
+                // ImageIO reads the pixels as stored; a camera's orientation tag says how they
+                // display, which is what the dimensions and the hashes must describe. The fallback
+                // (Skia) applies the tag itself.
+                val orientation = if (decoded != null) ExifOrientation.read(bytes) else ExifOrientation.NORMAL
+                val swap = ExifOrientation.swapsAxes(orientation)
+                val image = decoded?.image?.let { ExifOrientation.apply(it, orientation) } ?: fallbackDecoder?.invoke(bytes)
                 if (image != null) {
-                    width = image.width
-                    height = image.height
+                    width = decoded?.let { if (swap) it.height else it.width } ?: image.width
+                    height = decoded?.let { if (swap) it.width else it.height } ?: image.height
                     val platformImage = image.toPlatformImage()
                     blurhash = runCatching { platformImage.toBlurhash() }.getOrNull()
                     thumbhash = runCatching { platformImage.toThumbhash() }.getOrNull()
@@ -78,9 +94,38 @@ object MediaMetadataReader {
         )
     }
 
-    fun guessMimeType(file: File): String {
-        val ext = file.extension.lowercase()
-        return when (ext) {
+    private class Decoded(
+        val width: Int,
+        val height: Int,
+        val image: BufferedImage,
+    )
+
+    /**
+     * The image's real size from its header, plus a copy decoded at a fraction of it: the preview
+     * hashes only look at about 100 pixels, so a 5000x3333 photo need not fill 66 MB to make them.
+     */
+    private fun readForHashes(bytes: ByteArray): Decoded? =
+        ImageIO.createImageInputStream(ByteArrayInputStream(bytes))?.use { input ->
+            val reader = ImageIO.getImageReaders(input).asSequence().firstOrNull() ?: return null
+            try {
+                reader.input = input
+                val width = reader.getWidth(0)
+                val height = reader.getHeight(0)
+                val step = (minOf(width, height) / HASH_SOURCE_MIN_SIDE).coerceAtLeast(1)
+                val param = reader.defaultReadParam.apply { if (step > 1) setSourceSubsampling(step, step, 0, 0) }
+                Decoded(width, height, reader.read(0, param))
+            } finally {
+                reader.dispose()
+            }
+        }
+
+    // Twice the 100 pixels blurhash and thumbhash scale down to.
+    private const val HASH_SOURCE_MIN_SIDE = 200
+
+    fun guessMimeType(file: File): String = guessMimeTypeFromExtension(file.extension)
+
+    fun guessMimeTypeFromExtension(extension: String): String =
+        when (extension.lowercase()) {
             "jpg", "jpeg" -> "image/jpeg"
             "png" -> "image/png"
             "gif" -> "image/gif"
@@ -96,5 +141,4 @@ object MediaMetadataReader {
             "flac" -> "audio/flac"
             else -> "application/octet-stream"
         }
-    }
 }

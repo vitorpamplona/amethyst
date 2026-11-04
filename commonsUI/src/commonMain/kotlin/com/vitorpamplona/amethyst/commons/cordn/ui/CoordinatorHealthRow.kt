@@ -29,7 +29,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.cordn.CoordinatorHealth
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -37,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_health_down
 import com.vitorpamplona.amethyst.commons.resources.cordn_health_failures
 import com.vitorpamplona.amethyst.commons.resources.cordn_health_ok
 import com.vitorpamplona.amethyst.commons.resources.cordn_health_unknown
+import com.vitorpamplona.cordn.client.CoordinatorHealth
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 

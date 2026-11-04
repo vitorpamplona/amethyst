@@ -39,8 +39,7 @@ import kotlin.io.path.exists
  * - the boot-time sweep has a strict ownership claim — anything in
  *   this directory belongs to us.
  *
- * The directory may be overridden via `-Damethyst.tmp.dir=PATH`,
- * useful for tests.
+ * The directory may be overridden via `-Damethyst.tmp.dir=PATH`.
  */
 object AmethystTempDir {
     private const val PROP_OVERRIDE = "amethyst.tmp.dir"
@@ -71,7 +70,10 @@ object AmethystTempDir {
         return createTempFile(root.toPath(), prefix, suffix).toFile()
     }
 
-    /** Path to the per-user temp dir. Test-friendly accessor. */
+    /**
+     * Path to the per-user temp dir. Every JVM on the account shares it, test forks included, so a
+     * test must not list it: another fork's files would show up there.
+     */
     fun rootDir(): File = root
 
     /**

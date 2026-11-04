@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.datasource.RelayGroupOpenChatHistorySubAssembler
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
@@ -57,8 +58,8 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatRoomVouches
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.LoadRelayGroupChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenChatHistorySubscription
@@ -219,6 +220,12 @@ private fun ChannelView(
                         .weight(1f, true)
                 },
         ) {
+            // Who the room vouches for, rebuilt when its metadata changes (a new speaker, member).
+            val channelState by channel
+                .flow()
+                .metadata.stateFlow
+                .collectAsStateWithLifecycle()
+            val vouches = remember(channelState) { ChatRoomVouches(channel.memberKeys()) }
             RefreshingChatroomFeedView(
                 feedContentState = feedViewModel.feedState,
                 accountViewModel = accountViewModel,
@@ -260,6 +267,7 @@ private fun ChannelView(
                             RelayReachSentinels(limits, listState) { index -> items.getOrNull(index)?.event?.createdAt }
                         }
                     },
+                collapseOutsideNetwork = vouches,
             )
         }
 

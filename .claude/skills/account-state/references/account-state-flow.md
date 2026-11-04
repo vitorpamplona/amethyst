@@ -1,94 +1,86 @@
 # Account State-Object Catalog
 
-`Account.kt` composes ~50 **feature state objects** (not raw StateFlow
-properties). Each object pins its backing addressable note in `LocalCache`,
-exposes `val flow: StateFlow<…>` (decrypted + backup-merged + `stateIn`), and
-offers suspend mutation helpers that return signed events. Consumers read
-`account.<property>.flow`.
+`commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/model/Account.kt` composes ~50
+feature state objects. Packages below are relative to `commons/…/commons/model/`. Names were checked
+against `Account.kt`; if one has moved, grep `Account.kt` for the class name — the import tells you
+where it lives.
 
-(Property and class names are exact as of the current `Account.kt`; if one has
-been renamed, grep `Account.kt` for the class name.)
+## Identity and contacts
 
-## Identity & Contacts
+| `Account` property | Class | Kind | Package |
+|---|---|---|---|
+| `userMetadata` | `UserMetadataState` | 0 | `nip01UserMetadata/` |
+| `kind3FollowList` | `Kind3FollowListState` | 3 | `nip02FollowLists/` |
+| `muteList` (+ `muteListDecryptionCache`) | `MuteListState` (+ `MuteListDecryptionCache`) | 10000 | `nip51Lists/muteList/` |
+| `blockPeopleList` | `BlockPeopleListState` | NIP-51 people set | `nip51Lists/blockPeopleList/` |
+| `followSets` (+ `followSetDecryptionCache`) | `FollowSetsState` | NIP-51 follow sets | `nip51Lists/followSets/` |
+| `starterPacks` | `StarterPacksState` | NIP-51 starter packs | `nip51Lists/followSets/` |
+| `hiddenUsers` | `HiddenUsersState` — derived from `muteList.flow` + `blockPeopleList.flow` | — | `nip51Lists/` |
+| `allFollows` | `MergedFollowListsState` — kind3 + follow sets + starter packs + interest/geohash/community lists | — | `serverList/` |
 
-| Account property | State class | Kind | Package |
-|------------------|-------------|------|---------|
-| `userMetadata` | `UserMetadataState` | 0 | `amethyst/.../model/nip01UserMetadata/` |
-| `kind3FollowList` | `Kind3FollowListState` | 3 | `model/nip02FollowLists/` |
-| `muteList` (+ `muteListDecryptionCache`) | `MuteListState` | 10000 | `model/nip51Lists/muteList/` |
-| `blockPeopleList`, `peopleLists` | `BlockPeopleListState`, `FollowSetsState` | NIP-51 people sets | `model/nip51Lists/followSets/` |
-| `followLists` | `StarterPacksState` | NIP-51 follow sets | `model/nip51Lists/followSets/` |
-| `hiddenUsers` | `HiddenUsersState` — derived from `muteList.flow` + `blockPeopleList.flow` | — | `model/nip51Lists/` |
-| `allFollows` | `MergedFollowListsState` — merges kind3 + people/follow/hashtag/geohash/community lists | — | `model/serverList/` |
+## Relay lists
 
-## Relay Lists
+| `Account` property | Class | Kind | Package |
+|---|---|---|---|
+| `nip65RelayList` | `Nip65RelayListState` | 10002 | `nip65RelayList/` |
+| `dmRelayList` | `DmRelayListState` | 10050 | `nip17Dms/` |
+| `searchRelayList` | `SearchRelayListState` | 10007 | `nip51Lists/searchRelays/` |
+| `blockedRelayList` | `BlockedRelayListState` | 10006 | `nip51Lists/blockedRelays/` |
+| `localRelayList` | `LocalRelayListState` | local only | `localRelays/` |
+| `privateStorageRelayList` | `PrivateStorageRelayListState` | private | `edits/` |
+| `keyPackageRelayList` | `KeyPackageRelayListState` | Marmot | `marmot/` |
+| `trustedRelayList`, `proxyRelayList`, `broadcastRelayList`, `indexerRelayList`, `favoriteRelayList` | `TrustedRelayListState`, `ProxyRelayListState`, `BroadcastRelayListState`, `IndexerRelayListState`, `FavoriteRelayListState` — each with a `…DecryptionCache` sibling | NIP-51 relay sets | `nip51Lists/trustedRelays/`, `…/proxyRelays/`, `…/broadcastRelays/`, `…/indexerRelays/`, `…/favoriteRelays/` |
 
-| Account property | State class | Kind | Package |
-|------------------|-------------|------|---------|
-| `nip65RelayList` | `Nip65RelayListState` | 10002 | `model/nip65RelayList/` |
-| `dmRelayList` | `DmRelayListState` | 10050 | `model/nip17Dms/` |
-| `searchRelayList` | `SearchRelayListState` | 10007 | `model/nip51Lists/searchRelays/` |
-| `blockedRelayList` | `BlockedRelayListState` | 10006 | `model/nip51Lists/blockedRelays/` |
-| `localRelayList` | `LocalRelayListState` | local | `model/localRelays/` |
-| `privateStorageRelayList` | `PrivateStorageRelayListState` | private storage | `model/edits/` |
-| `keyPackageRelayList`, `trustedRelayList`, `proxyRelayList`, `broadcastRelayList`, `indexerRelayList`, `favoriteRelayList` | per-feature `…RelayListState` classes, each with a `DecryptionCache` sibling | custom relay sets | `model/nip51Lists/…` |
+Derived relay views (merge several of the above, no event of their own): `homeRelays`
+(`AccountHomeRelayState`), `outboxRelays` (`AccountOutboxRelayState`), `dmRelays`
+(`DmInboxRelayState`), `notificationRelays` (`NotificationInboxRelayState`), `trustedRelays`
+(`TrustedRelayListsState`), `followOutboxesOrProxy` (`FollowListOutboxOrProxyRelays`),
+`followPlusAllMineWithIndex`, `followPlusAllMineWithSearch`.
 
-Derived relay views (merge several of the above): `homeRelays`
-(`AccountHomeRelayState`), `outboxRelays`, `dmRelays`, `notificationRelays`,
-`trustedRelays`, `followPlusAllMineWithIndex`, `followPlusAllMineWithSearch`,
-`defaultGlobalRelays`.
+## Content lists
 
-## Content Lists
+| `Account` property | Class | Kind | Package |
+|---|---|---|---|
+| `bookmarkState` (legacy `oldBookmarkState`) | `BookmarkListState` (`OldBookmarkListState`) | 10003 | `nip51Lists/` |
+| `bookmarkSets` | `BookmarkSetsState` | NIP-51 bookmark sets | `nip51Lists/bookmarkSets/` |
+| `pinState` | `PinListState` | NIP-51 pins | `nip51Lists/` |
+| `interestSets` | `InterestSetsState` | NIP-51 interest sets | `nip51Lists/interestSets/` |
+| `interestList` / `geohashList` | `InterestListState` / `GeohashListState` | NIP-51 | `nip51Lists/interestLists/`, `nip51Lists/geohashLists/` |
+| `communityList` | `CommunityListState` | NIP-72 | `nip72Communities/` |
+| `favoriteAlgoFeedsList` | `FavoriteAlgoFeedsListState` | NIP-51 | `nip51Lists/favoriteAlgoFeedsLists/` |
+| `emoji`, `ownedEmojiPacks` | `EmojiPackState`, `OwnedEmojiPacksState` | NIP-30 | `nip30CustomEmojis/` |
+| `publicChatList` | `PublicChatListState` | NIP-28 | `nip28PublicChats/` |
+| `ephemeralChatList` | `EphemeralChatListState` | ephemeral chats | `emphChat/` |
+| `relayGroupList` | `RelayGroupListState` | 10009 (NIP-29 groups) | `nip29RelayGroups/` |
+| `blossomServers` | `BlossomServerListState` | Blossom | `nipB7Blossom/` |
 
-| Account property | State class | Kind | Package |
-|------------------|-------------|------|---------|
-| `bookmarkState` (and legacy `oldBookmarkState`) | `BookmarkListState` | 10003 | `model/nip51Lists/` |
-| `bookmarkSets` | `BookmarkSetsState` | NIP-51 bookmark sets | `model/nip51Lists/bookmarkSets/` |
-| `pinState` | `PinListState` | NIP-51 | `model/nip51Lists/` |
-| `interestSets` | `InterestSetsState` | NIP-51 interest sets | `model/nip51Lists/interestSets/` |
-| `hashtagList` / `geohashList` | `InterestListState` / `GeohashListState` | NIP-51 | `model/nip51Lists/interestLists/`, `…/geohashLists/` |
-| `communityList` | `CommunityListState` | NIP-72 communities | `model/nip72Communities/` |
-| `favoriteAlgoFeedsList` | `FavoriteAlgoFeedsListState` | NIP-51 | `model/nip51Lists/` |
-| `emoji`, `ownedEmojiPacks` | `EmojiPackState`, `OwnedEmojiPacksState` | 10030 | `commons/.../commons/model/nip30CustomEmojis/` |
-| `publicChatList` | `PublicChatListState` | NIP-28 | `commons/.../commons/model/nip28PublicChats/` |
-| `ephemeralChatList` | `EphemeralChatListState` | ephemeral chats | `commons/.../commons/model/emphChat/` |
-| `blossomServers` | `BlossomServerListState` | Blossom (BUD) | `model/nipB7Blossom/` |
+## Other feature state
 
-## Other Feature State
+| `Account` property | Class | Purpose | Package |
+|---|---|---|---|
+| `vanish` | `VanishRequestsState` | NIP-62 vanish requests | `nip62Vanish/` |
+| `appSpecific` | `AppSpecificState` | NIP-78 app data | `nip78AppSpecific/` |
+| `otsState` | `OtsState` | NIP-03 OpenTimestamps | `nip03Timestamp/` |
+| `liveHomeFollowListsPerRelay`, `liveStoriesFollowListsPerRelay`, `liveDiscoveryFollowListsPerRelay`, … | `OutboxLoaderState(...).flow` — already a flow | per-feed outbox routing | `topNavFeeds/` |
+| `privateDMDecryptionCache`, `draftsDecryptionCache` | `PrivateDMCache`, `DraftEventCache` (quartz) | NIP-04/NIP-37 decryption caches | quartz `nip04Dm/`, `nip37Drafts/` |
 
-| Account property | State class | Purpose | Package |
-|------------------|-------------|---------|---------|
-| `vanish` | `VanishRequestsState` | NIP-62 vanish requests | `model/nip62Vanish/` |
-| `appSpecific` | `AppSpecificState` | NIP-78 app data | `model/nip78AppSpecific/` |
-| `otsState` | `OtsState` | NIP-03 OpenTimestamps | `model/nip03Timestamp/` |
-| `live*FollowListsPerRelay` | `OutboxLoaderState(...).flow` — already a flow | per-feed outbox routing | `model/topNavFeeds/` |
-| `privateDMDecryptionCache`, `draftsDecryptionCache` | `PrivateDMCache`, `DraftEventCache` | NIP-44 decryption caches | — |
+## Publishing mutations
 
-Note the migration direction: newer/extracted state classes live in
-`commons/src/commonMain/.../commons/model/`, the rest still in
-`amethyst/src/main/java/.../model/`. Check both when looking for one.
+Mutation helpers build and sign the replaceable event with the quartz event class and **return** it;
+an `Account` method sends it. Real pairs from `Account.kt`:
 
-## Publishing Mutations
+```kotlin
+suspend fun follow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(user))
+suspend fun follow(community: AddressableNote) = sendMyPublicAndPrivateOutbox(communityList.follow(community))
+```
 
-State objects' mutation helpers (e.g. `MuteListState.hideUser(pubkey)`,
-`BookmarkListState` add/remove) **build and sign** the updated replaceable
-event via the quartz event class (`XEvent.add / remove / create`) and return
-it. The caller (usually a method on `Account`) is responsible for sending it
-through the client. Decryption results are cached in the paired
-`…DecryptionCache` so re-renders don't re-decrypt.
+The send helpers (`sendAutomatic`, `sendMyPublicAndPrivateOutbox`, `sendLiterallyEverywhere`)
+delegate to `EventBroadcaster` (`model/EventBroadcaster.kt`). Pick the one that matches where the
+event must land; for an encrypted list that is almost always `sendMyPublicAndPrivateOutbox`.
 
-## When a State Object Doesn't Exist Yet
+## Local backups
 
-If you're adding a new NIP that's user-scoped, follow the pattern (full recipe
-in `SKILL.md`):
-
-1. Create `model/nipXX…/XState.kt` modeled on `MuteListState` (encrypted) or
-   `BookmarkListState` (plain).
-2. Pin the note with `cache.getOrCreateAddressableNote(...)`, expose
-   `val flow: StateFlow<…>` via `stateIn(scope, Eagerly, default)`.
-3. Instantiate it in `Account.kt` (plus a `DecryptionCache` sibling if
-   private), and wire the relay subscription (see `relay-client` skill).
-4. Add mutation helpers that build, sign, and return the event; publish from
-   the calling site.
-5. Use `AccountSettings` for the local backup copy if the list must survive
-   relay loss.
+`AccountSettings` (`model/AccountSettings.kt`) keeps `backupX` copies of the lists the account
+cannot afford to lose (`backupContactList`, `backupMuteList`, `backupNIP65RelayList`,
+`backupDMRelayList`, …). The state object falls back to it when the relay copy is absent, so a new
+list that must survive relay loss needs its own `backup…` field.

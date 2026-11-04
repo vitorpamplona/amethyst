@@ -25,13 +25,10 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.compositionLocalOf
 
 /**
- * Provided once at the App composition root. Map keyed by [LockScope]; every
- * scope must have an entry (see [lockStateFor] which throws when missing).
+ * Provided once at the App composition root, one state per [LockScope]. Empty where no lock is
+ * installed (previews, tests), which every gate reads as unlocked.
  */
-val LocalPrivacyLockState =
-    compositionLocalOf<Map<LockScope, PrivacyLockState>> {
-        error("LocalPrivacyLockState not provided — wrap App() with CompositionLocalProvider")
-    }
+val LocalPrivacyLockState = compositionLocalOf<Map<LockScope, PrivacyLockState>> { emptyMap() }
 
 /**
  * Convenience accessor used inside gate composables. Reads the map from the

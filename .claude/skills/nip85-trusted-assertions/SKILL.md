@@ -1,6 +1,6 @@
 ---
 name: nip85-trusted-assertions
-description: The NIP-85 trusted-assertions model in Quartz (`nip85TrustedAssertions/`) — kind 10040 trust-provider lists, kind 30382 contact cards / user assertions, 30383 event assertions, 30384 addressable assertions, 30385 external-id assertions. Use when building or parsing these events, working with the typed tags (RankTag, HopsTag, FollowerCountTag, ServiceProviderTag/ServiceType, …), wiring a consumer that resolves a 10040 provider entry to the 30382s it signs, ranking on assertion values, or touching the GrapeRank publisher, contact-card nicknames, or the trust projection of an external store.
+description: NIP-85 trusted assertions in Quartz: kind 10040 provider lists, 30382-30385 assertion cards, RankTag/HopsTag/ServiceType, GrapeRank publisher, contact-card nicknames. Use when building, parsing or ranking on these events.
 ---
 
 # NIP-85 Trusted Assertions — the Quartz model
@@ -59,7 +59,7 @@ There is **no fixed tag name**: `tag[0]` *is* the service string.
 - `object ProviderTypes` (`list/tags/ServiceType.kt`) enumerates the *known* service types —
   `30382:rank`, `30382:followers`, `30382:first_created_at`, per-metric `30383:*`/`30384:*`/
   `30385:*`, etc. It is an **open vocabulary**: real 10040s in the wild (see the fiatjaf →
-  brainstorm fixture in `commonTest/.../nip85TrustedAssertions/ServiceParser.kt`) carry types
+  brainstorm fixture in `commonTest/.../experimental/nip85TrustedAssertions/ServiceParser.kt`) carry types
   Quartz doesn't enumerate (`30382:personalizedGrapeRank_influence`, `30382:hops`,
   `30382:verifiedFollowersCount`, …). Parse any `kind:type`; special-case only what you rank on.
 
@@ -74,14 +74,17 @@ There is **no fixed tag name**: `tag[0]` *is* the service string.
   store's orphan sweep does — is a legitimate storage policy, not a protocol rule).
 - What an entry authorizes is scoped by its `ServiceType`: `30382:rank` authorizes that
   provider's user-rank cards, nothing else. Amethyst models this as one provider slot per
-  metric (`liveUserRankProvider`, `liveUserFollowerCount` in
-  `amethyst/.../model/trustedAssertions/TrustProviderListState.kt`).
+  metric (`liveUserRankProvider`, `liveUserFollowerCount`: the interface is
+  `commons/.../model/nip85TrustedAssertions/TrustProviderListState.kt`, the account's
+  implementation `commons/.../model/trustedAssertions/TrustProviderListState.kt`).
 - **Multi-provider combination is unprescribed.** When two listed providers assert different
   ranks, there is no spec'd merge; Amethyst avoids the question by selecting one provider per
   metric slot. Consumers choose their own policy — document it.
 - The relay URL in the entry is a **fetch hint, and it is honored**:
-  `amethyst/.../UserCardsSubAssembler.kt` subscribes for cards at the provider's declared relay
-  (`kinds=[30382], authors=[provider], #d=[targets]`).
+  `commons/.../relayClient/user/watchers/UserCardsSubAssembler.kt` subscribes for cards at the
+  provider's declared relay via `filterUserAssertionsToTargetKeysFromTrustedAccountsInTheRelay`
+  (`relayClient/assemblers/ContactCardFilters.kt`: user-assertion kinds, `authors=[providers]`,
+  `#d=[targets]`).
 
 ### The dual use of kind 30382
 
@@ -195,7 +198,7 @@ Consumption chain: read `O`'s 10040 → entry matching `ServiceType(30382, "rank
 `{kinds:[30382], authors:["<P>"], "#d":["<S>", …]}` at the hinted relay → newest card per
 address wins → `rank()`.
 
-Literal fixtures: `quartz/src/commonTest/.../nip85TrustedAssertions/ServiceParser.kt` (a real
+Literal fixtures: `quartz/src/commonTest/.../experimental/nip85TrustedAssertions/ServiceParser.kt` (a real
 10040 — fiatjaf's, pointing at the Brainstorm provider) and `AssertionEventTest.kt` (all four
 assertion kinds with every tag populated).
 
@@ -217,8 +220,10 @@ card's `a`-tag (`30382:<provider>:<target>`).
   tests exist; no in-repo publisher yet).
 - **Known warts**: `ServiceProviderTag.assemble(id: ServiceProviderTag)` infers `Array<Any>` —
   dead code, don't use it; `SummaryTag.assemble(ip:)`/`ActiveHours*Tag.assemble(count:)` params
-  are misnamed; the tests live under `commonTest/.../experimental/nip85TrustedAssertions/`
-  (stale path); `TrustProviderListEvent` extends the addressable base, so a stray on-wire `d`
+  are misnamed; most tests (`AssertionEventTest`, `ServiceTypeParserTest`,
+  `UserAssertionPetNameTest`, the `ServiceParser` fixture) live under
+  `commonTest/.../experimental/nip85TrustedAssertions/` (stale path; newer ones are under
+  `commonTest/.../nip85TrustedAssertions/`); `TrustProviderListEvent` extends the addressable base, so a stray on-wire `d`
   tag is reflected by `dTag()` even though the convention is `""`.
 
 ## Where it's consumed (reading list)
@@ -226,7 +231,8 @@ card's `a`-tag (`30382:<provider>:<target>`).
 - **Publisher**: `quartz/.../experimental/graperank/GrapeRankPublisher.kt` (canonical 30382
   writer), `cli/.../graperank/` (`amy graperank register|unregister|providers|publish`).
 - **Client model**: `commons/.../model/nip85TrustedAssertions/` (`UserAssertionsState`,
-  `UserCardsCache`, `UserAssertionDecryptionCache`, `TrustProviderListDecryptionCache`),
-  `amethyst/.../model/trustedAssertions/TrustProviderListState.kt`.
+  `UserCardsCache`, `UserAssertionDecryptionCache`, `TrustProviderListDecryptionCache`, the
+  `TrustProviderListState` interface), `commons/.../model/trustedAssertions/`
+  (`TrustProviderListState` implementation, `ScoreProviderEdits`).
 - **Relay plumbing**: `commons/.../relayClient/assemblers/ContactCardFilters.kt`,
-  `amethyst/.../reqCommand/user/watchers/UserCardsSubAssembler.kt`.
+  `commons/.../relayClient/user/watchers/UserCardsSubAssembler.kt`.

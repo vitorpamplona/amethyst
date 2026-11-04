@@ -130,6 +130,15 @@ class SearchRelayListState(
                 emptySet(),
             )
 
+    /**
+     * The relays to save to add [relay], or null when it is already there. Starts from the
+     * defaults when the user has no list, so adding one keeps the search the user had.
+     */
+    suspend fun withRelay(relay: NormalizedRelayUrl): List<NormalizedRelayUrl>? {
+        val current = normalizeSearchRelayListWithBackup(searchListNote)
+        return if (relay in current) null else current.toList() + relay
+    }
+
     suspend fun saveRelayList(searchRelays: List<NormalizedRelayUrl>): SearchRelayListEvent {
         val relayListForSearch = getSearchRelayList()
 

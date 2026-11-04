@@ -39,8 +39,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.search_group_filtered_on_results
+import com.vitorpamplona.amethyst.commons.resources.search_people_shared_id
 import com.vitorpamplona.amethyst.commons.search.KindCandidate
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 
 /** One row the people picker offers: who they are, and how to tell them from a namesake. */
@@ -111,7 +115,7 @@ fun SearchGroupPicker(
                 onClick = { onPick(candidate) },
                 title = candidate.name,
                 subtitle = candidate.subtitle,
-                trailing = if (candidate.ambiguous) "shared id" else null,
+                trailing = if (candidate.ambiguous) stringRes(Res.string.search_people_shared_id) else null,
             )
         }
     }
@@ -141,7 +145,7 @@ fun SearchKindPicker(
                 // `kind:21` is one; a reader picking between them deserves to see which.
                 subtitle =
                     if (candidate.isPseudo) {
-                        "filtered on results"
+                        stringRes(Res.string.search_group_filtered_on_results)
                     } else {
                         candidate.kinds.joinToString(", ")
                     },

@@ -22,11 +22,22 @@ package com.vitorpamplona.amethyst.commons.ui.components.util
 
 import android.content.ClipData
 import android.content.ClipDescription
+import android.os.PersistableBundle
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
+import androidx.compose.ui.platform.nativeClipboardManager
 
 actual suspend fun Clipboard.setText(text: String) {
     setClipEntry(ClipEntry(ClipData.newPlainText("", text)))
+}
+
+actual suspend fun Clipboard.setSensitiveText(text: String) {
+    val clip =
+        ClipData.newPlainText("", text).apply {
+            // ClipDescription.EXTRA_IS_SENSITIVE, spelled out: the constant is API 33, the key works earlier.
+            description.extras = PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
+        }
+    setClipEntry(ClipEntry(clip))
 }
 
 actual suspend fun Clipboard.getText(): String? =
@@ -40,6 +51,6 @@ actual suspend fun Clipboard.getText(): String? =
 // getPrimaryClip does. Only the types whose items carry the text getText reads: a text/uri-list clip
 // (ClipData.newUri) has none, so offering to paste it would do nothing.
 actual suspend fun Clipboard.hasText(): Boolean =
-    nativeClipboard.primaryClipDescription?.let {
+    nativeClipboardManager.primaryClipDescription?.let {
         it.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) || it.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
     } == true

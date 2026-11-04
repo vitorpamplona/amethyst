@@ -41,7 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconChange
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.description
 import com.vitorpamplona.amethyst.commons.resources.marmot_avatar_url
@@ -56,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_group_name_placeholde
 import com.vitorpamplona.amethyst.commons.resources.marmot_legacy_group_no_avatar_url
 import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -65,9 +65,12 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send.uploadMarmotGroupIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.marmot.client.MarmotGroupIconChange
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 @Composable
@@ -116,7 +119,7 @@ fun EditGroupInfoScreen(
                             val iconChange =
                                 pickedIcon?.let { media ->
                                     MarmotGroupIconChange.Set(
-                                        accountViewModel.uploadMarmotGroupIcon(media.uri, media.mimeType, accountViewModel.host.mediaUploader),
+                                        accountViewModel.uploadMarmotGroupIcon(nostrGroupId, media.uri, media.mimeType, accountViewModel.mediaUploader),
                                     )
                                 } ?: if (removeIcon) MarmotGroupIconChange.Clear else MarmotGroupIconChange.Keep
                             accountViewModel.updateMarmotGroupMetadata(
@@ -143,6 +146,7 @@ fun EditGroupInfoScreen(
                             nav.popBack()
                         } catch (e: Exception) {
                             isSaving = false
+                            currentCoroutineContext().ensureActive()
                             launch(Dispatchers.Main) {
                                 longNotice.show(loadStringRes(Res.string.marmot_failed_to_update, e.message))
                             }
@@ -199,7 +203,7 @@ fun EditGroupInfoScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
                 label = { Text(stringRes(Res.string.description)) },

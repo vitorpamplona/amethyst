@@ -72,9 +72,9 @@ fun ConcordChannelSubscription(
 
 /**
  * Always-on account-level preload of every joined community's Control (and folded Chat) planes,
- * mounted once high in the logged-in tree ([com.vitorpamplona.amethyst.ui.screen.loggedIn.LoggedInPage])
+ * mounted once high in the logged-in tree ([com.vitorpamplona.amethyst.commons.ui.app.AmethystApp])
  * — the Concord analog of the always-on account/DM gift-wrap tail
- * ([com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription]).
+ * ([com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountFilterAssemblerSubscription]).
  *
  * Concord control-plane wraps are addressed to *derived stream keys*, not `#p=self`, so the always-on
  * DM tail never picks them up — without this, communities only fold (and thus reveal their channels,

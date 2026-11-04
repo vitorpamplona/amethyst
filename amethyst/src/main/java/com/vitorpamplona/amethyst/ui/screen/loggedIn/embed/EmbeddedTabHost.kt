@@ -25,6 +25,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -71,7 +72,7 @@ object EmbeddedTabHost {
      * The favorite screens and the preloader key their acquisition on this, so they re-acquire a freshly
      * built session instead of the stale warm one.
      */
-    var rebuildEpoch by mutableStateOf(0)
+    var rebuildEpoch by mutableIntStateOf(0)
         private set
 
     /** Window-space bounds of the active tab's reserved content area. */
@@ -361,7 +362,7 @@ object EmbeddedTabHost {
     /**
      * Account the warm sessions were built for, as the opaque WebView storage-profile name (null while
      * logged out). Kept HERE, next to the sessions it describes, rather than in a composable's `remember`:
-     * the whole logged-in subtree is rebuilt per account (`key(pubKey)` in `SetAccountCentricViewModelStore`),
+     * the whole logged-in subtree is rebuilt per account (`key(pubKey)` in `AccountScopedViewModelStore`),
      * so a remembered "last applied" value would be re-seeded to the NEW account on the very first
      * composition after a switch and the change would never be detected.
      */
