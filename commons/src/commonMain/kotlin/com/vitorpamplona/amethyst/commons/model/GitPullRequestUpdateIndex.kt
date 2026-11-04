@@ -78,7 +78,7 @@ object GitPullRequestUpdateIndex {
 
     /**
      * The updates per PR, oldest first, keeping only those the PR's author or a confirmed repository
-     * maintainer signed ([GitAuthority.maintainerActorsOf]): anyone else's would let a stranger move
+     * maintainer signed, as of the update ([GitAuthority.isMaintainerAt]): anyone else's would let a stranger move
      * the tip, and the clone URL "View changes" fetches from. Updates of a PR that hasn't loaded wait
      * for it.
      */
@@ -88,12 +88,10 @@ object GitPullRequestUpdateIndex {
         authority: GitAuthority,
     ): Map<HexKey, List<GitPullRequestUpdateEvent>> {
         val byParent = HashMap<HexKey, MutableList<GitPullRequestUpdateEvent>>()
-        val actorsByParent = HashMap<HexKey, Set<HexKey>>()
         for (event in events) {
             val target = event.parentPullRequestId() ?: continue
             val pullRequest = pullRequestsById[target] ?: continue
-            val actors = actorsByParent.getOrPut(target) { authority.maintainerActorsOf(pullRequest) }
-            if (event.pubKey !in actors) continue
+            if (!authority.isMaintainerAt(event.pubKey, pullRequest, event.createdAt)) continue
             byParent.getOrPut(target) { ArrayList() }.add(event)
         }
         return byParent.mapValues { it.value.sortedWith(GitPullRequestRevisions.order) }

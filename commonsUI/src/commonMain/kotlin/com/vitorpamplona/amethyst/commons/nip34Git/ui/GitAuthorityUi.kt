@@ -27,7 +27,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /** The current [GitAuthority], [GitAuthority.EMPTY] until the repository announcements are scanned. */
 @Composable
@@ -44,11 +43,4 @@ fun rememberIsAuthorisedChange(
 ): Boolean {
     val authority = observeGitAuthority()
     return remember(change, item, authority) { authority.isAuthorisedChange(change, item) }
-}
-
-/** Who may set status, labels, subject edits and cover notes on [item]; see [GitAuthority.memberActorsOf]. */
-@Composable
-fun rememberGitMemberActors(item: Event): Set<HexKey> {
-    val authority = observeGitAuthority()
-    return remember(item, authority) { authority.memberActorsOf(item) }
 }

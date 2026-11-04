@@ -281,10 +281,9 @@ private fun RenameRow(
     nav: INav,
 ) {
     val item = baseNote.replyTo?.lastOrNull()?.event
-    val actors = if (item != null) rememberGitMemberActors(item) else emptySet()
-    val authorised = event.pubKey in actors
     val labels by GitItemLabelIndex.byItem.collectAsStateWithLifecycle()
     val authority = observeGitAuthority()
+    val authorised = remember(event, item, authority) { item != null && authority.isMemberAt(event.pubKey, item, event.createdAt) }
     val previous =
         remember(event, item, labels, authority) {
             item?.let { GitItemTitles.renamesOf(it, labels?.get(it.id).orEmpty(), authority).firstOrNull { rename -> rename.event.id == event.id }?.from }

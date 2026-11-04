@@ -51,7 +51,7 @@ class GitRename(
 /**
  * The title and labels an issue, patch or PR shows once its after-the-fact edits apply: NIP-32
  * label events (kind 1985) naming it, `#subject` for renames and `#t` for labels, counted only
- * when its author or a confirmed repository member signed them ([GitAuthority.memberActorsOf]),
+ * when its author or a confirmed repository member at the time signed them ([GitAuthority.isMemberAt]),
  * as gitworkshop does.
  */
 object GitItemTitles {
@@ -76,10 +76,9 @@ object GitItemTitles {
                 .orEmpty(),
         authority: GitAuthority = GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY,
     ): List<GitRename> {
-        val actors = authority.memberActorsOf(item)
         var previous = originalTitleOf(item)
         return labels
-            .filter { it.pubKey in actors && it.subjectEdit() != null }
+            .filter { it.subjectEdit() != null && authority.isMemberAt(it.pubKey, item, it.createdAt) }
             .sortedWith(compareBy<LabelEvent> { it.createdAt }.thenBy { it.id })
             .map { label ->
                 val to = label.subjectEdit()!!
@@ -109,9 +108,8 @@ object GitItemTitles {
                 .orEmpty(),
         authority: GitAuthority = GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY,
     ): List<String> {
-        val actors = authority.memberActorsOf(item)
         val own = item.tags.hashtags().filter { it !in SERIES_TAGS }
-        val added = labels.filter { it.pubKey in actors }.flatMap { event -> event.labelsByNamespace(LabelEvent.HASHTAG_NAMESPACE).map { it.label } }
+        val added = labels.filter { authority.isMemberAt(it.pubKey, item, it.createdAt) }.flatMap { event -> event.labelsByNamespace(LabelEvent.HASHTAG_NAMESPACE).map { it.label } }
         return (own + added).filter { it.isNotBlank() }.distinct().sorted()
     }
 }

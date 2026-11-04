@@ -114,7 +114,7 @@ fun GitVersionedSummary(
 
 /**
  * The cover notes on [item] that count, oldest first: those its author or a confirmed member of its
- * repositories signed ([GitAuthority.memberActorsOf]). The last one is the item's current summary,
+ * repositories at the time signed ([GitAuthority.isMemberAt]). The last one is the item's current summary,
  * the same one [GitCoverNotes.latestAuthorised] picks.
  */
 @Composable
@@ -122,11 +122,11 @@ fun observeCoverNoteVersions(item: Note): List<Note> {
     val index by GitCoverNoteIndex.byRoot.collectAsStateWithLifecycle()
     val notes = index?.get(item.idHex)
     val itemEvent = item.event
-    val actors = if (itemEvent != null) rememberGitMemberActors(itemEvent) else emptySet()
-    return remember(notes, actors) {
+    val authority = observeGitAuthority()
+    return remember(notes, itemEvent, authority) {
         notes
             .orEmpty()
-            .filter { it.rootEventId() == item.idHex && it.pubKey in actors }
+            .filter { it.rootEventId() == item.idHex && itemEvent != null && authority.isMemberAt(it.pubKey, itemEvent, it.createdAt) }
             .sortedWith(compareBy<GitCoverNoteEvent> { it.createdAt }.thenBy { it.id })
             .mapNotNull { LocalCache.getNoteIfExists(it.id) }
     }

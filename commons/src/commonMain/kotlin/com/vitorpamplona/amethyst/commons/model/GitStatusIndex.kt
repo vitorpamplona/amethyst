@@ -76,7 +76,7 @@ object GitStatusIndex {
 
     /**
      * The latest status per item among those its author or a confirmed repository member signed
-     * ([GitAuthority]); anyone else's is a proposal and doesn't change the item. An item that hasn't
+     * at the time ([GitAuthority.isMemberAt]); anyone else's is a proposal and doesn't change the item. An item that hasn't
      * loaded has no known author, so its statuses wait for it. Ties go to the lower event id.
      */
     fun reduceLatestByTarget(
@@ -85,12 +85,11 @@ object GitStatusIndex {
         authority: GitAuthority,
     ): Map<HexKey, GitStatusEvent> {
         val latest = HashMap<HexKey, GitStatusEvent>()
-        val actorsByItem = HashMap<HexKey, Set<HexKey>>()
         for (event in events) {
             val target = event.rootEventId() ?: continue
             val item = itemsById[target] ?: continue
-            val actors = actorsByItem.getOrPut(target) { authority.memberActorsOf(item) }
-            if (event.pubKey !in actors) continue
+            // By the roles when the status was signed: a later maintainer's old status is a proposal.
+            if (!authority.isMemberAt(event.pubKey, item, event.createdAt)) continue
             val current = latest[target]
             if (current == null || event.createdAt > current.createdAt || (event.createdAt == current.createdAt && event.id < current.id)) {
                 latest[target] = event

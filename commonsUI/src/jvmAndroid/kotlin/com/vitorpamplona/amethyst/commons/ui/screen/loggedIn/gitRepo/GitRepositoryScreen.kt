@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_title
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_code
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_issues
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_patches
+import com.vitorpamplona.amethyst.commons.resources.git_status_draft
 import com.vitorpamplona.amethyst.commons.resources.loading_feed
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
@@ -118,6 +119,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -299,7 +301,8 @@ private fun GitRepositoryHome(
         }
     val openPullCount =
         remember(openPatchItems, closedPatchItems, statusMap) {
-            (openPatchItems + closedPatchItems).distinctBy { it.idHex }.count { !GitStatusIndex.isClosedOrResolved(it.idHex, statusMap) }
+            // Drafts aren't counted: the badge is what awaits review, as gitworkshop's PR tab shows it.
+            (openPatchItems + closedPatchItems).distinctBy { it.idHex }.count { !GitStatusIndex.isClosedOrResolved(it.idHex, statusMap) && statusMap?.get(it.idHex) !is GitStatusDraftEvent }
         }
 
     var showSettings by rememberSaveable(note.idHex) { mutableStateOf(false) }
@@ -631,13 +634,25 @@ private fun StatusFeedScreen(
     nav: INav,
     floatingButton: (@Composable () -> Unit)? = null,
 ) {
-    var showClosed by rememberSaveable(persistKey) { mutableStateOf(false) }
+    var bucket by rememberSaveable(persistKey) { mutableStateOf(StatusBucket.OPEN) }
     var selectedLabel by rememberSaveable(persistKey) { mutableStateOf<String?>(null) }
 
-    val openItems = rememberGitFeedItems(openViewModel)
+    val openFeedItems = rememberGitFeedItems(openViewModel)
     val closedItems = rememberGitFeedItems(closedViewModel)
 
-    val activeItems = if (showClosed) closedItems else openItems
+    // The open feed holds drafts too (they aren't closed); split them out as gitworkshop does, so
+    // "Open" counts what is ready for review and "Draft" what isn't.
+    val statusMap by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
+    val isDraft: (Note) -> Boolean = remember(statusMap) { { note -> statusMap?.get(note.idHex) is GitStatusDraftEvent } }
+    val draftItems = remember(openFeedItems, isDraft) { openFeedItems.filter(isDraft) }
+    val openItems = remember(openFeedItems, isDraft) { openFeedItems.filterNot(isDraft) }
+
+    val activeItems =
+        when (bucket) {
+            StatusBucket.OPEN -> openItems
+            StatusBucket.DRAFT -> draftItems
+            StatusBucket.CLOSED -> closedItems
+        }
     val labels =
         remember(activeItems) {
             activeItems.flatMap { gitLabelsOf(it.event) }.distinct().sorted()
@@ -655,9 +670,10 @@ private fun StatusFeedScreen(
         nav = nav,
         belowBar = {
             StatusFilterChips(
-                showClosed = showClosed,
-                onShowClosed = { showClosed = it },
+                bucket = bucket,
+                onBucket = { bucket = it },
                 openCount = openItems.size,
+                draftCount = draftItems.size,
                 closedCount = closedItems.size,
                 selectedLabel = selectedLabel,
                 onSelectLabel = { selectedLabel = it },
@@ -667,23 +683,36 @@ private fun StatusFeedScreen(
         floatingButton = floatingButton,
     ) {
         RefresheableFeedView(
-            viewModel = if (showClosed) closedViewModel else openViewModel,
+            viewModel = if (bucket == StatusBucket.CLOSED) closedViewModel else openViewModel,
             routeForLastRead = null,
             accountViewModel = accountViewModel,
             nav = nav,
             onLoaded = { loaded, listState ->
-                GitItemFeedLoaded(loaded, listState, accountViewModel, nav, labelFilter = selectedLabel)
+                val itemFilter: ((Note) -> Boolean)? =
+                    when (bucket) {
+                        StatusBucket.OPEN -> { note -> !isDraft(note) }
+                        StatusBucket.DRAFT -> isDraft
+                        StatusBucket.CLOSED -> null
+                    }
+                GitItemFeedLoaded(loaded, listState, accountViewModel, nav, labelFilter = selectedLabel, itemFilter = itemFilter)
             },
         )
     }
 }
 
-/** The Open/Closed status chips plus the optional label-filter row, shown inside the top bar. */
+/** Which status a repository's issue or PR list shows. */
+private enum class StatusBucket { OPEN, DRAFT, CLOSED }
+
+/**
+ * The Open / Draft / Closed status chips plus the optional label-filter row, shown inside the top
+ * bar. "Draft" appears only while there are drafts (issues have none).
+ */
 @Composable
 private fun StatusFilterChips(
-    showClosed: Boolean,
-    onShowClosed: (Boolean) -> Unit,
+    bucket: StatusBucket,
+    onBucket: (StatusBucket) -> Unit,
     openCount: Int,
+    draftCount: Int,
     closedCount: Int,
     selectedLabel: String?,
     onSelectLabel: (String?) -> Unit,
@@ -698,28 +727,11 @@ private fun StatusFilterChips(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            FilterChip(
-                selected = !showClosed,
-                onClick = { onShowClosed(false) },
-                label = { Text(countedLabel(stringRes(Res.string.git_repo_filter_open), openCount)) },
-                leadingIcon =
-                    if (!showClosed) {
-                        { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                    } else {
-                        null
-                    },
-            )
-            FilterChip(
-                selected = showClosed,
-                onClick = { onShowClosed(true) },
-                label = { Text(countedLabel(stringRes(Res.string.git_repo_filter_closed), closedCount)) },
-                leadingIcon =
-                    if (showClosed) {
-                        { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                    } else {
-                        null
-                    },
-            )
+            StatusChip(bucket == StatusBucket.OPEN, countedLabel(stringRes(Res.string.git_repo_filter_open), openCount)) { onBucket(StatusBucket.OPEN) }
+            if (draftCount > 0 || bucket == StatusBucket.DRAFT) {
+                StatusChip(bucket == StatusBucket.DRAFT, countedLabel(stringRes(Res.string.git_status_draft), draftCount)) { onBucket(StatusBucket.DRAFT) }
+            }
+            StatusChip(bucket == StatusBucket.CLOSED, countedLabel(stringRes(Res.string.git_repo_filter_closed), closedCount)) { onBucket(StatusBucket.CLOSED) }
         }
 
         if (labels.isNotEmpty()) {
@@ -747,6 +759,25 @@ private fun StatusFilterChips(
             }
         }
     }
+}
+
+@Composable
+private fun StatusChip(
+    selected: Boolean,
+    label: String,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        leadingIcon =
+            if (selected) {
+                { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+            } else {
+                null
+            },
+    )
 }
 
 @Composable

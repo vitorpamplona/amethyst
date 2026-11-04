@@ -49,16 +49,48 @@ import kotlinx.coroutines.flow.stateIn
  * item's author and the repository's confirmed members ([GitRepositoryMembership]) change what
  * the item shows. Everything else is at most a proposal.
  *
- * Without per-event role history this uses the membership as of now, as gitworkshop does while
- * history is loading. While a repository's announcement has not loaded, its coordinate's own
- * pubkey stands in for its members, so the owner's statuses show without a flash.
+ * An event counts by the roles when it was signed ([isMemberAt], [isMaintainerAt]): a merge by
+ * someone who became a maintainer later is still a proposal, as gitworkshop judges it. Who may
+ * act now ([memberActorsOf]) uses today's membership. While a repository's announcement has not
+ * loaded, its coordinate's own pubkey stands in for its members, so the owner's statuses show
+ * without a flash.
  */
 @Immutable
 class GitAuthority(
     private val announcements: Map<String, Map<HexKey, GitRepositoryEvent>>,
 ) {
-    /** The membership seen from [repository]'s announcement, or null while it is unknown. */
-    fun membership(repository: Address): GitRepositoryMembership? = announcements[repository.dTag]?.let { GitRepositoryMembership.resolve(repository.pubKeyHex, repository.dTag, it) }
+    /**
+     * The membership of the repository [repository] belongs to, seen from its lead (the component's
+     * anchor, whose role records history prefers), or null while the announcement is unknown.
+     */
+    fun membership(repository: Address): GitRepositoryMembership? = announcements[repository.dTag]?.let { GitRepositoryMembership.resolveFromLead(repository.pubKeyHex, repository.dTag, it) }
+
+    /**
+     * Whether [pubKey] could set status, labels, subject edits and cover notes on [item] at
+     * [createdAt]: its author always, else a confirmed member of one of its repositories then.
+     */
+    fun isMemberAt(
+        pubKey: HexKey,
+        item: Event,
+        createdAt: Long,
+    ): Boolean =
+        pubKey == item.pubKey ||
+            repositoriesOf(item).any { repository ->
+                val membership = membership(repository)
+                if (membership == null) repository.pubKeyHex == pubKey else pubKey in membership.membersAt(createdAt)
+            }
+
+    /** Whether [pubKey] could move [item]'s tip (a PR update) at [createdAt]: its author, or a maintainer then. */
+    fun isMaintainerAt(
+        pubKey: HexKey,
+        item: Event,
+        createdAt: Long,
+    ): Boolean =
+        pubKey == item.pubKey ||
+            repositoriesOf(item).any { repository ->
+                val membership = membership(repository)
+                if (membership == null) repository.pubKeyHex == pubKey else pubKey in membership.maintainersAt(createdAt)
+            }
 
     /**
      * Who may set status, labels, subject edits and cover notes on an item by [itemAuthor] filed
@@ -105,22 +137,25 @@ class GitAuthority(
     fun maintainerActorsOf(item: Event): Set<HexKey> = maintainerActors(item.pubKey, repositoriesOf(item))
 
     /**
-     * Whether [change], a status (1630-1633) or a PR update (1619), counts for [item]. Without the
-     * item its author is unknown, so only members of the repositories [change] names count: a
-     * stranger's status about an item we haven't seen is not trusted.
+     * Whether [change], a status (1630-1633) or a PR update (1619), counts for [item], by the roles
+     * when it was signed. Without the item its author is unknown, so only members of the
+     * repositories [change] names count: a stranger's status about an item we haven't seen is not
+     * trusted.
      */
     fun isAuthorisedChange(
         change: Event,
         item: Event?,
     ): Boolean {
         val maintainersOnly = change is GitPullRequestUpdateEvent
-        if (item != null) return change.pubKey in (if (maintainersOnly) maintainerActorsOf(item) else memberActorsOf(item))
+        if (item != null) {
+            return if (maintainersOnly) isMaintainerAt(change.pubKey, item, change.createdAt) else isMemberAt(change.pubKey, item, change.createdAt)
+        }
         return change.tags.repositoryAddresses().any { repository ->
             val membership = membership(repository)
             when {
                 membership == null -> repository.pubKeyHex == change.pubKey
-                maintainersOnly -> membership.isMaintainer(change.pubKey)
-                else -> membership.isMember(change.pubKey)
+                maintainersOnly -> change.pubKey in membership.maintainersAt(change.createdAt)
+                else -> change.pubKey in membership.membersAt(change.createdAt)
             }
         }
     }

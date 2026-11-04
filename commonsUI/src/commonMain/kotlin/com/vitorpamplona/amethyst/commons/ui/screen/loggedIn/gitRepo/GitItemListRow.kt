@@ -101,11 +101,12 @@ fun GitItemFeedLoaded(
     accountViewModel: AccountViewModel,
     nav: INav,
     labelFilter: String? = null,
+    itemFilter: ((Note) -> Boolean)? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
     val list =
-        remember(items, labelFilter) {
-            if (labelFilter == null) items.list else items.list.filter { labelFilter in gitLabelsOf(it.event) }
+        remember(items, labelFilter, itemFilter) {
+            items.list.filter { (labelFilter == null || labelFilter in gitLabelsOf(it.event)) && (itemFilter == null || itemFilter(it)) }
         }
 
     LazyColumn(

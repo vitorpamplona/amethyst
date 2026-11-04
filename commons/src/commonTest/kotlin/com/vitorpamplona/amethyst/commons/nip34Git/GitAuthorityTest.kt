@@ -124,4 +124,53 @@ class GitAuthorityTest {
         assertTrue(fromStranger !in kept)
         assertTrue(GitPullRequestUpdateIndex.groupByParent(listOf(fromAuthor), emptyMap(), authority).isEmpty())
     }
+
+    @Test
+    fun aMergeBySomeoneWhoBecameAMaintainerLaterIsOnlyAProposal() {
+        // The real `din` repository: Alex (0461) marked chad's July PR merged, but the lead's
+        // announcement records Alex as a maintainer only from Nov 2. gitworkshop keeps it open.
+        val alex = "0461fcbecc4c3374439932d6b8f11269ccdb7cc973ad7a50ae362db135a474dd"
+        val soapbox = "781a1527055f74c1f70230f10384609b34548f8ab6a0a6caa74025827f9fdae5"
+        val chad = "86184109eae937d8d6f980b4a0b46da4ef0d983eade403ee1b4c0b6bde238b47"
+        val din =
+            listOf(
+                GitRepositoryEvent(
+                    "573aab8572fbb42cbc143a4d3594a02e4b3bc86da3d3d67adb6f8840f71ea554",
+                    alex,
+                    1793647335,
+                    arrayOf(
+                        arrayOf("d", "din"),
+                        arrayOf("maintainers", alex, soapbox),
+                        arrayOf("m", alex),
+                        arrayOf("M", soapbox, "1793647289"),
+                        arrayOf("m", soapbox, "1793647060", "1793647289"),
+                        arrayOf("m", chad, "0", "1793647255", "1793647255", "defer"),
+                    ),
+                    "",
+                    sig,
+                ),
+                GitRepositoryEvent(
+                    "ef23a3f7bb6cc75aec878ce06d2d23276fc5105dded2abbb9d2d17da949d8085",
+                    soapbox,
+                    1793647255,
+                    arrayOf(
+                        arrayOf("d", "din"),
+                        arrayOf("maintainers", soapbox, alex, chad),
+                        arrayOf("M", soapbox, "1793647255"),
+                        arrayOf("m", soapbox, "1793647172", "1793647255"),
+                        arrayOf("m", alex, "1793647172"),
+                        arrayOf("m", chad, "0", "1793647255", "1793647255"),
+                    ),
+                    "",
+                    sig,
+                ),
+                GitRepositoryEvent("7540f16c85a1bce5870aac78b03d4e53b52f5b88da2b7c814b50ff23abc50eec", chad, 1784466593, arrayOf(arrayOf("d", "din"), arrayOf("maintainers", chad, alex)), "", sig),
+            )
+        val dinAuthority = GitAuthority(mapOf("din" to GitRepositoryMembership.latestByAuthor(din, "din")))
+        val julyPr = GitPullRequestEvent(itemId, chad, 1784429323, arrayOf(arrayOf("a", "30617:$alex:din")), "", sig)
+        val julyMerge = GitStatusClosedEvent("b".repeat(64), alex, 1784431506, arrayOf(arrayOf("e", itemId, "", "root")), "", sig)
+
+        assertTrue(alex in dinAuthority.memberActorsOf(julyPr), "Alex is a maintainer today")
+        assertNull(GitStatusIndex.reduceLatestByTarget(listOf(julyMerge), mapOf(itemId to julyPr), dinAuthority)[itemId])
+    }
 }
