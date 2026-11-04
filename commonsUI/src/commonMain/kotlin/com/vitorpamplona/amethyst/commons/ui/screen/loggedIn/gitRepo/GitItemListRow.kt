@@ -207,7 +207,10 @@ private fun GitItemRowContent(
                 MoreOptionsButton(note, accountViewModel = accountViewModel, nav = nav)
             }
 
-            ObserveDisplayNip05Status(note, accountViewModel, nav)
+            // The author's NIP-05 / npub line, as feed cards show it: only in the complete UI mode.
+            if (accountViewModel.settings.isCompleteUIMode()) {
+                ObserveDisplayNip05Status(note, accountViewModel, nav)
+            }
 
             val subject = observeGitItemTitle(note)
             Text(
