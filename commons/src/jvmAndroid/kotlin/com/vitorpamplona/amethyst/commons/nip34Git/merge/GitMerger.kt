@@ -24,21 +24,15 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
-import com.vitorpamplona.amethyst.commons.nip34Git.coverNote.GitCoverNotes
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPatchSeries
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevisions
-import com.vitorpamplona.amethyst.commons.nip34Git.state.GitSignedState
+import com.vitorpamplona.amethyst.commons.nip34Git.status.GitMergeStatuses
 import com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses
 import com.vitorpamplona.amethyst.commons.nip34Git.status.publishGitApplied
-import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
+import com.vitorpamplona.amethyst.commons.nip34Git.status.publishGitIssueResolved
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
-import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.issue.GitClosingReferences
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -92,26 +86,17 @@ class GitMerger(
             membership.confirmedMaintainers.mapNotNull { maintainer ->
                 cache.getAddressableNoteIfExists(Address(GitRepositoryStateEvent.KIND, maintainer, repository.dTag))?.event as? GitRepositoryStateEvent
             }
-
-        val update = if (event is GitPullRequestEvent) GitPullRequestRevisions.latest(item, authority) else null
-        val coverNote = GitCoverNotes.latest(item, authority)
-        val ownText =
-            when (event) {
-                is GitPullRequestEvent -> event.content
-                is GitPatchEvent -> event.description()
-                else -> null
-            }?.takeIf { it.isNotBlank() }
-
-        return GitMergeInputs(
+        // A revision (a revised series, or the PR a series became) threads onto the original.
+        val threaded = item.replies.mapNotNull { it.event }
+        return GitMergeInputs.build(
             item = event,
-            patches = if (event is GitPatchEvent) GitPatchSeries.of(item) else emptyList(),
-            pullRequestTip = update?.currentCommit() ?: (event as? GitPullRequestEvent)?.currentCommit(),
-            pullRequestClones = ((update?.cloneUrls() ?: emptyList()) + ((event as? GitPullRequestEvent)?.cloneUrls() ?: emptyList())).distinct(),
+            threaded = threaded,
+            seriesOf = { root -> cache.getNoteIfExists(root.id)?.let { GitPatchSeries.of(it) } ?: listOf(root) },
+            updatesOf = { pr -> cache.getNoteIfExists(pr.id)?.let { GitPullRequestRevisions.updates(it, authority) } ?: emptyList() },
             repository = repository,
             announcements = membership.confirmedAnnouncements,
-            signedState = GitSignedState.latest(states),
-            title = GitItemTitles.titleOf(item, authority) ?: "",
-            nostrUri = NEvent.createNostrUri(event.id, event.pubKey, event.kind, item.relayHintUrl()),
+            states = states,
+            authority = authority,
             authorName =
                 cache
                     .getUserIfExists(event.pubKey)
@@ -120,9 +105,7 @@ class GitMerger(
                     ?.value
                     ?.info
                     ?.bestName(),
-            authorNpub = NPub.create(event.pubKey),
-            description = coverNote?.content?.takeIf { it.isNotBlank() } ?: ownText,
-            descriptionIsCoverNote = coverNote != null && coverNote.content.isNotBlank(),
+            relayHint = item.relayHintUrl(),
         )
     }
 
@@ -217,47 +200,24 @@ class GitMerger(
 
     /**
      * Marks resolved each open issue of this repository that a merged commit's message closes
-     * ([GitClosingReferences]), once, quoting the line that closed it, as gitworkshop does.
+     * ([GitMergeStatuses.resolutions]), once, quoting the line that closed it, as gitworkshop does.
      */
     private suspend fun resolveIssues(
         item: Note,
         merge: GitPreparedMerge,
     ): Int {
-        val references = merge.newCommits.associateWith { GitClosingReferences.parse(it.message) }.filterValues { it.isNotEmpty() }
-        if (references.isEmpty()) return 0
+        val commits = merge.newCommits.map { GitMergeStatuses.MergedCommit(it.oid, it.message) }
+        if (commits.none { GitClosingReferences.parse(it.message).isNotEmpty() }) return 0
         val coordinates = authority.coordinatesToTag(merge.inputs.repository).toSet()
-        val issues = loadIssues(merge, coordinates)
-
-        fun find(
-            id: HexKey,
-            isPrefix: Boolean,
-        ): Note? {
-            val matches = issues.filter { if (isPrefix) it.idHex.startsWith(id) else it.idHex == id }
-            val issue = matches.singleOrNull() ?: return null
-            val event = issue.event as? GitIssueEvent ?: return null
-            return issue.takeIf { GitAuthority.repositoriesOf(event).any { it in coordinates } }
-        }
-
-        val done = HashSet<HexKey>()
-        var count = 0
-        val itemEvent = item.event ?: return 0
-        references.forEach { (commit, refs) ->
-            refs.forEach { reference ->
-                val issue = find(reference.id, reference.isPrefix) ?: return@forEach
-                if (!done.add(issue.idHex) || GitStatuses.isClosedOrResolved(issue, authority)) return@forEach
-                val content =
-                    buildString {
-                        append(reference.line).append("\n\nresolved by commit ").append(commit.oid)
-                        if (merge.plan.mergeCommit != commit.oid) append(", when merged in commit ").append(merge.plan.mergeCommit)
-                    }
-                account.publishGitApplied(item = issue, mergeCommit = merge.plan.mergeCommit, content = content, authority = authority) {
-                    alt("issue resolved from commit message")
-                    add(arrayOf("c", commit.oid))
-                    add(QEventTag.assemble(itemEvent.id, item.relayHintUrl(), itemEvent.pubKey))
-                }
-                count++
+        val issues = loadIssues(merge, coordinates).associateBy { it.idHex }
+        val resolutions =
+            GitMergeStatuses.resolutions(commits, issues.values.mapNotNull { it.event as? GitIssueEvent }, coordinates) { issue ->
+                issues[issue.id]?.let { !GitStatuses.isClosedOrResolved(it, authority) } ?: false
             }
+        resolutions.forEach { resolution ->
+            val issue = issues[resolution.issue.id] ?: return@forEach
+            account.publishGitIssueResolved(issue, resolution, merge.plan.mergeCommit, item, authority)
         }
-        return count
+        return resolutions.size
     }
 }

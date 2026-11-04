@@ -68,9 +68,17 @@ object GitItemTitles {
         authority: GitAuthority = LocalCache.gitAuthority,
     ): List<GitRename> {
         val itemEvent = item.event ?: return emptyList()
+        return renamesOf(itemEvent, item.replies.mapNotNull { it.event as? LabelEvent }, authority)
+    }
+
+    /** [renamesOf] for labels held outside the cache (`amy`, tests). */
+    fun renamesOf(
+        itemEvent: Event,
+        labels: Collection<LabelEvent>,
+        authority: GitAuthority,
+    ): List<GitRename> {
         var previous = originalTitleOf(itemEvent)
-        return item.replies
-            .mapNotNull { it.event as? LabelEvent }
+        return labels
             .filter { it.subjectEdit() != null && authority.isMemberAt(it.pubKey, itemEvent, it.createdAt) }
             .sortedWith(compareBy<LabelEvent> { it.createdAt }.thenBy { it.id })
             .map { label ->
@@ -78,6 +86,13 @@ object GitItemTitles {
                 GitRename(label, previous, to).also { previous = to }
             }
     }
+
+    /** [titleOf] for labels held outside the cache. */
+    fun titleOf(
+        itemEvent: Event,
+        labels: Collection<LabelEvent>,
+        authority: GitAuthority,
+    ): String? = renamesOf(itemEvent, labels, authority).lastOrNull()?.to ?: originalTitleOf(itemEvent)
 
     /** The title [item] shows: its latest authorised rename, else its own. */
     fun titleOf(

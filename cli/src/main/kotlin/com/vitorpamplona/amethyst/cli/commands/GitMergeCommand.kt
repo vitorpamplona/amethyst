@@ -24,28 +24,29 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
 import com.vitorpamplona.amethyst.commons.nip34Git.merge.GitMergeCheck
 import com.vitorpamplona.amethyst.commons.nip34Git.merge.GitMergeEngine
 import com.vitorpamplona.amethyst.commons.nip34Git.merge.GitMergeInputs
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPatchSeries
-import com.vitorpamplona.amethyst.commons.nip34Git.state.GitSignedState
+import com.vitorpamplona.amethyst.commons.nip34Git.status.GitMergeStatuses
+import com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryMembership
 import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
-import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
-import com.vitorpamplona.quartz.nip34Git.status.repository
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 
 /**
  * `amy git merge TARGET [--yes]` — merge a pull request or a patch series on the repository's
@@ -89,44 +90,42 @@ object GitMergeCommand {
             if (!membership.isMaintainer(me)) return@use Output.error("not_maintainer", "only a confirmed maintainer can merge")
 
             val repoRelays = relays + membership.confirmedAnnouncements.flatMap { it.relaysNorm() }
-            val stateFilter = Filter(kinds = listOf(GitRepositoryStateEvent.KIND), authors = membership.confirmedMaintainers, tags = mapOf("d" to listOf(dTag)))
-            val updateFilter = Filter(kinds = listOf(GitPullRequestUpdateEvent.KIND), tags = mapOf("E" to listOf(item.id)))
-            val seriesFilter = Filter(kinds = listOf(GitPatchEvent.KIND), authors = listOf(item.pubKey), tags = mapOf("e" to listOf(item.id)))
-            ctx.drain(repoRelays.associateWith { listOf(stateFilter, updateFilter, seriesFilter) })
+            val authority = GitAuthority.of(mapOf(dTag to announcements))
 
-            val state = GitSignedState.latest(ctx.store.query<GitRepositoryStateEvent>(stateFilter))
-            val update =
-                if (item is GitPullRequestEvent) {
-                    ctx.store
-                        .query<GitPullRequestUpdateEvent>(updateFilter)
-                        .filter { it.parentPullRequestId() == item.id && (it.pubKey == item.pubKey || membership.isMaintainer(it.pubKey)) }
-                        .maxWithOrNull(compareBy<GitPullRequestUpdateEvent> { it.createdAt }.thenByDescending { it.id })
-                } else {
-                    null
-                }
-            val patches =
-                if (item is GitPatchEvent) {
-                    GitPatchSeries.chain(item, ctx.store.query<GitPatchEvent>(seriesFilter).filter { it.id != item.id && it.seriesRootId() == item.id && !it.isCoverLetter() })
-                } else {
-                    emptyList()
-                }
+            // What threads onto the item: revisions, cover notes and renames (and a series' patches).
+            val stateFilter = Filter(kinds = listOf(GitRepositoryStateEvent.KIND), authors = membership.confirmedMaintainers, tags = mapOf("d" to listOf(dTag)))
+            val threadFilter = Filter(kinds = listOf(GitPatchEvent.KIND, GitPullRequestEvent.KIND, GitCoverNoteEvent.KIND, LabelEvent.KIND), tags = mapOf("e" to listOf(item.id)))
+            ctx.drain(repoRelays.associateWith { listOf(stateFilter, threadFilter) })
+            val threaded = ctx.store.query<Event>(threadFilter)
+
+            // The series and PR updates of whatever gets merged: the item, or its latest revision.
+            val revision = if (item is GitPatchEvent) GitPatchSeries.latestRevision(item, threaded, authority) else null
+            val source = revision ?: item
+            val sourceFilters =
+                listOf(
+                    Filter(kinds = listOf(GitPatchEvent.KIND), authors = listOf(source.pubKey), tags = mapOf("e" to listOf(source.id))),
+                    Filter(kinds = listOf(GitPullRequestUpdateEvent.KIND), tags = mapOf("E" to listOf(source.id))),
+                )
+            if (revision != null || item is GitPullRequestEvent) ctx.drain(repoRelays.associateWith { sourceFilters })
+            val sourceEvents = if (source.id == item.id) threaded + ctx.store.query<Event>(sourceFilters[1]) else ctx.store.query<Event>(sourceFilters)
 
             val inputs =
-                GitMergeInputs(
+                GitMergeInputs.build(
                     item = item,
-                    patches = patches,
-                    pullRequestTip = update?.currentCommit() ?: (item as? GitPullRequestEvent)?.currentCommit(),
-                    pullRequestClones = ((update?.cloneUrls() ?: emptyList()) + ((item as? GitPullRequestEvent)?.cloneUrls() ?: emptyList())).distinct(),
+                    threaded = threaded,
+                    seriesOf = { root ->
+                        val candidates = sourceEvents.filterIsInstance<GitPatchEvent>().filter { it.id != root.id && it.pubKey == root.pubKey && it.seriesRootId() == root.id && !it.isCoverLetter() && !it.isRootRevision() }
+                        GitPatchSeries.chain(root, candidates)
+                    },
+                    updatesOf = { pr -> sourceEvents.filterIsInstance<GitPullRequestUpdateEvent>().filter { it.parentPullRequestId() == pr.id } },
                     repository = repoAddress,
                     announcements = membership.confirmedAnnouncements,
-                    signedState = state,
-                    title = (item as? GitPullRequestEvent)?.subject() ?: (item as? GitPatchEvent)?.title() ?: "",
-                    nostrUri = NEvent.createNostrUri(item.id, item.pubKey, item.kind, repoRelays.firstOrNull()),
+                    states = ctx.store.query<GitRepositoryStateEvent>(stateFilter),
+                    authority = authority,
                     authorName = nameOf(ctx, item.pubKey),
-                    authorNpub = NPub.create(item.pubKey),
-                    description = ((item as? GitPullRequestEvent)?.content ?: (item as? GitPatchEvent)?.description())?.takeIf { it.isNotBlank() },
-                    descriptionIsCoverNote = false,
+                    relayHint = repoRelays.firstOrNull(),
                 )
+            val patches = inputs.patches
 
             val engine = GitMergeEngine { ctx.okhttp }
             val email = metadataOf(ctx, me)?.contactMetaData()?.nip05?.takeIf { it.isNotBlank() } ?: "${NPub.create(me)}@nostr"
@@ -149,6 +148,8 @@ object GitMergeCommand {
                         ready.plan.strategy.name
                             .lowercase(),
                     "servers" to ready.targets.map { it.cloneUrl },
+                    "not_grasp" to ready.otherClones,
+                    "merged_from" to inputs.source.id,
                 )
             if (!confirm) {
                 Output.emit(plan + mapOf("merged" to false, "hint" to "pass --yes to sign the state, push and mark it merged"))
@@ -160,23 +161,44 @@ object GitMergeCommand {
             ctx.publish(push.state, repoRelays + ready.targets.map { it.relay } + ctx.outboxRelays())
 
             val coordinates = membership.confirmedCoordinates()
+            val euc = membership.confirmedAnnouncements.firstNotNullOfOrNull { it.earliestUniqueCommit() }
+            val itemHint = EventHintBundle<Event>(item, repoRelays.firstOrNull())
             val status =
                 ctx.signer.sign(
-                    GitStatusAppliedEvent.build(
-                        content = "",
-                        target = EventHintBundle<Event>(item),
-                        appliedPatches = patches.map { EventHintBundle(it) },
+                    GitMergeStatuses.merged(
+                        target = itemHint,
+                        coordinates = coordinates,
+                        earliestUniqueCommit = euc,
+                        signer = me,
                         mergeCommit = ready.plan.mergeCommit,
+                        appliedPatches = patches.map { EventHintBundle(it) },
                         appliedAsCommits = ready.plan.appliedCommits,
-                        notify =
-                            coordinates
-                                .map { it.pubKeyHex }
-                                .filter { it != me && it != item.pubKey }
-                                .distinct()
-                                .map { PTag(it) },
-                    ) { coordinates.forEach { repository(ATag(it)) } },
+                    ),
                 )
             val ack = ctx.publish(status, repoRelays)
+
+            // Issues its commits close, on the default branch only, each once and only while open.
+            val resolved =
+                if (!ready.isDefaultBranch) {
+                    emptyList()
+                } else {
+                    val commits = ready.newCommits.map { GitMergeStatuses.MergedCommit(it.oid, it.message) }
+                    val issueFilter = Filter(kinds = listOf(GitIssueEvent.KIND), tags = mapOf("a" to coordinates.map { it.toValue() }))
+                    ctx.drain(repoRelays.associateWith { listOf(issueFilter) })
+                    val issues = ctx.store.query<GitIssueEvent>(issueFilter)
+                    val statusFilter = Filter(kinds = listOf(GitStatusEvent.KIND_OPEN, GitStatusEvent.KIND_APPLIED, GitStatusEvent.KIND_CLOSED, GitStatusEvent.KIND_DRAFT), tags = mapOf("e" to issues.map { it.id }))
+                    if (issues.isNotEmpty()) ctx.drain(repoRelays.associateWith { listOf(statusFilter) })
+                    val latest = GitStatuses.latestByItem(ctx.store.query<GitStatusEvent>(statusFilter), issues.associateBy { it.id }, authority)
+                    GitMergeStatuses.resolutions(commits, issues, coordinates.toSet()) { !GitStatuses.isClosedOrResolved(latest[it.id]) }.map { resolution ->
+                        val signed =
+                            ctx.signer.sign(
+                                GitMergeStatuses.resolved(resolution, EventHintBundle<Event>(resolution.issue), ready.plan.mergeCommit, itemHint, coordinates, euc, me),
+                            )
+                        ctx.publish(signed, repoRelays)
+                        resolution.issue.id
+                    }
+                }
+
             Output.emit(
                 plan +
                     mapOf(

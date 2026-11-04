@@ -74,39 +74,51 @@ suspend fun Account.publishGitStatus(
 /**
  * Signs and broadcasts the applied status (1631) of a merge made here: [item] merged as
  * [mergeCommit], quoting the [appliedPatches] of a series (`q`) and the commits it became, tagged
- * like [publishGitStatus]. An issue a merged commit resolves gets one too, with the [content] that
- * says why and the [extra] tags gitworkshop adds (the commit, the PR).
+ * as [GitMergeStatuses.merged] writes it.
  */
 suspend fun Account.publishGitApplied(
     item: Note,
     mergeCommit: String,
     appliedPatches: List<Note> = emptyList(),
     appliedAsCommits: List<String> = emptyList(),
-    content: String = "",
     authority: GitAuthority = LocalCache.gitAuthority,
-    extra: TagArrayBuilder<GitStatusAppliedEvent>.() -> Unit = {},
 ): GitStatusAppliedEvent? {
     val hint = item.toEventHint<Event>() ?: return null
     val coordinates = authority.coordinatesToTag(hint.event)
-    val euc = coordinates.firstOrNull()?.let(authority::earliestUniqueCommit)
-    val notify =
-        coordinates
-            .map { it.pubKeyHex }
-            .filter { it != signer.pubKey && it != hint.event.pubKey }
-            .distinct()
-            .map { PTag(it) }
     val template =
-        GitStatusAppliedEvent.build(
-            content = content,
+        GitMergeStatuses.merged(
             target = hint,
-            appliedPatches = appliedPatches.mapNotNull { it.toEventHint<GitPatchEvent>() },
+            coordinates = coordinates,
+            earliestUniqueCommit = coordinates.firstOrNull()?.let(authority::earliestUniqueCommit),
+            signer = signer.pubKey,
             mergeCommit = mergeCommit,
+            appliedPatches = appliedPatches.mapNotNull { it.toEventHint<GitPatchEvent>() },
             appliedAsCommits = appliedAsCommits,
-            notify = notify,
-        ) {
-            fileUnder(coordinates, euc)
-            extra()
-        }
+        )
+    return signAndComputeBroadcast(template)
+}
+
+/** Signs and broadcasts the resolved status of an issue a merged commit closed ([GitMergeStatuses.resolved]). */
+suspend fun Account.publishGitIssueResolved(
+    issue: Note,
+    resolution: GitMergeStatuses.Resolution,
+    mergeCommit: String,
+    merged: Note,
+    authority: GitAuthority = LocalCache.gitAuthority,
+): GitStatusAppliedEvent? {
+    val issueHint = issue.toEventHint<Event>() ?: return null
+    val mergedHint = merged.toEventHint<Event>() ?: return null
+    val coordinates = authority.coordinatesToTag(issueHint.event)
+    val template =
+        GitMergeStatuses.resolved(
+            resolution = resolution,
+            issue = issueHint,
+            mergeCommit = mergeCommit,
+            merged = mergedHint,
+            coordinates = coordinates,
+            earliestUniqueCommit = coordinates.firstOrNull()?.let(authority::earliestUniqueCommit),
+            signer = signer.pubKey,
+        )
     return signAndComputeBroadcast(template)
 }
 

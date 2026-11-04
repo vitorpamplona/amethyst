@@ -20,14 +20,22 @@
  */
 package com.vitorpamplona.amethyst.commons.nip34Git.merge
 
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.coverNote.GitCoverNotes
+import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPatchSeries
+import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevisions
 import com.vitorpamplona.amethyst.commons.nip34Git.state.GitSignedState
+import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
-import com.vitorpamplona.quartz.nip34Git.git.GitObjectParser
-import com.vitorpamplona.quartz.nip34Git.git.GitObjectType
 import com.vitorpamplona.quartz.nip34Git.git.GitPerson
 import com.vitorpamplona.quartz.nip34Git.git.GitPushClient
 import com.vitorpamplona.quartz.nip34Git.git.GitSmartHttpTransport
@@ -40,6 +48,7 @@ import com.vitorpamplona.quartz.nip34Git.merge.GraspPusher
 import com.vitorpamplona.quartz.nip34Git.merge.GraspTarget
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
 import okhttp3.OkHttpClient
@@ -47,11 +56,14 @@ import java.util.TimeZone
 
 /**
  * Everything a merge reads about an item and its repository, gathered by the caller (the app from
- * its cache, `amy` from relays) so the merge itself is the same for both.
+ * its cache, `amy` from relays) and assembled by [build], so the merge is the same for both.
  *
- * @param item the pull request (1618) or the root patch (1617) of a series.
- * @param patches for a patch series, its patches in order, [item] first.
- * @param pullRequestTip the PR's current tip: its latest authorised update's, else its own.
+ * @param item the pull request (1618) or the root patch (1617) the thread, its title and its
+ *   status hang on.
+ * @param source what is merged: [item], or its latest revision (a revised series, or the pull
+ *   request a series became).
+ * @param patches for a patch series, [source]'s patches in order.
+ * @param pullRequestTip for a pull request, [source]'s current tip: its latest authorised update's, else its own.
  * @param pullRequestClones where that tip is served: the update's and the PR's clone URLs.
  * @param announcements the repository's confirmed announcements: their clone URLs are pushed to.
  * @param signedState the maintainers' latest signed state (kind 30618), the branch tips a merge starts from.
@@ -59,6 +71,7 @@ import java.util.TimeZone
  */
 class GitMergeInputs(
     val item: Event,
+    val source: Event,
     val patches: List<GitPatchEvent>,
     val pullRequestTip: String?,
     val pullRequestClones: List<String>,
@@ -71,14 +84,85 @@ class GitMergeInputs(
     val authorNpub: String,
     val description: String?,
     val descriptionIsCoverNote: Boolean,
-)
+) {
+    companion object {
+        /**
+         * The inputs of merging [item] from the events about it: [threaded] holds what replies to it
+         * (revisions, PR updates, cover notes, renames), [seriesOf] a series root's own patches.
+         * Only what [authority] counts is read: a stranger's revision, update, cover note or
+         * rename never reaches a merge.
+         */
+        fun build(
+            item: Event,
+            threaded: Collection<Event>,
+            seriesOf: (GitPatchEvent) -> List<GitPatchEvent>,
+            updatesOf: (GitPullRequestEvent) -> Collection<GitPullRequestUpdateEvent>,
+            repository: Address,
+            announcements: List<GitRepositoryEvent>,
+            states: List<GitRepositoryStateEvent>,
+            authority: GitAuthority,
+            authorName: String?,
+            relayHint: NormalizedRelayUrl?,
+        ): GitMergeInputs {
+            val source = (if (item is GitPatchEvent) GitPatchSeries.latestRevision(item, threaded, authority) else null) ?: item
+            val pr = source as? GitPullRequestEvent
+            val update = pr?.let { GitPullRequestRevisions.authorised(updatesOf(it), it, authority).lastOrNull() }
+            val coverNote =
+                GitCoverNotes
+                    .authorised(threaded.filterIsInstance<GitCoverNoteEvent>(), item, authority)
+                    .lastOrNull()
+                    ?.content
+                    ?.takeIf { it.isNotBlank() }
+            val ownText =
+                when (item) {
+                    is GitPullRequestEvent -> item.content
+                    is GitPatchEvent -> item.description()
+                    else -> null
+                }?.takeIf { it.isNotBlank() }
+            return GitMergeInputs(
+                item = item,
+                source = source,
+                patches = (source as? GitPatchEvent)?.let(seriesOf) ?: emptyList(),
+                pullRequestTip = update?.currentCommit() ?: pr?.currentCommit(),
+                pullRequestClones = ((update?.cloneUrls() ?: emptyList()) + (pr?.cloneUrls() ?: emptyList())).distinct(),
+                repository = repository,
+                announcements = announcements,
+                signedState = GitSignedState.latest(states),
+                title = GitItemTitles.titleOf(item, threaded.filterIsInstance<LabelEvent>(), authority) ?: "",
+                nostrUri = NEvent.createNostrUri(item.id, item.pubKey, item.kind, relayHint),
+                authorName = authorName,
+                authorNpub = NPub.create(item.pubKey),
+                description = coverNote ?: ownText,
+                descriptionIsCoverNote = coverNote != null,
+            )
+        }
+    }
+}
+
+/**
+ * Where a merge goes: the GRASP servers it pushes to, and the [others] (GitHub, a self-hosted
+ * forge) it cannot, which keep the old tip until a maintainer pushes there with git.
+ */
+class GitMergeTargets(
+    val grasp: List<GraspTarget>,
+    val others: List<String>,
+) {
+    companion object {
+        fun of(announcements: List<GitRepositoryEvent>): GitMergeTargets {
+            val grasp = announcements.flatMap(GraspTarget::of).distinctBy { it.cloneUrl }
+            val pushed = grasp.mapTo(HashSet()) { it.cloneUrl }
+            val others = announcements.flatMap { it.clones() }.distinct().filter { it !in pushed }
+            return GitMergeTargets(grasp, others)
+        }
+    }
+}
 
 /** Why a merge can't be made in the app; the maintainer merges with git instead. */
 enum class GitMergeBlocker {
     /** The item's repository announcement has not loaded yet. */
     REPOSITORY_NOT_LOADED,
 
-    /** Some clone URL is not a GRASP server, which only a local `git push` can reach. */
+    /** No clone URL is a GRASP server: only a local `git push` can reach them. */
     NOT_ON_GRASP,
 
     /** The maintainers never signed a state (kind 30618), so there is no branch tip to start from. */
@@ -113,7 +197,8 @@ sealed interface GitMergeCheck {
 }
 
 /**
- * A merge ready to publish: [branch] moves from [oldTip] to [plan]'s new tip on [targets].
+ * A merge ready to publish: [branch] moves from [oldTip] to [plan]'s new tip on [targets]; the
+ * [otherClones] are git hosts the push cannot reach.
  * [newCommits] are the commits the branch gains (the merge commit aside), whose messages may
  * resolve issues; [isDefaultBranch] says whether they count for that (only the default branch's do).
  */
@@ -125,6 +210,7 @@ class GitPreparedMerge(
     val plan: GitMergePlan.Ready,
     val targets: List<GraspTarget>,
     val newCommits: List<GitCommit>,
+    val otherClones: List<String> = emptyList(),
 )
 
 /** The signed state a merge published, and how each GRASP server took the push. */
@@ -149,18 +235,20 @@ class GitMergeEngine(
         inputs: GitMergeInputs,
         committer: GitPerson,
     ): GitMergeCheck {
-        val announcements = inputs.announcements
-        if (announcements.isEmpty() || !announcements.all(GraspTarget::coversAllClones)) return GitMergeCheck.Blocked(GitMergeBlocker.NOT_ON_GRASP)
-        val targets = announcements.flatMap(GraspTarget::of).distinctBy { it.cloneUrl }
+        // Gitworkshop merges only when every clone URL is a GRASP server; a repository mirrored to
+        // GitHub as well merges here too, and the dialog says the mirror needs a push with git.
+        val split = GitMergeTargets.of(inputs.announcements)
+        val targets = split.grasp
+        if (targets.isEmpty()) return GitMergeCheck.Blocked(GitMergeBlocker.NOT_ON_GRASP)
 
         val state = inputs.signedState ?: return GitMergeCheck.Blocked(GitMergeBlocker.NO_SIGNED_STATE)
-        val pr = inputs.item as? GitPullRequestEvent
+        val pr = inputs.source as? GitPullRequestEvent
         val branch = pr?.targetBranch() ?: state.headBranch ?: return GitMergeCheck.Blocked(GitMergeBlocker.NO_BRANCH_TIP)
         val oldTip = state.commitFor(branch) ?: return GitMergeCheck.Blocked(GitMergeBlocker.NO_BRANCH_TIP)
 
         val clones = targets.map { it.cloneUrl }
         // The repository's servers first; a PR's blob may be only on the PR's own servers.
-        val source = GitObjectSource(transport, (clones + inputs.pullRequestClones).distinct())
+        val source = GitObjectSource(transport, (clones + inputs.pullRequestClones + split.others).distinct())
         val message =
             GitMergeMessage.build(
                 rootId = inputs.item.id,
@@ -177,7 +265,7 @@ class GitMergeEngine(
                 val tip = inputs.pullRequestTip ?: return GitMergeCheck.Blocked(GitMergeBlocker.NO_PULL_REQUEST_TIP)
                 // A GRASP server keeps each PR's commits under refs/nostr/<id>, so the repository's
                 // own servers come after the PR's.
-                val prSource = GitObjectSource(transport, (inputs.pullRequestClones + clones).distinct())
+                val prSource = GitObjectSource(transport, (inputs.pullRequestClones + clones + split.others).distinct())
                 GitMergePlanner(source).planPullRequest(oldTip, tip, prSource, committer, message)
             } else {
                 GitMergePlanner(source).planPatches(oldTip, inputs.patches, committer, message)
@@ -187,13 +275,7 @@ class GitMergeEngine(
             is GitMergePlan.AlreadyMerged -> GitMergeCheck.AlreadyMerged
             is GitMergePlan.Conflicts -> GitMergeCheck.Conflicts(plan.paths)
             is GitMergePlan.Failed -> GitMergeCheck.Failed(plan.reason)
-            is GitMergePlan.Ready -> {
-                val commits =
-                    plan.objects
-                        .filter { it.type == GitObjectType.COMMIT && it.oid != plan.mergeCommit }
-                        .map { GitObjectParser.parseCommit(it.oid, it.data) }
-                GitMergeCheck.Ready(GitPreparedMerge(inputs, branch, branch == state.headBranch, oldTip, plan, targets, commits))
-            }
+            is GitMergePlan.Ready -> GitMergeCheck.Ready(GitPreparedMerge(inputs, branch, branch == state.headBranch, oldTip, plan, targets, plan.newCommits, split.others))
         }
     }
 

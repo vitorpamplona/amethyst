@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_merge_done
 import com.vitorpamplona.amethyst.commons.resources.git_merge_done_issues
 import com.vitorpamplona.amethyst.commons.resources.git_merge_done_title
 import com.vitorpamplona.amethyst.commons.resources.git_merge_failed_title
+import com.vitorpamplona.amethyst.commons.resources.git_merge_other_clones
 import com.vitorpamplona.amethyst.commons.resources.git_merge_partial
 import com.vitorpamplona.amethyst.commons.resources.git_merge_ref_change
 import com.vitorpamplona.amethyst.commons.resources.git_merge_servers
@@ -238,6 +239,13 @@ private fun MergeSummary(merge: GitPreparedMerge) {
             .distinct()
             .joinToString(", ")
     Text(stringRes(Res.string.git_merge_servers, servers), color = MaterialTheme.colorScheme.grayText, style = MaterialTheme.typography.bodySmall)
+    if (merge.otherClones.isNotEmpty()) {
+        Text(
+            stringRes(Res.string.git_merge_other_clones, merge.otherClones.joinToString(", ") { it.substringAfter("://").removeSuffix(".git") }),
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
 }
 
 @Composable

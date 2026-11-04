@@ -21,7 +21,11 @@
 package com.vitorpamplona.amethyst.commons.nip34Git.pr
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 
 /**
  * The patches of a series, in the order `git am` applies them: the root, then each patch that
@@ -49,6 +53,43 @@ object GitPatchSeries {
             }
         }
         return chain(first, found.values)
+    }
+
+    /**
+     * The newest revision of the patch series rooted at [root]: a root patch tagged `root-revision`
+     * (or a pull request tagged so, when the series was upgraded to one) that replies to [root],
+     * signed by [root]'s author or a maintainer. Null when the series was never revised. ngit and
+     * gitworkshop merge this one: the original is what the thread, its title and its status hang on.
+     */
+    fun latestRevision(
+        root: Event,
+        candidates: Collection<Event>,
+        authority: GitAuthority,
+    ): Event? =
+        candidates
+            .filter { it.id != root.id && isRevisionOf(it, root) && (it.pubKey == root.pubKey || authority.isMaintainerAt(it.pubKey, root, it.createdAt)) }
+            .maxWithOrNull(compareBy<Event> { it.createdAt }.thenByDescending { it.id })
+
+    /** [latestRevision] among the events threaded onto [root] in the cache. */
+    fun latestRevision(
+        root: Note,
+        authority: GitAuthority,
+    ): Note? {
+        val event = root.event ?: return null
+        val revision = latestRevision(event, root.replies.mapNotNull { it.event }, authority) ?: return null
+        return root.replies.firstOrNull { it.idHex == revision.id }
+    }
+
+    private fun isRevisionOf(
+        event: Event,
+        root: Event,
+    ): Boolean {
+        val tagged = event.tags.any { HashtagTag.isTagged(it, GitPatchEvent.ROOT_REVISION) || HashtagTag.isTagged(it, GitPatchEvent.REVISION_ROOT) }
+        return when (event) {
+            is GitPatchEvent -> tagged && event.previousPatchId() == root.id
+            is GitPullRequestEvent -> tagged && event.rootPatchId() == root.id
+            else -> false
+        }
     }
 
     /** [first] followed by the patches of [rest] that chain from it, each replying to the previous. */
