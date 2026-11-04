@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -62,11 +64,13 @@ import com.vitorpamplona.amethyst.commons.resources.action_paste
 import com.vitorpamplona.amethyst.commons.resources.action_scan
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
+import com.vitorpamplona.amethyst.commons.resources.wallet_amount_sats
 import com.vitorpamplona.amethyst.commons.resources.wallet_paste_invoice
 import com.vitorpamplona.amethyst.commons.resources.wallet_pay
 import com.vitorpamplona.amethyst.commons.resources.wallet_payment_sending
 import com.vitorpamplona.amethyst.commons.resources.wallet_payment_success
 import com.vitorpamplona.amethyst.commons.resources.wallet_send
+import com.vitorpamplona.amethyst.commons.service.lnurl.lightningAddressOrNull
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -100,6 +104,7 @@ fun WalletSendScreen(
     val sendState by walletViewModel.sendState.collectAsState()
     var invoiceText by remember { mutableStateOf("") }
     var qrScanning by remember { mutableStateOf(false) }
+    var amountText by remember { mutableStateOf("") }
     val clipboard = LocalClipboard.current
     val clipboardScope = rememberCoroutineScope()
 
@@ -128,6 +133,10 @@ fun WalletSendScreen(
         ) {
             when (val state = sendState) {
                 is SendState.Idle -> {
+                    // A Lightning address has no amount of its own, so the screen asks for one.
+                    val lnAddress = lightningAddressOrNull(invoiceText)
+                    val amountSats = amountText.toLongOrNull()
+
                     Spacer(modifier = Modifier.height(16.dp))
 
                     OutlinedTextField(
@@ -189,11 +198,26 @@ fun WalletSendScreen(
                         }
                     }
 
+                    if (lnAddress != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = amountText,
+                            onValueChange = { amountText = it.filter(Char::isDigit) },
+                            label = { Text(stringRes(Res.string.wallet_amount_sats)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Button(
                         onClick = {
-                            if (invoiceText.isNotBlank()) {
+                            if (lnAddress != null) {
+                                amountSats?.takeIf { it > 0 }?.let { walletViewModel.sendToLightningAddress(lnAddress, it) }
+                            } else if (invoiceText.isNotBlank()) {
                                 walletViewModel.sendPayment(invoiceText.trim())
                             }
                         },
@@ -202,7 +226,12 @@ fun WalletSendScreen(
                                 .fillMaxWidth()
                                 .height(56.dp),
                         shape = RoundedCornerShape(16.dp),
-                        enabled = invoiceText.isNotBlank(),
+                        enabled =
+                            if (lnAddress != null) {
+                                amountSats != null && amountSats > 0
+                            } else {
+                                invoiceText.isNotBlank()
+                            },
                     ) {
                         Text(
                             stringRes(Res.string.wallet_pay),

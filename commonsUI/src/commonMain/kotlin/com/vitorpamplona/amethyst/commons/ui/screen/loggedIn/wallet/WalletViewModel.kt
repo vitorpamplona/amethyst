@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_load_fai
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_load_more_failed
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_not_supported
 import com.vitorpamplona.amethyst.commons.service.ClinkDebitPayer
+import com.vitorpamplona.amethyst.commons.service.lnurl.LightningInvoiceResolver
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.sats
@@ -959,6 +960,35 @@ class WalletViewModel : ViewModel() {
                         }
                     }
                 }
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                _sendState.value = SendState.Error(e.message ?: text(Res.string.send_payment_failed))
+            }
+        }
+    }
+
+    /**
+     * Pays a Lightning address: asks its LNURL-pay service for an invoice of exactly [sats], then
+     * pays that invoice from the selected wallet like [sendPayment] does.
+     */
+    fun sendToLightningAddress(
+        lnAddress: String,
+        sats: Long,
+    ) {
+        val avm = accountViewModel ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            _sendState.value = SendState.Sending
+            try {
+                val invoice =
+                    LightningInvoiceResolver(avm.host.lnurlTransport).lnAddressInvoice(
+                        lnAddress = lnAddress,
+                        milliSats = sats * 1000L,
+                        message = "",
+                        onProgress = {},
+                    )
+                sendPayment(invoice)
+            } catch (e: LightningInvoiceResolver.LightningAddressError) {
+                _sendState.value = SendState.Error(avm.noticeResolver.resolve(e.notice).message)
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
                 _sendState.value = SendState.Error(e.message ?: text(Res.string.send_payment_failed))
