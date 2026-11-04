@@ -579,14 +579,6 @@ open class EventCache :
     /** NIP-34 repositories by identifier (an announcement's `d`): announcements, items and memberships. */
     val gitRepositories = LargeCache<String, GitRepository>()
 
-    private val gitAnnouncementChangesFlow = MutableSharedFlow<GitRepository>(0, 100, BufferOverflow.DROP_OLDEST)
-
-    /**
-     * A repository whose announcements changed: its memberships, and so which announcements are one
-     * repository, may differ. Lists that group or filter by membership rebuild on it.
-     */
-    val gitAnnouncementChanges = gitAnnouncementChangesFlow.asSharedFlow()
-
     /** Who may change a NIP-34 item's state, read live from [gitRepositories]. */
     val gitAuthority =
         GitAuthority(
@@ -1084,25 +1076,12 @@ open class EventCache :
     // An announcement joins its identifier's repository; its replacement (same AddressableNote, new
     // event) re-resolves the memberships there.
     private fun indexGitAnnouncement(event: GitRepositoryEvent) {
-        val repository = getOrCreateGitRepository(event.dTag())
-        repository.addAnnouncement(getOrCreateAddressableNote(event.address()))
-        gitAnnouncementChangesFlow.tryEmit(repository)
+        getOrCreateGitRepository(event.dTag()).addAnnouncement(getOrCreateAddressableNote(event.address()))
     }
 
     private fun indexGitItem(event: Event) {
         val note = getNoteIfExists(event.id) ?: return
         gitRepositoriesOf(event).forEach { it.addItem(note) }
-    }
-
-    // A status, PR update, cover note or label already threads onto its item (computeReplyTo);
-    // tell the item's repositories so their lists and counts follow.
-    private fun indexGitActivity(event: Event) {
-        val note = getNoteIfExists(event.id) ?: return
-        val items = if (event is LabelEvent) event.labeledEvents().mapNotNull(::getNoteIfExists) else note.replyTo.orEmpty()
-        items.forEach { item ->
-            val itemEvent = item.event ?: return@forEach
-            gitRepositoriesOf(itemEvent).forEach { it.itemActivity(item, note) }
-        }
     }
 
     fun getOrCreateLiveChannel(key: Address): LiveActivitiesChannel = liveChatChannels.getOrCreate(key) { LiveActivitiesChannel(key) }
@@ -4029,7 +4008,7 @@ open class EventCache :
                 is OtsEvent -> consume(event, relay, wasVerified)
                 is PollResponseEvent -> consume(event, relay, wasVerified)
                 is ReactionEvent -> consume(event, relay, wasVerified)
-                is LabelEvent -> consume(event, relay, wasVerified).also { if (it) indexGitActivity(event) }
+                is LabelEvent -> consume(event, relay, wasVerified)
                 is UserAssertionEvent -> consume(event, relay, wasVerified)
                 is ReportEvent -> consume(event, relay, wasVerified)
                 is RepostEvent -> consume(event, relay, wasVerified)
@@ -4165,10 +4144,10 @@ open class EventCache :
                 // An agent profile makes its author an agent, which can change how names in a
                 // channel are told apart.
                 is AgentProfileEvent -> consumeBaseReplaceable(event, relay, wasVerified).also { BuzzIdentityNames.invalidate() }
-                // NIP-34: announcements, items and what acts on items also feed their repository.
+                // NIP-34: announcements and items also join their repository.
                 is GitRepositoryEvent -> consumeBaseReplaceable(event, relay, wasVerified).also { if (it) indexGitAnnouncement(event) }
                 is GitIssueEvent, is GitPatchEvent, is GitPullRequestEvent -> consumeRegularEvent(event, relay, wasVerified).also { if (it) indexGitItem(event) }
-                is GitStatusEvent, is GitPullRequestUpdateEvent, is GitCoverNoteEvent -> consumeRegularEvent(event, relay, wasVerified).also { if (it) indexGitActivity(event) }
+                is GitStatusEvent, is GitPullRequestUpdateEvent, is GitCoverNoteEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is ObserverFrameEvent -> false
                 is HuddleReactionEvent -> false
                 // Relay-synthesized "this huddle session is live" (48104): only produced on demand

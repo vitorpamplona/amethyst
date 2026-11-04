@@ -28,12 +28,12 @@ import com.vitorpamplona.amethyst.commons.gitRepo.dal.RepositoryIssuesFeedFilter
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.nip34Git.observeGitRepositoryActivity
 import com.vitorpamplona.amethyst.commons.viewmodels.AndroidFeedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
 
@@ -47,8 +47,8 @@ class RepositoryIssuesFeedViewModel(
         // A status doesn't change the item's note, and a co-maintainer's announcement can bring items
         // filed under their coordinate into the list: re-partition when the repository changes.
         viewModelScope.launch(Dispatchers.IO) {
-            val repository = LocalCache.getOrCreateGitRepository(note.address.dTag).flow()
-            merge(repository.announcements.stateFlow, repository.items.stateFlow, repository.activity.stateFlow)
+            LocalCache
+                .observeGitRepositoryActivity(note.address.dTag)
                 .debounce(250)
                 .collect { invalidateData() }
         }

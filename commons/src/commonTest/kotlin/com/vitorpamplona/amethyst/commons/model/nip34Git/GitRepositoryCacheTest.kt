@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.nip34Git
 
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.amethyst.commons.nip34Git.observeGitRepositoryActivity
 import com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -30,6 +31,9 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -75,5 +79,30 @@ class GitRepositoryCacheTest {
             // The reporter withdraws the issue: the repository lets go of it.
             cache.justConsume(reporter.sign(DeletionRequestEvent.build(listOf(issue))), null, true)
             assertTrue(!repository.items.containsKey(issue.id))
+        }
+
+    @Test
+    fun theCachesObserversSeeARepositorysActivity() =
+        runTest {
+            val cache = EventCache()
+            val ownerAnnouncement = announcement(owner, coMaintainer)
+            cache.justConsume(ownerAnnouncement, null, true)
+            val issue = reporter.sign(GitIssueEvent.build("Broken", "it broke", EventHintBundle(ownerAnnouncement), emptyList(), emptyList(), createdAt = 20))
+            cache.justConsume(issue, null, true)
+
+            val emissions = mutableListOf<Unit>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { cache.observeGitRepositoryActivity("din").collect { emissions.add(it) } }
+            advanceUntilIdle()
+            val before = emissions.size
+
+            // A status on a listed item, and a co-maintainer's announcement, both reach observers.
+            cache.justConsume(coMaintainer.sign(GitStatusClosedEvent.build("", EventHintBundle(issue), createdAt = 30)), null, true)
+            advanceUntilIdle()
+            val afterStatus = emissions.size
+            assertTrue(afterStatus > before, "a status emits")
+
+            cache.justConsume(announcement(coMaintainer, owner), null, true)
+            advanceUntilIdle()
+            assertTrue(emissions.size > afterStatus, "an announcement emits")
         }
 }

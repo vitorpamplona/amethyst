@@ -80,6 +80,8 @@ import com.vitorpamplona.amethyst.commons.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.commons.webBookmarks.dal.WebBookmarkFeedFilter
 import com.vitorpamplona.amethyst.commons.workouts.dal.WorkoutFeedFilter
 import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -180,7 +182,9 @@ class AccountFeedContentStates(
         // the additive path never re-checks: rebuild the list when the memberships change.
         scope.launch(Dispatchers.IO) {
             @OptIn(FlowPreview::class)
-            LocalCache.gitAnnouncementChanges
+            LocalCache
+                .observeEvents<GitRepositoryEvent>(Filter(kinds = listOf(GitRepositoryEvent.KIND)))
+                .drop(1)
                 .debounce(500)
                 .collect { gitRepositoriesFeed.invalidateData() }
         }

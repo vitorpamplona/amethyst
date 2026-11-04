@@ -192,17 +192,6 @@ class CachePruner(
             pruneOldMessagesChannel(channel)
         }
 
-        // NIP-34 repositories hold their items the way channels hold messages.
-        cache.gitRepositories.forEach { _, repository ->
-            val toBeRemoved = repository.pruneOldItems()
-            val childrenToBeRemoved = mutableListOf<Note>()
-            toBeRemoved.forEach {
-                unlinkAndRemove(it)
-                childrenToBeRemoved.addAll(it.clearChildLinks())
-            }
-            unlinkAndRemove(childrenToBeRemoved)
-        }
-
         cache.chatroomList.forEach { userHex, room ->
             // History floors are pinned per scope on first advance; null means that window never paged
             // history, so its cursors hold no position to misalign and nothing needs rewinding. Only the

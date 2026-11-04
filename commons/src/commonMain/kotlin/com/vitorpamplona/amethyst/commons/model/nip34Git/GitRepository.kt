@@ -22,16 +22,14 @@ package com.vitorpamplona.amethyst.commons.model.nip34Git
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NotesGatherer
+import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryMembership
-import com.vitorpamplona.quartz.utils.cache.LargeCache
-import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * Everything the cache knows about the NIP-34 repositories published under one identifier (the
@@ -42,19 +40,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * They are told apart by [membership], resolved from a selected author's announcement the way
  * gitworkshop does, so a stranger's announcement under the same name never joins another's.
  *
- * Statuses, PR updates, cover notes and renames are not stored here: the cache links each one to
- * the item it acts on (its replies), and [itemActivity] tells observers the item changed.
+ * It holds its notes softly, as the cache does: a screen that shows them keeps them alive, and
+ * memory pressure can reclaim the rest. Statuses, PR updates, cover notes and renames are not
+ * stored here: the cache threads each one onto the item it acts on (its replies). To react to any
+ * of it, observe the cache ([com.vitorpamplona.amethyst.commons.model.cache.EventCache.observeEvents]).
  */
 @Stable
 class GitRepository(
     val identifier: String,
 ) : NotesGatherer {
-    // Strong references: the cache keeps its notes weakly, and a repository's lists must not
-    // lose an announcement or an item while its screen is open.
-    private val announcementNotes = LargeCache<HexKey, AddressableNote>()
+    private val announcementNotes = LargeSoftCache<HexKey, AddressableNote>()
 
     /** The issues, patches and pull requests filed under one of this identifier's coordinates. */
-    val items = LargeCache<HexKey, Note>()
+    val items = LargeSoftCache<HexKey, Note>()
 
     private val lock = KmpLock()
 
@@ -92,14 +90,12 @@ class GitRepository(
 
     /** Called when [note], an announcement under this identifier, arrives or is replaced by a newer version. */
     fun addAnnouncement(note: AddressableNote) {
-        val author = note.address.pubKeyHex
-        if (announcementNotes.get(author) !== note) {
-            announcementNotes.put(author, note)
+        if (announcementNotes.get(note.address.pubKeyHex) !== note) {
+            announcementNotes.put(note.address.pubKeyHex, note)
             note.addGatherer(this)
         }
         // Any announcement can confirm or end anyone's role, so every resolved view is stale.
         forgetMemberships()
-        flowSet?.announcements?.invalidateData()
     }
 
     /** Called when [note], an issue, patch or PR filed under this identifier, arrives. */
@@ -107,60 +103,14 @@ class GitRepository(
         if (items.containsKey(note.idHex)) return
         items.put(note.idHex, note)
         note.addGatherer(this)
-        flowSet?.items?.invalidateData()
-    }
-
-    /**
-     * [activity] (a status, PR update, cover note or label) of [item] arrived. The repository
-     * gathers it, so its withdrawal (NIP-09) reaches [removeNote] and refreshes the lists too.
-     */
-    fun itemActivity(
-        item: Note,
-        activity: Note,
-    ) {
-        if (!items.containsKey(item.idHex)) return
-        activity.addGatherer(this)
-        flowSet?.activity?.invalidateData()
-    }
-
-    /**
-     * Drops all but the newest [keep] items while no screen observes this repository, as channels
-     * prune their messages, and returns the dropped ones for the pruner to unlink from the cache.
-     * Opening the repository again fetches them, and they are filed here again as they arrive.
-     */
-    fun pruneOldItems(keep: Int = 500): Set<Note> {
-        if (flowSet?.isInUse() == true || items.size() <= keep) return emptySet()
-        val kept =
-            items
-                .values()
-                .sortedWith(Channel.DefaultFeedOrder)
-                .take(keep)
-                .toHashSet()
-        val dropped = items.filterIntoSet { _, note -> note !in kept }
-        dropped.forEach {
-            items.remove(it.idHex)
-            it.removeGatherer(this)
-        }
-        flowSet?.items?.invalidateData()
-        return dropped
     }
 
     override fun removeNote(note: Note) {
-        when {
-            items.remove(note.idHex) != null -> {
-                flowSet?.items?.invalidateData()
-            }
-
-            note is AddressableNote && announcementNotes.get(note.address.pubKeyHex) === note -> {
-                announcementNotes.remove(note.address.pubKeyHex)
-                forgetMemberships()
-                flowSet?.announcements?.invalidateData()
-            }
-
-            // A gathered status, update, cover note or label was withdrawn.
-            else -> {
-                flowSet?.activity?.invalidateData()
-            }
+        if (items.containsKey(note.idHex)) {
+            items.remove(note.idHex)
+        } else if (note is AddressableNote && announcementNotes.get(note.address.pubKeyHex) === note) {
+            announcementNotes.remove(note.address.pubKeyHex)
+            forgetMemberships()
         }
     }
 
@@ -169,49 +119,4 @@ class GitRepository(
             announcementsVersion++
             memberships = HashMap()
         }
-
-    private var flowSet: GitRepositoryFlowSet? = null
-
-    /** The flows observers collect; created on first use, like a channel's. */
-    fun flow(): GitRepositoryFlowSet =
-        flowSet ?: lock.withLock {
-            flowSet ?: GitRepositoryFlowSet(this).also { flowSet = it }
-        }
-
-    fun clearFlow() {
-        lock.withLock { if (flowSet?.isInUse() == false) flowSet = null }
-    }
 }
-
-@Stable
-class GitRepositoryFlowSet(
-    repository: GitRepository,
-) {
-    /** An announcement arrived, changed or was withdrawn: memberships may differ. */
-    val announcements = GitRepositoryFlow(repository)
-
-    /** An item was filed or withdrawn. */
-    val items = GitRepositoryFlow(repository)
-
-    /** A listed item's status, PR update, cover note or title changed. */
-    val activity = GitRepositoryFlow(repository)
-
-    fun isInUse(): Boolean = announcements.hasObservers() || items.hasObservers() || activity.hasObservers()
-}
-
-class GitRepositoryFlow(
-    val repository: GitRepository,
-) {
-    val stateFlow = MutableStateFlow(GitRepositoryState(repository))
-
-    fun invalidateData() {
-        stateFlow.tryEmit(GitRepositoryState(repository))
-    }
-
-    fun hasObservers() = stateFlow.subscriptionCount.value > 0
-}
-
-/** A fresh instance per change, so a StateFlow re-emits it. */
-class GitRepositoryState(
-    val repository: GitRepository,
-)
