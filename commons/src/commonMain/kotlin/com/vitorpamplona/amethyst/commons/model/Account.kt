@@ -4096,8 +4096,10 @@ class Account(
         val oldRelays = keyPackageRelayList.flow.value
         val newRelays = keyPackageRelays.toSet()
         sendLiterallyEverywhere(keyPackageRelayList.saveRelayList(keyPackageRelays))
-        if (oldRelays != newRelays) {
-            republishEventsTo(myKeyPackageEvents(), newRelays)
+        // Only relays that joined lack these; the rest already hold them, and a removal needs nothing.
+        val addedRelays = newRelays - oldRelays
+        if (addedRelays.isNotEmpty()) {
+            republishEventsTo(myKeyPackageEvents(), addedRelays)
         }
     }
 
@@ -4105,8 +4107,10 @@ class Account(
         val oldRelays = privateStorageRelayList.flow.value
         val newRelays = relays.toSet()
         sendMyPublicAndPrivateOutbox(privateStorageRelayList.saveRelayList(relays))
-        if (oldRelays != newRelays) {
-            republishEventsTo(accountSettingsEvents(), newRelays)
+        // Only relays that joined lack these; the rest already hold them, and a removal needs nothing.
+        val addedRelays = newRelays - oldRelays
+        if (addedRelays.isNotEmpty()) {
+            republishEventsTo(accountSettingsEvents(), addedRelays)
         }
     }
 
@@ -4114,10 +4118,12 @@ class Account(
         val oldRelays = searchRelayList.flowNoDefaults.value
         val newRelays = searchRelays.toSet()
         sendMyPublicAndPrivateOutbox(searchRelayList.saveRelayList(searchRelays))
-        if (oldRelays != newRelays) {
+        // Only relays that joined lack these; the rest already hold them, and a removal needs nothing.
+        val addedRelays = newRelays - oldRelays
+        if (addedRelays.isNotEmpty()) {
             republishEventsTo(
                 listOfNotNull(userMetadata.getUserMetadataEvent()),
-                newRelays,
+                addedRelays,
             )
         }
     }
@@ -4126,13 +4132,15 @@ class Account(
         val oldRelays = indexerRelayList.flowNoDefaults.value
         val newRelays = trustedRelays.toSet()
         sendMyPublicAndPrivateOutbox(indexerRelayList.saveRelayList(trustedRelays))
-        if (oldRelays != newRelays) {
+        // Only relays that joined lack these; the rest already hold them, and a removal needs nothing.
+        val addedRelays = newRelays - oldRelays
+        if (addedRelays.isNotEmpty()) {
             republishEventsTo(
                 listOfNotNull(
                     userMetadata.getUserMetadataEvent(),
                     kind3FollowList.getFollowListEvent(),
                 ),
-                newRelays,
+                addedRelays,
             )
         }
     }
@@ -4141,8 +4149,10 @@ class Account(
         val oldRelays = broadcastRelayList.flow.value
         val newRelays = trustedRelays.toSet()
         sendMyPublicAndPrivateOutbox(broadcastRelayList.saveRelayList(trustedRelays))
-        if (oldRelays != newRelays) {
-            republishEventsTo(accountSettingsEvents(), newRelays)
+        // Only relays that joined lack these; the rest already hold them, and a removal needs nothing.
+        val addedRelays = newRelays - oldRelays
+        if (addedRelays.isNotEmpty()) {
+            republishEventsTo(accountSettingsEvents(), addedRelays)
         }
     }
 
@@ -4150,8 +4160,10 @@ class Account(
         val oldRelays = localRelayList.flow.value
         val newRelays = relays.toSet()
         localRelayList.saveRelayList(relays) {}
-        if (oldRelays != newRelays) {
-            republishEventsTo(accountSettingsEvents(), newRelays)
+        // Only relays that joined lack these; the rest already hold them, and a removal needs nothing.
+        val addedRelays = newRelays - oldRelays
+        if (addedRelays.isNotEmpty()) {
+            republishEventsTo(accountSettingsEvents(), addedRelays)
         }
     }
 
@@ -4243,20 +4255,16 @@ class Account(
 
     suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) {
         val oldOutbox = nip65RelayList.outboxFlowNoDefaults.value
-        val oldInbox = nip65RelayList.inboxFlowNoDefaults.value
         val newOutbox =
             relays
                 .filter { it.type.isWrite() }
                 .map { it.relayUrl }
                 .toSet()
-        val newInbox =
-            relays
-                .filter { it.type.isRead() }
-                .map { it.relayUrl }
-                .toSet()
         sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))
-        if (oldOutbox != newOutbox || oldInbox != newInbox) {
-            republishEventsTo(accountSettingsEvents(), newOutbox)
+        // Only outbox relays that joined lack these; an inbox-only change or a removal needs nothing.
+        val addedOutbox = newOutbox - oldOutbox
+        if (addedOutbox.isNotEmpty()) {
+            republishEventsTo(accountSettingsEvents(), addedOutbox)
         }
     }
 

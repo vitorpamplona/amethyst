@@ -33,6 +33,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -90,7 +91,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.blocked.BlockedRelayListViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.blocked.renderBlockedItems
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.broadcast.BroadcastRelayListViewModel
@@ -151,19 +152,19 @@ fun AllRelayListScreen(
     val proxyViewModel: ProxyRelayListViewModel = rememberViewModel { ProxyRelayListViewModel() }
     val relayFeedsViewModel: FavoriteRelayListViewModel = rememberViewModel { FavoriteRelayListViewModel() }
 
-    dmViewModel.init(accountViewModel)
-    keyPackageViewModel.init(accountViewModel)
-    nip65ViewModel.init(accountViewModel)
-    searchViewModel.init(accountViewModel)
-    localViewModel.init(accountViewModel)
-    privateOutboxViewModel.init(accountViewModel)
+    dmViewModel.init(accountViewModel, autoSave = true)
+    keyPackageViewModel.init(accountViewModel, autoSave = true)
+    nip65ViewModel.init(accountViewModel, autoSave = true)
+    searchViewModel.init(accountViewModel, autoSave = true)
+    localViewModel.init(accountViewModel, autoSave = true)
+    privateOutboxViewModel.init(accountViewModel, autoSave = true)
     connectedViewModel.init(accountViewModel)
-    blockedViewModel.init(accountViewModel)
-    trustedViewModel.init(accountViewModel)
-    broadcastViewModel.init(accountViewModel)
-    indexerViewModel.init(accountViewModel)
-    proxyViewModel.init(accountViewModel)
-    relayFeedsViewModel.init(accountViewModel)
+    blockedViewModel.init(accountViewModel, autoSave = true)
+    trustedViewModel.init(accountViewModel, autoSave = true)
+    broadcastViewModel.init(accountViewModel, autoSave = true)
+    indexerViewModel.init(accountViewModel, autoSave = true)
+    proxyViewModel.init(accountViewModel, autoSave = true)
+    relayFeedsViewModel.init(accountViewModel, autoSave = true)
 
     LaunchedEffect(accountViewModel) {
         dmViewModel.load()
@@ -179,6 +180,24 @@ fun AllRelayListScreen(
         indexerViewModel.load()
         proxyViewModel.load()
         relayFeedsViewModel.load()
+    }
+
+    // Every edit is published after a short debounce; leaving the screen publishes the last one now.
+    DisposableEffect(Unit) {
+        onDispose {
+            dmViewModel.flushAutoSave()
+            keyPackageViewModel.flushAutoSave()
+            nip65ViewModel.flushAutoSave()
+            searchViewModel.flushAutoSave()
+            localViewModel.flushAutoSave()
+            privateOutboxViewModel.flushAutoSave()
+            blockedViewModel.flushAutoSave()
+            trustedViewModel.flushAutoSave()
+            broadcastViewModel.flushAutoSave()
+            indexerViewModel.flushAutoSave()
+            proxyViewModel.flushAutoSave()
+            relayFeedsViewModel.flushAutoSave()
+        }
     }
 
     MappedAllRelayListView(
@@ -311,57 +330,27 @@ fun MappedAllRelayListView(
 
     Scaffold(
         topBar = {
-            SavingTopBar(
-                titleRes = Res.string.relay_settings,
-                additionalActions = {
-                    ExportDropdownMenu {
-                        RelayListCollection(
-                            homeRelays = homeFeedState,
-                            notifRelays = notifFeedState,
-                            dmRelays = dmFeedState,
-                            privateOutboxRelays = privateOutboxFeedState,
-                            proxyRelays = proxyRelays,
-                            broadcastRelays = broadcastRelays,
-                            indexerRelays = indexerRelays,
-                            searchRelays = searchFeedState,
-                            localRelays = localFeedState,
-                            trustedRelays = trustedFeedState,
-                            favoriteRelays = relayFeedsFeedState,
-                            blockedRelays = blockedFeedState,
-                        )
-                    }
-                },
-                onCancel = {
-                    dmViewModel.clear()
-                    keyPackageViewModel.clear()
-                    nip65ViewModel.clear()
-                    searchViewModel.clear()
-                    localViewModel.clear()
-                    privateOutboxViewModel.clear()
-                    trustedViewModel.clear()
-                    blockedViewModel.clear()
-                    broadcastViewModel.clear()
-                    indexerViewModel.clear()
-                    proxyViewModel.clear()
-                    relayFeedsViewModel.clear()
-                    nav.popBack()
-                },
-                onPost = {
-                    dmViewModel.create()
-                    keyPackageViewModel.create()
-                    nip65ViewModel.create()
-                    searchViewModel.create()
-                    localViewModel.create()
-                    privateOutboxViewModel.create()
-                    trustedViewModel.create()
-                    blockedViewModel.create()
-                    broadcastViewModel.create()
-                    indexerViewModel.create()
-                    proxyViewModel.create()
-                    relayFeedsViewModel.create()
-                    nav.popBack()
-                },
-            )
+            TopBarWithBackButton(
+                caption = stringRes(Res.string.relay_settings),
+                nav = nav,
+            ) {
+                ExportDropdownMenu {
+                    RelayListCollection(
+                        homeRelays = homeFeedState,
+                        notifRelays = notifFeedState,
+                        dmRelays = dmFeedState,
+                        privateOutboxRelays = privateOutboxFeedState,
+                        proxyRelays = proxyRelays,
+                        broadcastRelays = broadcastRelays,
+                        indexerRelays = indexerRelays,
+                        searchRelays = searchFeedState,
+                        localRelays = localFeedState,
+                        trustedRelays = trustedFeedState,
+                        favoriteRelays = relayFeedsFeedState,
+                        blockedRelays = blockedFeedState,
+                    )
+                }
+            }
         },
     ) { pad ->
         val anyDragging =

@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.events_from_you
 import com.vitorpamplona.amethyst.commons.resources.events_to_you
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.RelayListAutoSaver
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -65,27 +66,70 @@ class Nip65RelayListViewModel : ViewModel() {
 
     var hasModified = false
 
-    fun init(accountViewModel: AccountViewModel) {
+    /** Signs and publishes every edit instead of waiting for [create]; see BasicRelaySetupInfoModel.autoSave. */
+    var autoSave = false
+        private set
+
+    /** Snapshots are (outbox, inbox), the order the screen shows them in. */
+    private val autoSaver = RelayListAutoSaver<Pair<List<NormalizedRelayUrl>, List<NormalizedRelayUrl>>>(viewModelScope)
+
+    fun init(
+        accountViewModel: AccountViewModel,
+        autoSave: Boolean = false,
+    ) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
+        this.autoSave = autoSave
     }
 
     fun load() {
+        // Same rules as BasicRelaySetupInfoModel.load: keep the lists while an edit is pending,
+        // and only reload when the account's lists moved away from the ones on screen.
+        if (autoSave) {
+            if (!autoSaver.isIdle) return
+            val lists = account.nip65RelayList
+            if (Pair(lists.ownWriteRelays().distinct(), lists.ownReadRelays().distinct()) == autoSaver.persisted) return
+        }
+
         clear()
+        autoSaver.persisted = snapshot()
         loadRelayDocuments()
         loadCounts()
     }
 
     fun create() {
         if (hasModified) {
+            val lists = snapshot()
             accountViewModel.launchSigner {
-                val writes = _homeRelays.value.map { it.relay }.toSet()
-                val reads = _notificationRelays.value.map { it.relay }.toSet()
-
-                account.sendNip65RelayList(nip65ListOf(writes, reads))
+                publish(lists)
                 clear()
             }
         }
+    }
+
+    /** Publishes the pending auto-save edit now instead of after the debounce, e.g. on leaving. */
+    fun flushAutoSave() {
+        autoSaver.cancelPending()
+        if (!autoSave || !hasModified) return
+        hasModified = false
+
+        autoSaver.save(
+            snapshot = snapshot(),
+            launch = { save -> accountViewModel.launchSigner { save() } },
+            publish = ::publish,
+        )
+    }
+
+    private fun snapshot() = Pair(_homeRelays.value.map { it.relay }, _notificationRelays.value.map { it.relay })
+
+    private fun markModified() {
+        hasModified = true
+        if (autoSave) autoSaver.schedule(::flushAutoSave)
+    }
+
+    private suspend fun publish(lists: Pair<List<NormalizedRelayUrl>, List<NormalizedRelayUrl>>) {
+        val (writes, reads) = lists
+        account.sendNip65RelayList(nip65ListOf(writes.toSet(), reads.toSet()))
     }
 
     fun loadRelayDocuments() {
@@ -183,17 +227,17 @@ class Nip65RelayListViewModel : ViewModel() {
         if (_homeRelays.value.any { it.relay == relay.relay }) return
 
         _homeRelays.update { it.plus(relay) }
-        hasModified = true
+        markModified()
     }
 
     fun deleteHomeRelay(relay: BasicRelaySetupInfo) {
         _homeRelays.update { it.minus(relay) }
-        hasModified = true
+        markModified()
     }
 
     fun deleteHomeAll() {
         _homeRelays.update { _ -> emptyList() }
-        hasModified = true
+        markModified()
     }
 
     fun toggleHomePaidRelay(
@@ -212,24 +256,24 @@ class Nip65RelayListViewModel : ViewModel() {
                 add(to, removeAt(from))
             }
         }
-        hasModified = true
+        markModified()
     }
 
     fun addNotifRelay(relay: BasicRelaySetupInfo) {
         if (_notificationRelays.value.any { it.relay == relay.relay }) return
 
         _notificationRelays.update { it.plus(relay) }
-        hasModified = true
+        markModified()
     }
 
     fun deleteNotifRelay(relay: BasicRelaySetupInfo) {
         _notificationRelays.update { it.minus(relay) }
-        hasModified = true
+        markModified()
     }
 
     fun deleteNotifAll() {
         _notificationRelays.update { _ -> emptyList() }
-        hasModified = true
+        markModified()
     }
 
     fun moveNotifRelay(
@@ -241,7 +285,7 @@ class Nip65RelayListViewModel : ViewModel() {
                 add(to, removeAt(from))
             }
         }
-        hasModified = true
+        markModified()
     }
 
     fun toggleNotifPaidRelay(

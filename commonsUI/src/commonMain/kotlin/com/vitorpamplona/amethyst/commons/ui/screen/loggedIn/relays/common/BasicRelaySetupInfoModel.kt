@@ -53,13 +53,39 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
 
     var hasModified = false
 
-    fun init(accountViewModel: AccountViewModel) {
+    /**
+     * When on, every edit is signed and published (debounced by [RelayListAutoSaver]) instead of
+     * waiting for [create]. The all-relays settings screen turns it on; the add-relay dialogs keep
+     * their Save button.
+     */
+    var autoSave = false
+        private set
+
+    private val autoSaver = RelayListAutoSaver<List<NormalizedRelayUrl>>(viewModelScope)
+
+    fun init(
+        accountViewModel: AccountViewModel,
+        autoSave: Boolean = false,
+    ) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
+        this.autoSave = autoSave
     }
 
     fun load() {
+        if (autoSave) {
+            // An edit is waiting or being signed: rebuilding the list from the account now would
+            // put back the list that save is about to replace.
+            if (!autoSaver.isIdle) return
+            // Back from a sub-screen and the account's list is still the one on screen: keep it,
+            // with its paid flags and counts, instead of querying every relay again. A list that
+            // changed meanwhile (a relay feed followed, a relay blocked) reloads, so the next edit
+            // here doesn't publish over it.
+            if (relayListBuilder().map { it.relay } == autoSaver.persisted) return
+        }
+
         clear()
+        autoSaver.persisted = _relays.value.map { it.relay }
         loadRelayDocuments()
         loadCounts()
     }
@@ -77,6 +103,24 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
                 clear()
             }
         }
+    }
+
+    /** Publishes the pending auto-save edit now instead of after the debounce, e.g. on leaving. */
+    fun flushAutoSave() {
+        autoSaver.cancelPending()
+        if (!autoSave || !hasModified) return
+        hasModified = false
+
+        autoSaver.save(
+            snapshot = _relays.value.map { it.relay },
+            launch = { save -> accountViewModel.launchSigner { save() } },
+            publish = { saveRelayList(it) },
+        )
+    }
+
+    private fun markModified() {
+        hasModified = true
+        if (autoSave) autoSaver.schedule(::flushAutoSave)
     }
 
     fun loadRelayDocuments() {
@@ -149,12 +193,12 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
         if (relays.value.any { it.relay == relay.relay }) return
 
         _relays.update { it.plus(relay) }
-        hasModified = true
+        markModified()
     }
 
     fun deleteRelay(relay: BasicRelaySetupInfo) {
         _relays.update { it.minus(relay) }
-        hasModified = true
+        markModified()
     }
 
     fun moveRelay(
@@ -166,12 +210,12 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
                 add(to, removeAt(from))
             }
         }
-        hasModified = true
+        markModified()
     }
 
     fun deleteAll() {
         _relays.update { _ -> emptyList() }
-        hasModified = true
+        markModified()
     }
 
     fun togglePaidRelay(
