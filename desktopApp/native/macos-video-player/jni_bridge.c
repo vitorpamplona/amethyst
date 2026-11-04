@@ -30,9 +30,11 @@ extern void   seekTo(void* ctx, double time);
 extern void   disposeVideoPlayer(void* ctx);
 extern void   setPlaybackSpeed(void* ctx, float speed);
 extern float  getPlaybackSpeed(void* ctx);
-extern const char* getVideoTitle(void* ctx);
-extern int64_t     getVideoBitrate(void* ctx);
-extern const char* getVideoMimeType(void* ctx);
+// Both return a strdup'd copy the caller frees, so they are declared non-const here
+// (Swift's UnsafePointer<CChar>; C linkage ignores the qualifier).
+extern char*   getVideoTitle(void* ctx);
+extern int64_t getVideoBitrate(void* ctx);
+extern char*   getVideoMimeType(void* ctx);
 extern int32_t getAudioChannels(void* ctx);
 extern int32_t getAudioSampleRate(void* ctx);
 extern int32_t consumeDidPlayToEnd(void* ctx);
@@ -153,10 +155,10 @@ static jfloat JNICALL jni_GetPlaybackSpeed(JNIEnv* env, jclass cls, jlong handle
 
 static jstring JNICALL jni_GetVideoTitle(JNIEnv* env, jclass cls, jlong handle) {
     if (!handle) return NULL;
-    const char* s = getVideoTitle(toCtx(handle));
+    char* s = getVideoTitle(toCtx(handle));
     if (!s) return NULL;
     jstring result = (*env)->NewStringUTF(env, s);
-    free((void*)s);
+    free(s);
     return result;
 }
 
@@ -166,10 +168,10 @@ static jlong JNICALL jni_GetVideoBitrate(JNIEnv* env, jclass cls, jlong handle) 
 
 static jstring JNICALL jni_GetVideoMimeType(JNIEnv* env, jclass cls, jlong handle) {
     if (!handle) return NULL;
-    const char* s = getVideoMimeType(toCtx(handle));
+    char* s = getVideoMimeType(toCtx(handle));
     if (!s) return NULL;
     jstring result = (*env)->NewStringUTF(env, s);
-    free((void*)s);
+    free(s);
     return result;
 }
 
