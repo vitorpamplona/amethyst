@@ -89,7 +89,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.clink.ui.ClinkBudgetDialog
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
-import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.icons.brand.PaymentBrandIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -1546,26 +1546,17 @@ private fun WalletDetailRow(
     }
 }
 
+// NWC's rail mark: the official full-color logo, sized like the Bitcoin and
+// Cashu marks so the three rails line up.
 @Composable
 private fun NwcChip() {
-    Box(
-        modifier =
-            Modifier
-                .size(28.dp)
-                .clip(CircleShape)
-                .background(color = NwcViolet),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            symbol = MaterialSymbols.Bolt,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(18.dp),
-        )
-    }
+    Material3Icon(
+        imageVector = PaymentBrandIcons.Nwc,
+        contentDescription = null,
+        tint = Color.Unspecified,
+        modifier = Modifier.size(28.dp),
+    )
 }
-
-private val NwcViolet = Color(0xFF8B5CF6)
 
 internal const val BALANCE_DOTS = "\u2022\u2022\u2022"
 
@@ -1576,29 +1567,6 @@ private fun relayHostOf(wallet: NwcWalletEntryNorm): String =
         .trimEnd('/')
 
 private fun shortenMiddle(value: String): String = if (value.length <= 20) value else value.take(12) + "\u2026" + value.takeLast(6)
-
-// Mirrors OnchainSection's BitcoinChip so both payment rails render their
-// logo the same way, a filled circular chip with a white glyph. Cashu uses
-// the theme primary in place of bitcoin orange to keep the two rails
-// distinct at a glance.
-@Composable
-private fun CashuChip() {
-    Box(
-        modifier =
-            Modifier
-                .size(28.dp)
-                .clip(CircleShape)
-                .background(color = MaterialTheme.colorScheme.primary),
-        contentAlignment = Alignment.Center,
-    ) {
-        Material3Icon(
-            imageVector = CustomHashTagIcons.Cashu,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(18.dp),
-        )
-    }
-}
 
 @Composable
 private fun CashuWalletRow(
@@ -1615,7 +1583,13 @@ private fun CashuWalletRow(
                 .fillMaxWidth()
                 .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        // Same rail-card treatment as the on-chain card: a 2dp brand stroke over
+        // a faint tint of the brand color.
+        border = BorderStroke(2.dp, PaymentBrandIcons.CashuAccent),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = PaymentBrandIcons.CashuAccent.copy(alpha = 0.12f),
+            ),
     ) {
         Row(
             modifier =
@@ -1624,7 +1598,12 @@ private fun CashuWalletRow(
                     .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            CashuChip()
+            Material3Icon(
+                imageVector = PaymentBrandIcons.Cashu,
+                contentDescription = null,
+                tint = Color.Unspecified,
+                modifier = Modifier.size(28.dp),
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
