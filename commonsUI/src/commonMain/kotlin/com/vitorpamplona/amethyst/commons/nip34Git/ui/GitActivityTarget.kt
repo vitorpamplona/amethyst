@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTargetNote
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
@@ -89,12 +90,7 @@ fun GitItemReference(
     val event = item.event ?: return
     val kind = observeGitStatus(item)?.statusKind() ?: StatusKind.OPEN
     val title = observeGitItemTitle(item)
-    val repository =
-        remember(event) {
-            GitAuthority.repositoriesOf(event).firstOrNull()?.let { address ->
-                (LocalCache.getAddressableNoteIfExists(address)?.event as? GitRepositoryEvent)?.name() ?: address.dTag
-            }
-        }
+    val repository = remember(event) { gitRepositoryNameOf(event) }
 
     Row(
         modifier =
@@ -121,3 +117,9 @@ fun GitItemReference(
         }
     }
 }
+
+/** The name of the repository [item] is filed in (its first coordinate), or its identifier until the announcement loads. */
+fun gitRepositoryNameOf(item: Event): String? =
+    GitAuthority.repositoriesOf(item).firstOrNull()?.let { address ->
+        (LocalCache.getAddressableNoteIfExists(address)?.event as? GitRepositoryEvent)?.name()?.ifBlank { null } ?: address.dTag
+    }

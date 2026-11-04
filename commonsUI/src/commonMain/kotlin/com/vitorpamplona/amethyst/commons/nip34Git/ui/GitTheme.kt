@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -37,13 +38,16 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.gitDashboard.GitDashboardViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * The colors every git screen draws a lifecycle state in, so the list icon, the thread's pill, the
@@ -183,4 +187,19 @@ fun GitRefTag(
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
                 .padding(horizontal = 6.dp, vertical = 1.dp),
     )
+}
+
+/**
+ * Marks [item] read for the git dashboard's inbox while its thread is open: when it opens, and
+ * again when the reader leaves, so what arrived while they read it isn't counted as new.
+ */
+@Composable
+fun MarkGitItemRead(
+    item: Note,
+    accountViewModel: AccountViewModel,
+) {
+    DisposableEffect(item) {
+        GitDashboardViewModel.markItemRead(accountViewModel.account, item)
+        onDispose { GitDashboardViewModel.markItemRead(accountViewModel.account, item) }
+    }
 }

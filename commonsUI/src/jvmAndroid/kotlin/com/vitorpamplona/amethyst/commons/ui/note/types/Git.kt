@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitRefTag
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusPill
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitVersionedSummary
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.LocalGitThreadRoot
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.MarkGitItemRead
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitMetaStyle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitPullRequestPushText
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemLabels
@@ -540,6 +541,7 @@ private fun RenderGitPatchEvent(
 ) {
     // The repository announcements its statuses, updates, labels and cover notes are judged by.
     LoadGitRepositoryAnnouncements(noteEvent)
+    if (LocalGitThreadRoot.current) MarkGitItemRead(note, accountViewModel)
 
     val inThread = LocalGitThreadRoot.current
     GitCardContainer {
@@ -636,6 +638,7 @@ private fun RenderGitIssueEvent(
 ) {
     // The repository announcements its statuses, updates, labels and cover notes are judged by.
     LoadGitRepositoryAnnouncements(noteEvent)
+    if (LocalGitThreadRoot.current) MarkGitItemRead(note, accountViewModel)
 
     GitCardContainer {
         val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
@@ -703,6 +706,7 @@ private fun RenderGitPullRequestEvent(
 ) {
     // The repository announcements its statuses, updates, labels and cover notes are judged by.
     LoadGitRepositoryAnnouncements(noteEvent)
+    if (LocalGitThreadRoot.current) MarkGitItemRead(note, accountViewModel)
 
     // A later pull-request update (kind 1619) revises this PR with a newer commit /
     // merge base. Fold the most recent one in so the card reflects the current state.
