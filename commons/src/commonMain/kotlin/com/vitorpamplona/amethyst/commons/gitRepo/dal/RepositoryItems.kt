@@ -47,12 +47,8 @@ fun isFiledUnder(
 
 /**
  * Whether a patch starts a series, and so gets a row of its own: tagged `["t", "root"]`, and not a
- * revision of another series (`root-revision`). A patch with no thread tags at all (a lone patch from
- * an older client) also counts; the rest of a series lives in its root's thread.
+ * revision of another series (`root-revision`). The rest of a series lives in its root's thread.
+ * gitworkshop lists exactly these, so an untagged patch from an older client is not a row here
+ * either: listing it would make the two clients' open counts disagree.
  */
-fun GitPatchEvent.isSeriesRoot(): Boolean =
-    if (isRoot()) {
-        !isRootRevision()
-    } else {
-        !isRootRevision() && threadEventIds().isEmpty()
-    }
+fun GitPatchEvent.isSeriesRoot(): Boolean = isRoot() && !isRootRevision()
