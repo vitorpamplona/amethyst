@@ -34,10 +34,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -86,7 +86,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -179,9 +178,9 @@ fun AddNwcWalletScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                OutlinedButton(
-                    modifier = Modifier.weight(1f),
-                    shape = ButtonBorder,
+                Button(
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
                     onClick = {
                         try {
                             uri.openUri(
@@ -298,7 +297,11 @@ fun AddNwcWalletScreen(
                     }
                 },
                 enabled = nwcUri.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                shape = RoundedCornerShape(12.dp),
             ) {
                 Text(stringRes(Res.string.wallet_save))
             }
@@ -329,7 +332,7 @@ fun AddNwcWalletScreen(
                 )
             }
 
-            OutlinedButton(
+            FilledTonalButton(
                 onClick = {
                     walletViewModel.fetchBackupForRestore { backup ->
                         if (backup == null) {
