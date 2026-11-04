@@ -59,7 +59,9 @@ class EncryptionKeyCache {
         expectedMimeType: String?,
     ) = add(url, DecryptInformation(cipher, expectedMimeType))
 
-    fun get(url: String): DecryptInformation? = cache.get(url) ?: blobHashInPath(url)?.let { byBlobHash.get(it) }
+    // Runs for every request on the media clients, nearly all unencrypted: parse the path only
+    // while some blossom: key is registered.
+    fun get(url: String): DecryptInformation? = cache.get(url) ?: if (byBlobHash.size() == 0) null else blobHashInPath(url)?.let { byBlobHash.get(it) }
 
     /** Forgets [url]'s key, e.g. when the message that carried it expired (CORD-08). */
     fun remove(url: String) {
