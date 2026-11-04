@@ -79,6 +79,23 @@ class GitAuthority(
     fun membership(repository: Address): GitRepositoryMembership? = memberships[repository]
 
     /**
+     * The coordinates a change to [repository] is filed under: every confirmed member's, as
+     * gitworkshop tags them, so whichever announcement a client opens finds it. Just
+     * [repository] while its announcements are unknown.
+     */
+    fun coordinatesToTag(repository: Address): List<Address> = membership(repository)?.confirmedCoordinates()?.ifEmpty { null } ?: listOf(repository)
+
+    /** [coordinatesToTag] for the repository [item] is filed against, plus the item's own coordinates. */
+    fun coordinatesToTag(item: Event): List<Address> {
+        val own = repositoriesOf(item)
+        val primary = own.firstOrNull() ?: return emptyList()
+        return (coordinatesToTag(primary) + own).distinct()
+    }
+
+    /** The repository's earliest unique commit, from the first confirmed announcement that names one. */
+    fun earliestUniqueCommit(repository: Address): String? = membership(repository)?.confirmedAnnouncements?.firstNotNullOfOrNull { it.earliestUniqueCommit() }
+
+    /**
      * The announcements needed to judge items filed under [repositories]: theirs, then those of
      * everyone they name (maintainers and role subjects, ended roles included) and so on, as far as
      * the cache has reached. Load them on screen with the event finder; each one that arrives

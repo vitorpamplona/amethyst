@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.status.publishGitStatus
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusButtons
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitAuthority
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.statusKind
@@ -36,10 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
-import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
-import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
-import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
-import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 
 /**
  * NIP-34 status controls for an issue, patch or pull request. Visible only to the people whose
@@ -79,18 +77,14 @@ private fun sendStatus(
     note: Note,
     target: StatusKind,
 ) {
-    val hint = note.toEventHint<Event>() ?: return
-    accountViewModel.launchSigner {
-        val template =
-            when (target) {
-                StatusKind.OPEN -> GitStatusOpenEvent.build("", hint)
-                StatusKind.CLOSED -> GitStatusClosedEvent.build("", hint)
-                StatusKind.APPLIED -> GitStatusAppliedEvent.build("", hint)
-                StatusKind.DRAFT -> GitStatusDraftEvent.build("", hint)
-            }
-        val signed = accountViewModel.account.signer.sign(template)
-        accountViewModel.account.sendAutomatic(signed)
-    }
+    val kind =
+        when (target) {
+            StatusKind.OPEN -> GitStatusEvent.KIND_OPEN
+            StatusKind.CLOSED -> GitStatusEvent.KIND_CLOSED
+            StatusKind.APPLIED -> GitStatusEvent.KIND_APPLIED
+            StatusKind.DRAFT -> GitStatusEvent.KIND_DRAFT
+        }
+    accountViewModel.launchSigner { accountViewModel.account.publishGitStatus(note, kind) }
 }
 
 /** The repository coordinate an issue, patch or PR is filed against (its first). */

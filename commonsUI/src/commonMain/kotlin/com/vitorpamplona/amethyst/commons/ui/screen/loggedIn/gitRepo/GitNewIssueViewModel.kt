@@ -46,8 +46,12 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.issue.notify
+import com.vitorpamplona.quartz.nip34Git.issue.repository
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -222,21 +226,16 @@ class GitNewIssueViewModel : ViewModel() {
         // each is notified), as gitworkshop does: whichever announcement a client opens finds it.
         val coMaintainers =
             (GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY)
-                .membership(repoNote.address)
-                ?.confirmedCoordinates()
-                .orEmpty()
+                .coordinatesToTag(repoNote.address)
                 .filter { it != repoNote.address }
 
         val template =
             GitIssueEvent.build(subject.trim(), body, repositoryHint, emptyList(), parseLabels(labels)) {
-                coMaintainers.forEach {
-                    addUniqueValueIfNew(arrayOf("a", it.toValue()))
-                    addUniqueValueIfNew(arrayOf("p", it.pubKeyHex))
-                }
+                coMaintainers.forEach { repository(ATag(it)) }
+                notify(coMaintainers.map { PTag(it.pubKeyHex) })
                 if (usedIMetas.isNotEmpty()) imetas(usedIMetas)
             }
-        val signed = account.signer.sign(template)
-        account.sendAutomatic(signed)
+        account.signAndComputeBroadcast(template)
     }
 }
 

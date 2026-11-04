@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -100,6 +101,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
+import com.vitorpamplona.quartz.nip34Git.gitThreadRootId
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
@@ -683,10 +685,7 @@ open class CommentPostViewModel :
             if (replyingTo != null) {
                 val eventHint = replyingTo.toEventHint<Event>() ?: return null
 
-                CommentEvent.replyBuilder(
-                    msg = tagger.message,
-                    replyingTo = eventHint,
-                ) {
+                val replyTags: TagArrayBuilder<CommentEvent>.() -> Unit = {
                     // A reply inside a NIP-29 group thread must carry the group's `h`
                     // tag, or the host relay won't accept it and no other member (or
                     // other NIP-29 client, e.g. Flotilla) will see it. Inherit it from
@@ -731,6 +730,21 @@ open class CommentPostViewModel :
                     emojis(emojis)
                     imetas(usedAttachments)
                     geoHash?.let { geohash(it) }
+                }
+
+                // NIP-34: a status, PR update, cover note or legacy reply is part of an issue's or
+                // PR's thread, which clients read by the item (`#E`). Root the comment there, still
+                // answering the event it replies to; rooted at that event, nobody would find it.
+                val gitItem =
+                    replyingToEvent
+                        ?.gitThreadRootId()
+                        ?.takeIf { it != replyingToEvent.id }
+                        ?.let { LocalCache.getNoteIfExists(it)?.toEventHint<Event>() }
+
+                if (gitItem != null) {
+                    CommentEvent.replyBuilder(tagger.message, root = gitItem, replyingTo = eventHint, initializer = replyTags)
+                } else {
+                    CommentEvent.replyBuilder(tagger.message, replyingTo = eventHint, initializer = replyTags)
                 }
             } else {
                 val externalIdentity = externalIdentity ?: return null
