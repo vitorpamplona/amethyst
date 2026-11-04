@@ -61,8 +61,7 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
     var autoSave = false
         private set
 
-    private val autoSaver = RelayListAutoSaver(viewModelScope)
-    private var loaded = false
+    private val autoSaver = RelayListAutoSaver<List<NormalizedRelayUrl>>(viewModelScope)
 
     fun init(
         accountViewModel: AccountViewModel,
@@ -74,12 +73,19 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
     }
 
     fun load() {
-        // An auto-saving editor owns its list for its whole life: rebuilding it from the account
-        // when the screen re-enters composition could put back the list an in-flight save replaces.
-        if (autoSave && loaded) return
-        loaded = true
+        if (autoSave) {
+            // An edit is waiting or being signed: rebuilding the list from the account now would
+            // put back the list that save is about to replace.
+            if (!autoSaver.isIdle) return
+            // Back from a sub-screen and the account's list is still the one on screen: keep it,
+            // with its paid flags and counts, instead of querying every relay again. A list that
+            // changed meanwhile (a relay feed followed, a relay blocked) reloads, so the next edit
+            // here doesn't publish over it.
+            if (relayListBuilder().map { it.relay } == autoSaver.persisted) return
+        }
 
         clear()
+        autoSaver.persisted = _relays.value.map { it.relay }
         loadRelayDocuments()
         loadCounts()
     }
@@ -105,10 +111,11 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
         if (!autoSave || !hasModified) return
         hasModified = false
 
-        val urls = _relays.value.map { it.relay }
-        accountViewModel.launchSigner {
-            autoSaver.serialized { saveRelayList(urls) }
-        }
+        autoSaver.save(
+            snapshot = _relays.value.map { it.relay },
+            launch = { save -> accountViewModel.launchSigner { save() } },
+            publish = { saveRelayList(it) },
+        )
     }
 
     private fun markModified() {

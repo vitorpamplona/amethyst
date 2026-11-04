@@ -40,7 +40,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -71,8 +70,8 @@ class Nip65RelayListViewModel : ViewModel() {
     var autoSave = false
         private set
 
-    private val autoSaver = RelayListAutoSaver(viewModelScope)
-    private var loaded = false
+    /** Snapshots are (outbox, inbox), the order the screen shows them in. */
+    private val autoSaver = RelayListAutoSaver<Pair<List<NormalizedRelayUrl>, List<NormalizedRelayUrl>>>(viewModelScope)
 
     fun init(
         accountViewModel: AccountViewModel,
@@ -84,20 +83,25 @@ class Nip65RelayListViewModel : ViewModel() {
     }
 
     fun load() {
-        // See BasicRelaySetupInfoModel.load: an auto-saving editor keeps its own list.
-        if (autoSave && loaded) return
-        loaded = true
+        // Same rules as BasicRelaySetupInfoModel.load: keep the lists while an edit is pending,
+        // and only reload when the account's lists moved away from the ones on screen.
+        if (autoSave) {
+            if (!autoSaver.isIdle) return
+            val lists = account.nip65RelayList
+            if (Pair(lists.ownWriteRelays().distinct(), lists.ownReadRelays().distinct()) == autoSaver.persisted) return
+        }
 
         clear()
+        autoSaver.persisted = snapshot()
         loadRelayDocuments()
         loadCounts()
     }
 
     fun create() {
         if (hasModified) {
-            val relays = advertisedRelays()
+            val lists = snapshot()
             accountViewModel.launchSigner {
-                account.sendNip65RelayList(relays)
+                publish(lists)
                 clear()
             }
         }
@@ -109,22 +113,24 @@ class Nip65RelayListViewModel : ViewModel() {
         if (!autoSave || !hasModified) return
         hasModified = false
 
-        val relays = advertisedRelays()
-        accountViewModel.launchSigner {
-            autoSaver.serialized { account.sendNip65RelayList(relays) }
-        }
+        autoSaver.save(
+            snapshot = snapshot(),
+            launch = { save -> accountViewModel.launchSigner { save() } },
+            publish = ::publish,
+        )
     }
+
+    private fun snapshot() = Pair(_homeRelays.value.map { it.relay }, _notificationRelays.value.map { it.relay })
 
     private fun markModified() {
         hasModified = true
         if (autoSave) autoSaver.schedule(::flushAutoSave)
     }
 
-    private fun advertisedRelays(): List<AdvertisedRelayInfo> =
-        nip65ListOf(
-            writes = _homeRelays.value.map { it.relay }.toSet(),
-            reads = _notificationRelays.value.map { it.relay }.toSet(),
-        )
+    private suspend fun publish(lists: Pair<List<NormalizedRelayUrl>, List<NormalizedRelayUrl>>) {
+        val (writes, reads) = lists
+        account.sendNip65RelayList(nip65ListOf(writes.toSet(), reads.toSet()))
+    }
 
     fun loadRelayDocuments() {
         viewModelScope.launch(Dispatchers.IO) {
