@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,7 +31,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -47,8 +45,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -106,7 +102,7 @@ fun GitCommitLog(
         val commit = remember(openCommit, commits) { commits?.firstOrNull { it.oid == openCommit } }
         PlatformBackHandler { openCommit = null }
         Column(Modifier.fillMaxSize()) {
-            LogHeader(title = commit?.shortOid ?: "", onBack = { openCommit = null })
+            LogHeader(title = commit?.summary ?: "", onBack = { openCommit = null })
             HorizontalDivider(thickness = 0.5.dp)
             if (commit == null) {
                 GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(Res.string.git_repo_file_load_error))
@@ -173,7 +169,7 @@ private fun CommitDiff(
                     if (commit.summary.isNotBlank()) {
                         Text(commit.summary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         Text(
-                            text = "${commit.shortOid} · ${commit.authorName}",
+                            text = commit.authorName,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                             modifier = Modifier.padding(bottom = 8.dp),
@@ -217,17 +213,6 @@ private fun CommitRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = commit.shortOid,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                    modifier =
-                        Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                            .padding(horizontal = 5.dp, vertical = 1.dp),
-                )
                 val time by produceState("", commit.authorTimeSec) { value = relativeTime(commit.authorTimeSec) }
                 Text(
                     text = "${commit.authorName} · $time",

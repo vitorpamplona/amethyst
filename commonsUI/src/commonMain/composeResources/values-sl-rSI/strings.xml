@@ -2694,7 +2694,6 @@
     <string name="forked_from">Razcepljeno od</string>
     <string name="git_clone_address">Klon:</string>
     <string name="git_branch">Veja</string>
-    <string name="git_commit">Objavi</string>
     <string name="git_pr_update_description">Zahtevek za združitev (PR) je bil posodobljen na novo objavo.</string>
     <string name="git_repo_tab_issues">Težave</string>
     <string name="git_repo_tab_patches">Popravki in PR-ji</string>

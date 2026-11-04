@@ -2653,7 +2653,6 @@
     <string name="forked_from">Geforkt von</string>
     <string name="git_clone_address">Klonen:</string>
     <string name="git_branch">Branch</string>
-    <string name="git_commit">Commit</string>
     <string name="git_pr_update_description">Der Pull-Request wurde auf einen neuen Commit aktualisiert.</string>
     <string name="git_repo_tab_issues">Tickets</string>
     <string name="git_repo_tab_patches">Patches und PRs</string>

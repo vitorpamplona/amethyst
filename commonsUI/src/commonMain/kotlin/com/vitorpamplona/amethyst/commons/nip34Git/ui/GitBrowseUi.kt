@@ -49,7 +49,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -137,13 +136,12 @@ fun GitMessageBox(
 }
 
 /**
- * Compact bar identifying the snapshot: a branch/tag picker, the short commit the
- * file tree was loaded from, and the entry count of the current directory.
+ * Compact bar identifying the snapshot: a branch/tag picker and the entry count of the
+ * current directory.
  */
 @Composable
 fun RepoInfoBar(
     branch: String?,
-    headCommit: String,
     entryCount: Int,
     branches: List<String> = emptyList(),
     tags: List<String> = emptyList(),
@@ -164,7 +162,6 @@ fun RepoInfoBar(
             } else if (branch != null) {
                 InfoChip(symbol = MaterialSymbols.AltRoute, label = branch)
             }
-            InfoChip(symbol = MaterialSymbols.Commit, label = headCommit.take(7), monospace = true)
             Text(
                 text = pluralStringRes(Res.plurals.git_repo_item_count, entryCount, entryCount),
                 style = MaterialTheme.typography.labelMedium,
@@ -272,7 +269,6 @@ private fun RefMenuItem(
 private fun InfoChip(
     symbol: MaterialSymbol,
     label: String,
-    monospace: Boolean = false,
 ) {
     Row(
         modifier =
@@ -293,7 +289,6 @@ private fun InfoChip(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
-            fontFamily = if (monospace) FontFamily.Monospace else null,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

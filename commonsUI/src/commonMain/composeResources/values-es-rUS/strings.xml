@@ -1322,7 +1322,6 @@
     <string name="forked_from">Bifurcación de</string>
     <string name="git_clone_address">Clon:</string>
     <string name="git_branch">Rama</string>
-    <string name="git_commit">Confirmar</string>
     <string name="git_pr_update_description">Se actualizó la solicitud de incorporación de cambios con una nueva confirmación.</string>
     <string name="git_repo_tab_issues">Incidencias</string>
     <string name="git_repo_tab_patches">Parches y PRs</string>

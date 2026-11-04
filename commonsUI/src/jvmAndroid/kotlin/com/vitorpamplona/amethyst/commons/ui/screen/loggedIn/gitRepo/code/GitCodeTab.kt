@@ -185,7 +185,6 @@ private fun CodeBrowser(
         item(key = "repo-info-bar") {
             RepoInfoBar(
                 branch = snapshot.branch,
-                headCommit = snapshot.headCommit,
                 entryCount = entries.size,
                 branches = snapshot.branches,
                 tags = snapshot.tags,

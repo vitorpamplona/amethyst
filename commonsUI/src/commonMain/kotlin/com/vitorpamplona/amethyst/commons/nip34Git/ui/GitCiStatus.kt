@@ -93,7 +93,6 @@ import com.vitorpamplona.amethyst.commons.resources.git_ci_runs_disclaimer
 import com.vitorpamplona.amethyst.commons.resources.git_ci_runs_title
 import com.vitorpamplona.amethyst.commons.resources.git_ci_signed_by
 import com.vitorpamplona.amethyst.commons.resources.git_ci_success
-import com.vitorpamplona.amethyst.commons.resources.git_commit
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -340,14 +339,6 @@ private fun AttemptBlock(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            attempt.commit?.let {
-                Text(
-                    text = stringRes(Res.string.git_commit) + " " + it.take(7),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.grayText,
-                )
-            }
             Spacer(Modifier.weight(1f))
             TimeAgo(attempt.sortTime)
         }
