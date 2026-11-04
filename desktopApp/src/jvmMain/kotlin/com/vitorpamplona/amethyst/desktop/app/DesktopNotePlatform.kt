@@ -49,6 +49,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -113,6 +115,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import com.vitorpamplona.amethyst.commons.ui.components.LoadUrlPreview as SharedLoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.components.rememberUrlPreviewState as sharedRememberUrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitIssueEvent as SharedRenderGitIssueEvent
@@ -264,9 +267,10 @@ object DesktopNotePlatform : NotePlatform {
                 // The declared size, else the one this image had last time (or that the feed's
                 // prefetch read), so the card keeps its shape while it loads instead of jumping.
                 val ratio = content.dim.ratioOrNull() ?: MediaAspectRatioCache.get(url)
+                // Crop asks the image to cover the cell its caller sized (a gallery's), not to keep its shape.
+                val size = if (contentScale == ContentScale.Crop) Modifier.croppedImageSize(ratio, MaxInlineMediaHeight) else Modifier.inlineImageSize(ratio, MaxInlineMediaHeight)
                 val modifier =
-                    Modifier
-                        .inlineImageSize(ratio, MaxInlineMediaHeight)
+                    size
                         // Where the viewer grows the image out of, and shrinks it back into.
                         .zoomSourceAnchor(source)
                         .clip(shape)
@@ -764,6 +768,41 @@ internal fun Modifier.inlineImageSize(
     dim: DimensionTag?,
     maxHeight: Dp,
 ): Modifier = inlineImageSize(dim.ratioOrNull(), maxHeight)
+
+/**
+ * The size of a [ContentScale.Crop] image: the whole cell its caller sized, when the cell has a
+ * height (a gallery cell, a grid tile), so the picture covers it whatever its own shape. A gallery
+ * gives both of its cells the first picture's shape; sized by its own ratio, a second picture of
+ * another shape left part of its cell empty. With no height to fill it sizes like [inlineImageSize].
+ */
+internal fun Modifier.croppedImageSize(
+    ratio: Float?,
+    maxHeight: Dp,
+): Modifier =
+    layout { measurable, constraints ->
+        if (constraints.hasBoundedHeight && constraints.hasBoundedWidth) {
+            val placeable = measurable.measure(Constraints.fixed(constraints.maxWidth, constraints.maxHeight))
+            layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
+        } else if (constraints.hasBoundedWidth) {
+            val width = constraints.maxWidth
+            val cap = maxHeight.roundToPx()
+            val known = ratio?.takeIf { it > 0f && it.isFinite() }
+            if (known != null) {
+                // As inlineImageSize: full width at the ratio, narrowed and centered past the height cap.
+                val fullWidthHeight = (width / known).roundToInt()
+                val height = minOf(fullWidthHeight, cap)
+                val imageWidth = if (fullWidthHeight > cap) (cap * known).roundToInt().coerceAtMost(width) else width
+                val placeable = measurable.measure(Constraints.fixed(imageWidth, height))
+                layout(width, height) { placeable.placeRelative((width - imageWidth) / 2, 0) }
+            } else {
+                val placeable = measurable.measure(Constraints(minWidth = width, maxWidth = width, maxHeight = cap))
+                layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
+            }
+        } else {
+            val placeable = measurable.measure(constraints)
+            layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
+        }
+    }
 
 /** [inlineImageSize] for a width-to-height [ratio], or null when the shape is unknown. */
 internal fun Modifier.inlineImageSize(
