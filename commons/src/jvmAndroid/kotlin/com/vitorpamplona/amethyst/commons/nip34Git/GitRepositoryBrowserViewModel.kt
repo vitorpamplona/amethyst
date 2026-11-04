@@ -88,9 +88,19 @@ class GitRepositoryBrowserViewModel(
     /**
      * The tips the repository's maintainers signed (kind 30618). With it, the default branch is the
      * one their HEAD names, and a server that serves their commit is preferred over one that
-     * answers first; set it before [loadOnce].
+     * answers first. See [updateSignedState].
      */
-    var signedState: GitSignedState? = null
+    private var signedState: GitSignedState? = null
+
+    /**
+     * Follows the maintainers' signed state as the screen observes it. A newer one can name another
+     * tip or branch, so a repository already loaded is loaded again against it.
+     */
+    fun updateSignedState(state: GitSignedState?) {
+        if (state?.event?.id == signedState?.event?.id) return
+        signedState = state
+        if (started) reload()
+    }
 
     /** The branch/tag currently displayed (null = the server's default branch). */
     var currentRef: String? = null

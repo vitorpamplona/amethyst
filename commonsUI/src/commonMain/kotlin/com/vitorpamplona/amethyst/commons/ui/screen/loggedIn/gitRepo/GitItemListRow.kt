@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCiStatusBadge
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusPill
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemLabels
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemTitle
+import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_pr_revised
 import com.vitorpamplona.amethyst.commons.resources.git_untitled
@@ -77,7 +78,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 
@@ -106,7 +107,7 @@ fun GitItemFeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
     val list =
         remember(items, labelFilter, itemFilter) {
-            items.list.filter { (labelFilter == null || labelFilter in gitLabelsOf(it.event)) && (itemFilter == null || itemFilter(it)) }
+            items.list.filter { (labelFilter == null || labelFilter in gitLabelsOf(it)) && (itemFilter == null || itemFilter(it)) }
         }
 
     LazyColumn(
@@ -176,6 +177,8 @@ private fun GitItemRowContent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    note.event?.let { LoadGitRepositoryAnnouncements(it) }
+
     Row(
         modifier =
             clickableNoteModifier(note, modifier, accountViewModel, showPopup, nav)
@@ -206,7 +209,7 @@ private fun GitItemRowContent(
 
             ObserveDisplayNip05Status(note, accountViewModel, nav)
 
-            val subject = note.event?.let { observeGitItemTitle(it) }
+            val subject = observeGitItemTitle(note)
             Text(
                 text = subject ?: stringRes(Res.string.git_untitled),
                 style = MaterialTheme.typography.bodyLarge,
@@ -215,13 +218,13 @@ private fun GitItemRowContent(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            val labels = note.event?.let { observeGitItemLabels(it) }.orEmpty()
+            val labels = observeGitItemLabels(note)
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.padding(top = 2.dp),
             ) {
-                GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
+                GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN, forIssue = note.event is GitIssueEvent)
                 if (note.event is GitPullRequestEvent) {
                     GitRevisedChip(note.idHex)
                 }
@@ -279,6 +282,6 @@ private fun GitRevisedChip(prIdHex: String) {
     }
 }
 
-internal fun gitSubjectOf(event: Event?): String? = event?.let { GitItemTitles.titleOf(it) }
+internal fun gitSubjectOf(note: Note): String? = GitItemTitles.titleOf(note)
 
-internal fun gitLabelsOf(event: Event?): List<String> = event?.let { GitItemTitles.labelsOf(it) }.orEmpty()
+internal fun gitLabelsOf(note: Note): List<String> = GitItemTitles.labelsOf(note)

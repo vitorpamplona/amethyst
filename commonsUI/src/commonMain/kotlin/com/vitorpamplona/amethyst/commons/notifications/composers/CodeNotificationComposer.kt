@@ -156,7 +156,7 @@ object CodeNotificationComposer {
         itemId: String?,
         content: String,
     ): String? {
-        val title = itemId?.let { LocalCache.getNoteIfExists(it)?.event }?.let { GitItemTitles.titleOf(it) }
+        val title = itemId?.let { LocalCache.getNoteIfExists(it) }?.let { GitItemTitles.titleOf(it) }
         return listOfNotNull(title, content.ifBlank { null }).joinToString("\n").ifBlank { null }
     }
 

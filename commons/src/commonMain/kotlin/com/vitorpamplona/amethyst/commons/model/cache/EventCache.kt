@@ -2231,6 +2231,10 @@ open class EventCache :
 
             note.loadEvent(event, author, repliesTo)
 
+            // A NIP-34 rename (`#subject`) is part of the renamed item's history: computeReplyTo
+            // links it, and the item lists it among its replies like any other reply.
+            repliesTo.forEach { it.addReply(note) }
+
             // Attach NIP-32 hashtag labels (namespace #t) to the labeled events so the
             // hashtag feed can surface posts tagged by a follow and attribute the labeler.
             val hashtags = event.hashtagAssociations()

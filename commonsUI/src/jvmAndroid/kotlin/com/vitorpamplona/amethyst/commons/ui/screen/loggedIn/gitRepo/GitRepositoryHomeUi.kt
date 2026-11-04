@@ -546,7 +546,7 @@ private fun ActivityRow(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = gitSubjectOf(event) ?: stringRes(Res.string.git_untitled),
+            text = gitSubjectOf(note) ?: stringRes(Res.string.git_untitled),
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

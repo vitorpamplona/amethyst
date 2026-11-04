@@ -57,7 +57,6 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevision
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevisions
-import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemLabelIndex
 import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -280,13 +279,13 @@ private fun RenameRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val item = baseNote.replyTo?.lastOrNull()?.event
-    val labels by GitItemLabelIndex.byItem.collectAsStateWithLifecycle()
+    val itemNote = baseNote.replyTo?.lastOrNull()
+    val item = itemNote?.event
     val authority = observeGitAuthority()
     val authorised = remember(event, item, authority) { item != null && authority.isMemberAt(event.pubKey, item, event.createdAt) }
     val previous =
-        remember(event, item, labels, authority) {
-            item?.let { GitItemTitles.renamesOf(it, labels?.get(it.id).orEmpty(), authority).firstOrNull { rename -> rename.event.id == event.id }?.from }
+        remember(event, itemNote, authority) {
+            itemNote?.let { GitItemTitles.renamesOf(it, authority).firstOrNull { rename -> rename.event.id == event.id }?.from }
         }
 
     TimelineRowLayout(

@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.nip34Git.state
 
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
-import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
 
 /**
@@ -44,17 +41,11 @@ class GitSignedState(
     }
 
     companion object {
-        /** The newest state signed by a confirmed maintainer of [repository], or null when none is in the cache. */
-        fun latestFor(
-            repository: Address,
-            authority: GitAuthority,
-        ): GitSignedState? {
-            val maintainers = authority.membership(repository)?.confirmedMaintainers ?: listOf(repository.pubKeyHex)
-            return maintainers
-                .mapNotNull { LocalCache.getAddressableNoteIfExists(Address(GitRepositoryStateEvent.KIND, it, repository.dTag))?.event as? GitRepositoryStateEvent }
+        /** The newest of the maintainers' signed states [events], ignoring discontinued ones (no refs). */
+        fun latest(events: List<GitRepositoryStateEvent>): GitSignedState? =
+            events
                 .filterNot { it.isDiscontinued() }
                 .maxWithOrNull(compareBy<GitRepositoryStateEvent> { it.createdAt }.thenByDescending { it.id })
                 ?.let { GitSignedState(it) }
-        }
     }
 }

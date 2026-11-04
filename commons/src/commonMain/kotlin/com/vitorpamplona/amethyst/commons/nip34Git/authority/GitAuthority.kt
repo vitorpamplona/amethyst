@@ -59,11 +59,42 @@ import kotlinx.coroutines.flow.stateIn
 class GitAuthority(
     private val announcements: Map<String, Map<HexKey, GitRepositoryEvent>>,
 ) {
+    // Resolved once per announcement, here, so the status, update and label checks that run for
+    // every event don't walk the role graph again.
+    private val memberships: Map<Address, GitRepositoryMembership> =
+        buildMap {
+            announcements.forEach { (identifier, byAuthor) ->
+                byAuthor.keys.forEach { author ->
+                    GitRepositoryMembership.resolveFromLead(author, identifier, byAuthor)?.let {
+                        put(Address(GitRepositoryEvent.KIND, author, identifier), it)
+                    }
+                }
+            }
+        }
+
     /**
      * The membership of the repository [repository] belongs to, seen from its lead (the component's
      * anchor, whose role records history prefers), or null while the announcement is unknown.
      */
-    fun membership(repository: Address): GitRepositoryMembership? = announcements[repository.dTag]?.let { GitRepositoryMembership.resolveFromLead(repository.pubKeyHex, repository.dTag, it) }
+    fun membership(repository: Address): GitRepositoryMembership? = memberships[repository]
+
+    /**
+     * The announcements needed to judge items filed under [repositories]: theirs, then those of
+     * everyone they name (maintainers and role subjects, ended roles included) and so on, as far as
+     * the cache has reached. Load them on screen with the event finder; each one that arrives
+     * names the next, and the repository relays it carries are the hints to find them.
+     */
+    fun announcementsToLoad(repositories: List<Address>): Set<Address> {
+        val result = LinkedHashSet<Address>()
+        val queue = ArrayDeque(repositories.filter { it.kind == GitRepositoryEvent.KIND })
+        while (queue.isNotEmpty()) {
+            val address = queue.removeFirst()
+            if (!result.add(address)) continue
+            val announcement = announcements[address.dTag]?.get(address.pubKeyHex) ?: continue
+            announcement.namedPubKeys().forEach { queue.add(Address(GitRepositoryEvent.KIND, it, address.dTag)) }
+        }
+        return result
+    }
 
     /**
      * Whether [pubKey] could set status, labels, subject edits and cover notes on [item] at

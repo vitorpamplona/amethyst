@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.music.dal.MusicPlaylistsFeedFilter
 import com.vitorpamplona.amethyst.commons.music.dal.MusicTracksFeedFilter
 import com.vitorpamplona.amethyst.commons.nests.dal.NestsFeedFilter
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
 import com.vitorpamplona.amethyst.commons.nip64Chess.dal.ChessLobbyFeedFilter
 import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.commons.notifications.NotificationSummaryState
@@ -173,6 +174,17 @@ class AccountFeedContentStates(
         // references that would otherwise keep pruned cache objects alive.
         scope.launch(Dispatchers.IO) {
             memoryPressure.collect { trimFeedsToSize(200) }
+        }
+
+        // Co-maintainers' announcements merge repository cards into one per repository
+        // (GitRepositoriesFeedFilter.sort), and a membership is only known once they arrive, which
+        // the additive path never re-checks: rebuild the list when the memberships change.
+        scope.launch(Dispatchers.IO) {
+            @OptIn(FlowPreview::class)
+            GitAuthorityIndex.authority
+                .drop(1)
+                .debounce(500)
+                .collect { gitRepositoriesFeed.invalidateData() }
         }
 
         // Marmot group list changes (new group, group marked known, group

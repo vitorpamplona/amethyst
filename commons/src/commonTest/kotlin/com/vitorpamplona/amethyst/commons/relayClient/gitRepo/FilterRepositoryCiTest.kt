@@ -60,9 +60,9 @@ class FilterRepositoryCiTest {
     }
 
     @Test
-    fun fetchesTheAnnouncementsOfEndedRolesToo() {
-        // Alex's `din` announcement: chad's maintainer role there has ended, but judging a July
-        // status needs chad's announcement (gitworkshop fetches every role subject).
+    fun asksForItemsUnderEveryNamedCoordinate() {
+        // Alex's `din` announcement: chad's maintainer role there has ended, but items filed under
+        // chad's coordinate are still this repository's to list.
         val alex = "0461fcbecc4c3374439932d6b8f11269ccdb7cc973ad7a50ae362db135a474dd"
         val soapbox = "781a1527055f74c1f70230f10384609b34548f8ab6a0a6caa74025827f9fdae5"
         val chad = "86184109eae937d8d6f980b4a0b46da4ef0d983eade403ee1b4c0b6bde238b47"
@@ -83,8 +83,7 @@ class FilterRepositoryCiTest {
                 "0".repeat(128),
             )
 
-        val filter = filterRepositoryAnnouncements(relay, din).filter
-        assertEquals(setOf(alex, soapbox, chad), filter.authors!!.toSet())
-        assertEquals(listOf("din"), filter.tags?.get("d"))
+        val filter = filterRepositoryContent(relay, din, null).filter
+        assertEquals(setOf(alex, soapbox, chad).map { "30617:$it:din" }.toSet(), filter.tags?.get("a")!!.toSet())
     }
 }

@@ -71,10 +71,9 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
-import com.vitorpamplona.amethyst.commons.nip34Git.state.GitSignedState
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitSignedState
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
+import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.RepositoryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_button
@@ -226,6 +225,8 @@ private fun RepoContentSubscription(
     if (event != null) {
         RepositoryFilterAssemblerSubscription(note, accountViewModel.dataSources().gitRepository)
     }
+    // Its co-maintainers' announcements, which its membership (and so its lists) depend on.
+    LoadGitRepositoryAnnouncements(remember(note) { listOf(note.address) })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -241,11 +242,11 @@ private fun GitRepositoryHome(
 
     // Start the smart-HTTP browser as soon as the announcement arrives, so the README renders.
     LaunchedEffect(event) {
-        event?.let {
-            browserViewModel.signedState = GitSignedState.latestFor(note.address, GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY)
-            browserViewModel.loadOnce(it.clones(), cacheKey)
-        }
+        event?.let { browserViewModel.loadOnce(it.clones(), cacheKey) }
     }
+    // The maintainers' signed tips decide which server's code is shown.
+    val signedState = observeGitSignedState(note.address, accountViewModel)
+    LaunchedEffect(signedState) { browserViewModel.updateSignedState(signedState) }
     val browserState by browserViewModel.state.collectAsStateWithLifecycle()
 
     RepoContentSubscription(note, event, accountViewModel)
@@ -403,11 +404,11 @@ private fun GitRepositoryCode(
     val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
     val cacheKey = remember(note) { note.address.toValue() }
     LaunchedEffect(event) {
-        event?.let {
-            browserViewModel.signedState = GitSignedState.latestFor(note.address, GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY)
-            browserViewModel.loadOnce(it.clones(), cacheKey)
-        }
+        event?.let { browserViewModel.loadOnce(it.clones(), cacheKey) }
     }
+    // The maintainers' signed tips decide which server's code is shown.
+    val signedState = observeGitSignedState(note.address, accountViewModel)
+    LaunchedEffect(signedState) { browserViewModel.updateSignedState(signedState) }
     val browserState by browserViewModel.state.collectAsStateWithLifecycle()
     RepoContentSubscription(note, event, accountViewModel)
 
@@ -655,7 +656,7 @@ private fun StatusFeedScreen(
         }
     val labels =
         remember(activeItems) {
-            activeItems.flatMap { gitLabelsOf(it.event) }.distinct().sorted()
+            activeItems.flatMap { gitLabelsOf(it) }.distinct().sorted()
         }
 
     // A label selected under one status may not exist under the other; drop it when it's gone.

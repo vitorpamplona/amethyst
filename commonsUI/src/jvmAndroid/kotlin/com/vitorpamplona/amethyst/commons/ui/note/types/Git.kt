@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemTitle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observePreviousRevision
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.shortCommit
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
+import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_branch
 import com.vitorpamplona.amethyst.commons.resources.git_clone_address
@@ -125,6 +126,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.UnifiedDiffParser
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import kotlinx.collections.immutable.ImmutableList
 
 private val ChipShape = RoundedCornerShape(8.dp)
 private val HeaderSpacing = Arrangement.spacedBy(Size8dp)
@@ -276,7 +278,7 @@ private fun GitMetaRow(
 /** The labels an issue, patch or PR shows, as small chips under its title. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun GitLabelsRow(labels: List<String>) {
+private fun GitLabelsRow(labels: ImmutableList<String>) {
     if (labels.isEmpty()) return
     FlowRow(
         modifier = Modifier.padding(top = Size5dp),
@@ -524,6 +526,9 @@ private fun RenderGitPatchEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // The repository announcements its statuses, updates, labels and cover notes are judged by.
+    LoadGitRepositoryAnnouncements(noteEvent)
+
     GitCardContainer {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -550,11 +555,11 @@ private fun RenderGitPatchEvent(
             }
         }
 
-        val title = observeGitItemTitle(noteEvent)
+        val title = observeGitItemTitle(note)
         if (title != null) {
             GitSubjectTitle(title)
         }
-        GitLabelsRow(observeGitItemLabels(noteEvent))
+        GitLabelsRow(observeGitItemLabels(note))
 
         val commit = remember(noteEvent) { noteEvent.commit()?.takeIf { it.isNotBlank() } }
         if (commit != null) {
@@ -631,6 +636,9 @@ private fun RenderGitIssueEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // The repository announcements its statuses, updates, labels and cover notes are judged by.
+    LoadGitRepositoryAnnouncements(noteEvent)
+
     GitCardContainer {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -642,16 +650,16 @@ private fun RenderGitIssueEvent(
                 contentColor = MaterialTheme.colorScheme.primary,
             )
 
-            GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
+            GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN, forIssue = true)
         }
 
         val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
         // A maintainer may have renamed it since (NIP-32 `#subject`): show the current title.
-        val title = observeGitItemTitle(noteEvent)
+        val title = observeGitItemTitle(note)
         if (title != null) {
             GitSubjectTitle(title)
         }
-        GitLabelsRow(observeGitItemLabels(noteEvent))
+        GitLabelsRow(observeGitItemLabels(note))
 
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
         if (repository != null) {
@@ -708,6 +716,9 @@ private fun RenderGitPullRequestEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // The repository announcements its statuses, updates, labels and cover notes are judged by.
+    LoadGitRepositoryAnnouncements(noteEvent)
+
     // A later pull-request update (kind 1619) revises this PR with a newer commit /
     // merge base. Fold the most recent one in so the card reflects the current state.
     val updateIndex by GitPullRequestUpdateIndex.latestByPullRequest.collectAsStateWithLifecycle()
@@ -756,11 +767,11 @@ private fun RenderGitPullRequestEvent(
 
         val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
         // A maintainer may have renamed it since (NIP-32 `#subject`): show the current title.
-        val title = observeGitItemTitle(noteEvent)
+        val title = observeGitItemTitle(note)
         if (title != null) {
             GitSubjectTitle(title)
         }
-        GitLabelsRow(observeGitItemLabels(noteEvent))
+        GitLabelsRow(observeGitItemLabels(note))
 
         // Where it comes from, and where it goes when it isn't the default branch (`b`).
         val branch =

@@ -20,26 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.nip34Git.title
 
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 
 /** One authorised title change of an issue, patch or PR: [from] (the title before) to [to]. */
 class GitRename(
@@ -49,10 +38,11 @@ class GitRename(
 )
 
 /**
- * The title and labels an issue, patch or PR shows once its after-the-fact edits apply: NIP-32
- * label events (kind 1985) naming it, `#subject` for renames and `#t` for labels, counted only
- * when its author or a confirmed repository member at the time signed them ([GitAuthority.isMemberAt]),
- * as gitworkshop does.
+ * The title and labels an issue, patch or PR shows once its after-the-fact NIP-32 edits (kind
+ * 1985) apply, counted only when its author or a confirmed repository member at the time signed
+ * them ([GitAuthority.isMemberAt]), as gitworkshop does. Both come from what the cache already
+ * keeps on the item's [Note]: renames (`#subject`) are among its `replies`, `#t` labels in its
+ * `labels`, each with the label event that added it.
  */
 object GitItemTitles {
     /** Patch-series markers that ride in `t` tags but are not labels. */
@@ -69,16 +59,14 @@ object GitItemTitles {
 
     /** The authorised renames of [item], oldest first (`created_at`, then event id). */
     fun renamesOf(
-        item: Event,
-        labels: List<LabelEvent> =
-            GitItemLabelIndex.byItem.value
-                ?.get(item.id)
-                .orEmpty(),
+        item: Note,
         authority: GitAuthority = GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY,
     ): List<GitRename> {
-        var previous = originalTitleOf(item)
-        return labels
-            .filter { it.subjectEdit() != null && authority.isMemberAt(it.pubKey, item, it.createdAt) }
+        val itemEvent = item.event ?: return emptyList()
+        var previous = originalTitleOf(itemEvent)
+        return item.replies
+            .mapNotNull { it.event as? LabelEvent }
+            .filter { it.subjectEdit() != null && authority.isMemberAt(it.pubKey, itemEvent, it.createdAt) }
             .sortedWith(compareBy<LabelEvent> { it.createdAt }.thenBy { it.id })
             .map { label ->
                 val to = label.subjectEdit()!!
@@ -88,51 +76,25 @@ object GitItemTitles {
 
     /** The title [item] shows: its latest authorised rename, else its own. */
     fun titleOf(
-        item: Event,
-        labels: List<LabelEvent> =
-            GitItemLabelIndex.byItem.value
-                ?.get(item.id)
-                .orEmpty(),
+        item: Note,
         authority: GitAuthority = GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY,
-    ): String? = renamesOf(item, labels, authority).lastOrNull()?.to ?: originalTitleOf(item)
+    ): String? = renamesOf(item, authority).lastOrNull()?.to ?: item.event?.let { originalTitleOf(it) }
 
     /**
      * The labels [item] shows, sorted: its own `t` tags (patch-series markers aside) plus every `#t`
-     * label from an authorised label event.
+     * label an authorised label event added.
      */
     fun labelsOf(
-        item: Event,
-        labels: List<LabelEvent> =
-            GitItemLabelIndex.byItem.value
-                ?.get(item.id)
-                .orEmpty(),
+        item: Note,
         authority: GitAuthority = GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY,
     ): List<String> {
-        val own = item.tags.hashtags().filter { it !in SERIES_TAGS }
-        val added = labels.filter { authority.isMemberAt(it.pubKey, item, it.createdAt) }.flatMap { event -> event.labelsByNamespace(LabelEvent.HASHTAG_NAMESPACE).map { it.label } }
+        val itemEvent = item.event ?: return emptyList()
+        val own = itemEvent.tags.hashtags().filter { it !in SERIES_TAGS }
+        val added =
+            item.labels
+                .filter { (_, labelers) ->
+                    labelers.any { labeler -> labeler.event?.let { authority.isMemberAt(it.pubKey, itemEvent, it.createdAt) } == true }
+                }.keys
         return (own + added).filter { it.isNotBlank() }.distinct().sorted()
     }
-}
-
-/**
- * Every `#subject` or `#t` label event (kind 1985) in the cache, grouped by the events it labels,
- * kept current from [LocalCache.observeEvents]. Eager like the other NIP-34 indexes; `null` until the
- * first scan.
- */
-object GitItemLabelIndex {
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-    val byItem: StateFlow<Map<HexKey, List<LabelEvent>>?> =
-        LocalCache
-            .observeEvents<LabelEvent>(Filter(kinds = listOf(LabelEvent.KIND)))
-            .map { events ->
-                val byItem = HashMap<HexKey, MutableList<LabelEvent>>()
-                for (event in events) {
-                    val namespaces = event.namespaces()
-                    if (namespaces.none { it.namespace == LabelEvent.SUBJECT_NAMESPACE || it.namespace == LabelEvent.HASHTAG_NAMESPACE }) continue
-                    event.labeledEvents().forEach { byItem.getOrPut(it) { ArrayList() }.add(event) }
-                }
-                byItem as Map<HexKey, List<LabelEvent>>
-            }.flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, null)
 }

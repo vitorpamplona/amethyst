@@ -24,22 +24,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemLabelIndex
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 
 /** The title [item] shows, its latest authorised rename applied ([GitItemTitles.titleOf]). */
 @Composable
-fun observeGitItemTitle(item: Event): String? {
-    val labels by GitItemLabelIndex.byItem.collectAsStateWithLifecycle()
+fun observeGitItemTitle(item: Note): String? {
+    // Renames arrive as the item's replies.
+    val replies by remember(item) { item.flow().replies.stateFlow }.collectAsStateWithLifecycle()
     val authority = observeGitAuthority()
-    return remember(item, labels, authority) { GitItemTitles.titleOf(item, labels?.get(item.id).orEmpty(), authority) }
+    return remember(replies, authority) { GitItemTitles.titleOf(item, authority) }
 }
 
 /** The labels [item] shows: its own plus authorised NIP-32 `#t` labels ([GitItemTitles.labelsOf]). */
 @Composable
-fun observeGitItemLabels(item: Event): List<String> {
-    val labels by GitItemLabelIndex.byItem.collectAsStateWithLifecycle()
+fun observeGitItemLabels(item: Note): ImmutableList<String> {
+    val labels by remember(item) { item.flow().labels.stateFlow }.collectAsStateWithLifecycle()
     val authority = observeGitAuthority()
-    return remember(item, labels, authority) { GitItemTitles.labelsOf(item, labels?.get(item.id).orEmpty(), authority) }
+    return remember(labels, authority) { GitItemTitles.labelsOf(item, authority).toImmutableList() }
 }
