@@ -68,6 +68,8 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.merge.GitMergeTargets
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevision
 import com.vitorpamplona.amethyst.commons.nip34Git.status.publishGitStatus
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitActivityTarget
@@ -84,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.isGitThreadRoot
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemLabels
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemTitle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitPullRequestUpdates
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observePreviousRevision
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.rememberGitMerge
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
@@ -1024,5 +1027,15 @@ private fun GitStatusActionsWithMerge(
         rememberGitMerge(note, accountViewModel) {
             accountViewModel.launchSigner { accountViewModel.account.publishGitStatus(note, GitStatusEvent.KIND_APPLIED) }
         }
-    GitStatusActions(note, accountViewModel, onMerge)
+    // Offer the in-app merge only where it can land: a repository with a GRASP server.
+    val announcements = observeGitRepositoryAnnouncements(event)
+    val onGrasp =
+        remember(event, announcements) {
+            GitAuthority
+                .repositoriesOf(event)
+                .firstOrNull()
+                ?.let { LocalCache.gitAuthority.membership(it) }
+                ?.let { GitMergeTargets.of(it.confirmedAnnouncements).grasp.isNotEmpty() } ?: true
+        }
+    GitStatusActions(note, accountViewModel, onMerge.takeIf { onGrasp })
 }

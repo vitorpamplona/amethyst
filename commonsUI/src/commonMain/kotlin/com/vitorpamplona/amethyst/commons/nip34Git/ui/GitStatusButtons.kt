@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.nip34Git.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
@@ -50,6 +51,8 @@ import com.vitorpamplona.amethyst.commons.resources.git_merge_action
 import com.vitorpamplona.amethyst.commons.resources.git_status_close
 import com.vitorpamplona.amethyst.commons.resources.git_status_mark_draft
 import com.vitorpamplona.amethyst.commons.resources.git_status_mark_merged
+import com.vitorpamplona.amethyst.commons.resources.git_status_mark_merged_with_git
+import com.vitorpamplona.amethyst.commons.resources.git_status_mark_merged_with_git_hint
 import com.vitorpamplona.amethyst.commons.resources.git_status_ready
 import com.vitorpamplona.amethyst.commons.resources.git_status_reopen
 import com.vitorpamplona.amethyst.commons.resources.git_status_resolve
@@ -71,6 +74,8 @@ private class StatusAction(
     val label: String,
     /** Opens the in-app merge instead of setting [target] directly. */
     val mergesInApp: Boolean = false,
+    /** A second line in the menu, when the label alone could be mistaken for another action. */
+    val hint: String? = null,
 )
 
 /**
@@ -97,7 +102,15 @@ fun GitStatusButtons(
     val draft = StatusAction(StatusKind.DRAFT, MaterialSymbols.EditNote, stringRes(Res.string.git_status_mark_draft))
     val markMerged = StatusAction(StatusKind.APPLIED, MaterialSymbols.CallMerge, stringRes(Res.string.git_status_mark_merged))
     val mergeInApp = StatusAction(StatusKind.APPLIED, MaterialSymbols.CallMerge, stringRes(Res.string.git_merge_action), mergesInApp = true)
-    val merges = if (onMerge != null) listOf(mergeInApp, markMerged) else listOf(markMerged)
+    // Beside the in-app merge, marking it merged is for a merge already made with git: say so.
+    val markedMergedWithGit =
+        StatusAction(
+            StatusKind.APPLIED,
+            MaterialSymbols.CheckCircle,
+            stringRes(Res.string.git_status_mark_merged_with_git),
+            hint = stringRes(Res.string.git_status_mark_merged_with_git_hint),
+        )
+    val merges = if (onMerge != null) listOf(mergeInApp, markedMergedWithGit) else listOf(markMerged)
     val resolve = StatusAction(StatusKind.APPLIED, MaterialSymbols.CheckCircle, stringRes(Res.string.git_status_resolve))
     val close = StatusAction(StatusKind.CLOSED, MaterialSymbols.Cancel, stringRes(Res.string.git_status_close))
 
@@ -148,10 +161,13 @@ fun GitStatusButtons(
                         val tint = if (action.target == StatusKind.CLOSED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.grayText
                         DropdownMenuItem(
                             text = {
-                                Text(
-                                    text = action.label,
-                                    color = if (action.target == StatusKind.CLOSED) MaterialTheme.colorScheme.error else Color.Unspecified,
-                                )
+                                Column {
+                                    Text(
+                                        text = action.label,
+                                        color = if (action.target == StatusKind.CLOSED) MaterialTheme.colorScheme.error else Color.Unspecified,
+                                    )
+                                    action.hint?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText) }
+                                }
                             },
                             leadingIcon = { Icon(action.symbol, contentDescription = null, modifier = Modifier.size(18.dp), tint = tint) },
                             onClick = {

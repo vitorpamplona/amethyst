@@ -46,12 +46,12 @@ enum class GitMergeStep { PUBLISHING_STATE_AND_PUSHING, PUBLISHING_STATUS }
 
 /** How a merge ended. */
 sealed interface GitMergeOutcome {
-    /** [branch] moved to [newTip] on [push]'s servers; [resolvedIssues] issues were marked resolved by its commits. */
+    /** [branch] moved to [newTip] on [push]'s servers; [resolvedIssues] were marked resolved by its commits. */
     class Merged(
         val push: GitMergePush,
         val branch: String,
         val newTip: String,
-        val resolvedIssues: Int,
+        val resolvedIssues: List<GitMergeStatuses.Resolution>,
     ) : GitMergeOutcome
 
     /** No server took the push: nothing but the signed state went out, and it named a tip no server has. */
@@ -110,7 +110,11 @@ class GitMerger(
     }
 
     /** Plans the merge of [item], fetching what it needs from the repository's servers. */
-    suspend fun check(item: Note): GitMergeCheck {
+    suspend fun check(
+        item: Note,
+        onStep: (GitMergeCheckStep) -> Unit = {},
+    ): GitMergeCheck {
+        onStep(GitMergeCheckStep.STATE)
         refreshSignedStates(item)
         val inputs = inputsFor(item) ?: return GitMergeCheck.Blocked(GitMergeBlocker.REPOSITORY_NOT_LOADED)
         val me = account.userProfile()
@@ -122,7 +126,12 @@ class GitMerger(
                 ?.info
         val name = info?.bestName()?.takeIf { it.isNotBlank() } ?: "Anonymous"
         val email = info?.nip05?.takeIf { it.isNotBlank() } ?: "${me.pubkeyNpub()}@nostr"
-        return engine.check(inputs, GitMergeEngine.committer(name, email))
+        val check = engine.check(inputs, GitMergeEngine.committer(name, email), onStep)
+        if (check !is GitMergeCheck.Ready || !check.merge.isDefaultBranch) return check
+        // Which issues it will resolve, so the confirmation can say so.
+        if (check.merge.newCommits.none { GitClosingReferences.parse(it.message).isNotEmpty() }) return check
+        onStep(GitMergeCheckStep.ISSUES)
+        return GitMergeCheck.Ready(check.merge, resolutionsFor(check.merge))
     }
 
     /**
@@ -142,9 +151,14 @@ class GitMerger(
             .forEach { cache.justConsume(it, null, wasVerified = false) }
     }
 
+    /**
+     * Signs, pushes and publishes [merge]. [resolutions] are the issues the check found its commits
+     * close; each is resolved unless it closed meanwhile.
+     */
     suspend fun merge(
         item: Note,
         merge: GitPreparedMerge,
+        resolutions: List<GitMergeStatuses.Resolution> = emptyList(),
         onStep: (GitMergeStep) -> Unit = {},
     ): GitMergeOutcome {
         onStep(GitMergeStep.PUBLISHING_STATE_AND_PUSHING)
@@ -167,7 +181,7 @@ class GitMerger(
             authority = authority,
         )
 
-        val resolved = if (merge.isDefaultBranch) resolveIssues(item, merge) else 0
+        val resolved = if (merge.isDefaultBranch) resolveIssues(item, merge, resolutions) else emptyList()
         return GitMergeOutcome.Merged(push, merge.branch, merge.plan.newTip, resolved)
     }
 
@@ -198,26 +212,30 @@ class GitMerger(
         return issues
     }
 
+    /** The open issues of this repository that [merge]'s commits close ([GitMergeStatuses.resolutions]). */
+    private suspend fun resolutionsFor(merge: GitPreparedMerge): List<GitMergeStatuses.Resolution> {
+        val commits = merge.newCommits.map { GitMergeStatuses.MergedCommit(it.oid, it.message) }
+        val coordinates = authority.coordinatesToTag(merge.inputs.repository).toSet()
+        val issues = loadIssues(merge, coordinates).associateBy { it.idHex }
+        return GitMergeStatuses.resolutions(commits, issues.values.mapNotNull { it.event as? GitIssueEvent }, coordinates) { issue ->
+            issues[issue.id]?.let { !GitStatuses.isClosedOrResolved(it, authority) } ?: false
+        }
+    }
+
     /**
-     * Marks resolved each open issue of this repository that a merged commit's message closes
-     * ([GitMergeStatuses.resolutions]), once, quoting the line that closed it, as gitworkshop does.
+     * Marks resolved each of [planned] (or, when the check found none to show, whatever the
+     * commits close now) that is still open, quoting the line that closed it, as gitworkshop does.
      */
     private suspend fun resolveIssues(
         item: Note,
         merge: GitPreparedMerge,
-    ): Int {
-        val commits = merge.newCommits.map { GitMergeStatuses.MergedCommit(it.oid, it.message) }
-        if (commits.none { GitClosingReferences.parse(it.message).isNotEmpty() }) return 0
-        val coordinates = authority.coordinatesToTag(merge.inputs.repository).toSet()
-        val issues = loadIssues(merge, coordinates).associateBy { it.idHex }
-        val resolutions =
-            GitMergeStatuses.resolutions(commits, issues.values.mapNotNull { it.event as? GitIssueEvent }, coordinates) { issue ->
-                issues[issue.id]?.let { !GitStatuses.isClosedOrResolved(it, authority) } ?: false
-            }
-        resolutions.forEach { resolution ->
-            val issue = issues[resolution.issue.id] ?: return@forEach
-            account.publishGitIssueResolved(issue, resolution, merge.plan.mergeCommit, item, authority)
+        planned: List<GitMergeStatuses.Resolution>,
+    ): List<GitMergeStatuses.Resolution> {
+        val resolutions = planned.ifEmpty { if (merge.newCommits.any { GitClosingReferences.parse(it.message).isNotEmpty() }) resolutionsFor(merge) else emptyList() }
+        return resolutions.filter { resolution ->
+            val issue = cache.getNoteIfExists(resolution.issue.id) ?: return@filter false
+            if (GitStatuses.isClosedOrResolved(issue, authority)) return@filter false
+            account.publishGitIssueResolved(issue, resolution, merge.plan.mergeCommit, item, authority) != null
         }
-        return resolutions.size
     }
 }

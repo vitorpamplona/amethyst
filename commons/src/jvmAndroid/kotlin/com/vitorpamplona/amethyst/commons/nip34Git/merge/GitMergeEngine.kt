@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.coverNote.GitCoverNotes
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPatchSeries
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevisions
 import com.vitorpamplona.amethyst.commons.nip34Git.state.GitSignedState
+import com.vitorpamplona.amethyst.commons.nip34Git.status.GitMergeStatuses
 import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -42,6 +43,7 @@ import com.vitorpamplona.quartz.nip34Git.git.GitSmartHttpTransport
 import com.vitorpamplona.quartz.nip34Git.merge.GitMergeMessage
 import com.vitorpamplona.quartz.nip34Git.merge.GitMergePlan
 import com.vitorpamplona.quartz.nip34Git.merge.GitMergePlanner
+import com.vitorpamplona.quartz.nip34Git.merge.GitMergeStage
 import com.vitorpamplona.quartz.nip34Git.merge.GitObjectSource
 import com.vitorpamplona.quartz.nip34Git.merge.GraspPushResult
 import com.vitorpamplona.quartz.nip34Git.merge.GraspPusher
@@ -175,14 +177,42 @@ enum class GitMergeBlocker {
     NO_PULL_REQUEST_TIP,
 }
 
+/** Where a check is, for its progress line: each is a round trip to the relays or servers. */
+enum class GitMergeCheckStep {
+    STATE,
+    HISTORY,
+    CHANGES,
+    MERGING,
+    ISSUES,
+    ;
+
+    companion object {
+        fun of(stage: GitMergeStage) =
+            when (stage) {
+                GitMergeStage.HISTORY -> HISTORY
+                GitMergeStage.CHANGES -> CHANGES
+                GitMergeStage.MERGING -> MERGING
+            }
+    }
+}
+
 /** What merging an item here would do, before anything is signed. */
 sealed interface GitMergeCheck {
+    /** What merging by hand needs: where the pull request's [tip] is served ([clone]), or that it is a patch series. */
+    class Hint(
+        val clone: String?,
+        val tip: String?,
+        val isPatchSeries: Boolean,
+    )
+
     class Blocked(
         val blocker: GitMergeBlocker,
+        val merge: Hint? = null,
     ) : GitMergeCheck
 
     class Conflicts(
         val paths: List<String>,
+        val merge: Hint? = null,
     ) : GitMergeCheck
 
     object AlreadyMerged : GitMergeCheck
@@ -191,8 +221,10 @@ sealed interface GitMergeCheck {
         val message: String,
     ) : GitMergeCheck
 
+    /** [resolutions]: the open issues its commits close, which the merge will mark resolved. */
     class Ready(
         val merge: GitPreparedMerge,
+        val resolutions: List<GitMergeStatuses.Resolution> = emptyList(),
     ) : GitMergeCheck
 }
 
@@ -234,17 +266,24 @@ class GitMergeEngine(
     suspend fun check(
         inputs: GitMergeInputs,
         committer: GitPerson,
+        onStep: (GitMergeCheckStep) -> Unit = {},
     ): GitMergeCheck {
         // Gitworkshop merges only when every clone URL is a GRASP server; a repository mirrored to
         // GitHub as well merges here too, and the dialog says the mirror needs a push with git.
         val split = GitMergeTargets.of(inputs.announcements)
         val targets = split.grasp
-        if (targets.isEmpty()) return GitMergeCheck.Blocked(GitMergeBlocker.NOT_ON_GRASP)
+        val hint =
+            GitMergeCheck.Hint(
+                clone = (inputs.pullRequestClones + targets.map { it.cloneUrl } + split.others).firstOrNull(),
+                tip = inputs.pullRequestTip,
+                isPatchSeries = inputs.source is GitPatchEvent,
+            )
+        if (targets.isEmpty()) return GitMergeCheck.Blocked(GitMergeBlocker.NOT_ON_GRASP, hint)
 
-        val state = inputs.signedState ?: return GitMergeCheck.Blocked(GitMergeBlocker.NO_SIGNED_STATE)
+        val state = inputs.signedState ?: return GitMergeCheck.Blocked(GitMergeBlocker.NO_SIGNED_STATE, hint)
         val pr = inputs.source as? GitPullRequestEvent
-        val branch = pr?.targetBranch() ?: state.headBranch ?: return GitMergeCheck.Blocked(GitMergeBlocker.NO_BRANCH_TIP)
-        val oldTip = state.commitFor(branch) ?: return GitMergeCheck.Blocked(GitMergeBlocker.NO_BRANCH_TIP)
+        val branch = pr?.targetBranch() ?: state.headBranch ?: return GitMergeCheck.Blocked(GitMergeBlocker.NO_BRANCH_TIP, hint)
+        val oldTip = state.commitFor(branch) ?: return GitMergeCheck.Blocked(GitMergeBlocker.NO_BRANCH_TIP, hint)
 
         val clones = targets.map { it.cloneUrl }
         // The repository's servers first; a PR's blob may be only on the PR's own servers.
@@ -266,14 +305,14 @@ class GitMergeEngine(
                 // A GRASP server keeps each PR's commits under refs/nostr/<id>, so the repository's
                 // own servers come after the PR's.
                 val prSource = GitObjectSource(transport, (inputs.pullRequestClones + clones + split.others).distinct())
-                GitMergePlanner(source).planPullRequest(oldTip, tip, prSource, committer, message)
+                GitMergePlanner(source) { onStep(GitMergeCheckStep.of(it)) }.planPullRequest(oldTip, tip, prSource, committer, message)
             } else {
-                GitMergePlanner(source).planPatches(oldTip, inputs.patches, committer, message)
+                GitMergePlanner(source) { onStep(GitMergeCheckStep.of(it)) }.planPatches(oldTip, inputs.patches, committer, message)
             }
 
         return when (plan) {
             is GitMergePlan.AlreadyMerged -> GitMergeCheck.AlreadyMerged
-            is GitMergePlan.Conflicts -> GitMergeCheck.Conflicts(plan.paths)
+            is GitMergePlan.Conflicts -> GitMergeCheck.Conflicts(plan.paths, hint)
             is GitMergePlan.Failed -> GitMergeCheck.Failed(plan.reason)
             is GitMergePlan.Ready -> GitMergeCheck.Ready(GitPreparedMerge(inputs, branch, branch == state.headBranch, oldTip, plan, targets, plan.newCommits, split.others))
         }
