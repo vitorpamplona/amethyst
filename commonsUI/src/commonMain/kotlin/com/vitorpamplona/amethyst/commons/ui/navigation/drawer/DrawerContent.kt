@@ -73,6 +73,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
@@ -139,6 +140,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarItemDef
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavItemIcon
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.canOpen
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -924,6 +926,7 @@ fun CatalogNavigationRow(
                 nav.closeDrawer()
                 nav.navBottomBar(def.resolveRoute(accountViewModel))
             },
+            imageVector = def.imageVector,
         )
         return
     }
@@ -934,6 +937,7 @@ fun CatalogNavigationRow(
         tint = tint,
         nav = nav,
         computeRoute = { def.resolveRoute(accountViewModel) },
+        imageVector = def.imageVector,
     )
 }
 
@@ -998,6 +1002,7 @@ fun NavigationRow(
     tint: Color,
     nav: INav,
     computeRoute: () -> Route,
+    imageVector: ImageVector? = null,
 ) {
     IconRow(
         title = title,
@@ -1007,6 +1012,7 @@ fun NavigationRow(
             nav.closeDrawer()
             nav.navDrawer(computeRoute)
         },
+        imageVector = imageVector,
     )
 }
 
@@ -1016,6 +1022,7 @@ fun IconRow(
     icon: MaterialSymbol,
     tint: Color,
     onClick: () -> Unit,
+    imageVector: ImageVector? = null,
 ) {
     val title = stringRes(title)
 
@@ -1029,8 +1036,9 @@ fun IconRow(
                 ).padding(vertical = LocalDrawerMetrics.current.itemVerticalPadding, horizontal = 25.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
+        NavItemIcon(
             symbol = icon,
+            imageVector = imageVector,
             contentDescription = title,
             modifier = Size22ModifierWith4Padding,
             tint = tint,
