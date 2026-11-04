@@ -58,7 +58,6 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemLabels
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemTitle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitStatus
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.statusKind
-import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_untitled
@@ -249,7 +248,7 @@ private fun GitCommentCount(
     item: Note,
     accountViewModel: AccountViewModel,
 ) {
-    EventFinderFilterAssemblerSubscription(item)
+    // The repository's subscription loads the comments with the items' statuses.
     val flow =
         remember(item) {
             item

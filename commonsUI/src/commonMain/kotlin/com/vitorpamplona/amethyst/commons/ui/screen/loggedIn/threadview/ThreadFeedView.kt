@@ -406,7 +406,7 @@ fun RenderThreadFeed(
             if (index == 0) {
                 ProvideTextStyle(TextStyle(fontSize = 18.sp, lineHeight = 1.20.em)) {
                     // A git item's tools (diff, clone, status buttons) belong to its own thread.
-                    CompositionLocalProvider(LocalGitThreadRoot provides true) {
+                    CompositionLocalProvider(LocalGitThreadRoot provides item.idHex) {
                         NoteMaster(
                             baseNote = item,
                             modifier = modifier,

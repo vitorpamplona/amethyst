@@ -75,10 +75,10 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitLabelTag
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitRefTag
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusPill
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitVersionedSummary
-import com.vitorpamplona.amethyst.commons.nip34Git.ui.LocalGitThreadRoot
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.MarkGitItemRead
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitMetaStyle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitPullRequestPushText
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.isGitThreadRoot
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemLabels
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemTitle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitPullRequestUpdates
@@ -541,12 +541,13 @@ private fun RenderGitPatchEvent(
 ) {
     // The repository announcements its statuses, updates, labels and cover notes are judged by.
     LoadGitRepositoryAnnouncements(noteEvent)
-    if (LocalGitThreadRoot.current) MarkGitItemRead(note, accountViewModel)
+    // Statuses name a series' first patch, so a later patch shows the series' state, and reading
+    // it reads the series the dashboard lists.
+    val seriesRoot = remember(noteEvent) { noteEvent.seriesRootId()?.let { LocalCache.getOrCreateNote(it) } ?: note }
+    val inThread = isGitThreadRoot(note)
+    if (inThread) MarkGitItemRead(seriesRoot, accountViewModel)
 
-    val inThread = LocalGitThreadRoot.current
     GitCardContainer {
-        // Statuses name a series' first patch, so a later patch shows the series' state.
-        val seriesRoot = remember(noteEvent) { noteEvent.seriesRootId()?.let { LocalCache.getOrCreateNote(it) } ?: note }
         GitItemHeader(
             repository = remember(noteEvent) { noteEvent.repositoryAddress() },
             section = GitItemSection.PULLS,
@@ -638,7 +639,7 @@ private fun RenderGitIssueEvent(
 ) {
     // The repository announcements its statuses, updates, labels and cover notes are judged by.
     LoadGitRepositoryAnnouncements(noteEvent)
-    if (LocalGitThreadRoot.current) MarkGitItemRead(note, accountViewModel)
+    if (isGitThreadRoot(note)) MarkGitItemRead(note, accountViewModel)
 
     GitCardContainer {
         val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
@@ -658,7 +659,7 @@ private fun RenderGitIssueEvent(
 
         GitCoverNoteAndDescription(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
-        if (!makeItShort && LocalGitThreadRoot.current) {
+        if (!makeItShort && isGitThreadRoot(note)) {
             GitStatusActions(note, accountViewModel)
         }
     }
@@ -706,7 +707,7 @@ private fun RenderGitPullRequestEvent(
 ) {
     // The repository announcements its statuses, updates, labels and cover notes are judged by.
     LoadGitRepositoryAnnouncements(noteEvent)
-    if (LocalGitThreadRoot.current) MarkGitItemRead(note, accountViewModel)
+    if (isGitThreadRoot(note)) MarkGitItemRead(note, accountViewModel)
 
     // A later pull-request update (kind 1619) revises this PR with a newer commit /
     // merge base. Fold the most recent one in so the card reflects the current state.
@@ -755,7 +756,7 @@ private fun RenderGitPullRequestEvent(
 
         GitCoverNoteAndDescription(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
-        if (!makeItShort && LocalGitThreadRoot.current) {
+        if (!makeItShort && isGitThreadRoot(note)) {
             GitCloneSection(cloneUrls)
             GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel)
             GitStatusActions(note, accountViewModel)

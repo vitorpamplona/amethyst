@@ -31,8 +31,11 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
  * announcement's plus every confirmed co-maintainer's and moderator's. An item is filed with one
  * `a` per maintainer, and one filed against any confirmed member belongs to the same repository.
  */
-fun repositoryCoordinateSet(viewed: Address): Set<String> {
-    val membership = LocalCache.gitAuthority.membership(viewed)
+fun repositoryCoordinateSet(
+    viewed: Address,
+    authority: GitAuthority = LocalCache.gitAuthority,
+): Set<String> {
+    val membership = authority.membership(viewed)
     return buildSet {
         add(viewed.toValue())
         membership?.confirmedCoordinates()?.forEach { add(it.toValue()) }

@@ -98,6 +98,8 @@ class GitDashboardViewModel(
     /** Marks everything in the inbox as read as of now. */
     fun markAllRead() {
         account.markAsRead(INBOX_ROUTE, TimeUtils.now())
+        // The cutoff now covers every item's own marker: forget them, so they don't pile up.
+        account.settings.dropLastRead { it.startsWith(ITEM_ROUTE_PREFIX) }
         refresh()
     }
 
@@ -129,11 +131,15 @@ class GitDashboardViewModel(
     companion object {
         const val INBOX_ROUTE = "GitInbox"
 
+        private const val ITEM_ROUTE_PREFIX = "GitItem/"
+
+        private val GIT_ITEM_KINDS = setOf(GitIssueEvent.KIND.toString(), GitPullRequestEvent.KIND.toString(), GitPatchEvent.KIND.toString())
+
         /** How far back a first-time reader's inbox counts as unread. */
         private const val FIRST_RUN_WINDOW = 7 * 24 * 60 * 60L
 
         /** The last-read route of one issue, patch or PR: its thread sets it when opened. */
-        fun itemReadRoute(item: Note): String = "GitItem/" + item.idHex
+        fun itemReadRoute(item: Note): String = ITEM_ROUTE_PREFIX + item.idHex
 
         /** Marks [item] read as of now, as its thread opens. */
         fun markItemRead(
@@ -153,6 +159,7 @@ class GitDashboardViewModel(
                 event is GitReplyEvent ||
                 event is GitRepositoryEvent ||
                 event is LabelEvent ||
-                event is CommentEvent
+                // NIP-22 comments are everywhere in the app; only ones in a git item's thread count.
+                (event is CommentEvent && event.rootKinds().any { it.getOrNull(1) in GIT_ITEM_KINDS })
     }
 }

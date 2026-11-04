@@ -88,11 +88,15 @@ private val GitDarkPalette =
 fun gitPalette(): GitPalette = if (MaterialTheme.colorScheme.isLight) GitLightPalette else GitDarkPalette
 
 /**
- * True inside the thread of the issue, patch or PR being drawn as its root: only there does the item
- * show what is for working on it (its full diff, clone commands, the changes, the status buttons).
- * In a feed, a notification or a quote it is something to read and open.
+ * The id of the note a thread draws as its root. Only that issue, patch or PR shows what is for
+ * working on it (its full diff, clone commands, the changes, the status buttons); in a feed, a
+ * notification or a quote (even one inside the root's own text) it is something to read and open.
  */
-val LocalGitThreadRoot = staticCompositionLocalOf { false }
+val LocalGitThreadRoot = staticCompositionLocalOf<String?> { null }
+
+/** Whether [item] is the root of the thread on screen ([LocalGitThreadRoot]). */
+@Composable
+fun isGitThreadRoot(item: Note): Boolean = LocalGitThreadRoot.current == item.idHex
 
 /** One corner radius for every git chip, box and card. */
 val GitShape = RoundedCornerShape(6.dp)

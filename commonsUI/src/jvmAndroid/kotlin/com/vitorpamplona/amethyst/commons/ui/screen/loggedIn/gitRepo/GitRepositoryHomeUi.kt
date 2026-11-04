@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitLabelTag
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStateIcon
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitCard
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitMetaStyle
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitStatus
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.statusKind
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -146,7 +147,18 @@ fun RepoHero(
     val description = event.description()?.takeIf { it.isNotBlank() }
     val topics = remember(event) { event.hashtags().filter { it.isNotBlank() } }
     val isFork = event.isPersonalFork()
-    val maintainers = remember(event) { (listOf(event.pubKey) + event.maintainers()).distinct() }
+    // The confirmed maintainers (role tags and the legacy list, each confirmed by their own
+    // announcement), as the lists and the status authority count them; the announcement's own
+    // names until the others load.
+    val announcements = observeGitRepositoryAnnouncements(event.dTag())
+    val maintainers =
+        remember(event, announcements) {
+            LocalCache.gitAuthority
+                .membership(event.address())
+                ?.confirmedMaintainers
+                ?.takeIf { it.isNotEmpty() }
+                ?: (listOf(event.pubKey) + event.maintainers()).distinct()
+        }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (description != null) {

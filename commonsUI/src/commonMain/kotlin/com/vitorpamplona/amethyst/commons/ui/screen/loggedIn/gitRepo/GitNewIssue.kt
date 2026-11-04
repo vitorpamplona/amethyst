@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitShape
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitCard
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitMetaStyle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitPalette
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryActivity
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_add_label
@@ -331,8 +332,10 @@ private fun LabelPicker(
     repoNote: AddressableNote,
     viewModel: GitNewIssueViewModel,
 ) {
+    // Recomputed as the repository's items arrive, so a cold open still fills in.
+    val activity = observeGitRepositoryActivity(repoNote.dTag())
     val known =
-        remember(repoNote) {
+        remember(repoNote, activity) {
             val counts = HashMap<String, Int>()
             LocalCache.getGitRepositoryIfExists(repoNote.dTag())?.items?.filterIntoSet { _, note -> note.event is GitIssueEvent }?.forEach { note ->
                 GitItemTitles.labelsOf(note).forEach { counts[it] = (counts[it] ?: 0) + 1 }

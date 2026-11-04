@@ -241,7 +241,8 @@ class GitNewIssueViewModel : ViewModel() {
 /** Splits a free-text label field on commas/whitespace, stripping any leading `#`. */
 internal fun parseLabels(raw: String): List<String> =
     raw
-        .split(',', ' ', '\n', '\t')
+        // Commas and lines separate labels; a space belongs to one ("good first issue").
+        .split(',', '\n', '\t')
         .map { it.trim().removePrefix("#") }
         .filter { it.isNotEmpty() }
         .distinct()

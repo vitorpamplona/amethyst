@@ -34,6 +34,7 @@ import kotlin.test.assertEquals
 
 class GitDashboardTest {
     private val me = NostrSignerInternal(KeyPair("0000000000000000000000000000000000000000000000000000000000000001".hexToByteArray()))
+    private val coMaintainer = NostrSignerInternal(KeyPair("0000000000000000000000000000000000000000000000000000000000000002".hexToByteArray()))
     private val stranger = NostrSignerInternal(KeyPair("0000000000000000000000000000000000000000000000000000000000000003".hexToByteArray()))
 
     @Test
@@ -84,5 +85,23 @@ class GitDashboardTest {
             assertEquals(0, inbox[1].unread)
             assertEquals(GitInboxAction.CLOSED, inbox[0].latestAction)
             assertEquals(GitInboxAction.OPENED, inbox[1].latestAction)
+        }
+
+    @Test
+    fun itemsFiledUnderACoMaintainersCoordinateReachTheInboxThroughTheGivenCache() =
+        runTest {
+            // A fresh cache, not LocalCache: membership must be read from the cache passed in.
+            val cache = EventCache()
+            val mine = me.sign(GitRepositoryEvent.build(name = "din", dTag = "din", createdAt = 10) { add(arrayOf("maintainers", me.pubKey, coMaintainer.pubKey)) })
+            val theirs = coMaintainer.sign(GitRepositoryEvent.build(name = "din", dTag = "din", createdAt = 11) { add(arrayOf("maintainers", coMaintainer.pubKey, me.pubKey)) })
+            cache.justConsume(mine, null, true)
+            cache.justConsume(theirs, null, true)
+
+            val filedWithThem = stranger.sign(GitIssueEvent.build("Theirs", "", EventHintBundle(theirs), emptyList(), emptyList(), createdAt = 20))
+            cache.justConsume(filedWithThem, null, true)
+
+            val inbox = GitDashboard.inbox(me.pubKey, listOf(mine.address()), cache, lastRead = { 0L })
+            assertEquals(listOf(filedWithThem.id), inbox.map { it.item.idHex })
+            assertEquals(1, GitDashboard.myRepositories(me.pubKey, cache).single().openIssues)
         }
 }

@@ -80,12 +80,14 @@ fun GitRepositoriesScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchLifecycleAndUpdateModel(gitRepositoriesFeedContentState)
-    WatchAccountForGitRepositoriesScreen(gitRepositoriesFeedContentState = gitRepositoriesFeedContentState, accountViewModel = accountViewModel)
-    GitRepositoriesFilterAssemblerSubscription(accountViewModel)
-
-    // Dashboard first: what needs the reader. Explore keeps the list-driven feed of repositories.
+    // Dashboard first: what needs the reader. Explore keeps the list-driven feed of repositories,
+    // and only loads it while it is the tab on screen.
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    if (tab == 1) {
+        WatchLifecycleAndUpdateModel(gitRepositoriesFeedContentState)
+        WatchAccountForGitRepositoriesScreen(gitRepositoriesFeedContentState = gitRepositoriesFeedContentState, accountViewModel = accountViewModel)
+        GitRepositoriesFilterAssemblerSubscription(accountViewModel)
+    }
 
     DisappearingScaffold(
         isInvertedLayout = false,

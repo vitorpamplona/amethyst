@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
 import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
@@ -35,6 +36,7 @@ import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
+import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
@@ -112,11 +114,12 @@ fun filterRepositoryItemEssentials(
         listOf(
             RelayBasedFilter(
                 relay = relay,
-                filter = ExplainedFilter(purpose = SubPurpose.TOPIC_FEED, tags = mapOf("e" to ids), kinds = RepositoryItemEssentialKinds, since = since),
+                filter = ExplainedFilter(purpose = SubPurpose.TOPIC_FEED, tags = mapOf("e" to ids), kinds = RepositoryItemEssentialKinds + GitReplyEvent.KIND, since = since),
             ),
             RelayBasedFilter(
                 relay = relay,
-                filter = ExplainedFilter(purpose = SubPurpose.TOPIC_FEED, tags = mapOf("E" to ids), kinds = listOf(GitPullRequestUpdateEvent.KIND), since = since),
+                // The items' comments too: the lists show how many each has.
+                filter = ExplainedFilter(purpose = SubPurpose.TOPIC_FEED, tags = mapOf("E" to ids), kinds = listOf(GitPullRequestUpdateEvent.KIND, CommentEvent.KIND), since = since),
             ),
         )
     }

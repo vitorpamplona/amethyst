@@ -133,7 +133,7 @@ object GitDashboard {
         lastRead: (Note) -> Long,
         limit: Int = 100,
     ): List<GitInboxEntry> {
-        val coordinates = watched.flatMapTo(HashSet()) { repositoryCoordinateSet(it) }
+        val coordinates = watched.flatMapTo(HashSet()) { repositoryCoordinateSet(it, cache.gitAuthority) }
         val entries = HashMap<HexKey, GitInboxEntry>()
 
         cache.gitRepositories.forEach { _, repository ->
@@ -217,7 +217,7 @@ object GitDashboard {
         announcement: GitRepositoryEvent,
         cache: EventCache,
     ): GitDashboardRepository {
-        val coordinates = repositoryCoordinateSet(announcement.address())
+        val coordinates = repositoryCoordinateSet(announcement.address(), cache.gitAuthority)
         var last = announcement.createdAt
         var issues = 0
         var pulls = 0
