@@ -181,7 +181,10 @@ fun RenderVideoPlayer(
                     lastMeasured[1] = it.height
                     val (w, h) = clampViewportShortSide(it.width, it.height, viewportCeiling)
                     applyViewportConstraint(controllerState.controller, w, h)
-                }.pointerInput(isLive, controllerState) {
+                }.pointerInput(isLive, controllerState, controllerVisible) {
+                    // controllerVisible is a key because the detector's coroutine outlives
+                    // recompositions: without it, a caller that hands in a new state keeps the
+                    // taps toggling the old one, which nothing draws anymore.
                     detectTapGestures(
                         onTap = { controllerVisible.value = !controllerVisible.value },
                         onDoubleTap = { offset ->

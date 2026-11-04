@@ -53,7 +53,10 @@ fun VideoViewInner(
     nostrUriCallback: String? = null,
     automaticallyStartPlayback: Boolean,
     isLiveStream: Boolean = false,
-    controllerVisible: MutableState<Boolean> = mutableStateOf(false),
+    // Remembered: an unremembered default made a new state on every recomposition, while the
+    // player's tap detector kept toggling the first one. A live stream recomposes here each time
+    // its kind 30311 event is republished, and from then on taps no longer showed the controls.
+    controllerVisible: MutableState<Boolean> = remember { mutableStateOf(false) },
     onZoom: (() -> Unit)? = null,
     hasBlurhash: Boolean = false,
     isFullscreen: Boolean = false,
