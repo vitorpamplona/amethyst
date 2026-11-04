@@ -68,7 +68,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.CompactInvoic
 import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.MayBeInvoicePreview
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
-import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.RichTextBlockPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
@@ -99,7 +99,7 @@ open class DefaultRichTextSegmentRenderer(
 
         if (canPreview) {
             state.mediaForPager[segment.segmentText]?.let {
-                BleedingMedia(HalfVertPadding, enabled = it !is MediaUrlPdf) { roundedCorner ->
+                BleedingMedia(RichTextBlockPadding, enabled = it !is MediaUrlPdf) { roundedCorner ->
                     ZoomableContentView(
                         content = it,
                         images = state.mediaList,

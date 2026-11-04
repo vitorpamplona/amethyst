@@ -180,6 +180,17 @@ val RowColSpacing10dp = Arrangement.spacedBy(10.dp)
 val HalfHorzPadding = Modifier.padding(horizontal = 5.dp)
 val HalfVertPadding = Modifier.padding(vertical = 5.dp)
 
+/**
+ * The space above and below a block in a post's text: an image, a video, a gallery, a PDF or a
+ * link card. The same on both sides, so a block in the middle of a post sits evenly between its
+ * paragraphs; the blank lines an author types around a block are dropped
+ * (`dropBlankLinesAroundBlocks`), so this is the whole gap.
+ */
+val RichTextBlockSpacing = 8.dp
+
+/** [RichTextBlockSpacing] above and below a block. */
+val RichTextBlockPadding = Modifier.padding(vertical = RichTextBlockSpacing)
+
 val HorzPadding = Modifier.padding(horizontal = 10.dp)
 val VertPadding = Modifier.padding(vertical = 10.dp)
 

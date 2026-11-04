@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
-import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.RichTextBlockPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable
@@ -114,7 +114,7 @@ fun RenderLoaded(
 
     when {
         state.previewInfo.mimeType.startsWith("image") -> {
-            BleedingMedia(HalfVertPadding) { roundedCorner ->
+            BleedingMedia(RichTextBlockPadding) { roundedCorner ->
                 ZoomableContentView(
                     content = MediaUrlImage(url, uri = callbackUri),
                     roundedCorner = roundedCorner,
@@ -129,7 +129,7 @@ fun RenderLoaded(
         // playlist served as `audio/x-mpegurl` off `/stream?id=1` is otherwise handed to the
         // progressive source and fails.
         state.previewInfo.mimeType.startsWith("video") || state.previewInfo.mimeType.startsWith("audio") -> {
-            BleedingMedia(HalfVertPadding) { roundedCorner ->
+            BleedingMedia(RichTextBlockPadding) { roundedCorner ->
                 ZoomableContentView(
                     content = MediaUrlVideo(url, uri = callbackUri, mimeType = state.previewInfo.mimeType),
                     roundedCorner = roundedCorner,
@@ -140,7 +140,7 @@ fun RenderLoaded(
         }
 
         state.previewInfo.mimeType.startsWith("application/pdf") -> {
-            Box(modifier = HalfVertPadding) {
+            Box(modifier = RichTextBlockPadding) {
                 ZoomableContentView(
                     content = MediaUrlPdf(url, uri = callbackUri, mimeType = state.previewInfo.mimeType),
                     roundedCorner = true,
@@ -156,7 +156,7 @@ fun RenderLoaded(
         // out. `playableMediaUrl` is null unless the page's declared type held up, so a page whose
         // `og:video` is really an embed (YouTube's, say) still falls through to the card below.
         playableMedia != null -> {
-            BleedingMedia(HalfVertPadding) { roundedCorner ->
+            BleedingMedia(RichTextBlockPadding) { roundedCorner ->
                 ZoomableContentView(
                     content =
                         MediaUrlVideo(

@@ -51,7 +51,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.theme.CashuCardBorders
-import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.RichTextBlockPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import kotlinx.coroutines.Dispatchers
@@ -91,7 +91,7 @@ fun BlossomUriRenderer(
 ) {
     val media = state.mediaForPager[word]
     if (media != null) {
-        BleedingMedia(HalfVertPadding, enabled = media !is MediaUrlPdf) { roundedCorner ->
+        BleedingMedia(RichTextBlockPadding, enabled = media !is MediaUrlPdf) { roundedCorner ->
             ZoomableContentView(
                 content = media,
                 images = state.mediaList,

@@ -604,7 +604,7 @@ private fun ReactionDetailGallery(
     // reaction line. Guarding here keeps the padded Row from rendering an empty strip
     // for a note that has neither.
     if (hasReactions || relays.isNotEmpty()) {
-        // Full width: the icon column lines up with the 35dp picture slot of the note's header.
+        // Full width: the icon column lines up with the picture slot of the note's header.
         val startPadding = if (LocalDisplaySettings.current.fullWidthNotes) NoteHorizontalPadding else 10.dp
         Row(
             verticalAlignment = CenterVertically,
