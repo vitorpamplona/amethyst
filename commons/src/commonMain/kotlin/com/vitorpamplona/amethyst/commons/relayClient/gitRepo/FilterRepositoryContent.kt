@@ -86,7 +86,16 @@ val RepositoryCiKinds =
  * fetch to resolve the repository's membership, and whose coordinates to query. Discovery only:
  * who actually counts is [com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryMembership].
  */
-fun repositoryDiscoveryPubKeys(repository: GitRepositoryEvent): List<HexKey> = (listOf(repository.pubKey) + repository.activeMaintainerAssignments() + repository.activeModeratorAssignments() + repository.maintainers()).distinct()
+fun repositoryDiscoveryPubKeys(repository: GitRepositoryEvent): List<HexKey> =
+    (
+        listOf(repository.pubKey) +
+            repository.activeMaintainerAssignments() +
+            repository.activeModeratorAssignments() +
+            repository.maintainers() +
+            // Ended roles too: judging an older status needs the announcements of whoever held a
+            // role then, as gitworkshop fetches its history subjects.
+            repository.roleRecords().map { it.subject }
+    ).distinct()
 
 /**
  * Every coordinate an issue, PR, patch or CI event may tag the repository with: they carry one `a`

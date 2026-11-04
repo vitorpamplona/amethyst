@@ -58,4 +58,33 @@ class FilterRepositoryCiTest {
     fun ciKindsDoNotShareTheIssueAndPrLimit() {
         assertFalse(RepositoryContentKinds.any { it in RepositoryCiKinds })
     }
+
+    @Test
+    fun fetchesTheAnnouncementsOfEndedRolesToo() {
+        // Alex's `din` announcement: chad's maintainer role there has ended, but judging a July
+        // status needs chad's announcement (gitworkshop fetches every role subject).
+        val alex = "0461fcbecc4c3374439932d6b8f11269ccdb7cc973ad7a50ae362db135a474dd"
+        val soapbox = "781a1527055f74c1f70230f10384609b34548f8ab6a0a6caa74025827f9fdae5"
+        val chad = "86184109eae937d8d6f980b4a0b46da4ef0d983eade403ee1b4c0b6bde238b47"
+        val din =
+            GitRepositoryEvent(
+                "573aab8572fbb42cbc143a4d3594a02e4b3bc86da3d3d67adb6f8840f71ea554",
+                alex,
+                1793647335,
+                arrayOf(
+                    arrayOf("d", "din"),
+                    arrayOf("maintainers", alex, soapbox),
+                    arrayOf("m", alex),
+                    arrayOf("M", soapbox, "1793647289"),
+                    arrayOf("m", soapbox, "1793647060", "1793647289"),
+                    arrayOf("m", chad, "0", "1793647255", "1793647255", "defer"),
+                ),
+                "",
+                "0".repeat(128),
+            )
+
+        val filter = filterRepositoryAnnouncements(relay, din).filter
+        assertEquals(setOf(alex, soapbox, chad), filter.authors!!.toSet())
+        assertEquals(listOf("din"), filter.tags?.get("d"))
+    }
 }
