@@ -107,7 +107,8 @@ class GitDashboardViewModel(
         val mine = GitDashboard.myRepositories(me, LocalCache)
         val followed = GitDashboard.followedRepositories(account.gitRepositoryListState.publicRepositoryAddressSet.value, LocalCache)
         val watched = (mine + followed).map { it.note.address }
-        val cutoff = account.loadLastRead(INBOX_ROUTE)
+        // A reader new to the inbox starts with the last week unread, not every item ever filed.
+        val cutoff = account.loadLastRead(INBOX_ROUTE).takeIf { it > 0 } ?: (TimeUtils.now() - FIRST_RUN_WINDOW).also { account.markAsRead(INBOX_ROUTE, it) }
         val inbox = GitDashboard.inbox(me, watched, LocalCache, lastRead = { maxOf(cutoff, account.loadLastRead(itemReadRoute(it))) })
         return GitDashboardState(
             myRepositories = mine,
@@ -129,6 +130,9 @@ class GitDashboardViewModel(
 
     companion object {
         const val INBOX_ROUTE = "GitInbox"
+
+        /** How far back a first-time reader's inbox counts as unread. */
+        private const val FIRST_RUN_WINDOW = 7 * 24 * 60 * 60L
 
         /** The last-read route of one issue, patch or PR: its thread sets it when opened. */
         fun itemReadRoute(item: Note): String = "GitItem/" + item.idHex
