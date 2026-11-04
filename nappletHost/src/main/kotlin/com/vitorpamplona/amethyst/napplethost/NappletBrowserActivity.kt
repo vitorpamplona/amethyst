@@ -136,7 +136,7 @@ import com.vitorpamplona.amethyst.commons.R as CommonsR
 class NappletBrowserActivity : ComponentActivity() {
     private var webView: WebView? = null
 
-    private var startUrl: String = "about:blank"
+    private var startUrl: String = BLANK_PAGE
     private var proxyPort: Int = -1
     private var useTor: Boolean = true
     private var themeType: String = "SYSTEM"
@@ -401,7 +401,7 @@ class NappletBrowserActivity : ComponentActivity() {
                 claimRoute { if (webView === wv) wv.loadUrl(startUrl) }
             }
         } else {
-            wv.url?.let { if (it.isNotBlank() && it != "about:blank") startUrl = it }
+            wv.url?.let { if (it.isNotBlank() && it != BLANK_PAGE) startUrl = it }
         }
         updateTaskDescription()
     }
@@ -782,7 +782,7 @@ class NappletBrowserActivity : ComponentActivity() {
             // one, even a next one that never talks to the bridge.
             if (bridge.onNavigation()) releasePage()
             // A window a page opened takes its first real page as its home ("scope").
-            if (startUrl == "about:blank" && url.startsWith("http")) startUrl = url
+            if (startUrl == BLANK_PAGE && url.startsWith("http")) startUrl = url
             // Re-arm favicon capture when the host changes, so a same-host in-page nav doesn't re-send.
             if (OmniboxInput.hostOf(url) != lastIconHost) {
                 lastIconHost = null
@@ -2026,6 +2026,7 @@ class NappletBrowserActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "NappletBrowserActivity"
+        private const val BLANK_PAGE = "about:blank"
         private const val NOT_SIGNED_IN = "Sign in to Amethyst to use this site's Nostr features."
         private const val MINT_TIMED_OUT = "Amethyst didn't answer. Reload the page to try again."
         private const val ACTIVITY_CLASS = "com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity"

@@ -30,9 +30,11 @@ extern void   seekTo(void* ctx, double time);
 extern void   disposeVideoPlayer(void* ctx);
 extern void   setPlaybackSpeed(void* ctx, float speed);
 extern float  getPlaybackSpeed(void* ctx);
-extern const char* getVideoTitle(void* ctx);
-extern int64_t     getVideoBitrate(void* ctx);
-extern const char* getVideoMimeType(void* ctx);
+// Both return a strdup'd copy the caller frees, so they are declared non-const here
+// (Swift's UnsafePointer<CChar>; C linkage ignores the qualifier).
+extern char*   getVideoTitle(void* ctx);
+extern int64_t getVideoBitrate(void* ctx);
+extern char*   getVideoMimeType(void* ctx);
 extern int32_t getAudioChannels(void* ctx);
 extern int32_t getAudioSampleRate(void* ctx);
 extern int32_t consumeDidPlayToEnd(void* ctx);
@@ -153,10 +155,10 @@ static jfloat JNICALL jni_GetPlaybackSpeed(JNIEnv* env, jclass cls, jlong handle
 
 static jstring JNICALL jni_GetVideoTitle(JNIEnv* env, jclass cls, jlong handle) {
     if (!handle) return NULL;
-    const char* s = getVideoTitle(toCtx(handle));
+    char* s = getVideoTitle(toCtx(handle));
     if (!s) return NULL;
     jstring result = (*env)->NewStringUTF(env, s);
-    free((void*)s);
+    free(s);
     return result;
 }
 
@@ -166,10 +168,10 @@ static jlong JNICALL jni_GetVideoBitrate(JNIEnv* env, jclass cls, jlong handle) 
 
 static jstring JNICALL jni_GetVideoMimeType(JNIEnv* env, jclass cls, jlong handle) {
     if (!handle) return NULL;
-    const char* s = getVideoMimeType(toCtx(handle));
+    char* s = getVideoMimeType(toCtx(handle));
     if (!s) return NULL;
     jstring result = (*env)->NewStringUTF(env, s);
-    free((void*)s);
+    free(s);
     return result;
 }
 
@@ -190,34 +192,34 @@ static jboolean JNICALL jni_ConsumeDidPlayToEnd(JNIEnv* env, jclass cls, jlong h
 // ---------------------------------------------------------------------------
 
 static const JNINativeMethod g_methods[] = {
-    { "nCreatePlayer",           "()J",                         (void*)jni_CreatePlayer },
-    { "nOpenUri",                "(JLjava/lang/String;)V",      (void*)jni_OpenUri },
-    { "nPlay",                   "(J)V",                        (void*)jni_Play },
-    { "nPause",                  "(J)V",                        (void*)jni_Pause },
-    { "nSetVolume",              "(JF)V",                       (void*)jni_SetVolume },
-    { "nGetVolume",              "(J)F",                        (void*)jni_GetVolume },
-    { "nLockFrame",              "(J[I)J",                      (void*)jni_LockFrame },
-    { "nUnlockFrame",            "(J)V",                        (void*)jni_UnlockFrame },
-    { "nWrapPointer",            "(JJ)Ljava/nio/ByteBuffer;",   (void*)jni_WrapPointer },
-    { "nGetFrameWidth",          "(J)I",                        (void*)jni_GetFrameWidth },
-    { "nGetFrameHeight",         "(J)I",                        (void*)jni_GetFrameHeight },
-    { "nGetDisplayAspectRatio",  "(J)D",                        (void*)jni_GetDisplayAspectRatio },
-    { "nSetOutputSize",          "(JII)I",                      (void*)jni_SetOutputSize },
-    { "nGetVideoFrameRate",      "(J)F",                        (void*)jni_GetVideoFrameRate },
-    { "nGetScreenRefreshRate",   "(J)F",                        (void*)jni_GetScreenRefreshRate },
-    { "nGetCaptureFrameRate",    "(J)F",                        (void*)jni_GetCaptureFrameRate },
-    { "nGetVideoDuration",       "(J)D",                        (void*)jni_GetVideoDuration },
-    { "nGetCurrentTime",         "(J)D",                        (void*)jni_GetCurrentTime },
-    { "nSeekTo",                 "(JD)V",                       (void*)jni_SeekTo },
-    { "nDisposePlayer",          "(J)V",                        (void*)jni_DisposePlayer },
-    { "nSetPlaybackSpeed",       "(JF)V",                       (void*)jni_SetPlaybackSpeed },
-    { "nGetPlaybackSpeed",       "(J)F",                        (void*)jni_GetPlaybackSpeed },
-    { "nGetVideoTitle",          "(J)Ljava/lang/String;",       (void*)jni_GetVideoTitle },
-    { "nGetVideoBitrate",        "(J)J",                        (void*)jni_GetVideoBitrate },
-    { "nGetVideoMimeType",       "(J)Ljava/lang/String;",       (void*)jni_GetVideoMimeType },
-    { "nGetAudioChannels",       "(J)I",                        (void*)jni_GetAudioChannels },
-    { "nGetAudioSampleRate",     "(J)I",                        (void*)jni_GetAudioSampleRate },
-    { "nConsumeDidPlayToEnd",    "(J)Z",                        (void*)jni_ConsumeDidPlayToEnd },
+    { "nCreatePlayer",           "()J",                         (void*)&jni_CreatePlayer },
+    { "nOpenUri",                "(JLjava/lang/String;)V",      (void*)&jni_OpenUri },
+    { "nPlay",                   "(J)V",                        (void*)&jni_Play },
+    { "nPause",                  "(J)V",                        (void*)&jni_Pause },
+    { "nSetVolume",              "(JF)V",                       (void*)&jni_SetVolume },
+    { "nGetVolume",              "(J)F",                        (void*)&jni_GetVolume },
+    { "nLockFrame",              "(J[I)J",                      (void*)&jni_LockFrame },
+    { "nUnlockFrame",            "(J)V",                        (void*)&jni_UnlockFrame },
+    { "nWrapPointer",            "(JJ)Ljava/nio/ByteBuffer;",   (void*)&jni_WrapPointer },
+    { "nGetFrameWidth",          "(J)I",                        (void*)&jni_GetFrameWidth },
+    { "nGetFrameHeight",         "(J)I",                        (void*)&jni_GetFrameHeight },
+    { "nGetDisplayAspectRatio",  "(J)D",                        (void*)&jni_GetDisplayAspectRatio },
+    { "nSetOutputSize",          "(JII)I",                      (void*)&jni_SetOutputSize },
+    { "nGetVideoFrameRate",      "(J)F",                        (void*)&jni_GetVideoFrameRate },
+    { "nGetScreenRefreshRate",   "(J)F",                        (void*)&jni_GetScreenRefreshRate },
+    { "nGetCaptureFrameRate",    "(J)F",                        (void*)&jni_GetCaptureFrameRate },
+    { "nGetVideoDuration",       "(J)D",                        (void*)&jni_GetVideoDuration },
+    { "nGetCurrentTime",         "(J)D",                        (void*)&jni_GetCurrentTime },
+    { "nSeekTo",                 "(JD)V",                       (void*)&jni_SeekTo },
+    { "nDisposePlayer",          "(J)V",                        (void*)&jni_DisposePlayer },
+    { "nSetPlaybackSpeed",       "(JF)V",                       (void*)&jni_SetPlaybackSpeed },
+    { "nGetPlaybackSpeed",       "(J)F",                        (void*)&jni_GetPlaybackSpeed },
+    { "nGetVideoTitle",          "(J)Ljava/lang/String;",       (void*)&jni_GetVideoTitle },
+    { "nGetVideoBitrate",        "(J)J",                        (void*)&jni_GetVideoBitrate },
+    { "nGetVideoMimeType",       "(J)Ljava/lang/String;",       (void*)&jni_GetVideoMimeType },
+    { "nGetAudioChannels",       "(J)I",                        (void*)&jni_GetAudioChannels },
+    { "nGetAudioSampleRate",     "(J)I",                        (void*)&jni_GetAudioSampleRate },
+    { "nConsumeDidPlayToEnd",    "(J)Z",                        (void*)&jni_ConsumeDidPlayToEnd },
 };
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {

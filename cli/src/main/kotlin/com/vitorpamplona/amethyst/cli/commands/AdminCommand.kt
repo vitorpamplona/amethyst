@@ -94,6 +94,9 @@ object AdminCommand {
         |  admin RELAY list-blocked-ips               list blocked IPs
         """.trimMargin()
 
+    private const val EVENT_ID_ARG = "event-id"
+    private const val ROLE_ID_ARG = "role-id"
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
@@ -143,18 +146,18 @@ object AdminCommand {
                 "allow-pubkey" -> Nip86Request.allowPubkey(needArg("pubkey") ?: return 2, reason)
                 "unallow-pubkey" -> Nip86Request.unallowPubkey(needArg("pubkey") ?: return 2, reason)
                 "list-allowed-pubkeys" -> Nip86Request.listAllowedPubkeys()
-                "ban-event" -> Nip86Request.banEvent(needArg("event-id") ?: return 2, reason)
-                "unban-event" -> Nip86Request.unbanEvent(needArg("event-id") ?: return 2, reason)
+                "ban-event" -> Nip86Request.banEvent(needArg(EVENT_ID_ARG) ?: return 2, reason)
+                "unban-event" -> Nip86Request.unbanEvent(needArg(EVENT_ID_ARG) ?: return 2, reason)
                 "list-banned-events" -> Nip86Request.listBannedEvents()
-                "allow-event" -> Nip86Request.allowEvent(needArg("event-id") ?: return 2, reason)
-                "unallow-event" -> Nip86Request.unallowEvent(needArg("event-id") ?: return 2, reason)
+                "allow-event" -> Nip86Request.allowEvent(needArg(EVENT_ID_ARG) ?: return 2, reason)
+                "unallow-event" -> Nip86Request.unallowEvent(needArg(EVENT_ID_ARG) ?: return 2, reason)
                 "list-allowed-events" -> Nip86Request.listAllowedEvents()
                 "list-needing-moderation" -> Nip86Request.listEventsNeedingModeration()
-                "create-role" -> Nip86Request.createRole(needArg("role-id") ?: return 2, label, description, colorInt, orderInt)
-                "edit-role" -> Nip86Request.editRole(needArg("role-id") ?: return 2, label, description, colorInt, orderInt)
-                "delete-role" -> Nip86Request.deleteRole(needArg("role-id") ?: return 2)
-                "assign-role" -> Nip86Request.assignRole(needArg("pubkey") ?: return 2, needSecondArg("role-id") ?: return 2)
-                "unassign-role" -> Nip86Request.unassignRole(needArg("pubkey") ?: return 2, needSecondArg("role-id") ?: return 2)
+                "create-role" -> Nip86Request.createRole(needArg(ROLE_ID_ARG) ?: return 2, label, description, colorInt, orderInt)
+                "edit-role" -> Nip86Request.editRole(needArg(ROLE_ID_ARG) ?: return 2, label, description, colorInt, orderInt)
+                "delete-role" -> Nip86Request.deleteRole(needArg(ROLE_ID_ARG) ?: return 2)
+                "assign-role" -> Nip86Request.assignRole(needArg("pubkey") ?: return 2, needSecondArg(ROLE_ID_ARG) ?: return 2)
+                "unassign-role" -> Nip86Request.unassignRole(needArg("pubkey") ?: return 2, needSecondArg(ROLE_ID_ARG) ?: return 2)
                 "list-claims" -> Nip86Request.listClaims()
                 "create-claim" -> Nip86Request.createClaim(needArg("claim") ?: return 2)
                 "delete-claim" -> Nip86Request.deleteClaim(needArg("claim") ?: return 2)

@@ -101,7 +101,7 @@ object CyberspaceCommands {
         val hex = args.positional.firstOrNull() ?: return Output.error("bad_args", "cyberspace coord COORD_HEX")
         args.rejectUnknown()
 
-        val point = CyberspaceCoordinate.decode(hex) ?: return Output.error("bad_args", "not a coordinate: 32 bytes of lowercase hex")
+        val point = CyberspaceCoordinate.decode(hex) ?: return Output.error("bad_args", NOT_A_COORDINATE)
 
         Output.emit(
             mapOf(
@@ -126,10 +126,10 @@ object CyberspaceCommands {
         val args = Args(rest)
         val hex = args.positional.firstOrNull() ?: return Output.error("bad_args", "cyberspace region COORD_HEX --height H")
         val height = args.intFlag("height", 0)
-        val maxHeight = args.intFlag("max-height", CantorTree.DEFAULT_MAX_COMPUTE_HEIGHT)
+        val maxHeight = args.intFlag(MAX_HEIGHT_FLAG, CantorTree.DEFAULT_MAX_COMPUTE_HEIGHT)
         args.rejectUnknown()
 
-        val point = CyberspaceCoordinate.decode(hex) ?: return Output.error("bad_args", "not a coordinate: 32 bytes of lowercase hex")
+        val point = CyberspaceCoordinate.decode(hex) ?: return Output.error("bad_args", NOT_A_COORDINATE)
         if (height < 0) return Output.error("bad_args", "--height must be >= 0")
         if (height > maxHeight) {
             // The same refusal both references make, and for the same reason:
@@ -227,7 +227,7 @@ object CyberspaceCommands {
         val keyHex = args.flag("key")
         val coordHex = args.flag("coord")
         val heightRaw = args.flag("height")
-        val maxHeight = args.intFlag("max-height", CantorTree.DEFAULT_MAX_COMPUTE_HEIGHT)
+        val maxHeight = args.intFlag(MAX_HEIGHT_FLAG, CantorTree.DEFAULT_MAX_COMPUTE_HEIGHT)
         args.rejectUnknown()
 
         if ((keyHex == null) == (coordHex == null)) {
@@ -257,7 +257,7 @@ object CyberspaceCommands {
             } else {
                 val point =
                     CyberspaceCoordinate.decode(coordHex!!)
-                        ?: return Output.error("bad_args", "not a coordinate: 32 bytes of lowercase hex")
+                        ?: return Output.error("bad_args", NOT_A_COORDINATE)
                 if (height < 0) return Output.error("bad_args", "--height must be >= 0")
                 if (height > maxHeight) return Output.error("too_big", "height $height exceeds max-height $maxHeight")
                 RegionKey.at(point, height, maxHeight).decryptionKey
@@ -322,7 +322,7 @@ object CyberspaceCommands {
         val maxGap = args.intFlag("max-gap", DEFAULT_MAX_GAP)
         val limit = args.longFlag("limit", Long.MAX_VALUE)
         val wantIds = args.bool("ids")
-        val maxHeight = args.intFlag("max-height", CantorTree.DEFAULT_MAX_COMPUTE_HEIGHT)
+        val maxHeight = args.intFlag(MAX_HEIGHT_FLAG, CantorTree.DEFAULT_MAX_COMPUTE_HEIGHT)
         args.rejectUnknown()
 
         val bag = bagOf(json) ?: return Output.error("bad_event", "not a kind ${CyberspaceBagEvent.KIND} bag")
@@ -425,6 +425,9 @@ object CyberspaceCommands {
      * you which one a stranger meant.
      */
     private const val DEFAULT_MAX_GAP = 20
+
+    private const val MAX_HEIGHT_FLAG = "max-height"
+    private const val NOT_A_COORDINATE = "not a coordinate: 32 bytes of lowercase hex"
 
     /** An 85-bit axis as decimal, from its two halves, without a big integer. */
     private fun decimal(

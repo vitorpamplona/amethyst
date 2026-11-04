@@ -100,7 +100,7 @@ class EmbeddedWebAppController(
      * sandbox destroys its WebView, so the adapter is dead. See [attachView] for why this matters.
      */
     private var adapterDelivered = false
-    private var startUrl: String = "about:blank"
+    private var startUrl: String = BLANK_PAGE
 
     private var hasLoadedReal = false
     private var blankRecovered = false
@@ -547,7 +547,7 @@ class EmbeddedWebAppController(
                 val canGoBack = msg.data?.getBoolean(NappletBrowserContract.KEY_CAN_GO_BACK, false) ?: false
                 val canGoForward = msg.data?.getBoolean(NappletBrowserContract.KEY_CAN_GO_FORWARD, false) ?: false
                 val title = msg.data?.getString(NappletBrowserContract.KEY_TITLE)
-                if (url != "about:blank") {
+                if (url != BLANK_PAGE) {
                     lastUrl = url
                     lastTitle = title
                 }
@@ -748,7 +748,7 @@ class EmbeddedWebAppController(
         onLoadStatusChanged?.invoke(status)
     }
 
-    private fun String.isBlankPage() = isEmpty() || this == "about:blank"
+    private fun String.isBlankPage() = isEmpty() || this == BLANK_PAGE
 
     fun back() = send(NappletBrowserContract.MSG_BACK) {}
 
@@ -875,6 +875,7 @@ class EmbeddedWebAppController(
         // nonce a fresh main process would hand out ids a still-running `:napplet` already holds.
         private val PROCESS_NONCE = UUID.randomUUID().toString().take(8)
         private const val MAX_CONSOLE_LOGS = 200
+        private const val BLANK_PAGE = "about:blank"
 
         private fun newSessionId() = "browser-$PROCESS_NONCE-${SESSION_SEQ.incrementAndGet()}"
     }
