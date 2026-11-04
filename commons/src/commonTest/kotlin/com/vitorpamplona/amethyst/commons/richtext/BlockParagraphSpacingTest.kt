@@ -39,7 +39,7 @@ class BlockParagraphSpacingTest {
         assertTrue(paragraphs[1].isBlankLine())
 
         // ...which the renderer drops under the card.
-        val rendered = dropBlankLineAfterBlocks(paragraphs, canPreview = true)
+        val rendered = dropBlankLinesAroundBlocks(paragraphs, canPreview = true)
         assertEquals(2, rendered.size)
         assertSame(paragraphs[0], rendered[0])
         assertSame(paragraphs[2], rendered[1])
@@ -49,7 +49,7 @@ class BlockParagraphSpacingTest {
     fun blankLineAfterInlineLinkIsKeptWithoutPreviews() {
         val paragraphs = parse("here: https://metadata.nostr.com/\n\nSomething zeroed it out.")
 
-        assertSame(paragraphs, dropBlankLineAfterBlocks(paragraphs, canPreview = false))
+        assertSame(paragraphs, dropBlankLinesAroundBlocks(paragraphs, canPreview = false))
     }
 
     @Test
@@ -57,7 +57,7 @@ class BlockParagraphSpacingTest {
         val paragraphs = parse("look at this https://example.com/cat.jpg\n\nnice, right?")
 
         assertEquals(3, paragraphs.size)
-        val rendered = dropBlankLineAfterBlocks(paragraphs, canPreview = false)
+        val rendered = dropBlankLinesAroundBlocks(paragraphs, canPreview = false)
         assertEquals(listOf(paragraphs[0], paragraphs[2]), rendered)
     }
 
@@ -66,7 +66,7 @@ class BlockParagraphSpacingTest {
         val paragraphs = parse("here: https://metadata.nostr.com/\n\n\nSomething zeroed it out.")
 
         assertEquals(4, paragraphs.size)
-        val rendered = dropBlankLineAfterBlocks(paragraphs, canPreview = true)
+        val rendered = dropBlankLinesAroundBlocks(paragraphs, canPreview = true)
         assertEquals(listOf(paragraphs[0], paragraphs[2], paragraphs[3]), rendered)
     }
 
@@ -74,13 +74,51 @@ class BlockParagraphSpacingTest {
     fun linkInTheMiddleOfALineKeepsTheBlankLine() {
         val paragraphs = parse("here: https://metadata.nostr.com/ is the site\n\nSomething zeroed it out.")
 
-        assertSame(paragraphs, dropBlankLineAfterBlocks(paragraphs, canPreview = true))
+        assertSame(paragraphs, dropBlankLinesAroundBlocks(paragraphs, canPreview = true))
     }
 
     @Test
-    fun blankLineBeforeAPreviewIsKept() {
+    fun blankLineBeforeAPreviewIsDropped() {
         val paragraphs = parse("Something zeroed it out.\n\nhttps://metadata.nostr.com/")
 
-        assertSame(paragraphs, dropBlankLineAfterBlocks(paragraphs, canPreview = true))
+        assertEquals(3, paragraphs.size)
+        assertTrue(paragraphs[1].isBlankLine())
+        assertEquals(listOf(paragraphs[0], paragraphs[2]), dropBlankLinesAroundBlocks(paragraphs, canPreview = true))
+    }
+
+    @Test
+    fun blankLineBeforeAnInlineLinkIsKeptWithoutPreviews() {
+        val paragraphs = parse("Something zeroed it out.\n\nhttps://metadata.nostr.com/")
+
+        assertSame(paragraphs, dropBlankLinesAroundBlocks(paragraphs, canPreview = false))
+    }
+
+    @Test
+    fun imageInTheMiddleLosesTheBlankLineOnBothSides() {
+        val paragraphs = parse("Above the picture.\n\nhttps://example.com/cat.jpg\n\nBelow the picture.")
+
+        // The gallery parser already folds the blank line after a standalone image into it...
+        assertEquals(4, paragraphs.size)
+        assertTrue(paragraphs[1].isBlankLine())
+
+        // ...and the one before it goes here, so the picture sits evenly between the two paragraphs.
+        val rendered = dropBlankLinesAroundBlocks(paragraphs, canPreview = false)
+        assertEquals(listOf(paragraphs[0], paragraphs[2], paragraphs[3]), rendered)
+    }
+
+    @Test
+    fun onlyOneBlankLineBeforeABlockIsDropped() {
+        val paragraphs = parse("Above the picture.\n\n\nhttps://example.com/cat.jpg")
+
+        assertEquals(4, paragraphs.size)
+        val rendered = dropBlankLinesAroundBlocks(paragraphs, canPreview = false)
+        assertEquals(listOf(paragraphs[0], paragraphs[1], paragraphs[3]), rendered)
+    }
+
+    @Test
+    fun linkLaterInTheNextLineKeepsTheBlankLineBefore() {
+        val paragraphs = parse("Something zeroed it out.\n\nsee https://metadata.nostr.com/")
+
+        assertSame(paragraphs, dropBlankLinesAroundBlocks(paragraphs, canPreview = true))
     }
 }

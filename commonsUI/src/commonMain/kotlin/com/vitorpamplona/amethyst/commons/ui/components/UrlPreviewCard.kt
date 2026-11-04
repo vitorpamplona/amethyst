@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.components
 import androidx.collection.LruCache
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,10 +69,11 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthWithHorzPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.RichTextBlockSpacing
 import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
-import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.previewCardImageModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import kotlinx.coroutines.launch
@@ -126,10 +128,16 @@ fun UrlPreviewCard(
     val borderColor = MaterialTheme.colorScheme.subtleBorder
     val frame =
         if (bleed == 0.dp) {
-            MaterialTheme.colorScheme.innerPostModifier
+            remember(borderColor) {
+                Modifier
+                    .padding(vertical = RichTextBlockSpacing)
+                    .fillMaxWidth()
+                    .clip(QuoteBorder)
+                    .border(1.dp, borderColor, QuoteBorder)
+            }
         } else {
             Modifier
-                .padding(vertical = 4.dp)
+                .padding(vertical = RichTextBlockSpacing)
                 .bleedHorizontally(bleed)
                 .fillMaxWidth()
                 .drawWithContent {

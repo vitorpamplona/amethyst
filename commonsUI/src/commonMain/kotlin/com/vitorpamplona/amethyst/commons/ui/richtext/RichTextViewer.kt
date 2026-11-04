@@ -84,7 +84,7 @@ import com.vitorpamplona.amethyst.commons.richtext.TimestampSegment
 import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WebxdcSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
-import com.vitorpamplona.amethyst.commons.richtext.dropBlankLineAfterBlocks
+import com.vitorpamplona.amethyst.commons.richtext.dropBlankLinesAroundBlocks
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideZoomSourceGroup
@@ -114,7 +114,7 @@ fun RichTextViewer(
     val renderer = LocalRichTextSegmentRenderer.current
     val baseStyle = LocalTextStyle.current
     val paragraphStyle = remember(baseStyle) { baseStyle.copy(lineHeight = 1.3.em) }
-    val paragraphs = remember(state, canPreview) { dropBlankLineAfterBlocks(state.paragraphs, canPreview) }
+    val paragraphs = remember(state, canPreview) { dropBlankLinesAroundBlocks(state.paragraphs, canPreview) }
 
     // Only this text's own media may run past its column; cards and quotes it embeds keep theirs in.
     val mediaBleed = LocalMediaBleed.current

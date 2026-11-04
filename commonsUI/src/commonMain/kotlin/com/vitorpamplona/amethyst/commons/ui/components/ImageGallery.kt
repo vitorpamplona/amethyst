@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,7 +46,7 @@ import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
-import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.commons.ui.theme.RichTextBlockPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.collections.immutable.ImmutableList
@@ -141,7 +140,7 @@ fun ImageGallery(
                 state.mediaForPager[imageUrl] as? MediaUrlImage
             }.toImmutableList()
 
-    Column(modifier = modifier.padding(vertical = Size10dp)) {
+    Column(modifier = modifier.then(RichTextBlockPadding)) {
         when (resolvedImages.size) {
             1 -> SingleImageGallery(resolvedImages, accountViewModel, roundedCorner)
             2 -> TwoImageGallery(resolvedImages, accountViewModel, roundedCorner)
