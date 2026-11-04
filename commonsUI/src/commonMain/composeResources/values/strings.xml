@@ -2752,7 +2752,6 @@
     <string name="git_clone_address">Clone:</string>
     <string name="git_branch">Branch</string>
     <string name="git_commit">Commit</string>
-    <string name="git_merge_base">Merge base</string>
     <string name="git_pr_update_description">Updated the pull request to a new commit.</string>
     <string name="git_repo_tab_issues">Issues</string>
     <string name="git_repo_tab_patches">Patches &amp; PRs</string>
@@ -2810,13 +2809,10 @@
     <string name="git_pr_changes_retry">Retry loading changes</string>
     <string name="git_pr_revised">Revised</string>
     <string name="git_cover_note">Cover note</string>
-    <string name="git_was">%1$s (was %2$s)</string>
-    <string name="git_pr_pushed">Pushed %1$s.</string>
-    <string name="git_pr_pushed_from">Pushed %1$s (was %2$s).</string>
-    <string name="git_pr_pushed_rebased">Pushed %1$s (was %2$s), rebased onto %3$s.</string>
-    <string name="git_timeline_pushed">pushed %1$s</string>
-    <string name="git_timeline_pushed_from">pushed %1$s (was %2$s)</string>
-    <string name="git_timeline_pushed_rebased">pushed %1$s (was %2$s), rebased onto %3$s</string>
+    <string name="git_pr_pushed">Pushed new commits.</string>
+    <string name="git_pr_pushed_rebased">Rebased and pushed new commits.</string>
+    <string name="git_timeline_pushed">pushed new commits</string>
+    <string name="git_timeline_pushed_rebased">rebased and pushed new commits</string>
     <string name="git_timeline_set_status">set status to</string>
     <string name="git_inline_removed_lines">(removed lines)</string>
     <string name="git_timeline_patch_added">added a patch</string>

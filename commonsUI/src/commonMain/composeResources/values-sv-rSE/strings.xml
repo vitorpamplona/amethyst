@@ -2654,7 +2654,6 @@
     <string name="git_clone_address">Klona:</string>
     <string name="git_branch">Gren</string>
     <string name="git_commit">Commit</string>
-    <string name="git_merge_base">Mergebas</string>
     <string name="git_pr_update_description">Uppdaterade pull request till en ny commit.</string>
     <string name="git_repo_tab_issues">Ärenden</string>
     <string name="git_repo_tab_patches">Patchar och PR</string>

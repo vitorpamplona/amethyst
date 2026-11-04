@@ -74,18 +74,14 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitPullRequestPushText
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemLabels
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemTitle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observePreviousRevision
-import com.vitorpamplona.amethyst.commons.nip34Git.ui.shortCommit
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_branch
 import com.vitorpamplona.amethyst.commons.resources.git_clone_address
-import com.vitorpamplona.amethyst.commons.resources.git_commit
-import com.vitorpamplona.amethyst.commons.resources.git_merge_base
 import com.vitorpamplona.amethyst.commons.resources.git_pr_revised
 import com.vitorpamplona.amethyst.commons.resources.git_pr_update_description
 import com.vitorpamplona.amethyst.commons.resources.git_repo_personal_fork
-import com.vitorpamplona.amethyst.commons.resources.git_was
 import com.vitorpamplona.amethyst.commons.resources.kind_git_issue
 import com.vitorpamplona.amethyst.commons.resources.kind_git_patch
 import com.vitorpamplona.amethyst.commons.resources.kind_git_pr
@@ -244,9 +240,8 @@ private fun GitSubjectTitle(text: String) {
 }
 
 /**
- * A small icon + value line for a piece of git metadata such as a branch name,
- * commit hash or merge base. [value] is shown verbatim; commit-like hashes are
- * expected to be shortened by the caller via [shortCommit].
+ * A small icon + value line for a piece of git metadata such as a
+ * branch. [value] is shown verbatim.
  */
 @Composable
 private fun GitMetaRow(
@@ -408,18 +403,6 @@ private fun GitMarkdownBody(
     }
 }
 
-/** [current] shortened, followed by "(was …)" when a later update moved it off [original]. */
-@Composable
-private fun revisedValue(
-    current: String,
-    original: String?,
-): String =
-    if (original.isNullOrBlank() || original == current) {
-        current.shortCommit()
-    } else {
-        stringRes(id = Res.string.git_was, current.shortCommit(), original.shortCommit())
-    }
-
 /**
  * The summary of an issue or PR: its current cover note, with the edit pencil stepping back
  * through older ones to the item's own description ([GitVersionedSummary]).
@@ -560,16 +543,6 @@ private fun RenderGitPatchEvent(
             GitSubjectTitle(title)
         }
         GitLabelsRow(observeGitItemLabels(note))
-
-        val commit = remember(noteEvent) { noteEvent.commit()?.takeIf { it.isNotBlank() } }
-        if (commit != null) {
-            Spacer(modifier = StdVertSpacer)
-            GitMetaRow(
-                symbol = MaterialSymbols.Commit,
-                contentDescription = stringRes(id = Res.string.git_commit),
-                value = commit.shortCommit(),
-            )
-        }
 
         Spacer(modifier = HalfDoubleVertSpacer)
 
@@ -798,20 +771,11 @@ private fun RenderGitPullRequestEvent(
                 (update?.cloneUrls().orEmpty() + noteEvent.cloneUrls()).filter { it.isNotBlank() }.distinct()
             }
 
-        if (branch != null || currentCommit != null || mergeBase != null) {
+        // Commit hashes stay off the card: a bare short hash is nothing a reader can act on. They
+        // still drive "View changes" below, and the Revised chip says when an update moved them.
+        if (branch != null) {
             Spacer(modifier = StdVertSpacer)
-            Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
-                branch?.let {
-                    GitMetaRow(MaterialSymbols.AltRoute, stringRes(id = Res.string.git_branch), it)
-                }
-                // A later update moved the tip: say what it was so the original isn't lost.
-                currentCommit?.let {
-                    GitMetaRow(MaterialSymbols.Commit, stringRes(id = Res.string.git_commit), revisedValue(it, noteEvent.currentCommit()))
-                }
-                mergeBase?.let {
-                    GitMetaRow(MaterialSymbols.CallMerge, stringRes(id = Res.string.git_merge_base), revisedValue(it, noteEvent.mergeBase()))
-                }
-            }
+            GitMetaRow(MaterialSymbols.AltRoute, stringRes(id = Res.string.git_branch), branch)
         }
 
         if (cloneUrls.isNotEmpty()) {
@@ -919,19 +883,6 @@ private fun RenderGitPullRequestUpdateEvent(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.grayText,
         )
-
-        // Without an earlier revision to compare with, the summary can't name the commits.
-        if (previous == null && (current.commit != null || current.mergeBase != null)) {
-            Spacer(modifier = StdVertSpacer)
-            Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
-                current.commit?.let {
-                    GitMetaRow(MaterialSymbols.Commit, stringRes(id = Res.string.git_commit), it.shortCommit())
-                }
-                current.mergeBase?.let {
-                    GitMetaRow(MaterialSymbols.CallMerge, stringRes(id = Res.string.git_merge_base), it.shortCommit())
-                }
-            }
-        }
 
         val cloneUrls =
             remember(noteEvent, pullRequest, quotesPullRequest) {

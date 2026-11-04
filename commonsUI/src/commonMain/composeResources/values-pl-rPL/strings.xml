@@ -2686,7 +2686,6 @@
     <string name="git_clone_address">Klonuj:</string>
     <string name="git_branch">Gałąź</string>
     <string name="git_commit">Commit</string>
-    <string name="git_merge_base">Scal gałąź główną</string>
     <string name="git_pr_update_description">Zaktualizowano pull request, uwzględniając nowy commit.</string>
     <string name="git_repo_tab_issues">Problemy</string>
     <string name="git_repo_tab_patches">Łaty &amp; PRs</string>

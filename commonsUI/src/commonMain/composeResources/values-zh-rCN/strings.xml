@@ -1757,7 +1757,6 @@
     <string name="git_clone_address">克隆：</string>
     <string name="git_branch">分支</string>
     <string name="git_commit">提交</string>
-    <string name="git_merge_base">合并基</string>
     <string name="git_pr_update_description">将拉取请求更新为新提交。</string>
     <string name="git_repo_tab_issues">议题</string>
     <string name="git_repo_tab_patches">补丁 &amp; PR</string>

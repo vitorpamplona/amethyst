@@ -61,7 +61,6 @@ import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_pr_pushed
-import com.vitorpamplona.amethyst.commons.resources.git_pr_pushed_from
 import com.vitorpamplona.amethyst.commons.resources.git_pr_pushed_rebased
 import com.vitorpamplona.amethyst.commons.resources.git_pr_update_description
 import com.vitorpamplona.amethyst.commons.resources.git_proposed
@@ -69,7 +68,6 @@ import com.vitorpamplona.amethyst.commons.resources.git_proposed_explanation
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_patch_added
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_patch_revision
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_pushed
-import com.vitorpamplona.amethyst.commons.resources.git_timeline_pushed_from
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_pushed_rebased
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_renamed
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_renamed_was
@@ -115,9 +113,6 @@ fun isGitTimelineEvent(event: Event?): Boolean =
  * edit pencil steps through the rest, as kind-1 edits do, so the thread lists none of them.
  */
 fun isHiddenInGitThread(event: Event?): Boolean = event is GitCoverNoteEvent
-
-/** A git object id shortened to its 7-character prefix for display. */
-fun String.shortCommit(): String = if (length > 7) take(7) else this
 
 /**
  * One timeline entry in the thread of the issue, patch or PR that [baseNote] acts on. The thread
@@ -338,9 +333,10 @@ fun observePreviousRevision(
 }
 
 /**
- * "pushed 4246e71 (was 70d31ba), rebased onto bca8dc9": what a PR update changed, compared with the
- * [previous] revision. [sentence] picks the capitalized form a card shows on its own over the
- * lowercase one a timeline entry puts after the author's name. Null when [current] names no commit.
+ * "rebased and pushed new commits": what a PR update changed, compared with the [previous]
+ * revision, in words rather than commit hashes, which a reader can do nothing with. [sentence]
+ * picks the capitalized form a card shows on its own over the lowercase one a timeline entry puts
+ * after the author's name. Null when [current] names no commit.
  */
 @Composable
 fun gitPullRequestPushText(
@@ -348,14 +344,11 @@ fun gitPullRequestPushText(
     previous: GitPullRequestRevision?,
     sentence: Boolean,
 ): String? {
-    val commit = current.commit?.shortCommit() ?: return null
-    val was = previous?.commit?.takeIf { it != current.commit }?.shortCommit()
-    val onto = if (previous != null && current.rebasedFrom(previous)) current.mergeBase?.shortCommit() else null
-
+    if (current.commit == null) return null
+    val rebased = previous != null && current.rebasedFrom(previous)
     return when {
-        was != null && onto != null -> stringRes(if (sentence) Res.string.git_pr_pushed_rebased else Res.string.git_timeline_pushed_rebased, commit, was, onto)
-        was != null -> stringRes(if (sentence) Res.string.git_pr_pushed_from else Res.string.git_timeline_pushed_from, commit, was)
-        else -> stringRes(if (sentence) Res.string.git_pr_pushed else Res.string.git_timeline_pushed, commit)
+        rebased -> stringRes(if (sentence) Res.string.git_pr_pushed_rebased else Res.string.git_timeline_pushed_rebased)
+        else -> stringRes(if (sentence) Res.string.git_pr_pushed else Res.string.git_timeline_pushed)
     }
 }
 

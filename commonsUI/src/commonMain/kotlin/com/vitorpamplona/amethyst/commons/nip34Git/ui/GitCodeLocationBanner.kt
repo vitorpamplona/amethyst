@@ -83,15 +83,6 @@ fun GitCodeLocationBanner(
             overflow = TextOverflow.MiddleEllipsis,
             modifier = Modifier.weight(1f, fill = false),
         )
-        location.commit?.let {
-            Text(
-                text = "@ " + it.shortCommit(),
-                style = MaterialTheme.typography.labelMedium,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.grayText,
-                maxLines = 1,
-            )
-        }
         if (location.removedSide) {
             Text(
                 text = stringRes(Res.string.git_inline_removed_lines),
