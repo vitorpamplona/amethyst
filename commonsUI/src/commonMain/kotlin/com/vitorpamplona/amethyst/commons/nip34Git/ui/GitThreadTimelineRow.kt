@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.nip34Git.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,16 +38,24 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -69,17 +78,16 @@ import com.vitorpamplona.amethyst.commons.resources.git_timeline_patch_revision
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_pushed
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_pushed_rebased
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_renamed
-import com.vitorpamplona.amethyst.commons.resources.git_timeline_renamed_was
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_set_status
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.GitStatusPill
 import com.vitorpamplona.amethyst.commons.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.commons.ui.note.NoteUsernameDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.gitStatusStyle
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
-import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
@@ -158,25 +166,16 @@ private fun StatusRow(
         container = if (authorised) style.container else MaterialTheme.colorScheme.surfaceVariant,
         content = if (authorised) style.content else MaterialTheme.colorScheme.onSurfaceVariant,
         action = stringRes(Res.string.git_timeline_set_status),
+        authorised = authorised,
         accountViewModel = accountViewModel,
         nav = nav,
-        inline = {
-            GitStatusPill(kind, forIssue = isIssue)
-            if (!authorised) TimelineLabel(stringRes(Res.string.git_proposed))
-        },
+        inline = { GitStatusPill(kind, forIssue = isIssue) },
     ) {
-        if (!authorised) {
-            Text(
-                text = stringRes(Res.string.git_proposed_explanation),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
-        }
         if (event.content.isNotBlank()) {
             Text(
                 text = event.content,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 2.dp),
+                modifier = Modifier.padding(top = 4.dp),
             )
         }
     }
@@ -217,8 +216,7 @@ private fun UpdateRow(
         newCloneUrls.forEach {
             Text(
                 text = it,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.grayText,
+                style = gitMetaStyle(),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -254,8 +252,9 @@ private fun PatchRow(
         if (title != null) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -290,31 +289,23 @@ private fun RenameRow(
         container = MaterialTheme.colorScheme.surfaceVariant,
         content = MaterialTheme.colorScheme.onSurfaceVariant,
         action = stringRes(Res.string.git_timeline_renamed),
+        authorised = authorised,
         accountViewModel = accountViewModel,
         nav = nav,
-        inline = {
-            if (!authorised) TimelineLabel(stringRes(Res.string.git_proposed))
-        },
     ) {
+        // "~~old title~~ new title", as a forge writes a rename.
         Text(
-            text = event.subjectEdit().orEmpty(),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
+            text =
+                buildAnnotatedString {
+                    if (previous != null) {
+                        withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough, color = MaterialTheme.colorScheme.grayText)) { append(previous) }
+                        append("  ")
+                    }
+                    withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(event.subjectEdit().orEmpty()) }
+                },
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(top = 2.dp),
         )
-        if (previous != null) {
-            Text(
-                text = stringRes(Res.string.git_timeline_renamed_was, previous),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
-        }
-        if (!authorised) {
-            Text(
-                text = stringRes(Res.string.git_proposed_explanation),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
-        }
     }
 }
 
@@ -349,10 +340,15 @@ fun gitPullRequestPushText(
     }
 }
 
+/** The width of the rail column, the width of a reply's avatar column, so the badges line up with it. */
+private val RailWidth = 55.dp
+private val BadgeSize = 24.dp
+
 /**
- * The shared shape of a timeline entry: a colored icon for the kind of change, then the author's
- * picture, name and time on one line and the change itself under it ([action] and [inline]
- * flowing together), with [body] for its detail.
+ * The shared shape of a timeline entry, as a forge draws its history: a small badge for the kind
+ * of change on a rail that runs down the thread, then one line of who did what and when ([action]
+ * and [inline] flowing together), with [body] for its detail. A change that did not apply
+ * ([authorised] false) is drawn muted, tagged Proposed, with the reason under it.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -366,49 +362,79 @@ private fun TimelineRowLayout(
     action: String,
     accountViewModel: AccountViewModel,
     nav: INav,
+    authorised: Boolean = true,
     inline: @Composable () -> Unit = {},
     body: @Composable ColumnScope.() -> Unit = {},
 ) {
+    val railColor = MaterialTheme.colorScheme.subtleBorder
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
                 .background(background)
-                // Match NoteComposeLayout's 12dp gutters so the icon lines up with reply avatars.
-                .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.Top,
+                // The rail runs the row's full height, so consecutive entries join into one line.
+                .drawBehind {
+                    val x = 12.dp.toPx() + RailWidth.toPx() / 2
+                    drawLine(railColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 2.dp.toPx())
+                }
+                // Match NoteComposeLayout's 12dp gutters so the rail runs under the reply avatars.
+                .padding(start = 12.dp, end = 12.dp),
     ) {
         Box(
-            modifier = Modifier.size(28.dp).clip(CircleShape).background(container),
-            contentAlignment = Alignment.Center,
+            modifier = Modifier.width(RailWidth),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            Icon(symbol = symbol, contentDescription = null, modifier = Modifier.size(16.dp), tint = content)
+            Box(
+                modifier =
+                    Modifier
+                        .padding(top = 8.dp)
+                        .size(BadgeSize)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.background)
+                        .background(container),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(symbol = symbol, contentDescription = null, modifier = Modifier.size(14.dp), tint = content)
+            }
         }
 
         Spacer(modifier = Modifier.width(10.dp))
 
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                NoteAuthorPicture(baseNote = baseNote, size = 18.dp, accountViewModel = accountViewModel, nav = nav)
-                Spacer(modifier = Modifier.width(6.dp))
-                NoteUsernameDisplay(baseNote, Modifier.weight(1f, fill = false), accountViewModel = accountViewModel, nav = nav)
-                TimeAgo(baseNote)
-            }
-
+        Column(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(vertical = 10.dp)
+                    .alpha(if (authorised) 1f else 0.65f),
+        ) {
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
                 itemVerticalAlignment = Alignment.CenterVertically,
             ) {
+                NoteAuthorPicture(baseNote = baseNote, size = 16.dp, accountViewModel = accountViewModel, nav = nav)
+                ProvideTextStyle(MaterialTheme.typography.bodySmall) {
+                    NoteUsernameDisplay(baseNote, accountViewModel = accountViewModel, nav = nav)
+                }
                 Text(
                     text = action,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.grayText,
                 )
                 inline()
+                if (!authorised) TimelineLabel(stringRes(Res.string.git_proposed))
+                Text(text = timeAgo(baseNote.createdAt(), prefix = "· "), style = gitMetaStyle(), maxLines = 1)
             }
 
             body()
+
+            if (!authorised) {
+                Text(
+                    text = stringRes(Res.string.git_proposed_explanation),
+                    style = gitMetaStyle(),
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
         }
     }
 }
@@ -423,7 +449,7 @@ private fun TimelineLabel(text: String) {
         modifier =
             Modifier
                 .clip(LabelShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, LabelShape)
                 .padding(horizontal = 6.dp, vertical = 1.dp),
     )
 }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,11 +39,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCardButtonHeight
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCardButtonPadding
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_pr_changes_retry
 import com.vitorpamplona.amethyst.commons.resources.git_pr_loading_changes
@@ -50,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_pr_no_changes
 import com.vitorpamplona.amethyst.commons.resources.git_pr_view_changes
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip34Git.git.GitHttpClient
 import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
@@ -106,13 +110,27 @@ fun GitPullRequestChanges(
 
     when (val s = state) {
         ChangesState.Idle ->
-            FilledTonalButton(
-                onClick = { load() },
-                modifier = Modifier.padding(top = 8.dp).then(GitCardButtonHeight),
-                contentPadding = GitCardButtonPadding,
+            // A bordered "Files changed" bar, the shape the diff takes once it loads, rather than
+            // a button: the diff is fetched on demand, so its stats aren't known until then.
+            Row(
+                modifier =
+                    Modifier
+                        .padding(top = 12.dp)
+                        .fillMaxWidth()
+                        .gitCard()
+                        .clickable { load() }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Icon(MaterialSymbols.Code, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(stringRes(Res.string.git_pr_view_changes), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
+                Icon(MaterialSymbols.Code, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.grayText)
+                Text(
+                    text = stringRes(Res.string.git_pr_view_changes),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(MaterialSymbols.ChevronRight, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.grayText)
             }
 
         ChangesState.Loading ->

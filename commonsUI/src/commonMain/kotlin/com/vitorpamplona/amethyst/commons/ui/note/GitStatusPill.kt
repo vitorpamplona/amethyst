@@ -95,7 +95,7 @@ internal fun gitStatusStyle(
         StatusKind.APPLIED -> {
             StatusStyle(
                 label = stringResource(if (forIssue) Res.string.git_status_resolved else Res.string.git_status_merged),
-                symbol = MaterialSymbols.Check,
+                symbol = if (forIssue) MaterialSymbols.CheckCircle else MaterialSymbols.CallMerge,
                 container = Color(0xFF8250DF),
                 content = Color.White,
             )

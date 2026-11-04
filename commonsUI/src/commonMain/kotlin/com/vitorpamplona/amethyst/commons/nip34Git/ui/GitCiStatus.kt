@@ -222,6 +222,44 @@ fun GitCiStatusBadge(
 }
 
 /**
+ * The CI mark a list row ends with: the state's glyph in its color, with "2/3" when more than one
+ * workflow ran. The full [GitCiStatusBadge] stays for the item's own header. Tapping it opens
+ * [GitCiRunsDialog].
+ */
+@Composable
+fun GitCiStatusIcon(
+    targetIdHex: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    modifier: Modifier = Modifier,
+) {
+    val summary = rememberCiSummary(targetIdHex) ?: return
+    val state = summary.state ?: return
+    var showRuns by remember { mutableStateOf(false) }
+    val tint = stateTint(state)
+    val label = stringRes(ciStyle(state).label)
+
+    Row(
+        modifier = modifier.clip(CardShape).clickable { showRuns = true }.padding(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Icon(symbol = ciSymbol(state), contentDescription = label, modifier = Modifier.size(16.dp), tint = tint)
+        if (summary.workflows.size > 1) {
+            Text(
+                text = stringRes(Res.string.git_ci_count, summary.passed, summary.workflows.size),
+                style = MaterialTheme.typography.labelSmall,
+                color = tint,
+            )
+        }
+    }
+
+    if (showRuns) {
+        GitCiRunsDialog(targetIdHex, accountViewModel, nav) { showRuns = false }
+    }
+}
+
+/**
  * Every workflow run attached to [targetIdHex], grouped by (workflow, coordinator) with the current
  * attempt open and earlier attempts behind a toggle. Each attempt lists only the Job Results it
  * quotes — with name, conclusion, signer, log tail and the full-log link — and the coordinator that
@@ -369,9 +407,9 @@ private fun attemptLabel(attempt: CiRunAttempt): String =
 @Composable
 private fun stateTint(state: CiState): Color =
     when (state) {
-        CiState.SUCCESS -> Color(0xFF1F883D)
-        CiState.FAILURE -> Color(0xFFCF222E)
-        CiState.PENDING -> Color(0xFF9A6700)
+        CiState.SUCCESS -> gitPalette().open
+        CiState.FAILURE -> gitPalette().closed
+        CiState.PENDING -> gitPalette().pending
         CiState.CANCELLED, CiState.NEUTRAL -> MaterialTheme.colorScheme.grayText
     }
 

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -41,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -52,12 +54,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -68,8 +71,11 @@ import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevision
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCiStatusBadge
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitLabelTag
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitRefTag
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusPill
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitVersionedSummary
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitMetaStyle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitPullRequestPushText
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemLabels
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemTitle
@@ -80,15 +86,14 @@ import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryA
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_branch
 import com.vitorpamplona.amethyst.commons.resources.git_clone_address
-import com.vitorpamplona.amethyst.commons.resources.git_pr_revised
 import com.vitorpamplona.amethyst.commons.resources.git_pr_update_description
 import com.vitorpamplona.amethyst.commons.resources.git_repo_personal_fork
-import com.vitorpamplona.amethyst.commons.resources.kind_git_issue
-import com.vitorpamplona.amethyst.commons.resources.kind_git_patch
-import com.vitorpamplona.amethyst.commons.resources.kind_git_pr
+import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_issues
+import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_patches
 import com.vitorpamplona.amethyst.commons.resources.kind_git_pr_update
 import com.vitorpamplona.amethyst.commons.resources.kind_git_repo
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
+import com.vitorpamplona.amethyst.commons.ui.components.CommandLine
 import com.vitorpamplona.amethyst.commons.ui.components.ScopedViewModelStore
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
@@ -97,7 +102,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
-import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitRepositoryBrowserViewModelFactory
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoExternalNotice
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoLanguageBar
@@ -108,7 +112,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.repoHasFetc
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfDoubleVertSpacer
-import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size8dp
@@ -116,7 +119,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.patch.UnifiedDiffParser
@@ -227,71 +230,184 @@ private fun LinkRow(
     }
 }
 
+/**
+ * The head of an issue, patch or PR: "ngit / Issues" (each part opens its screen), the title a
+ * size above the body it heads, and one line with the state, CI and labels. It replaces the
+ * repository card and the type chip, which said the same at twice the height.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun GitSubjectTitle(text: String) {
-    Spacer(modifier = StdVertSpacer)
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurface,
-        overflow = TextOverflow.Ellipsis,
-        maxLines = 3,
-    )
+private fun GitItemHeader(
+    repository: Address?,
+    section: GitItemSection,
+    title: String?,
+    labels: ImmutableList<String>,
+    nav: INav,
+    accountViewModel: AccountViewModel,
+    state: @Composable () -> Unit,
+) {
+    if (repository != null) {
+        GitRepositoryBreadcrumb(repository, section, accountViewModel, nav)
+        Spacer(modifier = Modifier.height(6.dp))
+    }
+
+    if (title != null) {
+        val base = LocalTextStyle.current.fontSize
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontSize = if (base.isSpecified) base * 1.2f else 20.sp,
+            lineHeight = if (base.isSpecified) base * 1.5f else 26.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 4,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
+    ) {
+        state()
+        labels.forEach { GitLabelTag(it) }
+    }
 }
 
-/**
- * A small icon + value line for a piece of git metadata such as a
- * branch. [value] is shown verbatim.
- */
+/** Which of a repository's lists an item belongs to, for its breadcrumb. */
+private enum class GitItemSection { ISSUES, PULLS }
+
 @Composable
-private fun GitMetaRow(
-    symbol: MaterialSymbol,
-    contentDescription: String?,
-    value: String,
+private fun GitRepositoryBreadcrumb(
+    repository: Address,
+    section: GitItemSection,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = LinkRowSpacing,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Icon(
-            symbol = symbol,
-            contentDescription = contentDescription,
-            modifier = Modifier.size(Size16dp),
+            symbol = MaterialSymbols.Code,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
             tint = MaterialTheme.colorScheme.grayText,
         )
+        LoadAddressableNote(repository) { repoNote ->
+            val repoEvent = repoNote?.let { observeNoteEvent<GitRepositoryEvent>(it, accountViewModel).value }
+            Text(
+                text = repoEvent?.name() ?: repository.dTag,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false).clip(ChipShape).clickable { nav.nav(Route.GitRepository(repository)) },
+            )
+        }
+        Text(text = "/", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.grayText)
         Text(
-            text = value,
-            style = MaterialTheme.typography.labelMedium.copy(fontSize = Font12SP),
+            text = stringRes(if (section == GitItemSection.ISSUES) Res.string.git_repo_tab_issues else Res.string.git_repo_tab_patches),
+            style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.grayText,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            modifier =
+                Modifier.clip(ChipShape).clickable {
+                    nav.nav(if (section == GitItemSection.ISSUES) Route.GitRepositoryIssues(repository) else Route.GitRepositoryPulls(repository))
+                },
         )
     }
 }
 
-/** The labels an issue, patch or PR shows, as small chips under its title. */
-@OptIn(ExperimentalLayoutApi::class)
+/** "hzrd149 wants to merge nixos-desktop into main", as the refs alone: source → target. */
 @Composable
-private fun GitLabelsRow(labels: ImmutableList<String>) {
-    if (labels.isEmpty()) return
-    FlowRow(
-        modifier = Modifier.padding(top = Size5dp),
-        horizontalArrangement = Arrangement.spacedBy(Size5dp),
-        verticalArrangement = Arrangement.spacedBy(Size5dp),
+private fun GitBranchLine(
+    source: String?,
+    target: String?,
+) {
+    if (source == null && target == null) return
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        labels.forEach { label ->
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier =
-                    Modifier
-                        .clip(ChipShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(horizontal = 6.dp, vertical = 1.dp),
+        Icon(
+            symbol = MaterialSymbols.AltRoute,
+            contentDescription = stringRes(id = Res.string.git_branch),
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.grayText,
+        )
+        if (source != null) GitRefTag(source, Modifier.weight(1f, fill = false))
+        if (target != null) {
+            Icon(
+                symbol = MaterialSymbols.AutoMirrored.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.grayText,
             )
+            GitRefTag(target, Modifier.weight(1f, fill = false))
+        }
+    }
+}
+
+/**
+ * Where to fetch the commits from, folded into one "Clone" line: a clone URL is a long string of
+ * keys nobody reads, and the one thing to do with it is copy a `git clone`.
+ */
+@Composable
+private fun GitCloneSection(cloneUrls: List<String>) {
+    if (cloneUrls.isEmpty()) return
+    var expanded by remember(cloneUrls) { mutableStateOf(false) }
+    val host =
+        remember(cloneUrls) {
+            cloneUrls
+                .first()
+                .removePrefix("https://")
+                .removePrefix("http://")
+                .substringBefore('/')
+        }
+
+    Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+        Row(
+            modifier =
+                Modifier
+                    .clip(ChipShape)
+                    .clickable { expanded = !expanded }
+                    .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.CloudDownload,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.grayText,
+            )
+            Text(
+                text = stringRes(id = Res.string.git_clone_address).trimEnd(':'),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = if (cloneUrls.size > 1) "$host +${cloneUrls.size - 1}" else host,
+                style = gitMetaStyle(),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            Icon(
+                symbol = if (expanded) MaterialSymbols.KeyboardArrowUp else MaterialSymbols.KeyboardArrowDown,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.grayText,
+            )
+        }
+        if (expanded) {
+            Column(Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                cloneUrls.forEach { CommandLine("git clone $it") }
+            }
         }
     }
 }
@@ -390,16 +506,7 @@ private fun GitMarkdownBody(
                 )
             }
 
-            val event = note.event
-            if (event?.hasHashtags() == true) {
-                DisplayUncitedHashtags(
-                    event = event,
-                    content = body,
-                    callbackUri = callbackUri,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
+            // The `t` tags are the item's labels, already drawn under its title.
         }
     }
 }
@@ -449,57 +556,6 @@ fun RenderGitPatchEvent(
 }
 
 @Composable
-private fun RenderShortRepositoryHeader(
-    baseNote: AddressableNote,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val noteEvent by observeNoteEvent<GitRepositoryEvent>(baseNote, accountViewModel)
-    val title = noteEvent?.name() ?: baseNote.dTag()
-    val summary = noteEvent?.description()
-
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(ChipShape)
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
-                .clickable { nav.nav(Route.GitRepository(baseNote.address)) }
-                .padding(horizontal = Size10dp, vertical = Size8dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = HeaderSpacing,
-    ) {
-        IconBadge(
-            symbol = MaterialSymbols.Code,
-            contentDescription = null,
-            background = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-            tint = MaterialTheme.colorScheme.primary,
-            size = 24.dp,
-            iconSize = 14.dp,
-        )
-
-        Column(modifier = Modifier.weight(1f, fill = true)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            summary?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.grayText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun RenderGitPatchEvent(
     noteEvent: GitPatchEvent,
     note: Note,
@@ -514,40 +570,21 @@ private fun RenderGitPatchEvent(
     LoadGitRepositoryAnnouncements(noteEvent)
 
     GitCardContainer {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = HeaderSpacing,
+        // Statuses name a series' first patch, so a later patch shows the series' state.
+        val seriesRoot = remember(noteEvent) { noteEvent.seriesRootId()?.let { LocalCache.getOrCreateNote(it) } ?: note }
+        GitItemHeader(
+            repository = remember(noteEvent) { noteEvent.repositoryAddress() },
+            section = GitItemSection.PULLS,
+            title = observeGitItemTitle(note),
+            labels = observeGitItemLabels(note),
+            nav = nav,
+            accountViewModel = accountViewModel,
         ) {
-            TypeChip(
-                text = stringRes(id = Res.string.kind_git_patch),
-                background = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
-                contentColor = MaterialTheme.colorScheme.tertiary,
-            )
-
-            // Statuses name a series' first patch, so a later patch shows the series' state.
-            val seriesRoot = remember(noteEvent) { noteEvent.seriesRootId()?.let { LocalCache.getOrCreateNote(it) } ?: note }
             GitStatusPill(item = seriesRoot, defaultIfMissing = StatusKind.OPEN)
-
             GitCiStatusBadge(targetIdHex = note.idHex, accountViewModel = accountViewModel, nav = nav)
         }
 
-        val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
-        if (repository != null) {
-            Spacer(modifier = StdVertSpacer)
-            LoadAddressableNote(repository) {
-                if (it != null) {
-                    RenderShortRepositoryHeader(it, accountViewModel, nav)
-                }
-            }
-        }
-
-        val title = observeGitItemTitle(note)
-        if (title != null) {
-            GitSubjectTitle(title)
-        }
-        GitLabelsRow(observeGitItemLabels(note))
-
-        Spacer(modifier = HalfDoubleVertSpacer)
+        Spacer(modifier = Modifier.height(12.dp))
 
         // A patch's body is its commit message and diff: a cover note sits above it, never in place of it.
         GitVersionedSummary(note, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, CoverNoteSpacing, descriptionIsSummary = false) {
@@ -616,38 +653,20 @@ private fun RenderGitIssueEvent(
     LoadGitRepositoryAnnouncements(noteEvent)
 
     GitCardContainer {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = HeaderSpacing,
+        val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
+        // A maintainer may have renamed it since (NIP-32 `#subject`): show the current title.
+        GitItemHeader(
+            repository = remember(noteEvent) { noteEvent.repositoryAddress() },
+            section = GitItemSection.ISSUES,
+            title = observeGitItemTitle(note),
+            labels = observeGitItemLabels(note),
+            nav = nav,
+            accountViewModel = accountViewModel,
         ) {
-            TypeChip(
-                text = stringRes(id = Res.string.kind_git_issue),
-                background = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                contentColor = MaterialTheme.colorScheme.primary,
-            )
-
             GitStatusPill(item = note, defaultIfMissing = StatusKind.OPEN, forIssue = true)
         }
 
-        val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
-        // A maintainer may have renamed it since (NIP-32 `#subject`): show the current title.
-        val title = observeGitItemTitle(note)
-        if (title != null) {
-            GitSubjectTitle(title)
-        }
-        GitLabelsRow(observeGitItemLabels(note))
-
-        val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
-        if (repository != null) {
-            Spacer(modifier = StdVertSpacer)
-            LoadAddressableNote(repository) {
-                if (it != null) {
-                    RenderShortRepositoryHeader(it, accountViewModel, nav)
-                }
-            }
-        }
-
-        Spacer(modifier = HalfDoubleVertSpacer)
+        Spacer(modifier = Modifier.height(12.dp))
 
         GitCoverNoteAndDescription(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
@@ -700,65 +719,23 @@ private fun RenderGitPullRequestEvent(
     val update = observeGitPullRequestUpdates(note).lastOrNull()
 
     GitCardContainer {
-        val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
-        if (repository != null) {
-            LoadAddressableNote(repository) {
-                if (it != null) {
-                    RenderShortRepositoryHeader(it, accountViewModel, nav)
-                }
-            }
-            Spacer(modifier = StdVertSpacer)
-        }
-
-        FlowRow(
-            horizontalArrangement = HeaderSpacing,
-            verticalArrangement = Arrangement.spacedBy(Size5dp),
-        ) {
-            TypeChip(
-                text = stringRes(id = Res.string.kind_git_pr),
-                background = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
-                contentColor = MaterialTheme.colorScheme.secondary,
-                symbol = MaterialSymbols.CallMerge,
-            )
-
-            GitStatusPill(item = note, defaultIfMissing = StatusKind.OPEN)
-
-            if (update != null) {
-                TypeChip(
-                    text = stringRes(id = Res.string.git_pr_revised),
-                    background = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    symbol = MaterialSymbols.Sync,
-                )
-            }
-
-            GitCiStatusBadge(
-                targetIdHex = note.idHex,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                modifier = Modifier.align(Alignment.CenterVertically),
-            )
-        }
-
         val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
         // A maintainer may have renamed it since (NIP-32 `#subject`): show the current title.
-        val title = observeGitItemTitle(note)
-        if (title != null) {
-            GitSubjectTitle(title)
+        GitItemHeader(
+            repository = remember(noteEvent) { noteEvent.repositoryAddress() },
+            section = GitItemSection.PULLS,
+            title = observeGitItemTitle(note),
+            labels = observeGitItemLabels(note),
+            nav = nav,
+            accountViewModel = accountViewModel,
+        ) {
+            GitStatusPill(item = note, defaultIfMissing = StatusKind.OPEN)
+            GitCiStatusBadge(targetIdHex = note.idHex, accountViewModel = accountViewModel, nav = nav)
         }
-        GitLabelsRow(observeGitItemLabels(note))
 
         // Where it comes from, and where it goes when it isn't the default branch (`b`).
-        val branch =
-            remember(noteEvent) {
-                val source = noteEvent.branchName()?.takeIf { it.isNotBlank() }
-                val target = noteEvent.targetBranch()
-                when {
-                    target == null -> source
-                    source == null -> "→ $target"
-                    else -> "$source → $target"
-                }
-            }
+        val source = remember(noteEvent) { noteEvent.branchName()?.takeIf { it.isNotBlank() } }
+        val target = remember(noteEvent) { noteEvent.targetBranch()?.takeIf { it.isNotBlank() } }
         val currentCommit =
             remember(noteEvent, update) {
                 (update?.currentCommit() ?: noteEvent.currentCommit())?.takeIf { it.isNotBlank() }
@@ -774,31 +751,18 @@ private fun RenderGitPullRequestEvent(
             }
 
         // Commit hashes stay off the card: a bare short hash is nothing a reader can act on. They
-        // still drive "View changes" below, and the Revised chip says when an update moved them.
-        if (branch != null) {
-            Spacer(modifier = StdVertSpacer)
-            GitMetaRow(MaterialSymbols.AltRoute, stringRes(id = Res.string.git_branch), branch)
+        // still drive the changes below, and the thread's timeline says when an update moved them.
+        if (source != null || target != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            GitBranchLine(source, target)
         }
 
-        if (cloneUrls.isNotEmpty()) {
-            Spacer(modifier = StdVertSpacer)
-            Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
-                cloneUrls.forEach { url ->
-                    LinkRow(
-                        symbol = MaterialSymbols.CloudDownload,
-                        contentDescription = stringRes(id = Res.string.git_clone_address),
-                        url = url,
-                        style = MaterialTheme.typography.labelMedium.copy(fontSize = Font12SP),
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = HalfDoubleVertSpacer)
+        Spacer(modifier = Modifier.height(12.dp))
 
         GitCoverNoteAndDescription(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
         if (!makeItShort) {
+            GitCloneSection(cloneUrls)
             GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel)
             GitStatusActions(note, accountViewModel)
         }
@@ -868,11 +832,7 @@ private fun RenderGitPullRequestUpdateEvent(
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
         if (repository != null && !quotesPullRequest) {
             Spacer(modifier = StdVertSpacer)
-            LoadAddressableNote(repository) {
-                if (it != null) {
-                    RenderShortRepositoryHeader(it, accountViewModel, nav)
-                }
-            }
+            GitRepositoryBreadcrumb(repository, GitItemSection.PULLS, accountViewModel, nav)
         }
 
         val current = remember(noteEvent) { GitPullRequestRevision.of(noteEvent) }
@@ -994,13 +954,7 @@ private fun RenderGitRepositoryEvent(
                 horizontalArrangement = Arrangement.spacedBy(Size5dp),
                 verticalArrangement = Arrangement.spacedBy(Size5dp),
             ) {
-                topics.forEach { topic ->
-                    TypeChip(
-                        text = "#$topic",
-                        background = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                        contentColor = MaterialTheme.colorScheme.grayText,
-                    )
-                }
+                topics.forEach { topic -> GitLabelTag(topic) }
             }
         }
     }

@@ -20,17 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.nip34Git.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -38,7 +36,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,14 +47,17 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.coverNote.GitCoverNotes
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_cover_note
+import com.vitorpamplona.amethyst.commons.resources.git_summary_edited_by
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayEditStatus
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 
@@ -97,7 +97,7 @@ fun GitVersionedSummary(
     val cover = shown?.event as? GitCoverNoteEvent
 
     if (cover != null) {
-        CoverNoteBox(cover, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, coverModifier) {
+        CoverNoteBox(cover, descriptionIsSummary, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, coverModifier) {
             DisplayEditStatus(editState)
         }
         if (!descriptionIsSummary) description()
@@ -119,9 +119,15 @@ fun observeCoverNoteVersions(item: Note): List<Note> {
     return remember(versions) { versions.mapNotNull { LocalCache.getNoteIfExists(it.id) } }
 }
 
+/**
+ * The current cover note, drawn as the item's description itself, since that is what it is now,
+ * with one muted line saying who wrote this version. On a patch, whose description is its commit
+ * message, it reads as a note above the diff instead ([asDescription] false).
+ */
 @Composable
 private fun CoverNoteBox(
     cover: GitCoverNoteEvent,
+    asDescription: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
@@ -131,17 +137,9 @@ private fun CoverNoteBox(
     trailing: @Composable () -> Unit,
 ) {
     Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clip(BannerShape)
-                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), BannerShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.06f))
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        GitCoverNoteHeader(cover, accountViewModel, trailing = trailing)
-
         val tags = remember(cover) { cover.tags.toImmutableListOfLists() }
         TranslatableRichTextViewer(
             content = cover.content,
@@ -155,6 +153,41 @@ private fun CoverNoteBox(
             accountViewModel = accountViewModel,
             nav = nav,
         )
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            // The version pencil ([trailing]) already marks an edit; a patch's note gets a pin.
+            if (!asDescription) {
+                Icon(
+                    symbol = MaterialSymbols.PushPin,
+                    contentDescription = null,
+                    modifier = Modifier.size(13.dp),
+                    tint = MaterialTheme.colorScheme.grayText,
+                )
+            }
+            Text(
+                text = stringRes(if (asDescription) Res.string.git_summary_edited_by else Res.string.git_cover_note),
+                style = gitMetaStyle(),
+                maxLines = 1,
+            )
+            LoadUser(baseUserHex = cover.pubKey) { user ->
+                if (user != null) {
+                    ProvideTextStyle(gitMetaStyle()) {
+                        UsernameDisplay(
+                            user,
+                            Modifier.weight(1f, fill = false),
+                            fontWeight = FontWeight.SemiBold,
+                            textColor = MaterialTheme.colorScheme.grayText,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
+                }
+            }
+            Text(text = timeAgo(cover.createdAt, prefix = "· "), style = gitMetaStyle(), maxLines = 1)
+            trailing()
+        }
     }
 }
 

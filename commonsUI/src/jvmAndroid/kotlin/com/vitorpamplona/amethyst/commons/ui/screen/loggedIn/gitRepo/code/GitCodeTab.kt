@@ -51,6 +51,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -63,7 +65,9 @@ import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.GitStateMismatch
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitLoadingBox
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitMessageBox
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitShape
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.RepoInfoBar
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_repo_code_error
 import com.vitorpamplona.amethyst.commons.resources.git_repo_code_loading
@@ -80,6 +84,8 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPa
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
 import com.vitorpamplona.quartz.nip34Git.git.GitTreeEntry
@@ -165,10 +171,15 @@ private fun CodeBrowser(
     }
 
     var query by rememberSaveable(snapshot.headCommit) { mutableStateOf("") }
+    var searchOpen by rememberSaveable(snapshot.headCommit) { mutableStateOf(false) }
     val searching = query.isNotBlank()
 
-    PlatformBackHandler(enabled = searching || path.isNotEmpty()) {
-        if (searching) query = "" else pathString = path.dropLast(1).joinToString("/")
+    PlatformBackHandler(enabled = searchOpen || searching || path.isNotEmpty()) {
+        when {
+            searching -> query = ""
+            searchOpen -> searchOpen = false
+            else -> pathString = path.dropLast(1).joinToString("/")
+        }
     }
 
     val entries = remember(snapshot, pathString) { snapshot.entriesAt(path).orEmpty() }
@@ -190,11 +201,16 @@ private fun CodeBrowser(
                 tags = snapshot.tags,
                 onSelectRef = { viewModel.switchRef(it) },
                 onHistory = { showHistory = true },
+                onSearch = {
+                    searchOpen = !searchOpen
+                    if (!searchOpen) query = ""
+                },
             )
         }
-        item(key = "file-search") {
-            FileSearchField(query = query, onQueryChange = { query = it })
-            HorizontalDivider(thickness = 0.5.dp)
+        if (searchOpen || searching) {
+            item(key = "file-search") {
+                FileSearchField(query = query, onQueryChange = { query = it })
+            }
         }
 
         if (searching) {
@@ -213,13 +229,15 @@ private fun CodeBrowser(
                 }
             }
         } else {
-            item(key = "breadcrumb") {
-                Breadcrumb(
-                    path = path,
-                    onNavigate = { depth -> pathString = path.take(depth).joinToString("/") },
-                )
-                HorizontalDivider(thickness = 0.5.dp)
+            if (path.isNotEmpty()) {
+                item(key = "breadcrumb") {
+                    Breadcrumb(
+                        path = path,
+                        onNavigate = { depth -> pathString = path.take(depth).joinToString("/") },
+                    )
+                }
             }
+            item(key = "list-top") { HorizontalDivider(thickness = 0.5.dp) }
             if (entries.isEmpty()) {
                 item(key = "empty-folder") {
                     GitMessageBox(MaterialSymbols.Folder, stringRes(Res.string.git_repo_empty_folder), Modifier.fillParentMaxWidth())
@@ -234,9 +252,8 @@ private fun CodeBrowser(
                         },
                     )
                     HorizontalDivider(
-                        modifier = Modifier.padding(start = 44.dp),
                         thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                        color = MaterialTheme.colorScheme.subtleBorder,
                     )
                 }
             }
@@ -249,6 +266,9 @@ private fun FileSearchField(
     query: String,
     onQueryChange: (String) -> Unit,
 ) {
+    // Opened from the search icon: take the keyboard at once.
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
     TextField(
         value = query,
         onValueChange = onQueryChange,
@@ -264,16 +284,18 @@ private fun FileSearchField(
         },
         colors =
             TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
             ),
+        textStyle = MaterialTheme.typography.bodyMedium,
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 2.dp)
-                .clip(RoundedCornerShape(10.dp)),
+                .padding(horizontal = 12.dp, vertical = 4.dp)
+                .gitCard()
+                .focusRequester(focusRequester),
     )
 }
 
@@ -301,7 +323,6 @@ private fun SearchResultRow(
             Text(
                 text = path.last(),
                 style = MaterialTheme.typography.bodyMedium,
-                fontFamily = FontFamily.Monospace,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -318,6 +339,7 @@ private fun SearchResultRow(
     }
 }
 
+/** "root / src / apps": each folder above the current one opens it. */
 @Composable
 private fun Breadcrumb(
     path: List<String>,
@@ -328,18 +350,12 @@ private fun Breadcrumb(
             Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 10.dp, vertical = 3.dp),
+                .padding(horizontal = 10.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Crumb(label = stringRes(Res.string.git_repo_root), current = path.isEmpty()) { onNavigate(0) }
         path.forEachIndexed { index, segment ->
-            Icon(
-                symbol = MaterialSymbols.ChevronRight,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f),
-            )
+            Text(text = "/", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.grayText)
             Crumb(label = segment, current = index == path.lastIndex) { onNavigate(index + 1) }
         }
     }
@@ -351,26 +367,17 @@ private fun Crumb(
     current: Boolean,
     onClick: () -> Unit,
 ) {
-    val background =
-        if (current) {
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        }
-    val textColor = if (current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-
     Text(
         text = label,
-        style = MaterialTheme.typography.labelLarge,
+        style = MaterialTheme.typography.bodyMedium,
         fontWeight = if (current) FontWeight.SemiBold else FontWeight.Normal,
-        color = textColor,
+        color = if (current) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
         maxLines = 1,
         modifier =
             Modifier
-                .clip(RoundedCornerShape(8.dp))
+                .clip(GitShape)
                 .let { if (!current) it.clickable(onClick = onClick) else it }
-                .background(background)
-                .padding(horizontal = 10.dp, vertical = 4.dp),
+                .padding(horizontal = 4.dp, vertical = 4.dp),
     )
 }
 
@@ -384,9 +391,9 @@ private fun EntryRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = 16.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         val symbol =
             when {
@@ -394,30 +401,21 @@ private fun EntryRow(
                 entry.isSubmodule -> MaterialSymbols.Code
                 else -> MaterialSymbols.Description
             }
-        val tint = if (entry.isFolder) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        // One font for folders and files, folders told apart by their tinted icon, as forges list a tree.
+        val tint = if (entry.isFolder) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.grayText
         Icon(
             symbol = symbol,
             contentDescription = null,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(18.dp),
             tint = tint,
         )
         Text(
             text = entry.name,
             style = MaterialTheme.typography.bodyMedium,
-            fontFamily = if (entry.isFolder) null else FontFamily.Monospace,
-            fontWeight = if (entry.isFolder) FontWeight.Medium else FontWeight.Normal,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        if (entry.isFolder) {
-            Icon(
-                symbol = MaterialSymbols.ChevronRight,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
-            )
-        }
     }
 }
 

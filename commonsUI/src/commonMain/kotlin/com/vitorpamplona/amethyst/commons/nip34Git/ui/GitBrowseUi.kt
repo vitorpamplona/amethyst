@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.nip34Git.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,9 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -61,9 +58,11 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_commits
 import com.vitorpamplona.amethyst.commons.resources.git_repo_default_branch
 import com.vitorpamplona.amethyst.commons.resources.git_repo_item_count
 import com.vitorpamplona.amethyst.commons.resources.git_repo_retry
+import com.vitorpamplona.amethyst.commons.resources.git_repo_search_files
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tags
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 
 /** Centered spinner + caption while the repository or a file is loading. */
 @Composable
@@ -147,35 +146,43 @@ fun RepoInfoBar(
     tags: List<String> = emptyList(),
     onSelectRef: ((String?) -> Unit)? = null,
     onHistory: (() -> Unit)? = null,
+    onSearch: (() -> Unit)? = null,
 ) {
+    // The branch picker on the left; search and history as quiet actions on the right.
     Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(
-            modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            if (onSelectRef != null && (branches.size + tags.size) > 1) {
-                BranchSelector(branch, branches, tags, onSelectRef)
-            } else if (branch != null) {
-                InfoChip(symbol = MaterialSymbols.AltRoute, label = branch)
+        if (onSelectRef != null && (branches.size + tags.size) > 1) {
+            BranchSelector(branch, branches, tags, onSelectRef)
+        } else if (branch != null) {
+            InfoChip(symbol = MaterialSymbols.AltRoute, label = branch)
+        }
+        Text(
+            text = pluralStringRes(Res.plurals.git_repo_item_count, entryCount, entryCount),
+            style = gitMetaStyle(),
+            maxLines = 1,
+            modifier = Modifier.weight(1f),
+        )
+        if (onSearch != null) {
+            IconButton(onClick = onSearch) {
+                Icon(
+                    symbol = MaterialSymbols.Search,
+                    contentDescription = stringRes(Res.string.git_repo_search_files),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.grayText,
+                )
             }
-            Text(
-                text = pluralStringRes(Res.plurals.git_repo_item_count, entryCount, entryCount),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-            )
         }
         if (onHistory != null) {
-            IconButton(onClick = onHistory) {
-                Icon(
-                    symbol = MaterialSymbols.History,
-                    contentDescription = stringRes(Res.string.git_repo_commits),
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+            Row(
+                modifier = Modifier.clip(GitShape).clickable(onClick = onHistory).padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Icon(symbol = MaterialSymbols.History, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.grayText)
+                Text(text = stringRes(Res.string.git_repo_commits), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.grayText)
             }
         }
     }
@@ -193,19 +200,19 @@ private fun BranchSelector(
         Row(
             modifier =
                 Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .gitCard()
                     .clickable { expanded = true }
-                    .padding(start = 8.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                    .padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Icon(MaterialSymbols.AltRoute, contentDescription = null, modifier = Modifier.size(15.dp), tint = MaterialTheme.colorScheme.primary)
+            Icon(MaterialSymbols.AltRoute, contentDescription = null, modifier = Modifier.size(15.dp), tint = MaterialTheme.colorScheme.grayText)
             Text(
                 text = current ?: stringRes(Res.string.git_repo_default_branch),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
+                modifier = Modifier.padding(start = 4.dp),
             )
             Icon(MaterialSymbols.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -273,9 +280,8 @@ private fun InfoChip(
     Row(
         modifier =
             Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .gitCard()
+                .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -283,12 +289,12 @@ private fun InfoChip(
             symbol = symbol,
             contentDescription = null,
             modifier = Modifier.size(15.dp),
-            tint = MaterialTheme.colorScheme.primary,
+            tint = MaterialTheme.colorScheme.grayText,
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

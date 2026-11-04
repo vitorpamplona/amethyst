@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,7 +41,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -58,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.CodeHighlighter
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_diff_binary
 import com.vitorpamplona.amethyst.commons.resources.git_diff_files_changed
@@ -122,12 +121,16 @@ private fun DiffStatSummary(parsed: ParsedPatch) {
     }
 }
 
+/** Files with more diff lines than this start folded. */
+private const val FOLD_LINES = 200
+
 @Composable
 private fun DiffFileCard(
     file: GitDiffFile,
     highlightEnabled: Boolean,
 ) {
-    var expanded by rememberSaveable(file.displayPath) { mutableStateOf(true) }
+    // A long file starts folded, so one generated lockfile doesn't bury the rest of the change.
+    var expanded by rememberSaveable(file.displayPath) { mutableStateOf(file.hunks.sumOf { it.lines.size } <= FOLD_LINES) }
     val language = remember(file.displayPath) { CodeHighlighter.languageForFile(file.displayPath) }
     // The app's theme, not the system's: they differ when the user picks one in Settings, and
     // the highlighter paints plain code and punctuation for the background it is told about.
@@ -137,8 +140,7 @@ private fun DiffFileCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surface),
+                .gitCard(),
     ) {
         // File header
         Row(
@@ -146,7 +148,7 @@ private fun DiffFileCard(
                 Modifier
                     .fillMaxWidth()
                     .clickable { expanded = !expanded }
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f))
                     .padding(horizontal = 10.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),

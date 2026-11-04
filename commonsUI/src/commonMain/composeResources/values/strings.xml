@@ -2757,6 +2757,9 @@
     <string name="git_repo_filter_open">Open</string>
     <string name="git_repo_filter_closed">Closed &amp; Resolved</string>
     <string name="git_repo_label_all">All</string>
+    <string name="git_repo_labels">Labels</string>
+    <string name="git_repo_readme">README</string>
+    <string name="git_repo_maintainers">Maintained by</string>
     <string name="git_repo_bookmark">Bookmark repository</string>
     <string name="git_repo_stat_branches">Branches</string>
     <string name="git_repo_stat_tags">Tags</string>
@@ -2785,6 +2788,7 @@
     <string name="git_repo_search_files">Search files…</string>
     <string name="git_repo_no_search_results">No matching files.</string>
     <string name="git_repo_commits">Commits</string>
+    <string name="git_repo_commit">Commit</string>
     <string name="git_repo_no_commits">No commit history available.</string>
     <string name="git_repo_copy_file">Copy file contents</string>
     <string name="git_repo_plain_text">Text</string>
@@ -2808,6 +2812,7 @@
     <string name="git_pr_changes_retry">Retry loading changes</string>
     <string name="git_pr_revised">Revised</string>
     <string name="git_cover_note">Cover note</string>
+    <string name="git_summary_edited_by">Edited by</string>
     <string name="git_pr_pushed">Pushed new commits.</string>
     <string name="git_pr_pushed_rebased">Rebased and pushed new commits.</string>
     <string name="git_timeline_pushed">pushed new commits</string>
@@ -2816,8 +2821,7 @@
     <string name="git_inline_removed_lines">(removed lines)</string>
     <string name="git_timeline_patch_added">added a patch</string>
     <string name="git_timeline_patch_revision">posted a new revision</string>
-    <string name="git_timeline_renamed">changed the title to</string>
-    <string name="git_timeline_renamed_was">Was: %1$s</string>
+    <string name="git_timeline_renamed">changed the title</string>
     <string name="git_proposed">Proposed</string>
     <string name="git_proposed_explanation">Not applied: only the author or a repository maintainer can change this.</string>
     <string name="git_ci_success">CI passed</string>

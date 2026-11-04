@@ -21,18 +21,26 @@
 package com.vitorpamplona.amethyst.commons.nip34Git.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -46,18 +54,30 @@ import com.vitorpamplona.amethyst.commons.resources.git_status_reopen
 import com.vitorpamplona.amethyst.commons.resources.git_status_resolve
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 
 /** Compact sizing shared by the small action buttons on git cards. */
 val GitCardButtonHeight = Modifier.height(32.dp)
 val GitCardButtonPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
 
+private val PrimaryShape = RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp, topEnd = 0.dp, bottomEnd = 0.dp)
+private val MenuShape = RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 6.dp, bottomEnd = 6.dp)
+private val SingleShape = RoundedCornerShape(6.dp)
+
+private class StatusAction(
+    val target: StatusKind,
+    val symbol: MaterialSymbol,
+    val label: String,
+)
+
 /**
- * NIP-34 status buttons for an issue, patch or pull request, by its [current] status:
- * - closed, merged or resolved: "Reopen";
- * - a draft patch or PR: "Ready for review"; an open one: "Mark as draft";
- * - an open patch or PR, to a repository maintainer ([canMerge]): "Mark merged";
+ * NIP-34 status controls for an issue, patch or pull request, as one split button: the step the
+ * item most likely takes next from its [current] status, and a menu with the others.
+ * - closed, merged or resolved: "Reopen", alone;
+ * - an open patch or PR: "Mark merged" to a repository maintainer ([canMerge]), "Mark as draft"
+ *   to anyone else; a draft one: "Ready for review";
  * - an open issue: "Resolve";
- * - anything open: "Close".
+ * - anything open: "Close", always in the menu.
  * The host decides who may see them and publishes the status event.
  */
 @Composable
@@ -67,53 +87,74 @@ fun GitStatusButtons(
     canMerge: Boolean,
     onSetStatus: (StatusKind) -> Unit,
 ) {
-    FlowRow(
-        modifier = Modifier.padding(top = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+    val reopen = StatusAction(StatusKind.OPEN, MaterialSymbols.RadioButtonChecked, stringRes(Res.string.git_status_reopen))
+    val ready = StatusAction(StatusKind.OPEN, MaterialSymbols.RadioButtonChecked, stringRes(Res.string.git_status_ready))
+    val draft = StatusAction(StatusKind.DRAFT, MaterialSymbols.EditNote, stringRes(Res.string.git_status_mark_draft))
+    val merge = StatusAction(StatusKind.APPLIED, MaterialSymbols.CallMerge, stringRes(Res.string.git_status_mark_merged))
+    val resolve = StatusAction(StatusKind.APPLIED, MaterialSymbols.CheckCircle, stringRes(Res.string.git_status_resolve))
+    val close = StatusAction(StatusKind.CLOSED, MaterialSymbols.Cancel, stringRes(Res.string.git_status_close))
+
+    val actions: List<StatusAction> =
+        when {
+            current == StatusKind.CLOSED || current == StatusKind.APPLIED -> listOf(reopen)
+            !isPatchOrPr -> listOf(resolve, close)
+            current == StatusKind.DRAFT -> listOfNotNull(ready, merge.takeIf { canMerge }, close)
+            canMerge -> listOf(merge, draft, close)
+            else -> listOf(draft, close)
+        }
+
+    val primary = actions.first()
+    val rest = actions.drop(1)
+    val container = if (primary.target == StatusKind.DRAFT) MaterialTheme.colorScheme.surfaceVariant else gitStateColor(primary.target)
+    val content = if (primary.target == StatusKind.DRAFT) MaterialTheme.colorScheme.onSurfaceVariant else Color.White
+    val colors = ButtonDefaults.buttonColors(containerColor = container, contentColor = content)
+
+    Row(
+        modifier = Modifier.padding(top = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(1.dp),
     ) {
-        if (current == StatusKind.CLOSED || current == StatusKind.APPLIED) {
-            StatusButton(MaterialSymbols.RadioButtonChecked, stringRes(Res.string.git_status_reopen)) { onSetStatus(StatusKind.OPEN) }
-            return@FlowRow
-        }
-
-        if (isPatchOrPr) {
-            if (current == StatusKind.DRAFT) {
-                StatusButton(MaterialSymbols.RadioButtonChecked, stringRes(Res.string.git_status_ready)) { onSetStatus(StatusKind.OPEN) }
-            } else {
-                StatusButton(MaterialSymbols.EditNote, stringRes(Res.string.git_status_mark_draft)) { onSetStatus(StatusKind.DRAFT) }
-            }
-            if (canMerge) {
-                StatusButton(MaterialSymbols.Check, stringRes(Res.string.git_status_mark_merged)) { onSetStatus(StatusKind.APPLIED) }
-            }
-        } else {
-            StatusButton(MaterialSymbols.Check, stringRes(Res.string.git_status_resolve)) { onSetStatus(StatusKind.APPLIED) }
-        }
-
-        OutlinedButton(
-            onClick = { onSetStatus(StatusKind.CLOSED) },
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+        Button(
+            onClick = { onSetStatus(primary.target) },
+            shape = if (rest.isEmpty()) SingleShape else PrimaryShape,
+            colors = colors,
             modifier = GitCardButtonHeight,
             contentPadding = GitCardButtonPadding,
         ) {
-            Icon(MaterialSymbols.Cancel, contentDescription = null, modifier = Modifier.size(16.dp))
-            Text(stringRes(Res.string.git_status_close), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
+            Icon(primary.symbol, contentDescription = null, modifier = Modifier.size(16.dp))
+            Text(primary.label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 6.dp))
         }
-    }
-}
 
-@Composable
-private fun StatusButton(
-    symbol: MaterialSymbol,
-    label: String,
-    onClick: () -> Unit,
-) {
-    FilledTonalButton(
-        onClick = onClick,
-        modifier = GitCardButtonHeight,
-        contentPadding = GitCardButtonPadding,
-    ) {
-        Icon(symbol, contentDescription = null, modifier = Modifier.size(16.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
+        if (rest.isNotEmpty()) {
+            var expanded by remember { mutableStateOf(false) }
+            Box {
+                Button(
+                    onClick = { expanded = true },
+                    shape = MenuShape,
+                    colors = colors,
+                    modifier = GitCardButtonHeight,
+                    contentPadding = PaddingValues(horizontal = 6.dp),
+                ) {
+                    Icon(MaterialSymbols.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    rest.forEach { action ->
+                        val tint = if (action.target == StatusKind.CLOSED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.grayText
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = action.label,
+                                    color = if (action.target == StatusKind.CLOSED) MaterialTheme.colorScheme.error else Color.Unspecified,
+                                )
+                            },
+                            leadingIcon = { Icon(action.symbol, contentDescription = null, modifier = Modifier.size(18.dp), tint = tint) },
+                            onClick = {
+                                expanded = false
+                                onSetStatus(action.target)
+                            },
+                        )
+                    }
+                }
+            }
+        }
     }
 }

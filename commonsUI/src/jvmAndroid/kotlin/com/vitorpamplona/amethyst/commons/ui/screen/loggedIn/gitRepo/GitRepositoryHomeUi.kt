@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -57,9 +58,16 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitIconTile
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitLabelTag
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStateIcon
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitCard
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitMetaStyle
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitStatus
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.statusKind
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_repo_external_host_body
 import com.vitorpamplona.amethyst.commons.resources.git_repo_external_host_title
+import com.vitorpamplona.amethyst.commons.resources.git_repo_maintainers
 import com.vitorpamplona.amethyst.commons.resources.git_repo_open_in_browser
 import com.vitorpamplona.amethyst.commons.resources.git_repo_personal_fork
 import com.vitorpamplona.amethyst.commons.resources.git_repo_push_first_body
@@ -76,31 +84,29 @@ import com.vitorpamplona.amethyst.commons.ui.components.CommandLine
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
-import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
+import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.gitSubjectOf
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
-import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
-import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.repository.NostrCloneUrl
-
-private val CardShape = RoundedCornerShape(15.dp)
 
 // ---------------------------------------------------------------------------
 // Hero / identity — name, description and topics in the dashboard language.
 // ---------------------------------------------------------------------------
 
-/** The top-bar title: owner avatar + project name, with the repo description as a subtitle. */
+/** The top-bar title: the owner's avatar and the project name. */
 @Composable
 fun RepoTitleBar(
     event: GitRepositoryEvent?,
@@ -109,61 +115,77 @@ fun RepoTitleBar(
     nav: INav,
 ) {
     val owner = event?.pubKey?.let { LocalCache.checkGetOrCreateUser(it) }
-    val description = event?.description()?.takeIf { it.isNotBlank() }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (owner != null) {
             ClickableUserPicture(
                 baseUser = owner,
-                size = 28.dp,
+                size = 26.dp,
                 accountViewModel = accountViewModel,
                 onClick = { nav.nav(Route.Profile(it.pubkeyHex)) },
             )
         }
-        Column(Modifier.weight(1f, fill = false)) {
-            Text(
-                text = event?.name() ?: fallback,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (description != null) {
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.grayText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+        Text(
+            text = event?.name() ?: fallback,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * What the project is: its description in full, its topics and fork badge, and the people who
+ * maintain it.
+ */
+@Composable
+fun RepoHero(
+    event: GitRepositoryEvent,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val description = event.description()?.takeIf { it.isNotBlank() }
+    val topics = remember(event) { event.hashtags().filter { it.isNotBlank() } }
+    val isFork = event.isPersonalFork()
+    val maintainers = remember(event) { (listOf(event.pubKey) + event.maintainers()).distinct() }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (description != null) {
+            Text(text = description, style = MaterialTheme.typography.bodyLarge)
+        }
+        if (topics.isNotEmpty() || isFork) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (isFork) GitLabelTag(stringRes(Res.string.git_repo_personal_fork))
+                topics.forEach { GitLabelTag(it) }
+            }
+        }
+        // Who maintains it: a few by name, a crowd by face.
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            itemVerticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = stringRes(Res.string.git_repo_maintainers), style = gitMetaStyle())
+            val named = maintainers.size <= 3
+            maintainers.take(8).forEach { key ->
+                val user = remember(key) { LocalCache.getOrCreateUser(key) }
+                Row(
+                    modifier = Modifier.clip(CircleShape).clickable { nav.nav(Route.Profile(key)) },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    UserPicture(user = user, size = 20.dp, accountViewModel = accountViewModel, nav = nav)
+                    if (named) {
+                        ProvideTextStyle(MaterialTheme.typography.bodySmall) {
+                            UsernameDisplay(user, fontWeight = FontWeight.SemiBold, accountViewModel = accountViewModel)
+                        }
+                    }
+                }
+            }
+            if (maintainers.size > 8) {
+                Text(text = "+" + (maintainers.size - 8), style = gitMetaStyle())
             }
         }
     }
-}
-
-/** The repository's topic chips and personal-fork badge (name + description live in the top bar). */
-@Composable
-fun RepoHero(event: GitRepositoryEvent) {
-    val topics = remember(event) { event.hashtags().filter { it.isNotBlank() } }
-    val isFork = event.isPersonalFork()
-    if (topics.isEmpty() && !isFork) return
-
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (isFork) PillChip(stringRes(Res.string.git_repo_personal_fork))
-        topics.forEach { PillChip("#$it") }
-    }
-}
-
-@Composable
-private fun PillChip(label: String) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.grayText,
-        modifier =
-            Modifier
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
-                .padding(horizontal = 10.dp, vertical = 3.dp),
-    )
 }
 
 // ---------------------------------------------------------------------------
@@ -200,47 +222,31 @@ fun RepoStatTiles(
     files: Int,
     updatedEpochSec: Long?,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    // One quiet line of facts, as a forge puts them under the name, in place of a tile dashboard.
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
-        StatTile(MaterialSymbols.Commit, branches.toString(), stringRes(Res.string.git_repo_stat_branches), Modifier.weight(1f))
-        StatTile(MaterialSymbols.Tag, tags.toString(), stringRes(Res.string.git_repo_stat_tags), Modifier.weight(1f))
-        StatTile(MaterialSymbols.Description, compactCount(files), stringRes(Res.string.git_repo_stat_files), Modifier.weight(1f))
-        StatTile(MaterialSymbols.Schedule, updatedEpochSec?.let { timeAgo(it, prefix = "") } ?: "—", stringRes(Res.string.git_repo_stat_updated), Modifier.weight(1f))
+        StatItem(MaterialSymbols.AltRoute, branches.toString(), stringRes(Res.string.git_repo_stat_branches))
+        StatItem(MaterialSymbols.Tag, tags.toString(), stringRes(Res.string.git_repo_stat_tags))
+        StatItem(MaterialSymbols.Description, compactCount(files), stringRes(Res.string.git_repo_stat_files))
+        if (updatedEpochSec != null) {
+            StatItem(MaterialSymbols.Schedule, timeAgo(updatedEpochSec, prefix = ""), stringRes(Res.string.git_repo_stat_updated))
+        }
     }
 }
 
 @Composable
-private fun StatTile(
+private fun StatItem(
     symbol: MaterialSymbol,
     value: String,
     label: String,
-    modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .clip(CardShape)
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(vertical = 12.dp, horizontal = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
-        Icon(symbol = symbol, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.grayText,
-            maxLines = 1,
-        )
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Icon(symbol = symbol, contentDescription = null, modifier = Modifier.size(15.dp), tint = MaterialTheme.colorScheme.grayText)
+        Text(text = value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+        Text(text = label.lowercase(), style = gitMetaStyle(), maxLines = 1)
     }
 }
 
@@ -262,7 +268,7 @@ fun RepoLanguageBar(slices: List<LanguageSlice>) {
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(10.dp)
+                    .height(6.dp)
                     .clip(CircleShape),
         ) {
             slices.forEach { slice ->
@@ -270,7 +276,7 @@ fun RepoLanguageBar(slices: List<LanguageSlice>) {
                     modifier =
                         Modifier
                             .weight(slice.fraction.coerceAtLeast(0.0001f))
-                            .height(10.dp)
+                            .height(6.dp)
                             .background(slice.color),
                 )
             }
@@ -278,7 +284,7 @@ fun RepoLanguageBar(slices: List<LanguageSlice>) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             slices.forEach { slice ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Box(Modifier.size(9.dp).clip(CircleShape).background(slice.color))
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(slice.color))
                     Text(
                         text = slice.name + "  " + (slice.fraction * 100).toInt() + "%",
                         style = MaterialTheme.typography.labelSmall,
@@ -375,8 +381,7 @@ fun RepoExternalNotice(event: GitRepositoryEvent) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(CardShape)
-                .background(MaterialTheme.colorScheme.surface)
+                .gitCard()
                 .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -456,34 +461,33 @@ fun RepoLastCommit(
     commit: GitCommit,
     onClick: (() -> Unit)? = null,
 ) {
+    // The forge's latest-commit bar: who, what and when, on one line.
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(CardShape)
-                .background(MaterialTheme.colorScheme.surface)
+                .gitCard()
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f))
                 .let { if (onClick != null) it.clickable(onClick = onClick) else it }
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(MaterialSymbols.Commit, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = commit.summary,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = commit.authorName + timeAgo(commit.authorTimeSec, prefix = " · "),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.grayText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        Text(
+            text = commit.authorName,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+        )
+        Text(
+            text = commit.summary,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.grayText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Text(text = timeAgo(commit.authorTimeSec, prefix = ""), style = gitMetaStyle(), maxLines = 1)
     }
 }
 
@@ -498,22 +502,19 @@ fun RepoActivityPulse(
     nav: INav,
 ) {
     if (items.isEmpty()) return
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(CardShape)
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(vertical = 6.dp),
-    ) {
+    Column(Modifier.fillMaxWidth()) {
         Text(
             text = stringRes(Res.string.git_repo_recent_activity),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.grayText,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+            modifier = Modifier.padding(bottom = 6.dp),
         )
-        items.forEach { ActivityRow(it, accountViewModel, nav) }
+        Column(Modifier.fillMaxWidth().gitCard()) {
+            items.forEachIndexed { index, note ->
+                if (index > 0) HorizontalDivider(thickness = DividerThickness, color = MaterialTheme.colorScheme.subtleBorder)
+                ActivityRow(note, accountViewModel, nav)
+            }
+        }
     }
 }
 
@@ -524,21 +525,17 @@ private fun ActivityRow(
     nav: INav,
 ) {
     val event = note.event ?: return
+    val kind = observeGitStatus(note)?.statusKind() ?: StatusKind.OPEN
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable { nav.nav { routeFor(note, accountViewModel.account) } }
-                .padding(horizontal = 14.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(
-            symbol = activityIcon(event),
-            contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        GitStateIcon(kind = kind, forIssue = event is GitIssueEvent, contentDescription = null, size = 16.dp)
         Text(
             text = gitSubjectOf(note) ?: stringRes(Res.string.git_untitled),
             style = MaterialTheme.typography.bodyMedium,
@@ -546,17 +543,9 @@ private fun ActivityRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        TimeAgo(note)
+        Text(text = timeAgo(note.createdAt(), prefix = ""), style = gitMetaStyle(), maxLines = 1)
     }
 }
-
-private fun activityIcon(event: Event): MaterialSymbol =
-    when (event) {
-        is GitIssueEvent -> MaterialSymbols.ErrorOutline
-        is GitPullRequestEvent -> MaterialSymbols.CallMerge
-        is GitPatchEvent -> MaterialSymbols.CallMerge
-        else -> MaterialSymbols.Commit
-    }
 
 // ---------------------------------------------------------------------------
 // Helpers.

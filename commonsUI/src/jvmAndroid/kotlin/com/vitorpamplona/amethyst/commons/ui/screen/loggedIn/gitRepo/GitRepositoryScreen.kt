@@ -22,24 +22,32 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,6 +81,8 @@ import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitShape
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitCard
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryActivity
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitSignedState
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
@@ -83,6 +94,8 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_bookmark
 import com.vitorpamplona.amethyst.commons.resources.git_repo_filter_closed
 import com.vitorpamplona.amethyst.commons.resources.git_repo_filter_open
 import com.vitorpamplona.amethyst.commons.resources.git_repo_label_all
+import com.vitorpamplona.amethyst.commons.resources.git_repo_labels
+import com.vitorpamplona.amethyst.commons.resources.git_repo_readme
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_title
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_code
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_issues
@@ -116,6 +129,9 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.computeLang
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.gitLabelsOf
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.repoHasFetchableClone
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -356,12 +372,12 @@ private fun GitRepositoryHome(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(scaffoldPadding)
-                    .padding(horizontal = 12.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             val currentEvent = event
             if (currentEvent != null) {
-                RepoHero(currentEvent)
+                RepoHero(currentEvent, accountViewModel, nav)
             }
 
             if (snapshot != null) {
@@ -383,13 +399,15 @@ private fun GitRepositoryHome(
                 RepoPushFirstCommit(currentEvent)
             }
 
-            RepoNavCards(note, openIssueCount, openPullCount, nav)
+            RepoSections(note, openIssueCount, openPullCount, nav)
 
             RepoActivityPulse(activity, accountViewModel, nav)
 
             if (currentEvent != null) {
+                RepoReadmeCard {
+                    GitReadmeSection(browserState, browserViewModel, currentEvent, accountViewModel, nav)
+                }
                 RepoSocialRow(note, accountViewModel, nav)
-                GitReadmeSection(browserState, browserViewModel, currentEvent, accountViewModel, nav)
             } else {
                 EmptyMessage(stringRes(Res.string.loading_feed))
             }
@@ -415,7 +433,7 @@ private fun GitRepositoryCode(
     val browserState by browserViewModel.state.collectAsStateWithLifecycle()
     RepoContentSubscription(note, event, accountViewModel)
 
-    GitRepoSubScreenScaffold(event, note.dTag(), accountViewModel, nav) {
+    GitRepoSubScreenScaffold(event, note.dTag(), stringRes(Res.string.git_repo_tab_code), accountViewModel, nav) {
         val ev = event
         if (ev != null && !repoHasFetchableClone(ev)) {
             Column(
@@ -460,6 +478,7 @@ private fun GitRepositoryIssues(
         persistKey = note.idHex + "GitRepoIssuesStatus",
         event = event,
         fallbackTitle = note.dTag(),
+        section = stringRes(Res.string.git_repo_tab_issues),
         openViewModel = openViewModel,
         closedViewModel = closedViewModel,
         accountViewModel = accountViewModel,
@@ -494,6 +513,7 @@ private fun GitRepositoryPulls(
         persistKey = note.idHex + "GitRepoPatchesStatus",
         event = event,
         fallbackTitle = note.dTag(),
+        section = stringRes(Res.string.git_repo_tab_patches),
         openViewModel = openViewModel,
         closedViewModel = closedViewModel,
         accountViewModel = accountViewModel,
@@ -512,6 +532,7 @@ private fun GitRepositoryPulls(
 private fun GitRepoSubScreenScaffold(
     event: GitRepositoryEvent?,
     fallbackTitle: String,
+    section: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
     belowBar: (@Composable () -> Unit)? = null,
@@ -523,7 +544,7 @@ private fun GitRepoSubScreenScaffold(
         topBar = {
             Column {
                 ShorterTopAppBar(
-                    title = { TopBarTitle(event = event, fallback = fallbackTitle) },
+                    title = { TopBarTitle(event = event, fallback = fallbackTitle, section = section) },
                     navigationIcon = {
                         Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = nav::popBack) { ArrowBackIcon() }
@@ -540,84 +561,100 @@ private fun GitRepoSubScreenScaffold(
     }
 }
 
-/** The Code / Issues / Pull Requests entry points on the project home. */
+/**
+ * The Code / Issues / Pull Requests entry points on the project home: one bordered bar of three
+ * sections, each with its open count, as a forge's tab strip.
+ */
 @Composable
-private fun RepoNavCards(
+private fun RepoSections(
     note: AddressableNote,
     openIssues: Int,
     openPulls: Int,
     nav: INav,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+    Row(
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).gitCard(),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        RepoNavCard(MaterialSymbols.Code, stringRes(Res.string.git_repo_tab_code), null) {
+        // Code has no count: it takes its own width and leaves the rest to the two lists.
+        RepoSection(MaterialSymbols.Code, stringRes(Res.string.git_repo_tab_code), null, grow = false) {
             nav.nav(Route.GitRepositoryCode(note.address))
         }
-        RepoNavCard(MaterialSymbols.ErrorOutline, stringRes(Res.string.git_repo_tab_issues), openIssues) {
+        VerticalDivider(thickness = DividerThickness, color = MaterialTheme.colorScheme.subtleBorder)
+        RepoSection(MaterialSymbols.RadioButtonChecked, stringRes(Res.string.git_repo_tab_issues), openIssues) {
             nav.nav(Route.GitRepositoryIssues(note.address))
         }
-        RepoNavCard(MaterialSymbols.CallMerge, stringRes(Res.string.git_repo_tab_patches), openPulls) {
+        VerticalDivider(thickness = DividerThickness, color = MaterialTheme.colorScheme.subtleBorder)
+        RepoSection(MaterialSymbols.CallMerge, stringRes(Res.string.git_repo_tab_patches), openPulls) {
             nav.nav(Route.GitRepositoryPulls(note.address))
         }
     }
 }
 
 @Composable
-private fun RepoNavCard(
+private fun RowScope.RepoSection(
     symbol: MaterialSymbol,
     title: String,
     count: Int?,
+    grow: Boolean = true,
     onClick: () -> Unit,
 ) {
     Row(
         modifier =
             Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(15.dp))
-                .background(MaterialTheme.colorScheme.surface)
+                .let { if (grow) it.weight(1f) else it }
+                .fillMaxHeight()
                 .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
     ) {
-        Icon(
-            symbol = symbol,
-            contentDescription = null,
-            modifier = Modifier.size(22.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
+        Icon(symbol = symbol, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.grayText)
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
         )
         if (count != null && count > 0) {
-            Text(
-                text =
-                    if (count > 999) {
-                        "999+"
-                    } else {
-                        count.toString()
-                    },
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier =
-                    Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-                        .padding(horizontal = 9.dp, vertical = 2.dp),
-            )
+            GitCount(count)
         }
-        Icon(
-            symbol = MaterialSymbols.ChevronRight,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
-        )
+    }
+}
+
+/** A count beside a section name, quieter than the name. */
+@Composable
+private fun GitCount(count: Int) {
+    Text(
+        text = if (count > 999) "999+" else count.toString(),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.grayText,
+        maxLines = 1,
+    )
+}
+
+/** The README, in a bordered panel with its file name as the header, as forges show it. */
+@Composable
+private fun RepoReadmeCard(content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxWidth().gitCard()) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(symbol = MaterialSymbols.Description, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.grayText)
+            Text(text = stringRes(Res.string.git_repo_readme), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+        }
+        HorizontalDivider(thickness = DividerThickness, color = MaterialTheme.colorScheme.subtleBorder)
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+            content()
+        }
     }
 }
 
@@ -632,6 +669,7 @@ private fun StatusFeedScreen(
     persistKey: String,
     event: GitRepositoryEvent?,
     fallbackTitle: String,
+    section: String,
     openViewModel: FeedViewModel,
     closedViewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
@@ -670,6 +708,7 @@ private fun StatusFeedScreen(
     GitRepoSubScreenScaffold(
         event = event,
         fallbackTitle = fallbackTitle,
+        section = section,
         accountViewModel = accountViewModel,
         nav = nav,
         belowBar = {
@@ -708,8 +747,8 @@ private fun StatusFeedScreen(
 private enum class StatusBucket { OPEN, DRAFT, CLOSED }
 
 /**
- * The Open / Draft / Closed status chips plus the optional label-filter row, shown inside the top
- * bar. "Draft" appears only while there are drafts (issues have none).
+ * The Open / Draft / Closed toggles and the label menu, on one line inside the top bar, as a forge
+ * heads its issue list. "Draft" appears only while there are drafts (issues have none).
  */
 @Composable
 private fun StatusFilterChips(
@@ -727,61 +766,106 @@ private fun StatusFilterChips(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            StatusChip(bucket == StatusBucket.OPEN, countedLabel(stringRes(Res.string.git_repo_filter_open), openCount)) { onBucket(StatusBucket.OPEN) }
+            StatusToggle(bucket == StatusBucket.OPEN, MaterialSymbols.RadioButtonChecked, openCount, stringRes(Res.string.git_repo_filter_open)) { onBucket(StatusBucket.OPEN) }
             if (draftCount > 0 || bucket == StatusBucket.DRAFT) {
-                StatusChip(bucket == StatusBucket.DRAFT, countedLabel(stringRes(Res.string.git_status_draft), draftCount)) { onBucket(StatusBucket.DRAFT) }
+                StatusToggle(bucket == StatusBucket.DRAFT, MaterialSymbols.EditNote, draftCount, stringRes(Res.string.git_status_draft)) { onBucket(StatusBucket.DRAFT) }
             }
-            StatusChip(bucket == StatusBucket.CLOSED, countedLabel(stringRes(Res.string.git_repo_filter_closed), closedCount)) { onBucket(StatusBucket.CLOSED) }
-        }
-
-        if (labels.isNotEmpty()) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 10.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FilterChip(
-                    selected = selectedLabel == null,
-                    onClick = { onSelectLabel(null) },
-                    label = { Text(stringRes(Res.string.git_repo_label_all)) },
-                )
-                labels.forEach { label ->
-                    FilterChip(
-                        selected = selectedLabel == label,
-                        onClick = { onSelectLabel(if (selectedLabel == label) null else label) },
-                        label = { Text("#$label") },
-                    )
-                }
+            StatusToggle(bucket == StatusBucket.CLOSED, MaterialSymbols.Check, closedCount, stringRes(Res.string.git_repo_filter_closed)) { onBucket(StatusBucket.CLOSED) }
+            Spacer(Modifier.weight(1f))
+            if (labels.isNotEmpty() || selectedLabel != null) {
+                LabelMenu(selectedLabel, labels, onSelectLabel)
             }
         }
+        HorizontalDivider(thickness = DividerThickness)
     }
 }
 
 @Composable
-private fun StatusChip(
+private fun StatusToggle(
     selected: Boolean,
+    symbol: MaterialSymbol,
+    count: Int,
     label: String,
     onClick: () -> Unit,
 ) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label) },
-        leadingIcon =
-            if (selected) {
-                { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-            } else {
-                null
-            },
-    )
+    val color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.grayText
+    Row(
+        modifier =
+            Modifier
+                .clip(GitShape)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Icon(symbol = symbol, contentDescription = null, modifier = Modifier.size(16.dp), tint = color)
+        Text(
+            text = if (count > 0) "$count $label" else label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = color,
+            maxLines = 1,
+        )
+    }
+}
+
+/** "Labels ▾": picks one label to narrow the list to, or all of them. */
+@Composable
+private fun LabelMenu(
+    selectedLabel: String?,
+    labels: List<String>,
+    onSelectLabel: (String?) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            modifier =
+                Modifier
+                    .clip(GitShape)
+                    .clickable { expanded = true }
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.AutoMirrored.Label,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = if (selectedLabel != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.grayText,
+            )
+            Text(
+                text = selectedLabel ?: stringRes(Res.string.git_repo_labels),
+                style = MaterialTheme.typography.labelLarge,
+                color = if (selectedLabel != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.grayText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 140.dp),
+            )
+            Icon(symbol = MaterialSymbols.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.grayText)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringRes(Res.string.git_repo_label_all)) },
+                onClick = {
+                    onSelectLabel(null)
+                    expanded = false
+                },
+            )
+            labels.forEach { label ->
+                DropdownMenuItem(
+                    text = { Text(label, fontWeight = if (label == selectedLabel) FontWeight.SemiBold else FontWeight.Normal) },
+                    onClick = {
+                        onSelectLabel(if (label == selectedLabel) null else label)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -795,12 +879,6 @@ private fun NewIssueFab(onClick: () -> Unit) {
         text = { Text(stringRes(Res.string.git_new_issue_button)) },
     )
 }
-
-/** Appends a count to a chip label, e.g. "Open · 3". Hidden while the feed is still empty/loading. */
-private fun countedLabel(
-    base: String,
-    count: Int,
-): String = if (count > 0) "$base · $count" else base
 
 /**
  * Mirrors the active feed list out of a [FeedViewModel] so the status row can show item counts
@@ -819,17 +897,26 @@ private fun rememberGitFeedItems(viewModel: FeedViewModel): List<Note> {
     return items
 }
 
+/** "ngit / Issues": the project, then the section the screen is. */
 @Composable
 private fun TopBarTitle(
     event: GitRepositoryEvent?,
     fallback: String,
+    section: String?,
 ) {
-    Text(
-        text = event?.name() ?: fallback,
-        fontWeight = FontWeight.SemiBold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = event?.name() ?: fallback,
+            color = if (section != null) MaterialTheme.colorScheme.grayText else Color.Unspecified,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (section != null) {
+            Text(text = " / ", color = MaterialTheme.colorScheme.grayText, maxLines = 1)
+            Text(text = section, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        }
+    }
 }
 
 @Composable
