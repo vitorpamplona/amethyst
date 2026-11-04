@@ -42,13 +42,15 @@ import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 /**
  * NIP-34 status controls for an issue, patch or pull request. Visible only to the people whose
  * status counts ([GitAuthority.memberActorsOf]): the item's author and the repository's confirmed
- * members. "Mark merged" is for confirmed maintainers only, as gitworkshop offers it.
+ * members. "Merge" ([onMerge], when the host can merge in the app) and "Mark merged" are for
+ * confirmed maintainers only, as gitworkshop offers them.
  * The item's replies carry the published status everywhere it shows.
  */
 @Composable
 fun GitStatusActions(
     note: Note,
     accountViewModel: AccountViewModel,
+    onMerge: (() -> Unit)? = null,
 ) {
     val event = note.event ?: return
     if (GitAuthority.repositoriesOf(event).isEmpty()) return
@@ -67,6 +69,7 @@ fun GitStatusActions(
         isPatchOrPr = isPatchOrPr,
         canMerge = canMerge,
         onSetStatus = { sendStatus(accountViewModel, note, it) },
+        onMerge = onMerge.takeIf { canMerge },
     )
 }
 

@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.gitRepo.dal.isSeriesRoot
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -68,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevision
+import com.vitorpamplona.amethyst.commons.nip34Git.status.publishGitStatus
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitActivityTarget
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCiStatusBadge
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitItemReference
@@ -83,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemLabels
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemTitle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitPullRequestUpdates
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observePreviousRevision
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.rememberGitMerge
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -126,6 +129,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.UnifiedDiffParser
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import kotlinx.collections.immutable.ImmutableList
 
 private val ChipShape = RoundedCornerShape(8.dp)
@@ -592,7 +596,7 @@ private fun RenderGitPatchEvent(
         }
 
         if (!makeItShort && inThread) {
-            GitStatusActions(note, accountViewModel)
+            GitStatusActionsWithMerge(note, accountViewModel)
         }
     }
 }
@@ -759,7 +763,7 @@ private fun RenderGitPullRequestEvent(
         if (!makeItShort && isGitThreadRoot(note)) {
             GitCloneSection(cloneUrls)
             GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel)
-            GitStatusActions(note, accountViewModel)
+            GitStatusActionsWithMerge(note, accountViewModel)
         }
     }
 }
@@ -1000,4 +1004,25 @@ private fun RepoSnapshotDashboardContent(
         Spacer(modifier = HalfDoubleVertSpacer)
         RepoLastCommit(commit) { nav.nav(Route.GitRepository(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())) }
     }
+}
+
+/**
+ * [GitStatusActions] with the in-app merge for a pull request or a patch series' root; "Mark
+ * merged" stays for a merge made with git.
+ */
+@Composable
+private fun GitStatusActionsWithMerge(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
+    val event = note.event
+    if (event !is GitPullRequestEvent && !(event is GitPatchEvent && event.isSeriesRoot())) {
+        GitStatusActions(note, accountViewModel)
+        return
+    }
+    val onMerge =
+        rememberGitMerge(note, accountViewModel) {
+            accountViewModel.launchSigner { accountViewModel.account.publishGitStatus(note, GitStatusEvent.KIND_APPLIED) }
+        }
+    GitStatusActions(note, accountViewModel, onMerge)
 }

@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_merge_action
 import com.vitorpamplona.amethyst.commons.resources.git_status_close
 import com.vitorpamplona.amethyst.commons.resources.git_status_mark_draft
 import com.vitorpamplona.amethyst.commons.resources.git_status_mark_merged
@@ -68,14 +69,17 @@ private class StatusAction(
     val target: StatusKind,
     val symbol: MaterialSymbol,
     val label: String,
+    /** Opens the in-app merge instead of setting [target] directly. */
+    val mergesInApp: Boolean = false,
 )
 
 /**
  * NIP-34 status controls for an issue, patch or pull request, as one split button: the step the
  * item most likely takes next from its [current] status, and a menu with the others.
  * - closed, merged or resolved: "Reopen", alone;
- * - an open patch or PR: "Mark merged" to a repository maintainer ([canMerge]), "Mark as draft"
- *   to anyone else; a draft one: "Ready for review";
+ * - an open patch or PR: "Merge" to a repository maintainer ([canMerge]) when the app can merge
+ *   it ([onMerge]), with "Mark merged" (for a merge made with git) in the menu, else "Mark merged";
+ *   "Mark as draft" to anyone else; a draft one: "Ready for review";
  * - an open issue: "Resolve";
  * - anything open: "Close", always in the menu.
  * The host decides who may see them and publishes the status event.
@@ -86,11 +90,14 @@ fun GitStatusButtons(
     isPatchOrPr: Boolean,
     canMerge: Boolean,
     onSetStatus: (StatusKind) -> Unit,
+    onMerge: (() -> Unit)? = null,
 ) {
     val reopen = StatusAction(StatusKind.OPEN, MaterialSymbols.RadioButtonChecked, stringRes(Res.string.git_status_reopen))
     val ready = StatusAction(StatusKind.OPEN, MaterialSymbols.RadioButtonChecked, stringRes(Res.string.git_status_ready))
     val draft = StatusAction(StatusKind.DRAFT, MaterialSymbols.EditNote, stringRes(Res.string.git_status_mark_draft))
-    val merge = StatusAction(StatusKind.APPLIED, MaterialSymbols.CallMerge, stringRes(Res.string.git_status_mark_merged))
+    val markMerged = StatusAction(StatusKind.APPLIED, MaterialSymbols.CallMerge, stringRes(Res.string.git_status_mark_merged))
+    val mergeInApp = StatusAction(StatusKind.APPLIED, MaterialSymbols.CallMerge, stringRes(Res.string.git_merge_action), mergesInApp = true)
+    val merges = if (onMerge != null) listOf(mergeInApp, markMerged) else listOf(markMerged)
     val resolve = StatusAction(StatusKind.APPLIED, MaterialSymbols.CheckCircle, stringRes(Res.string.git_status_resolve))
     val close = StatusAction(StatusKind.CLOSED, MaterialSymbols.Cancel, stringRes(Res.string.git_status_close))
 
@@ -98,8 +105,8 @@ fun GitStatusButtons(
         when {
             current == StatusKind.CLOSED || current == StatusKind.APPLIED -> listOf(reopen)
             !isPatchOrPr -> listOf(resolve, close)
-            current == StatusKind.DRAFT -> listOfNotNull(ready, merge.takeIf { canMerge }, close)
-            canMerge -> listOf(merge, draft, close)
+            current == StatusKind.DRAFT -> listOf(ready) + (if (canMerge) merges else emptyList()) + close
+            canMerge -> merges + listOf(draft, close)
             else -> listOf(draft, close)
         }
 
@@ -114,7 +121,7 @@ fun GitStatusButtons(
         horizontalArrangement = Arrangement.spacedBy(1.dp),
     ) {
         Button(
-            onClick = { onSetStatus(primary.target) },
+            onClick = { if (primary.mergesInApp && onMerge != null) onMerge() else onSetStatus(primary.target) },
             shape = if (rest.isEmpty()) SingleShape else PrimaryShape,
             colors = colors,
             modifier = GitCardButtonHeight,
@@ -149,7 +156,7 @@ fun GitStatusButtons(
                             leadingIcon = { Icon(action.symbol, contentDescription = null, modifier = Modifier.size(18.dp), tint = tint) },
                             onClick = {
                                 expanded = false
-                                onSetStatus(action.target)
+                                if (action.mergesInApp && onMerge != null) onMerge() else onSetStatus(action.target)
                             },
                         )
                     }

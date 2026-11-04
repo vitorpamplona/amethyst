@@ -77,6 +77,8 @@ object GitCommands {
         |      [--parent-commit P] [--in-reply-to ID]
         |  git apply PATCH_ID [--check|--print]           apply a fetched kind:1617 patch to the local tree
         |      [--repo PATH]                                (default: `git am`; --check dry-runs; --print emits it)
+        |  git merge PR_OR_PATCH_ID [--yes]               merge it on the repo's GRASP servers (merge
+        |                                                   commit; without --yes only prints the plan)
         |  git pr REPO --commit TIP --clone URL[,URL]     publish a kind:1618 pull request [DESC arg]
         |      [--subject S] [--branch-name N] [--merge-base C] [--label L[,L]]
         |  git pr-update PR --commit TIP --clone URL[,URL] publish a kind:1619 pull-request update
@@ -101,7 +103,7 @@ object GitCommands {
         route(
             "git",
             tail,
-            "git <init|announce|state|list|show|grasp|browse|cat|log|issue|patch|apply|pr|comment|label|open|applied|close|draft|issues|patches|prs|thread>",
+            "git <init|announce|state|list|show|grasp|browse|cat|log|issue|patch|apply|merge|pr|comment|label|open|applied|close|draft|issues|patches|prs|thread>",
             mapOf(
                 "init" to { rest -> GitInitCommand.init(dataDir, rest) },
                 "announce" to { rest -> announce(dataDir, rest) },
@@ -124,6 +126,7 @@ object GitCommands {
                 "label" to { rest -> GitLabelCommand.label(dataDir, rest) },
                 "apply" to { rest -> GitApplyCommand.apply(dataDir, rest) },
                 "open" to { rest -> GitStatusCommands.open(dataDir, rest) },
+                "merge" to { rest -> GitMergeCommand.merge(dataDir, rest) },
                 "applied" to { rest -> GitStatusCommands.applied(dataDir, rest) },
                 "merged" to { rest -> GitStatusCommands.applied(dataDir, rest) },
                 "resolved" to { rest -> GitStatusCommands.applied(dataDir, rest) },

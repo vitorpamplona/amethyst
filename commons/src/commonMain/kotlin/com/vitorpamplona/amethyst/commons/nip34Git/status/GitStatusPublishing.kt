@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
@@ -66,6 +67,45 @@ suspend fun Account.publishGitStatus(
             GitStatusEvent.KIND_CLOSED -> GitStatusClosedEvent.build("", hint, notify = notify) { fileUnder(coordinates, euc) }
             GitStatusEvent.KIND_DRAFT -> GitStatusDraftEvent.build("", hint, notify = notify) { fileUnder(coordinates, euc) }
             else -> return null
+        }
+    return signAndComputeBroadcast(template)
+}
+
+/**
+ * Signs and broadcasts the applied status (1631) of a merge made here: [item] merged as
+ * [mergeCommit], quoting the [appliedPatches] of a series (`q`) and the commits it became, tagged
+ * like [publishGitStatus]. An issue a merged commit resolves gets one too, with the [content] that
+ * says why and the [extra] tags gitworkshop adds (the commit, the PR).
+ */
+suspend fun Account.publishGitApplied(
+    item: Note,
+    mergeCommit: String,
+    appliedPatches: List<Note> = emptyList(),
+    appliedAsCommits: List<String> = emptyList(),
+    content: String = "",
+    authority: GitAuthority = LocalCache.gitAuthority,
+    extra: TagArrayBuilder<GitStatusAppliedEvent>.() -> Unit = {},
+): GitStatusAppliedEvent? {
+    val hint = item.toEventHint<Event>() ?: return null
+    val coordinates = authority.coordinatesToTag(hint.event)
+    val euc = coordinates.firstOrNull()?.let(authority::earliestUniqueCommit)
+    val notify =
+        coordinates
+            .map { it.pubKeyHex }
+            .filter { it != signer.pubKey && it != hint.event.pubKey }
+            .distinct()
+            .map { PTag(it) }
+    val template =
+        GitStatusAppliedEvent.build(
+            content = content,
+            target = hint,
+            appliedPatches = appliedPatches.mapNotNull { it.toEventHint<GitPatchEvent>() },
+            mergeCommit = mergeCommit,
+            appliedAsCommits = appliedAsCommits,
+            notify = notify,
+        ) {
+            fileUnder(coordinates, euc)
+            extra()
         }
     return signAndComputeBroadcast(template)
 }
