@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
@@ -523,7 +524,9 @@ private fun RenderGitPatchEvent(
                 contentColor = MaterialTheme.colorScheme.tertiary,
             )
 
-            GitStatusPill(item = note, defaultIfMissing = StatusKind.OPEN)
+            // Statuses name a series' first patch, so a later patch shows the series' state.
+            val seriesRoot = remember(noteEvent) { noteEvent.seriesRootId()?.let { LocalCache.getOrCreateNote(it) } ?: note }
+            GitStatusPill(item = seriesRoot, defaultIfMissing = StatusKind.OPEN)
 
             GitCiStatusBadge(targetIdHex = note.idHex, accountViewModel = accountViewModel, nav = nav)
         }

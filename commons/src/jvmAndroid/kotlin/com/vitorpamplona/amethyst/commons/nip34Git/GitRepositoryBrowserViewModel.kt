@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.nip34Git.git.GitHttpException
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
 import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -123,8 +125,10 @@ class GitRepositoryBrowserViewModel(
         this.cloneUrls = cloneUrls
         this.cacheKey = cacheKey
 
+        // A cached snapshot is only as good as the server it came from: when the maintainers' signed
+        // state is already known and names another tip, look again instead of showing it.
         val cached = GitRepoSnapshotCache.get(cacheKey)
-        if (cached != null) {
+        if (cached != null && agreesWithSignedState(cached)) {
             _state.value = GitBrowseState.Loaded(cached)
             return
         }
@@ -141,48 +145,90 @@ class GitRepositoryBrowserViewModel(
     fun reload() {
         _state.value = GitBrowseState.Loading
         viewModelScope.launch(Dispatchers.IO) {
-            val candidates = candidateUrls()
-            if (candidates.isEmpty()) {
+            val servers = candidateServers()
+            if (servers.isEmpty()) {
                 _state.value = GitBrowseState.Error(NO_CLONE_URL)
                 return@launch
             }
-            val errors = StringBuilder()
-            var sawEmpty = false
-            var sawOtherFailure = false
-            val signed = signedState
-            val ref = currentRef ?: signed?.headBranch
-            var fallback: Pair<GitRepoSnapshot, GitStateMismatch>? = null
-            for (url in candidates) {
-                try {
-                    val snapshot = client.open(url, ref)
-                    val branch = snapshot.branch ?: ref
-                    val signedCommit = signed?.commitFor(branch)
-                    if (signedCommit == null || signedCommit == snapshot.headCommit) {
-                        // Only the default branch is cached; named refs are transient selections.
-                        if (currentRef == null) GitRepoSnapshotCache.put(cacheKey, snapshot)
-                        _state.value = GitBrowseState.Loaded(snapshot)
-                        return@launch
+            val ref = currentRef ?: signedState?.headBranch
+
+            // The first server usually serves what the maintainers signed, and opening one is a
+            // shallow clone, so it goes alone. Only when it disagrees (or fails) are the mirrors
+            // asked, all at once rather than one clone after another.
+            val first = openServer(servers.first(), ref)
+            if (first is Opened && first.mismatch == null) return@launch show(first)
+            val rest = servers.drop(1)
+            val others =
+                coroutineScope {
+                    val results = Channel<ServerResult>(rest.size)
+                    val jobs = rest.map { server -> launch { results.send(openServer(server, ref)) } }
+                    val collected = ArrayList<ServerResult>(rest.size)
+                    repeat(rest.size) {
+                        val result = results.receive()
+                        collected.add(result)
+                        if (result is Opened && result.mismatch == null) {
+                            jobs.forEach { it.cancel() }
+                            return@coroutineScope collected
+                        }
                     }
-                    // This server disagrees with what the maintainers signed: keep looking for one
-                    // that serves their commit, and show this one only if none does.
-                    if (fallback == null) fallback = snapshot to GitStateMismatch(branch ?: "", signedCommit, snapshot.headCommit)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    if (e is GitHttpException && (e.noBranches || e.httpCode == 404)) sawEmpty = true else sawOtherFailure = true
-                    errors
-                        .append(url)
-                        .append(" → ")
-                        .append(e.message ?: e.toString())
-                        .append('\n')
+                    collected
                 }
-            }
-            fallback?.let { (snapshot, mismatch) ->
-                _state.value = GitBrowseState.Loaded(snapshot, mismatch)
-                return@launch
-            }
-            _state.value = GitBrowseState.Error(errors.toString().trim(), isEmptyRepository = sawEmpty && !sawOtherFailure)
+
+            val all = listOf(first) + others
+            all.firstOrNull { it is Opened && it.mismatch == null }?.let { return@launch show(it as Opened) }
+            // No server serves the signed tip: show the first that answered, with the mismatch.
+            all.firstOrNull { it is Opened }?.let { return@launch show(it as Opened) }
+
+            val failures = all.filterIsInstance<Failed>()
+            val isEmpty = failures.isNotEmpty() && failures.all { it.isEmptyRepository }
+            _state.value = GitBrowseState.Error(failures.joinToString("\n") { it.message }, isEmptyRepository = isEmpty)
         }
+    }
+
+    private sealed interface ServerResult
+
+    private class Opened(
+        val snapshot: GitRepoSnapshot,
+        val mismatch: GitStateMismatch?,
+    ) : ServerResult
+
+    private class Failed(
+        val message: String,
+        val isEmptyRepository: Boolean,
+    ) : ServerResult
+
+    private fun show(opened: Opened) {
+        // Only the default branch is cached; named refs are transient selections.
+        if (opened.mismatch == null && currentRef == null) GitRepoSnapshotCache.put(cacheKey, opened.snapshot)
+        _state.value = GitBrowseState.Loaded(opened.snapshot, opened.mismatch)
+    }
+
+    /** True unless the maintainers signed another tip for [snapshot]'s branch. */
+    private fun agreesWithSignedState(snapshot: GitRepoSnapshot): Boolean {
+        val signedCommit = signedState?.commitFor(snapshot.branch ?: signedState?.headBranch) ?: return true
+        return signedCommit == snapshot.headCommit
+    }
+
+    /** Opens one server, trying its URLs (as announced, then with `.git`) in order. */
+    private suspend fun openServer(
+        urls: List<String>,
+        ref: String?,
+    ): ServerResult {
+        var last: Failed? = null
+        for (url in urls) {
+            try {
+                val snapshot = client.open(url, ref)
+                val branch = snapshot.branch ?: ref
+                val signedCommit = signedState?.commitFor(branch)
+                val mismatch = if (signedCommit == null || signedCommit == snapshot.headCommit) null else GitStateMismatch(branch ?: "", signedCommit, snapshot.headCommit)
+                return Opened(snapshot, mismatch)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                last = Failed(url + " → " + (e.message ?: e.toString()), e is GitHttpException && (e.noBranches || e.httpCode == 404))
+            }
+        }
+        return last ?: Failed(urls.joinToString(), false)
     }
 
     suspend fun readBlob(
@@ -202,17 +248,16 @@ class GitRepositoryBrowserViewModel(
             client.computeDiff(snapshot.cloneUrl, commit.oid, commit.parents.firstOrNull())
         }
 
-    /** http(s) clone URLs to try, in order, including a `.git` variant when missing. */
-    private fun candidateUrls(): List<String> {
-        val out = LinkedHashSet<String>()
-        for (raw in cloneUrls) {
-            val url = raw.trim()
-            if (!url.startsWith("http://") && !url.startsWith("https://")) continue
-            out.add(url)
-            if (!url.removeSuffix("/").endsWith(".git")) out.add(url.removeSuffix("/") + ".git")
-        }
-        return out.toList()
-    }
+    /**
+     * The http(s) clone URLs to try, one entry per server in announcement order: the URL as announced,
+     * then with `.git` when it lacks one (the same server, so tried in turn, never at once).
+     */
+    private fun candidateServers(): List<List<String>> =
+        cloneUrls
+            .map { it.trim() }
+            .filter { it.startsWith("http://") || it.startsWith("https://") }
+            .distinct()
+            .map { url -> if (url.removeSuffix("/").endsWith(".git")) listOf(url) else listOf(url, url.removeSuffix("/") + ".git") }
 
     companion object {
         const val NO_CLONE_URL = "no-clone-url"

@@ -57,7 +57,12 @@ object GitItemTitles {
             else -> null
         }?.takeIf { it.isNotBlank() }
 
-    /** The authorised renames of [item], oldest first (`created_at`, then event id). */
+    /**
+     * The authorised renames of [item], oldest first: by `created_at`, then by event id, so at equal
+     * timestamps the higher id is the later one and its title shows. That is gitworkshop's order for
+     * renames and cover notes (`a.createdAt - b.createdAt || a.id.localeCompare(b.id)`); it picks the
+     * lower id for statuses and PR updates instead (NIP-01), and so does Amethyst for those.
+     */
     fun renamesOf(
         item: Note,
         authority: GitAuthority = LocalCache.gitAuthority,

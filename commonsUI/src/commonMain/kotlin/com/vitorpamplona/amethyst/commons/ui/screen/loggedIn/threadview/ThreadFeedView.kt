@@ -330,11 +330,13 @@ fun RenderThreadFeed(
     // A NIP-34 status or PR update whose issue / patch / PR is in this thread draws as a timeline
     // row: the item it acts on is already on screen, so its feed card (which quotes that item)
     // would only repeat it. Cover notes on that item are versions of its summary, reached through
-    // the item's edit pencil, so they are left out.
+    // the item's edit pencil, so they are left out. The note this thread was opened on is neither:
+    // tapping a patch row opens that patch to read its diff, and a cover note opened from a
+    // notification or a quote is what the user came to see.
     val threadIds = remember(items) { items.list.mapTo(HashSet()) { it.idHex } }
     val visibleItems =
-        remember(visible, threadIds) {
-            visible.items.filterNot { isHiddenInGitThread(it.event) && it.replyTo?.lastOrNull()?.idHex in threadIds }
+        remember(visible, threadIds, noteId) {
+            visible.items.filterNot { it.idHex != noteId && isHiddenInGitThread(it.event) && it.replyTo?.lastOrNull()?.idHex in threadIds }
         }
     val position = visibleItems.indexOfFirst { it.idHex == noteId }
 
@@ -408,7 +410,7 @@ fun RenderThreadFeed(
                         nav = nav,
                     )
                 }
-            } else if (isGitTimelineEvent(item.event) && item.replyTo?.lastOrNull()?.idHex in threadIds) {
+            } else if (item.idHex != noteId && isGitTimelineEvent(item.event) && item.replyTo?.lastOrNull()?.idHex in threadIds) {
                 // Before the out-of-network collapse: a maintainer outside the viewer's network
                 // still changed the item, and a stranger's change already reads as "Proposed".
                 GitThreadTimelineRow(

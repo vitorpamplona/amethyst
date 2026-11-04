@@ -23,8 +23,13 @@ package com.vitorpamplona.amethyst.commons.relayClient.gitRepo
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 
@@ -39,6 +44,14 @@ class RepositoryItemEssentialsSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<RepositoryQueryState>,
 ) : SingleSubEoseManager<RepositoryQueryState>(client, allKeys) {
+    // The items whose history each relay has already sent: their ids were in a filter the relay
+    // answered with EOSE. Those are asked only for what is newer than the relay's cursor; a newly
+    // listed item is asked for its whole history in a filter of its own. Dropping the cursor for
+    // every id instead, as a grown key set usually does, re-downloaded every listed item's
+    // statuses, labels and cover notes each time a batch of items arrived.
+    private val lock = KmpLock()
+    private val coveredPerRelay = HashMap<NormalizedRelayUrl, Set<HexKey>>()
+
     override fun updateFilter(
         keys: List<RepositoryQueryState>,
         since: SincePerRelayMap?,
@@ -55,10 +68,25 @@ class RepositoryItemEssentialsSubAssembler(
                 }
             }
 
-        // A newly listed item has no history on the relay yet: drop that relay's cursor.
-        val sinceNow = sinceDroppingGrownRelays(idsPerRelay, since)
+        return idsPerRelay.flatMap { (relay, ids) ->
+            val covered = lock.withLock { coveredPerRelay[relay] }.orEmpty()
+            val (known, fresh) = ids.partition { it in covered }
+            val cursor = since?.get(relay)?.time
+            filterRepositoryItemEssentials(relay, known, cursor) + filterRepositoryItemEssentials(relay, fresh, null)
+        }
+    }
 
-        return idsPerRelay.flatMap { (relay, ids) -> filterRepositoryItemEssentials(relay, ids, sinceNow?.get(relay)?.time) }
+    override fun newEose(
+        relay: NormalizedRelayUrl,
+        time: Long,
+        filters: List<Filter>?,
+    ) {
+        // Every item id in the filters this EOSE answers now has its history on this relay.
+        val answered = filters.orEmpty().flatMapTo(HashSet()) { filter -> filter.tags?.get("e").orEmpty() + filter.tags?.get("E").orEmpty() }
+        if (answered.isNotEmpty()) {
+            lock.withLock { coveredPerRelay[relay] = coveredPerRelay[relay].orEmpty() + answered }
+        }
+        super.newEose(relay, time, filters)
     }
 
     override fun distinct(key: RepositoryQueryState) = key.repository.idHex
