@@ -1362,7 +1362,7 @@ private fun WalletSettingsSheet(
 }
 
 @Composable
-private fun BackupEnableDialog(
+internal fun BackupEnableDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {

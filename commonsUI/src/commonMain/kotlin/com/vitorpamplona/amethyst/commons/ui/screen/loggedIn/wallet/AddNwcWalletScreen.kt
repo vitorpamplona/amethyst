@@ -114,10 +114,28 @@ fun AddNwcWalletScreen(
     val noneFoundMsg = stringRes(Res.string.wallet_backup_none_found)
     val alreadyConnectedMsg = stringRes(Res.string.wallet_already_connected)
     var qrScanning by remember { mutableStateOf(false) }
+    var showBackupPrompt by remember { mutableStateOf(false) }
+    val backupEnabled by walletViewModel.backupEnabled.collectAsState()
+    val backupCardDismissed by walletViewModel.backupCardDismissed.collectAsState()
 
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
+
+    if (showBackupPrompt) {
+        BackupEnableDialog(
+            onConfirm = {
+                showBackupPrompt = false
+                walletViewModel.setBackupEnabled(true)
+                nav.popBack()
+            },
+            onDismiss = {
+                showBackupPrompt = false
+                walletViewModel.dismissBackupCard()
+                nav.popBack()
+            },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -264,7 +282,12 @@ fun AddNwcWalletScreen(
                     try {
                         val parsed = Nip47WalletConnect.parse(nwcUri.trim())
                         if (walletViewModel.addWallet(walletName.trim(), parsed)) {
-                            nav.popBack()
+                            // One chance to opt in while the wallet is fresh; "Not now" also hides the card.
+                            if (!backupEnabled && !backupCardDismissed) {
+                                showBackupPrompt = true
+                            } else {
+                                nav.popBack()
+                            }
                         } else {
                             error = alreadyConnectedMsg
                             shortNotice.show(alreadyConnectedMsg)
