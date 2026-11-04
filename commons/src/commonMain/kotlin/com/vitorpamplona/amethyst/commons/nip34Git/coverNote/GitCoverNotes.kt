@@ -20,51 +20,46 @@
  */
 package com.vitorpamplona.amethyst.commons.nip34Git.coverNote
 
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache.observeEvents
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 
 /**
- * Cover notes (kind 1624) on NIP-34 issues, patches and PRs, resolved by gitworkshop's rule: only a
- * note by the root item's author or a confirmed repository member counts
- * ([com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority.memberActorsOf]), and the latest of those by
- * `created_at` (ties broken by event id, descending) is the one displayed above the description.
+ * Cover notes (kind 1624) on NIP-34 issues, patches and PRs, by gitworkshop's rule: a note counts
+ * when the item's author or a confirmed repository member signed it, by the roles when it was
+ * signed ([GitAuthority.isMemberAt]). The newest of those is shown above the description, and the
+ * older ones are its earlier versions.
  */
 object GitCoverNotes {
-    /** The cover note to display on [rootId], or null when no authorised author has set one. */
-    fun latestAuthorised(
+    /**
+     * Oldest first; at equal timestamps the higher id is the later one, as gitworkshop sorts them
+     * (`resolveCoverNotes`), so [latest] is the one it shows.
+     */
+    private val order = compareBy<GitCoverNoteEvent> { it.createdAt }.thenBy { it.id }
+
+    /** Every cover note of [item] that counts, oldest first: the versions its summary steps through. */
+    fun versions(
+        item: Note,
+        authority: GitAuthority,
+    ): List<GitCoverNoteEvent> {
+        val itemEvent = item.event ?: return emptyList()
+        return authorised(item.replies.mapNotNull { it.event as? GitCoverNoteEvent }, itemEvent, authority)
+    }
+
+    /** The cover note shown on [item], or null when no one who counts has set one. */
+    fun latest(
+        item: Note,
+        authority: GitAuthority,
+    ): GitCoverNoteEvent? = versions(item, authority).lastOrNull()
+
+    /** [versions] for notes held outside the cache. */
+    fun authorised(
         notes: Collection<GitCoverNoteEvent>,
-        rootId: HexKey,
-        authorised: Set<HexKey>,
-    ): GitCoverNoteEvent? =
+        item: Event,
+        authority: GitAuthority,
+    ): List<GitCoverNoteEvent> =
         notes
-            .filter { it.rootEventId() == rootId && it.pubKey in authorised }
-            .maxWithOrNull(compareBy<GitCoverNoteEvent> { it.createdAt }.thenBy { it.id })
-}
-
-/**
- * Cross-screen index of every cover note in the cache, grouped by the item it covers, kept up to
- * date from the kind-indexed [observeEvents] like the other NIP-34 indexes. Eager so a card reads
- * `.value` without waiting; `null` means "not loaded yet".
- */
-object GitCoverNoteIndex {
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-    val byRoot: StateFlow<Map<HexKey, List<GitCoverNoteEvent>>?> =
-        LocalCache
-            .observeEvents<GitCoverNoteEvent>(Filter(kinds = listOf(GitCoverNoteEvent.KIND)))
-            .map { notes -> notes.groupBy { it.rootEventId() ?: "" }.filterKeys { it.isNotEmpty() } }
-            .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, null)
+            .filter { it.rootEventId() == item.id && authority.isMemberAt(it.pubKey, item, it.createdAt) }
+            .sortedWith(order)
 }

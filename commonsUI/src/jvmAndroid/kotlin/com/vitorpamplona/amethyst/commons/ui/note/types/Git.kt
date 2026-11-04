@@ -59,7 +59,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
-import com.vitorpamplona.amethyst.commons.model.GitPullRequestUpdateIndex
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
@@ -73,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitVersionedSummary
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitPullRequestPushText
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemLabels
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemTitle
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitPullRequestUpdates
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observePreviousRevision
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryAnnouncements
@@ -523,7 +523,7 @@ private fun RenderGitPatchEvent(
                 contentColor = MaterialTheme.colorScheme.tertiary,
             )
 
-            GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
+            GitStatusPill(item = note, defaultIfMissing = StatusKind.OPEN)
 
             GitCiStatusBadge(targetIdHex = note.idHex, accountViewModel = accountViewModel, nav = nav)
         }
@@ -623,7 +623,7 @@ private fun RenderGitIssueEvent(
                 contentColor = MaterialTheme.colorScheme.primary,
             )
 
-            GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN, forIssue = true)
+            GitStatusPill(item = note, defaultIfMissing = StatusKind.OPEN, forIssue = true)
         }
 
         val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
@@ -694,8 +694,7 @@ private fun RenderGitPullRequestEvent(
 
     // A later pull-request update (kind 1619) revises this PR with a newer commit /
     // merge base. Fold the most recent one in so the card reflects the current state.
-    val updateIndex by GitPullRequestUpdateIndex.latestByPullRequest.collectAsStateWithLifecycle()
-    val update = updateIndex?.get(note.idHex)
+    val update = observeGitPullRequestUpdates(note).lastOrNull()
 
     GitCardContainer {
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
@@ -719,7 +718,7 @@ private fun RenderGitPullRequestEvent(
                 symbol = MaterialSymbols.CallMerge,
             )
 
-            GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
+            GitStatusPill(item = note, defaultIfMissing = StatusKind.OPEN)
 
             if (update != null) {
                 TypeChip(

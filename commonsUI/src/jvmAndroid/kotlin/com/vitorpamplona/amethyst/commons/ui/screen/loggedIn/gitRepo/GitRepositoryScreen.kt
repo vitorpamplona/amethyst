@@ -65,12 +65,14 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
+import com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryActivity
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitSignedState
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryAnnouncements
@@ -292,18 +294,19 @@ private fun GitRepositoryHome(
                 .take(6)
         }
 
-    // Nav-card badges count only the OPEN issues/PRs. The open/closed split needs the status
-    // index (kinds 1630-1633); it's an eagerly-shared StateFlow, so the home reflects it without
-    // visiting the Issues screen first. The count is derived directly from the live index.
-    val statusMap by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
+    // Nav-card badges count only the OPEN issues/PRs, recounted when any item's state changes.
+    val repositoryActivity = observeGitRepositoryActivity(note.address.dTag)
     val openIssueCount =
-        remember(openIssueItems, closedIssueItems, statusMap) {
-            (openIssueItems + closedIssueItems).distinctBy { it.idHex }.count { !GitStatusIndex.isClosedOrResolved(it.idHex, statusMap) }
+        remember(openIssueItems, closedIssueItems, repositoryActivity) {
+            (openIssueItems + closedIssueItems).distinctBy { it.idHex }.count { !GitStatuses.isClosedOrResolved(it, LocalCache.gitAuthority) }
         }
     val openPullCount =
-        remember(openPatchItems, closedPatchItems, statusMap) {
+        remember(openPatchItems, closedPatchItems, repositoryActivity) {
             // Drafts aren't counted: the badge is what awaits review, as gitworkshop's PR tab shows it.
-            (openPatchItems + closedPatchItems).distinctBy { it.idHex }.count { !GitStatusIndex.isClosedOrResolved(it.idHex, statusMap) && statusMap?.get(it.idHex) !is GitStatusDraftEvent }
+            (openPatchItems + closedPatchItems).distinctBy { it.idHex }.count {
+                val status = GitStatuses.latest(it, LocalCache.gitAuthority)
+                !GitStatuses.isClosedOrResolved(status) && status !is GitStatusDraftEvent
+            }
         }
 
     var showSettings by rememberSaveable(note.idHex) { mutableStateOf(false) }
@@ -643,8 +646,8 @@ private fun StatusFeedScreen(
 
     // The open feed holds drafts too (they aren't closed); split them out as gitworkshop does, so
     // "Open" counts what is ready for review and "Draft" what isn't.
-    val statusMap by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
-    val isDraft: (Note) -> Boolean = remember(statusMap) { { note -> statusMap?.get(note.idHex) is GitStatusDraftEvent } }
+    val repositoryActivity = observeGitRepositoryActivity(event?.dTag() ?: persistKey)
+    val isDraft: (Note) -> Boolean = remember(repositoryActivity) { { note -> GitStatuses.latest(note, LocalCache.gitAuthority) is GitStatusDraftEvent } }
     val draftItems = remember(openFeedItems, isDraft) { openFeedItems.filter(isDraft) }
     val openItems = remember(openFeedItems, isDraft) { openFeedItems.filterNot(isDraft) }
 

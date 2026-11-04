@@ -49,9 +49,8 @@ class CiItemEvents(
 
 /**
  * Cross-screen index of the Nostr CI runs attached to each PR / patch, keyed by the root item id the
- * runs carry in their NIP-22 `E` tag. Like [com.vitorpamplona.amethyst.commons.model.GitStatusIndex]
- * it reduces the kind-indexed [observeEvents] stream, so a list row reads its badge without a cache
- * scan. Only 9842 and 39842 are indexed: Job Results (9841) are read on demand, inside the attempt
+ * runs carry in their NIP-22 `E` tag. It reduces the kind-indexed [observeEvents] stream, so a list
+ * row reads its badge without a cache scan. Only 9842 and 39842 are indexed: Job Results (9841) are read on demand, inside the attempt
  * that quotes them. Push-triggered runs carry no `E` and are left out.
  *
  * Eager, never `WhileSubscribed`: rows read `.value` synchronously. `null` means "not loaded yet".

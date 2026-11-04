@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.gitRepo.dal
 
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
  * `a` per maintainer, and one filed against any confirmed member belongs to the same repository.
  */
 fun repositoryCoordinateSet(viewed: Address): Set<String> {
-    val membership = (GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY).membership(viewed)
+    val membership = LocalCache.gitAuthority.membership(viewed)
     return buildSet {
         add(viewed.toValue())
         membership?.confirmedCoordinates()?.forEach { add(it.toValue()) }

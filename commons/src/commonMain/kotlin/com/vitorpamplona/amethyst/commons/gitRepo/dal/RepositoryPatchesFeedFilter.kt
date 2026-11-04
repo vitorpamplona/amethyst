@@ -24,9 +24,9 @@ import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 
@@ -38,12 +38,10 @@ class RepositoryPatchesFeedFilter(
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-patches-" + (if (showClosed) "closed-" else "open-") + repositoryNote.idHex
 
     override fun feed(): List<Note> {
+        // The repository's own items, as the cache filed them: no scan of every cached note.
+        val repository = LocalCache.getGitRepositoryIfExists(repositoryNote.address.dTag) ?: return emptyList()
         val coordinates = repositoryCoordinateSet(repositoryNote.address)
-        val result =
-            LocalCache.notes.mapNotNullIntoSet { _, note ->
-                if (matches(note, coordinates)) note else null
-            }
-        return sort(result)
+        return sort(repository.items.filterIntoSet { _, note -> matches(note, coordinates) })
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> {
@@ -64,7 +62,7 @@ class RepositoryPatchesFeedFilter(
                 else -> false
             }
         if (!listed) return false
-        return GitStatusIndex.isClosedOrResolved(note.idHex) == showClosed
+        return GitStatuses.isClosedOrResolved(note, LocalCache.gitAuthority) == showClosed
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()

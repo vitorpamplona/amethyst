@@ -49,13 +49,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.GitPullRequestUpdateIndex
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCiStatusBadge
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusPill
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemLabels
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemTitle
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitPullRequestUpdates
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_pr_revised
@@ -227,9 +227,9 @@ private fun GitItemRowContent(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.padding(top = 2.dp),
             ) {
-                GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN, forIssue = note.event is GitIssueEvent)
+                GitStatusPill(item = note, defaultIfMissing = StatusKind.OPEN, forIssue = note.event is GitIssueEvent)
                 if (note.event is GitPullRequestEvent) {
-                    GitRevisedChip(note.idHex)
+                    GitRevisedChip(note)
                 }
                 if (note.event is GitPullRequestEvent || note.event is GitPatchEvent) {
                     GitCiStatusBadge(targetIdHex = note.idHex, accountViewModel = accountViewModel, nav = nav)
@@ -257,9 +257,8 @@ private fun LabelChip(label: String) {
 
 /** Small "Revised" badge shown when a pull request has a later kind-1619 update. */
 @Composable
-private fun GitRevisedChip(prIdHex: String) {
-    val index by GitPullRequestUpdateIndex.latestByPullRequest.collectAsStateWithLifecycle()
-    if (index?.get(prIdHex) == null) return
+private fun GitRevisedChip(pullRequest: Note) {
+    if (observeGitPullRequestUpdates(pullRequest).isEmpty()) return
 
     Row(
         verticalAlignment = Alignment.CenterVertically,

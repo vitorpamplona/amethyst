@@ -48,12 +48,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.GitPullRequestUpdateIndex
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevision
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevisions
@@ -276,11 +275,11 @@ private fun RenameRow(
 ) {
     val itemNote = baseNote.replyTo?.lastOrNull()
     val item = itemNote?.event
-    val authority = observeGitAuthority()
-    val authorised = remember(event, item, authority) { item != null && authority.isMemberAt(event.pubKey, item, event.createdAt) }
+    val announcements = observeGitRepositoryAnnouncements(item)
+    val authorised = remember(event, item, announcements) { item != null && LocalCache.gitAuthority.isMemberAt(event.pubKey, item, event.createdAt) }
     val previous =
-        remember(event, itemNote, authority) {
-            itemNote?.let { GitItemTitles.renamesOf(it, authority).firstOrNull { rename -> rename.event.id == event.id }?.from }
+        remember(event, itemNote, announcements) {
+            itemNote?.let { GitItemTitles.renamesOf(it, LocalCache.gitAuthority).firstOrNull { rename -> rename.event.id == event.id }?.from }
         }
 
     TimelineRowLayout(
@@ -325,11 +324,9 @@ fun observePreviousRevision(
     update: GitPullRequestUpdateEvent,
     pullRequest: GitPullRequestEvent?,
 ): GitPullRequestRevision? {
-    val updates by GitPullRequestUpdateIndex.byPullRequest.collectAsStateWithLifecycle()
-    return remember(update, updates, pullRequest) {
-        val siblings = update.parentPullRequestId()?.let { updates?.get(it) }.orEmpty()
-        GitPullRequestRevisions.previous(update, siblings, pullRequest)
-    }
+    val pullRequestNote = remember(update) { update.parentPullRequestId()?.let { LocalCache.getOrCreateNote(it) } } ?: return null
+    val siblings = observeGitPullRequestUpdates(pullRequestNote)
+    return remember(update, siblings, pullRequest) { GitPullRequestRevisions.previous(update, siblings, pullRequest) }
 }
 
 /**

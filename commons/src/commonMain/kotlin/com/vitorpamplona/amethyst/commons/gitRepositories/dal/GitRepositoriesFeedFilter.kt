@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
@@ -86,7 +85,7 @@ class GitRepositoriesFeedFilter(
      * same-identifier announcement nobody confirmed stays a card of its own.
      */
     private fun oneCardPerRepository(items: Set<Note>): Set<Note> {
-        val authority = GitAuthorityIndex.authority.value ?: return items
+        val authority = LocalCache.gitAuthority
         val result = HashSet<Note>()
         val byRepository = HashMap<String, Note>()
         for (note in items) {

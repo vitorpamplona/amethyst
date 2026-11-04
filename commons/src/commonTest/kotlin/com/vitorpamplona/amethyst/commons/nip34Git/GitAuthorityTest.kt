@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.nip34Git
 
-import com.vitorpamplona.amethyst.commons.model.GitPullRequestUpdateIndex
-import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevisions
+import com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -60,7 +60,7 @@ class GitAuthorityTest {
             repo(invitee),
         )
 
-    private val authority = GitAuthority(mapOf("din" to GitRepositoryMembership.latestByAuthor(announcements, "din")))
+    private val authority = GitAuthority.of(mapOf("din" to GitRepositoryMembership.latestByAuthor(announcements, "din")))
 
     private val issue = GitIssueEvent(itemId, author, 10, arrayOf(arrayOf("a", "30617:$owner:din")), "bug", sig)
 
@@ -91,17 +91,17 @@ class GitAuthorityTest {
         val strangerClose = status("c".repeat(64), stranger, 30, closed = true)
         val inviteeClose = status("d".repeat(64), invitee, 40, closed = true)
 
-        val latest = GitStatusIndex.reduceLatestByTarget(listOf(open, strangerClose, inviteeClose), items, authority)
+        val latest = GitStatuses.latestByItem(listOf(open, strangerClose, inviteeClose), items, authority)
         assertEquals(open, latest[itemId])
 
         val authorClose = status("e".repeat(64), author, 50, closed = true)
-        assertEquals(authorClose, GitStatusIndex.reduceLatestByTarget(listOf(open, strangerClose, authorClose), items, authority)[itemId])
+        assertEquals(authorClose, GitStatuses.latestByItem(listOf(open, strangerClose, authorClose), items, authority)[itemId])
     }
 
     @Test
     fun statusesWaitForTheirItem() {
         val close = status("b".repeat(64), owner, 20, closed = true)
-        assertNull(GitStatusIndex.reduceLatestByTarget(listOf(close), emptyMap(), authority)[itemId])
+        assertNull(GitStatuses.latestByItem(listOf(close), emptyMap(), authority)[itemId])
     }
 
     @Test
@@ -118,11 +118,9 @@ class GitAuthorityTest {
         val fromMaintainer = update("c".repeat(64), coMaintainer, "ccccccc")
         val fromStranger = update("d".repeat(64), stranger, "ddddddd")
 
-        val grouped = GitPullRequestUpdateIndex.groupByParent(listOf(fromStranger, fromAuthor, fromMaintainer), mapOf(itemId to pr), authority)
-        val kept = grouped[itemId].orEmpty()
+        val kept = GitPullRequestRevisions.authorised(listOf(fromStranger, fromAuthor, fromMaintainer), pr, authority)
         assertEquals(setOf(fromAuthor, fromMaintainer), kept.toSet())
         assertTrue(fromStranger !in kept)
-        assertTrue(GitPullRequestUpdateIndex.groupByParent(listOf(fromAuthor), emptyMap(), authority).isEmpty())
     }
 
     @Test
@@ -166,11 +164,11 @@ class GitAuthorityTest {
                 ),
                 GitRepositoryEvent("7540f16c85a1bce5870aac78b03d4e53b52f5b88da2b7c814b50ff23abc50eec", chad, 1784466593, arrayOf(arrayOf("d", "din"), arrayOf("maintainers", chad, alex)), "", sig),
             )
-        val dinAuthority = GitAuthority(mapOf("din" to GitRepositoryMembership.latestByAuthor(din, "din")))
+        val dinAuthority = GitAuthority.of(mapOf("din" to GitRepositoryMembership.latestByAuthor(din, "din")))
         val julyPr = GitPullRequestEvent(itemId, chad, 1784429323, arrayOf(arrayOf("a", "30617:$alex:din")), "", sig)
         val julyMerge = GitStatusClosedEvent("b".repeat(64), alex, 1784431506, arrayOf(arrayOf("e", itemId, "", "root")), "", sig)
 
         assertTrue(alex in dinAuthority.memberActorsOf(julyPr), "Alex is a maintainer today")
-        assertNull(GitStatusIndex.reduceLatestByTarget(listOf(julyMerge), mapOf(itemId to julyPr), dinAuthority)[itemId])
+        assertNull(GitStatuses.latestByItem(listOf(julyMerge), mapOf(itemId to julyPr), dinAuthority)[itemId])
     }
 }

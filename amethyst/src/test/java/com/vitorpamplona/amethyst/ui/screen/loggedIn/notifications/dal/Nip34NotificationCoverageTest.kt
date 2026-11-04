@@ -49,9 +49,10 @@ import org.junit.Test
  *    home-feed spillover). This is what gives you a merge notification when
  *    you close the app and come back an hour later.
  * 2. [RepliesAndReactionsKinds2] — the `#e`=<targetId> engagement subscription
- *    that fires when a patch/PR/issue row is on screen. This is what makes
- *    [com.vitorpamplona.amethyst.commons.model.GitStatusIndex] actually see status
- *    events so the closed/merged pill can render on the repo page.
+ *    that fires when a patch/PR/issue row is on screen. This is what brings the
+ *    status events onto the item (its replies, where
+ *    [com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses] reads them) so the
+ *    closed/merged pill can render on the repo page.
  * 3. [NotificationFeedFilter.NOTIFICATION_KINDS] — the in-app Notifications tab
  *    kind gate. Without this, the event arrives from (1), sits in LocalCache,
  *    and never renders a row.
@@ -148,7 +149,7 @@ class Nip34NotificationCoverageTest {
         assertTrue(
             "Kinds $missing are missing from RepliesAndReactionsKinds2. When a repo/PR row is " +
                 "on screen the app fetches replies + reactions targeting the visible events — " +
-                "this is where GitStatusIndex gets its data. Missing kinds mean the closed/" +
+                "this is where GitStatuses gets its data. Missing kinds mean the closed/" +
                 "merged pill on a repo listing never populates for anyone who isn't a p-tagged " +
                 "participant of the PR.",
             missing.isEmpty(),

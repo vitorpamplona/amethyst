@@ -42,14 +42,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
-import com.vitorpamplona.amethyst.commons.nip34Git.coverNote.GitCoverNoteIndex
 import com.vitorpamplona.amethyst.commons.nip34Git.coverNote.GitCoverNotes
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_cover_note
@@ -113,23 +110,13 @@ fun GitVersionedSummary(
 }
 
 /**
- * The cover notes on [item] that count, oldest first: those its author or a confirmed member of its
- * repositories at the time signed ([GitAuthority.isMemberAt]). The last one is the item's current summary,
- * the same one [GitCoverNotes.latestAuthorised] picks.
+ * The cover notes on [item] that count, as notes, oldest first ([GitCoverNotes.versions], the one
+ * rule the banner and every other reader share). The last one is the item's current summary.
  */
 @Composable
 fun observeCoverNoteVersions(item: Note): List<Note> {
-    val index by GitCoverNoteIndex.byRoot.collectAsStateWithLifecycle()
-    val notes = index?.get(item.idHex)
-    val itemEvent = item.event
-    val authority = observeGitAuthority()
-    return remember(notes, itemEvent, authority) {
-        notes
-            .orEmpty()
-            .filter { it.rootEventId() == item.idHex && itemEvent != null && authority.isMemberAt(it.pubKey, itemEvent, it.createdAt) }
-            .sortedWith(compareBy<GitCoverNoteEvent> { it.createdAt }.thenBy { it.id })
-            .mapNotNull { LocalCache.getNoteIfExists(it.id) }
-    }
+    val versions = observeGitCoverNotes(item)
+    return remember(versions) { versions.mapNotNull { LocalCache.getNoteIfExists(it.id) } }
 }
 
 @Composable

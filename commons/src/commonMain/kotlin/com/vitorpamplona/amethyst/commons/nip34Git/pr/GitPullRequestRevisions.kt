@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.nip34Git.pr
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 
@@ -49,6 +51,35 @@ data class GitPullRequestRevision(
  */
 object GitPullRequestRevisions {
     val order: Comparator<GitPullRequestUpdateEvent> = compareBy<GitPullRequestUpdateEvent> { it.createdAt }.thenByDescending { it.id }
+
+    /**
+     * [pullRequest]'s updates, oldest first, from the ones the cache threads onto it: only those its
+     * author or a confirmed maintainer signed, as of the update ([GitAuthority.isMaintainerAt]).
+     * Anyone else's would let a stranger move the tip and the clone URL "View changes" fetches from.
+     */
+    fun updates(
+        pullRequest: Note,
+        authority: GitAuthority,
+    ): List<GitPullRequestUpdateEvent> {
+        val pr = pullRequest.event as? GitPullRequestEvent ?: return emptyList()
+        return authorised(pullRequest.replies.mapNotNull { it.event as? GitPullRequestUpdateEvent }, pr, authority)
+    }
+
+    /** The update that set [pullRequest]'s current tip, or null when it has none that counts. */
+    fun latest(
+        pullRequest: Note,
+        authority: GitAuthority,
+    ): GitPullRequestUpdateEvent? = updates(pullRequest, authority).lastOrNull()
+
+    /** [updates] for updates held outside the cache. */
+    fun authorised(
+        updates: Collection<GitPullRequestUpdateEvent>,
+        pullRequest: GitPullRequestEvent,
+        authority: GitAuthority,
+    ): List<GitPullRequestUpdateEvent> =
+        updates
+            .filter { it.parentPullRequestId() == pullRequest.id && authority.isMaintainerAt(it.pubKey, pullRequest, it.createdAt) }
+            .sortedWith(order)
 
     /**
      * The revision [update] replaced: the update of the same PR just before it, or the PR's own tip

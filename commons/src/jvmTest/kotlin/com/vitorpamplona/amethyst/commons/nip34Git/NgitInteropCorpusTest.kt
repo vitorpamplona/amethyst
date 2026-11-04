@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.commons.nip34Git
 
 import com.vitorpamplona.amethyst.commons.gitRepo.dal.isFiledUnder
 import com.vitorpamplona.amethyst.commons.gitRepo.dal.isSeriesRoot
-import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
@@ -57,7 +57,7 @@ class NgitInteropCorpusTest {
 
     private fun stateCounts(): Map<String, Int> {
         val announcements = events.filterIsInstance<GitRepositoryEvent>()
-        val authority = GitAuthority(mapOf("ngit" to announcements.groupBy { it.pubKey }.mapValues { (_, v) -> v.maxBy { it.createdAt } }))
+        val authority = GitAuthority.of(mapOf("ngit" to announcements.groupBy { it.pubKey }.mapValues { (_, v) -> v.maxBy { it.createdAt } }))
         val coordinates = authority.coordinatesToTag(lead).map { it.toValue() }.toSet()
 
         // A status its own author withdrew (kind 5) never reaches the cache.
@@ -69,7 +69,7 @@ class NgitInteropCorpusTest {
         val statuses = events.filterIsInstance<GitStatusEvent>().filter { it.id !in withdrawn }
 
         val items = events.filter { it is GitIssueEvent || it is GitPullRequestEvent || it is GitPatchEvent }
-        val latest = GitStatusIndex.reduceLatestByTarget(statuses, items.associateBy { it.id }, authority)
+        val latest = GitStatuses.latestByItem(statuses, items.associateBy { it.id }, authority)
 
         return items
             .filter { (it !is GitPatchEvent || it.isSeriesRoot()) && isFiledUnder(it, coordinates) }

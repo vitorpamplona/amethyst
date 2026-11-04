@@ -33,8 +33,6 @@ import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
 import com.vitorpamplona.amethyst.commons.wot.curatedHidesByTrust
 import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
@@ -292,8 +290,12 @@ class NotificationFeedFilter(
                 // Anyone can publish a status or a PR update that p-tags the user. Only one by the
                 // item's author or a confirmed repository member changes the item, so only those
                 // notify (gitworkshop drops the rest from its notifications the same way).
-                val authority = GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY
-                return authority.isAuthorisedChange(event, note.replyTo?.lastOrNull()?.event)
+                // While the item or its repository's announcements haven't loaded (a cold start, a
+                // push) there is nothing to judge by, and dropping it would lose a maintainer's
+                // change for good, since nothing re-checks it: it notifies.
+                val item = note.replyTo?.lastOrNull()?.event ?: return true
+                val authority = LocalCache.gitAuthority
+                return !authority.canJudge(item) || authority.isAuthorisedChange(event, item)
             }
 
             if (event is GitIssueEvent || event is GitPatchEvent ||

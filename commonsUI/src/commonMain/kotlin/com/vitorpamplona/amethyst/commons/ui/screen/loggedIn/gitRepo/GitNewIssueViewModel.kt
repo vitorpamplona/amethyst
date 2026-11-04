@@ -29,9 +29,8 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
@@ -225,7 +224,7 @@ class GitNewIssueViewModel : ViewModel() {
         // File it under every confirmed co-maintainer's coordinate too (one `a` each, and a `p` so
         // each is notified), as gitworkshop does: whichever announcement a client opens finds it.
         val coMaintainers =
-            (GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY)
+            LocalCache.gitAuthority
                 .coordinatesToTag(repoNote.address)
                 .filter { it != repoNote.address }
 

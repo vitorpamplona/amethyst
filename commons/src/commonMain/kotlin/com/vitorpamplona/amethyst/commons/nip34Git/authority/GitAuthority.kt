@@ -20,12 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.nip34Git.authority
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
@@ -33,15 +31,6 @@ import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryMembership
 import com.vitorpamplona.quartz.nip34Git.repository.repositoryAddresses
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 
 /**
  * Who may change an issue's, patch's or PR's state, from the repository announcements in the
@@ -55,28 +44,23 @@ import kotlinx.coroutines.flow.stateIn
  * loaded, its coordinate's own pubkey stands in for its members, so the owner's statuses show
  * without a flash.
  */
-@Immutable
+@Stable
 class GitAuthority(
-    private val announcements: Map<String, Map<HexKey, GitRepositoryEvent>>,
+    private val membershipOf: (repository: Address) -> GitRepositoryMembership?,
+    private val announcementOf: (repository: Address) -> GitRepositoryEvent?,
 ) {
-    // Resolved once per announcement, here, so the status, update and label checks that run for
-    // every event don't walk the role graph again.
-    private val memberships: Map<Address, GitRepositoryMembership> =
-        buildMap {
-            announcements.forEach { (identifier, byAuthor) ->
-                byAuthor.keys.forEach { author ->
-                    GitRepositoryMembership.resolveFromLead(author, identifier, byAuthor)?.let {
-                        put(Address(GitRepositoryEvent.KIND, author, identifier), it)
-                    }
-                }
-            }
-        }
-
     /**
      * The membership of the repository [repository] belongs to, seen from its lead (the component's
      * anchor, whose role records history prefers), or null while the announcement is unknown.
      */
-    fun membership(repository: Address): GitRepositoryMembership? = memberships[repository]
+    fun membership(repository: Address): GitRepositoryMembership? = membershipOf(repository)
+
+    /**
+     * Whether the cache can judge changes to [item]: its first repository's announcement has loaded.
+     * Until then [isMemberAt] lets only the coordinate's owner through, which drops a confirmed
+     * co-maintainer's change; callers that cannot wait for it (a notification) let it through.
+     */
+    fun canJudge(item: Event): Boolean = repositoriesOf(item).firstOrNull()?.let { membership(it) } != null
 
     /**
      * The coordinates a change to [repository] is filed under: every confirmed member's, as
@@ -107,7 +91,7 @@ class GitAuthority(
         while (queue.isNotEmpty()) {
             val address = queue.removeFirst()
             if (!result.add(address)) continue
-            val announcement = announcements[address.dTag]?.get(address.pubKeyHex) ?: continue
+            val announcement = announcementOf(address) ?: continue
             announcement.namedPubKeys().forEach { queue.add(Address(GitRepositoryEvent.KIND, it, address.dTag)) }
         }
         return result
@@ -209,7 +193,25 @@ class GitAuthority(
     }
 
     companion object {
-        val EMPTY = GitAuthority(emptyMap())
+        val EMPTY = GitAuthority({ null }, { null })
+
+        /**
+         * An authority over [announcements] (by identifier, then author) held outside a cache, for
+         * tests and tools: every announcement's membership is resolved once, up front.
+         */
+        fun of(announcements: Map<String, Map<HexKey, GitRepositoryEvent>>): GitAuthority {
+            val memberships =
+                buildMap {
+                    announcements.forEach { (identifier, byAuthor) ->
+                        byAuthor.keys.forEach { author ->
+                            GitRepositoryMembership.resolveFromLead(author, identifier, byAuthor)?.let {
+                                put(Address(GitRepositoryEvent.KIND, author, identifier), it)
+                            }
+                        }
+                    }
+                }
+            return GitAuthority({ memberships[it] }, { announcements[it.dTag]?.get(it.pubKeyHex) })
+        }
 
         /** The kinds whose state the authority rules govern: issues, patches and pull requests. */
         val ITEM_KINDS = listOf(GitIssueEvent.KIND, GitPatchEvent.KIND, GitPullRequestEvent.KIND)
@@ -223,22 +225,4 @@ class GitAuthority(
                 else -> emptyList()
             }
     }
-}
-
-/**
- * The [GitAuthority] over every repository announcement in the cache, kept current from
- * [LocalCache.observeEvents]. Eager, like the other NIP-34 indexes, so callers can read `.value`
- * synchronously; `null` until the first scan.
- */
-object GitAuthorityIndex {
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-    val authority: StateFlow<GitAuthority?> =
-        LocalCache
-            .observeEvents<GitRepositoryEvent>(Filter(kinds = listOf(GitRepositoryEvent.KIND)))
-            .map { events ->
-                val byIdentifier = events.groupBy { it.dTag() }
-                GitAuthority(byIdentifier.mapValues { (identifier, list) -> GitRepositoryMembership.latestByAuthor(list, identifier) })
-            }.flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, null)
 }

@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.commons.nip34Git.status
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -47,7 +47,7 @@ import com.vitorpamplona.quartz.nip34Git.status.repository
 suspend fun Account.publishGitStatus(
     item: Note,
     kind: Int,
-    authority: GitAuthority = GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY,
+    authority: GitAuthority = LocalCache.gitAuthority,
 ): GitStatusEvent? {
     val hint = item.toEventHint<Event>() ?: return null
     val coordinates = authority.coordinatesToTag(hint.event)

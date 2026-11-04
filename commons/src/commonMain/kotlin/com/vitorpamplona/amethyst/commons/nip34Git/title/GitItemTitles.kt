@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.commons.nip34Git.title
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
@@ -60,7 +60,7 @@ object GitItemTitles {
     /** The authorised renames of [item], oldest first (`created_at`, then event id). */
     fun renamesOf(
         item: Note,
-        authority: GitAuthority = GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY,
+        authority: GitAuthority = LocalCache.gitAuthority,
     ): List<GitRename> {
         val itemEvent = item.event ?: return emptyList()
         var previous = originalTitleOf(itemEvent)
@@ -77,7 +77,7 @@ object GitItemTitles {
     /** The title [item] shows: its latest authorised rename, else its own. */
     fun titleOf(
         item: Note,
-        authority: GitAuthority = GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY,
+        authority: GitAuthority = LocalCache.gitAuthority,
     ): String? = renamesOf(item, authority).lastOrNull()?.to ?: item.event?.let { originalTitleOf(it) }
 
     /**
@@ -86,7 +86,7 @@ object GitItemTitles {
      */
     fun labelsOf(
         item: Note,
-        authority: GitAuthority = GitAuthorityIndex.authority.value ?: GitAuthority.EMPTY,
+        authority: GitAuthority = LocalCache.gitAuthority,
     ): List<String> {
         val itemEvent = item.event ?: return emptyList()
         val own = itemEvent.tags.hashtags().filter { it !in SERIES_TAGS }

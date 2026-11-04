@@ -111,7 +111,7 @@ val RepliesAndReactionsKinds2 =
         // NIP-34 status events (1630/1631/1632/1633). Rooted at the target
         // patch/PR/issue via a `root`-marked `e` tag, so an `e=<targetId>`
         // engagement fetch surfaces every open/applied/closed/draft transition —
-        // the signal GitStatusIndex needs to answer isClosedOrResolved() for
+        // the signal GitStatuses needs to answer isClosedOrResolved() for
         // repo rows. PR revisions (1619) anchor with `E` instead and are pulled
         // by [RootScopedRepliesKinds]; listing them here matched nothing.
         GitStatusOpenEvent.KIND,

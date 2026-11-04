@@ -85,7 +85,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitThreadTimelineRow
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.isGitTimelineEvent
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.isHiddenInGitThread
-import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.listingStatus
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ClassifiedsOpenMarketsDetails
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ListingStatusBadge
@@ -278,15 +278,15 @@ fun RenderThreadFeed(
     // A review thread an authorised member marked resolved (NIP-22 reply with `["l","resolved"]`)
     // also starts collapsed, as gitworkshop folds it.
     val rootEvent = items.list.firstOrNull()?.event
-    val gitAuthority = observeGitAuthority()
+    val gitAnnouncements = observeGitRepositoryAnnouncements(rootEvent)
     val resolvedThreads =
-        remember(items, rootEvent, gitAuthority) {
+        remember(items, rootEvent, gitAnnouncements) {
             if (rootEvent !is GitIssueEvent && rootEvent !is GitPatchEvent && rootEvent !is GitPullRequestEvent) {
                 emptySet()
             } else {
                 items.list.mapNotNullTo(HashSet()) { note ->
                     val event = note.event as? CommentEvent
-                    if (event != null && event.isGitThreadResolution() && gitAuthority.isMemberAt(event.pubKey, rootEvent, event.createdAt)) note.replyTo?.lastOrNull()?.idHex else null
+                    if (event != null && event.isGitThreadResolution() && LocalCache.gitAuthority.isMemberAt(event.pubKey, rootEvent, event.createdAt)) note.replyTo?.lastOrNull()?.idHex else null
                 }
             }
         }

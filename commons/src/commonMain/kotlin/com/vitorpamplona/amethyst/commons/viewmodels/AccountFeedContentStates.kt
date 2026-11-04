@@ -61,7 +61,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.music.dal.MusicPlaylistsFeedFilter
 import com.vitorpamplona.amethyst.commons.music.dal.MusicTracksFeedFilter
 import com.vitorpamplona.amethyst.commons.nests.dal.NestsFeedFilter
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthorityIndex
 import com.vitorpamplona.amethyst.commons.nip64Chess.dal.ChessLobbyFeedFilter
 import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.commons.notifications.NotificationSummaryState
@@ -181,8 +180,7 @@ class AccountFeedContentStates(
         // the additive path never re-checks: rebuild the list when the memberships change.
         scope.launch(Dispatchers.IO) {
             @OptIn(FlowPreview::class)
-            GitAuthorityIndex.authority
-                .drop(1)
+            LocalCache.gitAnnouncementChanges
                 .debounce(500)
                 .collect { gitRepositoriesFeed.invalidateData() }
         }

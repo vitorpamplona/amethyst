@@ -25,7 +25,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
-import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -46,8 +46,9 @@ fun LoadGitRepositoryAnnouncements(item: Event) {
 @Composable
 fun LoadGitRepositoryAnnouncements(repositories: List<Address>) {
     if (repositories.isEmpty()) return
-    val authority = observeGitAuthority()
-    val addresses = remember(repositories, authority) { authority.announcementsToLoad(repositories) }
+    // Each announcement that arrives names the next ones to load.
+    val announcements = repositories.map { it.dTag }.distinct().map { observeGitRepositoryAnnouncements(it) }
+    val addresses = remember(repositories, announcements) { LocalCache.gitAuthority.announcementsToLoad(repositories) }
     addresses.forEach { address ->
         key(address) {
             val note = remember(address) { LocalCache.getOrCreateAddressableNote(address) }

@@ -20,8 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.nip34Git
 
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
 import com.vitorpamplona.amethyst.commons.nip34Git.coverNote.GitCoverNotes
 import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import kotlin.test.Test
 import kotlin.test.assertNull
 import kotlin.test.assertSame
@@ -35,7 +38,17 @@ class GitCoverNotesTest {
     private val maintainer = "3".repeat(64)
     private val stranger = "4".repeat(64)
 
-    private val authorised = setOf(author, owner, maintainer)
+    // The owner and the maintainer list each other, so both are confirmed members.
+    private fun announcement(
+        pubKey: String,
+        other: String,
+    ) = GitRepositoryEvent(pubKey.take(63) + "0", pubKey, 1, arrayOf(arrayOf("d", "repo"), arrayOf("maintainers", pubKey, other)), "", sig)
+
+    private val authority = GitAuthority.of(mapOf("repo" to mapOf(owner to announcement(owner, maintainer), maintainer to announcement(maintainer, owner))))
+
+    private val item = GitPullRequestEvent(root, author, 1, arrayOf(arrayOf("a", "30617:$owner:repo")), "", sig)
+
+    private fun latest(notes: List<GitCoverNoteEvent>) = GitCoverNotes.authorised(notes, item, authority).lastOrNull()
 
     private fun note(
         id: String,
@@ -53,7 +66,7 @@ class GitCoverNotesTest {
         val old = note("1".repeat(64), author, 100)
         val newer = note("2".repeat(64), maintainer, 200)
 
-        assertSame(newer, GitCoverNotes.latestAuthorised(listOf(newer, old), root, authorised))
+        assertSame(newer, latest(listOf(newer, old)))
     }
 
     @Test
@@ -61,8 +74,8 @@ class GitCoverNotesTest {
         val mine = note("1".repeat(64), author, 100)
         val spam = note("2".repeat(64), stranger, 900)
 
-        assertSame(mine, GitCoverNotes.latestAuthorised(listOf(spam, mine), root, authorised))
-        assertNull(GitCoverNotes.latestAuthorised(listOf(spam), root, authorised))
+        assertSame(mine, latest(listOf(spam, mine)))
+        assertNull(latest(listOf(spam)))
     }
 
     @Test
@@ -70,8 +83,8 @@ class GitCoverNotesTest {
         val low = note("1".repeat(64), author, 100)
         val high = note("f".repeat(64), owner, 100)
 
-        assertSame(high, GitCoverNotes.latestAuthorised(listOf(low, high), root, authorised))
-        assertSame(high, GitCoverNotes.latestAuthorised(listOf(high, low), root, authorised))
+        assertSame(high, latest(listOf(low, high)))
+        assertSame(high, latest(listOf(high, low)))
     }
 
     @Test
@@ -79,13 +92,13 @@ class GitCoverNotesTest {
         val elsewhere = note("1".repeat(64), author, 900, target = otherRoot)
         val here = note("2".repeat(64), author, 100)
 
-        assertSame(here, GitCoverNotes.latestAuthorised(listOf(elsewhere, here), root, authorised))
+        assertSame(here, latest(listOf(elsewhere, here)))
     }
 
     @Test
     fun unmarkedRootTagSeenOnRelaysStillResolves() {
         val unmarked = note("1".repeat(64), author, 100, marker = false)
 
-        assertSame(unmarked, GitCoverNotes.latestAuthorised(listOf(unmarked), root, authorised))
+        assertSame(unmarked, latest(listOf(unmarked)))
     }
 }

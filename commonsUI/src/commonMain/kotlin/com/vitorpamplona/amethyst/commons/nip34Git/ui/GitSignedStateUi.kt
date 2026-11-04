@@ -40,8 +40,8 @@ fun observeGitSignedState(
     repository: Address,
     accountViewModel: AccountViewModel,
 ): GitSignedState? {
-    val authority = observeGitAuthority()
-    val maintainers = remember(repository, authority) { authority.membership(repository)?.confirmedMaintainers ?: listOf(repository.pubKeyHex) }
+    val announcements = observeGitRepositoryAnnouncements(repository.dTag)
+    val maintainers = remember(repository, announcements) { LocalCache.gitAuthority.membership(repository)?.confirmedMaintainers ?: listOf(repository.pubKeyHex) }
     val events =
         maintainers.map { maintainer ->
             key(maintainer) {

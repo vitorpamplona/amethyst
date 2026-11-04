@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
+import com.vitorpamplona.amethyst.commons.model.nip34Git.GitRepository
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollTallyPolicy
 import com.vitorpamplona.amethyst.commons.model.nip90DVMs.DvmHeartbeatRegistry
@@ -59,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.model.observables.NoteListMatchingFilt
 import com.vitorpamplona.amethyst.commons.model.observables.Observable
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.model.redirectStrayRelayGroupContent
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
 import com.vitorpamplona.amethyst.commons.rendering.unknown.isStorableUnknownKind
 import com.vitorpamplona.amethyst.commons.rendering.unknown.unknownKindAddress
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
@@ -574,6 +576,24 @@ open class EventCache :
     val relayGroupChannels = LargeCache<GroupId, RelayGroupChannel>()
     val concordChannels = LargeCache<ConcordChannelId, ConcordChannel>()
 
+    /** NIP-34 repositories by identifier (an announcement's `d`): announcements, items and memberships. */
+    val gitRepositories = LargeCache<String, GitRepository>()
+
+    private val gitAnnouncementChangesFlow = MutableSharedFlow<GitRepository>(0, 100, BufferOverflow.DROP_OLDEST)
+
+    /**
+     * A repository whose announcements changed: its memberships, and so which announcements are one
+     * repository, may differ. Lists that group or filter by membership rebuild on it.
+     */
+    val gitAnnouncementChanges = gitAnnouncementChangesFlow.asSharedFlow()
+
+    /** Who may change a NIP-34 item's state, read live from [gitRepositories]. */
+    val gitAuthority =
+        GitAuthority(
+            membershipOf = { getGitRepositoryIfExists(it.dTag)?.membership(it.pubKeyHex) },
+            announcementOf = { getGitRepositoryIfExists(it.dTag)?.announcement(it.pubKeyHex) },
+        )
+
     val paymentTracker = NwcPaymentTracker()
 
     /**
@@ -1049,6 +1069,42 @@ open class EventCache :
 
     fun getOrCreatePublicChatChannel(key: HexKey): PublicChatChannel = publicChatChannels.getOrCreate(key) { PublicChatChannel(key) }
 
+    fun getGitRepositoryIfExists(identifier: String): GitRepository? = gitRepositories.get(identifier)
+
+    fun getOrCreateGitRepository(identifier: String): GitRepository = gitRepositories.getOrCreate(identifier) { GitRepository(identifier) }
+
+    /** The repositories [item] (an issue, patch or PR) is filed under, by identifier. */
+    fun gitRepositoriesOf(item: Event): List<GitRepository> =
+        GitAuthority
+            .repositoriesOf(item)
+            .map { it.dTag }
+            .distinct()
+            .map(::getOrCreateGitRepository)
+
+    // An announcement joins its identifier's repository; its replacement (same AddressableNote, new
+    // event) re-resolves the memberships there.
+    private fun indexGitAnnouncement(event: GitRepositoryEvent) {
+        val repository = getOrCreateGitRepository(event.dTag())
+        repository.addAnnouncement(getOrCreateAddressableNote(event.address()))
+        gitAnnouncementChangesFlow.tryEmit(repository)
+    }
+
+    private fun indexGitItem(event: Event) {
+        val note = getNoteIfExists(event.id) ?: return
+        gitRepositoriesOf(event).forEach { it.addItem(note) }
+    }
+
+    // A status, PR update, cover note or label already threads onto its item (computeReplyTo);
+    // tell the item's repositories so their lists and counts follow.
+    private fun indexGitActivity(event: Event) {
+        val note = getNoteIfExists(event.id) ?: return
+        val items = if (event is LabelEvent) event.labeledEvents().mapNotNull(::getNoteIfExists) else note.replyTo.orEmpty()
+        items.forEach { item ->
+            val itemEvent = item.event ?: return@forEach
+            gitRepositoriesOf(itemEvent).forEach { it.itemActivity(item, note) }
+        }
+    }
+
     fun getOrCreateLiveChannel(key: Address): LiveActivitiesChannel = liveChatChannels.getOrCreate(key) { LiveActivitiesChannel(key) }
 
     fun getOrCreateEphemeralChannel(key: RoomId): EphemeralChatChannel = ephemeralChannels.getOrCreate(key) { EphemeralChatChannel(key) }
@@ -1523,9 +1579,8 @@ open class EventCache :
             is GitStatusEvent -> {
                 // A status event roots itself at a patch/PR/issue via a
                 // marked-`root` `e` tag; link only that so the transition
-                // appears in the target's replies (GitStatusIndex reduces the
-                // observed stream separately and doesn't need this wiring, but
-                // ThreadFeedView and the notifications-tab reply chain do).
+                // appears in the target's replies, where GitStatuses reads it,
+                // and ThreadFeedView and the notifications-tab reply chain too.
                 listOfNotNull(event.rootEventId()?.let { checkGetOrCreateNote(it) })
             }
 
@@ -3974,7 +4029,7 @@ open class EventCache :
                 is OtsEvent -> consume(event, relay, wasVerified)
                 is PollResponseEvent -> consume(event, relay, wasVerified)
                 is ReactionEvent -> consume(event, relay, wasVerified)
-                is LabelEvent -> consume(event, relay, wasVerified)
+                is LabelEvent -> consume(event, relay, wasVerified).also { if (it) indexGitActivity(event) }
                 is UserAssertionEvent -> consume(event, relay, wasVerified)
                 is ReportEvent -> consume(event, relay, wasVerified)
                 is RepostEvent -> consume(event, relay, wasVerified)
@@ -4110,6 +4165,10 @@ open class EventCache :
                 // An agent profile makes its author an agent, which can change how names in a
                 // channel are told apart.
                 is AgentProfileEvent -> consumeBaseReplaceable(event, relay, wasVerified).also { BuzzIdentityNames.invalidate() }
+                // NIP-34: announcements, items and what acts on items also feed their repository.
+                is GitRepositoryEvent -> consumeBaseReplaceable(event, relay, wasVerified).also { if (it) indexGitAnnouncement(event) }
+                is GitIssueEvent, is GitPatchEvent, is GitPullRequestEvent -> consumeRegularEvent(event, relay, wasVerified).also { if (it) indexGitItem(event) }
+                is GitStatusEvent, is GitPullRequestUpdateEvent, is GitCoverNoteEvent -> consumeRegularEvent(event, relay, wasVerified).also { if (it) indexGitActivity(event) }
                 is ObserverFrameEvent -> false
                 is HuddleReactionEvent -> false
                 // Relay-synthesized "this huddle session is live" (48104): only produced on demand
@@ -4215,7 +4274,6 @@ open class EventCache :
                 is SnoObjectEvent,
                 is SnoAvatarEvent,
                 is CyberspaceBagEvent,
-                is GitRepositoryEvent,
                 is GitRepositoryStateEvent,
                 // Nostr CI Workflow Progress (39842): the live marker of a run, replaced as it advances.
                 // CiStatusIndex reads it for the PR / patch CI badge; not linked into any thread.
@@ -4429,15 +4487,9 @@ open class EventCache :
                 is FileStorageHeaderEvent,
                 is ZapGoalEvent,
                 is GroupEvent,
-                is GitIssueEvent,
                 is GitReplyEvent,
-                is GitPatchEvent,
-                is GitPullRequestEvent,
-                is GitPullRequestUpdateEvent,
-                is GitStatusEvent,
-                // Cover notes are linked to the item they cover (computeReplyTo); the CI results are
-                // not linked into any thread — CiStatusIndex and the runs sheet read them instead.
-                is GitCoverNoteEvent,
+                // The CI results are not linked into any thread: CiStatusIndex and the runs sheet
+                // read them instead.
                 is CiJobResultEvent,
                 is CiWorkflowResultEvent,
                 is SnoShardEvent,

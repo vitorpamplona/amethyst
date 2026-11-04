@@ -23,13 +23,13 @@ package com.vitorpamplona.amethyst.commons.ui.note.types
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
 import com.vitorpamplona.amethyst.commons.nip34Git.status.publishGitStatus
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusButtons
-import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryAnnouncements
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitStatus
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.statusKind
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -43,7 +43,7 @@ import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
  * NIP-34 status controls for an issue, patch or pull request. Visible only to the people whose
  * status counts ([GitAuthority.memberActorsOf]): the item's author and the repository's confirmed
  * members. "Mark merged" is for confirmed maintainers only, as gitworkshop offers it.
- * [GitStatusIndex] reflects the published status everywhere.
+ * The item's replies carry the published status everywhere it shows.
  */
 @Composable
 fun GitStatusActions(
@@ -54,15 +54,13 @@ fun GitStatusActions(
     if (GitAuthority.repositoriesOf(event).isEmpty()) return
     val isPatchOrPr = event is GitPatchEvent || event is GitPullRequestEvent
 
-    val authority = observeGitAuthority()
+    val announcements = observeGitRepositoryAnnouncements(event)
     val me = accountViewModel.account.signer.pubKey
-    val canSetStatus = remember(event, authority, me) { me in authority.memberActorsOf(event) }
+    val canSetStatus = remember(event, announcements, me) { me in LocalCache.gitAuthority.memberActorsOf(event) }
     if (!canSetStatus) return
-    val canMerge = remember(event, authority, me) { authority.isRepositoryMaintainer(me, event) }
+    val canMerge = remember(event, announcements, me) { LocalCache.gitAuthority.isRepositoryMaintainer(me, event) }
 
-    val index by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
-    if (index == null) return
-    val current = index?.get(note.idHex)?.statusKind() ?: StatusKind.OPEN
+    val current = observeGitStatus(note)?.statusKind() ?: StatusKind.OPEN
 
     GitStatusButtons(
         current = current,

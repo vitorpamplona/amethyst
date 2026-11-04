@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
 import kotlinx.collections.immutable.ImmutableList
@@ -38,8 +39,8 @@ fun observeGitItemTitle(item: Note): String? {
     EventFinderFilterAssemblerSubscription(item)
     // Renames arrive as the item's replies.
     val replies by remember(item) { item.flow().replies.stateFlow }.collectAsStateWithLifecycle()
-    val authority = observeGitAuthority()
-    return remember(replies, authority) { GitItemTitles.titleOf(item, authority) }
+    val announcements = observeGitRepositoryAnnouncements(item.event)
+    return remember(replies, announcements) { GitItemTitles.titleOf(item, LocalCache.gitAuthority) }
 }
 
 /** The labels [item] shows: its own plus authorised NIP-32 `#t` labels ([GitItemTitles.labelsOf]). */
@@ -48,6 +49,6 @@ fun observeGitItemLabels(item: Note): ImmutableList<String> {
     // Same as [observeGitItemTitle]: `#t` labels reach the item only through its own `e` fetch.
     EventFinderFilterAssemblerSubscription(item)
     val labels by remember(item) { item.flow().labels.stateFlow }.collectAsStateWithLifecycle()
-    val authority = observeGitAuthority()
-    return remember(labels, authority) { GitItemTitles.labelsOf(item, authority).toImmutableList() }
+    val announcements = observeGitRepositoryAnnouncements(item.event)
+    return remember(labels, announcements) { GitItemTitles.labelsOf(item, LocalCache.gitAuthority).toImmutableList() }
 }
