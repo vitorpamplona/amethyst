@@ -75,6 +75,9 @@ class GitMergeInputs(
 
 /** Why a merge can't be made in the app; the maintainer merges with git instead. */
 enum class GitMergeBlocker {
+    /** The item's repository announcement has not loaded yet. */
+    REPOSITORY_NOT_LOADED,
+
     /** Some clone URL is not a GRASP server, which only a local `git push` can reach. */
     NOT_ON_GRASP,
 
@@ -156,7 +159,8 @@ class GitMergeEngine(
         val oldTip = state.commitFor(branch) ?: return GitMergeCheck.Blocked(GitMergeBlocker.NO_BRANCH_TIP)
 
         val clones = targets.map { it.cloneUrl }
-        val source = GitObjectSource(transport, clones)
+        // The repository's servers first; a PR's blob may be only on the PR's own servers.
+        val source = GitObjectSource(transport, (clones + inputs.pullRequestClones).distinct())
         val message =
             GitMergeMessage.build(
                 rootId = inputs.item.id,
@@ -209,7 +213,7 @@ class GitMergeEngine(
                 makeHead = merge.isDefaultBranch,
             )
         val state = signer.sign(template)
-        val result = GraspPusher(client, pushClient).push(state, merge.targets, merge.branch, merge.plan.newTip, merge.plan.objects)
+        val result = GraspPusher(client, pushClient).push(state, merge.targets, merge.branch, merge.plan.newTip, merge.plan.objects, merge.plan.branch)
         return GitMergePush(state, result)
     }
 

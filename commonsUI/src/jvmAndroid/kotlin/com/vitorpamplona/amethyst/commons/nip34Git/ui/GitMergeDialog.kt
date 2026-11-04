@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_merge_blocked_no_branch
 import com.vitorpamplona.amethyst.commons.resources.git_merge_blocked_no_state
 import com.vitorpamplona.amethyst.commons.resources.git_merge_blocked_no_tip
 import com.vitorpamplona.amethyst.commons.resources.git_merge_blocked_not_grasp
+import com.vitorpamplona.amethyst.commons.resources.git_merge_blocked_not_loaded
 import com.vitorpamplona.amethyst.commons.resources.git_merge_blocked_title
 import com.vitorpamplona.amethyst.commons.resources.git_merge_cancel
 import com.vitorpamplona.amethyst.commons.resources.git_merge_checking
@@ -89,7 +90,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip34Git.grasp.GraspServer
 import com.vitorpamplona.quartz.nip34Git.merge.GitMergeStrategy
-import com.vitorpamplona.quartz.nip34Git.state.tags.RefTag
 import kotlin.reflect.KClass
 
 private class GitMergeViewModelFactory(
@@ -252,6 +252,7 @@ private fun CheckBody(check: GitMergeCheck) {
         is GitMergeCheck.Blocked ->
             Text(
                 when (check.blocker) {
+                    GitMergeBlocker.REPOSITORY_NOT_LOADED -> stringRes(Res.string.git_merge_blocked_not_loaded)
                     GitMergeBlocker.NOT_ON_GRASP -> stringRes(Res.string.git_merge_blocked_not_grasp)
                     GitMergeBlocker.NO_SIGNED_STATE -> stringRes(Res.string.git_merge_blocked_no_state)
                     GitMergeBlocker.NO_BRANCH_TIP -> stringRes(Res.string.git_merge_blocked_no_branch)
@@ -266,11 +267,7 @@ private fun CheckBody(check: GitMergeCheck) {
 private fun DoneBody(outcome: GitMergeOutcome) {
     when (outcome) {
         is GitMergeOutcome.Merged -> {
-            val tip =
-                outcome.push.state
-                    .refs()
-                    .firstOrNull { it.kind == RefTag.Kind.BRANCH }
-            Text(stringRes(Res.string.git_merge_done, tip?.shortName ?: "", tip?.commit?.take(7) ?: ""))
+            Text(stringRes(Res.string.git_merge_done, outcome.branch, outcome.newTip.take(7)))
             if (outcome.resolvedIssues > 0) Text(pluralStringRes(Res.plurals.git_merge_done_issues, outcome.resolvedIssues, outcome.resolvedIssues))
             val failures =
                 outcome.push.result.servers

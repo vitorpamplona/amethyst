@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import okhttp3.OkHttpClient
 
 /** Where a merge is, for a progress line. */
@@ -51,9 +52,11 @@ enum class GitMergeStep { PUBLISHING_STATE_AND_PUSHING, PUBLISHING_STATUS }
 
 /** How a merge ended. */
 sealed interface GitMergeOutcome {
-    /** The branch moved on [push]'s servers; [resolvedIssues] issues were marked resolved by its commits. */
+    /** [branch] moved to [newTip] on [push]'s servers; [resolvedIssues] issues were marked resolved by its commits. */
     class Merged(
         val push: GitMergePush,
+        val branch: String,
+        val newTip: String,
         val resolvedIssues: Int,
     ) : GitMergeOutcome
 
@@ -126,7 +129,7 @@ class GitMerger(
     /** Plans the merge of [item], fetching what it needs from the repository's servers. */
     suspend fun check(item: Note): GitMergeCheck {
         refreshSignedStates(item)
-        val inputs = inputsFor(item) ?: return GitMergeCheck.Failed("the repository has not loaded")
+        val inputs = inputsFor(item) ?: return GitMergeCheck.Blocked(GitMergeBlocker.REPOSITORY_NOT_LOADED)
         val me = account.userProfile()
         val info =
             me
@@ -171,7 +174,8 @@ class GitMerger(
         account.client.publish(push.state, relays)
 
         onStep(GitMergeStep.PUBLISHING_STATUS)
-        val patches = if (item.event is GitPatchEvent) GitPatchSeries.of(item).map { cache.getOrCreateNote(it.id) } else emptyList()
+        // The series as planned: a patch that arrived since was not merged.
+        val patches = merge.inputs.patches.map { cache.getOrCreateNote(it.id) }
         account.publishGitApplied(
             item = item,
             mergeCommit = merge.plan.mergeCommit,
@@ -181,7 +185,34 @@ class GitMerger(
         )
 
         val resolved = if (merge.isDefaultBranch) resolveIssues(item, merge) else 0
-        return GitMergeOutcome.Merged(push, resolved)
+        return GitMergeOutcome.Merged(push, merge.branch, merge.plan.newTip, resolved)
+    }
+
+    /**
+     * The repository's issues with their statuses, fetched from its relays: a thread opened from
+     * a notification has loaded neither, and an issue must be known to be open before it is
+     * resolved.
+     */
+    private suspend fun loadIssues(
+        merge: GitPreparedMerge,
+        coordinates: Set<Address>,
+    ): List<Note> {
+        val relays = merge.inputs.announcements.flatMapTo(HashSet()) { it.relaysNorm() }
+        if (relays.isNotEmpty()) {
+            val issueFilter = Filter(kinds = listOf(GitIssueEvent.KIND), tags = mapOf("a" to coordinates.map { it.toValue() }))
+            val fetched = account.client.fetchAll(filters = relays.associateWith { listOf(issueFilter) }, idleTimeoutMs = 8_000)
+            fetched.forEach { cache.justConsume(it, null, wasVerified = false) }
+            val ids = fetched.map { it.id }.distinct()
+            if (ids.isNotEmpty()) {
+                val statusFilter = Filter(kinds = listOf(GitStatusEvent.KIND_OPEN, GitStatusEvent.KIND_APPLIED, GitStatusEvent.KIND_CLOSED, GitStatusEvent.KIND_DRAFT), tags = mapOf("e" to ids))
+                account.client
+                    .fetchAll(filters = relays.associateWith { listOf(statusFilter) }, idleTimeoutMs = 8_000)
+                    .forEach { cache.justConsume(it, null, wasVerified = false) }
+            }
+        }
+        val issues = ArrayList<Note>()
+        cache.getGitRepositoryIfExists(merge.inputs.repository.dTag)?.items?.forEach { _, note -> if (note.event is GitIssueEvent) issues.add(note) }
+        return issues
     }
 
     /**
@@ -192,10 +223,10 @@ class GitMerger(
         item: Note,
         merge: GitPreparedMerge,
     ): Int {
-        val repository = cache.getGitRepositoryIfExists(merge.inputs.repository.dTag) ?: return 0
+        val references = merge.newCommits.associateWith { GitClosingReferences.parse(it.message) }.filterValues { it.isNotEmpty() }
+        if (references.isEmpty()) return 0
         val coordinates = authority.coordinatesToTag(merge.inputs.repository).toSet()
-        val issues = ArrayList<Note>()
-        repository.items.forEach { _, note -> if (note.event is GitIssueEvent) issues.add(note) }
+        val issues = loadIssues(merge, coordinates)
 
         fun find(
             id: HexKey,
@@ -210,8 +241,8 @@ class GitMerger(
         val done = HashSet<HexKey>()
         var count = 0
         val itemEvent = item.event ?: return 0
-        merge.newCommits.forEach { commit ->
-            GitClosingReferences.parse(commit.message).forEach { reference ->
+        references.forEach { (commit, refs) ->
+            refs.forEach { reference ->
                 val issue = find(reference.id, reference.isPrefix) ?: return@forEach
                 if (!done.add(issue.idHex) || GitStatuses.isClosedOrResolved(issue, authority)) return@forEach
                 val content =

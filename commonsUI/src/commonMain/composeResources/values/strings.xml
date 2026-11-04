@@ -2870,6 +2870,7 @@
     <string name="git_merge_already">Its commits are already in the branch.</string>
     <string name="git_merge_blocked_title">Merge it with git</string>
     <string name="git_merge_blocked_not_grasp">Some of this repository's clone URLs are not GRASP servers, which only git on your computer can push to.</string>
+    <string name="git_merge_blocked_not_loaded">The repository has not loaded yet. Try again in a moment.</string>
     <string name="git_merge_blocked_no_state">The maintainers have not published the repository state, so there is no branch tip to merge into.</string>
     <string name="git_merge_blocked_no_branch">The repository state has no tip for the branch this targets.</string>
     <string name="git_merge_blocked_no_tip">The pull request does not name its tip commit.</string>
