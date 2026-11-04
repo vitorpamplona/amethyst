@@ -815,8 +815,11 @@ has no API to draw into the title bar on Wayland (as the app does on macOS),
 and an app-drawn bar would lose GNOME's window menu and button layout.
 `-Dsun.awt.wl.WindowDecorationStyle=builtin|gtk|server` overrides the choice.
 
-Set `AMETHYST_X11=1` to keep a Wayland session on XWayland (the Flatpak also
-needs `--socket=x11` for that). `./gradlew :desktopApp:run` on a stock JDK runs
+Natively on Wayland the app draws on the CPU, since Skiko's GPU surfaces need X11.
+Settings › App › "Draw through XWayland" moves it to XWayland, where it can use the
+graphics card, from the next start (saved in `display.properties` in the data
+directory; offered only where an X display is reachable). `AMETHYST_X11=1` does the
+same and wins over the setting (the Flatpak also needs `--socket=x11` for either). `./gradlew :desktopApp:run` on a stock JDK runs
 on X11/XWayland; run it on JBR to try the Wayland path.
 `scripts/wayland-smoke-test.sh <launcher>` starts a packaged app on a headless
 sway with Xwayland turned off and passes only if it opens a native Wayland
