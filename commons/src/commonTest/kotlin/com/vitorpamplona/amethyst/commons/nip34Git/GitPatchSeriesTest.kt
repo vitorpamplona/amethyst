@@ -28,7 +28,7 @@ import kotlin.test.assertEquals
 class GitPatchSeriesTest {
     private val sig = "0".repeat(128)
     private val author = "1".repeat(64)
-    private val root = patch("a", 100, arrayOf(arrayOf("t", "root")))
+    private val root = patch('a', 100, arrayOf("t", "root"))
 
     private fun patch(
         id: Char,

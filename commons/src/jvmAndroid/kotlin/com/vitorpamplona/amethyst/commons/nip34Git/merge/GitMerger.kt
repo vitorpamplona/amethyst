@@ -33,6 +33,8 @@ import com.vitorpamplona.amethyst.commons.nip34Git.status.publishGitApplied
 import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
@@ -123,6 +125,7 @@ class GitMerger(
 
     /** Plans the merge of [item], fetching what it needs from the repository's servers. */
     suspend fun check(item: Note): GitMergeCheck {
+        refreshSignedStates(item)
         val inputs = inputsFor(item) ?: return GitMergeCheck.Failed("the repository has not loaded")
         val me = account.userProfile()
         val info =
@@ -134,6 +137,23 @@ class GitMerger(
         val name = info?.bestName()?.takeIf { it.isNotBlank() } ?: "Anonymous"
         val email = info?.nip05?.takeIf { it.isNotBlank() } ?: "${me.pubkeyNpub()}@nostr"
         return engine.check(inputs, GitMergeEngine.committer(name, email))
+    }
+
+    /**
+     * Fetches the maintainers' signed states (kind 30618) from the repository's relays. A thread
+     * never loads them, and a merge must start from the newest one: a GRASP server refuses a push
+     * whose state names a tip it doesn't hold.
+     */
+    private suspend fun refreshSignedStates(item: Note) {
+        val event = item.event ?: return
+        val repository = GitAuthority.repositoriesOf(event).firstOrNull() ?: return
+        val membership = authority.membership(repository) ?: return
+        val relays = membership.confirmedAnnouncements.flatMapTo(HashSet()) { it.relaysNorm() }
+        if (relays.isEmpty()) return
+        val filter = Filter(kinds = listOf(GitRepositoryStateEvent.KIND), authors = membership.confirmedMaintainers, tags = mapOf("d" to listOf(repository.dTag)))
+        account.client
+            .fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 8_000)
+            .forEach { cache.justConsume(it, null, wasVerified = false) }
     }
 
     suspend fun merge(
