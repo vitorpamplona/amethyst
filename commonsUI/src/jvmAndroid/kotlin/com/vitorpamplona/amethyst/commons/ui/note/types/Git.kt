@@ -24,7 +24,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -70,11 +68,14 @@ import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevision
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitActivityTarget
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCiStatusBadge
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitItemReference
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitLabelTag
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitRefTag
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusPill
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitVersionedSummary
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.LocalGitThreadRoot
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitMetaStyle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitPullRequestPushText
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemLabels
@@ -90,14 +91,13 @@ import com.vitorpamplona.amethyst.commons.resources.git_pr_update_description
 import com.vitorpamplona.amethyst.commons.resources.git_repo_personal_fork
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_issues
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_patches
-import com.vitorpamplona.amethyst.commons.resources.kind_git_pr_update
 import com.vitorpamplona.amethyst.commons.resources.kind_git_repo
-import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.CommandLine
 import com.vitorpamplona.amethyst.commons.ui.components.ScopedViewModelStore
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.GitDiffStatSummary
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.LoadDecryptedContent
@@ -110,7 +110,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoStatTil
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.computeLanguageBreakdown
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.repoHasFetchableClone
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -204,38 +203,6 @@ private fun TypeChip(
     }
 }
 
-@Composable
-private fun LinkRow(
-    symbol: MaterialSymbol,
-    contentDescription: String?,
-    url: String,
-    style: TextStyle = LocalTextStyle.current,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = LinkRowSpacing,
-    ) {
-        Icon(
-            symbol = symbol,
-            contentDescription = contentDescription,
-            modifier = Modifier.size(Size16dp),
-            tint = MaterialTheme.colorScheme.grayText,
-        )
-        ClickableUrlOrBlossom(
-            url = url,
-            urlText = url.removePrefix("https://").removePrefix("http://"),
-            style = style,
-        )
-    }
-}
-
-/**
- * The head of an issue, patch or PR: "ngit / Issues" (each part opens its screen), the title a
- * size above the body it heads, and one line with the state, CI and labels. It replaces the
- * repository card and the type chip, which said the same at twice the height.
- */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun GitItemHeader(
     repository: Address?,
@@ -542,6 +509,11 @@ fun RenderGitPatchEvent(
     nav: INav,
 ) {
     val event = baseNote.event as? GitPatchEvent ?: return
+    // Quoted (the post a comment answers, a repost's preview): name it, don't reprint it.
+    if (makeItShort) {
+        GitItemReference(baseNote, nav, bordered = false)
+        return
+    }
 
     RenderGitPatchEvent(
         event,
@@ -569,6 +541,7 @@ private fun RenderGitPatchEvent(
     // The repository announcements its statuses, updates, labels and cover notes are judged by.
     LoadGitRepositoryAnnouncements(noteEvent)
 
+    val inThread = LocalGitThreadRoot.current
     GitCardContainer {
         // Statuses name a series' first patch, so a later patch shows the series' state.
         val seriesRoot = remember(noteEvent) { noteEvent.seriesRootId()?.let { LocalCache.getOrCreateNote(it) } ?: note }
@@ -588,8 +561,9 @@ private fun RenderGitPatchEvent(
 
         // A patch's body is its commit message and diff: a cover note sits above it, never in place of it.
         GitVersionedSummary(note, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, CoverNoteSpacing, descriptionIsSummary = false) {
-            // In a collapsed feed preview keep the lightweight markdown body; in the
-            // full (thread) view parse the patch into a proper file-by-file diff.
+            // In a collapsed feed preview keep the lightweight markdown body. Otherwise parse the
+            // patch: its thread draws the file-by-file diff, a feed or a notification only says
+            // how big it is, since a diff is something to work through, not to scroll past.
             val parsed = if (makeItShort) null else remember(noteEvent) { UnifiedDiffParser.parse(noteEvent.content) }
             if (parsed != null && parsed.hasDiff) {
                 // The title is drawn above; the message keeps only the body under git's headers.
@@ -599,16 +573,22 @@ private fun RenderGitPatchEvent(
                         text = body,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = if (inThread) Int.MAX_VALUE else 6,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(modifier = HalfDoubleVertSpacer)
                 }
-                GitDiffView(parsed, Modifier.fillMaxWidth())
+                if (inThread) {
+                    GitDiffView(parsed, Modifier.fillMaxWidth())
+                } else {
+                    GitDiffStatSummary(parsed)
+                }
             } else {
                 GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
         }
 
-        if (!makeItShort) {
+        if (!makeItShort && inThread) {
             GitStatusActions(note, accountViewModel)
         }
     }
@@ -625,6 +605,11 @@ fun RenderGitIssueEvent(
     nav: INav,
 ) {
     val event = baseNote.event as? GitIssueEvent ?: return
+    // Quoted (the post a comment answers, a repost's preview): name it, don't reprint it.
+    if (makeItShort) {
+        GitItemReference(baseNote, nav, bordered = false)
+        return
+    }
 
     RenderGitIssueEvent(
         event,
@@ -670,7 +655,7 @@ private fun RenderGitIssueEvent(
 
         GitCoverNoteAndDescription(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
-        if (!makeItShort) {
+        if (!makeItShort && LocalGitThreadRoot.current) {
             GitStatusActions(note, accountViewModel)
         }
     }
@@ -687,6 +672,11 @@ fun RenderGitPullRequestEvent(
     nav: INav,
 ) {
     val event = baseNote.event as? GitPullRequestEvent ?: return
+    // Quoted (the post a comment answers, a repost's preview): name it, don't reprint it.
+    if (makeItShort) {
+        GitItemReference(baseNote, nav, bordered = false)
+        return
+    }
 
     RenderGitPullRequestEvent(
         event,
@@ -761,7 +751,7 @@ private fun RenderGitPullRequestEvent(
 
         GitCoverNoteAndDescription(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
-        if (!makeItShort) {
+        if (!makeItShort && LocalGitThreadRoot.current) {
             GitCloneSection(cloneUrls)
             GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel)
             GitStatusActions(note, accountViewModel)
@@ -817,18 +807,6 @@ private fun RenderGitPullRequestUpdateEvent(
     val quotesPullRequest = pullRequest != null && !makeItShort && quotesLeft > 0
 
     GitCardContainer {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = HeaderSpacing,
-        ) {
-            TypeChip(
-                text = stringRes(id = Res.string.kind_git_pr_update),
-                background = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                symbol = MaterialSymbols.Sync,
-            )
-        }
-
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
         if (repository != null && !quotesPullRequest) {
             Spacer(modifier = StdVertSpacer)
@@ -839,36 +817,24 @@ private fun RenderGitPullRequestUpdateEvent(
         val previous = observePreviousRevision(noteEvent, pullRequest)
         val summary = gitPullRequestPushText(current, previous, sentence = true)
 
-        Spacer(modifier = HalfDoubleVertSpacer)
-        Text(
-            text = summary ?: stringRes(id = Res.string.git_pr_update_description),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.grayText,
-        )
-
-        val cloneUrls =
-            remember(noteEvent, pullRequest, quotesPullRequest) {
-                val shown = if (quotesPullRequest) pullRequest.cloneUrls().toSet() else emptySet()
-                noteEvent.cloneUrls().filter { it.isNotBlank() && it !in shown }
-            }
-
-        if (cloneUrls.isNotEmpty()) {
-            Spacer(modifier = StdVertSpacer)
-            Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
-                cloneUrls.forEach { url ->
-                    LinkRow(
-                        symbol = MaterialSymbols.CloudDownload,
-                        contentDescription = stringRes(id = Res.string.git_clone_address),
-                        url = url,
-                        style = MaterialTheme.typography.labelMedium.copy(fontSize = Font12SP),
-                    )
-                }
-            }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(
+                symbol = MaterialSymbols.Sync,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.grayText,
+            )
+            Text(
+                text = summary ?: stringRes(id = Res.string.git_pr_update_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.grayText,
+            )
         }
 
+        // Where the new commits are fetched from is the PR thread's business (its Clone line).
         if (quotesPullRequest) {
             Spacer(modifier = StdVertSpacer)
-            RenderTargetNote(note, quotesLeft, backgroundColor, accountViewModel, nav)
+            GitActivityTarget(note, quotesLeft, backgroundColor, accountViewModel, nav)
         }
     }
 }

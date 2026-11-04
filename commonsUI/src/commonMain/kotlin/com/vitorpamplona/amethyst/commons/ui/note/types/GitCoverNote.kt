@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitActivityTarget
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCoverNoteHeader
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -76,6 +77,6 @@ fun RenderGitCoverNoteEvent(
 
     if (!makeItShort && note.replyTo?.lastOrNull() != null) {
         Spacer(modifier = StdVertSpacer)
-        RenderTargetNote(note, quotesLeft, backgroundColor, accountViewModel, nav)
+        GitActivityTarget(note, quotesLeft, backgroundColor, accountViewModel, nav)
     }
 }

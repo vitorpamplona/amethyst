@@ -29,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -81,6 +82,13 @@ private val GitDarkPalette =
 
 @Composable
 fun gitPalette(): GitPalette = if (MaterialTheme.colorScheme.isLight) GitLightPalette else GitDarkPalette
+
+/**
+ * True inside the thread of the issue, patch or PR being drawn as its root: only there does the item
+ * show what is for working on it (its full diff, clone commands, the changes, the status buttons).
+ * In a feed, a notification or a quote it is something to read and open.
+ */
+val LocalGitThreadRoot = staticCompositionLocalOf { false }
 
 /** One corner radius for every git chip, box and card. */
 val GitShape = RoundedCornerShape(6.dp)

@@ -47,6 +47,7 @@ import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -83,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeEditDraft
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitThreadTimelineRow
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.LocalGitThreadRoot
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.isGitTimelineEvent
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.isHiddenInGitThread
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryAnnouncements
@@ -403,12 +405,15 @@ fun RenderThreadFeed(
 
             if (index == 0) {
                 ProvideTextStyle(TextStyle(fontSize = 18.sp, lineHeight = 1.20.em)) {
-                    NoteMaster(
-                        baseNote = item,
-                        modifier = modifier,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                    // A git item's tools (diff, clone, status buttons) belong to its own thread.
+                    CompositionLocalProvider(LocalGitThreadRoot provides true) {
+                        NoteMaster(
+                            baseNote = item,
+                            modifier = modifier,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 }
             } else if (item.idHex != noteId && isGitTimelineEvent(item.event) && item.replyTo?.lastOrNull()?.idHex in threadIds) {
                 // Before the out-of-network collapse: a maintainer outside the viewer's network

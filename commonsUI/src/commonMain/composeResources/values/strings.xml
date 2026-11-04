@@ -2800,6 +2800,11 @@
     <string name="git_new_issue_cancel">Cancel</string>
     <string name="git_new_issue_labels">Labels</string>
     <string name="git_new_issue_labels_hint">bug, enhancement…</string>
+    <string name="git_new_issue_body_hint">Describe the problem or the idea. Markdown works.</string>
+    <string name="git_new_issue_write">Write</string>
+    <string name="git_new_issue_preview">Preview</string>
+    <string name="git_new_issue_nothing_to_preview">Nothing to preview</string>
+    <string name="git_new_issue_add_label">Add label</string>
     <string name="git_status_close">Close</string>
     <string name="git_status_reopen">Reopen</string>
     <string name="git_status_mark_merged">Mark merged</string>

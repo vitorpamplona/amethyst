@@ -96,15 +96,16 @@ fun GitDiffView(
         remember(parsed) { parsed.files.sumOf { f -> f.hunks.sumOf { it.lines.size } } <= HIGHLIGHT_LINE_BUDGET }
 
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        DiffStatSummary(parsed)
+        GitDiffStatSummary(parsed)
         parsed.files.forEach { file ->
             DiffFileCard(file, highlightEnabled)
         }
     }
 }
 
+/** "3 files changed +12 -4", the line that heads a diff and stands for it where the diff isn't drawn. */
 @Composable
-private fun DiffStatSummary(parsed: ParsedPatch) {
+fun GitDiffStatSummary(parsed: ParsedPatch) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
