@@ -218,6 +218,8 @@ fun GitMergeDialog(
         },
         confirmButton = {
             when {
+                // Checking can take a minute on a large repository: it can always be called off.
+                state is GitMergeUiState.Checking -> TextButton(onClick = onDismiss) { Text(stringRes(Res.string.git_merge_cancel)) }
                 merging -> TextButton(onClick = onDismiss) { Text(stringRes(Res.string.git_merge_hide)) }
                 ready != null ->
                     Button(
@@ -229,8 +231,7 @@ fun GitMergeDialog(
             }
         },
         dismissButton = {
-            // Checking can take a minute on a large repository: it can always be called off.
-            if (state is GitMergeUiState.Checking || ready != null && !merging || canMarkMerged) {
+            if (ready != null && !merging || canMarkMerged) {
                 TextButton(onClick = onDismiss) { Text(stringRes(Res.string.git_merge_cancel)) }
             }
         },
