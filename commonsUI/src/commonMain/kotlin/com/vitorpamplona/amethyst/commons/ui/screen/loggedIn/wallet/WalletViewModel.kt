@@ -450,6 +450,21 @@ class WalletViewModel : ViewModel() {
     private val _restoreNoneFound = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val restoreNoneFound = _restoreNoneFound.asSharedFlow()
 
+    // Set once per screen visit by an existence-only lookup (no decrypt, no signer prompt).
+    private val _backupAvailable = MutableStateFlow(false)
+    val backupAvailable = _backupAvailable.asStateFlow()
+    private var backupChecked = false
+
+    /** Looks for a live backup on the relays so the empty state can offer a one-tap restore. */
+    fun checkForBackup() {
+        val acc = account ?: return
+        if (backupChecked) return
+        backupChecked = true
+        viewModelScope.launch(Dispatchers.IO) {
+            _backupAvailable.value = acc.nwcBackup.hasBackup()
+        }
+    }
+
     fun lookForBackupToRestore() {
         fetchBackupForRestore { backup ->
             if (backup == null) {
@@ -478,6 +493,7 @@ class WalletViewModel : ViewModel() {
             )
         val added = acc.settings.mergeRestoredNwcWallets(payload)
         refreshWalletList()
+        _backupAvailable.value = false
         viewModelScope.launch {
             _backupMessage.value =
                 if (added > 0) {

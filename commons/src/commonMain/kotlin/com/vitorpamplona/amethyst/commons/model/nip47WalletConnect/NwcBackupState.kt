@@ -230,12 +230,35 @@ class NwcBackupState(
         val defaultId: String?,
     )
 
+    /** True when a live (not deleted) backup sits on the user's relays. Never decrypts, so it needs no signer prompt. */
+    suspend fun hasBackup(): Boolean = fetchLiveBackupEvents().isNotEmpty()
+
     /** Reads Wisp, Sidecar and zap.cooking backups too. Does not merge: the user confirms what to restore. */
     suspend fun fetchBackup(): FoundNwcBackup? {
+        val wallets = ArrayList<RestorableWallet>()
+        val seen = HashSet<Nip47WalletConnect.Nip47URINorm>()
+        var defaultId: String? = null
+        for (event in fetchLiveBackupEvents()) {
+            val payload = decryptAndDecode(event) ?: continue
+            val dTag = NwcBackupFormat.dTagOf(event.tags) ?: continue
+            if (dTag == NwcBackupFormat.D_TAG) defaultId = payload.defaultId
+            payload.wallets.forEach { entry ->
+                val key = entry.uri.normalize() ?: return@forEach
+                if (seen.add(key)) wallets += RestorableWallet(entry, dTag, event.createdAt)
+            }
+        }
+        if (wallets.isEmpty()) return null
+        return FoundNwcBackup(
+            wallets = wallets,
+            defaultId = defaultId?.takeIf { id -> wallets.any { it.wallet.id == id } },
+        )
+    }
+
+    private suspend fun fetchLiveBackupEvents(): List<Event> {
         val relays = awaitOutboxRelays(RELAY_READY_WAIT_MS) + readRelaysFlow.value
         if (relays.isEmpty()) {
             Log.w(TAG) { "Outbox relays unavailable; cannot look for a backup yet" }
-            return null
+            return emptyList()
         }
 
         // A REQ sent into a still-connecting socket reads as an empty backup, so wait for a live one.
@@ -266,23 +289,7 @@ class NwcBackupState(
                     .orEmpty()
                     .filter { it.pubKey == signer.pubKey }
 
-            val wallets = ArrayList<RestorableWallet>()
-            val seen = HashSet<Nip47WalletConnect.Nip47URINorm>()
-            var defaultId: String? = null
-            for (event in NwcBackupFormat.liveBackups(events)) {
-                val payload = decryptAndDecode(event) ?: continue
-                val dTag = NwcBackupFormat.dTagOf(event.tags) ?: continue
-                if (dTag == NwcBackupFormat.D_TAG) defaultId = payload.defaultId
-                payload.wallets.forEach { entry ->
-                    val key = entry.uri.normalize() ?: return@forEach
-                    if (seen.add(key)) wallets += RestorableWallet(entry, dTag, event.createdAt)
-                }
-            }
-            if (wallets.isEmpty()) return null
-            return FoundNwcBackup(
-                wallets = wallets,
-                defaultId = defaultId?.takeIf { id -> wallets.any { it.wallet.id == id } },
-            )
+            return NwcBackupFormat.liveBackups(events)
         } finally {
             relays.forEach { client.releaseConnection(it) }
         }

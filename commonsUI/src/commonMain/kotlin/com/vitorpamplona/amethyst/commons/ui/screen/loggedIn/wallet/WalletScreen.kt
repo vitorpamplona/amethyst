@@ -119,6 +119,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_backup_disclaimer
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_dismiss
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_enable_confirm
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_enable_title
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_found_restore
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_none_found
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_published
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_relays_title
@@ -370,6 +371,39 @@ private fun NoWalletSetup(
 @Composable
 private fun RestoreBackupLink(walletViewModel: WalletViewModel) {
     val backupBusy by walletViewModel.backupBusy.collectAsState()
+    val backupAvailable by walletViewModel.backupAvailable.collectAsState()
+
+    LaunchedEffect(walletViewModel) { walletViewModel.checkForBackup() }
+
+    if (backupAvailable) {
+        FilledTonalButton(
+            onClick = { walletViewModel.lookForBackupToRestore() },
+            enabled = !backupBusy,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            if (backupBusy) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text(
+                stringRes(
+                    if (backupBusy) {
+                        Res.string.wallet_backup_searching
+                    } else {
+                        Res.string.wallet_backup_found_restore
+                    },
+                ),
+            )
+        }
+        return
+    }
 
     TextButton(
         onClick = { walletViewModel.lookForBackupToRestore() },
