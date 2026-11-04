@@ -223,7 +223,7 @@ private fun RepoContentSubscription(
     accountViewModel: AccountViewModel,
 ) {
     if (event != null) {
-        RepositoryFilterAssemblerSubscription(note, accountViewModel.dataSources().gitRepository)
+        RepositoryFilterAssemblerSubscription(note, event, accountViewModel.dataSources().gitRepository)
     }
     // Its co-maintainers' announcements, which its membership (and so its lists) depend on.
     LoadGitRepositoryAnnouncements(remember(note) { listOf(note.address) })

@@ -184,7 +184,7 @@ class RelaySubscriptionsCoordinator(
 
     val chatroom = ChatroomFilterAssembler(client)
     val community = CommunityFilterAssembler(cache, client)
-    val gitRepository = RepositoryFilterAssembler(cache, client)
+    val gitRepository = RepositoryFilterAssembler(cache, client, scope)
 
     // The items filed under the D-list headers on screen (kinds 9999/39999 by `#z`).
     val dListItems = DListItemsFilterAssembler(client)
