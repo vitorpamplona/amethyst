@@ -32,7 +32,6 @@ import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.cartridges.CartDetector
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
-import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.ui.cartridges.CartPlayOverlay
@@ -50,7 +49,15 @@ import okio.Path
 // Call-site shims for [NotePlatform]: the same names and defaults the app's own composables have,
 // so shared note code reads as it did and only its imports point here.
 
-/** The platform's media view, with a Play button on top when the image is a game cartridge. */
+/**
+ * The platform's media view, with a Play button on top when the image is a game cartridge.
+ *
+ * Encrypted chat attachments (NIP-17 files, Marmot and Cordn media) qualify too: their chat view
+ * puts the key in the account's `EncryptionKeyCache`, and the image HTTP client the player
+ * downloads with decrypts in flight, so the cart arrives as plaintext with its plaintext hash. A
+ * `blossom:` URI works too: the cache finds the key again by the blob's sha256 once the URI
+ * resolves to a server URL.
+ */
 @Composable
 fun ZoomableContentView(
     content: BaseMediaContent,
@@ -60,7 +67,7 @@ fun ZoomableContentView(
     accountViewModel: AccountViewModel,
 ) {
     val platform = LocalNotePlatform.current
-    if (content is MediaUrlImage && content !is EncryptedMediaUrlImage && CartDetector.mightBeCart(content.url, content.mimeType, content.dim)) {
+    if (content is MediaUrlImage && CartDetector.mightBeCart(content.url, content.mimeType, content.dim)) {
         Box {
             platform.ZoomableContentView(content, images, roundedCorner, contentScale, accountViewModel)
             CartPlayOverlay(content, accountViewModel, Modifier.matchParentSize())

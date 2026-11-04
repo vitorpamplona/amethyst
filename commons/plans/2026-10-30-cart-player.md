@@ -22,6 +22,17 @@ Amethyst adds around them.
   image HTTP client (Tor-aware), and only when the user lets images load. The one cart post found
   on relays is a bare `image.nostr.build/<hash>.png` with no `imeta`, so tags alone would miss it.
   Answers are cached per URL.
+- **Chats**: a cart linked in a chat message's text goes through the same rich-text renderer as a
+  note. A cart sent as an encrypted attachment (NIP-17 file message, Marmot or Cordn media) plays
+  too: the chat view caches its key in `EncryptionKeyCache`, and `EncryptedBlobInterceptor` on the
+  image client decrypts the download, so the probe and the player read plaintext and check the
+  plaintext hash the message records (`EncryptedCartDownloadTest`). The interceptor drops the
+  probe's Range header, so an encrypted PNG of unknown size is downloaded whole to answer it. An
+  encrypted `blossom:` attachment works too: `EncryptionKeyCache` files a key registered under a
+  `blossom:` URI by the blob's sha256 as well, and finds it again for any server URL whose last
+  path segment is `<sha256>[.ext]` (`EncryptionKeyCacheTest`). The player then checks the
+  plaintext hash, not the URI's, which names the ciphertext. An encrypted attachment carries one
+  file and no cart links, so it plays as a single cart.
 - **Player** (`commonsUI/.../ui/cartridges/CartPlayer.kt`, `CartPlayerViewModel` in commons): the
   app holds one `KikoPlayer` per cart in `CartPlayerViewModel` (so a rotation keeps the game) and
   shows it with `KikoGame` in a full-screen dialog, adding the pause and close buttons, its
