@@ -269,7 +269,9 @@ fun WalletScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            if (showOnchainWallet) {
+            // With wallets the card is the list's first item and scrolls with them; the
+            // loading and empty states have no list, so it stays pinned above them.
+            if (showOnchainWallet && !hasWallet) {
                 OnchainSection(
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -307,6 +309,8 @@ fun WalletScreen(
                     cashuBalanceSats = cashuBalanceSats,
                     cashuMintCount = cashuMints.size,
                     hideBalance = hideBalances,
+                    accountViewModel = accountViewModel,
+                    showOnchainWallet = showOnchainWallet,
                 )
             }
         }
@@ -463,6 +467,8 @@ private fun MultiWalletHomeContent(
     cashuBalanceSats: Long,
     cashuMintCount: Int,
     hideBalance: Boolean,
+    accountViewModel: AccountViewModel,
+    showOnchainWallet: Boolean,
 ) {
     val walletInfoList by walletViewModel.walletInfoList.collectAsState()
     val nwcWallets by walletViewModel.wallets.collectAsState()
@@ -495,6 +501,15 @@ private fun MultiWalletHomeContent(
                 .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (showOnchainWallet) {
+            item(key = "onchain") {
+                OnchainSection(
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            }
+        }
         items(walletInfoList, key = { info -> info.walletId }) { walletInfo ->
             WalletCard(
                 walletInfo = walletInfo,
