@@ -485,6 +485,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustProvide
 import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustedAssertion
 import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustedList
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.fullWidthHeaderPictureSize
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderConcordTimerNotice
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
@@ -499,8 +500,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -1453,8 +1452,10 @@ fun InnerNoteWithReactions(
                 if (repostedNote != null) {
                     // FullWidthRepostHeader draws both authors' pictures beside their rows.
                 } else if (fullWidth) {
-                    Box(modifier = Size35Modifier, contentAlignment = Alignment.BottomEnd) {
-                        RenderAuthorImages(baseNote, nav, accountViewModel, Size35dp)
+                    // Sized to the header rows beside it: 35dp next to two rows, 30dp next to one.
+                    val pictureSize = fullWidthHeaderPictureSize(twoRows = showSecondRow)
+                    Box(modifier = remember(pictureSize) { Modifier.size(pictureSize) }, contentAlignment = Alignment.BottomEnd) {
+                        RenderAuthorImages(baseNote, nav, accountViewModel, pictureSize)
                     }
                 } else if (notBoostedNorQuote) {
                     Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {

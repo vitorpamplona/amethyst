@@ -25,6 +25,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.NoteLayoutType
@@ -48,6 +50,8 @@ data class DisplaySettings(
     val autoPlayVideos: Boolean = true,
     /** How notes place their author and media. */
     val noteLayout: NoteLayoutType = NoteLayoutType.AUTHOR_COLUMN,
+    /** Complete UI mode: a note's header adds a second row (NIP-05, status or npub) under the name. */
+    val completeUiMode: Boolean = false,
 ) {
     /** Robohash fallbacks are skipped in performance mode (a plain face icon instead). */
     val loadRobohash: Boolean get() = !performanceMode
@@ -57,7 +61,17 @@ data class DisplaySettings(
 
     /** Full-width notes also run their own images and videos out to the screen edges. */
     val edgeToEdgeMedia: Boolean get() = noteLayout == NoteLayoutType.EDGE_TO_EDGE
+
+    /**
+     * The author picture of a full-width note's header, sized to the rows beside it: 35dp next to
+     * the name and its second row, 30dp next to the name alone, where 35dp would leave the one
+     * row floating in a band taller than it needs.
+     */
+    val fullWidthPictureSize: Dp get() = fullWidthHeaderPictureSize(twoRows = completeUiMode)
 }
+
+/** The full-width header's author picture beside [twoRows] header rows, or beside one. */
+fun fullWidthHeaderPictureSize(twoRows: Boolean): Dp = if (twoRows) 35.dp else 30.dp
 
 // Not static: showProfilePictures follows the connection type (Wi-Fi only), so this changes when the
 // network does, and only its readers should recompose, not everything under the theme.
@@ -77,6 +91,7 @@ fun collectDisplaySettings(settings: UiSettingsState): DisplaySettings {
             performanceMode = featureSet == FeatureSetType.PERFORMANCE,
             autoPlayVideos = autoPlayVideos,
             noteLayout = noteLayout,
+            completeUiMode = featureSet == FeatureSetType.COMPLETE,
         )
     }
 }
