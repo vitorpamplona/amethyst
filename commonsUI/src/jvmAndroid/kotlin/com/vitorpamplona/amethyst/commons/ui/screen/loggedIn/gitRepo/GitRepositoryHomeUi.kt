@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.gitSubjectOf
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -206,7 +207,7 @@ fun RepoStatTiles(
         StatTile(MaterialSymbols.Commit, branches.toString(), stringRes(Res.string.git_repo_stat_branches), Modifier.weight(1f))
         StatTile(MaterialSymbols.Tag, tags.toString(), stringRes(Res.string.git_repo_stat_tags), Modifier.weight(1f))
         StatTile(MaterialSymbols.Description, compactCount(files), stringRes(Res.string.git_repo_stat_files), Modifier.weight(1f))
-        StatTile(MaterialSymbols.Schedule, updatedEpochSec?.let { relativeShort(it) } ?: "—", stringRes(Res.string.git_repo_stat_updated), Modifier.weight(1f))
+        StatTile(MaterialSymbols.Schedule, updatedEpochSec?.let { timeAgo(it, prefix = "") } ?: "—", stringRes(Res.string.git_repo_stat_updated), Modifier.weight(1f))
     }
 }
 
@@ -476,7 +477,7 @@ fun RepoLastCommit(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = commit.authorName + " · " + relativeShort(commit.authorTimeSec),
+                text = commit.authorName + timeAgo(commit.authorTimeSec, prefix = " · "),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.grayText,
                 maxLines = 1,
@@ -572,19 +573,4 @@ private fun compactCount(n: Int): String =
 private fun trimDecimal(v: Double): String {
     val rounded = (v * 10).toInt() / 10.0
     return if (rounded % 1.0 == 0.0) rounded.toInt().toString() else rounded.toString()
-}
-
-/** A coarse "time since" label for epoch seconds: "5m", "3h", "2d", "4w", "1y". */
-private fun relativeShort(epochSec: Long): String {
-    val deltaSec = (System.currentTimeMillis() / 1000) - epochSec
-    if (deltaSec < 60) return "now"
-    val mins = deltaSec / 60
-    if (mins < 60) return mins.toString() + "m"
-    val hours = mins / 60
-    if (hours < 24) return hours.toString() + "h"
-    val days = hours / 24
-    if (days < 7) return days.toString() + "d"
-    val weeks = days / 7
-    if (weeks < 52) return weeks.toString() + "w"
-    return (days / 365).toString() + "y"
 }

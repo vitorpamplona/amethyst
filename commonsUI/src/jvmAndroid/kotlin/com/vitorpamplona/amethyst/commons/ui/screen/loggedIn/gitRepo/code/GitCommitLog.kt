@@ -63,12 +63,11 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_no_commits
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.relativeTimeSpan
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
 import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -213,9 +212,8 @@ private fun CommitRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val time by produceState("", commit.authorTimeSec) { value = relativeTime(commit.authorTimeSec) }
                 Text(
-                    text = "${commit.authorName} · $time",
+                    text = commit.authorName + timeAgo(commit.authorTimeSec, prefix = " · "),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                     maxLines = 1,
@@ -246,10 +244,3 @@ private fun LogHeader(
         )
     }
 }
-
-private suspend fun relativeTime(epochSec: Long): String =
-    if (epochSec <= 0) {
-        ""
-    } else {
-        relativeTimeSpan(epochSec, TimeUtils.now(), dayResolution = false)
-    }

@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.ui.note
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.CodeHighlighter
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_diff_binary
 import com.vitorpamplona.amethyst.commons.resources.git_diff_files_changed
+import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.quartz.nip34Git.patch.CharSpan
 import com.vitorpamplona.quartz.nip34Git.patch.GitDiffFile
 import com.vitorpamplona.quartz.nip34Git.patch.GitDiffLine
@@ -129,7 +129,9 @@ private fun DiffFileCard(
 ) {
     var expanded by rememberSaveable(file.displayPath) { mutableStateOf(true) }
     val language = remember(file.displayPath) { CodeHighlighter.languageForFile(file.displayPath) }
-    val darkMode = isSystemInDarkTheme()
+    // The app's theme, not the system's: they differ when the user picks one in Settings, and
+    // the highlighter paints plain code and punctuation for the background it is told about.
+    val darkMode = !MaterialTheme.colorScheme.isLight
 
     Column(
         modifier =

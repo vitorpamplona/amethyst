@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -75,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
 import com.vitorpamplona.quartz.nip34Git.git.GitTreeEntry
@@ -171,7 +171,9 @@ private fun HighlightedCode(
     fileName: String,
     modifier: Modifier,
 ) {
-    val darkMode = isSystemInDarkTheme()
+    // The app's theme, not the system's: they differ when the user picks one in Settings, and
+    // the highlighter paints plain code and punctuation for the background it is told about.
+    val darkMode = !MaterialTheme.colorScheme.isLight
     val language = remember(fileName) { CodeHighlighter.languageForFile(fileName) }
 
     val annotated by
