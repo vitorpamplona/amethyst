@@ -61,7 +61,6 @@ class GitDashboardState(
     val myRepositories: List<GitDashboardRepository>,
     val followedRepositories: List<GitDashboardRepository>,
     val inbox: List<GitInboxEntry>,
-    val recentWork: List<GitInboxEntry>,
 ) {
     val unreadCount: Int get() = inbox.count { it.unread > 0 }
 }
@@ -114,7 +113,6 @@ class GitDashboardViewModel(
             myRepositories = mine,
             followedRepositories = followed.filter { f -> mine.none { it.note.address == f.note.address } },
             inbox = inbox,
-            recentWork = GitDashboard.recentWork(inbox),
         )
     }
 

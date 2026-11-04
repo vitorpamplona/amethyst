@@ -28,23 +28,39 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.model.nip34Git.GitRepository
+import com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 
-/** A repository row of the dashboard: the announcement it opens and when anything last happened in it. */
+/**
+ * A repository row of the dashboard: the announcement it opens, when anything last happened in it,
+ * and the work waiting in it: open issues, and open patches and PRs (drafts included).
+ */
 @Immutable
 class GitDashboardRepository(
     val note: AddressableNote,
     val lastActivity: Long,
+    val openIssues: Int = 0,
+    val openPulls: Int = 0,
 )
+
+/** What last happened to an inbox item, for the row's "greenart7c3 commented". */
+enum class GitInboxAction { OPENED, COMMENTED, REOPENED, MERGED, RESOLVED, CLOSED, DRAFTED, PUSHED, EDITED, RETITLED }
 
 /** Why an item is in the inbox, checked in this order. */
 enum class GitInvolvement { AUTHOR, PARTICIPANT, WATCHING, MENTIONED }
@@ -61,7 +77,13 @@ class GitInboxEntry(
     val involvement: GitInvolvement,
     /** When the reader last authored or commented on it; 0 when never. */
     val myLastActivity: Long,
-)
+    /** The item itself, or the newest event about it: who acted last, shown with [latestAction]. */
+    val latest: Note,
+    val latestAction: GitInboxAction,
+) {
+    /** The reader opened it, took part or was named: the inbox's "Involved" filter. */
+    val isInvolved: Boolean get() = involvement != GitInvolvement.WATCHING
+}
 
 /**
  * The git dashboard's sections, computed from what [cache] holds: no relay work here. Its
@@ -83,7 +105,7 @@ object GitDashboard {
                 val mine = announcements[me]
                 val shown =
                     mine ?: announcements.values.firstOrNull { me in it.maintainers() || it.roleRecords().any { record -> record.subject == me && record.isActive } }
-                shown?.let { GitDashboardRepository(cache.getOrCreateAddressableNote(it.address()), lastActivity(repository, it)) }
+                shown?.let { summaryOf(cache.getOrCreateAddressableNote(it.address()), repository, it, cache) }
             }.sortedByDescending { it.lastActivity }
 
     /** The repositories in the reader's follow list (kind 10018), most recently active first. */
@@ -96,7 +118,7 @@ object GitDashboard {
                 val note = cache.getOrCreateAddressableNote(address)
                 val event = note.event as? GitRepositoryEvent
                 val repository = cache.getGitRepositoryIfExists(address.dTag)
-                GitDashboardRepository(note, if (repository != null && event != null) lastActivity(repository, event) else 0L)
+                if (repository != null && event != null) summaryOf(note, repository, event, cache) else GitDashboardRepository(note, 0L)
             }.sortedByDescending { it.lastActivity }
 
     /**
@@ -138,16 +160,6 @@ object GitDashboard {
         return entries.values.sortedByDescending { it.lastActivity }.take(limit)
     }
 
-    /** What the reader wrote or answered, by when they last did: where to pick the work back up. */
-    fun recentWork(
-        inbox: List<GitInboxEntry>,
-        limit: Int = 10,
-    ): List<GitInboxEntry> =
-        inbox
-            .filter { it.myLastActivity > 0 }
-            .sortedByDescending { it.myLastActivity }
-            .take(limit)
-
     private fun entryOf(
         item: Note,
         me: HexKey,
@@ -156,33 +168,66 @@ object GitDashboard {
     ): GitInboxEntry {
         val created = item.createdAt() ?: 0L
         var last = created
+        var latest = item
+        var latestAction = GitInboxAction.OPENED
         var unread = if (created > readAt && item.author?.pubkeyHex != me) 1 else 0
         var mine = if (item.author?.pubkeyHex == me) created else 0L
+        val isIssue = item.event is GitIssueEvent
         item.replies.forEach { reply ->
             val at = reply.createdAt() ?: return@forEach
-            if (at > last) last = at
+            val action = actionOf(reply.event, isIssue) ?: return@forEach
+            if (at > last) {
+                last = at
+                latest = reply
+                latestAction = action
+            }
             val byMe = reply.author?.pubkeyHex == me
             if (byMe && isConversation(reply) && at > mine) mine = at
             if (!byMe && at > readAt) unread++
         }
-        return GitInboxEntry(item, last, unread, involvement, mine)
+        return GitInboxEntry(item, last, unread, involvement, mine, latest, latestAction)
     }
+
+    /** What [event] did to the item, or null for what the inbox doesn't report (a reaction, a zap). */
+    private fun actionOf(
+        event: Event?,
+        isIssue: Boolean,
+    ): GitInboxAction? =
+        when (event) {
+            is CommentEvent, is GitReplyEvent -> GitInboxAction.COMMENTED
+            is GitStatusOpenEvent -> GitInboxAction.REOPENED
+            is GitStatusAppliedEvent -> if (isIssue) GitInboxAction.RESOLVED else GitInboxAction.MERGED
+            is GitStatusClosedEvent -> GitInboxAction.CLOSED
+            is GitStatusDraftEvent -> GitInboxAction.DRAFTED
+            is GitPullRequestUpdateEvent -> GitInboxAction.PUSHED
+            is GitPatchEvent -> GitInboxAction.PUSHED
+            is GitCoverNoteEvent -> GitInboxAction.EDITED
+            is LabelEvent -> GitInboxAction.RETITLED
+            else -> null
+        }
 
     /** Issues, PRs and series-root patches: the items a repository lists. */
     private fun isListedItem(event: Event): Boolean = event is GitIssueEvent || event is GitPullRequestEvent || (event is GitPatchEvent && event.isSeriesRoot())
 
     private fun isConversation(reply: Note): Boolean = reply.event is CommentEvent || reply.event is GitReplyEvent
 
-    private fun lastActivity(
+    private fun summaryOf(
+        note: AddressableNote,
         repository: GitRepository,
         announcement: GitRepositoryEvent,
-    ): Long {
+        cache: EventCache,
+    ): GitDashboardRepository {
         val coordinates = repositoryCoordinateSet(announcement.address())
         var last = announcement.createdAt
+        var issues = 0
+        var pulls = 0
         repository.items.forEach { _, item ->
             val event = item.event ?: return@forEach
-            if (event.createdAt > last && isFiledUnder(event, coordinates)) last = event.createdAt
+            if (!isFiledUnder(event, coordinates)) return@forEach
+            if (event.createdAt > last) last = event.createdAt
+            if (!isListedItem(event) || GitStatuses.isClosedOrResolved(item, cache.gitAuthority)) return@forEach
+            if (event is GitIssueEvent) issues++ else pulls++
         }
-        return last
+        return GitDashboardRepository(note, last, issues, pulls)
     }
 }

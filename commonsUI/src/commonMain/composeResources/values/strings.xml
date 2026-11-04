@@ -2802,21 +2802,40 @@
     <string name="git_inbox_empty">Issues and pull requests in repositories you maintain or follow, and the ones you take part in, show up here.</string>
     <string name="git_inbox_all_read">You are all caught up.</string>
     <string name="git_inbox_author">You opened</string>
-    <string name="git_inbox_participant">You commented</string>
     <string name="git_inbox_mentioned">Mentioned</string>
-    <string name="git_inbox_watching">Watching</string>
     <plurals name="git_inbox_new_count">
         <item quantity="one">%1$d new</item>
         <item quantity="other">%1$d new</item>
     </plurals>
-    <string name="git_continue_working">Continue where you left off</string>
     <string name="git_your_repositories">Your repositories</string>
     <string name="git_your_repositories_empty">Repositories you announce or maintain show up here.</string>
     <string name="git_followed_repositories">Followed repositories</string>
-    <string name="git_followed_repositories_empty">Bookmark a repository from its page to follow it here.</string>
+    <string name="git_followed_repositories_empty">Follow a repository from its page to see it here.</string>
     <string name="git_filter_repositories">Filter repositories</string>
     <string name="git_show_more">Show more</string>
     <string name="git_show_less">Show less</string>
+    <string name="git_inbox_involved">Involved</string>
+    <string name="git_inbox_action_opened">opened it</string>
+    <string name="git_inbox_action_commented">commented</string>
+    <string name="git_inbox_action_reopened">reopened it</string>
+    <string name="git_inbox_action_merged">merged it</string>
+    <string name="git_inbox_action_resolved">resolved it</string>
+    <string name="git_inbox_action_closed">closed it</string>
+    <string name="git_inbox_action_drafted">marked it as draft</string>
+    <string name="git_inbox_action_pushed">pushed commits</string>
+    <string name="git_inbox_action_edited">edited the description</string>
+    <string name="git_inbox_action_retitled">changed the title</string>
+    <plurals name="git_repo_open_issues">
+        <item quantity="one">%1$d issue</item>
+        <item quantity="other">%1$d issues</item>
+    </plurals>
+    <plurals name="git_repo_open_pulls">
+        <item quantity="one">%1$d PR</item>
+        <item quantity="other">%1$d PRs</item>
+    </plurals>
+    <string name="git_repo_updated">updated %1$s</string>
+    <string name="git_explore_repositories">Explore repositories</string>
+    <string name="git_repo_follow">Follow repository</string>
     <string name="git_new_issue_title">New issue</string>
     <string name="git_new_issue_subject">Title</string>
     <string name="git_new_issue_body">Description</string>

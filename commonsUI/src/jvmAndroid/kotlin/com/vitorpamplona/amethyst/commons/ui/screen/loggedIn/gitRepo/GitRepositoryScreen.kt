@@ -90,9 +90,9 @@ import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryA
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.RepositoryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_button
-import com.vitorpamplona.amethyst.commons.resources.git_repo_bookmark
 import com.vitorpamplona.amethyst.commons.resources.git_repo_filter_closed
 import com.vitorpamplona.amethyst.commons.resources.git_repo_filter_open
+import com.vitorpamplona.amethyst.commons.resources.git_repo_follow
 import com.vitorpamplona.amethyst.commons.resources.git_repo_label_all
 import com.vitorpamplona.amethyst.commons.resources.git_repo_labels
 import com.vitorpamplona.amethyst.commons.resources.git_repo_readme
@@ -346,9 +346,10 @@ private fun GitRepositoryHome(
                         .collectAsStateWithLifecycle()
                     val isBookmarked = remember(bookmarkedSet, note) { bookmarkedSet.contains(note.address) }
                     IconButton(onClick = { accountViewModel.toggleRepositoryBookmark(note, isBookmarked) }) {
+                        // Following is the kind-10018 list, which gitworkshop calls "Followed repositories".
                         Icon(
-                            symbol = if (isBookmarked) MaterialSymbols.Bookmark else MaterialSymbols.BookmarkAdd,
-                            contentDescription = stringRes(Res.string.git_repo_bookmark),
+                            symbol = if (isBookmarked) MaterialSymbols.Visibility else MaterialSymbols.VisibilityOff,
+                            contentDescription = stringRes(Res.string.git_repo_follow),
                             tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }

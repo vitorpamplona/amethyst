@@ -59,7 +59,8 @@ class GitDashboardTest {
             // The reader's own report isn't news to them; the stranger's is.
             assertEquals(0, inbox.first { it.item.idHex == mineElsewhere.id }.unread)
             assertEquals(1, inbox.first { it.item.idHex == inMine.id }.unread)
-            assertEquals(listOf(mineElsewhere.id), GitDashboard.recentWork(inbox).map { it.item.idHex })
+            assertEquals(listOf(mineElsewhere.id), inbox.filter { it.isInvolved }.map { it.item.idHex })
+            assertEquals(1, GitDashboard.myRepositories(me.pubKey, cache).single().openIssues)
         }
 
     @Test
@@ -81,5 +82,7 @@ class GitDashboardTest {
             assertEquals(1, inbox[0].unread)
             assertEquals(30L, inbox[0].lastActivity)
             assertEquals(0, inbox[1].unread)
+            assertEquals(GitInboxAction.CLOSED, inbox[0].latestAction)
+            assertEquals(GitInboxAction.OPENED, inbox[1].latestAction)
         }
 }

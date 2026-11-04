@@ -337,7 +337,8 @@ fun NavDestinations.sharedDestinations(
     composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
     composableFromEndArgs<Route.Pictures> { PicturesScreen(accountViewModel, nav, it.attachments, it.message) }
     composableFromEnd<Route.Workouts> { WorkoutsScreen(accountViewModel, nav) }
-    composableFromEnd<Route.GitRepositories> { GitRepositoriesScreen(accountViewModel, nav) }
+    // The dashboard sizes its own columns; Explore caps its feed to the reading width itself.
+    composableFromEnd<Route.GitRepositories>(capWidth = false) { GitRepositoriesScreen(accountViewModel, nav) }
     composableFromEnd<Route.NewGitRepository> { NewGitRepositoryScreen(accountViewModel, nav) }
     composableFromEnd<Route.Highlights> { HighlightsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }

@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepositories
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
@@ -31,6 +34,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -43,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.commons.ui.layouts.FeedContentMaxWidth
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
@@ -110,26 +116,34 @@ fun GitRepositoriesScreen(
                 }
             }
         },
-        floatingButton = {
-            FabBottomBarPadded(nav) {
-                NewGitRepositoryButton(nav)
-            }
-        },
+        // The dashboard has its own "+ New" beside your repositories.
+        floatingButton =
+            if (tab == 1) {
+                { FabBottomBarPadded(nav) { NewGitRepositoryButton(nav) } }
+            } else {
+                null
+            },
         accountViewModel = accountViewModel,
     ) {
         if (tab == 0) {
             GitDashboard(accountViewModel, nav, onExplore = { tab = 1 })
             return@DisappearingScaffold
         }
-        RefresheableBox(gitRepositoriesFeedContentState, true) {
-            SaveableFeedContentState(gitRepositoriesFeedContentState, scrollStateKey = ScrollStateKeys.GIT_REPOSITORIES_SCREEN) { listState ->
-                RenderFeedContentState(
-                    feedContentState = gitRepositoriesFeedContentState,
-                    accountViewModel = accountViewModel,
-                    listState = listState,
-                    nav = nav,
-                    routeForLastRead = "GitRepositoriesFeed",
-                )
+        // The route is uncapped for the dashboard's columns; the list keeps the reading width.
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            Box(Modifier.widthIn(max = FeedContentMaxWidth)) {
+                RefresheableBox(gitRepositoriesFeedContentState, true) {
+                    SaveableFeedContentState(gitRepositoriesFeedContentState, scrollStateKey = ScrollStateKeys.GIT_REPOSITORIES_SCREEN) { listState ->
+                        RenderFeedContentState(
+                            feedContentState = gitRepositoriesFeedContentState,
+                            accountViewModel = accountViewModel,
+                            listState = listState,
+                            nav = nav,
+                            routeForLastRead = "GitRepositoriesFeed",
+                            onLoaded = { GitRepositoryExploreList(it, listState, accountViewModel, nav) },
+                        )
+                    }
+                }
             }
         }
     }
