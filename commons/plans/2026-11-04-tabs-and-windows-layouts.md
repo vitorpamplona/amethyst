@@ -1,0 +1,277 @@
+# Tabs and windows: two new navigation layouts
+
+Status: **Proposed, not started.** Date: 2026-11-04.
+
+## Goal
+
+Add a setting, *Settings › App › Navigation layout*, with three choices:
+
+| Layout | What it does | Why |
+|---|---|---|
+| **Stack** (default, what ships today) | One back stack per window. The bottom bar or rail switches tabs inside that stack. | Keep the current behaviour for everyone who wants it. |
+| **Tabs** | The main pane holds several independent back stacks shown as browser-style tabs. You can open a screen in a new tab, switch between tabs, close them, and reorder them. | Follow many things at once (a thread, a profile, a hashtag, a DM) without losing your place in any of them. |
+| **Windows** | Each screen opens in its own OS window. Back closes the window. | Break Amethyst into pieces a window manager (i3, sway, Hyprland, macOS Stage Manager, Android desktop windowing) can tile, stack and place. |
+
+Tabs work on both platforms and at every window size. Windows ship on Desktop first, then on
+Android where the device supports free-form windows (desktop windowing on Android 16+, ChromeOS,
+DeX). Phones don't offer the Windows option.
+
+## What exists today (survey)
+
+| Component | Where | Use in this plan |
+|---|---|---|
+| `NavBackStacks` / `NavStackEntry` (headless back stack, JSON `encode`/`decode`) | `commons/…/model/navigation/NavBackStacks.kt` | **Reused as-is.** Each tab and each window owns one. |
+| `Nav : INav` (each op runs after `ImeSettler`), `rememberNav()` | `commonsUI/…/ui/navigation/navs/Nav.kt`, `RememberNavs.kt` | **Reused.** The tab and window navs wrap it the way `DeckColumnNav` and `TwoPaneNav` do. |
+| `INav` | `commonsUI/…/ui/navigation/navs/INav.kt` | **Extended** with one method (`openNew`) that defaults to `nav(route)`, so the ~hundreds of call sites don't change. |
+| Deck: `DeckArea`, `DeckColumnPane`, `DeckColumnNav`, `DeckLayout` in `AccountSettings.deck` | `commonsUI/…/ui/navigation/deck/`, `commons/…/model/deck/DeckLayout.kt` | **The template to copy.** A deck column already gets its own back stack, its own `ViewModelStoreOwner` (entry keys restart at `nav-0` in each stack), its own `NavigationEventDispatcherOwner` (back goes only to the focused column), and its own `EmojiPanelHost`. Columns are persisted as JSON, and a column whose route no longer decodes is dropped instead of breaking the whole layout. Tabs and windows need all of that. |
+| `NavigationHost` (retained = stack + savedTabs; only `stack` is displayed) | `commonsUI/…/ui/navigation/host/NavigationHost.kt` | **Reused** once per tab and once per window. |
+| `NavDestinations` + `sharedDestinations` + `AppRoot.registerDestinations` | `ui/navigation/host/` | **Reused.** Built per nav, the way `rememberDeck` builds them per column. `NavFamily` (fade / drill-in / modal) also decides what kind of window a route gets. |
+| `AppShellLayout` (bar / rail / drawer, `deck` slot) | `ui/navigation/shell/AppShellLayout.kt` | **Extended** with a tab-strip slot above the content. |
+| `ScreenLayoutSpec` / `LocalScreenLayout` | `ui/layouts/ScreenLayout.kt` | **Reused.** The column pattern (`ColumnScreenLayout`, rail tier, no docked panels) carries over to secondary windows. |
+| `UiSettings` / `UiSettingsFlow` / `UiSettingsStore` (`deckMode`) | `commons/…/model/` | **Extended** with `navigationLayout`. It's a device setting, not a synced one, like `deckMode`. |
+| `AppSettingsScreen.DeckModeTile` | `commonsUI/…/settings/AppSettingsScreen.kt` | **Extended** with a segmented row next to it. |
+| `AmethystDesktop.main` → one `AppWindow`, plus `DesktopNappletWindows` declared inside it | `desktopApp/…/desktop/app/AmethystDesktop.kt`, `…/napplet/DesktopNappletWindows.kt` | **The precedent** for extra windows declared inside the app's composition so they inherit its providers. `SavedWindowBounds` gets generalised. |
+| `DesktopNavigator` + `DesktopMenuBar` + `Command` shortcuts | `desktopApp/…/app/DesktopMenuBar.kt` | **Made per window.** Shortcut conflicts are listed under Decisions. |
+| `MainActivity` with `launchMode="singleInstance"` | `amethyst/src/main/AndroidManifest.xml` | **Left alone.** Android windows get a separate `ScreenActivity`. |
+
+**Duplicates to avoid:** don't write a second back-stack type, a second persistence format or a
+second per-pane ViewModel scheme. Tabs and windows are "deck columns with different chrome", so
+reuse the deck's pieces, or pull them out into shared helpers, before writing new ones.
+
+### Things that break as soon as there are two shells (found in the survey)
+
+1. **Account-wide work runs once per composition.** `LoggedInPage` in `AmethystApp.kt` starts
+   `RelayAuthSubscription`, `AccountFilterAssemblerSubscription`, every `*Preload`,
+   `root.LoggedInEffects` (on desktop: OS notifications and the scheduled-post loop),
+   `RelayAuthPromptHost` and the toast/notify/crash hosts. A second window that runs
+   `AmethystApp` again would start all of it twice. That's worse than wasted work:
+   `ComposeSubscriptionManager` keeps queries in a map keyed by the query value
+   (`commons/…/relayClient/composeSubscriptionManagers/ComposeSubscriptionManager.kt`).
+   Two windows subscribe the *same* account query, so when one window closes its
+   `unsubscribe` removes the other window's subscription too. The account session has to be
+   hoisted so it runs exactly once.
+2. **Process-wide singletons that assume one window:** `DeckFocus` and `DeckCommandBus`
+   (their KDoc says "one window shows one deck"), and `NavTransitionTier.isLargeScreen` (a global
+   `var` mirrored from the tier). A small secondary window next to a large main one would fight
+   over it. `DesktopNavigator` is one per app, and `GlobalMediaPlayer` and `NowPlayingBar` are
+   fine as one per app but must be drawn in exactly one window.
+3. **`rememberForever*State` (`ui/feeds/RememberForeverStates.kt`)** stores scroll positions in
+   one global map keyed by constants like `HOME_FOLLOWS`. Two Home tabs or windows would restore
+   each other's position. Prefix the key with the owning tab or window id.
+4. **ViewModel keys collide across stacks.** Each `NavBackStacks` starts at id 0, so `nav-0`
+   exists in every tab. The deck already solves this with one `ViewModelStoreOwner` per column.
+
+## Design
+
+### Shared pieces (Phase 0, no visible change)
+
+- **Setting.** Add `enum class NavigationLayout { STACK, TABS, WINDOWS }` to `UiSettings` /
+  `UiSettingsFlow` / `UiSettingsStore`, defaulting to `STACK`. Add an
+  `AppPlatform.supportsMultipleWindows` port: Desktop returns true; Android returns
+  `FEATURE_FREEFORM_WINDOW_MANAGEMENT || isInMultiWindowMode capable` and false on phones. The
+  settings row offers Windows only where that port is true. Under Windows, hide the deck
+  toggle, because the window manager does the deck's job.
+- **Split `LoggedInPage`** into:
+  - `AccountSession(account, root) { accountViewModel -> … }`: everything account-wide listed
+    above, run once per process or account.
+  - `ShellWindow(accountViewModel, navHolder, chrome)`: the per-window part (`rememberNav`, the
+    destinations, `AppShellLayout`, `EmojiPanelScope`, `RelockOnLeave`, `TrackScreen`). Today's
+    single window is `AccountSession { ShellWindow(it, …) }`, so the stack layout behaves
+    exactly as it does now.
+  - The toast, notify and crash hosts render in the **focused** window only. Add a
+    `LocalIsActiveShell` that each window sets from its focus state.
+- **Per-window state instead of singletons.** Make `DeckFocus`, `DeckCommandBus` and
+  `NavTransitionTier` CompositionLocals (or fields on a `ShellWindowState`) provided by
+  `ShellWindow`. Give `rememberForever*State` a key-prefix local (`LocalStateKeyScope`) that
+  defaults to `""`, so the stack layout keeps its keys.
+- **`INav.openNew(route: Route, background: Boolean = false)`**, with a default of `nav(route)`. In
+  the stack layout nothing changes. The tab nav opens a tab and the window nav opens a window.
+- **Capture the click modifier once per window.** Most call sites do `nav.nav(route)` from an
+  `onClick` with no pointer details. Rather than touch all of them, `ShellWindow` adds an
+  `Initial`-pass `pointerInput` (the same trick `DeckColumnPane` uses for focus) that records
+  "this press was a middle click or Ctrl/Cmd-click" into a per-window `OpenIntentState`. A
+  tab or window nav's `nav()` reads that flag (and clears it) and turns the push into
+  `openNew(route, background = true)`. Only the stack layout ignores it.
+- **`rememberRouteTitle(route): String`** in `commonsUI`: "Home", "@alice", "#bitcoin", the first
+  line of a note, a chat name. Tab labels and window titles both use it. Build it on top of
+  `destinations.serialNameOf` and the deck's `columnChoices` labels, and observe the user and
+  note for the dynamic parts.
+
+### Tabs (Phase 1, shared UI, both platforms)
+
+**Model (headless, `commons/…/model/navigation/NavTabs.kt`).** This is a direct analogue of
+`DeckLayout`:
+
+```kotlin
+@Serializable data class NavTabSaved(val id: String, val stack: String /* NavBackStacks.encode() */, val openerId: String? = null, val pinned: Boolean = false)
+@Stable class NavTabs { val tabs: SnapshotStateList<NavTab>; var activeId; fun open(route, after, background); fun close(id); fun move(id, delta); fun activate(id); fun reopenClosed(); fun encode()/decode() }
+class NavTab(val id: String, val stacks: NavBackStacks, var openerId: String?, var pinned: Boolean)
+```
+
+- Each tab is a full `NavBackStacks`, so the bottom bar and rail keep their exact meaning
+  *inside the active tab* (`switchTab`). Modifier-clicking a bar item opens that section in a new
+  tab.
+- Closing the last tab opens a fresh Home tab, so the list is never empty. Closing the active
+  tab activates its opener if that tab is still open, and otherwise the tab next to it, as
+  browsers do.
+- Keep a small stack of recently closed tabs for *Reopen closed tab*.
+- Persist per account in `AccountSettings` next to `deck`, on the same "drop what no longer
+  decodes" rule. Tabs come back after a restart; on Android, `rememberSaveable` also covers
+  process death.
+- Cap tabs at about 30. Past about 8 live tabs, the least recently used ones are *discarded*: the
+  route and the stack stay, the ViewModels and saved UI state go, and the tab is rebuilt when you
+  next open it. Browsers keep memory bounded the same way.
+
+**Navigation (`commonsUI/…/ui/navigation/tabs/TabbedNav.kt`).** `TabbedNav : INav by activeTabNav`
+delegates to the active tab's `Nav` and overrides `openNew` (and `nav` when `OpenIntentState`
+is set). Back and Esc pop the active tab. At a tab's root, back closes the tab *if it has an
+opener*, so a link opened in a new tab is dismissed back to where it came from. Deep links,
+intents and OS notifications open in a new foreground tab (`NavigationEffects` /
+`NavigateIfIntentRequested` and `DesktopDeepLinks` call `openNew` instead of `newStack`).
+
+**Rendering.** For each tab, one `NavigationHost` inside a `key(tab.id)` with its own
+`ViewModelStoreOwner` (child of the account store), a `SaveableStateHolder` slot and an
+`EmojiPanelHost`, copied from `DeckColumnPane`. Only the active tab is composed. Inactive tabs
+keep ViewModels and saved state, but their compose-scoped relay subscriptions stop while hidden,
+which is the right default for a background tab. A tab may show a "new activity" dot later, but
+that's out of scope here.
+
+**Chrome.**
+- *Rail and drawer tiers:* a tab strip across the top of the content area, right of the rail
+  or drawer and left of the deck. Each tab has a title, a close button and drag-to-reorder;
+  middle-click closes. A `+` button opens Home. Overflow scrolls horizontally, like
+  `DeckArea`'s column row.
+- *Bottom-bar tier (phones):* no strip. A tab-count button in the top bar (or a bottom-bar
+  item, where the user has placed one) opens a tab-switcher sheet showing a grid of tab cards
+  with titles. Long-press on a note, profile, hashtag or link adds *Open in new tab* to the
+  existing drop-down menus. Phones have no middle click, so these menus are the entry point.
+- *Desktop shortcuts:* Ctrl/Cmd+T new tab, Ctrl/Cmd+W close, Ctrl+Tab / Ctrl+Shift+Tab cycle,
+  Ctrl/Cmd+Shift+T reopen. Ctrl/Cmd+1…9 activate a tab only if the decision below says so. The
+  *Window* menu lists the open tabs.
+
+**Deck in tabs mode.** Deck columns stay where they are, to the right of the tabbed main pane.
+Later, a column header can get *Open in tab* and a tab can get *Pin as column*, since both hold
+a `Route` plus a stack.
+
+### Windows on Desktop (Phase 2)
+
+**Model.** `AppWindows` (headless, in `commons/…/model/navigation/`) holds a list of
+`ScreenWindowSpec(id, stack: NavBackStacks, openerId, kind: NavFamily, bounds)`, persisted per
+account like the tabs so the window manager gets the same windows back on the next start.
+`desktopApp` renders it: inside the main window's composition (the `DesktopNappletWindows`
+precedent), `appWindows.forEach { key(it.id) { ScreenWindow(it) } }`.
+
+**Each `ScreenWindow`** is an `AppWindow` with:
+- `ShellWindow` running in *single-screen chrome*: no drawer, no bar or rail, and the screen's own
+  top bar with its back arrow. `LocalScreenLayout` comes from the window's own size
+  (`AppRoot.rememberScreenLayoutSpec()` already reads the window), so a narrow tiled window
+  lays out like a phone column and a wide one like a desktop.
+- Its own `Nav`, `ViewModelStoreOwner`, `NavigationEventDispatcherOwner`, `DesktopNavigator` and
+  `DesktopMenuBar` (on macOS the menu follows the focused window), and its own
+  `SavedWindowBounds`.
+- A title from `rememberRouteTitle`, in a stable form such as `"#bitcoin — Amethyst"` or
+  `"Notifications — Amethyst"`. Window-manager rules match on titles, so the format is a
+  documented contract. Setting a per-kind X11 `WM_WINDOW_ROLE` or Wayland `app_id` is a research
+  item: AWT has no public API for either, and `setX11WindowClass` already sets the
+  process-wide `WM_CLASS`.
+
+**What `WindowNav : INav` does in windows mode:**
+
+| Call | Effect |
+|---|---|
+| `nav(route)` (drill-in or fade family) | Opens a new top-level window next to the opener |
+| `nav(route)` (modal family: composers, pickers) | Opens an **owned** child window. Window managers float transient windows, which suits a composer |
+| `openNew` / modifier-click | Same as `nav`, but stays behind the opener (background) |
+| `newStack(route)` | Focuses an open window already showing that route, or else opens one |
+| `navBottomBar(route)` / menu-bar sections | Home, Notifications, Messages, Search, … are **singletons**: focus the one that exists, or else open it |
+| `popBack()` | Pops inside the window if it has history, or else closes the window and focuses its opener |
+
+Optionally (see Decisions), a per-user "push inside the window, modifier-click for a new window"
+variant reuses the same nav with the table's first row swapped.
+
+**Main window and lifetime.** The main window keeps the full shell (drawer, rail, Home) as the
+hub, the place to log in, switch accounts and find everything. In Phase 2a it also hosts
+`AccountSession`, so closing it quits the app. That's simple, and it's how many multi-window apps
+behave. Phase 2b moves `AccountSession` to `application {}` scope, with an app-level
+`ViewModelStoreOwner` and an "any window focused" flow for `DesktopAppRoot.LoggedInEffects`'s
+notification gating. Any window can then be the last one open, and the hub can be reopened
+from any window's *Window* menu.
+
+**Per-app versus per-window, decided once:** the privacy lock gates every window (each renders
+`PrivacyLockGate`), and the wallet blur follows each window's own focus. `NowPlayingBar` and
+`GlobalFullscreenOverlay` stay in the main window, while playback is global already. Toasts go to
+the focused window. Switching account closes the previous account's windows and restores the
+new account's saved set. Deep links and OS-notification clicks open a window.
+
+### Windows on Android (Phase 3)
+
+- Add a new `ScreenActivity` (`launchMode="standard"`, `documentLaunchMode="always"`,
+  resizeable) that hosts `ShellWindow` for one route, passed as the route's JSON (`Route` is
+  `@Serializable`). Start it with `FLAG_ACTIVITY_NEW_DOCUMENT | FLAG_ACTIVITY_MULTIPLE_TASK`,
+  plus `FLAG_ACTIVITY_LAUNCH_ADJACENT` in split screen, and `ActivityOptions.setLaunchBounds`
+  in free-form mode. `MainActivity` stays `singleInstance` so its intent handling doesn't
+  change.
+- Every activity is its own composition, so `AccountSession` has to become **process-level**.
+  Move the account-wide subscriptions behind a ref-counted holder in the main process,
+  started while any Amethyst activity is at least `STARTED`. That keeps
+  `AccountForegroundFilterAssemblerSubscription`'s pause-on-stop working across several
+  windows. This is the biggest piece of Android work. Run it through `android-expert` (two
+  processes: none of this may touch `:napplet`) and `relay-client`.
+- `AppWindows` on Android is the set of live `ScreenActivity` tasks, tracked by the window id
+  in the intent. A singleton route (Home, Notifications) brings its task to the front through
+  `ActivityManager.appTasks` instead of starting a new one.
+
+### Moving between modes (Phase 4, polish)
+
+- Tab context menu: *Move to new window*. Window menu: *Move into a tab of the main window*.
+  Both carry the `NavBackStacks` across intact through `encode`/`decode`.
+- Switching the setting at runtime: Stack → Tabs makes the current stack the first tab. Tabs →
+  Windows turns each tab into a window, with a confirmation when there are more than 5. Going
+  back collapses windows into tabs, or into the active stack for Stack mode.
+
+## Phasing
+
+| Phase | Ships | Module(s) | Done when |
+|---|---|---|---|
+| 0 | Setting (Stack only selectable), `AccountSession`/`ShellWindow` split, de-singletoned deck and transition state, `openNew`, `OpenIntentState`, `rememberRouteTitle` | commons, commonsUI, desktopApp | No visible change. Existing nav tests pass, and desktop and Android look the same |
+| 1 | Tabs, all tiers | commons (`NavTabs`), commonsUI | `NavTabsTest`, headless desktop run at 1440×900 and 480×900, Android phone check of the switcher |
+| 2a | Desktop windows, main window owns the session | commons (`AppWindows`), commonsUI, desktopApp | Headless run shows N windows. Tested by hand under i3/sway and macOS |
+| 2b | Session at application scope, hub reopenable | desktopApp, commonsUI | Close the hub with other windows still open: nothing restarts and nothing is subscribed twice |
+| 3 | Android windows | amethyst, commons | Checked on an Android 16 desktop-windowing emulator image or a DeX/ChromeOS device |
+| 4 | Move tab ↔ window ↔ column, runtime layout switch | commonsUI, desktopApp | Manual test sheet |
+
+Phases 0 and 1 are worth shipping even if Windows is reconsidered. Phase 0 also fixes the latent
+singleton bugs above for the deck.
+
+## Testing
+
+- **Headless, no Compose:** `NavTabsTest` (open, close, opener fallback, reorder, reopen,
+  never-empty, encode/decode with an unknown route, discard keeps the route) and
+  `AppWindowsTest` (singleton routes, opener focus on pop, persistence). Model them on
+  `NavBackStacksTest` and the deck tests.
+- **Nav tests in `commonsUI` `commonTest`:** `TabbedNavTest` and `WindowNavTest`, run the way
+  `NavBottomBarStackTest` and `NavDrawerTest` are (`runTest`, no mocks), including the
+  modifier-click → `openNew` path.
+- **Subscription regression:** two `ShellWindow`s over one `AccountSession`. Close one, and the
+  account's REQs must still be open. This is the failure mode found in the survey.
+- **Run the app:** `tools/desktop-run/run-headless.sh start`, with screenshots of the tab strip,
+  the phone tab switcher (`AMETHYST_SCREEN=480x900x24`), and two or three screen windows. Xvfb
+  has no window manager, so windows overlap at their saved positions. That still shows
+  titles, sizes and contents. Tiling behaviour needs a hand test under a real window manager.
+
+## Decisions for the maintainer
+
+1. **Shortcut conflicts.** Ctrl/Cmd+T and +W are the deck's add-column and close-column today,
+   and Ctrl/Cmd+1/2/3 are Home, Messages and Notifications. Proposal: under Tabs, the browser
+   keys go to tabs and the deck moves to Ctrl/Cmd+Alt+T/W. Ctrl/Cmd+1…3 keep opening sections,
+   and Alt+1…9 (now the deck's focus keys) select tabs when the deck is off.
+2. **Windows drill-in policy.** Should every push open a window (the pure "each screen is a
+   window" model, best for tiling window managers), or only modifier-clicks, with plain clicks
+   pushing inside the window? Proposal: pure by default, with the other as a sub-option.
+3. **Hub lifetime.** Is Phase 2a's "closing the main window quits" acceptable for a first
+   release, or is 2b a blocker?
+4. **Tab persistence.** Restore tabs and windows after a restart (proposed, per account), or
+   start fresh each launch?
+5. **Default for links in Tabs mode.** Plain clicks stay in the tab and modifier-clicks or the
+   long-press menu open a new one (proposed, as browsers do). The alternative is "notes and
+   profiles always open in a new tab".
