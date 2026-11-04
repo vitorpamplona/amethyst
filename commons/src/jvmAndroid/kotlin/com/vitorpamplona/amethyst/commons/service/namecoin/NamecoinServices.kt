@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.service.namecoin
 
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NAMECOIN_LOOKUP_TIMEOUT_MS
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.service.http.RoleBasedHttpClientBuilder
@@ -138,6 +139,7 @@ class NamecoinServices(
 
     val resolver by lazy {
         NamecoinNameResolver(
+            lookupTimeoutMs = NAMECOIN_LOOKUP_TIMEOUT_MS,
             electrumxClient =
                 object : IElectrumXClient {
                     override suspend fun nameShowWithFallback(
