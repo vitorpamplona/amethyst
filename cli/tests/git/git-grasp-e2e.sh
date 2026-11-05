@@ -114,7 +114,9 @@ amy_as() {
 M() { amy_as m "$@"; }
 C() { amy_as c "$@"; }
 # git over plain HTTP to this machine: no proxy, no prompts.
-g() { NO_PROXY="$HOST,localhost" no_proxy="$HOST,localhost" GIT_TERMINAL_PROMPT=0 git -c http.proxy= -c user.email=t@e.st -c user.name=tester "$@"; }
+# push.negotiate off: a global push.negotiate=true makes git 2.43 print "push negotiation failed"
+# on pushes that are fine, even to a local bare repository, which reads like a server fault.
+g() { NO_PROXY="$HOST,localhost" no_proxy="$HOST,localhost" GIT_TERMINAL_PROMPT=0 git -c http.proxy= -c push.negotiate=false -c user.email=t@e.st -c user.name=tester "$@"; }
 
 mkdir -p "$STATE_DIR"/{m,c,relay,outbox}
 step "Starting the GRASP relay on $RELAY and the outbox relay on $OUTBOX…"

@@ -53,6 +53,8 @@ fun GitStatusActions(
     onMerge: (() -> Unit)? = null,
 ) {
     val event = note.event ?: return
+    // A read-only login (an npub) can't sign a status: offer nothing it would fail at.
+    if (!accountViewModel.account.isWriteable()) return
     if (GitAuthority.repositoriesOf(event).isEmpty()) return
     val isPatchOrPr = event is GitPatchEvent || event is GitPullRequestEvent
 

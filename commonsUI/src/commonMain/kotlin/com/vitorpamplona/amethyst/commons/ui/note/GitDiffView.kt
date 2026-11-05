@@ -46,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -84,6 +85,8 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitFileChange
 import com.vitorpamplona.quartz.nip34Git.patch.IntralineDiff
 import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
 import dev.snipme.highlights.model.SyntaxLanguage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -93,12 +96,12 @@ private val DiffFontSize = 12.sp
 private val DiffLineHeight = 17.sp
 
 // A file with more diff lines than this is shown without syntax highlighting: highlighting runs
-// per line as a file opens, and only opened files pay for it.
+// in the background as a file opens, and only opened files pay for it.
 private const val FILE_HIGHLIGHT_LIMIT = 1500
 
 // Highlighted lines across a whole diff: a change of many small files (each opened at once) still
 // highlights its first files, and draws the rest plain rather than tokenising thousands of lines
-// on the main thread.
+// before any of them shows.
 private const val DIFF_HIGHLIGHT_BUDGET = 3000
 
 /**
@@ -192,6 +195,12 @@ private fun DiffFileCard(
     // The app's theme, not the system's: they differ when the user picks one in Settings, and
     // the highlighter paints plain code and punctuation for the background it is told about.
     val darkMode = !MaterialTheme.colorScheme.isLight
+    // Tokenised off the main thread once the file is open; until then its lines draw plain.
+    val highlights by produceState(emptyMap<String, AnnotatedString>(), file, language, darkMode, expanded, highlightEnabled) {
+        if (expanded && highlightEnabled && language != null) {
+            value = withContext(Dispatchers.Default) { highlightLines(file, language, darkMode) }
+        }
+    }
 
     Column(
         modifier =
@@ -251,8 +260,8 @@ private fun DiffFileCard(
                             val right = rightIndex?.let { hunk.lines[it] }
                             // As tall as the side that wraps more, so both sides' colours fill the row.
                             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-                                SplitCell(file, left, true, leftIndex?.let { emphasis[it] }, gutterWidth, language.takeIf { highlightEnabled }, darkMode, onLineClick, Modifier.weight(1f))
-                                SplitCell(file, right, false, rightIndex?.let { emphasis[it] }, gutterWidth, language.takeIf { highlightEnabled }, darkMode, onLineClick, Modifier.weight(1f))
+                                SplitCell(file, left, true, leftIndex?.let { emphasis[it] }, gutterWidth, highlights, onLineClick, Modifier.weight(1f))
+                                SplitCell(file, right, false, rightIndex?.let { emphasis[it] }, gutterWidth, highlights, onLineClick, Modifier.weight(1f))
                             }
                             // Comments on either side, under the pair.
                             lineAnnotations?.let { annotate ->
@@ -290,8 +299,7 @@ private fun DiffFileCard(
                                             DiffLineRow(
                                                 line,
                                                 gutterWidth,
-                                                language.takeIf { highlightEnabled },
-                                                darkMode,
+                                                highlights[line.content],
                                                 emphasis[index],
                                                 onClick = onLineClick?.let { { it(file, line) } },
                                                 modifier = Modifier.fillMaxWidth(),
@@ -332,8 +340,8 @@ private fun HunkHeaderRow(header: String) {
 private fun DiffLineRow(
     line: GitDiffLine,
     gutterWidth: Dp,
-    language: SyntaxLanguage?,
-    darkMode: Boolean,
+    /** The line's syntax colours, or null to draw it plain. */
+    highlighted: AnnotatedString?,
     emphasis: CharSpan?,
     onClick: (() -> Unit)? = null,
     showOld: Boolean = true,
@@ -368,13 +376,8 @@ private fun DiffLineRow(
     val numberColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
 
     val content =
-        remember(line.content, language, darkMode, emphasis) {
-            val base =
-                if (language != null && line.content.isNotEmpty()) {
-                    CodeHighlighter.highlight(line.content, language, darkMode)
-                } else {
-                    AnnotatedString(line.content)
-                }
+        remember(line.content, highlighted, emphasis) {
+            val base = highlighted ?: AnnotatedString(line.content)
             if (emphasis != null && !emphasis.isEmpty) {
                 buildAnnotatedString {
                     append(base)
@@ -461,6 +464,21 @@ private fun splitRows(lines: List<GitDiffLine>): List<Pair<Int?, Int?>> {
     return rows
 }
 
+/** Each distinct line of [file], coloured for [language]: one pass, on a background thread. */
+private fun highlightLines(
+    file: GitDiffFile,
+    language: SyntaxLanguage,
+    darkMode: Boolean,
+): Map<String, AnnotatedString> {
+    val out = HashMap<String, AnnotatedString>()
+    file.hunks.forEach { hunk ->
+        hunk.lines.forEach { line ->
+            if (line.content.isNotEmpty() && line.content !in out) out[line.content] = CodeHighlighter.highlight(line.content, language, darkMode)
+        }
+    }
+    return out
+}
+
 /** One side of a side-by-side row: the old side shows old numbers, the new side new ones. */
 @Composable
 private fun SplitCell(
@@ -469,8 +487,7 @@ private fun SplitCell(
     oldSide: Boolean,
     emphasis: CharSpan?,
     gutterWidth: Dp,
-    language: SyntaxLanguage?,
-    darkMode: Boolean,
+    highlights: Map<String, AnnotatedString>,
     onLineClick: ((GitDiffFile, GitDiffLine) -> Unit)?,
     modifier: Modifier,
 ) {
@@ -483,8 +500,7 @@ private fun SplitCell(
     DiffLineRow(
         line,
         gutterWidth,
-        language,
-        darkMode,
+        highlights[line.content],
         emphasis,
         onClick = onLineClick?.let { { it(file, line) } },
         showOld = oldSide,

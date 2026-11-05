@@ -33,11 +33,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -74,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalTarget
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalUiState
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposals
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitBranchField
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitShape
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitTextEditor
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitTextEditorState
@@ -317,7 +314,7 @@ private fun GitNewPullRequestForm(
                 onLoad = { viewModel.loadBranches(source) },
             )
             if (targetBranches.isNotEmpty()) {
-                BranchPicker(stringRes(Res.string.git_pr_new_base), targetBranches, targetBranch) { targetBranch = it }
+                GitBranchField(stringRes(Res.string.git_pr_new_base), targetBranches, targetBranch) { targetBranch = it }
             }
             OutlinedTextField(
                 value = title,
@@ -372,37 +369,7 @@ private fun SourceBranchSection(
         is GitBranchesState.Failed -> Text(branchesState.reason, color = MaterialTheme.colorScheme.error)
         else -> {}
     }
-    if (branches.isNotEmpty()) BranchPicker(stringRes(Res.string.git_pr_new_branch), branches, branch, onBranch)
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun BranchPicker(
-    label: String,
-    options: List<String>,
-    selected: String?,
-    onSelect: (String) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = selected ?: "",
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-        )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { option ->
-                DropdownMenuItem(text = { Text(option, fontFamily = FontFamily.Monospace) }, onClick = {
-                    expanded = false
-                    onSelect(option)
-                })
-            }
-        }
-    }
+    if (branches.isNotEmpty()) GitBranchField(stringRes(Res.string.git_pr_new_branch), branches, branch, onBranch)
 }
 
 /**

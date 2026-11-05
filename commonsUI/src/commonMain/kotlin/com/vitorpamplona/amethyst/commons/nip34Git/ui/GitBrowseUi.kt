@@ -34,9 +34,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -221,7 +227,7 @@ private fun BranchSelector(
             if (branches.isNotEmpty()) {
                 SectionHeader(stringRes(Res.string.git_repo_branches))
                 branches.forEach { name ->
-                    RefMenuItem(name, MaterialSymbols.AltRoute, selected = name == current) {
+                    GitRefMenuItem(name, MaterialSymbols.AltRoute, selected = name == current) {
                         expanded = false
                         if (name != current) onSelectRef(name)
                     }
@@ -230,7 +236,7 @@ private fun BranchSelector(
             if (tags.isNotEmpty()) {
                 SectionHeader(stringRes(Res.string.git_repo_tags))
                 tags.forEach { name ->
-                    RefMenuItem(name, MaterialSymbols.Tag, selected = name == current) {
+                    GitRefMenuItem(name, MaterialSymbols.Tag, selected = name == current) {
                         expanded = false
                         if (name != current) onSelectRef(name)
                     }
@@ -251,8 +257,9 @@ private fun SectionHeader(text: String) {
     )
 }
 
+/** One branch or tag in a ref menu: the chosen one in bold and the accent colour. */
 @Composable
-private fun RefMenuItem(
+internal fun GitRefMenuItem(
     name: String,
     symbol: MaterialSymbol,
     selected: Boolean,
@@ -270,6 +277,40 @@ private fun RefMenuItem(
         leadingIcon = { Icon(symbol, contentDescription = null, modifier = Modifier.size(16.dp)) },
         onClick = onClick,
     )
+}
+
+/**
+ * A form field that picks one of [options] (branches): the same menu rows as the code browser's
+ * branch chip, under a labelled, read-only field.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun GitBranchField(
+    label: String,
+    options: List<String>,
+    selected: String?,
+    onSelect: (String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = selected ?: "",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                GitRefMenuItem(option, MaterialSymbols.AltRoute, selected = option == selected) {
+                    expanded = false
+                    onSelect(option)
+                }
+            }
+        }
+    }
 }
 
 @Composable
