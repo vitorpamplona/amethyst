@@ -49,9 +49,10 @@ fun NewDateOrSubjectDivisor(
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    if (previous == null) return
-
     NewDateDivisor(previous, note)
+
+    // The oldest loaded message has nothing to rename from.
+    if (previous == null) return
 
     val newSubject = remember(previous, note) { subjectChangeOf(previous.event, note.event) }
     if (newSubject != null) {
@@ -70,7 +71,9 @@ fun NewDateOrSubjectDivisor(
 }
 
 /**
- * The day header alone: [note]'s date when it differs from [previous]'s. For a row that must not
+ * The day header alone: [note]'s date when it differs from [previous]'s, or always above the oldest
+ * loaded message ([previous] null), so every message sits under its day and its own timestamp can
+ * leave the date out (see LocalChatDayDividers). For a row that must not
  * show a subject change (it names the author), like a collapsed run of messages from outside the
  * network.
  */
@@ -79,12 +82,10 @@ fun NewDateDivisor(
     previous: Note?,
     note: Note,
 ) {
-    if (previous == null) return
-
     val never = stringRes(Res.string.never)
     val today = stringRes(Res.string.today)
 
-    val prevDate = remember(previous) { dateFormatter(previous.event?.createdAt, never, today) }
+    val prevDate = remember(previous) { previous?.let { dateFormatter(it.event?.createdAt, never, today) } }
     val date = remember(note) { dateFormatter(note.event?.createdAt, never, today) }
 
     if (prevDate != date) {

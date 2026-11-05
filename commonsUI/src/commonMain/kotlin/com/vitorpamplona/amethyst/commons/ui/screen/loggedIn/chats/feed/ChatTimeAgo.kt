@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_pinned_content_d
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayLocation
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayPoW
+import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
 import com.vitorpamplona.amethyst.commons.ui.note.timeAbsoluteNoDot
 import com.vitorpamplona.amethyst.commons.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -54,7 +56,15 @@ import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 
 /**
- * The time on a chat bubble, as a clock time ("9:08"; "Sep 28, 9:08" once it is not today).
+ * Whether the feed this message is in heads every day with a divider ([ChatFeedView] does). Then
+ * the message's own time is just the time of day: "Aug 20, 5:20 PM" under an "Aug 20" divider
+ * said the date twice. Surfaces without dividers (thread view, audio-room panel) keep the date.
+ */
+val LocalChatDayDividers = compositionLocalOf { false }
+
+/**
+ * The time on a chat bubble, as a clock time ("9:08"; "Sep 28, 9:08" once it is not today, unless
+ * the feed heads each day with a divider: see [LocalChatDayDividers]).
  *
  * Not relative: "32 min. ago" on every bubble was long, kept changing under the reader, and
  * made a column of near-identical captions. A conversation is read by when things were said.
@@ -63,8 +73,16 @@ import com.vitorpamplona.quartz.nip40Expiration.expiration
  */
 @Composable
 fun ChatTimeAgo(baseNote: Note) {
+    val createdAt = baseNote.createdAt() ?: 0L
+    val text =
+        if (LocalChatDayDividers.current && createdAt > 0L) {
+            val timeOfDay = rememberTimeOfDayFormatter()
+            remember(createdAt, timeOfDay) { timeOfDay(createdAt * 1000) }
+        } else {
+            timeAbsoluteNoDot(createdAt)
+        }
     Text(
-        text = timeAbsoluteNoDot(baseNote.createdAt() ?: 0L),
+        text = text,
         color = MaterialTheme.colorScheme.placeholderText,
         fontSize = Font12SP,
         maxLines = 1,

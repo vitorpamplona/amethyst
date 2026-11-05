@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.buzz.ui.BuzzAgentLabel
@@ -158,6 +159,7 @@ private fun WatchAndDisplayUser(
                 tags = (if (nameOverride == null && petName != null) nickname?.tags else userState?.tags) ?: EmptyTagList,
                 color = nameColor,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 fontWeight = ChatAuthorNameWeight,
                 fontSize = ChatAuthorNameSize,
             )

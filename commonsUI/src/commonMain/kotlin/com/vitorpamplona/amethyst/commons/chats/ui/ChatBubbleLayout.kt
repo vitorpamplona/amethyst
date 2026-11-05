@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
 import com.vitorpamplona.amethyst.commons.ui.note.CommentIcon
+import com.vitorpamplona.amethyst.commons.ui.richtext.LocalBlankLineScale
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatPaddingGroupedModifier
@@ -154,6 +155,10 @@ private val ChatOpenStackSpacing = Arrangement.spacedBy(4.dp)
 // Open text keeps a readable measure on wide windows: past ~75 characters a line is hard to
 // track back to the start of the next.
 private val ChatOpenMaxWidth = Modifier.widthIn(max = 680.dp)
+
+// Without a bubble edge, a blank line inside a message must be clearly shorter than the gap to
+// the next message: half a line (~10dp) under OPEN's 12dp, and COMPACT marks each message with a name.
+private const val CHAT_OPEN_BLANK_LINE_SCALE = 0.5f
 
 // A quoted reply in the COMPACT and OPEN layouts: a tinted block with a bar down its leading edge
 // instead of a bubble inside a bubble.
@@ -382,82 +387,32 @@ fun ChatBubbleLayout(
                 Modifier
             }
 
-        when {
-            innerQuote && layout != ChatLayoutType.BUBBLES -> {
-                ChatQuoteBlock(
-                    isLoggedInUser = isLoggedInUser,
-                    // A filled card is a second block inside a one-line layout; compact keeps the bar only.
-                    filled = layout != ChatLayoutType.COMPACT,
-                    drawAuthorInfo = drawAuthorInfo || layout == ChatLayoutType.COMPACT,
-                    animatedColor = animatedColor,
-                    bgColor = bgColor,
-                    onClick = onClick,
-                    onDoubleTap = onDoubleTap,
-                    onAuthorClick = onAuthorClick,
-                    actionMenu = actionMenu,
-                    drawAuthorLine = drawAuthorLine,
-                    inner = inner,
-                )
-            }
-
-            layout == ChatLayoutType.COMPACT -> {
-                CompactChatLine(
-                    modifier = swipeModifier,
-                    repeatsAuthorAbove = groupPosition.isConnectedAbove,
-                    animatedColor = animatedColor,
-                    bgColor = bgColor,
-                    onClick = onClick,
-                    onDoubleTap = onDoubleTap,
-                    onAuthorClick = onAuthorClick,
-                    actionMenu = actionMenu,
-                    reactionsRow = reactionsRow,
-                    footerRow = footerRow,
-                    drawAuthorLine = drawAuthorLine,
-                    inner = inner,
-                )
-            }
-
-            openRow -> {
-                OpenChatMessage(
-                    modifier = swipeModifier,
-                    drawAuthorInfo = drawAuthorInfo,
-                    animatedColor = animatedColor,
-                    bgColor = bgColor,
-                    onClick = onClick,
-                    onDoubleTap = onDoubleTap,
-                    onAuthorClick = onAuthorClick,
-                    actionMenu = actionMenu,
-                    reactionsRow = reactionsRow,
-                    footerRow = footerRow,
-                    drawAuthorLine = drawAuthorLine,
-                    authorAvatar = authorAvatar,
-                    inner = inner,
-                )
-            }
-
-            else -> {
-                // A top-level bubble's row spans the screen so the bubble can sit on its side. A quoted
-                // reply is drawn INSIDE another bubble, where filling the width pushed that bubble out to
-                // its maximum: a one-word answer to a one-word message stretched across the screen.
-                Row(
-                    modifier = (if (innerQuote) Modifier else Modifier.fillMaxWidth()).then(swipeModifier),
-                    horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
-                    verticalAlignment = Alignment.Bottom,
-                ) {
-                    if (authorAvatar != null && !isLoggedInUser && !innerQuote) {
-                        Box(ChatAuthorGutterModifier) {
-                            if (groupPosition.isLastOfGroup) authorAvatar()
-                        }
-                        Spacer(ChatAuthorGutterGap)
-                    }
-                    InnerChatBubble(
+        CompositionLocalProvider(
+            LocalBlankLineScale provides if (layout == ChatLayoutType.BUBBLES) LocalBlankLineScale.current else CHAT_OPEN_BLANK_LINE_SCALE,
+        ) {
+            when {
+                innerQuote && layout != ChatLayoutType.BUBBLES -> {
+                    ChatQuoteBlock(
                         isLoggedInUser = isLoggedInUser,
-                        innerQuote = innerQuote,
-                        drawAuthorInfo = drawAuthorInfo,
-                        groupPosition = groupPosition,
-                        transparentBubble = transparentBubble,
+                        // A filled card is a second block inside a one-line layout; compact keeps the bar only.
+                        filled = layout != ChatLayoutType.COMPACT,
+                        drawAuthorInfo = drawAuthorInfo || layout == ChatLayoutType.COMPACT,
                         animatedColor = animatedColor,
-                        highlightActive = highlightActive.value,
+                        bgColor = bgColor,
+                        onClick = onClick,
+                        onDoubleTap = onDoubleTap,
+                        onAuthorClick = onAuthorClick,
+                        actionMenu = actionMenu,
+                        drawAuthorLine = drawAuthorLine,
+                        inner = inner,
+                    )
+                }
+
+                layout == ChatLayoutType.COMPACT -> {
+                    CompactChatLine(
+                        modifier = swipeModifier,
+                        repeatsAuthorAbove = groupPosition.isConnectedAbove,
+                        animatedColor = animatedColor,
                         bgColor = bgColor,
                         onClick = onClick,
                         onDoubleTap = onDoubleTap,
@@ -468,6 +423,60 @@ fun ChatBubbleLayout(
                         drawAuthorLine = drawAuthorLine,
                         inner = inner,
                     )
+                }
+
+                openRow -> {
+                    OpenChatMessage(
+                        modifier = swipeModifier,
+                        drawAuthorInfo = drawAuthorInfo,
+                        animatedColor = animatedColor,
+                        bgColor = bgColor,
+                        onClick = onClick,
+                        onDoubleTap = onDoubleTap,
+                        onAuthorClick = onAuthorClick,
+                        actionMenu = actionMenu,
+                        reactionsRow = reactionsRow,
+                        footerRow = footerRow,
+                        drawAuthorLine = drawAuthorLine,
+                        authorAvatar = authorAvatar,
+                        inner = inner,
+                    )
+                }
+
+                else -> {
+                    // A top-level bubble's row spans the screen so the bubble can sit on its side. A quoted
+                    // reply is drawn INSIDE another bubble, where filling the width pushed that bubble out to
+                    // its maximum: a one-word answer to a one-word message stretched across the screen.
+                    Row(
+                        modifier = (if (innerQuote) Modifier else Modifier.fillMaxWidth()).then(swipeModifier),
+                        horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
+                        verticalAlignment = Alignment.Bottom,
+                    ) {
+                        if (authorAvatar != null && !isLoggedInUser && !innerQuote) {
+                            Box(ChatAuthorGutterModifier) {
+                                if (groupPosition.isLastOfGroup) authorAvatar()
+                            }
+                            Spacer(ChatAuthorGutterGap)
+                        }
+                        InnerChatBubble(
+                            isLoggedInUser = isLoggedInUser,
+                            innerQuote = innerQuote,
+                            drawAuthorInfo = drawAuthorInfo,
+                            groupPosition = groupPosition,
+                            transparentBubble = transparentBubble,
+                            animatedColor = animatedColor,
+                            highlightActive = highlightActive.value,
+                            bgColor = bgColor,
+                            onClick = onClick,
+                            onDoubleTap = onDoubleTap,
+                            onAuthorClick = onAuthorClick,
+                            actionMenu = actionMenu,
+                            reactionsRow = reactionsRow,
+                            footerRow = footerRow,
+                            drawAuthorLine = drawAuthorLine,
+                            inner = inner,
+                        )
+                    }
                 }
             }
         }

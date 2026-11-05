@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiCount
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiFontSize
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -95,6 +96,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ActionTile
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatAuthorAvatar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatAuthorNameSize
@@ -186,6 +188,10 @@ fun CordnMessageRow(
 
     val mentionTint = MaterialTheme.colorScheme.primary.copy(alpha = MENTION_TINT_ALPHA)
 
+    // As in NormalChatNote: in the OPEN layout someone else's message is bare text, and only its
+    // time shows where it ends, so each of their messages carries one.
+    val showTime = groupPosition.isLastOfGroup || (LocalDisplaySettings.current.chatLayout == ChatLayoutType.OPEN && !isMine)
+
     Box(if (mentionsMe) Modifier.fillMaxWidth().background(mentionTint) else Modifier.fillMaxWidth()) {
         ChatBubbleLayout(
             isLoggedInUser = isMine,
@@ -240,7 +246,7 @@ fun CordnMessageRow(
             // Mirrors chatFooterHasMeta: the footer earns its row on the last message
             // of a burst (for the time) or on any message carrying a marker of its own.
             footerRow =
-                if (groupPosition.isLastOfGroup || isEdited || isPinned) {
+                if (showTime || isEdited || isPinned) {
                     {
                         CordnMessageFooter(
                             message = message,
@@ -249,7 +255,7 @@ fun CordnMessageRow(
                             accountViewModel = accountViewModel,
                             isEdited = isEdited,
                             isPinned = isPinned,
-                            showTime = groupPosition.isLastOfGroup,
+                            showTime = showTime,
                         )
                     }
                 } else {
