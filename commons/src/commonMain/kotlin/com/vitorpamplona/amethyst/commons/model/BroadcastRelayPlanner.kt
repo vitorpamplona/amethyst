@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.relays.dialableRelays
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
@@ -144,7 +145,38 @@ class BroadcastRelayPlanner(
         return true
     }
 
-    fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> = computeRelayListToBroadcast(event, mutableSetOf())
+    fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> = privateGitRelays(event) ?: computeRelayListToBroadcast(event, mutableSetOf())
+
+    /**
+     * GRASP-08: an event of a private repository (its announcement, or anything filed under it or
+     * replying to something filed under it) goes only to that repository's relays, never to the
+     * user's or anyone's outbox. Null when the event belongs to no private repository.
+     */
+    private fun privateGitRelays(event: Event): Set<NormalizedRelayUrl>? {
+        if (event is GitRepositoryEvent) return if (event.isPrivate()) event.relaysNorm().toSet() else null
+        val repositories =
+            buildList {
+                addAll(gitRepositoryAddresses(event))
+                if (isEmpty()) {
+                    // A status, comment or review: the repository of the item it acts on.
+                    event.tags.forEach { tag ->
+                        if (tag.size > 1 && (tag[0] == "e" || tag[0] == "E")) {
+                            cache.getNoteIfExists(tag[1])?.event?.let { addAll(gitRepositoryAddresses(it)) }
+                        }
+                    }
+                }
+            }
+        if (repositories.isEmpty()) return null
+        val private =
+            repositories.mapNotNull { (cache.getAddressableNoteIfExists(it)?.event as? GitRepositoryEvent)?.takeIf { announcement -> announcement.isPrivate() } }
+        if (private.isEmpty()) return null
+        return private.flatMapTo(HashSet()) { it.relaysNorm() }
+    }
+
+    private fun gitRepositoryAddresses(event: Event): List<Address> =
+        event.tags.mapNotNull { tag ->
+            if (tag.size > 1 && tag[0] == "a" && tag[1].startsWith("${GitRepositoryEvent.KIND}:")) Address.parse(tag[1]) else null
+        }
 
     private fun computeRelayListToBroadcast(
         event: Event,

@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
+import com.vitorpamplona.quartz.nip34Git.git.GitHttpAuth
 import com.vitorpamplona.quartz.nip34Git.git.GitPerson
 import com.vitorpamplona.quartz.nip34Git.git.GitPushClient
 import com.vitorpamplona.quartz.nip34Git.git.GitSmartHttpTransport
@@ -259,9 +260,14 @@ class GitMergePush(
  */
 class GitMergeEngine(
     okHttpClient: (String) -> OkHttpClient,
+    /** Signs the requests of a private repository (GRASP-08); null when none needs it. */
+    auth: GitHttpAuth?,
 ) {
-    private val transport = GitSmartHttpTransport(okHttpClient)
-    private val pushClient = GitPushClient(okHttpClient, agent = "amethyst")
+    /** For public repositories only. Its own constructor, so a trailing lambda (`GitMergeEngine { client }`) is still the client. */
+    constructor(okHttpClient: (String) -> OkHttpClient) : this(okHttpClient, null)
+
+    private val transport = GitSmartHttpTransport(okHttpClient, auth)
+    private val pushClient = GitPushClient(okHttpClient, "amethyst", auth)
 
     suspend fun check(
         inputs: GitMergeInputs,

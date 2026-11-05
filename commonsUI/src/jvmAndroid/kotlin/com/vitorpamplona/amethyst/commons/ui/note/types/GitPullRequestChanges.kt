@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.nip34Git.GitPrivateRepositoryAuth
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCardButtonHeight
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCardButtonPadding
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitReviewHooks
@@ -178,7 +179,7 @@ private suspend fun loadDiff(
     mergeBase: String?,
 ): ParsedPatch =
     withContext(Dispatchers.IO) {
-        val client = GitHttpClient(accountViewModel.httpClientBuilder::okHttpClientForPreview)
+        val client = GitHttpClient(accountViewModel.httpClientBuilder::okHttpClientForPreview, GitPrivateRepositoryAuth(accountViewModel.account.signer))
         var lastError: Exception? = null
         for (url in candidates) {
             try {

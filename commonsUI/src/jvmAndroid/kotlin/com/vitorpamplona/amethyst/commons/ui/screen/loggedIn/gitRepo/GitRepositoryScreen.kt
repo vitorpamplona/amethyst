@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
+import com.vitorpamplona.amethyst.commons.nip34Git.GitPrivateRepositoryAuth
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses
@@ -93,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.RepositoryFilterAs
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_issue_search
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_button
+import com.vitorpamplona.amethyst.commons.resources.git_pr_new_title
 import com.vitorpamplona.amethyst.commons.resources.git_repo_filter_closed
 import com.vitorpamplona.amethyst.commons.resources.git_repo_filter_open
 import com.vitorpamplona.amethyst.commons.resources.git_repo_follow
@@ -138,6 +140,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip34Git.git.GitHttpAuth
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -145,6 +148,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import okhttp3.OkHttpClient
+import org.jetbrains.compose.resources.StringResource
 import kotlin.reflect.KClass
 
 // ---------------------------------------------------------------------------
@@ -210,12 +214,13 @@ fun GitRepositoryPullsScreen(
 /** Builds the [GitRepositoryBrowserViewModel] with the HTTP client its clones and fetches go through. */
 class GitRepositoryBrowserViewModelFactory(
     private val okHttpClient: (String) -> OkHttpClient,
+    private val auth: GitHttpAuth? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(
         modelClass: KClass<T>,
         extras: CreationExtras,
-    ): T = GitRepositoryBrowserViewModel(okHttpClient) as T
+    ): T = GitRepositoryBrowserViewModel(okHttpClient, auth) as T
 }
 
 @Composable
@@ -225,7 +230,7 @@ private fun rememberRepoBrowser(
 ): GitRepositoryBrowserViewModel =
     viewModel(
         key = note.idHex + "GitRepoBrowser",
-        factory = GitRepositoryBrowserViewModelFactory(accountViewModel.httpClientBuilder::okHttpClientForPreview),
+        factory = GitRepositoryBrowserViewModelFactory(accountViewModel.httpClientBuilder::okHttpClientForPreview, GitPrivateRepositoryAuth(accountViewModel.account.signer)),
     )
 
 /**
@@ -451,7 +456,7 @@ private fun GitRepositoryCode(
                 RepoExternalNotice(ev)
             }
         } else {
-            GitCodeTab(browserState, browserViewModel, accountViewModel, nav)
+            GitCodeTab(browserState, browserViewModel, note, accountViewModel, nav)
         }
     }
 }
@@ -522,6 +527,12 @@ private fun GitRepositoryPulls(
         closedViewModel = closedViewModel,
         accountViewModel = accountViewModel,
         nav = nav,
+        floatingButton =
+            if (event != null) {
+                { NewIssueFab(Res.string.git_pr_new_title) { nav.nav(Route.GitRepositoryNewPullRequest(note.address)) } }
+            } else {
+                null
+            },
     )
 }
 
@@ -901,14 +912,17 @@ private fun LabelMenu(
 }
 
 @Composable
-private fun NewIssueFab(onClick: () -> Unit) {
+private fun NewIssueFab(
+    label: StringResource = Res.string.git_new_issue_button,
+    onClick: () -> Unit,
+) {
     // The app theme overrides shapes.large (the extended-FAB default) to 0.dp, which makes the
     // FAB square — so pin an explicit rounded shape here.
     ExtendedFloatingActionButton(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
         icon = { Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(20.dp)) },
-        text = { Text(stringRes(Res.string.git_new_issue_button)) },
+        text = { Text(stringRes(label)) },
     )
 }
 

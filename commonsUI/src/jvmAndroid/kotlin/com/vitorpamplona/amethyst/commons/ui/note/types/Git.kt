@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
+import com.vitorpamplona.amethyst.commons.nip34Git.GitPrivateRepositoryAuth
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
@@ -112,6 +113,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitPullRequestUpdateButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitRepositoryBrowserViewModelFactory
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoExternalNotice
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoLanguageBar
@@ -603,6 +605,7 @@ private fun RenderGitPatchEvent(
         }
 
         if (!makeItShort && inThread) {
+            GitLocalCheckoutSection(note, null, emptyList(), null, patch = noteEvent.content)
             GitTriageBar(note, accountViewModel)
             GitReviewPanel(note, accountViewModel)
             GitStatusActionsWithMerge(note, accountViewModel)
@@ -772,7 +775,10 @@ private fun RenderGitPullRequestEvent(
 
         if (!makeItShort && isGitThreadRoot(note)) {
             GitCloneSection(cloneUrls)
+            GitLocalCheckoutSection(note, source, cloneUrls, currentCommit)
             GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel, rememberGitReviewHooks(note, currentCommit, accountViewModel, nav))
+            val repositoryNote = remember(noteEvent) { noteEvent.repositoryAddress()?.let { LocalCache.getOrCreateAddressableNote(it) } }
+            GitPullRequestUpdateButton(note, repositoryNote, accountViewModel, nav)
             GitTriageBar(note, accountViewModel)
             GitReviewPanel(note, accountViewModel)
             GitStatusActionsWithMerge(note, accountViewModel)
@@ -980,7 +986,7 @@ private fun RepoSnapshotDashboardContent(
     val browser: GitRepositoryBrowserViewModel =
         viewModel(
             key = note.idHex + "GitRepoCardBrowser",
-            factory = GitRepositoryBrowserViewModelFactory(accountViewModel.httpClientBuilder::okHttpClientForPreview),
+            factory = GitRepositoryBrowserViewModelFactory(accountViewModel.httpClientBuilder::okHttpClientForPreview, GitPrivateRepositoryAuth(accountViewModel.account.signer)),
         )
     LaunchedEffect(noteEvent) { browser.loadOnce(noteEvent.clones(), cacheKey) }
     val browserState by browser.state.collectAsStateWithLifecycle()

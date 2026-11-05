@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.state.GitSignedState
 import com.vitorpamplona.quartz.nip34Git.git.GitBlame
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
 import com.vitorpamplona.quartz.nip34Git.git.GitContentMatch
+import com.vitorpamplona.quartz.nip34Git.git.GitHttpAuth
 import com.vitorpamplona.quartz.nip34Git.git.GitHttpClient
 import com.vitorpamplona.quartz.nip34Git.git.GitHttpException
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
@@ -79,8 +80,10 @@ class GitStateMismatch(
  */
 class GitRepositoryBrowserViewModel(
     private val okHttpClient: (String) -> OkHttpClient,
+    /** Signs the requests of a private repository (GRASP-08); null when none needs it. */
+    auth: GitHttpAuth? = null,
 ) : ViewModel() {
-    private val client = GitHttpClient(okHttpClient)
+    private val client = GitHttpClient(okHttpClient, auth)
 
     private val _state = MutableStateFlow<GitBrowseState>(GitBrowseState.Loading)
     val state = _state.asStateFlow()

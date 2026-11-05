@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.nip34Git.merge
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.nip34Git.GitPrivateRepositoryAuth
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPatchSeries
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevisions
@@ -78,7 +79,7 @@ class GitMerger(
     private val cache: LocalCache = account.cache,
     private val authority: GitAuthority = LocalCache.gitAuthority,
 ) {
-    private val engine = GitMergeEngine(okHttpClient)
+    private val engine = GitMergeEngine(okHttpClient, GitPrivateRepositoryAuth(account.signer, cache))
 
     /** Null when [item] is not a PR or a series' root patch, or its repository hasn't loaded. */
     fun inputsFor(item: Note): GitMergeInputs? {
@@ -170,7 +171,9 @@ class GitMerger(
 
         // The state the servers took, now everywhere the repository is read.
         cache.justConsumeMyOwnEvent(push.state)
-        val relays = merge.inputs.announcements.flatMapTo(HashSet()) { it.relaysNorm() } + merge.targets.map { it.relay } + account.outboxRelays.flow.value
+        // A private repository's state stays on its own relays (GRASP-08).
+        val outbox = if (merge.inputs.announcements.any { it.isPrivate() }) emptySet() else account.outboxRelays.flow.value
+        val relays = merge.inputs.announcements.flatMapTo(HashSet()) { it.relaysNorm() } + merge.targets.map { it.relay } + outbox
         account.client.publish(push.state, relays)
 
         // The branch has moved: from here on a failure (a signer that times out, say) must not

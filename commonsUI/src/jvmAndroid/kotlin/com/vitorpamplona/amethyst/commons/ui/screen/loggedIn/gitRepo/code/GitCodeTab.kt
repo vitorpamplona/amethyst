@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.GitStateMismatch
@@ -73,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitShape
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.RepoInfoBar
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitCard
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_edit_action
 import com.vitorpamplona.amethyst.commons.resources.git_file_blame
 import com.vitorpamplona.amethyst.commons.resources.git_file_history
 import com.vitorpamplona.amethyst.commons.resources.git_file_history_title
@@ -93,6 +95,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitFileEditor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
@@ -107,6 +110,7 @@ import kotlin.coroutines.cancellation.CancellationException
 fun GitCodeTab(
     state: GitBrowseState,
     viewModel: GitRepositoryBrowserViewModel,
+    repository: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -126,7 +130,7 @@ fun GitCodeTab(
         }
 
         is GitBrowseState.Loaded ->
-            CodeBrowser(state.snapshot, viewModel, accountViewModel, nav, scaffoldPaddingTop = scaffoldPadding, mismatch = state.mismatch)
+            CodeBrowser(state.snapshot, viewModel, repository, accountViewModel, nav, scaffoldPaddingTop = scaffoldPadding, mismatch = state.mismatch)
     }
 }
 
@@ -134,6 +138,7 @@ fun GitCodeTab(
 private fun CodeBrowser(
     snapshot: GitRepoSnapshot,
     viewModel: GitRepositoryBrowserViewModel,
+    repository: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: INav,
     scaffoldPaddingTop: PaddingValues,
@@ -165,6 +170,14 @@ private fun CodeBrowser(
         val entry = remember(openFilePath) { snapshot.entryAt(openPath) }
         var showFileHistory by rememberSaveable(openFilePath) { mutableStateOf(false) }
         var showBlame by rememberSaveable(openFilePath) { mutableStateOf(false) }
+        var editing by rememberSaveable(openFilePath) { mutableStateOf(false) }
+        if (editing && entry != null) {
+            PlatformBackHandler { editing = false }
+            Column(Modifier.fillMaxSize().padding(scaffoldPaddingTop)) {
+                EditOpenFile(snapshot, viewModel, entry, openPath, repository, accountViewModel, nav) { editing = false }
+            }
+            return
+        }
         if (showFileHistory) {
             Column(Modifier.fillMaxSize().padding(scaffoldPaddingTop)) {
                 GitCommitLog(
@@ -185,6 +198,7 @@ private fun CodeBrowser(
                 blameOn = showBlame,
                 onHistory = { showFileHistory = true },
                 onBlame = { showBlame = !showBlame },
+                onEdit = if (entry != null && !entry.isDirectory && !entry.isSubmodule && !entry.isSymlink) ({ editing = true }) else null,
             )
             HorizontalDivider(thickness = 0.5.dp)
             if (entry == null) {
@@ -467,6 +481,7 @@ private fun FileHeader(
     blameOn: Boolean,
     onHistory: () -> Unit,
     onBlame: () -> Unit,
+    onEdit: (() -> Unit)?,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(end = 12.dp),
@@ -493,6 +508,64 @@ private fun FileHeader(
         IconButton(onClick = onHistory) {
             Icon(MaterialSymbols.History, contentDescription = stringRes(Res.string.git_file_history), modifier = Modifier.size(20.dp))
         }
+        if (onEdit != null) {
+            IconButton(onClick = onEdit) {
+                Icon(MaterialSymbols.Edit, contentDescription = stringRes(Res.string.git_edit_action), modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+}
+
+/** Above this a file is not edited in the app: a text field this long is unusable, and slow. */
+private const val EDITABLE_FILE_BYTES = 256 * 1024
+
+/**
+ * Loads the open file's text and hands it to [GitFileEditor], whose change is proposed as a pull
+ * request into the branch being browsed. A binary or very large file is not offered for editing.
+ */
+@Composable
+private fun EditOpenFile(
+    snapshot: GitRepoSnapshot,
+    viewModel: GitRepositoryBrowserViewModel,
+    entry: GitTreeEntry,
+    path: List<String>,
+    repository: AddressableNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onDone: () -> Unit,
+) {
+    var text by remember(entry.oid) { mutableStateOf<Result<String>?>(null) }
+    LaunchedEffect(entry.oid) {
+        text =
+            try {
+                val bytes = viewModel.readBlob(snapshot, entry.oid)
+                if (bytes.size > EDITABLE_FILE_BYTES || bytes.any { it == 0.toByte() }) {
+                    Result.failure(IllegalStateException("binary"))
+                } else {
+                    Result.success(bytes.decodeToString())
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+    }
+    val loaded = text
+    when {
+        loaded == null -> GitLoadingBox(stringRes(Res.string.git_repo_code_loading))
+        loaded.isFailure -> GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(Res.string.git_repo_file_load_error))
+        else ->
+            GitFileEditor(
+                repository = repository,
+                sourceClones = listOf(snapshot.cloneUrl),
+                branch = snapshot.branch,
+                parent = snapshot.headCommit,
+                path = path,
+                initial = loaded.getOrThrow(),
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onCancel = onDone,
+            )
     }
 }
 
