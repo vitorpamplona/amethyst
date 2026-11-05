@@ -188,4 +188,120 @@ class NavBackStacksLayoutsTest {
         assertEquals(Route.Hashtag("nostr"), restored.openerOf(restored.top)?.route)
         assertNull(restored.windowFocus)
     }
+
+    @Test
+    fun sectionsArePinnedAtTheStartOfTheStrip() {
+        val stacks = tabs()
+        stacks.push(Route.Note("n"))
+        stacks.switchTab(Route.Message)
+
+        assertEquals(listOf(Route.Home, Route.Message, Route.Note("n")), stacks.tabs().map { it.route })
+        assertTrue(stacks.tabs().take(2).all { it.pinned })
+    }
+
+    @Test
+    fun aClosedTabComesBack() {
+        val stacks = tabs()
+        stacks.push(Route.Note("n"))
+        stacks.pop()
+
+        assertTrue(stacks.canReopen)
+        assertTrue(stacks.reopenClosed())
+        assertEquals(Route.Note("n"), stacks.topRoute)
+        assertFalse(stacks.canReopen)
+    }
+
+    @Test
+    fun theBulkClosesLeaveThePinnedTabs() {
+        val stacks = tabs()
+        stacks.push(Route.Note("a"))
+        stacks.push(Route.Note("b"))
+        stacks.push(Route.Note("c"))
+        val b = stacks.tabs().first { it.route == Route.Note("b") }.id
+
+        stacks.closeToTheRight(b)
+        assertEquals(listOf(Route.Home, Route.Note("a"), Route.Note("b")), stacks.routes())
+
+        stacks.closeOthers(b)
+        assertEquals(listOf(Route.Home, Route.Note("b")), stacks.routes())
+        assertEquals(Route.Note("b"), stacks.topRoute)
+    }
+
+    @Test
+    fun closingWhatATabOpenedKeepsTheTab() {
+        val stacks = tabs()
+        stacks.push(Route.Hashtag("nostr"))
+        val hashtag = stacks.top.id
+        stacks.push(Route.Note("n"))
+        stacks.push(Route.Profile("p"))
+        stacks.activate(hashtag)
+
+        assertEquals(2, stacks.openedBy(hashtag))
+        stacks.closeOpenedBy(hashtag)
+        assertEquals(listOf(Route.Home, Route.Hashtag("nostr")), stacks.routes())
+    }
+
+    @Test
+    fun aBackgroundTabOpensWithoutTakingFocus() {
+        val stacks = tabs()
+        stacks.open(Route.Note("n"), background = true)
+
+        assertEquals(Route.Home, stacks.topRoute)
+        assertEquals(stacks.tabs().last().id, stacks.attention?.id)
+    }
+
+    @Test
+    fun tabsMoveAndCycleWithinTheirGroup() {
+        val stacks = tabs()
+        stacks.push(Route.Note("a"))
+        stacks.switchTab(Route.Home)
+        stacks.push(Route.Note("b"))
+        val a = stacks.tabs().first { it.route == Route.Note("a") }.id
+
+        stacks.move(a, -5)
+        assertEquals(listOf(Route.Home, Route.Note("a"), Route.Note("b")), stacks.routes())
+
+        stacks.cycle(1)
+        assertEquals(Route.Home, stacks.topRoute)
+        stacks.cycle(-1)
+        assertEquals(Route.Note("b"), stacks.topRoute)
+    }
+
+    @Test
+    fun aTabMovesOutToAWindowAndBack() {
+        val stacks = tabs()
+        stacks.push(Route.Note("n"))
+        val note = stacks.top.id
+        stacks.setDetached(note, true)
+
+        assertEquals(listOf(Route.Note("n")), stacks.windows().map { it.route })
+        assertEquals(listOf<Route>(Route.Home), stacks.tabs().map { it.route })
+        assertEquals(Route.Home, stacks.topRoute)
+        assertEquals(note, stacks.windowFocus?.id)
+
+        stacks.setDetached(note, false)
+        assertEquals(Route.Note("n"), stacks.topRoute)
+        assertTrue(stacks.windows().isEmpty())
+    }
+
+    @Test
+    fun aWindowRemembersWhichWindowOpenedIt() {
+        val stacks = windows()
+        stacks.push(Route.Note("n"))
+        val note = stacks.windows().single()
+        stacks.open(Route.Profile("p"), openerId = note.id)
+
+        assertEquals(note.id, stacks.openerOf(stacks.windows().last())?.id)
+    }
+
+    @Test
+    fun aSectionOrDrawerScreenHasNoOpener() {
+        val stacks = tabs()
+        stacks.push(Route.Note("n"))
+        stacks.switchTab(Route.Message)
+        stacks.push(Route.Bookmarks, drawerRoot = true)
+
+        assertNull(stacks.openerOf(stacks.stack.first { it.route == Route.Message }))
+        assertNull(stacks.openerOf(stacks.stack.first { it.route == Route.Bookmarks }))
+    }
 }

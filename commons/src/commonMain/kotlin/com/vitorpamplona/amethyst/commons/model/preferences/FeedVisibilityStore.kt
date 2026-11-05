@@ -53,6 +53,8 @@ data class FeedVisibility(
     val deckLayoutJson: String? = null,
     /** The [com.vitorpamplona.amethyst.commons.model.AccentColorType] name; null follows the app-wide accent. */
     val accentColor: String? = null,
+    /** The open tabs or windows of the tabs and windows layouts, as `NavBackStacks.encode()` JSON. */
+    val openScreensJson: String? = null,
 )
 
 /** Reads and writes [FeedVisibility] in the account's DataStore. */
@@ -68,6 +70,7 @@ class FeedVisibilityStore(
         val customFeedsJson = stringPreferencesKey("custom_feeds")
         val deckLayoutJson = stringPreferencesKey("deck_layout")
         val accentColor = stringPreferencesKey("accent_color")
+        val openScreensJson = stringPreferencesKey("open_screens")
 
         /** What the `secret_keeper_<npub>` file called these, for the one-shot copy. */
         val legacyTable =
@@ -98,6 +101,7 @@ class FeedVisibilityStore(
             customFeedsJson = prefs[customFeedsJson],
             deckLayoutJson = prefs[deckLayoutJson],
             accentColor = prefs[accentColor],
+            openScreensJson = prefs[openScreensJson],
         )
     }
 
@@ -112,6 +116,7 @@ class FeedVisibilityStore(
             value.customFeedsJson.let { if (it != null) prefs[customFeedsJson] = it else prefs.remove(customFeedsJson) }
             value.deckLayoutJson.let { if (it != null) prefs[deckLayoutJson] = it else prefs.remove(deckLayoutJson) }
             value.accentColor.let { if (it != null) prefs[accentColor] = it else prefs.remove(accentColor) }
+            value.openScreensJson.let { if (it != null) prefs[openScreensJson] = it else prefs.remove(openScreensJson) }
         }
     }
 }

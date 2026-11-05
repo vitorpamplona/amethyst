@@ -21,18 +21,28 @@
 package com.vitorpamplona.amethyst.commons.ui.navigation.tabs
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 
 private const val MAX_TITLE = 40
 
 /**
  * A short name for the screen [route] shows, for a tab or a window title: the person's name on a
- * profile, a note's first line, the hashtag, the bar's label for a section, or else the route's
- * own name spelled out ("NewShortNote" reads "New short note").
+ * profile (updated as their metadata arrives), a note's first line, the hashtag, the bar's label
+ * for a section, or else the route's own name spelled out ("NewShortNote" reads "New short note").
  */
 @Composable
 fun routeTitle(
@@ -40,7 +50,13 @@ fun routeTitle(
     accountViewModel: AccountViewModel,
 ): String {
     when (route) {
-        is Route.Profile -> LocalCache.getUserIfExists(route.id)?.let { return it.toBestDisplayName().take(MAX_TITLE) }
+        is Route.Profile -> {
+            val user = remember(route.id) { LocalCache.getUserIfExists(route.id) }
+            if (user != null) {
+                val info by observeUserInfo(user, accountViewModel)
+                return (info?.info?.bestName() ?: user.toBestDisplayName()).take(MAX_TITLE)
+            }
+        }
         is Route.Note ->
             LocalCache
                 .getNoteIfExists(route.id)
@@ -56,6 +72,62 @@ fun routeTitle(
     if (section != null && route !is Route.Profile) return stringRes(section.labelRes)
     return spellOut(route::class.simpleName ?: "")
 }
+
+/** The icon a tab shows for [route] when it has no picture of its own: the bar's icon for a section. */
+fun routeIcon(
+    route: Route,
+    accountViewModel: AccountViewModel,
+): MaterialSymbol =
+    when (route) {
+        is Route.Hashtag -> MaterialSymbols.Tag
+        is Route.Search -> MaterialSymbols.Search
+        is Route.Profile -> MaterialSymbols.Person
+        is Route.Room -> MaterialSymbols.Mail
+        is Route.Note -> MaterialSymbols.AutoMirrored.Article
+        else ->
+            NavBarCatalog.values.firstOrNull { it.resolveRoute(accountViewModel)::class == route::class }?.icon
+                ?: if (route::class.simpleName.orEmpty().contains("Settings")) MaterialSymbols.Settings else MaterialSymbols.Description
+    }
+
+/** A `nostr:` link to what [route] shows, for a tab's Copy link; null when it shows nothing linkable. */
+fun routeLink(route: Route): String? =
+    when (route) {
+        is Route.Note -> LocalCache.getNoteIfExists(route.id)?.toNostrUri()
+        is Route.Profile -> LocalCache.getUserIfExists(route.id)?.toNostrUri() ?: "nostr:${NPub.create(route.id)}"
+        else -> null
+    }
+
+/**
+ * A number that changes when something new happens on [route]'s screen while it is out of sight:
+ * a thread's replies, a chat's messages. Null for screens that have nothing to watch. A tab shows
+ * a dot when it differs from what it was when the user last looked.
+ */
+@Composable
+fun rememberRouteActivity(
+    route: Route,
+    accountViewModel: AccountViewModel,
+): Int? =
+    when (route) {
+        is Route.Note -> {
+            val note = remember(route.id) { LocalCache.getNoteIfExists(route.id) }
+            if (note == null) {
+                null
+            } else {
+                val replies by note
+                    .flow()
+                    .replies.stateFlow
+                    .collectAsState()
+                remember(replies) { note.replies.size }
+            }
+        }
+        is Route.Room -> {
+            val room = remember(route.id) { accountViewModel.account.chatroomList.getOrCreatePrivateChatroom(route.toKey()) }
+            var changes by remember(room) { mutableIntStateOf(0) }
+            LaunchedEffect(room) { room.changesFlow().collect { changes++ } }
+            changes
+        }
+        else -> null
+    }
 
 /** "NewShortNote" to "New short note". */
 internal fun spellOut(className: String): String =

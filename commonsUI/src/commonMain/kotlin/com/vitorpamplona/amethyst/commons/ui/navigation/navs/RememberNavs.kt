@@ -36,9 +36,13 @@ private val NavBackStacksSaver =
         restore = { NavBackStacks.decode(it) },
     )
 
+/**
+ * The window's [Nav]. A fresh one starts from [initial] when it gives one (the tabs or windows a
+ * previous run left open); state saved across a configuration change or process death wins.
+ */
 @Composable
-fun rememberNav(): Nav {
-    val stacks = rememberSaveable(saver = NavBackStacksSaver) { NavBackStacks() }
+fun rememberNav(initial: () -> NavBackStacks? = { null }): Nav {
+    val stacks = rememberSaveable(saver = NavBackStacksSaver) { initial() ?: NavBackStacks() }
     val scope = rememberCoroutineScope()
     // The settler is rebuilt whenever its inputs change (density, the keyboard controller), and the
     // app handles density and size changes without recreating the activity. Nav must survive that:

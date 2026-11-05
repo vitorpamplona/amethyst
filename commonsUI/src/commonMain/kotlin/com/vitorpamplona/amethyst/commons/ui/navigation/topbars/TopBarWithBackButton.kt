@@ -27,15 +27,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
+
+private val NoActions: @Composable RowScope.() -> Unit = {}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBarWithBackButton(
     caption: String,
     nav: INav,
-    actions: @Composable RowScope.() -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = NoActions,
 ) {
+    // In a tab or a window of its own the strip or the title bar already names the screen, and there
+    // is no back arrow: a bar holding nothing but that name again is left out.
+    if (!LocalBackArrowAllowed.current && actions === NoActions) return
+
     ShorterTopAppBar(
         title = {
             Text(

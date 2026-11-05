@@ -62,6 +62,15 @@ class Nav(
     /** The screen on top. Snapshot state: composables reading it recompose when it changes. */
     val currentRoute: Route get() = stacks.topRoute
 
+    /**
+     * Set by the shell when the press that is about to navigate held Ctrl or Cmd: the screen then
+     * opens as a background tab (or a window that does not take the focus). Read once, by the next
+     * navigation. Ignored by the stack layout.
+     */
+    var openNextInBackground: Boolean = false
+
+    private fun takeBackground(): Boolean = openNextInBackground.also { openNextInBackground = false }
+
     /** What the navigation host displays: the stack, or the one screen of a tab or section. */
     fun shownEntries(): List<NavStackEntry> = stacks.shown(wide = isDrawerDocked)
 
@@ -77,16 +86,42 @@ class Nav(
     }
 
     override fun nav(route: Route) {
+        val background = takeBackground()
         navigationScope.launch {
             ime.settle()
-            stacks.push(route)
+            if (background && stacks.isSingleScreen) stacks.open(route, background = true) else stacks.push(route)
         }
     }
 
     override fun nav(computeRoute: suspend () -> Route?) {
+        val background = takeBackground()
         navigationScope.launch {
             ime.settle()
-            computeRoute()?.let { stacks.push(it) }
+            computeRoute()?.let { if (background && stacks.isSingleScreen) stacks.open(it, background = true) else stacks.push(it) }
+        }
+    }
+
+    /** Opens [route] from the screen window [openerId]: a window placed by it, or a tab. */
+    fun navFrom(
+        openerId: Long,
+        route: Route,
+    ) {
+        val background = takeBackground()
+        navigationScope.launch {
+            ime.settle()
+            stacks.open(route, background = background, openerId = openerId)
+        }
+    }
+
+    /** [navFrom], for a route that has to be resolved first. */
+    fun navFrom(
+        openerId: Long,
+        computeRoute: suspend () -> Route?,
+    ) {
+        val background = takeBackground()
+        navigationScope.launch {
+            ime.settle()
+            computeRoute()?.let { stacks.open(it, background = background, openerId = openerId) }
         }
     }
 

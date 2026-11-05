@@ -49,6 +49,8 @@ class NavStackEntry(
     tabRoute: Route? = null,
     drawerRoot: Boolean = false,
     routeVersion: Int = 0,
+    pinned: Boolean = false,
+    detached: Boolean = false,
 ) {
     /** What this screen shows. Replaced in place when the same destination is reopened with other arguments. */
     var route by mutableStateOf(route)
@@ -81,6 +83,12 @@ class NavStackEntry(
 
     /** Opened from the navigation drawer: it can pop, but keeps the bottom bar like a tab root. */
     var drawerRoot by mutableStateOf(drawerRoot)
+
+    /** A tab kept at the start of the strip, drawn as its icon, and left alone by the bulk closes. */
+    var pinned by mutableStateOf(pinned)
+
+    /** A tab moved out to a window of its own (tabs layout). */
+    var detached by mutableStateOf(detached)
 
     val contentKey: String get() = "nav-$id"
 
@@ -139,6 +147,15 @@ class NavBackStacks private constructor(
     var windowFocus by mutableStateOf<WindowFocus?>(null)
         private set
 
+    /** The last tab asked for again while already open: the strip flashes it so the user sees where it went. */
+    var attention by mutableStateOf<WindowFocus?>(null)
+        private set
+
+    /** What was closed, newest last, for [reopenClosed]. */
+    private val closed = ArrayDeque<Route>()
+
+    val canReopen: Boolean get() = closed.isNotEmpty()
+
     val isSingleScreen: Boolean get() = mode != NavigationLayoutType.STACK
 
     val top: NavStackEntry
@@ -155,8 +172,7 @@ class NavBackStacks private constructor(
     fun retained(): List<NavStackEntry> =
         when (mode) {
             NavigationLayoutType.STACK -> stack + savedTabs.values
-            NavigationLayoutType.TABS -> stack.toList()
-            NavigationLayoutType.WINDOWS -> stack.filter(::isSection)
+            else -> stack.filter(::isMainScreen)
         }
 
     /**
@@ -166,12 +182,23 @@ class NavBackStacks private constructor(
     fun shown(wide: Boolean): List<NavStackEntry> =
         when (mode) {
             NavigationLayoutType.STACK -> stack.toList()
-            NavigationLayoutType.TABS -> if (wide) listOf(top) else chain(top)
+            NavigationLayoutType.TABS -> if (wide) listOf(top) else chain(top).filter(::isMainScreen)
             NavigationLayoutType.WINDOWS -> listOf(top)
         }
 
-    /** The screens that get a window of their own: empty unless in the windows mode. */
-    fun windows(): List<NavStackEntry> = if (mode == NavigationLayoutType.WINDOWS) stack.filterNot(::isSection) else emptyList()
+    /** The screens that get a window of their own: every screen but the sections in the windows mode, the tabs moved out in the tabs mode. */
+    fun windows(): List<NavStackEntry> = if (isSingleScreen) stack.filterNot(::isMainScreen) else emptyList()
+
+    /** The tab strip, in order: pinned tabs first. Empty unless in the tabs mode. */
+    fun tabs(): List<NavStackEntry> = if (mode == NavigationLayoutType.TABS) stack.filter(::isMainScreen) else emptyList()
+
+    /** A screen the main window shows: a tab not moved out, or a section in the windows mode. */
+    fun isMainScreen(entry: NavStackEntry): Boolean =
+        when (mode) {
+            NavigationLayoutType.STACK -> true
+            NavigationLayoutType.TABS -> !entry.detached
+            NavigationLayoutType.WINDOWS -> isSection(entry)
+        }
 
     /** A screen the bar, rail or drawer reach as a top-level place: Home and the bar's tabs. */
     fun isSection(entry: NavStackEntry): Boolean = entry.tabRoot || entry.route == Route.Home
@@ -309,74 +336,184 @@ class NavBackStacks private constructor(
 
     /**
      * Opens [route] as a screen of its own (single-screen modes), or focuses the one already
-     * showing it. [tabRoute] marks a section the bar asks for, found again under that route.
-     * [forceNew] opens another copy even when one is open (a fresh search).
+     * showing it. [tabRoute] marks a section the bar asks for, found again under that route; a
+     * section opens as a pinned tab. A tab opens right after its opener ([openerId], else the active
+     * tab); [background] leaves the active tab where it is. [forceNew] opens another copy even when
+     * one is open (a fresh search, a duplicate).
      */
     fun open(
         route: Route,
         drawerRoot: Boolean = false,
         tabRoute: Route? = null,
         forceNew: Boolean = false,
+        background: Boolean = false,
+        openerId: Long? = null,
     ): Boolean {
         if (!forceNew) {
             val existing = stack.firstOrNull { it.route == route || (tabRoute != null && it.tabRoute == tabRoute) }
             if (existing != null) {
                 if (tabRoute != null) existing.tabRoute = tabRoute
-                activate(existing.id)
+                // Shown where it already is, flashed so the user sees where it went.
+                if (!background) activate(existing.id)
+                flash(existing.id)
                 return true
             }
         }
         val entry = newEntry(route, tabRoute, drawerRoot)
-        val at = stack.indexOfFirst { it.id == activeId }
-        if (mode == NavigationLayoutType.TABS && at >= 0) {
-            stack.add(at + 1, entry)
-            openers[entry.id] = activeId
+        val opener = openerId ?: activeId
+        if (mode == NavigationLayoutType.TABS) {
+            if (tabRoute != null) {
+                entry.pinned = true
+                stack.add(pinnedCount(), entry)
+            } else {
+                val at = stack.indexOfFirst { it.id == opener && isMainScreen(it) }.takeIf { it >= 0 } ?: stack.indexOfFirst { it.id == activeId }
+                stack.add(if (at >= 0) maxOf(at + 1, pinnedCount()) else stack.size, entry)
+            }
         } else {
             stack.add(entry)
         }
-        activate(entry.id)
+        // A section or a drawer screen is a place of its own, not something the active tab opened.
+        if (tabRoute == null && !drawerRoot && stack.any { it.id == opener }) openers[entry.id] = opener
+        if (!background) activate(entry.id) else flash(entry.id)
         return true
+    }
+
+    private fun pinnedCount() = stack.count { it.pinned && isMainScreen(it) }
+
+    private fun flash(id: Long) {
+        attention = WindowFocus(id, (attention?.serial ?: 0) + 1)
     }
 
     /** Shows the screen [id]: the tab, the main window's section, or raises the window. */
     fun activate(id: Long) {
         val entry = stack.firstOrNull { it.id == id } ?: return
-        if (mode == NavigationLayoutType.WINDOWS && !isSection(entry)) {
-            windowFocus = WindowFocus(id, (windowFocus?.serial ?: 0) + 1)
-        } else {
+        if (isMainScreen(entry)) {
             activeId = id
+            // A section asked for from a screen window brings the main window forward.
+            if (mode == NavigationLayoutType.WINDOWS) windowFocus = WindowFocus(id, (windowFocus?.serial ?: 0) + 1)
+        } else {
+            windowFocus = WindowFocus(id, (windowFocus?.serial ?: 0) + 1)
         }
     }
 
     /**
      * Closes the screen [id] (single-screen modes): the active tab moves to its opener, else to
      * its left neighbour. The last tab, or the main window's last section, is replaced by Home.
+     * The closed screen can come back with [reopenClosed].
      */
     fun close(id: Long): Boolean {
         val index = stack.indexOfFirst { it.id == id }
         if (index < 0) return false
-        val opener = openerOf(stack[index])
+        val closing = stack[index]
+        val opener = openerOf(closing)
         stack.removeAt(index)
         openers.remove(id)
         // The tabs this one opened now count the tab that opened it as their opener.
         openers.entries.filter { it.value == id }.map { it.key }.forEach { child ->
             if (opener != null) openers[child] = opener.id else openers.remove(child)
         }
-        if (stack.none(::isMainScreen)) stack.add(0, newEntry(Route.Home))
-        if (stack.none { it.id == activeId }) {
-            activeId = (opener ?: stack.getOrNull(index - 1)?.takeIf(::isMainScreen) ?: stack.first(::isMainScreen)).id
+        closed.addLast(closing.route)
+        while (closed.size > MAX_CLOSED) closed.removeFirst()
+        if (stack.none(::isMainScreen)) stack.add(0, newEntry(Route.Home, tabRoute = if (mode == NavigationLayoutType.TABS) Route.Home else null).also { it.pinned = mode == NavigationLayoutType.TABS })
+        if (stack.none { it.id == activeId && isMainScreen(it) }) {
+            activeId = (opener?.takeIf(::isMainScreen) ?: stack.getOrNull(index - 1)?.takeIf(::isMainScreen) ?: stack.first(::isMainScreen)).id
         }
         return true
     }
 
-    /** A screen the main window can show: any tab, or a section in the windows mode. */
-    private fun isMainScreen(entry: NavStackEntry): Boolean = mode != NavigationLayoutType.WINDOWS || isSection(entry)
+    /** Opens the screen closed last again, as a new tab or window. */
+    fun reopenClosed(): Boolean {
+        val route = closed.removeLastOrNull() ?: return false
+        return open(route, forceNew = stack.none { it.route == route })
+    }
 
-    /** Back in a narrow tabs window: shows the tab that opened the active one, closing nothing. */
-    fun back(): Boolean {
-        val opener = openerOf(top) ?: return false
-        activeId = opener.id
-        return true
+    /** Closes every tab but [id] and the pinned ones. */
+    fun closeOthers(id: Long) {
+        tabs().filter { it.id != id && !it.pinned }.forEach { close(it.id) }
+        activate(id)
+    }
+
+    /** Closes the unpinned tabs after [id] in the strip. */
+    fun closeToTheRight(id: Long) {
+        val tabs = tabs()
+        val at = tabs.indexOfFirst { it.id == id }
+        if (at < 0) return
+        tabs.drop(at + 1).filter { !it.pinned }.forEach { close(it.id) }
+    }
+
+    /** Closes the screens [id] opened, and the ones they opened, leaving [id] open. */
+    fun closeOpenedBy(id: Long) {
+        val descendants = stack.filter { entry -> entry.id != id && chain(entry).any { it.id == id } }
+        descendants.forEach { close(it.id) }
+    }
+
+    /** The screens [id] opened that are still open, directly or through others. */
+    fun openedBy(id: Long): Int = stack.count { entry -> entry.id != id && chain(entry).any { it.id == id } }
+
+    /** Pins or unpins the tab [id], moving it to the end of the pinned tabs or just after them. */
+    fun setPinned(
+        id: Long,
+        pinned: Boolean,
+    ) {
+        val entry = stack.firstOrNull { it.id == id } ?: return
+        if (entry.pinned == pinned) return
+        stack.remove(entry)
+        entry.pinned = pinned
+        stack.add(pinnedCount(), entry)
+    }
+
+    /** Moves the tab [id] [delta] places along the strip, staying among the pinned or the unpinned tabs. */
+    fun move(
+        id: Long,
+        delta: Int,
+    ) {
+        val tabs = tabs()
+        val from = tabs.indexOfFirst { it.id == id }
+        if (from < 0 || delta == 0) return
+        val entry = tabs[from]
+        val group = tabs.filter { it.pinned == entry.pinned }
+        val inGroup = group.indexOf(entry)
+        val target = group.getOrNull((inGroup + delta).coerceIn(0, group.lastIndex)) ?: return
+        if (target == entry) return
+        stack.remove(entry)
+        val at = stack.indexOf(target)
+        stack.add(if (delta > 0) at + 1 else at, entry)
+    }
+
+    /** Shows the tab [delta] places from the active one, wrapping around: Ctrl+Tab and Ctrl+Shift+Tab. */
+    fun cycle(delta: Int) {
+        val tabs = tabs()
+        if (tabs.size < 2) return
+        val at = tabs.indexOfFirst { it.id == activeId }.coerceAtLeast(0)
+        activate(tabs[(at + delta).mod(tabs.size)].id)
+    }
+
+    /** Opens another copy of the screen [id], next to it. */
+    fun duplicate(id: Long) {
+        val entry = stack.firstOrNull { it.id == id } ?: return
+        open(entry.route, forceNew = true, openerId = id)
+    }
+
+    /** Moves the tab [id] out to a window of its own, or ([detached] false) back into the strip. */
+    fun setDetached(
+        id: Long,
+        detached: Boolean,
+    ) {
+        if (mode != NavigationLayoutType.TABS) return
+        val entry = stack.firstOrNull { it.id == id } ?: return
+        if (entry.detached == detached) return
+        if (detached && stack.count(::isMainScreen) <= 1) {
+            // The strip never empties: Home takes the moved tab's place.
+            stack.add(0, newEntry(Route.Home, tabRoute = Route.Home).also { it.pinned = true })
+        }
+        entry.detached = detached
+        if (detached) {
+            entry.pinned = false
+            if (activeId == id) activeId = (openerOf(entry)?.takeIf(::isMainScreen) ?: stack.first(::isMainScreen)).id
+            windowFocus = WindowFocus(id, (windowFocus?.serial ?: 0) + 1)
+        } else {
+            activate(id)
+        }
     }
 
     /** Hands the screen [id] another route in place: the next step of a flow, not a new screen. */
@@ -390,24 +527,34 @@ class NavBackStacks private constructor(
     /**
      * Switches how screens open. Leaving a single-screen mode keeps the active screen and the tabs
      * that opened it as a stack; entering tabs turns each screen of the stack into a tab opened by
-     * the one below it; entering windows keeps only the sections, in the main window.
+     * the one below it, with Home and the bar's tabs pinned; entering windows keeps only the
+     * sections, in the main window.
      */
     fun changeMode(newMode: NavigationLayoutType) {
         if (newMode == mode) return
         if (isSingleScreen) {
-            val keep = if (mode == NavigationLayoutType.TABS) chain(top) else listOf(top)
+            val keep = if (mode == NavigationLayoutType.TABS) chain(top).filter(::isMainScreen) else listOf(top)
             stack.clear()
             stack.addAll(keep)
             openers.clear()
+            keep.forEach {
+                it.pinned = false
+                it.detached = false
+            }
             if (stack.first().route != Route.Home) stack.add(0, newEntry(Route.Home))
         }
         mode = newMode
         savedTabs.clear()
+        closed.clear()
         when (newMode) {
             NavigationLayoutType.STACK -> {}
             NavigationLayoutType.TABS -> {
                 stack.zipWithNext { below, above -> openers[above.id] = below.id }
                 activeId = stack.last().id
+                stack.filter(::isSection).forEach { it.pinned = true }
+                val pinned = stack.filter { it.pinned }
+                stack.removeAll(pinned)
+                stack.addAll(0, pinned)
             }
             NavigationLayoutType.WINDOWS -> {
                 stack.removeAll { !isSection(it) }
@@ -442,6 +589,8 @@ class NavBackStacks private constructor(
         val tabRoute: Route? = null,
         val drawerRoot: Boolean = false,
         val routeVersion: Int = 0,
+        val pinned: Boolean = false,
+        val detached: Boolean = false,
     )
 
     @Serializable
@@ -454,12 +603,14 @@ class NavBackStacks private constructor(
         val openers: List<List<Long>> = emptyList(),
     )
 
-    private fun NavStackEntry.toSaved() = SavedEntry(route, id, tabRoute, drawerRoot, routeVersion)
+    private fun NavStackEntry.toSaved() = SavedEntry(route, id, tabRoute, drawerRoot, routeVersion, pinned, detached)
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
 
-        private fun SavedEntry.toEntry() = NavStackEntry(route, id, tabRoute, drawerRoot, routeVersion)
+        private const val MAX_CLOSED = 10
+
+        private fun SavedEntry.toEntry() = NavStackEntry(route, id, tabRoute, drawerRoot, routeVersion, pinned, detached)
 
         /** Restores what [encode] wrote, or null when it can't be read (an app update renamed a route). */
         fun decode(encoded: String): NavBackStacks? =

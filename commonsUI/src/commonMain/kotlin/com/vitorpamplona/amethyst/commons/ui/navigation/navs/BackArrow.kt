@@ -21,6 +21,12 @@
 package com.vitorpamplona.amethyst.commons.ui.navigation.navs
 
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.input.pointer.isMetaPressed
+import androidx.compose.ui.input.pointer.pointerInput
 
 /**
  * Whether the screens below may draw a back arrow. False where each screen holds a tab or a window
@@ -28,3 +34,19 @@ import androidx.compose.runtime.compositionLocalOf
  * instead. Top bars that draw an arrow without asking [INav.canPop] check this.
  */
 val LocalBackArrowAllowed = compositionLocalOf { true }
+
+/**
+ * Watches every press under it, before the pressed element sees it, and tells [nav] whether Ctrl or
+ * Cmd was held: a link or note clicked that way opens in the background (tabs and windows layouts).
+ */
+fun Modifier.openInBackgroundOnModifiedClick(nav: Nav): Modifier =
+    pointerInput(nav) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                if (event.type == PointerEventType.Press) {
+                    nav.openNextInBackground = event.keyboardModifiers.isCtrlPressed || event.keyboardModifiers.isMetaPressed
+                }
+            }
+        }
+    }

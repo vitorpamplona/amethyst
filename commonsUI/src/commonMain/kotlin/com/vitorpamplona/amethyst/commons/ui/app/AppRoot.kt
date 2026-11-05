@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.ScreenLayoutSpec
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberScreenLayoutSpec
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.commons.ui.navigation.windows.ScreenWindowSpec
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -98,15 +99,13 @@ interface AppRoot {
     fun ShellOverlay(accountViewModel: AccountViewModel) {}
 
     /**
-     * One OS window holding [content], one screen of the windows layout, titled [title]. Raised
-     * whenever [focus] changes to a new value; [onClose] runs when the user closes it. Only a front
-     * end that offers [NavigationLayoutType.WINDOWS] (see `AppPlatform.navigationLayouts`) draws it.
+     * One OS window holding [content]: a screen of the windows layout, or a tab moved out. Only a
+     * front end that offers [NavigationLayoutType.WINDOWS] (see `AppPlatform.navigationLayouts`)
+     * draws it.
      */
     @Composable
     fun ScreenWindow(
-        title: String,
-        focus: Int?,
-        onClose: () -> Unit,
+        window: ScreenWindowSpec,
         content: @Composable () -> Unit,
     ) {}
 

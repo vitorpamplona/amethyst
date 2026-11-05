@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.appupdate.ui.AppUpdateHost
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.isSameRoute
 import com.vitorpamplona.amethyst.commons.model.navigation.lockScope
@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavTransitionTier
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavigationHost
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.sharedDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.openInBackgroundOnModifiedClick
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.commons.ui.navigation.shell.AppShellLayout
@@ -109,8 +110,10 @@ import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelScope
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
@@ -271,6 +274,7 @@ private fun ObserveAntiSpamFilterSettings(accountViewModel: AccountViewModel) {
     LocalCache.antiSpam.active = isSpamActive
 }
 
+@OptIn(FlowPreview::class)
 @Composable
 private fun AppNavigation(
     accountViewModel: AccountViewModel,
@@ -278,14 +282,26 @@ private fun AppNavigation(
     sessionManager: AccountSessionManager,
     root: AppRoot,
 ) {
-    val nav = rememberNav()
-
     // Stack, tabs or windows, as the user picked, among the layouts this front end offers.
     val layoutChoice by accountViewModel.settings.uiSettingsFlow.navigationLayout
         .collectAsState()
     val layouts = LocalAppPlatform.current.navigationLayouts
     val layout = if (layoutChoice in layouts) layoutChoice else NavigationLayoutType.STACK
+
+    // The tabs or windows the last run left open come back, in the layout they were opened in.
+    val accountSettings = accountViewModel.account.settings
+    val nav =
+        rememberNav {
+            accountSettings.openScreens.value
+                ?.let { NavBackStacks.decode(it) }
+                ?.takeIf { it.mode == layout && layout != NavigationLayoutType.STACK }
+        }
     LaunchedEffect(nav, layout) { nav.stacks.changeMode(layout) }
+    LaunchedEffect(nav) {
+        snapshotFlow { if (nav.stacks.isSingleScreen) nav.stacks.encode() else null }
+            .debounce(OPEN_SCREENS_SAVE_DEBOUNCE_MS)
+            .collect { accountSettings.updateOpenScreens(it) }
+    }
 
     // Shows the "log in to this relay?" dialog when a NIP-42 challenge needs the user to decide.
     // Hosted here rather than per account so one dialog serves the whole shell: challenges
@@ -323,28 +339,27 @@ private fun AppNavigation(
         LocalUserFinderAccount provides accountViewModel.account,
         LocalEventFinder provides accountViewModel.dataSources().eventFinder,
     ) {
-        AppShellLayout(
-            accountViewModel = accountViewModel,
-            nav = nav,
-            drawerContent = { openAccountSwitcher -> DrawerContent(nav, openAccountSwitcher, accountViewModel) },
-            permanentDrawerContent = { openAccountSwitcher ->
-                PermanentDrawerContent(nav, openAccountSwitcher, accountViewModel) { expanded, onDismiss ->
-                    AccountSwitchMenu(expanded, onDismiss, accountViewModel, sessionManager)
-                }
-            },
-            accountSwitcherContent = { AccountSwitchBottomSheet(accountViewModel, sessionManager) },
-            suspendEdgeSwipe = root::suspendEdgeSwipe,
-            deck = rememberDeck(accountViewModel, nav, root),
-        ) {
-            // Inside the providers, so the panel reads the window's layout (its hover tooltips are
-            // for large screens).
-            EmojiPanelHost {
-                Column(Modifier.fillMaxSize()) {
-                    // The tab strip shows where the drawer docks; a narrower window reads as a stack.
-                    if (nav.stacks.mode == NavigationLayoutType.TABS && nav.isDrawerDocked) {
-                        ScreenTabStrip(nav, accountViewModel)
+        // A Ctrl/Cmd-click opens what it reaches in the background (tabs and windows layouts).
+        Box(Modifier.fillMaxSize().openInBackgroundOnModifiedClick(nav)) {
+            AppShellLayout(
+                accountViewModel = accountViewModel,
+                nav = nav,
+                drawerContent = { openAccountSwitcher -> DrawerContent(nav, openAccountSwitcher, accountViewModel) },
+                permanentDrawerContent = { openAccountSwitcher ->
+                    PermanentDrawerContent(nav, openAccountSwitcher, accountViewModel) { expanded, onDismiss ->
+                        AccountSwitchMenu(expanded, onDismiss, accountViewModel, sessionManager)
                     }
-                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                },
+                accountSwitcherContent = { AccountSwitchBottomSheet(accountViewModel, sessionManager) },
+                suspendEdgeSwipe = root::suspendEdgeSwipe,
+                deck = rememberDeck(accountViewModel, nav, root),
+                // Where the drawer docks: above the main screen and the panel beside it.
+                topStrip = if (nav.stacks.mode == NavigationLayoutType.TABS) ({ ScreenTabStrip(nav, accountViewModel) }) else null,
+            ) {
+                // Inside the providers, so the panel reads the window's layout (its hover tooltips are
+                // for large screens).
+                EmojiPanelHost {
+                    Box(Modifier.fillMaxSize()) {
                         BuildNavigation(nav, destinations, root)
                         // Each pinned nsite/napplet's manifest, pulled into LocalCache and kept on the device,
                         // so a favorite opens, and serves as an intent handler, on every platform.
@@ -355,9 +370,8 @@ private fun AppNavigation(
             }
         }
 
-        if (nav.stacks.mode == NavigationLayoutType.WINDOWS) {
-            ScreenWindows(nav, accountViewModel, root)
-        }
+        // Screens in windows of their own: the windows layout, or tabs moved out.
+        ScreenWindows(nav, accountViewModel, root)
 
         OpenFirstRoute(firstRoute, nav)
 
@@ -458,6 +472,9 @@ private fun RelockOnLeave(nav: Nav) {
 }
 
 private const val RELOCK_AFTER_LEAVE_MS = 500L
+
+/** Open tabs and windows are saved this long after the last change, not on every click. */
+private const val OPEN_SCREENS_SAVE_DEBOUNCE_MS = 1_000L
 
 /** Tells [root] which screen is on top, by its route's name only: never which profile or note. */
 @Composable

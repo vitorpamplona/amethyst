@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -103,6 +104,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.withContext
 import java.awt.Taskbar
@@ -277,6 +279,15 @@ fun main(args: Array<String>) {
         // The updater quits through here, as the Quit menu does: windows close, then the JVM exits.
         LaunchedEffect(Unit) { modules.quitRequests.collect { exitApplication() } }
 
+        // Closing the main window while screen windows are open only hides it; the app quits once
+        // the last of them closes too.
+        val navigator = root.navigator
+        LaunchedEffect(navigator) {
+            snapshotFlow { !navigator.mainWindowVisible && navigator.screenFrames.isEmpty() }
+                .filter { it }
+                .collect { exitApplication() }
+        }
+
         // Bumped to rebuild the window after a crash the user reports from the crash window: the
         // crashed composition can't be reused, but the session, account and size carry over.
         var windowGeneration by remember { mutableIntStateOf(0) }
@@ -292,12 +303,19 @@ fun main(args: Array<String>) {
         CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides exceptionHandlerFactory) {
             key(windowGeneration) {
                 AppWindow(
-                    onCloseRequest = ::exitApplication,
+                    onCloseRequest = {
+                        if (navigator.screenFrames.isEmpty()) exitApplication() else navigator.mainWindowVisible = false
+                    },
                     state = windowState,
                     title = "Amethyst",
                     icon = IconResources.adaptedBitmapPainter,
                     onPreviewKeyEvent = { root.navigator.handleShortcut(it, onQuit = ::exitApplication) },
+                    visible = navigator.mainWindowVisible,
                 ) {
+                    DisposableEffect(window) {
+                        navigator.mainFrame = window
+                        onDispose { if (navigator.mainFrame === window) navigator.mainFrame = null }
+                    }
                     // macOS: the title bar turns transparent over the app, which draws its own strip there.
                     frameScope?.applyNativeWindowChrome()
 
@@ -349,7 +367,10 @@ fun main(args: Array<String>) {
                                         ProvideTitleBarInsets(titleBar) {
                                             Box(Modifier.weight(1f).fillMaxWidth()) {
                                                 AmethystApp(modules.sessionManager, root)
-                                                SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
+                                                // Toasts show here unless a screen window has the focus (it shows them).
+                                                if (navigator.focusedScreenWindow == null) {
+                                                    SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
+                                                }
                                             }
                                         }
                                         // Whatever plays keeps playing across screens and after its card
