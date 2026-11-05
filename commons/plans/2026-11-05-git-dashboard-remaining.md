@@ -1,7 +1,23 @@
 # Git dashboard: what is left after the audit
 
-_Status: queued. Tested 2026-11-05. Quartz's share (history, blame and search downloads) is
-`quartz/plans/2026-11-05-git-fetch-costs.md` in the quartz repo._
+_Status: done 2026-11-05, except where a section says otherwise. Quartz's share (history, blame and
+search downloads) is `quartz/plans/2026-11-05-git-fetch-costs.md` in the quartz repo._
+
+## Outcome
+
+| Item | Result |
+|---|---|
+| 1. End-to-end run | Done: `amy serve --git-root` is a dev GRASP server (geode `GraspGitHost`); `amy git pr --source`, `pr-update --source` and `edit` run `GitProposals` (now on a `GitProposalHost`); `cli/tests/git/git-grasp-e2e.sh` passes 20/20, private repository included. The desktop app, as the maintainer on the same servers with `run-headless.sh --local-only`: inline comment, resolve, reopen, review verdict, label, merge, edit and propose, private repository browse and settings save, each looked at and checked on the server or relay. Not yet run in the app: New pull request and Update branch from a second account; an Android device. |
+| 2. Editor | Done: a windowed editor (a lazy list of lines, one block of lines in a `TextFieldState` at a time). 15-29 ms per keystroke at 20, 256 and 430 KB, against 149 and 274 ms for the whole-file field; round trips keep CRLF and a missing final newline. The 64 KB stopgap was skipped. |
+| 3. Row colours | Done, with an offscreen render test. |
+| 4. Unknown announcement | Done in the planner: such an event goes only where the repository's events were seen, until the announcement shows it public. Composers do not yet fetch the announcement first (the planner rule covers the leak). |
+| 5. Inline threads | Done: rendered under their line in the desktop app on a real thread. |
+| 6. Blame and search waits | With the quartz plan; the app picks it up at the next quartz release. |
+
+Found on the way: `AMETHYST_LOCAL_RELAYS` alone let a fresh test account publish its Marmot key
+package to the default public relays at login (one throwaway key's, during this testing).
+`run-headless.sh --local-only` now closes the app's proxy so only `127.0.0.1` answers, and
+`tools/desktop-run/README.md` says so.
 
 The in-app git features (review, PRs, edits, triage, settings, private repositories, checkout
 helpers) shipped with an audit pass. Five items stayed open, and testing them found a sixth. Each
