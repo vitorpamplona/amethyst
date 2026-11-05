@@ -7410,6 +7410,14 @@
     <string name="custom_feeds_search_people">Search by name, NIP-05 or npub</string>
     <string name="deck_mode">Deck</string>
     <string name="deck_mode_description">On wide windows, show extra columns beside the main screen, each with its own screen and history. Save sets of columns as workspaces.</string>
+    <string name="navigation_layout">Navigation layout</string>
+    <string name="navigation_layout_description">How screens open: on one stack, each in its own tab, or each in its own window. Tabs and windows have no back button: close them when you are done.</string>
+    <string name="navigation_layout_stack">Stack</string>
+    <string name="navigation_layout_tabs">Tabs</string>
+    <string name="navigation_layout_windows">Windows</string>
+    <string name="navigation_new_tab">New tab</string>
+    <string name="navigation_close_tab">Close tab</string>
+    <string name="navigation_window_title">%1$s — Amethyst</string>
     <string name="deck_workspaces">Workspaces</string>
     <string name="deck_workspace_number">Workspace %1$d</string>
     <string name="deck_save_workspace">Save as a new workspace</string>

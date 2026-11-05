@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
 import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -60,6 +61,9 @@ class Nav(
 
     /** The screen on top. Snapshot state: composables reading it recompose when it changes. */
     val currentRoute: Route get() = stacks.topRoute
+
+    /** What the navigation host displays: the stack, or the one screen of a tab or section. */
+    fun shownEntries(): List<NavStackEntry> = stacks.shown(wide = isDrawerDocked)
 
     override fun closeDrawer() {
         navigationScope.launch { drawerState.close() }
@@ -144,8 +148,17 @@ class Nav(
      * Hidden on tab roots (reached via the bottom nav) and on Home (the start destination): nothing
      * sits below either that a back arrow could return to. Every other entry is a push on top of
      * Home, so it can always pop.
+     *
+     * A tab or a window holds one screen and has no back arrow: it is closed instead. Only a tabs
+     * window too narrow for the strip shows one, on a tab another tab opened: back closes it and
+     * shows that tab.
      */
-    private fun canPop(entry: NavStackEntry): Boolean = !entry.tabRoot && entry.route != Route.Home
+    private fun canPop(entry: NavStackEntry): Boolean =
+        when (stacks.mode) {
+            NavigationLayoutType.STACK -> !entry.tabRoot && entry.route != Route.Home
+            NavigationLayoutType.TABS -> !isDrawerDocked && stacks.openerOf(entry) != null
+            NavigationLayoutType.WINDOWS -> false
+        }
 
     override fun popBack() {
         navigationScope.launch {

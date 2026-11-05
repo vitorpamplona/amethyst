@@ -77,7 +77,20 @@ data class UiSettings(
     // default: a feed full of languages would otherwise pull several of them over mobile data.
     val automaticallyDownloadTranslationModels: ConnectivityType = ConnectivityType.WIFI_ONLY,
     val hideWalletBalances: Boolean = false,
+    // How a desktop-size window opens screens: one stack (today), one screen per tab, or one per window.
+    val navigationLayout: NavigationLayoutType = NavigationLayoutType.STACK,
 )
+
+/**
+ * How screens open. [STACK] pushes them on one back stack; [TABS] gives each screen its own tab in
+ * the main pane and [WINDOWS] its own OS window, with no back button: they are closed instead.
+ * Only desktop-size front ends offer the last two.
+ */
+enum class NavigationLayoutType {
+    STACK,
+    TABS,
+    WINDOWS,
+}
 
 /**
  * How feed notes place their author and media. [AUTHOR_COLUMN] keeps the picture in a column to

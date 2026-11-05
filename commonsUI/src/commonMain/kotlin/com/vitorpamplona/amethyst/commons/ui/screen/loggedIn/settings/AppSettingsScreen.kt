@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.model.ConnectivityType
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
+import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.NoteLayoutType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
@@ -94,6 +95,11 @@ import com.vitorpamplona.amethyst.commons.resources.font_size
 import com.vitorpamplona.amethyst.commons.resources.font_size_description
 import com.vitorpamplona.amethyst.commons.resources.language
 import com.vitorpamplona.amethyst.commons.resources.language_description
+import com.vitorpamplona.amethyst.commons.resources.navigation_layout
+import com.vitorpamplona.amethyst.commons.resources.navigation_layout_description
+import com.vitorpamplona.amethyst.commons.resources.navigation_layout_stack
+import com.vitorpamplona.amethyst.commons.resources.navigation_layout_tabs
+import com.vitorpamplona.amethyst.commons.resources.navigation_layout_windows
 import com.vitorpamplona.amethyst.commons.resources.note_layout
 import com.vitorpamplona.amethyst.commons.resources.note_layout_description
 import com.vitorpamplona.amethyst.commons.resources.settings_section_appearance
@@ -206,6 +212,11 @@ fun SettingsScreen(
             ImmersiveScrollingTile(sharedPrefs)
             SettingsDivider()
             DeckModeTile(sharedPrefs)
+            val layouts = LocalAppPlatform.current.navigationLayouts
+            if (layouts.size > 1) {
+                SettingsDivider()
+                NavigationLayoutTile(sharedPrefs, layouts)
+            }
         }
 
         LocalAppUpdates.current?.let { AppUpdateSettingsSection(it) }
@@ -435,6 +446,29 @@ private fun ImmersiveScrollingTile(sharedPrefs: UiSettingsFlow) {
         icon = MaterialSymbols.Fullscreen,
         title = Res.string.automatically_hide_nav_bars,
         description = Res.string.automatically_hide_nav_bars_description,
+    )
+}
+
+@Composable
+private fun NavigationLayoutTile(
+    sharedPrefs: UiSettingsFlow,
+    layouts: List<NavigationLayoutType>,
+) {
+    val layout by sharedPrefs.navigationLayout.collectAsState()
+    SegmentedChoiceTile(
+        icon = MaterialSymbols.AutoMirrored.OpenInNew,
+        title = Res.string.navigation_layout,
+        description = Res.string.navigation_layout_description,
+        options = layouts,
+        labelRes = {
+            when (it) {
+                NavigationLayoutType.STACK -> Res.string.navigation_layout_stack
+                NavigationLayoutType.TABS -> Res.string.navigation_layout_tabs
+                NavigationLayoutType.WINDOWS -> Res.string.navigation_layout_windows
+            }
+        },
+        selected = layout,
+        onSelect = { sharedPrefs.navigationLayout.tryEmit(it) },
     )
 }
 

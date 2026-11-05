@@ -32,6 +32,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
@@ -54,6 +57,8 @@ import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.buildSettingsCatalog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.desktop.platform.AppWindow
+import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -140,6 +145,27 @@ class DesktopAppRoot(
                     resolveRelays = { account.outboxRelays.flow.value },
                 )
             onDispose { modules.scheduledPostScheduler.stop(loop) }
+        }
+    }
+
+    /** A screen of the windows layout: a plain OS window the window manager places and sizes. */
+    @Composable
+    override fun ScreenWindow(
+        title: String,
+        focus: Int?,
+        onClose: () -> Unit,
+        content: @Composable () -> Unit,
+    ) {
+        val state = rememberWindowState(size = DpSize(560.dp, 820.dp))
+        AppWindow(onCloseRequest = onClose, state = state, title = title, icon = IconResources.adaptedBitmapPainter) {
+            // Raised when the screen it shows is opened again from another window.
+            LaunchedEffect(focus) {
+                if (focus != null) {
+                    window.toFront()
+                    window.requestFocus()
+                }
+            }
+            content()
         }
     }
 

@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -48,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.account.ui.LoginOrSignupScreen
 import com.vitorpamplona.amethyst.commons.account.ui.RemoteSignerAuthPrompt
 import com.vitorpamplona.amethyst.commons.appupdate.ui.AppUpdateHost
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.isSameRoute
@@ -89,6 +91,9 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.commons.ui.navigation.shell.AppShellLayout
+import com.vitorpamplona.amethyst.commons.ui.navigation.tabs.ScreenTabStrip
+import com.vitorpamplona.amethyst.commons.ui.navigation.windows.ScreenWindows
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.privacylock.PrivacyLockGate
 import com.vitorpamplona.amethyst.commons.ui.privacylock.PrivacyLockHost
@@ -275,6 +280,13 @@ private fun AppNavigation(
 ) {
     val nav = rememberNav()
 
+    // Stack, tabs or windows, as the user picked, among the layouts this front end offers.
+    val layoutChoice by accountViewModel.settings.uiSettingsFlow.navigationLayout
+        .collectAsState()
+    val layouts = LocalAppPlatform.current.navigationLayouts
+    val layout = if (layoutChoice in layouts) layoutChoice else NavigationLayoutType.STACK
+    LaunchedEffect(nav, layout) { nav.stacks.changeMode(layout) }
+
     // Shows the "log in to this relay?" dialog when a NIP-42 challenge needs the user to decide.
     // Hosted here rather than per account so one dialog serves the whole shell: challenges
     // arrive off the shared relay socket, not from whatever screen happens to be on top.
@@ -327,14 +339,24 @@ private fun AppNavigation(
             // Inside the providers, so the panel reads the window's layout (its hover tooltips are
             // for large screens).
             EmojiPanelHost {
-                Box(Modifier.fillMaxSize()) {
-                    BuildNavigation(nav, destinations, root)
-                    // Each pinned nsite/napplet's manifest, pulled into LocalCache and kept on the device,
-                    // so a favorite opens, and serves as an intent handler, on every platform.
-                    FavoriteAppManifestPreloader(accountViewModel)
-                    root.ShellOverlay(accountViewModel)
+                Column(Modifier.fillMaxSize()) {
+                    // The tab strip shows where the drawer docks; a narrower window reads as a stack.
+                    if (nav.stacks.mode == NavigationLayoutType.TABS && nav.isDrawerDocked) {
+                        ScreenTabStrip(nav, accountViewModel)
+                    }
+                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                        BuildNavigation(nav, destinations, root)
+                        // Each pinned nsite/napplet's manifest, pulled into LocalCache and kept on the device,
+                        // so a favorite opens, and serves as an intent handler, on every platform.
+                        FavoriteAppManifestPreloader(accountViewModel)
+                        root.ShellOverlay(accountViewModel)
+                    }
                 }
             }
+        }
+
+        if (nav.stacks.mode == NavigationLayoutType.WINDOWS) {
+            ScreenWindows(nav, accountViewModel, root)
         }
 
         OpenFirstRoute(firstRoute, nav)
@@ -380,7 +402,8 @@ private fun rememberDeck(
 ): (@Composable (Modifier) -> Unit)? {
     val deckMode by accountViewModel.settings.uiSettingsFlow.deckMode
         .collectAsState()
-    if (!deckMode || !LocalScreenLayout.current.hasRoomForNotificationPanel) return null
+    // The windows layout leaves arranging screens to the window manager.
+    if (!deckMode || nav.stacks.mode == NavigationLayoutType.WINDOWS || !LocalScreenLayout.current.hasRoomForNotificationPanel) return null
     return remember(accountViewModel, nav, root) {
         { modifier ->
             DeckArea(

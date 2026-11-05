@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.navigation.host
 
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -27,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 
 /**
@@ -49,15 +54,39 @@ fun NavigationHost(
     destinations: NavDestinations,
     modifier: Modifier = Modifier,
 ) {
-    val visible = nav.stacks.stack.toList()
-    val retained = visible + nav.stacks.savedTabs.values
+    NavigationHost(
+        visible = nav.shownEntries(),
+        retained = nav.stacks.retained(),
+        destinations = destinations,
+        // Switching tabs or sections swaps the screen at once; only a stack slides and fades.
+        animated = !nav.stacks.isSingleScreen || nav.shownEntries().size > 1,
+        onBack = { nav.stacks.pop() },
+        modifier = modifier,
+    )
+}
+
+/**
+ * Renders [visible] (bottom to top) and keeps the state of every [retained] entry: the host behind
+ * the main window's [Nav] and behind each screen window, which shows its one entry.
+ */
+@Composable
+fun NavigationHost(
+    visible: List<NavStackEntry>,
+    retained: List<NavStackEntry>,
+    destinations: NavDestinations,
+    animated: Boolean,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // The shown entries first: the display takes the head of the decorated list.
+    val all = visible + retained.filterNot { it in visible }
     val decorated =
         rememberDecoratedNavEntries(
-            backStack = retained,
+            backStack = all,
             entryDecorators =
                 listOf(
                     rememberSaveableStateHolderNavEntryDecorator(),
-                    rememberRouteViewModelStoreNavEntryDecorator(retained),
+                    rememberRouteViewModelStoreNavEntryDecorator(all),
                 ),
             entryProvider = destinations::entryFor,
         )
@@ -65,10 +94,12 @@ fun NavigationHost(
     NavDisplay(
         entries = decorated.subList(0, visible.size),
         modifier = modifier.background(MaterialTheme.colorScheme.background),
-        transitionSpec = { destinations.pushTransition(this) },
-        popTransitionSpec = { destinations.popTransition(this) },
+        transitionSpec = { if (animated) destinations.pushTransition(this) else NoTransition },
+        popTransitionSpec = { if (animated) destinations.popTransition(this) else NoTransition },
         // A back gesture runs the same motion as a back press, scrubbed by the finger.
-        predictivePopTransitionSpec = { destinations.popTransition(this) },
-        onBack = { nav.stacks.pop() },
+        predictivePopTransitionSpec = { if (animated) destinations.popTransition(this) else NoTransition },
+        onBack = onBack,
     )
 }
+
+private val NoTransition: ContentTransform = EnterTransition.None togetherWith ExitTransition.None

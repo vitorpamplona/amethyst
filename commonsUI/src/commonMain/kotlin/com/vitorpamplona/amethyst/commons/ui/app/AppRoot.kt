@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.ui.layouts.ScreenLayoutSpec
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberScreenLayoutSpec
@@ -95,6 +96,19 @@ interface AppRoot {
     /** Layers drawn over the navigation host inside the shell, such as embedded app surfaces. */
     @Composable
     fun ShellOverlay(accountViewModel: AccountViewModel) {}
+
+    /**
+     * One OS window holding [content], one screen of the windows layout, titled [title]. Raised
+     * whenever [focus] changes to a new value; [onClose] runs when the user closes it. Only a front
+     * end that offers [NavigationLayoutType.WINDOWS] (see `AppPlatform.navigationLayouts`) draws it.
+     */
+    @Composable
+    fun ScreenWindow(
+        title: String,
+        focus: Int?,
+        onClose: () -> Unit,
+        content: @Composable () -> Unit,
+    ) {}
 
     /** Whether the drawer's edge swipe should wait, e.g. while an embedded surface drags a selection. */
     fun suspendEdgeSwipe(): Boolean = false

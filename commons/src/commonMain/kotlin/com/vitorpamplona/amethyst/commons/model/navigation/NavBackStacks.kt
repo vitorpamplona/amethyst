@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.snapshots.SnapshotStateMap
+import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.reflect.KClass
@@ -93,17 +94,30 @@ class NavStackEntry(
 /**
  * The app's back stack, owned by the app (Navigation 3 renders whatever this holds).
  *
- * [stack] is what is on screen, bottom to top; it is never empty and normally starts at
- * [Route.Home]. [savedTabs] holds the root entry of every bottom-bar tab the user left: a tab
- * survives being left — its ViewModels and scroll position — because its entry stays here, and so
- * stays in the list whose state Navigation 3 keeps alive. Nothing *above* a tab root is ever saved:
- * switching tabs drops it first, so returning to a tab always lands on the tab itself.
+ * In the [NavigationLayoutType.STACK] [mode], [stack] is what is on screen, bottom to top; it is
+ * never empty and normally starts at [Route.Home]. [savedTabs] holds the root entry of every
+ * bottom-bar tab the user left: a tab survives being left — its ViewModels and scroll position —
+ * because its entry stays here, and so stays in the list whose state Navigation 3 keeps alive.
+ * Nothing *above* a tab root is ever saved: switching tabs drops it first, so returning to a tab
+ * always lands on the tab itself.
+ *
+ * In the single-screen modes every entry of [stack] is one screen of its own, never pushed onto:
+ * - [NavigationLayoutType.TABS]: [stack] is the tab strip, in order, and [top] is the active tab.
+ *   A new screen opens as a tab right after the one that opened it ([openerOf]); closing a tab
+ *   goes back to its opener.
+ * - [NavigationLayoutType.WINDOWS]: the sections (Home and the bar's tabs, see [isSection]) are the
+ *   main window's screens, [top] being the one it shows; every other entry is a window ([windows]).
+ *
+ * Opening a screen that is already open focuses it instead ([windowFocus] for a window).
  */
 @Stable
 class NavBackStacks private constructor(
     initialStack: List<NavStackEntry>,
     initialSavedTabs: Map<Route, NavStackEntry>,
     private var nextId: Long,
+    initialMode: NavigationLayoutType = NavigationLayoutType.STACK,
+    initialActiveId: Long = -1,
+    initialOpeners: Map<Long, Long> = emptyMap(),
 ) {
     constructor(start: Route = Route.Home) : this(listOf(NavStackEntry(start, 0)), emptyMap(), 1)
 
@@ -111,12 +125,70 @@ class NavBackStacks private constructor(
 
     val savedTabs: SnapshotStateMap<Route, NavStackEntry> = mutableStateMapOf<Route, NavStackEntry>().apply { putAll(initialSavedTabs) }
 
-    val top: NavStackEntry get() = stack.last()
+    /** How screens open; change it with [changeMode]. */
+    var mode by mutableStateOf(initialMode)
+        private set
+
+    /** The screen shown in a single-screen mode: the active tab, or the main window's section. */
+    private var activeId by mutableStateOf(initialActiveId)
+
+    /** Which tab opened which, by entry id: closing a tab returns to its opener. */
+    private val openers: SnapshotStateMap<Long, Long> = mutableStateMapOf<Long, Long>().apply { putAll(initialOpeners) }
+
+    /** The last window asked to come to the front, so the platform can raise it. */
+    var windowFocus by mutableStateOf<WindowFocus?>(null)
+        private set
+
+    val isSingleScreen: Boolean get() = mode != NavigationLayoutType.STACK
+
+    val top: NavStackEntry
+        get() =
+            if (isSingleScreen) {
+                stack.firstOrNull { it.id == activeId } ?: stack.last()
+            } else {
+                stack.last()
+            }
 
     val topRoute: Route get() = top.route
 
-    /** Every entry whose state must stay alive: the visible stack, then the tabs the user left. */
-    fun retained(): List<NavStackEntry> = stack + savedTabs.values
+    /** Every entry whose state must stay alive in this host. Windows keep theirs in their own. */
+    fun retained(): List<NavStackEntry> =
+        when (mode) {
+            NavigationLayoutType.STACK -> stack + savedTabs.values
+            NavigationLayoutType.TABS -> stack.toList()
+            NavigationLayoutType.WINDOWS -> stack.filter(::isSection)
+        }
+
+    /**
+     * What the main host displays, bottom to top. A narrow window in tabs mode ([wide] false) shows
+     * the active tab on top of the tabs that opened it, so back walks to them.
+     */
+    fun shown(wide: Boolean): List<NavStackEntry> =
+        when (mode) {
+            NavigationLayoutType.STACK -> stack.toList()
+            NavigationLayoutType.TABS -> if (wide) listOf(top) else chain(top)
+            NavigationLayoutType.WINDOWS -> listOf(top)
+        }
+
+    /** The screens that get a window of their own: empty unless in the windows mode. */
+    fun windows(): List<NavStackEntry> = if (mode == NavigationLayoutType.WINDOWS) stack.filterNot(::isSection) else emptyList()
+
+    /** A screen the bar, rail or drawer reach as a top-level place: Home and the bar's tabs. */
+    fun isSection(entry: NavStackEntry): Boolean = entry.tabRoot || entry.route == Route.Home
+
+    /** The tab that opened [entry], while it is still open. */
+    fun openerOf(entry: NavStackEntry): NavStackEntry? = openers[entry.id]?.let { id -> stack.firstOrNull { it.id == id } }
+
+    /** [entry] after the tabs that opened it, oldest first. */
+    fun chain(entry: NavStackEntry): List<NavStackEntry> {
+        val result = ArrayDeque<NavStackEntry>()
+        var current: NavStackEntry? = entry
+        while (current != null && current !in result) {
+            result.addFirst(current)
+            current = openerOf(current)
+        }
+        return result.toList()
+    }
 
     private fun newEntry(
         route: Route,
@@ -129,6 +201,7 @@ class NavBackStacks private constructor(
         route: Route,
         drawerRoot: Boolean = false,
     ): Boolean {
+        if (isSingleScreen) return open(route, drawerRoot = drawerRoot)
         if (topRoute == route) return false
         stack.add(newEntry(route, drawerRoot = drawerRoot))
         return true
@@ -136,6 +209,8 @@ class NavBackStacks private constructor(
 
     /** Pops the top screen; the last one is never popped. Returns whether it popped. */
     fun pop(): Boolean {
+        // A tab closes; the main window's sections never pop (a window closes through [close]).
+        if (isSingleScreen) return mode == NavigationLayoutType.TABS && close(top.id)
         if (stack.size <= 1) return false
         stack.removeAt(stack.lastIndex)
         return true
@@ -150,6 +225,10 @@ class NavBackStacks private constructor(
      * [NavStackEntry.routeVersion], though: the previous arguments' ViewModels are cleared.
      */
     fun newStack(route: Route) {
+        if (isSingleScreen) {
+            open(route)
+            return
+        }
         val existing = stack.indexOfLast { it.route == route }
         if (existing >= 0) removeFrom(existing)
         if (stack.isNotEmpty() && topRoute::class == route::class) {
@@ -164,6 +243,10 @@ class NavBackStacks private constructor(
         route: Route,
         klass: KClass<T>,
     ) {
+        if (isSingleScreen) {
+            replace(top.id, route)
+            return
+        }
         val existing = stack.indexOfLast { klass.isInstance(it.route) }
         if (existing >= 0) removeFrom(existing)
         stack.add(newEntry(route))
@@ -175,6 +258,10 @@ class NavBackStacks private constructor(
      * the bottom so back from any tab returns to Home, and back from Home leaves the app.
      */
     fun switchTab(route: Route) {
+        if (isSingleScreen) {
+            open(route, tabRoute = route)
+            return
+        }
         popPushesAboveTabRoot()
 
         // Dropping those pushes is often the whole job: re-tapping the tab the user is inside, and
@@ -220,6 +307,116 @@ class NavBackStacks private constructor(
         }
     }
 
+    /**
+     * Opens [route] as a screen of its own (single-screen modes), or focuses the one already
+     * showing it. [tabRoute] marks a section the bar asks for, found again under that route.
+     * [forceNew] opens another copy even when one is open (a fresh search).
+     */
+    fun open(
+        route: Route,
+        drawerRoot: Boolean = false,
+        tabRoute: Route? = null,
+        forceNew: Boolean = false,
+    ): Boolean {
+        if (!forceNew) {
+            val existing = stack.firstOrNull { it.route == route || (tabRoute != null && it.tabRoute == tabRoute) }
+            if (existing != null) {
+                if (tabRoute != null) existing.tabRoute = tabRoute
+                activate(existing.id)
+                return true
+            }
+        }
+        val entry = newEntry(route, tabRoute, drawerRoot)
+        val at = stack.indexOfFirst { it.id == activeId }
+        if (mode == NavigationLayoutType.TABS && at >= 0) {
+            stack.add(at + 1, entry)
+            openers[entry.id] = activeId
+        } else {
+            stack.add(entry)
+        }
+        activate(entry.id)
+        return true
+    }
+
+    /** Shows the screen [id]: the tab, the main window's section, or raises the window. */
+    fun activate(id: Long) {
+        val entry = stack.firstOrNull { it.id == id } ?: return
+        if (mode == NavigationLayoutType.WINDOWS && !isSection(entry)) {
+            windowFocus = WindowFocus(id, (windowFocus?.serial ?: 0) + 1)
+        } else {
+            activeId = id
+        }
+    }
+
+    /**
+     * Closes the screen [id] (single-screen modes): the active tab moves to its opener, else to
+     * its left neighbour. The last tab, or the main window's last section, is replaced by Home.
+     */
+    fun close(id: Long): Boolean {
+        val index = stack.indexOfFirst { it.id == id }
+        if (index < 0) return false
+        val opener = openerOf(stack[index])
+        stack.removeAt(index)
+        openers.remove(id)
+        // The tabs this one opened now count the tab that opened it as their opener.
+        openers.entries.filter { it.value == id }.map { it.key }.forEach { child ->
+            if (opener != null) openers[child] = opener.id else openers.remove(child)
+        }
+        if (stack.none(::isMainScreen)) stack.add(0, newEntry(Route.Home))
+        if (stack.none { it.id == activeId }) {
+            activeId = (opener ?: stack.getOrNull(index - 1)?.takeIf(::isMainScreen) ?: stack.first(::isMainScreen)).id
+        }
+        return true
+    }
+
+    /** A screen the main window can show: any tab, or a section in the windows mode. */
+    private fun isMainScreen(entry: NavStackEntry): Boolean = mode != NavigationLayoutType.WINDOWS || isSection(entry)
+
+    /** Back in a narrow tabs window: shows the tab that opened the active one, closing nothing. */
+    fun back(): Boolean {
+        val opener = openerOf(top) ?: return false
+        activeId = opener.id
+        return true
+    }
+
+    /** Hands the screen [id] another route in place: the next step of a flow, not a new screen. */
+    fun replace(
+        id: Long,
+        route: Route,
+    ) {
+        stack.firstOrNull { it.id == id }?.reArgue(route)
+    }
+
+    /**
+     * Switches how screens open. Leaving a single-screen mode keeps the active screen and the tabs
+     * that opened it as a stack; entering tabs turns each screen of the stack into a tab opened by
+     * the one below it; entering windows keeps only the sections, in the main window.
+     */
+    fun changeMode(newMode: NavigationLayoutType) {
+        if (newMode == mode) return
+        if (isSingleScreen) {
+            val keep = if (mode == NavigationLayoutType.TABS) chain(top) else listOf(top)
+            stack.clear()
+            stack.addAll(keep)
+            openers.clear()
+            if (stack.first().route != Route.Home) stack.add(0, newEntry(Route.Home))
+        }
+        mode = newMode
+        savedTabs.clear()
+        when (newMode) {
+            NavigationLayoutType.STACK -> {}
+            NavigationLayoutType.TABS -> {
+                stack.zipWithNext { below, above -> openers[above.id] = below.id }
+                activeId = stack.last().id
+            }
+            NavigationLayoutType.WINDOWS -> {
+                stack.removeAll { !isSection(it) }
+                if (stack.isEmpty()) stack.add(newEntry(Route.Home))
+                activeId = stack.last().id
+            }
+        }
+    }
+
     /** Removes [index] and everything above it; every caller then adds a screen, so the stack never stays empty. */
     private fun removeFrom(index: Int) {
         while (stack.lastIndex >= index) stack.removeAt(stack.lastIndex)
@@ -232,6 +429,9 @@ class NavBackStacks private constructor(
                 stack = stack.map { it.toSaved() },
                 savedTabs = savedTabs.values.map { it.toSaved() },
                 nextId = nextId,
+                mode = mode,
+                activeId = activeId,
+                openers = openers.map { listOf(it.key, it.value) },
             ),
         )
 
@@ -249,6 +449,9 @@ class NavBackStacks private constructor(
         val stack: List<SavedEntry>,
         val savedTabs: List<SavedEntry>,
         val nextId: Long,
+        val mode: NavigationLayoutType = NavigationLayoutType.STACK,
+        val activeId: Long = -1,
+        val openers: List<List<Long>> = emptyList(),
     )
 
     private fun NavStackEntry.toSaved() = SavedEntry(route, id, tabRoute, drawerRoot, routeVersion)
@@ -269,7 +472,16 @@ class NavBackStacks private constructor(
                     // in place by newStack no longer matches its own route.
                     initialSavedTabs = saved.savedTabs.map { it.toEntry() }.associateBy { it.tabRoute ?: it.route },
                     nextId = saved.nextId,
+                    initialMode = saved.mode,
+                    initialActiveId = saved.activeId,
+                    initialOpeners = saved.openers.filter { it.size == 2 }.associate { it[0] to it[1] },
                 )
             }.getOrNull()
     }
 }
+
+/** Asks the platform to raise the window of entry [id]; [serial] tells two asks for the same window apart. */
+data class WindowFocus(
+    val id: Long,
+    val serial: Int,
+)

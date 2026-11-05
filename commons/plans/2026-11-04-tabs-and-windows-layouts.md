@@ -1,6 +1,47 @@
 # Tabs and windows: two new navigation layouts
 
-Status: **Proposed, not started.** Date: 2026-11-04.
+Status: **First lean cut built (desktop).** Date: 2026-11-04.
+
+## What the lean cut builds
+
+It skips the separate `NavTabs` / `AppWindows` models, `SingleScreenNav` and the
+`AccountSession` split described below. Tabs and windows are instead **modes of the existing
+`NavBackStacks`** (`mode: NavigationLayoutType`). `Nav`, the shell, the drawer and rail, and
+every screen keep their types.
+
+- **The setting.** `UiSettings.navigationLayout` (`STACK` / `TABS` / `WINDOWS`), a device
+  setting. `AppPlatform.navigationLayouts` lists what a front end offers. Desktop offers all
+  three; Android offers only the stack for now, so the setting row is hidden there.
+  `AmethystApp` applies the setting with `NavBackStacks.changeMode`.
+- **`NavBackStacks` in a single-screen mode.** Every entry is one screen.
+  - `push`, `newStack` and `switchTab` call `open()`. That focuses an equal route if one is
+    already open, and otherwise inserts a new tab after the active one, remembering it as the
+    opener.
+  - `pop` closes the active tab, which falls back to its opener.
+  - `popUpTo` replaces the screen in place.
+  - `top` is the active screen, so `currentRoute`, the rail and deep links work unchanged.
+- **Back arrows.** `Nav.canPop` is false in both modes, so every back arrow goes away. A tabs
+  window narrower than the docked drawer shows the opener chain as a stack, with a back arrow
+  that closes the tab.
+- **Tabs.** `ScreenTabStrip` sits above the main pane while the drawer is docked:
+  - each tab has a title from `routeTitle` and a ×;
+  - middle-click closes a tab;
+  - + opens a new Search tab.
+- **Windows.** The main window keeps the shell and shows the sections (Home and the bar's
+  tabs). Every other screen is an entry that `ScreenWindows` renders through
+  `AppRoot.ScreenWindow`, which on desktop is an `AppWindow`.
+  - The windows are declared inside the main window's composition, so the account and its
+    subscriptions run once. Closing the main window quits the app (Phase 2a).
+  - Each window has its own ViewModel store and emoji panel.
+  - Its nav (`ScreenWindowNav`) closes the window on `popBack`, replaces the screen on
+    `popUpTo`, and opens or raises other windows for everything else.
+- **Saving.** The mode, the active screen and the openers are saved with the stack in
+  `rememberSaveable`. They aren't persisted across restarts yet.
+- **Not built yet:** keyboard shortcuts, *Open in new tab* menu items, a background open on
+  Ctrl+click, persisting across restarts, the singleton clean-up, Android windows, and the
+  account-session split (Phase 2b).
+
+The rest of this document is the full design.
 
 ## Goal
 
