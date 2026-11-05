@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
@@ -410,6 +411,13 @@ class CachePruner(
         // no `replyTo` back-link — resolve the target by the `e` tag and drop the proof there.
         if (noteEvent is OtsEvent) {
             noteEvent.digestEventId()?.let { cache.getNoteIfExists(it)?.removeTimestamp(note) }
+        }
+
+        // NIP-32 hashtag labels are anchored on their targets' Note.labels (EventCache attaches them
+        // through labeledEvents()), and a #t-only label has no `replyTo` back-link: drop it there, or
+        // a deleted label would keep showing on the item.
+        if (noteEvent is LabelEvent) {
+            noteEvent.labeledEvents().forEach { cache.getNoteIfExists(it)?.removeLabel(note) }
         }
 
         if (noteEvent is ReportEvent) {

@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitItemTitle
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitPullRequestUpdates
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observePreviousRevision
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.rememberCanGitTriage
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.rememberGitMerge
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.rememberGitReviewHooks
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
@@ -139,6 +140,7 @@ import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 private val ChipShape = RoundedCornerShape(8.dp)
 private val HeaderSpacing = Arrangement.spacedBy(Size8dp)
@@ -214,6 +216,18 @@ private fun TypeChip(
             maxLines = 1,
         )
     }
+}
+
+/** The labels under an item's title; in its own thread a member's triage bar draws them instead, with their actions. */
+@Composable
+private fun gitHeaderLabels(
+    note: Note,
+    makeItShort: Boolean,
+    accountViewModel: AccountViewModel,
+): ImmutableList<String> {
+    val labels = observeGitItemLabels(note)
+    val triaged = !makeItShort && isGitThreadRoot(note) && rememberCanGitTriage(note, accountViewModel)
+    return if (triaged) persistentListOf() else labels
 }
 
 @Composable
@@ -564,7 +578,7 @@ private fun RenderGitPatchEvent(
             repository = remember(noteEvent) { noteEvent.repositoryAddress() },
             section = GitItemSection.PULLS,
             title = observeGitItemTitle(note),
-            labels = observeGitItemLabels(note),
+            labels = gitHeaderLabels(note, makeItShort, accountViewModel),
             nav = nav,
             accountViewModel = accountViewModel,
         ) {
@@ -664,7 +678,7 @@ private fun RenderGitIssueEvent(
             repository = remember(noteEvent) { noteEvent.repositoryAddress() },
             section = GitItemSection.ISSUES,
             title = observeGitItemTitle(note),
-            labels = observeGitItemLabels(note),
+            labels = gitHeaderLabels(note, makeItShort, accountViewModel),
             nav = nav,
             accountViewModel = accountViewModel,
         ) {
@@ -737,7 +751,7 @@ private fun RenderGitPullRequestEvent(
             repository = remember(noteEvent) { noteEvent.repositoryAddress() },
             section = GitItemSection.PULLS,
             title = observeGitItemTitle(note),
-            labels = observeGitItemLabels(note),
+            labels = gitHeaderLabels(note, makeItShort, accountViewModel),
             nav = nav,
             accountViewModel = accountViewModel,
         ) {
@@ -778,7 +792,7 @@ private fun RenderGitPullRequestEvent(
             GitLocalCheckoutSection(note, source, cloneUrls, currentCommit)
             GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel, rememberGitReviewHooks(note, currentCommit, accountViewModel, nav))
             val repositoryNote = remember(noteEvent) { noteEvent.repositoryAddress()?.let { LocalCache.getOrCreateAddressableNote(it) } }
-            GitPullRequestUpdateButton(note, repositoryNote, currentCommit, accountViewModel, nav)
+            GitPullRequestUpdateButton(note, repositoryNote, currentCommit, cloneUrls, accountViewModel, nav)
             GitTriageBar(note, accountViewModel)
             GitReviewPanel(note, accountViewModel)
             GitStatusActionsWithMerge(note, accountViewModel)

@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_new_repository_remove_to
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_topics_placeholder
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_bad_maintainers
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_bad_relays
+import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_changed_elsewhere
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_clone_urls
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_default_branch
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_description
@@ -102,6 +103,10 @@ fun GitRepoSettingsDialog(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
+    // The fields start from the announcement as it was when the dialog opened; a newer one (another
+    // device's edit) must not be overwritten with those values.
+    val opened = remember { event }
+    val changedElsewhere = event.id != opened.id
     var relays by rememberSaveable { mutableStateOf(event.relays().joinToString("\n")) }
     var maintainers by rememberSaveable {
         mutableStateOf(event.maintainers().filter { it != event.pubKey }.joinToString("\n") { Hex.decode(it).toNpub() })
@@ -240,6 +245,9 @@ fun GitRepoSettingsDialog(
                         minLines = 2,
                     )
                 }
+                if (changedElsewhere) {
+                    Text(stringRes(Res.string.git_repo_settings_changed_elsewhere), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
                 problems.forEach { problem ->
                     val label = if (problem.field == GitSettingsProblem.Field.RELAYS) Res.string.git_repo_settings_bad_relays else Res.string.git_repo_settings_bad_maintainers
                     Text(stringRes(label, problem.entries.joinToString(", ")), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -261,7 +269,7 @@ fun GitRepoSettingsDialog(
         },
         confirmButton = {
             Button(
-                enabled = name.isNotBlank() && problems.isEmpty(),
+                enabled = name.isNotBlank() && problems.isEmpty() && !changedElsewhere,
                 onClick = {
                     val allTopics = (topicList + NewGitRepository.splitList(topicDraft).map { it.removePrefix("#").lowercase() }).distinct()
                     val newHead = pickedBranch?.takeIf { it != signedState?.headBranch }

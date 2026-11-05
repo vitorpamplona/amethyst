@@ -32,10 +32,12 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -93,15 +95,22 @@ fun GitPullRequestChanges(
     val candidates = remember(cloneUrls) { candidateUrls(cloneUrls) }
     if (candidates.isEmpty() || headCommit.isNullOrBlank()) return
 
-    var state by remember(headCommit, mergeBase) { mutableStateOf<ChangesState>(ChangesState.Idle) }
+    // Whether the user asked for the diff survives leaving the screen; the diff itself is kept by
+    // commit, so coming back shows it again without a fetch.
+    var requested by rememberSaveable(headCommit, mergeBase) { mutableStateOf(false) }
+    var state by remember(headCommit, mergeBase) {
+        mutableStateOf<ChangesState>(PullRequestDiffs.get(headCommit, mergeBase)?.let { ChangesState.Loaded(it) } ?: ChangesState.Idle)
+    }
     val scope = rememberCoroutineScope()
 
     fun load() {
+        requested = true
         state = ChangesState.Loading
         scope.launch {
             state =
                 try {
                     val patch = loadDiff(accountViewModel, candidates, headCommit, mergeBase)
+                    PullRequestDiffs.put(headCommit, mergeBase, patch)
                     ChangesState.Loaded(patch)
                 } catch (e: CancellationException) {
                     throw e
@@ -110,6 +119,8 @@ fun GitPullRequestChanges(
                 }
         }
     }
+    // Asked for before, but no longer in memory: fetch it again rather than show the bar.
+    LaunchedEffect(headCommit, mergeBase) { if (requested && state == ChangesState.Idle) load() }
 
     when (val s = state) {
         ChangesState.Idle ->
@@ -169,6 +180,29 @@ fun GitPullRequestChanges(
                 Icon(MaterialSymbols.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                 Text(stringRes(Res.string.git_pr_changes_retry), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
             }
+    }
+}
+
+/**
+ * The last few diffs computed, by head and base commit. Both are content addresses, so an entry
+ * never goes stale; a handful is enough to come back to a pull request without fetching it again.
+ */
+private object PullRequestDiffs {
+    private const val MAX = 4
+    private val diffs = LinkedHashMap<Pair<String, String?>, ParsedPatch>(MAX, 0.75f, true)
+
+    fun get(
+        head: String,
+        base: String?,
+    ): ParsedPatch? = synchronized(diffs) { diffs[head to base] }
+
+    fun put(
+        head: String,
+        base: String?,
+        patch: ParsedPatch,
+    ) = synchronized(diffs) {
+        diffs[head to base] = patch
+        while (diffs.size > MAX) diffs.remove(diffs.keys.first())
     }
 }
 

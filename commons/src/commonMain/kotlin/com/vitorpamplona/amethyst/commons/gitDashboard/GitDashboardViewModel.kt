@@ -82,7 +82,7 @@ class GitDashboardViewModel(
             LocalCache.live.newEventBundles
                 .filter { bundle -> bundle.any { isDashboardEvent(it.event) } }
                 .map { },
-            account.gitRepositoryListState.publicRepositoryAddressSet.map { },
+            account.gitRepositoryListState.repositoryAddressSet.map { },
             refreshes,
         ).onStart { emit(Unit) }
             .debounce(300)
@@ -106,7 +106,7 @@ class GitDashboardViewModel(
     private fun compute(): GitDashboardState {
         val me = account.signer.pubKey
         val mine = GitDashboard.myRepositories(me, LocalCache)
-        val followed = GitDashboard.followedRepositories(account.gitRepositoryListState.publicRepositoryAddressSet.value, LocalCache)
+        val followed = GitDashboard.followedRepositories(account.gitRepositoryListState.repositoryAddressSet.value, LocalCache)
         val watched = (mine + followed).map { it.note.address }
         // A reader new to the inbox starts with the last week unread, not every item ever filed.
         val cutoff = account.loadLastRead(INBOX_ROUTE).takeIf { it > 0 } ?: (TimeUtils.now() - FIRST_RUN_WINDOW).also { account.markAsRead(INBOX_ROUTE, it) }

@@ -50,7 +50,7 @@ fun BookmarkedRepositoriesScreen(
             factory = BookmarkRepositoriesFeedViewModel.Factory(accountViewModel.account),
         )
 
-    val repositoryBookmarks by accountViewModel.account.gitRepositoryListState.publicRepositoryAddressSet
+    val repositoryBookmarks by accountViewModel.account.gitRepositoryListState.repositoryAddressSet
         .collectAsStateWithLifecycle()
 
     LaunchedEffect(repositoryBookmarks) {

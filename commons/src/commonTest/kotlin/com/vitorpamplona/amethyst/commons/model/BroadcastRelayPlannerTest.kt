@@ -290,4 +290,33 @@ class BroadcastRelayPlannerTest {
             cache.justConsume(publicRepo, null, true)
             assertTrue(planner.computeRelayListToBroadcast(like).containsAll(myOutbox), "public: the outbox again")
         }
+
+    @Test
+    fun aNoteThatOnlyNamesARepositoryCannotSteerItsReplies() =
+        runTest {
+            val (cache, _) = cacheWithBob()
+            val planner = planner(cache)
+            // A plain note naming a repository nobody has loaded, with a relay hint of its choosing.
+            val bait = bob.sign(TextNoteEvent.build("look") { add(arrayOf("a", "30617:${"f".repeat(64)}:x", "wss://evil.example.com")) })
+            cache.justConsume(bait, null, true)
+            cache.getNoteIfExists(bait.id)!!.addRelay(seenOn)
+            val like = me.sign(ReactionEvent.build("+", EventHintBundle<Event>(bait)))
+            cache.justConsumeMyOwnEvent(like)
+            val relays = planner.computeRelayListToBroadcast(like)
+            assertTrue(relays.containsAll(myOutbox), "the usual routing: $relays")
+            assertTrue(relay("evil") !in relays || relays.size > 1, "never only the note's hint: $relays")
+        }
+
+    @Test
+    fun deletingAPrivateRepositorysEventStaysOnItsRelays() =
+        runTest {
+            val (cache, _) = cacheWithBob()
+            val planner = planner(cache)
+            val repo = privateRepository(cache)
+            val issue = me.sign(GitIssueEvent.build("bug", "it broke", EventHintBundle(repo), emptyList(), emptyList()))
+            cache.justConsumeMyOwnEvent(issue)
+            val relays = planner.computeDeletionRelays(listOf(cache.getNoteIfExists(issue.id)!!))
+            assertTrue(myOutbox.none { it in relays } && myBroadcast.none { it in relays }, "not the outbox: $relays")
+            assertTrue(relay("grasp") in relays, "the repository's relay: $relays")
+        }
 }

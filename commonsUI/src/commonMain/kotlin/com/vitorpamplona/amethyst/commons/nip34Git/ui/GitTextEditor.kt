@@ -89,29 +89,43 @@ class GitTextEditorState(
 
     val isChanged: Boolean get() = edited || (blockField?.text?.toString()?.let { it != fieldOriginal } ?: false)
 
-    /** Opens the lines around [line] for editing, keeping what the open block had. */
+    /** True from [open] until the field asked for focus: once per block, not each time it scrolls into view. */
+    var wantsFocus by mutableStateOf(false)
+        internal set
+
+    /**
+     * Opens the lines around [line] (an index as the lines are drawn now, the open block's own
+     * lines counted as they were) for editing, keeping what the open block had.
+     */
     fun open(line: Int) {
-        commit()
-        val first = (line - BLOCK_BEFORE).coerceAtLeast(0)
-        val last = (line + BLOCK_AFTER).coerceAtMost(lines.lastIndex)
+        val previous = block
+        val delta = commit()
+        // A line drawn below the block moved by however many lines the block gained or lost.
+        val target = if (previous != null && line > previous.last) line + delta else line
+        val first = (target - BLOCK_BEFORE).coerceIn(0, lines.lastIndex.coerceAtLeast(0))
+        val last = (target + BLOCK_AFTER).coerceIn(first, lines.lastIndex.coerceAtLeast(0))
         val text = lines.subList(first, last + 1).joinToString("\n")
         fieldOriginal = text
         block = first..last
         blockField = TextFieldState(text)
+        wantsFocus = true
     }
 
-    /** Puts the open block back into the file's lines. */
-    fun commit() {
-        val range = block ?: return
+    /** Puts the open block back into the file's lines; returns how many lines it gained (negative: lost). */
+    fun commit(): Int {
+        val range = block ?: return 0
         val text = blockField?.text?.toString() ?: fieldOriginal
+        var delta = 0
         if (text != fieldOriginal) {
             val replacement = text.split('\n').map { if (crlf) it.removeSuffix("\r") else it }
             for (i in range.last downTo range.first) lines.removeAt(i)
             lines.addAll(range.first, replacement)
+            delta = replacement.size - (range.last - range.first + 1)
             edited = true
         }
         block = null
         blockField = null
+        return delta
     }
 
     /** The whole file as it is now, the open block included. */
@@ -169,7 +183,12 @@ fun GitTextEditor(
                         TextButton(onClick = { state.commit() }, enabled = !readOnly) { Text(stringRes(Res.string.git_edit_block_done)) }
                     }
                 }
-                LaunchedEffect(block.first) { runCatching { focus.requestFocus() } }
+                LaunchedEffect(block.first) {
+                    if (state.wantsFocus) {
+                        state.wantsFocus = false
+                        runCatching { focus.requestFocus() }
+                    }
+                }
             }
             val after = block.last + 1
             items(state.lines.size - after, key = { "line-${after + it}" }) { offset ->

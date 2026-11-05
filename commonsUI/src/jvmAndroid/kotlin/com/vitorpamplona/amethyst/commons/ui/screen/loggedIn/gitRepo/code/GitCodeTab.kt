@@ -167,7 +167,7 @@ private fun CodeBrowser(
     val openPath = openFilePath?.let { if (it.isEmpty()) emptyList() else it.split("/") }
 
     if (openPath != null) {
-        val entry = remember(openFilePath) { snapshot.entryAt(openPath) }
+        val entry = remember(snapshot, openFilePath) { snapshot.entryAt(openPath) }
         var showFileHistory by rememberSaveable(openFilePath) { mutableStateOf(false) }
         var showBlame by rememberSaveable(openFilePath) { mutableStateOf(false) }
         var editing by rememberSaveable(openFilePath) { mutableStateOf(false) }

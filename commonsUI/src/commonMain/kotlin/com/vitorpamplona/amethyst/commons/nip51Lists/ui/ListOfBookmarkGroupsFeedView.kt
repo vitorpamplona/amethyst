@@ -228,7 +228,7 @@ fun RepositoriesBookmarkList(
     repositories: GitRepositoryListState,
     openRepositories: () -> Unit,
 ) {
-    val repositoryAddresses by repositories.publicRepositoryAddressSet.collectAsStateWithLifecycle()
+    val repositoryAddresses by repositories.repositoryAddressSet.collectAsStateWithLifecycle()
 
     ListItem(
         modifier = Modifier.clickable(onClick = openRepositories),

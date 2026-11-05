@@ -37,12 +37,14 @@ import java.util.concurrent.ConcurrentHashMap
  * Only a URL under the announcer's own GRASP path (`https://<server>/<their npub>/…`) counts: a
  * stranger's announcement can call any URL private, and signing for it would tell that host who
  * the user is. Each URL's answer is kept for [rememberSeconds], so a fetch's many requests (blame,
- * search) do not each walk every repository in the cache.
+ * search) do not each walk every repository in the cache; a "not private" for only
+ * [rememberNegativeSeconds], since the announcement that makes it private may still be arriving.
  */
 class GitPrivateRepositoryAuth(
     signer: NostrSigner,
     private val cache: EventCache = LocalCache,
     private val rememberSeconds: Long = 30,
+    private val rememberNegativeSeconds: Long = 3,
 ) : GitHttpAuth(signer) {
     private val answers = ConcurrentHashMap<String, Pair<Long, Boolean>>()
 
@@ -51,7 +53,7 @@ class GitPrivateRepositoryAuth(
     private fun isPrivate(cloneUrl: String): Boolean {
         val wanted = repositoryUrl(cloneUrl).removeSuffix(".git")
         val now = TimeUtils.now()
-        answers[wanted]?.let { (at, answer) -> if (now - at < rememberSeconds) return answer }
+        answers[wanted]?.let { (at, answer) -> if (now - at < if (answer) rememberSeconds else rememberNegativeSeconds) return answer }
         val answer = findPrivate(wanted)
         answers[wanted] = now to answer
         return answer

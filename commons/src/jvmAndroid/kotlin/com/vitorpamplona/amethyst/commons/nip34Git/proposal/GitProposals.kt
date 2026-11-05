@@ -144,28 +144,21 @@ class GitProposals(
         knownMergeBase: String? = null,
         branchTip: String = tip,
     ): GitProposalResult {
-        val branch = targetBranch ?: target.defaultBranch
-        val graspClones = target.targets.grasp.map { it.cloneUrl }
-        val targetClones = graspClones + target.targets.others
-        val head = branch?.let { target.signedState?.commitFor(it) }
-
-        val sourceObjects = GitObjectSource(transport, (sourceClones + targetClones).distinct())
+        val setup = Setup(target, sourceClones, targetBranch ?: target.defaultBranch)
+        val head = setup.head
         // [branchTip] is the newest commit a server can serve: the tip itself, or for an edit made
         // here, the parent the new commit sits on (the new commit travels in [newObjects]).
-        val serverBase = head?.let { mergeBaseOrNull(targetClones, it, sourceObjects, branchTip) }
+        val serverBase = head?.let { setup.mergeBaseOrNull(it, branchTip) }
         val base = knownMergeBase ?: serverBase
         // With no merge base the branch goes whole, so a server that lacks its history still takes it.
-        val branchObjects = if (branchTip == head) null else GitBranchObjects(branchTip, serverBase, sourceObjects)
-
-        val repositoryHint = EventHintBundle(target.announcement, target.relayHint)
-        val euc = target.announcements.firstNotNullOfOrNull { it.earliestUniqueCommit() } ?: ""
-        val coMaintainers = coMaintainersOf(target)
+        val branchObjects = if (branchTip == head) null else GitBranchObjects(branchTip, serverBase, setup.sourceObjects)
+        val coMaintainers = setup.coMaintainers
 
         fun template(clones: List<String>): EventTemplate<GitPullRequestEvent> =
             GitPullRequestEvent.build(
                 description = description,
-                repository = repositoryHint,
-                earliestUniqueCommit = euc,
+                repository = setup.repositoryHint,
+                earliestUniqueCommit = setup.earliestUniqueCommit,
                 currentCommit = tip,
                 cloneUrls = clones,
                 subject = title,
@@ -182,7 +175,7 @@ class GitProposals(
 
         return publishWithCommits(
             target = target,
-            graspClones = graspClones,
+            graspClones = setup.graspClones,
             fallbackClones = sourceClones,
             tip = tip,
             newObjects = newObjects,
@@ -209,25 +202,18 @@ class GitProposals(
         sourceClones: List<String>,
         tip: String,
     ): GitProposalResult {
-        val pr = prHint.event
-        val graspClones = target.targets.grasp.map { it.cloneUrl }
-        val targetClones = graspClones + target.targets.others
-        val branch = pr.targetBranch() ?: target.defaultBranch
-        val head = branch?.let { target.signedState?.commitFor(it) }
-        val sourceObjects = GitObjectSource(transport, (sourceClones + targetClones).distinct())
-        val base = head?.let { mergeBaseOrNull(targetClones, it, sourceObjects, tip) }
-        val repositoryHint = EventHintBundle(target.announcement, target.relayHint)
-        val euc = target.announcements.firstNotNullOfOrNull { it.earliestUniqueCommit() } ?: ""
-        val coMaintainers = coMaintainersOf(target)
+        val setup = Setup(target, sourceClones, prHint.event.targetBranch() ?: target.defaultBranch)
+        val base = setup.head?.let { setup.mergeBaseOrNull(it, tip) }
+        val coMaintainers = setup.coMaintainers
         return publishWithCommits(
             target = target,
-            graspClones = graspClones,
+            graspClones = setup.graspClones,
             fallbackClones = sourceClones,
             tip = tip,
             newObjects = emptyList(),
-            branchObjects = GitBranchObjects(tip, base, sourceObjects),
+            branchObjects = GitBranchObjects(tip, base, setup.sourceObjects),
         ) { clones ->
-            GitPullRequestUpdateEvent.build(prHint, repositoryHint, euc, tip, clones, base, notify = coMaintainers.map { PTag(it.pubKeyHex) }) {
+            GitPullRequestUpdateEvent.build(prHint, setup.repositoryHint, setup.earliestUniqueCommit, tip, clones, base, notify = coMaintainers.map { PTag(it.pubKeyHex) }) {
                 coMaintainers.forEach { repository(ATag(it)) }
             }
         }
@@ -246,6 +232,7 @@ class GitProposals(
         message: String,
         description: String,
     ): GitProposalResult {
+        changes.keys.firstOrNull { !isSafePath(it) }?.let { return GitProposalResult.Failed("not a path a commit may write: ${it.joinToString("/")}") }
         val commit = GitObjectSource(transport, sourceClones).commitChanges(parent, changes, author(), message)
         val title =
             message
@@ -275,23 +262,53 @@ class GitProposals(
         )
     }
 
-    /** The other maintainers' coordinates of [target]'s repository, which its events also name. */
-    private fun coMaintainersOf(target: GitProposalTarget): List<Address> = authority.coordinatesToTag(target.repository).filter { it != target.repository }
+    companion object {
+        /**
+         * A file path a commit may write: segments, none empty, `.` or `..`, and none named `.git`
+         * in any case (git refuses trees with those, and a checkout of one could write outside the
+         * work tree or into its hooks: CVE-2014-9390).
+         */
+        fun isSafePath(path: List<String>): Boolean =
+            path.isNotEmpty() &&
+                path.all { segment ->
+                    segment.isNotEmpty() && segment != "." && segment != ".." && !segment.equals(".git", ignoreCase = true) && '\u0000' !in segment && '/' !in segment
+                }
+    }
 
-    /** The merge base of [tip] and [head], or null when the servers share none or could not be read; a cancelled caller still stops. */
-    private suspend fun mergeBaseOrNull(
-        targetClones: List<String>,
-        head: String,
-        sourceObjects: GitObjectSource,
-        tip: String,
-    ): String? =
-        try {
-            mergeBaseOf(GitObjectSource(transport, targetClones), head, sourceObjects, tip)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            null
-        }
+    /** What opening and updating a pull request share: where the commits go, the branch's signed tip, and what the event names. */
+    private inner class Setup(
+        target: GitProposalTarget,
+        sourceClones: List<String>,
+        branch: String?,
+    ) {
+        val graspClones = target.targets.grasp.map { it.cloneUrl }
+        val targetClones = graspClones + target.targets.others
+
+        /** The branch's tip in the maintainers' signed state. */
+        val head = branch?.let { target.signedState?.commitFor(it) }
+        val sourceObjects = GitObjectSource(transport, (sourceClones + targetClones).distinct())
+        val repositoryHint = EventHintBundle(target.announcement, target.relayHint)
+        val earliestUniqueCommit =
+            authority.earliestUniqueCommit(target.repository)
+                ?: target.announcements.firstNotNullOfOrNull { it.earliestUniqueCommit() }
+                ?: ""
+
+        /** The other maintainers' coordinates of the repository, which its events also name. */
+        val coMaintainers: List<Address> = authority.coordinatesToTag(target.repository).filter { it != target.repository }
+
+        /** The merge base of [tip] and [head], or null when the servers share none or could not be read; a cancelled caller still stops. */
+        suspend fun mergeBaseOrNull(
+            head: String,
+            tip: String,
+        ): String? =
+            try {
+                mergeBaseOf(GitObjectSource(transport, targetClones), head, sourceObjects, tip)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null
+            }
+    }
 
     /** The user as git writes them: their name, and NIP-05 address (or npub) as the email. */
     fun author(): GitPerson = host.author()
@@ -301,6 +318,10 @@ class GitProposals(
      * commits to them, and publishes it naming those that took them (signing again when some
      * didn't, as the event must not point at a server without the commits). A repository with no
      * GRASP server gets the event as is, pointing at the [fallbackClones] that serve the commits.
+     *
+     * A server that took a round's push keeps that round's `refs/nostr/<id>` when another refused
+     * and the event was signed again: refs/nostr refs are create-only, so the stale one stays as
+     * an unreferenced ref beside the one the published event names.
      */
     private suspend fun <T : Event> publishWithCommits(
         target: GitProposalTarget,
@@ -319,17 +340,16 @@ class GitProposals(
         // server that refuses drops out and the event is signed again without it, so the event
         // published names only servers that hold refs/nostr/<its id>.
         var servers = graspClones
-        var failures: Map<String, String?> = emptyMap()
-        repeat(graspClones.size) {
+        // Each round either publishes, fails, or drops at least one server, so the loop ends.
+        while (true) {
             val event = host.signer.sign(template(servers))
             val results = pusher.push(event.id, servers, tip, newObjects, branchObjects)
             val accepted = servers.filter { results[it] == null }
-            failures = results.filterValues { it != null }
+            val failures = results.filterValues { it != null }
             if (accepted.isEmpty()) return GitProposalResult.Failed(failures.entries.joinToString("; ") { "${it.key}: ${it.value}" })
             if (accepted.size == servers.size) return GitProposalResult.Published(publish(target, event), accepted)
             servers = accepted
         }
-        return GitProposalResult.Failed(failures.entries.joinToString("; ") { "${it.key}: ${it.value}" })
     }
 
     private suspend fun publish(

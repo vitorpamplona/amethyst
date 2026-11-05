@@ -106,7 +106,18 @@ class GitRepositoryBrowserViewModel(
     fun updateSignedState(state: GitSignedState?) {
         if (state?.event?.id == signedState?.event?.id) return
         signedState = state
-        if (started) reload()
+        if (!started) return
+        // A newer state that signs what is already shown changes nothing on screen: a reload would
+        // drop the open file, its blame and an edit in progress for the same tree.
+        val shown = (_state.value as? GitBrowseState.Loaded)?.snapshot
+        if (shown != null) {
+            val ref = currentRef ?: state?.headBranch ?: shown.branch
+            val wanted = state?.commitFor(ref)
+            val sameBranch = currentRef != null || state?.headBranch == null || state.headBranch == shown.branch
+            if (sameBranch && (wanted == null || wanted == shown.headCommit)) return
+        }
+        // Keep what is shown until the newer tree arrives.
+        reload(keepShowing = shown != null)
     }
 
     /** The branch/tag currently displayed (null = the server's default branch). */
@@ -147,8 +158,10 @@ class GitRepositoryBrowserViewModel(
         reload()
     }
 
-    fun reload() {
-        _state.value = GitBrowseState.Loading
+    fun reload() = reload(keepShowing = false)
+
+    private fun reload(keepShowing: Boolean) {
+        if (!keepShowing) _state.value = GitBrowseState.Loading
         viewModelScope.launch(Dispatchers.IO) {
             val servers = candidateServers()
             if (servers.isEmpty()) {
@@ -297,7 +310,8 @@ class GitRepositoryBrowserViewModel(
             }
         }
         val matches = withContext(Dispatchers.IO) { snapshot.searchContents(query, limit = SEARCH_LIMIT, onProgress = onProgress) }
-        if (matches.size < SEARCH_LIMIT) lastSearch = CompletedSearch(snapshot.headCommit, needle, matches)
+        // A blank query matches every line: nothing later narrows from it usefully.
+        if (needle.isNotBlank() && matches.size < SEARCH_LIMIT) lastSearch = CompletedSearch(snapshot.headCommit, needle, matches)
         return matches
     }
 

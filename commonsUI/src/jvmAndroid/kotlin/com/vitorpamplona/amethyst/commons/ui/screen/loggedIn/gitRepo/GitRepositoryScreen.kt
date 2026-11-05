@@ -350,7 +350,7 @@ private fun GitRepositoryHome(
                     }
                 },
                 actions = {
-                    val bookmarkedSet by accountViewModel.account.gitRepositoryListState.publicRepositoryAddressSet
+                    val bookmarkedSet by accountViewModel.account.gitRepositoryListState.repositoryAddressSet
                         .collectAsStateWithLifecycle()
                     val isBookmarked = remember(bookmarkedSet, note) { bookmarkedSet.contains(note.address) }
                     IconButton(onClick = { accountViewModel.toggleRepositoryBookmark(note, isBookmarked) }) {

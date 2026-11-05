@@ -137,7 +137,16 @@ fun GitDiffView(
                 var left = DIFF_HIGHLIGHT_BUDGET
                 parsed.files.map { file ->
                     val size = file.hunks.sumOf { it.lines.size }
-                    (size <= FILE_HIGHLIGHT_LIMIT && size <= left).also { if (it) left -= size }
+                    when {
+                        size > FILE_HIGHLIGHT_LIMIT -> false
+                        // A folded file pays only when the user opens it, one at a time: it costs the budget nothing.
+                        size > FOLD_LINES -> true
+                        size <= left -> {
+                            left -= size
+                            true
+                        }
+                        else -> false
+                    }
                 }
             }
         parsed.files.forEachIndexed { index, file ->
@@ -263,7 +272,8 @@ private fun DiffFileCard(
                             val emphasis = remember(hunk) { IntralineDiff.emphasis(hunk.lines) }
                             // The code scrolls sideways; the comments under a line don't, so they wrap to
                             // the card's width. Each run of lines up to a commented one is its own block.
-                            val runs = hunkRuns(hunk.lines) { lineAnnotations != null && hasAnnotations(file, it) }
+                            val annotated = lineAnnotations != null
+                            val runs = remember(hunk, annotated, hasAnnotations) { hunkRuns(hunk.lines) { annotated && hasAnnotations(file, it) } }
                             runs.forEach { run ->
                                 key(hunkIndex, run.first) {
                                     // At least the card's width and as wide as its longest line, with

@@ -64,13 +64,13 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import kotlinx.coroutines.launch
 
+private val CheckoutChipShape = RoundedCornerShape(8.dp)
+
 /**
  * "Check out locally": the commands that bring a pull request (or a patch series) into a reader's
  * own clone, ngit's first and plain git's after, plus the repository opened in an IDE. For a
  * patch, [patch] is its text, offered for copying to `git am`.
  */
-private val CheckoutChipShape = RoundedCornerShape(8.dp)
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun GitLocalCheckoutSection(

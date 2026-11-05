@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.nip34Git.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,6 +31,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -97,34 +99,40 @@ fun rememberGitReviewHooks(
     val byLine =
         remember(replies, item) {
             item.replies
-                .filter { (it.event as? CommentEvent)?.gitCodeLocation() != null }
-                .groupBy { note ->
-                    val location = (note.event as CommentEvent).gitCodeLocation()!!
-                    GitDiffLineKey(location.path, location.endLine ?: location.startLine ?: 0, location.removedSide)
-                }
+                .mapNotNull { note ->
+                    val location = (note.event as? CommentEvent)?.gitCodeLocation() ?: return@mapNotNull null
+                    GitDiffLineKey(location.path, location.endLine ?: location.startLine ?: 0, location.removedSide) to note
+                }.groupBy({ it.first }, { it.second })
         }
-    val onLineClick: (GitDiffFile, GitDiffLine) -> Unit = { file, line ->
-        line.keyIn(file)?.let { key ->
-            nav.nav(
-                Route.GenericCommentPost(
-                    replyTo = item.idHex,
-                    reviewPath = key.path,
-                    reviewCommit = commit,
-                    reviewLine = key.line,
-                    reviewRemovedSide = key.removedSide,
-                ),
-            )
-        }
+    val canComment = accountViewModel.account.isWriteable()
+    // One instance per change, so the diff's lines don't recompose for a new lambda each time.
+    return remember(item, commit, byLine, canComment, nav) {
+        GitReviewHooks(
+            onLineClick =
+                if (!canComment) {
+                    null
+                } else {
+                    { file, line ->
+                        line.keyIn(file)?.let { key ->
+                            nav.nav(
+                                Route.GenericCommentPost(
+                                    replyTo = item.idHex,
+                                    reviewPath = key.path,
+                                    reviewCommit = commit,
+                                    reviewLine = key.line,
+                                    reviewRemovedSide = key.removedSide,
+                                ),
+                            )
+                        }
+                    }
+                },
+            lineAnnotations = { file, line ->
+                val comments = line.keyIn(file)?.let { byLine[it] }
+                if (!comments.isNullOrEmpty()) InlineThreads(item, comments, accountViewModel, nav)
+            },
+            hasAnnotations = { file, line -> line.keyIn(file)?.let { byLine.containsKey(it) } == true },
+        )
     }
-    return GitReviewHooks(
-        onLineClick = onLineClick,
-        lineAnnotations = { file, line ->
-            val key = line.keyIn(file)
-            val comments = key?.let { byLine[it] }
-            if (!comments.isNullOrEmpty()) InlineThreads(item, comments, accountViewModel, nav)
-        },
-        hasAnnotations = { file, line -> line.keyIn(file)?.let { byLine.containsKey(it) } == true },
-    )
 }
 
 @Composable
@@ -164,7 +172,16 @@ private fun InlineThread(
             }
         }
     val canJudge = remember(itemEvent, me, announcements) { accountViewModel.account.isWriteable() && LocalCache.gitAuthority.isMaintainerAt(me, itemEvent, TimeUtils.now()) }
+    // The conversation under the comment: its replies, without the resolution markers.
+    val answers =
+        remember(replies, comment) {
+            comment.replies
+                .filter { (it.event as? CommentEvent)?.isGitThreadResolution() != true }
+                .sortedBy { it.createdAt() ?: 0 }
+        }
     val mine = resolutions.filter { it.author?.pubkeyHex == me }
+    // Reopening on another device deletes a resolution: watch each, or it stays resolved here.
+    WatchGitDeletions(resolutions)
 
     NoteCompose(
         baseNote = comment,
@@ -174,6 +191,20 @@ private fun InlineThread(
         accountViewModel = accountViewModel,
         nav = nav,
     )
+    answers.forEach { answer ->
+        key(answer.idHex) {
+            Box(Modifier.padding(start = 16.dp, top = 4.dp)) {
+                NoteCompose(
+                    baseNote = answer,
+                    isQuotedNote = true,
+                    makeItShort = true,
+                    quotesLeft = 0,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
+    }
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (resolutions.isNotEmpty()) {
             Text(stringRes(Res.string.git_review_resolved), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.grayText)

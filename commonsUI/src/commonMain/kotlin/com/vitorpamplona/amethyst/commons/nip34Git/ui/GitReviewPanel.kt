@@ -100,11 +100,16 @@ fun GitReviewPanel(
     accountViewModel: AccountViewModel,
 ) {
     val replies by observeNoteReplies(item)
-    val latest =
+    val reviews =
         remember(replies, item) {
-            item.replies
+            item.replies.filter { (it.event as? GitReviewEvent)?.let { review -> review.reviewedEventId() == item.idHex && review.verdict() != null } == true }
+        }
+    // A review taken back on another device is a deletion naming the review, not the item.
+    WatchGitDeletions(reviews)
+    val latest =
+        remember(reviews) {
+            reviews
                 .mapNotNull { it.event as? GitReviewEvent }
-                .filter { it.reviewedEventId() == item.idHex && it.verdict() != null }
                 .groupBy { it.pubKey }
                 .mapNotNull { (_, reviews) -> reviews.maxWithOrNull(compareBy<GitReviewEvent> { it.createdAt }.thenByDescending { it.id }) }
                 .sortedByDescending { it.createdAt }
@@ -124,7 +129,9 @@ fun GitReviewPanel(
                 }
             }
         }
-        OutlinedButton(onClick = { open = true }) { Text(stringRes(Res.string.git_review_action)) }
+        if (accountViewModel.account.isWriteable()) {
+            OutlinedButton(onClick = { open = true }) { Text(stringRes(Res.string.git_review_action)) }
+        }
     }
 
     if (open) {

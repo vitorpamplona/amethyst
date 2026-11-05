@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -45,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_merge_cancel
 import com.vitorpamplona.amethyst.commons.resources.git_triage_add_label
@@ -71,17 +73,21 @@ fun GitTriageBar(
     item: Note,
     accountViewModel: AccountViewModel,
 ) {
-    val itemEvent = item.event ?: return
+    if (!rememberCanGitTriage(item, accountViewModel)) return
     val me = accountViewModel.account.signer.pubKey
-    // Membership is read from the repository's announcements, which can arrive after the item.
-    val announcements = observeGitRepositoryAnnouncements(itemEvent)
-    val canTriage = remember(itemEvent, me, announcements) { accountViewModel.account.isWriteable() && LocalCache.gitAuthority.isMemberAt(me, itemEvent, TimeUtils.now()) }
-    if (!canTriage) return
 
     // Hashtag labels change the item's labels, not its replies: follow that flow, so an added or
     // removed label shows at once.
     val labelState by remember(item) { item.flow().labels.stateFlow }.collectAsStateWithLifecycle()
     val labels = observeGitItemLabels(item)
+    // A label deleted on another device names the label event, not the item: watch each one.
+    WatchGitDeletions(
+        remember(labelState) {
+            item.labels.values
+                .flatten()
+                .distinct()
+        },
+    )
     // The labels this user added (theirs to take back); one in the item's own tags is not.
     val mine = remember(labelState, me) { item.labels.filterValues { notes -> notes.any { it.author?.pubkeyHex == me } }.keys }
 
@@ -132,6 +138,30 @@ fun GitTriageBar(
             },
         )
     }
+}
+
+/**
+ * Whether the user may rename and label [item]: a repository member who can sign. Membership is
+ * read from the repository's announcements, which can arrive after the item.
+ */
+@Composable
+fun rememberCanGitTriage(
+    item: Note,
+    accountViewModel: AccountViewModel,
+): Boolean {
+    val itemEvent = item.event ?: return false
+    val me = accountViewModel.account.signer.pubKey
+    val announcements = observeGitRepositoryAnnouncements(itemEvent)
+    return remember(itemEvent, me, announcements) { accountViewModel.account.isWriteable() && LocalCache.gitAuthority.isMemberAt(me, itemEvent, TimeUtils.now()) }
+}
+
+/**
+ * Asks the relays for deletions of [notes] while on screen. A deletion names the event it takes
+ * back, so one of a label, a resolution or a review reaches no query for the item it is about.
+ */
+@Composable
+fun WatchGitDeletions(notes: List<Note>) {
+    notes.forEach { note -> key(note.idHex) { EventFinderFilterAssemblerSubscription(note) } }
 }
 
 /** gitworkshop's label form: lowercase, with anything but letters, digits and dashes made a dash. */

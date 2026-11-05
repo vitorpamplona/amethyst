@@ -86,6 +86,9 @@ class GitProposalViewModel(
     /** The editor's text while it differs from the file: kept here, not in saved state, since a file can be large. */
     var editDraft: String? = null
 
+    /** The commit [editDraft] was written against: a draft of an older tree is not replayed on a newer one. */
+    var editDraftParent: String? = null
+
     fun loadBranches(cloneUrl: String) {
         val url = cloneUrl.trim()
         // A slower answer for the previous URL must not land after this one.
@@ -113,7 +116,7 @@ class GitProposalViewModel(
         title: String,
         description: String,
         labels: List<String>,
-    ) = run {
+    ) = launchWork {
         proposals.openPullRequest(target, listOf(sourceClone.trim()), tip, title, description, labels, branchName = sourceBranch, targetBranch = targetBranch)
     }
 
@@ -122,7 +125,7 @@ class GitProposalViewModel(
         target: GitProposalTarget,
         sourceClone: String,
         tip: String,
-    ) = run { proposals.updatePullRequest(pullRequest, target, listOf(sourceClone.trim()), tip) }
+    ) = launchWork { proposals.updatePullRequest(pullRequest, target, listOf(sourceClone.trim()), tip) }
 
     fun proposeEdit(
         target: GitProposalTarget,
@@ -132,15 +135,16 @@ class GitProposalViewModel(
         path: List<String>,
         content: String,
         message: String,
-    ) = run { proposals.proposeEdit(target, sourceClones, branch, parent, mapOf(path to content.encodeToByteArray()), message, "") }
+    ) = launchWork { proposals.proposeEdit(target, sourceClones, branch, parent, mapOf(path to content.encodeToByteArray()), message, "") }
 
     fun reset() {
         if (_state.value !is GitProposalUiState.Working) _state.value = GitProposalUiState.Idle
     }
 
-    private fun run(work: suspend () -> GitProposalResult) {
-        if (_state.value is GitProposalUiState.Working) return
-        _state.value = GitProposalUiState.Working
+    private fun launchWork(work: suspend () -> GitProposalResult) {
+        // One at a time: a second tap while the first runs, from any thread, does nothing.
+        val current = _state.value
+        if (current is GitProposalUiState.Working || !_state.compareAndSet(current, GitProposalUiState.Working)) return
         workScope.launch(Dispatchers.IO) {
             var result: GitProposalResult? = null
             try {

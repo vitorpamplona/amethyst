@@ -3020,6 +3020,7 @@
     <string name="git_repo_settings_topics">Topics (comma separated)</string>
     <string name="git_repo_settings_save">Save</string>
     <string name="git_repo_private">Private</string>
+    <string name="git_repo_settings_changed_elsewhere">This repository was changed elsewhere while this was open. Close and open it again to edit the new version.</string>
     <string name="git_repo_settings_relays">Relays (one per line)</string>
     <string name="git_repo_settings_maintainers">Other maintainers (npub, one per line)</string>
     <string name="git_repo_settings_default_branch">Default branch</string>

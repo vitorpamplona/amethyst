@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.normalizeLabel
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitSignedState
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
+import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_edit_message
 import com.vitorpamplona.amethyst.commons.resources.git_edit_propose
@@ -176,6 +177,9 @@ private fun rememberGitProposalTarget(
     accountViewModel: AccountViewModel,
 ): GitProposalTarget? {
     val event by observeNoteEvent<GitRepositoryEvent>(repoNote, accountViewModel)
+    // Every maintainer's announcement, from relays as well: opened cold, the cache may hold only the
+    // owner's, and a PR must name each maintainer's coordinate and push to each one's GRASP servers.
+    LoadGitRepositoryAnnouncements(remember(repoNote) { listOf(repoNote.address) })
     val announcements = observeGitRepositoryAnnouncements(repoNote.address.dTag)
     val signedState = observeGitSignedState(repoNote.address, accountViewModel)
     return remember(event, announcements, signedState) { viewModel.target(repoNote) }
@@ -244,6 +248,7 @@ private fun GitNewPullRequestForm(
                 .orEmpty()
         }
     val canCreate = target != null && tip != null && loadedState != null && title.isNotBlank() && !working && accountViewModel.account.isWriteable()
+    PlatformBackHandler(enabled = working) {}
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -252,7 +257,8 @@ private fun GitNewPullRequestForm(
                 title = { Text(stringRes(Res.string.git_pr_new_title), fontWeight = FontWeight.SemiBold, maxLines = 1) },
                 navigationIcon = {
                     Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                        // Leaving while the commits are pushed would hide the result it waits for.
+                        IconButton(onClick = nav::popBack, enabled = !working) { ArrowBackIcon() }
                     }
                 },
                 actions = {
@@ -297,28 +303,19 @@ private fun GitNewPullRequestForm(
             OpenWhenPublished(viewModel, accountViewModel, nav) { reason -> Text(reason, color = MaterialTheme.colorScheme.error) }
             if (working) Text(stringRes(Res.string.git_pr_new_working), color = MaterialTheme.colorScheme.grayText)
 
-            OutlinedTextField(
-                value = source,
-                onValueChange = { source = it },
-                label = { Text(stringRes(Res.string.git_pr_new_source)) },
-                supportingText = { Text(stringRes(Res.string.git_pr_new_source_hint)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedButton(onClick = { viewModel.loadBranches(source) }, enabled = source.isNotBlank()) {
-                Text(stringRes(Res.string.git_pr_new_load_branches))
-            }
-            when (val b = branchesState) {
-                is GitBranchesState.Loading -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                is GitBranchesState.Failed -> Text(b.reason, color = MaterialTheme.colorScheme.error)
-                else -> {}
-            }
-            if (loaded.isNotEmpty()) {
-                BranchPicker(stringRes(Res.string.git_pr_new_branch), loaded.map { it.first }, sourceBranch) {
+            SourceBranchSection(
+                source = source,
+                onSource = { source = it },
+                showHint = true,
+                branchesState = branchesState,
+                branches = loaded.map { it.first },
+                branch = sourceBranch,
+                onBranch = {
                     sourceBranch = it
                     if (title.isBlank()) title = it.replace('-', ' ').replace('_', ' ')
-                }
-            }
+                },
+                onLoad = { viewModel.loadBranches(source) },
+            )
             if (targetBranches.isNotEmpty()) {
                 BranchPicker(stringRes(Res.string.git_pr_new_base), targetBranches, targetBranch) { targetBranch = it }
             }
@@ -345,6 +342,37 @@ private fun GitNewPullRequestForm(
             )
         }
     }
+}
+
+/** Where a pull request's commits come from: a clone URL, its branches once loaded, and the branch picked. */
+@Composable
+private fun SourceBranchSection(
+    source: String,
+    onSource: (String) -> Unit,
+    showHint: Boolean,
+    branchesState: GitBranchesState,
+    branches: List<String>,
+    branch: String?,
+    onBranch: (String) -> Unit,
+    onLoad: () -> Unit,
+) {
+    OutlinedTextField(
+        value = source,
+        onValueChange = onSource,
+        label = { Text(stringRes(Res.string.git_pr_new_source)) },
+        supportingText = if (showHint) ({ Text(stringRes(Res.string.git_pr_new_source_hint)) }) else null,
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    OutlinedButton(onClick = onLoad, enabled = source.isNotBlank()) {
+        Text(stringRes(Res.string.git_pr_new_load_branches))
+    }
+    when (branchesState) {
+        is GitBranchesState.Loading -> LinearProgressIndicator(Modifier.fillMaxWidth())
+        is GitBranchesState.Failed -> Text(branchesState.reason, color = MaterialTheme.colorScheme.error)
+        else -> {}
+    }
+    if (branches.isNotEmpty()) BranchPicker(stringRes(Res.string.git_pr_new_branch), branches, branch, onBranch)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -386,6 +414,8 @@ fun GitPullRequestUpdateButton(
     pullRequest: Note,
     repository: AddressableNote?,
     currentTip: String?,
+    /** Where the PR's newest commits are served: its latest update's clone URLs first, then its own. */
+    currentClones: List<String>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -412,7 +442,7 @@ fun GitPullRequestUpdateButton(
     val branchesState by viewModel.branches.collectAsStateWithLifecycle()
     var source by rememberSaveable {
         mutableStateOf(
-            event.cloneUrls().firstOrNull() ?: target
+            currentClones.firstOrNull() ?: event.cloneUrls().firstOrNull() ?: target
                 ?.targets
                 ?.grasp
                 ?.firstOrNull()
@@ -430,10 +460,16 @@ fun GitPullRequestUpdateButton(
         title = { Text(stringRes(Res.string.git_pr_update_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = source, onValueChange = { source = it }, label = { Text(stringRes(Res.string.git_pr_new_source)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedButton(onClick = { viewModel.loadBranches(source) }) { Text(stringRes(Res.string.git_pr_new_load_branches)) }
-                if (loaded.isNotEmpty()) BranchPicker(stringRes(Res.string.git_pr_new_branch), loaded.map { it.first }, branch) { branch = it }
-                (branchesState as? GitBranchesState.Failed)?.let { Text(it.reason, color = MaterialTheme.colorScheme.error) }
+                SourceBranchSection(
+                    source = source,
+                    onSource = { source = it },
+                    showHint = false,
+                    branchesState = branchesState,
+                    branches = loaded.map { it.first },
+                    branch = branch,
+                    onBranch = { branch = it },
+                    onLoad = { viewModel.loadBranches(source) },
+                )
                 when (val s = state) {
                     is GitProposalUiState.Working -> LinearProgressIndicator(Modifier.fillMaxWidth())
                     is GitProposalUiState.Done -> (s.result as? GitProposalResult.Failed)?.let { Text(it.reason, color = MaterialTheme.colorScheme.error) }
@@ -473,9 +509,24 @@ fun GitFileEditor(
     // The text lives in the view model, not saved state: a file of a few hundred KB would overflow
     // Android's saved-instance bundle. It is edited a block of lines at a time, so a keystroke
     // costs the block's layout, not the file's.
-    val editor = remember { GitTextEditorState(viewModel.editDraft ?: initial) }
-    DisposableEffect(editor) { onDispose { viewModel.editDraft = editor.text().takeIf { it != initial } } }
-    val changed = editor.isChanged || viewModel.editDraft != null
+    // A draft is replayed only on the commit it was written on: on a newer tip it would revert
+    // whatever changed upstream in the file.
+    val draft = remember { viewModel.editDraft?.takeIf { viewModel.editDraftParent == parent } }
+    val editor = remember { GitTextEditorState(draft ?: initial) }
+    // Cancelled or published, the draft is done; left any other way (back, a reload), it is kept.
+    val done = remember { mutableStateOf(false) }
+    DisposableEffect(editor) {
+        onDispose {
+            val draft = editor.text().takeIf { !done.value && it != initial }
+            viewModel.editDraft = draft
+            viewModel.editDraftParent = draft?.let { parent }
+        }
+    }
+    val finish = {
+        done.value = true
+        onCancel()
+    }
+    val changed = editor.isChanged || draft != null
     var message by rememberSaveable { mutableStateOf("Update ${path.lastOrNull() ?: ""}") }
     val working = viewModel.state.collectAsStateWithLifecycle().value is GitProposalUiState.Working
     // A result left from an earlier visit (published or failed after the editor closed) is not this one's.
@@ -485,7 +536,7 @@ fun GitFileEditor(
 
     Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringRes(Res.string.git_edit_title, path.joinToString("/")), style = MaterialTheme.typography.titleSmall, fontFamily = FontFamily.Monospace)
-        OpenWhenPublished(viewModel, accountViewModel, nav, leaveFirst = onCancel) { reason -> Text(reason, color = MaterialTheme.colorScheme.error) }
+        OpenWhenPublished(viewModel, accountViewModel, nav, leaveFirst = finish) { reason -> Text(reason, color = MaterialTheme.colorScheme.error) }
         Text(stringRes(Res.string.git_edit_tap_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
         GitTextEditor(editor, readOnly = working, modifier = Modifier.fillMaxWidth().weight(1f))
         OutlinedTextField(
@@ -496,7 +547,7 @@ fun GitFileEditor(
             modifier = Modifier.fillMaxWidth(),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onCancel, enabled = !working) { Text(stringRes(Res.string.git_merge_cancel)) }
+            TextButton(onClick = finish, enabled = !working) { Text(stringRes(Res.string.git_merge_cancel)) }
             Button(
                 enabled = target != null && message.isNotBlank() && changed && !working && accountViewModel.account.isWriteable(),
                 onClick = {

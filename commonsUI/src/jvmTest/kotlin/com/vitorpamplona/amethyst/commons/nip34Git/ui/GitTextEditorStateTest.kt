@@ -71,4 +71,22 @@ class GitTextEditorStateTest {
         assertEquals("first", state.lines[0])
         assertTrue(state.text().startsWith("first\nl2"))
     }
+
+    @Test
+    fun aLineBelowABlockThatChangedSizeOpensWhereItNowIs() {
+        val state = GitTextEditorState((0 until 100).joinToString("\n") { "l$it" })
+        state.open(0)
+        // The block holds lines 0..15; take out lines 1..15, keeping only the first.
+        state.blockField!!.setTextAndPlaceCursorAtEnd("l0")
+        // Line 99 as it was drawn below the block: after the commit it is line 84.
+        state.open(99)
+        assertEquals(85, state.lines.size)
+        assertTrue(84 in state.block!!, "the tapped line is in the block: ${state.block}")
+        assertTrue(
+            state.blockField!!
+                .text
+                .toString()
+                .endsWith("l99"),
+        )
+    }
 }
