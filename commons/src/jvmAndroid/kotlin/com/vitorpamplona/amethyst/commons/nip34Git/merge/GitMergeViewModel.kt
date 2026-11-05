@@ -29,6 +29,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
@@ -64,8 +65,9 @@ sealed interface GitMergeUiState {
 /**
  * Drives one item's merge: [check] plans it (cancellable with [dismiss]), [merge] signs, pushes and
  * publishes. The merge runs in [workScope] (the account's), not the screen's, so leaving the screen
- * halfway does not stop a push after its state went out; [onHiddenFinished] reports how a merge
- * the person [hide]s ended.
+ * halfway does not stop a push after its state went out. A merge the person [hide]s, or leaves the
+ * screen during, ends with [onHiddenFinished] (its outcome) or [onHiddenFailed] (an error) instead
+ * of the sheet.
  */
 class GitMergeViewModel(
     private val merger: GitMerger,
@@ -73,6 +75,7 @@ class GitMergeViewModel(
     /** Wraps the signing work so a refused or absent signer surfaces as the app reports it. */
     private val reportSignerErrors: suspend (suspend () -> Unit) -> Unit,
     private val onHiddenFinished: (GitMergeOutcome) -> Unit = {},
+    private val onHiddenFailed: (String) -> Unit = {},
 ) : ViewModel() {
     private val _state = MutableStateFlow<GitMergeUiState>(GitMergeUiState.Idle)
     val state: StateFlow<GitMergeUiState> = _state.asStateFlow()
@@ -102,30 +105,47 @@ class GitMergeViewModel(
         _state.value = GitMergeUiState.Merging(ready, GitMergeStep.PUBLISHING_STATE_AND_PUSHING)
         workScope.launch(Dispatchers.IO) {
             var outcome: GitMergeOutcome? = null
+            var failure: String? = null
             try {
                 reportSignerErrors {
-                    outcome = merger.merge(item, ready.merge, ready.resolutions) { step -> updateMerging { it.copyWith(step) } }
+                    outcome = merger.merge(item, ready.merge, ready.resolutions) { step -> updateMerging { GitMergeUiState.Merging(it.ready, step, it.hidden) } }
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _state.value = GitMergeUiState.Error(e.message ?: e::class.simpleName ?: "merge failed")
-                return@launch
+                failure = e.message ?: e::class.simpleName ?: "merge failed"
             }
-            val ended = outcome
-            val wasHidden = (_state.value as? GitMergeUiState.Merging)?.hidden == true
-            _state.value =
-                if (ended != null) {
-                    GitMergeUiState.Done(ended)
-                } else {
-                    // A signer that refused leaves the sheet where it was, ready to try again.
-                    GitMergeUiState.Checked(ready)
-                }
-            if (ended != null && wasHidden) onHiddenFinished(ended)
+            finish(ready, outcome, failure)
         }
     }
 
-    /** Closes the sheet while a merge goes on; it reports when it ends ([onHiddenFinished]). */
+    /**
+     * Ends a merge: on the sheet when it is showing; else the person hears of it where they are,
+     * and the sheet goes back to idle rather than pop up again.
+     */
+    private fun finish(
+        ready: GitMergeCheck.Ready,
+        outcome: GitMergeOutcome?,
+        failure: String?,
+    ) {
+        var wasHidden = false
+        _state.update { current ->
+            wasHidden = (current as? GitMergeUiState.Merging)?.hidden == true
+            when {
+                wasHidden && (outcome != null || failure != null) -> GitMergeUiState.Idle
+                outcome != null -> GitMergeUiState.Done(outcome)
+                failure != null -> GitMergeUiState.Error(failure)
+                // A signer that refused before anything was pushed: ready to try again.
+                else -> GitMergeUiState.Checked(ready)
+            }
+        }
+        if (wasHidden) {
+            outcome?.let(onHiddenFinished)
+            failure?.let(onHiddenFailed)
+        }
+    }
+
+    /** Closes the sheet while a merge goes on; it reports when it ends. */
     fun hide() = updateMerging { GitMergeUiState.Merging(it.ready, it.step, hidden = true) }
 
     /** Closes the sheet, cancelling a check; a merge in flight is only hidden. */
@@ -135,10 +155,14 @@ class GitMergeViewModel(
         _state.value = GitMergeUiState.Idle
     }
 
-    private inline fun updateMerging(change: (GitMergeUiState.Merging) -> GitMergeUiState.Merging) {
-        val current = _state.value as? GitMergeUiState.Merging ?: return
-        _state.value = change(current)
+    /** The screen is gone: a merge still running reports where the person is now. */
+    override fun onCleared() {
+        hide()
+        super.onCleared()
     }
 
-    private fun GitMergeUiState.Merging.copyWith(step: GitMergeStep) = GitMergeUiState.Merging(ready, step, hidden)
+    /** Changes a merge in flight atomically: [hide] and the merge's own steps come from different threads. */
+    private inline fun updateMerging(crossinline change: (GitMergeUiState.Merging) -> GitMergeUiState.Merging) {
+        _state.update { current -> (current as? GitMergeUiState.Merging)?.let(change) ?: current }
+    }
 }

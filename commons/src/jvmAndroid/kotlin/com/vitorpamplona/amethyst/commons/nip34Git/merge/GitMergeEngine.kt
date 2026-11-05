@@ -305,9 +305,9 @@ class GitMergeEngine(
                 // A GRASP server keeps each PR's commits under refs/nostr/<id>, so the repository's
                 // own servers come after the PR's.
                 val prSource = GitObjectSource(transport, (inputs.pullRequestClones + clones + split.others).distinct())
-                GitMergePlanner(source) { onStep(GitMergeCheckStep.of(it)) }.planPullRequest(oldTip, tip, prSource, committer, message)
+                GitMergePlanner(source, progress = { onStep(GitMergeCheckStep.of(it)) }).planPullRequest(oldTip, tip, prSource, committer, message)
             } else {
-                GitMergePlanner(source) { onStep(GitMergeCheckStep.of(it)) }.planPatches(oldTip, inputs.patches, committer, message)
+                GitMergePlanner(source, progress = { onStep(GitMergeCheckStep.of(it)) }).planPatches(oldTip, inputs.patches, committer, message)
             }
 
         return when (plan) {

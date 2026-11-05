@@ -2909,6 +2909,7 @@
     <string name="git_merge_leave_hint">You can leave this screen; the merge goes on.</string>
     <string name="git_merge_done_title">Merged</string>
     <string name="git_merge_done">Merged into %1$s as %2$s.</string>
+    <string name="git_merge_not_marked">The branch moved, but it could not be marked merged. Mark it now so others see it.</string>
     <string name="git_merge_resolved">Resolved %1$s</string>
     <string name="git_merge_partial">Not every server took it: %1$s</string>
     <string name="git_pr_view_changes">View changes</string>

@@ -33,13 +33,16 @@ import com.vitorpamplona.amethyst.commons.nip34Git.status.publishGitIssueResolve
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip34Git.issue.GitClosingReferences
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
+import com.vitorpamplona.quartz.utils.Log
 import okhttp3.OkHttpClient
+import kotlin.coroutines.cancellation.CancellationException
 
 /** Where a merge is, for a progress line. */
 enum class GitMergeStep { PUBLISHING_STATE_AND_PUSHING, PUBLISHING_STATUS }
@@ -52,6 +55,8 @@ sealed interface GitMergeOutcome {
         val branch: String,
         val newTip: String,
         val resolvedIssues: List<GitMergeStatuses.Resolution>,
+        /** False when the push landed but the "merged" status could not be signed or sent. */
+        val markedMerged: Boolean = true,
     ) : GitMergeOutcome
 
     /** No server took the push: nothing but the signed state went out, and it named a tip no server has. */
@@ -146,9 +151,7 @@ class GitMerger(
         val relays = membership.confirmedAnnouncements.flatMapTo(HashSet()) { it.relaysNorm() }
         if (relays.isEmpty()) return
         val filter = Filter(kinds = listOf(GitRepositoryStateEvent.KIND), authors = membership.confirmedMaintainers, tags = mapOf("d" to listOf(repository.dTag)))
-        account.client
-            .fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 8_000)
-            .forEach { cache.justConsume(it, null, wasVerified = false) }
+        consume(relays, listOf(filter))
     }
 
     /**
@@ -170,72 +173,97 @@ class GitMerger(
         val relays = merge.inputs.announcements.flatMapTo(HashSet()) { it.relaysNorm() } + merge.targets.map { it.relay } + account.outboxRelays.flow.value
         account.client.publish(push.state, relays)
 
+        // The branch has moved: from here on a failure (a signer that times out, say) must not
+        // read as "nothing happened", or the person merges again.
         onStep(GitMergeStep.PUBLISHING_STATUS)
-        // The series as planned: a patch that arrived since was not merged.
-        val patches = merge.inputs.patches.map { cache.getOrCreateNote(it.id) }
-        account.publishGitApplied(
-            item = item,
-            mergeCommit = merge.plan.mergeCommit,
-            appliedPatches = patches,
-            appliedAsCommits = merge.plan.appliedCommits,
-            authority = authority,
-        )
-
-        val resolved = if (merge.isDefaultBranch) resolveIssues(item, merge, resolutions) else emptyList()
-        return GitMergeOutcome.Merged(push, merge.branch, merge.plan.newTip, resolved)
+        return try {
+            // The series as planned: a patch that arrived since was not merged.
+            val patches = merge.inputs.patches.map { cache.getOrCreateNote(it.id) }
+            val status =
+                account.publishGitApplied(
+                    item = item,
+                    mergeCommit = merge.plan.mergeCommit,
+                    appliedPatches = patches,
+                    appliedAsCommits = merge.plan.appliedCommits,
+                    authority = authority,
+                )
+            val resolved = if (merge.isDefaultBranch && status != null) resolveIssues(item, merge, resolutions) else emptyList()
+            GitMergeOutcome.Merged(push, merge.branch, merge.plan.newTip, resolved, markedMerged = status != null)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "merged ${merge.plan.newTip}, but could not publish its status", e)
+            GitMergeOutcome.Merged(push, merge.branch, merge.plan.newTip, emptyList(), markedMerged = false)
+        }
     }
 
     /**
-     * The repository's issues with their statuses, fetched from its relays: a thread opened from
-     * a notification has loaded neither, and an issue must be known to be open before it is
-     * resolved.
+     * The open issues of this repository that [merge]'s commits close ([GitMergeStatuses.resolutions]),
+     * fetched from its relays (a thread opened from a notification has loaded none): the issues a
+     * full id names by id, every issue only when a `#prefix` must be matched, and the statuses of
+     * just the issues named, so an issue known closed is not resolved again.
      */
-    private suspend fun loadIssues(
-        merge: GitPreparedMerge,
-        coordinates: Set<Address>,
-    ): List<Note> {
-        val relays = merge.inputs.announcements.flatMapTo(HashSet()) { it.relaysNorm() }
-        if (relays.isNotEmpty()) {
-            val issueFilter = Filter(kinds = listOf(GitIssueEvent.KIND), tags = mapOf("a" to coordinates.map { it.toValue() }))
-            val fetched = account.client.fetchAll(filters = relays.associateWith { listOf(issueFilter) }, idleTimeoutMs = 8_000)
-            fetched.forEach { cache.justConsume(it, null, wasVerified = false) }
-            val ids = fetched.map { it.id }.distinct()
-            if (ids.isNotEmpty()) {
-                val statusFilter = Filter(kinds = listOf(GitStatusEvent.KIND_OPEN, GitStatusEvent.KIND_APPLIED, GitStatusEvent.KIND_CLOSED, GitStatusEvent.KIND_DRAFT), tags = mapOf("e" to ids))
-                account.client
-                    .fetchAll(filters = relays.associateWith { listOf(statusFilter) }, idleTimeoutMs = 8_000)
-                    .forEach { cache.justConsume(it, null, wasVerified = false) }
-            }
-        }
-        val issues = ArrayList<Note>()
-        cache.getGitRepositoryIfExists(merge.inputs.repository.dTag)?.items?.forEach { _, note -> if (note.event is GitIssueEvent) issues.add(note) }
-        return issues
-    }
-
-    /** The open issues of this repository that [merge]'s commits close ([GitMergeStatuses.resolutions]). */
     private suspend fun resolutionsFor(merge: GitPreparedMerge): List<GitMergeStatuses.Resolution> {
         val commits = merge.newCommits.map { GitMergeStatuses.MergedCommit(it.oid, it.message) }
+        val references = commits.flatMap { GitClosingReferences.parse(it.message) }
+        if (references.isEmpty()) return emptyList()
         val coordinates = authority.coordinatesToTag(merge.inputs.repository).toSet()
-        val issues = loadIssues(merge, coordinates).associateBy { it.idHex }
-        return GitMergeStatuses.resolutions(commits, issues.values.mapNotNull { it.event as? GitIssueEvent }, coordinates) { issue ->
+        val relays = merge.inputs.announcements.flatMapTo(HashSet()) { it.relaysNorm() }
+
+        if (relays.isNotEmpty()) {
+            val fullIds = references.filter { !it.isPrefix }.map { it.id }
+            val filters =
+                listOfNotNull(
+                    fullIds.takeIf { it.isNotEmpty() }?.let { Filter(ids = it, kinds = listOf(GitIssueEvent.KIND)) },
+                    if (references.any { it.isPrefix }) Filter(kinds = listOf(GitIssueEvent.KIND), tags = mapOf("a" to coordinates.map { it.toValue() })) else null,
+                )
+            consume(relays, filters)
+        }
+        val issues = repositoryIssues(merge)
+        val named = GitMergeStatuses.resolutions(commits, issues.values.mapNotNull { it.event as? GitIssueEvent }, coordinates) { true }
+        if (named.isEmpty()) return emptyList()
+        if (relays.isNotEmpty()) {
+            val statusKinds = listOf(GitStatusEvent.KIND_OPEN, GitStatusEvent.KIND_APPLIED, GitStatusEvent.KIND_CLOSED, GitStatusEvent.KIND_DRAFT)
+            consume(relays, listOf(Filter(kinds = statusKinds, tags = mapOf("e" to named.map { it.issue.id }))))
+        }
+        return GitMergeStatuses.resolutions(commits, named.map { it.issue }, coordinates) { issue ->
             issues[issue.id]?.let { !GitStatuses.isClosedOrResolved(it, authority) } ?: false
         }
     }
 
-    /**
-     * Marks resolved each of [planned] (or, when the check found none to show, whatever the
-     * commits close now) that is still open, quoting the line that closed it, as gitworkshop does.
-     */
+    private fun repositoryIssues(merge: GitPreparedMerge): Map<String, Note> {
+        val issues = HashMap<String, Note>()
+        cache.getGitRepositoryIfExists(merge.inputs.repository.dTag)?.items?.forEach { id, note -> if (note.event is GitIssueEvent) issues[id] = note }
+        return issues
+    }
+
+    /** Fetches [filters] from [relays] into the cache, waiting at most [RELAY_IDLE_MS] for a quiet relay. */
+    private suspend fun consume(
+        relays: Set<NormalizedRelayUrl>,
+        filters: List<Filter>,
+    ) {
+        if (filters.isEmpty()) return
+        account.client
+            .fetchAll(filters = relays.associateWith { filters }, idleTimeoutMs = RELAY_IDLE_MS)
+            .forEach { cache.justConsume(it, null, wasVerified = false) }
+    }
+
+    /** Marks resolved each of [planned] still open, quoting the line that closed it, as gitworkshop does. */
     private suspend fun resolveIssues(
         item: Note,
         merge: GitPreparedMerge,
         planned: List<GitMergeStatuses.Resolution>,
-    ): List<GitMergeStatuses.Resolution> {
-        val resolutions = planned.ifEmpty { if (merge.newCommits.any { GitClosingReferences.parse(it.message).isNotEmpty() }) resolutionsFor(merge) else emptyList() }
-        return resolutions.filter { resolution ->
+    ): List<GitMergeStatuses.Resolution> =
+        planned.filter { resolution ->
             val issue = cache.getNoteIfExists(resolution.issue.id) ?: return@filter false
             if (GitStatuses.isClosedOrResolved(issue, authority)) return@filter false
             account.publishGitIssueResolved(issue, resolution, merge.plan.mergeCommit, item, authority) != null
         }
+
+    companion object {
+        private const val TAG = "GitMerger"
+
+        /** These are small queries: a relay quiet this long has nothing more to send. */
+        private const val RELAY_IDLE_MS = 3_000L
     }
 }

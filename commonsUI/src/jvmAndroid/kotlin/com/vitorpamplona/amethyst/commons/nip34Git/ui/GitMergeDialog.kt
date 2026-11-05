@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_merge_hide
 import com.vitorpamplona.amethyst.commons.resources.git_merge_hide_details
 import com.vitorpamplona.amethyst.commons.resources.git_merge_leave_hint
 import com.vitorpamplona.amethyst.commons.resources.git_merge_more_commits
+import com.vitorpamplona.amethyst.commons.resources.git_merge_not_marked
 import com.vitorpamplona.amethyst.commons.resources.git_merge_other_clones
 import com.vitorpamplona.amethyst.commons.resources.git_merge_partial
 import com.vitorpamplona.amethyst.commons.resources.git_merge_push_failed
@@ -145,6 +146,7 @@ private class GitMergeViewModelFactory(
                         accountViewModel.toastManager.toast(Res.string.git_merge_failed_title, Res.string.git_merge_push_failed)
                 }
             },
+            onHiddenFailed = { accountViewModel.toastManager.toast(Res.string.git_merge_failed_title, Res.string.git_merge_failed_generic) },
         ) as T
 }
 
@@ -187,7 +189,8 @@ fun GitMergeDialog(
     val ready = check as? GitMergeCheck.Ready ?: (state as? GitMergeUiState.Merging)?.ready
     val merging = state is GitMergeUiState.Merging
     // A merge in flight can only be hidden: it goes on, and reports when it ends.
-    val canMarkMerged = check is GitMergeCheck.AlreadyMerged || check is GitMergeCheck.Conflicts || check is GitMergeCheck.Blocked
+    val notMarked = ((state as? GitMergeUiState.Done)?.outcome as? GitMergeOutcome.Merged)?.markedMerged == false
+    val canMarkMerged = check is GitMergeCheck.AlreadyMerged || check is GitMergeCheck.Conflicts || check is GitMergeCheck.Blocked || notMarked
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -232,7 +235,7 @@ fun GitMergeDialog(
         },
         dismissButton = {
             if (ready != null && !merging || canMarkMerged) {
-                TextButton(onClick = onDismiss) { Text(stringRes(Res.string.git_merge_cancel)) }
+                TextButton(onClick = onDismiss) { Text(stringRes(if (notMarked) Res.string.git_merge_close else Res.string.git_merge_cancel)) }
             }
         },
     )
@@ -382,6 +385,7 @@ private fun DoneBody(outcome: GitMergeOutcome) {
     when (outcome) {
         is GitMergeOutcome.Merged -> {
             Text(stringRes(Res.string.git_merge_done, outcome.branch, outcome.newTip.take(7)))
+            if (!outcome.markedMerged) Text(stringRes(Res.string.git_merge_not_marked), color = MaterialTheme.colorScheme.error)
             outcome.resolvedIssues.forEach { IssueLine(MaterialSymbols.CheckCircle, stringRes(Res.string.git_merge_resolved, issueLabel(it))) }
             if (outcome.push.result.servers
                     .any { !it.pushed }
