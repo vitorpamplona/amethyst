@@ -336,7 +336,7 @@ private fun GitRepositoryHome(
     var showSettings by rememberSaveable(note.idHex) { mutableStateOf(false) }
     val currentEventForSettings = event
     if (showSettings && currentEventForSettings != null) {
-        GitRepoSettingsDialog(currentEventForSettings, accountViewModel) { showSettings = false }
+        GitRepoSettingsDialog(currentEventForSettings, signedState, accountViewModel) { showSettings = false }
     }
 
     DisappearingScaffold(

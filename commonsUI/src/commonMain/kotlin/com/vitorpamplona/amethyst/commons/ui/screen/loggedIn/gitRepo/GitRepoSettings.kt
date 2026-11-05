@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
@@ -29,12 +31,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,14 +52,22 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.create.NewGitRepository
+import com.vitorpamplona.amethyst.commons.nip34Git.settings.GitRepositorySettings
+import com.vitorpamplona.amethyst.commons.nip34Git.settings.GitSettingsProblem
+import com.vitorpamplona.amethyst.commons.nip34Git.state.GitSignedState
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitIconTile
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_cancel
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_remove_topic
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_topics_placeholder
+import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_bad_maintainers
+import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_bad_relays
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_clone_urls
+import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_default_branch
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_description
+import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_maintainers
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_name
+import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_relays
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_save
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_title
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_topics
@@ -69,7 +81,10 @@ import com.vitorpamplona.amethyst.commons.ui.components.formFieldColors
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
+import com.vitorpamplona.quartz.utils.Hex
 
 /**
  * Edit form for a NIP-34 repository announcement (kind 30617). Because the event
@@ -79,12 +94,28 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
  * edit the name, description, web/clone URLs and topics. Fields share the look of the
  * New repository screen.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun GitRepoSettingsDialog(
     event: GitRepositoryEvent,
+    signedState: GitSignedState?,
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
+    var relays by rememberSaveable { mutableStateOf(event.relays().joinToString("\n")) }
+    var maintainers by rememberSaveable {
+        mutableStateOf(event.maintainers().filter { it != event.pubKey }.joinToString("\n") { Hex.decode(it).toNpub() })
+    }
+    val branches =
+        remember(signedState) {
+            signedState
+                ?.event
+                ?.branches()
+                ?.map { it.shortName }
+                .orEmpty()
+        }
+    var defaultBranch by rememberSaveable { mutableStateOf(signedState?.headBranch) }
+    val problems = GitRepositorySettings.problems(relays, maintainers)
     var name by rememberSaveable { mutableStateOf(event.name() ?: event.dTag()) }
     var description by rememberSaveable { mutableStateOf(event.description() ?: "") }
     var webUrls by rememberSaveable { mutableStateOf(event.webs().joinToString("\n")) }
@@ -187,14 +218,51 @@ fun GitRepoSettingsDialog(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                     )
                 }
+                LabeledField(Res.string.git_repo_settings_relays) {
+                    FormTextField(
+                        value = relays,
+                        onValueChange = { relays = it },
+                        placeholder = "wss://",
+                        singleLine = false,
+                        minLines = 2,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    )
+                }
+                LabeledField(Res.string.git_repo_settings_maintainers) {
+                    FormTextField(
+                        value = maintainers,
+                        onValueChange = { maintainers = it },
+                        placeholder = "npub1…",
+                        singleLine = false,
+                        minLines = 2,
+                    )
+                }
+                problems.forEach { problem ->
+                    val label = if (problem.field == GitSettingsProblem.Field.RELAYS) Res.string.git_repo_settings_bad_relays else Res.string.git_repo_settings_bad_maintainers
+                    Text(stringRes(label, problem.entries.joinToString(", ")), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+                if (branches.size > 1) {
+                    LabeledField(Res.string.git_repo_settings_default_branch) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            branches.forEach { branch ->
+                                FilterChip(
+                                    selected = branch == defaultBranch,
+                                    onClick = { defaultBranch = branch },
+                                    label = { Text(branch, fontFamily = FontFamily.Monospace) },
+                                )
+                            }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
-                enabled = name.isNotBlank(),
+                enabled = name.isNotBlank() && problems.isEmpty(),
                 onClick = {
                     val allTopics = (topicList + NewGitRepository.splitList(topicDraft).map { it.removePrefix("#").lowercase() }).distinct()
-                    saveRepository(accountViewModel, event, name.trim(), description.trim(), webUrls, cloneUrls, allTopics.joinToString("\n"))
+                    val newHead = defaultBranch?.takeIf { it != signedState?.headBranch }
+                    saveRepository(accountViewModel, event, name, description, webUrls, cloneUrls, relays, maintainers, allTopics, signedState, newHead)
                     onDismiss()
                 },
             ) {
@@ -214,6 +282,10 @@ private fun splitLines(raw: String): List<String> =
         .filter { it.isNotEmpty() }
         .distinct()
 
+/**
+ * Republishes the announcement when one of its fields changed, and, when [newHead] is set, the
+ * maintainers' signed state (kind 30618) with HEAD on that branch, every ref kept as signed.
+ */
 private fun saveRepository(
     accountViewModel: AccountViewModel,
     event: GitRepositoryEvent,
@@ -221,25 +293,18 @@ private fun saveRepository(
     description: String,
     webUrls: String,
     cloneUrls: String,
-    topics: String,
+    relays: String,
+    maintainers: String,
+    topics: List<String>,
+    signedState: GitSignedState?,
+    newHead: String?,
 ) {
     accountViewModel.launchSigner {
-        val template =
-            GitRepositoryEvent.build(
-                name = name,
-                description = description.ifBlank { null },
-                webUrls = splitLines(webUrls),
-                cloneUrls = splitLines(cloneUrls),
-                relays = event.relays(),
-                maintainers = event.maintainers(),
-                hashtags = splitLines(topics).map { it.removePrefix("#") },
-                earliestUniqueCommit = event.earliestUniqueCommit(),
-                personalFork = event.isPersonalFork(),
-                dTag = event.dTag(),
-            ) {
-                event.unmanagedTags().forEach { add(it) }
-            }
-        val signed = accountViewModel.account.signer.sign(template)
-        accountViewModel.account.sendAutomatic(signed)
+        val template = GitRepositorySettings.edit(event, name, description, webUrls, cloneUrls, relays, maintainers, topics)
+        val account = accountViewModel.account
+        account.sendAutomatic(account.signer.sign(template))
+        if (newHead != null && signedState != null) {
+            account.sendAutomatic(account.signer.sign(GitRepositoryStateEvent.changeHead(signedState.event, newHead)))
+        }
     }
 }

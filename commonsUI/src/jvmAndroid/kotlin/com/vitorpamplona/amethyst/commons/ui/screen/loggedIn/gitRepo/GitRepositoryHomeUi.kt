@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_external_host_title
 import com.vitorpamplona.amethyst.commons.resources.git_repo_maintainers
 import com.vitorpamplona.amethyst.commons.resources.git_repo_open_in_browser
 import com.vitorpamplona.amethyst.commons.resources.git_repo_personal_fork
+import com.vitorpamplona.amethyst.commons.resources.git_repo_private
 import com.vitorpamplona.amethyst.commons.resources.git_repo_push_first_body
 import com.vitorpamplona.amethyst.commons.resources.git_repo_push_first_get_ngit
 import com.vitorpamplona.amethyst.commons.resources.git_repo_push_first_title
@@ -147,6 +148,7 @@ fun RepoHero(
     val description = event.description()?.takeIf { it.isNotBlank() }
     val topics = remember(event) { event.hashtags().filter { it.isNotBlank() } }
     val isFork = event.isPersonalFork()
+    val isPrivate = remember(event) { event.isPrivate() }
     // The confirmed maintainers (role tags and the legacy list, each confirmed by their own
     // announcement), as the lists and the status authority count them; the announcement's own
     // names until the others load.
@@ -164,8 +166,9 @@ fun RepoHero(
         if (description != null) {
             Text(text = description, style = MaterialTheme.typography.bodyLarge)
         }
-        if (topics.isNotEmpty() || isFork) {
+        if (topics.isNotEmpty() || isFork || isPrivate) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (isPrivate) GitLabelTag(stringRes(Res.string.git_repo_private))
                 if (isFork) GitLabelTag(stringRes(Res.string.git_repo_personal_fork))
                 topics.forEach { GitLabelTag(it) }
             }
