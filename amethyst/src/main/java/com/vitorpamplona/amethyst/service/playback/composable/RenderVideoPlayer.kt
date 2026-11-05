@@ -33,6 +33,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
@@ -133,13 +134,23 @@ fun RenderVideoPlayer(
     // Returns null for the inline feed player (not inside a dialog) — fine, gated by isFullscreen below.
     val dialogWindow = getDialogWindow()
 
+    // The gesture detectors below run in pointerInput coroutines that outlive recompositions, so
+    // they read these through rememberUpdatedState instead of capturing the parameters: the
+    // caller can hand in a new controllerVisible, and GetVideoController swaps the controller
+    // when late captions rebuild the media item. A captured value would keep the old one, which
+    // nothing draws (taps stop showing the controls) or which is released (swipes and double
+    // taps do nothing). Reading the current value also avoids restarting the detectors, which
+    // would drop a gesture in progress.
+    val currentControllerState by rememberUpdatedState(controllerState)
+    val currentControllerVisible by rememberUpdatedState(controllerVisible)
+
     // Sync the per-video mute (Media3 player volume) with the volume swipe. Mirrors the mute
     // button's handler exactly, so its listener-driven icon flips when the swipe mutes/unmutes,
     // and the global default carries to the next video.
-    val isVideoMuted = { controllerState.controller.volume < 0.001f }
+    val isVideoMuted = { currentControllerState.controller.volume < 0.001f }
     val setVideoMuted = { mute: Boolean ->
         DEFAULT_MUTED_SETTING.value = mute
-        controllerState.controller.volume = if (mute) 0f else 1f
+        currentControllerState.controller.volume = if (mute) 0f else 1f
     }
 
     // Belt-and-suspenders: clear any brightness override when this player leaves composition, so
@@ -181,16 +192,16 @@ fun RenderVideoPlayer(
                     lastMeasured[1] = it.height
                     val (w, h) = clampViewportShortSide(it.width, it.height, viewportCeiling)
                     applyViewportConstraint(controllerState.controller, w, h)
-                }.pointerInput(isLive, controllerState) {
+                }.pointerInput(isLive) {
                     detectTapGestures(
-                        onTap = { controllerVisible.value = !controllerVisible.value },
+                        onTap = { currentControllerVisible.value = !currentControllerVisible.value },
                         onDoubleTap = { offset ->
                             if (!isLive) {
                                 val isLeftSide = offset.x < containerWidth[0] / 2
                                 if (isLeftSide) {
-                                    controllerState.controller.seekBackward()
+                                    currentControllerState.controller.seekBackward()
                                 } else {
-                                    controllerState.controller.skipForward()
+                                    currentControllerState.controller.skipForward()
                                 }
                             }
                         },
