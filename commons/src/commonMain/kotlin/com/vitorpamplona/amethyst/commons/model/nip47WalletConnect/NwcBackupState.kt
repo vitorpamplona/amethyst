@@ -230,15 +230,19 @@ class NwcBackupState(
         val defaultId: String?,
     )
 
-    /** True when a live (not deleted) backup sits on the user's relays. Never decrypts, so it needs no signer prompt. */
-    suspend fun hasBackup(): Boolean = fetchLiveBackupEvents().isNotEmpty()
+    /**
+     * True when a live (not deleted) backup sits on the user's relays, false when none does, and null
+     * when the relays could not be asked (none known yet, or the fetch failed). Never decrypts, so it
+     * needs no signer prompt.
+     */
+    suspend fun hasBackup(): Boolean? = fetchLiveBackupEvents()?.isNotEmpty()
 
     /** Reads Wisp, Sidecar and zap.cooking backups too. Does not merge: the user confirms what to restore. */
     suspend fun fetchBackup(): FoundNwcBackup? {
         val wallets = ArrayList<RestorableWallet>()
         val seen = HashSet<Nip47WalletConnect.Nip47URINorm>()
         var defaultId: String? = null
-        for (event in fetchLiveBackupEvents()) {
+        for (event in fetchLiveBackupEvents().orEmpty()) {
             val payload = decryptAndDecode(event) ?: continue
             val dTag = NwcBackupFormat.dTagOf(event.tags) ?: continue
             if (dTag == NwcBackupFormat.D_TAG) defaultId = payload.defaultId
@@ -254,11 +258,12 @@ class NwcBackupState(
         )
     }
 
-    private suspend fun fetchLiveBackupEvents(): List<Event> {
+    /** The live backup events on the user's relays, or null when the relays could not be asked. */
+    private suspend fun fetchLiveBackupEvents(): List<Event>? {
         val relays = awaitOutboxRelays(RELAY_READY_WAIT_MS) + readRelaysFlow.value
         if (relays.isEmpty()) {
             Log.w(TAG) { "Outbox relays unavailable; cannot look for a backup yet" }
-            return emptyList()
+            return null
         }
 
         // A REQ sent into a still-connecting socket reads as an empty backup, so wait for a live one.
@@ -280,14 +285,16 @@ class NwcBackupState(
                 }
 
             val events =
-                runCatching {
+                try {
                     client.fetchAll(
                         filters = relays.associateWith { filters },
                         idleTimeoutMs = RESTORE_IDLE_TIMEOUT_MS,
                     )
-                }.getOrNull()
-                    .orEmpty()
-                    .filter { it.pubKey == signer.pubKey }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w(TAG, "Failed to fetch the NWC backup", e)
+                    return null
+                }.filter { it.pubKey == signer.pubKey }
 
             return NwcBackupFormat.liveBackups(events)
         } finally {

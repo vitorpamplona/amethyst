@@ -32,9 +32,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -70,7 +68,6 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_backup_all_already_ad
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_none_found
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_restore
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_restored_toast
-import com.vitorpamplona.amethyst.commons.resources.wallet_backup_searching
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_connect_app
 import com.vitorpamplona.amethyst.commons.resources.wallet_name
 import com.vitorpamplona.amethyst.commons.resources.wallet_name_hint
@@ -332,7 +329,10 @@ fun AddNwcWalletScreen(
                 )
             }
 
-            FilledTonalButton(
+            RestoreBackupButton(
+                busy = backupBusy,
+                idleLabel = Res.string.wallet_backup_restore,
+                prominent = true,
                 onClick = {
                     walletViewModel.fetchBackupForRestore { backup ->
                         if (backup == null) {
@@ -342,31 +342,7 @@ fun AddNwcWalletScreen(
                         }
                     }
                 },
-                enabled = !backupBusy,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                if (backupBusy) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                Text(
-                    text =
-                        stringRes(
-                            if (backupBusy) {
-                                Res.string.wallet_backup_searching
-                            } else {
-                                Res.string.wallet_backup_restore
-                            },
-                        ),
-                )
-            }
+            )
         }
     }
 }
