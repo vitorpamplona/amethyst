@@ -12,9 +12,20 @@ Add a setting, *Settings › App › Navigation layout*, with three choices:
 | **Tabs** | The main pane holds several independent back stacks shown as browser-style tabs. You can open a screen in a new tab, switch between tabs, close them, and reorder them. | Follow many things at once (a thread, a profile, a hashtag, a DM) without losing your place in any of them. |
 | **Windows** | Each screen opens in its own OS window. Back closes the window. | Break Amethyst into pieces a window manager (i3, sway, Hyprland, macOS Stage Manager, Android desktop windowing) can tile, stack and place. |
 
-Tabs work on both platforms and at every window size. Windows ship on Desktop first, then on
-Android where the device supports free-form windows (desktop windowing on Android 16+, ChromeOS,
-DeX). Phones don't offer the Windows option.
+**Desktop sizes only.** On phones and in narrow windows, anything other than a nav stack gets
+too complicated: there's no room for a tab strip, and windows mean nothing there. So:
+
+- **Tabs** apply only while the window is on the permanent-drawer tier
+  (`NavigationStyle.PERMANENT_DRAWER`). The desktop app, a landscape tablet, and Android on a
+  laptop or in desktop windowing all qualify. Below that tier the same window falls back to the
+  stack: it shows the active tab's back stack with the bar or rail, keeps the other tabs, and
+  brings the strip back when the window widens again.
+- **Windows** apply only on desktop-class devices: the desktop app, and Android in desktop
+  windowing (Android 16+, ChromeOS, DeX). Within that, each window lays itself out by its own
+  size. A narrow tiled window still renders its one screen like a phone column, because the
+  window manager chose that size.
+- **Phones never see the setting.** It stays Stack, and nothing in this plan changes the phone
+  UI: no tab switcher, and no *Open in new tab* items in phone menus.
 
 ## What exists today (survey)
 
@@ -67,10 +78,20 @@ reuse the deck's pieces, or pull them out into shared helpers, before writing ne
 
 - **Setting.** Add `enum class NavigationLayout { STACK, TABS, WINDOWS }` to `UiSettings` /
   `UiSettingsFlow` / `UiSettingsStore`, defaulting to `STACK`. Add an
-  `AppPlatform.supportsMultipleWindows` port: Desktop returns true; Android returns
-  `FEATURE_FREEFORM_WINDOW_MANAGEMENT || isInMultiWindowMode capable` and false on phones. The
-  settings row offers Windows only where that port is true. Under Windows, hide the deck
-  toggle, because the window manager does the deck's job.
+  `AppPlatform.isDesktopClass` port. Desktop returns true. Android returns true while the
+  device offers free-form windows (`FEATURE_FREEFORM_WINDOW_MANAGEMENT`, desktop windowing,
+  ChromeOS, DeX), and false on phones and on tablets outside desktop mode. Where it is false,
+  the settings row isn't shown at all. Where it is true, the row shows all three options, with
+  the caption "Tabs show on windows wide enough for the side drawer". Under Windows, hide the
+  deck toggle, because the window manager does the deck's job.
+- **The effective layout.** One function decides which layout a window actually runs:
+  `effectiveLayout(setting, spec, isDesktopClass)`.
+  - `TABS` runs only when `spec.navigationStyle == PERMANENT_DRAWER`; otherwise the window
+    runs `STACK`.
+  - `WINDOWS` runs only when `isDesktopClass` is true; otherwise the window runs `STACK`.
+
+  Everything below reads this function rather than the raw setting. It is a pure function, so
+  it gets a unit test.
 - **Split `LoggedInPage`** into:
   - `AccountSession(account, root) { accountViewModel -> … }`: everything account-wide listed
     above, run once per process or account.
@@ -97,7 +118,7 @@ reuse the deck's pieces, or pull them out into shared helpers, before writing ne
   `destinations.serialNameOf` and the deck's `columnChoices` labels, and observe the user and
   note for the dynamic parts.
 
-### Tabs (Phase 1, shared UI, both platforms)
+### Tabs (Phase 1, shared UI, desktop-size windows on either platform)
 
 **Model (headless, `commons/…/model/navigation/NavTabs.kt`).** This is a direct analogue of
 `DeckLayout`:
@@ -137,14 +158,17 @@ which is the right default for a background tab. A tab may show a "new activity"
 that's out of scope here.
 
 **Chrome.**
-- *Rail and drawer tiers:* a tab strip across the top of the content area, right of the rail
-  or drawer and left of the deck. Each tab has a title, a close button and drag-to-reorder;
-  middle-click closes. A `+` button opens Home. Overflow scrolls horizontally, like
-  `DeckArea`'s column row.
-- *Bottom-bar tier (phones):* no strip. A tab-count button in the top bar (or a bottom-bar
-  item, where the user has placed one) opens a tab-switcher sheet showing a grid of tab cards
-  with titles. Long-press on a note, profile, hashtag or link adds *Open in new tab* to the
-  existing drop-down menus. Phones have no middle click, so these menus are the entry point.
+- *Drawer tier only:* a tab strip across the top of the content area, right of the drawer and
+  left of the deck or notification panel. Each tab has a title, a close button and
+  drag-to-reorder; middle-click closes. A `+` button opens Home. Overflow scrolls horizontally,
+  like `DeckArea`'s column row.
+- *A window that narrows to the rail or bottom-bar tier* drops the strip and shows only the
+  active tab's stack. Nothing is closed, and the strip and the other tabs come back when the
+  window widens. There's no tab switcher on small screens, and the bar and rail behave as they
+  do today.
+- *Entry points:* modifier-click and middle-click, plus *Open in new tab* in the existing note,
+  profile and link drop-down menus (right-click on desktop). The menu item shows only while
+  `effectiveLayout` is `TABS`.
 - *Desktop shortcuts:* Ctrl/Cmd+T new tab, Ctrl/Cmd+W close, Ctrl+Tab / Ctrl+Shift+Tab cycle,
   Ctrl/Cmd+Shift+T reopen. Ctrl/Cmd+1…9 activate a tab only if the decision below says so. The
   *Window* menu lists the open tabs.
@@ -205,6 +229,10 @@ new account's saved set. Deep links and OS-notification clicks open a window.
 
 ### Windows on Android (Phase 3)
 
+Tabs need no Android-specific work, since they're shared UI gated by the drawer tier.
+Windows on Android are only for desktop windowing (`isDesktopClass`). Phones and plain tablets
+never reach this code.
+
 - Add a new `ScreenActivity` (`launchMode="standard"`, `documentLaunchMode="always"`,
   resizeable) that hosts `ShellWindow` for one route, passed as the route's JSON (`Route` is
   `@Serializable`). Start it with `FLAG_ACTIVITY_NEW_DOCUMENT | FLAG_ACTIVITY_MULTIPLE_TASK`,
@@ -234,7 +262,7 @@ new account's saved set. Deep links and OS-notification clicks open a window.
 | Phase | Ships | Module(s) | Done when |
 |---|---|---|---|
 | 0 | Setting (Stack only selectable), `AccountSession`/`ShellWindow` split, de-singletoned deck and transition state, `openNew`, `OpenIntentState`, `rememberRouteTitle` | commons, commonsUI, desktopApp | No visible change. Existing nav tests pass, and desktop and Android look the same |
-| 1 | Tabs, all tiers | commons (`NavTabs`), commonsUI | `NavTabsTest`, headless desktop run at 1440×900 and 480×900, Android phone check of the switcher |
+| 1 | Tabs on the drawer tier, falling back to the stack below it | commons (`NavTabs`), commonsUI | `NavTabsTest` and `effectiveLayout` test. Headless desktop run at 1440×900 shows the strip; resized to 480×900 it shows today's stack, and widened again it shows the same tabs. Phone UI unchanged |
 | 2a | Desktop windows, main window owns the session | commons (`AppWindows`), commonsUI, desktopApp | Headless run shows N windows. Tested by hand under i3/sway and macOS |
 | 2b | Session at application scope, hub reopenable | desktopApp, commonsUI | Close the hub with other windows still open: nothing restarts and nothing is subscribed twice |
 | 3 | Android windows | amethyst, commons | Checked on an Android 16 desktop-windowing emulator image or a DeX/ChromeOS device |
@@ -254,8 +282,11 @@ singleton bugs above for the deck.
   modifier-click → `openNew` path.
 - **Subscription regression:** two `ShellWindow`s over one `AccountSession`. Close one, and the
   account's REQs must still be open. This is the failure mode found in the survey.
-- **Run the app:** `tools/desktop-run/run-headless.sh start`, with screenshots of the tab strip,
-  the phone tab switcher (`AMETHYST_SCREEN=480x900x24`), and two or three screen windows. Xvfb
+- **Run the app:** `tools/desktop-run/run-headless.sh start`, with screenshots of:
+  - the tab strip;
+  - the same session at phone width (`AMETHYST_SCREEN=480x900x24`), which must look exactly
+    like today's stack;
+  - two or three screen windows. Xvfb
   has no window manager, so windows overlap at their saved positions. That still shows
   titles, sizes and contents. Tiling behaviour needs a hand test under a real window manager.
 
@@ -273,5 +304,5 @@ singleton bugs above for the deck.
 4. **Tab persistence.** Restore tabs and windows after a restart (proposed, per account), or
    start fresh each launch?
 5. **Default for links in Tabs mode.** Plain clicks stay in the tab and modifier-clicks or the
-   long-press menu open a new one (proposed, as browsers do). The alternative is "notes and
+   right-click menu open a new one (proposed, as browsers do). The alternative is "notes and
    profiles always open in a new tab".
