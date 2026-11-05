@@ -102,7 +102,7 @@ class NavStackEntry(
 /**
  * The app's back stack, owned by the app (Navigation 3 renders whatever this holds).
  *
- * In the [NavigationLayoutType.STACK] [mode], [stack] is what is on screen, bottom to top; it is
+ * In the [NavigationLayoutType.STACK] [mode] (the deck's main screen too), [stack] is what is on screen, bottom to top; it is
  * never empty and normally starts at [Route.Home]. [savedTabs] holds the root entry of every
  * bottom-bar tab the user left: a tab survives being left — its ViewModels and scroll position —
  * because its entry stays here, and so stays in the list whose state Navigation 3 keeps alive.
@@ -156,7 +156,7 @@ class NavBackStacks private constructor(
 
     val canReopen: Boolean get() = closed.isNotEmpty()
 
-    val isSingleScreen: Boolean get() = mode != NavigationLayoutType.STACK
+    val isSingleScreen: Boolean get() = mode == NavigationLayoutType.TABS || mode == NavigationLayoutType.WINDOWS
 
     val top: NavStackEntry
         get() =
@@ -171,7 +171,7 @@ class NavBackStacks private constructor(
     /** Every entry whose state must stay alive in this host. Windows keep theirs in their own. */
     fun retained(): List<NavStackEntry> =
         when (mode) {
-            NavigationLayoutType.STACK -> stack + savedTabs.values
+            NavigationLayoutType.STACK, NavigationLayoutType.DECK -> stack + savedTabs.values
             else -> stack.filter(::isMainScreen)
         }
 
@@ -181,7 +181,7 @@ class NavBackStacks private constructor(
      */
     fun shown(wide: Boolean): List<NavStackEntry> =
         when (mode) {
-            NavigationLayoutType.STACK -> stack.toList()
+            NavigationLayoutType.STACK, NavigationLayoutType.DECK -> stack.toList()
             NavigationLayoutType.TABS -> if (wide) listOf(top) else chain(top).filter(::isMainScreen)
             NavigationLayoutType.WINDOWS -> listOf(top)
         }
@@ -195,7 +195,7 @@ class NavBackStacks private constructor(
     /** A screen the main window shows: a tab not moved out, or a section in the windows mode. */
     fun isMainScreen(entry: NavStackEntry): Boolean =
         when (mode) {
-            NavigationLayoutType.STACK -> true
+            NavigationLayoutType.STACK, NavigationLayoutType.DECK -> true
             NavigationLayoutType.TABS -> !entry.detached
             NavigationLayoutType.WINDOWS -> isSection(entry)
         }
@@ -530,7 +530,9 @@ class NavBackStacks private constructor(
      * the one below it, with Home and the bar's tabs pinned; entering windows keeps only the
      * sections, in the main window.
      */
-    fun changeMode(newMode: NavigationLayoutType) {
+    fun changeMode(layout: NavigationLayoutType) {
+        // The deck's main screen is a plain stack; its columns keep stacks of their own.
+        val newMode = if (layout == NavigationLayoutType.DECK) NavigationLayoutType.STACK else layout
         if (newMode == mode) return
         if (isSingleScreen) {
             val keep = if (mode == NavigationLayoutType.TABS) chain(top).filter(::isMainScreen) else listOf(top)
@@ -547,7 +549,7 @@ class NavBackStacks private constructor(
         savedTabs.clear()
         closed.clear()
         when (newMode) {
-            NavigationLayoutType.STACK -> {}
+            NavigationLayoutType.STACK, NavigationLayoutType.DECK -> {}
             NavigationLayoutType.TABS -> {
                 stack.zipWithNext { below, above -> openers[above.id] = below.id }
                 activeId = stack.last().id

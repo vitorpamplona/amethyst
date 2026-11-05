@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.BooleanType
 import com.vitorpamplona.amethyst.commons.model.ConnectivityType
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
+import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.NoteLayoutType
 import com.vitorpamplona.amethyst.commons.model.SpellCheckType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
@@ -123,6 +124,22 @@ class UiSettingsStoreTest {
                 it[UiSettingsStore.UI_USE_TRACKED_BROADCASTS] = BooleanType.ALWAYS.name
             }
             assertEquals(BooleanType.ALWAYS, UiSettingsStore(explicit).load()!!.useTrackedBroadcasts)
+        }
+
+    /** The deck was a switch of its own before the layout setting: whoever had it on starts in the deck layout. */
+    @Test
+    fun theOldDeckSwitchBecomesTheDeckLayout() =
+        runTest {
+            val deckOn = rawStore("deck-on")
+            deckOn.edit { it[UiSettingsStore.UI_DECK_MODE] = true }
+            assertEquals(NavigationLayoutType.DECK, UiSettingsStore(deckOn).load()!!.navigationLayout)
+
+            val chosen = rawStore("deck-and-tabs")
+            chosen.edit {
+                it[UiSettingsStore.UI_DECK_MODE] = true
+                it[UiSettingsStore.UI_NAVIGATION_LAYOUT] = NavigationLayoutType.TABS.name
+            }
+            assertEquals(NavigationLayoutType.TABS, UiSettingsStore(chosen).load()!!.navigationLayout)
         }
 
     @Test

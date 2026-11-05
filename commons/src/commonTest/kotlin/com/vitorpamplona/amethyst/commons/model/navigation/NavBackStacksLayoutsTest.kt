@@ -304,4 +304,16 @@ class NavBackStacksLayoutsTest {
         assertNull(stacks.openerOf(stacks.stack.first { it.route == Route.Message }))
         assertNull(stacks.openerOf(stacks.stack.first { it.route == Route.Bookmarks }))
     }
+
+    @Test
+    fun theDeckKeepsAPlainStackInTheMainScreen() {
+        val stacks = NavBackStacks()
+        stacks.push(Route.Note("n"))
+        stacks.changeMode(NavigationLayoutType.DECK)
+
+        assertEquals(NavigationLayoutType.STACK, stacks.mode)
+        assertFalse(stacks.isSingleScreen)
+        stacks.push(Route.Profile("p"))
+        assertEquals(listOf(Route.Home, Route.Note("n"), Route.Profile("p")), stacks.routes())
+    }
 }

@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorageVault
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -530,7 +531,7 @@ class DesktopAppModules(
     private val legacyCustomFeedImport = LegacyCustomFeedImport(filesDir)
 
     // A legacy user who ran the deck gets it on here too.
-    private val legacyDeckImport = LegacyDeckImport(filesDir) { uiPrefs.deckMode.tryEmit(true) }
+    private val legacyDeckImport = LegacyDeckImport(filesDir) { uiPrefs.navigationLayout.tryEmit(NavigationLayoutType.DECK) }
 
     // A NIP-46 signer's auth_url challenges, from logins and from the accounts' signers alike.
     val remoteSignerAuthPrompts = RemoteSignerAuthPrompts()

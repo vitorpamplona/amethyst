@@ -190,7 +190,7 @@ class Nav(
      */
     private fun canPop(entry: NavStackEntry): Boolean =
         when (stacks.mode) {
-            NavigationLayoutType.STACK -> !entry.tabRoot && entry.route != Route.Home
+            NavigationLayoutType.STACK, NavigationLayoutType.DECK -> !entry.tabRoot && entry.route != Route.Home
             NavigationLayoutType.TABS -> !isDrawerDocked && stacks.openerOf(entry) != null
             NavigationLayoutType.WINDOWS -> false
         }

@@ -83,8 +83,6 @@ import com.vitorpamplona.amethyst.commons.resources.autoplay_videos_description
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_always
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_never
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_unmetered_wifi_only_short
-import com.vitorpamplona.amethyst.commons.resources.deck_mode
-import com.vitorpamplona.amethyst.commons.resources.deck_mode_description
 import com.vitorpamplona.amethyst.commons.resources.font_family
 import com.vitorpamplona.amethyst.commons.resources.font_family_description
 import com.vitorpamplona.amethyst.commons.resources.font_family_monospace_short
@@ -96,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.resources.font_size_description
 import com.vitorpamplona.amethyst.commons.resources.language
 import com.vitorpamplona.amethyst.commons.resources.language_description
 import com.vitorpamplona.amethyst.commons.resources.navigation_layout
+import com.vitorpamplona.amethyst.commons.resources.navigation_layout_deck
 import com.vitorpamplona.amethyst.commons.resources.navigation_layout_description
 import com.vitorpamplona.amethyst.commons.resources.navigation_layout_stack
 import com.vitorpamplona.amethyst.commons.resources.navigation_layout_tabs
@@ -211,7 +210,6 @@ fun SettingsScreen(
             SettingsDivider()
             ImmersiveScrollingTile(sharedPrefs)
             SettingsDivider()
-            DeckModeTile(sharedPrefs)
             val layouts = LocalAppPlatform.current.navigationLayouts
             if (layouts.size > 1) {
                 SettingsDivider()
@@ -456,31 +454,20 @@ private fun NavigationLayoutTile(
 ) {
     val layout by sharedPrefs.navigationLayout.collectAsState()
     SegmentedChoiceTile(
-        icon = MaterialSymbols.AutoMirrored.OpenInNew,
+        icon = MaterialSymbols.Dashboard,
         title = Res.string.navigation_layout,
         description = Res.string.navigation_layout_description,
         options = layouts,
         labelRes = {
             when (it) {
                 NavigationLayoutType.STACK -> Res.string.navigation_layout_stack
+                NavigationLayoutType.DECK -> Res.string.navigation_layout_deck
                 NavigationLayoutType.TABS -> Res.string.navigation_layout_tabs
                 NavigationLayoutType.WINDOWS -> Res.string.navigation_layout_windows
             }
         },
         selected = layout,
         onSelect = { sharedPrefs.navigationLayout.tryEmit(it) },
-    )
-}
-
-@Composable
-private fun DeckModeTile(sharedPrefs: UiSettingsFlow) {
-    val deckMode by sharedPrefs.deckMode.collectAsState()
-    SettingsSwitchTile(
-        icon = MaterialSymbols.Dashboard,
-        title = Res.string.deck_mode,
-        description = Res.string.deck_mode_description,
-        checked = deckMode,
-        onCheckedChange = { sharedPrefs.deckMode.tryEmit(it) },
     )
 }
 

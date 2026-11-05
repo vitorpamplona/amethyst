@@ -294,7 +294,7 @@ private fun AppNavigation(
         rememberNav {
             accountSettings.openScreens.value
                 ?.let { NavBackStacks.decode(it) }
-                ?.takeIf { it.mode == layout && layout != NavigationLayoutType.STACK }
+                ?.takeIf { it.isSingleScreen && it.mode == layout }
         }
     LaunchedEffect(nav, layout) { nav.stacks.changeMode(layout) }
     LaunchedEffect(nav) {
@@ -352,7 +352,7 @@ private fun AppNavigation(
                 },
                 accountSwitcherContent = { AccountSwitchBottomSheet(accountViewModel, sessionManager) },
                 suspendEdgeSwipe = root::suspendEdgeSwipe,
-                deck = rememberDeck(accountViewModel, nav, root),
+                deck = rememberDeck(layout, accountViewModel, nav, root),
                 // Where the drawer docks: above the main screen and the panel beside it.
                 topStrip = if (nav.stacks.mode == NavigationLayoutType.TABS) ({ ScreenTabStrip(nav, accountViewModel) }) else null,
             ) {
@@ -404,20 +404,18 @@ private fun OpenFirstRoute(
 }
 
 /**
- * The deck's columns when the user turned the deck on and the window is wide enough for the
- * notification panel (about 1,200 dp); null otherwise. Each column gets the same screens as the
- * main navigation, built against the column's own back stack.
+ * The deck's columns in the deck layout, when the window is wide enough for the notification
+ * panel (about 1,200 dp); null otherwise, and a narrower window shows the plain stack. Each
+ * column gets the same screens as the main navigation, built against the column's own back stack.
  */
 @Composable
 private fun rememberDeck(
+    layout: NavigationLayoutType,
     accountViewModel: AccountViewModel,
     nav: Nav,
     root: AppRoot,
 ): (@Composable (Modifier) -> Unit)? {
-    val deckMode by accountViewModel.settings.uiSettingsFlow.deckMode
-        .collectAsState()
-    // The windows layout leaves arranging screens to the window manager.
-    if (!deckMode || nav.stacks.mode == NavigationLayoutType.WINDOWS || !LocalScreenLayout.current.hasRoomForNotificationPanel) return null
+    if (layout != NavigationLayoutType.DECK || !LocalScreenLayout.current.hasRoomForNotificationPanel) return null
     return remember(accountViewModel, nav, root) {
         { modifier ->
             DeckArea(

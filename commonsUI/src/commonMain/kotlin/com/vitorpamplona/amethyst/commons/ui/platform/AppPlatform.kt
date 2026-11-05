@@ -67,8 +67,8 @@ data class NostrConnectApp(
 interface AppPlatform {
     /**
      * The navigation layouts this front end offers in Settings › App; the stack is always first.
-     * Tabs and windows are for desktop-size front ends, so a phone offers only the stack and the
-     * setting is not shown.
+     * The deck needs a wide window and tabs and windows a desktop-size front end; with only the
+     * stack on offer the setting is not shown.
      */
     val navigationLayouts: List<NavigationLayoutType> get() = listOf(NavigationLayoutType.STACK)
 

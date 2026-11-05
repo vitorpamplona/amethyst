@@ -66,7 +66,7 @@ fun NavigationHost(
         animated = !nav.stacks.isSingleScreen || nav.shownEntries().size > 1,
         onBack = { nav.stacks.pop() },
         // A tab shows its back arrow only where the window is too narrow for the strip.
-        backArrows = nav.stacks.mode == NavigationLayoutType.STACK || (nav.stacks.mode == NavigationLayoutType.TABS && !nav.isDrawerDocked),
+        backArrows = !nav.stacks.isSingleScreen || (nav.stacks.mode == NavigationLayoutType.TABS && !nav.isDrawerDocked),
         modifier = modifier,
     )
 }

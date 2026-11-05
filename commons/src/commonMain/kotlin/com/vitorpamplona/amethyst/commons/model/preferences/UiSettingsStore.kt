@@ -134,6 +134,8 @@ class UiSettingsStore(
         val UI_SHOW_ONCHAIN_WALLET = booleanPreferencesKey("ui.show_onchain_wallet")
         val UI_SHOW_PAYTO_ZAP_CHIP = booleanPreferencesKey("ui.show_payto_zap_chip")
         val UI_SEARCH_ENGINE = stringPreferencesKey("ui.search_engine")
+
+        /** The deck switch from before [UI_NAVIGATION_LAYOUT]: read once, to start such a user in the deck layout. */
         val UI_DECK_MODE = booleanPreferencesKey("ui.deck_mode")
         val UI_SPELL_CHECK = stringPreferencesKey("ui.spell_check")
         val UI_NOTE_LAYOUT = stringPreferencesKey("ui.note_layout")
@@ -185,7 +187,6 @@ class UiSettingsStore(
                 showOnchainWallet = preferences[UI_SHOW_ONCHAIN_WALLET] ?: true,
                 showPayToZapChip = preferences[UI_SHOW_PAYTO_ZAP_CHIP] ?: true,
                 searchEngine = preferences[UI_SEARCH_ENGINE] ?: SearchEngines.DEFAULT.id,
-                deckMode = preferences[UI_DECK_MODE] ?: false,
                 spellCheck =
                     preferences[UI_SPELL_CHECK]?.let { name -> SpellCheckType.entries.firstOrNull { it.name == name } }
                         ?: SpellCheckType.AUTOMATIC,
@@ -196,9 +197,10 @@ class UiSettingsStore(
                     preferences[UI_DOWNLOAD_TRANSLATION_MODELS]?.let { name -> ConnectivityType.entries.firstOrNull { it.name == name } }
                         ?: ConnectivityType.WIFI_ONLY,
                 hideWalletBalances = preferences[UI_HIDE_WALLET_BALANCES] ?: false,
+                // Before the layout setting, the deck was a switch of its own: on, it is the deck layout now.
                 navigationLayout =
                     preferences[UI_NAVIGATION_LAYOUT]?.let { name -> NavigationLayoutType.entries.firstOrNull { it.name == name } }
-                        ?: NavigationLayoutType.STACK,
+                        ?: if (preferences[UI_DECK_MODE] == true) NavigationLayoutType.DECK else NavigationLayoutType.STACK,
             )
         }
 
@@ -242,7 +244,6 @@ class UiSettingsStore(
             preferences[UI_SHOW_ONCHAIN_WALLET] = sharedSettings.showOnchainWallet
             preferences[UI_SHOW_PAYTO_ZAP_CHIP] = sharedSettings.showPayToZapChip
             preferences[UI_SEARCH_ENGINE] = sharedSettings.searchEngine
-            preferences[UI_DECK_MODE] = sharedSettings.deckMode
             preferences[UI_SPELL_CHECK] = sharedSettings.spellCheck.name
             preferences[UI_NOTE_LAYOUT] = sharedSettings.noteLayout.name
             preferences[UI_DOWNLOAD_TRANSLATION_MODELS] = sharedSettings.automaticallyDownloadTranslationModels.name

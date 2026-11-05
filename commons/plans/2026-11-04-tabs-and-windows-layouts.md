@@ -67,6 +67,15 @@ every screen keep their types.
     Transient (`--login`) accounts save no settings, so theirs don't.
   - **Titles:** a top bar holding nothing but its caption is dropped while a tab or window
     already names the screen.
+- **Deck as a fourth layout:** the setting is now Stack · Deck · Tabs · Windows, and the deck's
+  own switch is gone.
+  - **Migration:** a stored `ui.deck_mode = true` loads as `DECK`.
+  - **Behaviour:** the deck's main screen is a plain stack (`changeMode(DECK)` keeps the
+    `STACK` mode). Its columns show only in the deck layout, on windows of about 1,200 dp and
+    up; narrower windows show the stack.
+  - **Shortcuts:** Cmd/Ctrl+T and +W now follow the layout, so the deck and tabs no longer
+    compete for them.
+  - **Android:** it offers Stack and Deck.
 - **Not built yet:** the singleton clean-up, Android windows, the account-session split
   (Phase 2b), and per-kind window identity for window-manager rules.
 

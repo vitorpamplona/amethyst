@@ -67,8 +67,6 @@ data class UiSettings(
     val showPayToZapChip: Boolean = true,
     // The browser omnibox's search engine, by [SearchEngines] id. Unknown ids fall back to the default.
     val searchEngine: String = SearchEngines.DEFAULT.id,
-    // Extra columns beside the main screen on wide windows (desktop, tablets, Chromebooks). Off by default.
-    val deckMode: Boolean = false,
     // Which engine underlines misspellings in the composers, on platforms that offer one (desktop).
     val spellCheck: SpellCheckType = SpellCheckType.AUTOMATIC,
     // How a note lays out its author: a picture column beside the text, or a header row above it.
@@ -77,17 +75,19 @@ data class UiSettings(
     // default: a feed full of languages would otherwise pull several of them over mobile data.
     val automaticallyDownloadTranslationModels: ConnectivityType = ConnectivityType.WIFI_ONLY,
     val hideWalletBalances: Boolean = false,
-    // How a desktop-size window opens screens: one stack (today), one screen per tab, or one per window.
+    // How a wide window arranges screens: one stack (today), deck columns, one screen per tab, or one per window.
     val navigationLayout: NavigationLayoutType = NavigationLayoutType.STACK,
 )
 
 /**
- * How screens open. [STACK] pushes them on one back stack; [TABS] gives each screen its own tab in
+ * How a window arranges several screens. [STACK] pushes them on one back stack. [DECK] adds columns
+ * beside it on wide windows, each with a stack of its own. [TABS] gives each screen its own tab in
  * the main pane and [WINDOWS] its own OS window, with no back button: they are closed instead.
  * Only desktop-size front ends offer the last two.
  */
 enum class NavigationLayoutType {
     STACK,
+    DECK,
     TABS,
     WINDOWS,
 }
