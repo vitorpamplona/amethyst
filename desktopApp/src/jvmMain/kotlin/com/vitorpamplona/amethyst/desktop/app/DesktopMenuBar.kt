@@ -42,9 +42,11 @@ import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.MenuScope
 import androidx.compose.ui.window.WindowPlacement
-import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
+import com.vitorpamplona.amethyst.commons.model.navigation.NavRequest
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.SingleScreenModel
+import com.vitorpamplona.amethyst.commons.model.navigation.TabsModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.deck_add_column
 import com.vitorpamplona.amethyst.commons.resources.deck_close_column
@@ -144,7 +146,7 @@ class DesktopNavigator {
         val window = focusedScreenWindow
         if (window != null && stacks.windows().any { it.id == window }) {
             stacks.close(window)
-        } else if (stacks.mode == NavigationLayoutType.TABS) {
+        } else if (stacks.model is TabsModel) {
             stacks.close(stacks.top.id)
         }
     }
@@ -256,11 +258,11 @@ private fun DesktopNavigator.run(
         Command.FOCUS_COLUMN_4, Command.FOCUS_COLUMN_5, Command.FOCUS_COLUMN_6,
         Command.FOCUS_COLUMN_7, Command.FOCUS_COLUMN_8, Command.FOCUS_COLUMN_9,
         -> DeckCommandBus.send(DeckCommand.FocusColumn(command.column))
-        Command.NEW_TAB -> stacks?.open(Route.Search(), forceNew = true)
+        Command.NEW_TAB -> stacks?.open(NavRequest(Route.Search(), forceNew = true))
         Command.CLOSE_TAB -> closeCurrentScreen()
-        Command.REOPEN_CLOSED -> stacks?.reopenClosed()
-        Command.NEXT_TAB -> stacks?.cycle(1)
-        Command.PREVIOUS_TAB -> stacks?.cycle(-1)
+        Command.REOPEN_CLOSED -> (stacks?.model as? SingleScreenModel)?.reopenClosed()
+        Command.NEXT_TAB -> (stacks?.model as? TabsModel)?.cycle(1)
+        Command.PREVIOUS_TAB -> (stacks?.model as? TabsModel)?.cycle(-1)
     }
 }
 
@@ -449,15 +451,16 @@ private fun MenuScope.ScreenWindowItems(
     navigator: DesktopNavigator,
     onQuit: () -> Unit,
 ) {
-    val stacks = navigator.stacks ?: return
+    val screens = navigator.stacks?.model as? SingleScreenModel ?: return
     val accountViewModel = navigator.accountViewModel ?: return
-    val tabs = stacks.mode == NavigationLayoutType.TABS
+    val tabsModel = screens as? TabsModel
+    val tabs = tabsModel != null
     Separator()
     Item(stringRes(Res.string.navigation_new_tab), shortcut = Command.NEW_TAB.shortcut) { navigator.run(Command.NEW_TAB, onQuit) }
     Item(stringRes(Res.string.navigation_close_tab), shortcut = Command.CLOSE_TAB.shortcut) { navigator.run(Command.CLOSE_TAB, onQuit) }
     Item(
         stringRes(if (tabs) Res.string.navigation_reopen_closed else Res.string.navigation_window_menu_reopen),
-        enabled = stacks.canReopen,
+        enabled = screens.canReopen,
         shortcut = Command.REOPEN_CLOSED.shortcut,
     ) { navigator.run(Command.REOPEN_CLOSED, onQuit) }
     if (tabs) {
@@ -465,18 +468,18 @@ private fun MenuScope.ScreenWindowItems(
         Item(stringRes(Res.string.navigation_previous_tab), shortcut = Command.PREVIOUS_TAB.shortcut) { navigator.run(Command.PREVIOUS_TAB, onQuit) }
     }
     val focused = navigator.focusedScreenWindow
-    if (focused != null && stacks.windows().any { it.id == focused && it.detached }) {
-        Item(stringRes(Res.string.navigation_window_menu_to_tab)) { stacks.setDetached(focused, false) }
+    if (focused != null && tabsModel != null && tabsModel.windows().any { it.id == focused }) {
+        Item(stringRes(Res.string.navigation_window_menu_to_tab)) { tabsModel.setDetached(focused, false) }
     }
     Separator()
     Item(stringRes(Res.string.navigation_window_menu_show_main)) { navigator.showMainWindow() }
     Item(stringRes(Res.string.navigation_window_menu_bring_all)) { navigator.bringAllToFront() }
-    val windows = stacks.windows()
+    val windows = screens.windows()
     if (windows.isNotEmpty()) {
-        Item(stringRes(Res.string.navigation_window_menu_close_all)) { windows.forEach { stacks.close(it.id) } }
+        Item(stringRes(Res.string.navigation_window_menu_close_all)) { windows.forEach { screens.close(it.id) } }
         Separator()
         windows.forEach { entry ->
-            Item(routeTitle(entry.route, accountViewModel)) { stacks.activate(entry.id) }
+            Item(routeTitle(entry.route, accountViewModel)) { screens.activate(entry.id) }
         }
     }
 }

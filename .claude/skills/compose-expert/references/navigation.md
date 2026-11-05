@@ -13,7 +13,10 @@ stack as plain snapshot state and `NavDisplay` renders it. There is no `NavContr
 | File | Role |
 |------|------|
 | `commons/…/model/navigation/Routes.kt` | `@Serializable sealed class Route`: every destination and its arguments |
-| `commons/…/model/navigation/NavBackStacks.kt` | `NavStackEntry`, `NavBackStacks`: the back stack and its rules (headless) |
+| `commons/…/model/navigation/NavBackStacks.kt` | `NavBackStacks`: the window's current `NavModel`, layout switches, saving (headless) |
+| `commons/…/model/navigation/NavModel.kt` | `NavModel` (one per `NavArrangement`), `SingleScreenModel` (tabs and windows: openers, close, reopen) |
+| `commons/…/model/navigation/StackModel.kt`, `TabsModel.kt`, `WindowsModel.kt` | The stack (and the deck's main screen), the tabs layout, the windows layout |
+| `commons/…/model/navigation/NavRequest.kt`, `NavStackEntry.kt` | `NavRequest` (route, kind, origin, background); `NavStackEntry`, `EntryIds` |
 | `commonsUI/…/ui/navigation/navs/Nav.kt` | `Nav`, the shared `INav` over `NavBackStacks`, plus `LocalNavStackEntry` |
 | `commonsUI/…/ui/navigation/navs/RememberNavs.kt` | `rememberNav()`: saves the back stack across config changes and process death |
 | `commonsUI/…/ui/navigation/navs/ImeSettler.kt` | Waits for the keyboard to close before every navigation |
@@ -28,10 +31,17 @@ stack as plain snapshot state and `NavDisplay` renders it. There is no `NavContr
 
 ## The back stack
 
-`NavBackStacks` holds two pieces of state:
+`NavBackStacks` holds one `NavModel`, picked by the layout (`NavigationLayoutType.arrangement()`;
+the deck is a stack). Every navigation is a `NavRequest` (`Push`, `Drawer`, `Section`,
+`Restart`, `Replace`, with an `origin` and a `background` flag) that the model reads its own
+way; `canGoBack`, `shown`, `retained` and `windows` tell the host what to draw. The stack layout's
+`StackModel` holds two pieces of state:
 
 - `stack`: what is on screen, bottom to top. It is never empty and starts at `Route.Home`.
 - `savedTabs`: the root entry of every bottom-bar tab the user left, keyed by its route.
+
+`TabsModel` and `WindowsModel` hold one screen per tab or window, closed rather than popped,
+with no back arrow.
 
 Each `NavStackEntry` has a unique `id`. Its `contentKey` (`"nav-$id"`) keys the screen's
 `rememberSaveable` state and its ViewModelStore, so the same route opened twice is two
@@ -46,14 +56,14 @@ screen:
 
 Operations (each one in `Nav` runs after `ImeSettler.settle()`):
 
-| `INav` call | `NavBackStacks` | Effect |
+| `INav` call | `NavRequest` kind | Effect in the stack layout |
 |-------------|-----------------|--------|
-| `nav(route)` | `push` | Pushes `route`, unless it is already on top |
-| `navDrawer(route)` | `push(drawerRoot = true)` | Same push, marked as a drawer screen |
-| `newStack(route)` | `newStack` | Drops the latest copy of `route` and everything above it, then shows it once. A same-class top takes the new arguments in place |
-| `popUpTo(route, klass)` | `popUpTo` | Drops the latest `klass` entry and everything above it, then pushes `route` |
-| `navBottomBar(route)` | `switchTab` | Drops pushes above the current tab root, keeps the left tab root in `savedTabs`, then restores `route`'s saved entry or opens it fresh |
-| `popBack()` | `pop` | Pops the top. The last entry is never popped |
+| `nav(route)` | `Push` | Pushes `route`, unless it is already on top |
+| `navDrawer(route)` | `Drawer` | Same push, marked as a drawer screen |
+| `newStack(route)` | `Restart` | Drops the latest copy of `route` and everything above it, then shows it once. A same-class top takes the new arguments in place |
+| `popUpTo(route, klass)` | `Replace(klass)` | Drops the latest `klass` entry and everything above it, then pushes `route` |
+| `navBottomBar(route)` | `Section` | Drops pushes above the current tab root, keeps the left tab root in `savedTabs`, then restores `route`'s saved entry or opens it fresh |
+| `popBack()` | `back()` | Pops the top. The last entry is never popped |
 
 `Route.Home` stays at the bottom, so back from any tab returns to Home and back from Home leaves
 the app. Nothing above a tab root is saved, so returning to a tab always lands on the tab itself.
@@ -116,6 +126,6 @@ re-delivered shares in place (`consumesSharesInPlace`) alone.
 ## Testing
 
 The back stack is plain state, so tests drive `NavBackStacks` and `Nav` with `runTest`, no
-Compose and no mocks: `NavBackStacksTest` (commons `commonTest`), and `NavBottomBarStackTest`,
+Compose and no mocks: `NavBackStacksTest` and `NavBackStacksLayoutsTest` (commons `commonTest`), and `NavBottomBarStackTest`,
 `NavDrawerTest`, `NavImeSettleTest`, `NavDestinationsTest` (commonsUI `commonTest`, package
 `com.vitorpamplona.amethyst.commons.ui.navigation`).

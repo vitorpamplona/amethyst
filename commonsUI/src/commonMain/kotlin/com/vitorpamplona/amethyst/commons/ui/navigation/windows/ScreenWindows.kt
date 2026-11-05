@@ -32,8 +32,11 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import com.vitorpamplona.amethyst.commons.model.navigation.NavRequest
 import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.SingleScreenModel
+import com.vitorpamplona.amethyst.commons.model.navigation.TabsModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.navigation_window_title
 import com.vitorpamplona.amethyst.commons.ui.app.AppRoot
@@ -70,14 +73,14 @@ fun ScreenWindows(
             val spec =
                 ScreenWindowSpec(
                     id = entry.id,
-                    openerId = nav.stacks.openerOf(entry)?.id,
+                    openerId = (nav.stacks.model as? SingleScreenModel)?.openerOf(entry)?.id,
                     kind = entry.route::class.simpleName ?: "",
                     title = stringRes(Res.string.navigation_window_title, routeTitle(entry.route, accountViewModel)),
                     focus =
-                        nav.stacks.windowFocus
+                        nav.stacks.model.windowFocus
                             ?.takeIf { it.id == entry.id }
                             ?.serial,
-                    isMovedOutTab = entry.detached,
+                    isMovedOutTab = nav.stacks.model is TabsModel,
                     onClose = { nav.stacks.close(entry.id) },
                 )
             root.ScreenWindow(spec) {
@@ -157,15 +160,15 @@ private class ScreenWindowNav(
     private val entry: NavStackEntry,
     private val main: Nav,
 ) : INav by main {
-    override fun nav(route: Route) = main.navFrom(entry.id, route)
+    override fun nav(route: Route) = main.open(NavRequest(route, origin = entry.id))
 
-    override fun nav(computeRoute: suspend () -> Route?) = main.navFrom(entry.id, computeRoute)
+    override fun nav(computeRoute: suspend () -> Route?) = main.open(NavRequest.Kind.Push, entry.id, computeRoute)
 
-    override fun navDrawer(route: Route) = main.navFrom(entry.id, route)
+    override fun navDrawer(route: Route) = main.open(NavRequest(route, NavRequest.Kind.Drawer, origin = entry.id))
 
-    override fun navDrawer(computeRoute: suspend () -> Route?) = main.navFrom(entry.id, computeRoute)
+    override fun navDrawer(computeRoute: suspend () -> Route?) = main.open(NavRequest.Kind.Drawer, entry.id, computeRoute)
 
-    override fun newStack(route: Route) = main.navFrom(entry.id, route)
+    override fun newStack(route: Route) = main.open(NavRequest(route, NavRequest.Kind.Restart, origin = entry.id))
 
     @Composable
     override fun canPop(): Boolean = false
@@ -174,14 +177,14 @@ private class ScreenWindowNav(
     override fun showsBottomBar(): Boolean = false
 
     override fun popBack() {
-        main.navigationScope.launch { main.stacks.close(entry.id) }
+        main.navigationScope.launch { main.stacks.back(entry) }
     }
 
     override fun <T : Route> popUpTo(
         route: Route,
         klass: KClass<T>,
     ) {
-        main.navigationScope.launch { main.stacks.replace(entry.id, route) }
+        main.open(NavRequest(route, NavRequest.Kind.Replace(klass), origin = entry.id))
     }
 }
 

@@ -76,6 +76,17 @@ every screen keep their types.
   - **Shortcuts:** Cmd/Ctrl+T and +W now follow the layout, so the deck and tabs no longer
     compete for them.
   - **Android:** it offers Stack and Deck.
+- **Refactor, one model per layout:** `NavBackStacks` holds a `NavModel`: `StackModel`,
+  `TabsModel` or `WindowsModel`. Tabs and windows share `SingleScreenModel` (openers, close,
+  reopen, attention and window focus).
+  - `NavigationLayoutType` (the user's choice) maps to `NavArrangement` (the model), so the model
+    never sees the deck.
+  - Every navigation is a `NavRequest` (`Push`, `Drawer`, `Section`, `Restart`, `Replace`, plus
+    origin and background). `Nav` turns the `INav` verbs into requests, and screen windows send
+    theirs with their own entry as the origin.
+  - What a screen means to one layout (pinned, moved out to a window) lives in that model, not
+    on `NavStackEntry`.
+  - Saving uses one serializable class per model.
 - **Not built yet:** the singleton clean-up, Android windows, the account-session split
   (Phase 2b), and per-kind window identity for window-manager rules.
 

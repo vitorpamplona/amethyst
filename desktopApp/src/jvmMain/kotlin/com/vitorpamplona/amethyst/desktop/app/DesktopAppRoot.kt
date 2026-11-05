@@ -293,11 +293,12 @@ class DesktopAppRoot(
 
         // A section asked for from a screen window, or a layout switch, brings the main window back.
         LaunchedEffect(nav) {
-            snapshotFlow { nav.stacks.windowFocus }.collect { focus ->
-                if (focus != null && nav.stacks.stack.any { it.id == focus.id && nav.stacks.isMainScreen(it) }) navigator.showMainWindow()
+            snapshotFlow { nav.stacks.model.windowFocus }.collect { focus ->
+                val model = nav.stacks.model
+                if (focus != null && model.entries.any { it.id == focus.id && model.isMainScreen(it) }) navigator.showMainWindow()
             }
         }
-        LaunchedEffect(nav.stacks.mode) { navigator.mainWindowVisible = true }
+        LaunchedEffect(nav.stacks.arrangement) { navigator.mainWindowVisible = true }
 
         DisposableEffect(nav, accountViewModel, destinations, settingsCatalog) {
             navigator.nav = nav

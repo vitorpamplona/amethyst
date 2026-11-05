@@ -36,7 +36,7 @@ import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
+import com.vitorpamplona.amethyst.commons.model.navigation.NavArrangement
 import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
@@ -67,9 +67,9 @@ fun NavigationHost(
         destinations = destinations,
         // Switching tabs or sections swaps the screen at once; only a stack slides and fades.
         animated = !nav.stacks.isSingleScreen || nav.shownEntries().size > 1,
-        onBack = { nav.stacks.pop() },
+        onBack = { nav.stacks.back() },
         // A tab shows its back arrow only where the window is too narrow for the strip.
-        backArrows = !nav.stacks.isSingleScreen || (nav.stacks.mode == NavigationLayoutType.TABS && !nav.isDrawerDocked),
+        backArrows = !nav.stacks.isSingleScreen || (nav.stacks.arrangement == NavArrangement.TABS && !nav.isDrawerDocked),
         modifier = modifier,
     )
 }

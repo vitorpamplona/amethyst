@@ -35,6 +35,54 @@ class NavBackStacksLayoutsTest {
 
     private fun windows() = NavBackStacks().apply { changeMode(NavigationLayoutType.WINDOWS) }
 
+    // The scenarios read in the user's terms; these reach the model of the layout in use.
+    private fun NavBackStacks.changeMode(layout: NavigationLayoutType) = changeArrangement(layout.arrangement())
+
+    private val NavBackStacks.tabsModel get() = model as TabsModel
+
+    private val NavBackStacks.single get() = model as SingleScreenModel
+
+    private fun NavBackStacks.tabs() = tabsModel.strip()
+
+    private fun NavBackStacks.open(
+        route: Route,
+        background: Boolean = false,
+        forceNew: Boolean = false,
+        openerId: Long? = null,
+    ) = open(NavRequest(route, origin = openerId, background = background, forceNew = forceNew))
+
+    private fun NavBackStacks.activate(id: Long) = single.activate(id)
+
+    private fun NavBackStacks.openerOf(entry: NavStackEntry) = single.openerOf(entry)
+
+    private val NavBackStacks.attention get() = single.attention
+
+    private val NavBackStacks.windowFocus get() = model.windowFocus
+
+    private val NavBackStacks.canReopen get() = single.canReopen
+
+    private fun NavBackStacks.reopenClosed() = single.reopenClosed()
+
+    private fun NavBackStacks.openedBy(id: Long) = single.openedBy(id)
+
+    private fun NavBackStacks.closeOpenedBy(id: Long) = single.closeOpenedBy(id)
+
+    private fun NavBackStacks.closeOthers(id: Long) = tabsModel.closeOthers(id)
+
+    private fun NavBackStacks.closeToTheRight(id: Long) = tabsModel.closeToTheRight(id)
+
+    private fun NavBackStacks.move(
+        id: Long,
+        delta: Int,
+    ) = tabsModel.move(id, delta)
+
+    private fun NavBackStacks.cycle(delta: Int) = tabsModel.cycle(delta)
+
+    private fun NavBackStacks.setDetached(
+        id: Long,
+        out: Boolean,
+    ) = tabsModel.setDetached(id, out)
+
     @Test
     fun eachScreenOpensAsATabNextToTheOneThatOpenedIt() {
         val stacks = tabs()
@@ -183,7 +231,7 @@ class NavBackStacksLayoutsTest {
 
         val restored = assertNotNull(NavBackStacks.decode(stacks.encode()))
 
-        assertEquals(NavigationLayoutType.TABS, restored.mode)
+        assertEquals(NavArrangement.TABS, restored.arrangement)
         assertEquals(Route.Note("n"), restored.topRoute)
         assertEquals(Route.Hashtag("nostr"), restored.openerOf(restored.top)?.route)
         assertNull(restored.windowFocus)
@@ -196,7 +244,7 @@ class NavBackStacksLayoutsTest {
         stacks.switchTab(Route.Message)
 
         assertEquals(listOf(Route.Home, Route.Message, Route.Note("n")), stacks.tabs().map { it.route })
-        assertTrue(stacks.tabs().take(2).all { it.pinned })
+        assertTrue(stacks.tabs().take(2).all { stacks.tabsModel.isPinned(it) })
     }
 
     @Test
@@ -311,9 +359,33 @@ class NavBackStacksLayoutsTest {
         stacks.push(Route.Note("n"))
         stacks.changeMode(NavigationLayoutType.DECK)
 
-        assertEquals(NavigationLayoutType.STACK, stacks.mode)
+        assertEquals(NavArrangement.STACK, stacks.arrangement)
         assertFalse(stacks.isSingleScreen)
         stacks.push(Route.Profile("p"))
         assertEquals(listOf(Route.Home, Route.Note("n"), Route.Profile("p")), stacks.routes())
+    }
+
+    @Test
+    fun aReplaceFromAWindowActsOnThatWindow() {
+        val stacks = windows()
+        stacks.push(Route.Note("a"))
+        stacks.push(Route.Note("b"))
+        val a = stacks.windows().first { it.route == Route.Note("a") }
+
+        stacks.open(NavRequest(Route.Note("a2"), NavRequest.Kind.Replace(Route.Note::class), origin = a.id))
+
+        assertEquals(listOf(Route.Note("a2"), Route.Note("b")), stacks.windows().map { it.route })
+        assertEquals(a.id, stacks.windows().first().id)
+    }
+
+    @Test
+    fun aRestartInTabsShowsTheOpenTabOrOpensOne() {
+        val stacks = tabs()
+        stacks.push(Route.Note("n"))
+        stacks.switchTab(Route.Home)
+        stacks.newStack(Route.Note("n"))
+
+        assertEquals(Route.Note("n"), stacks.topRoute)
+        assertEquals(2, stacks.tabs().size)
     }
 }

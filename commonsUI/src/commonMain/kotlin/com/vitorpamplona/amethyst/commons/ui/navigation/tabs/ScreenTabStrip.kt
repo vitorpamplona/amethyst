@@ -86,9 +86,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
+import com.vitorpamplona.amethyst.commons.model.navigation.NavRequest
 import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.TabsModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.navigation_close_tab
 import com.vitorpamplona.amethyst.commons.resources.navigation_new_tab
@@ -133,8 +134,9 @@ fun ScreenTabStrip(
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val stacks = nav.stacks
-    val tabs = stacks.tabs()
+    // The strip is the tabs model's view: nothing to draw in any other layout.
+    val stacks = nav.stacks.model as? TabsModel ?: return
+    val tabs = stacks.strip()
     val activeId = stacks.top.id
     val colors = MaterialTheme.colorScheme
 
@@ -144,7 +146,7 @@ fun ScreenTabStrip(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()) {
-                val pinnedCount = tabs.count { it.pinned }
+                val pinnedCount = tabs.count { stacks.isPinned(it) }
                 val unpinnedCount = (tabs.size - pinnedCount).coerceAtLeast(1)
                 val gaps = TabGap * (tabs.size - 1).coerceAtLeast(0)
                 val tabWidth = ((maxWidth - PinnedTabWidth * pinnedCount - gaps) / unpinnedCount).coerceIn(MinTabWidth, MaxTabWidth)
@@ -155,8 +157,8 @@ fun ScreenTabStrip(
                 LaunchedEffect(activeId, tabWidth, tabs.size) {
                     val index = tabs.indexOfFirst { it.id == activeId }
                     if (index < 0) return@LaunchedEffect
-                    val before = tabs.take(index).sumOf { (if (it.pinned) PinnedTabWidth else tabWidth).value.toDouble() + TabGap.value }
-                    val width = if (tabs[index].pinned) PinnedTabWidth else tabWidth
+                    val before = tabs.take(index).sumOf { (if (stacks.isPinned(it)) PinnedTabWidth else tabWidth).value.toDouble() + TabGap.value }
+                    val width = if (stacks.isPinned(tabs[index])) PinnedTabWidth else tabWidth
                     val start = with(density) { before.toFloat().dp.roundToPx() }
                     val end = start + with(density) { width.roundToPx() }
                     val viewport = scroll.viewportSize
@@ -176,7 +178,7 @@ fun ScreenTabStrip(
                         key(entry.id) {
                             ScreenTab(
                                 entry = entry,
-                                width = if (entry.pinned) PinnedTabWidth else tabWidth,
+                                width = if (stacks.isPinned(entry)) PinnedTabWidth else tabWidth,
                                 selected = entry.id == activeId,
                                 stacks = stacks,
                                 accountViewModel = accountViewModel,
@@ -186,7 +188,7 @@ fun ScreenTabStrip(
                 }
             }
             StripButton(MaterialSymbols.Add, stringRes(Res.string.navigation_new_tab)) {
-                stacks.open(Route.Search(), forceNew = true)
+                stacks.open(NavRequest(Route.Search(), forceNew = true))
             }
             TabListButton(stacks, accountViewModel)
         }
@@ -199,7 +201,7 @@ private fun ScreenTab(
     entry: NavStackEntry,
     width: Dp,
     selected: Boolean,
-    stacks: NavBackStacks,
+    stacks: TabsModel,
     accountViewModel: AccountViewModel,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -274,7 +276,7 @@ private fun ScreenTab(
             }.clickable { stacks.activate(entry.id) },
         contentAlignment = Alignment.CenterStart,
     ) {
-        if (entry.pinned) {
+        if (stacks.isPinned(entry)) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 TabIcon(entry.route, accountViewModel, selected)
             }
@@ -364,7 +366,7 @@ private fun SymbolIcon(
 @Composable
 private fun TabMenu(
     entry: NavStackEntry,
-    stacks: NavBackStacks,
+    stacks: TabsModel,
     expanded: Boolean,
     onDismiss: () -> Unit,
 ) {
@@ -377,8 +379,8 @@ private fun TabMenu(
 
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
         MenuItem(MaterialSymbols.Add, stringRes(Res.string.navigation_tab_duplicate), onDismiss) { stacks.duplicate(entry.id) }
-        MenuItem(MaterialSymbols.PushPin, stringRes(if (entry.pinned) Res.string.navigation_tab_unpin else Res.string.navigation_tab_pin), onDismiss) {
-            stacks.setPinned(entry.id, !entry.pinned)
+        MenuItem(MaterialSymbols.PushPin, stringRes(if (stacks.isPinned(entry)) Res.string.navigation_tab_unpin else Res.string.navigation_tab_pin), onDismiss) {
+            stacks.setPinned(entry.id, !stacks.isPinned(entry))
         }
         if (link != null) {
             MenuItem(MaterialSymbols.Link, stringRes(Res.string.navigation_tab_copy_link), onDismiss) { scope.launch { clipboard.setText(link) } }
@@ -420,7 +422,7 @@ private fun MenuItem(
 /** Every open tab in a menu, filtered by what the user types: the way to a tab once the strip scrolls. */
 @Composable
 private fun TabListButton(
-    stacks: NavBackStacks,
+    stacks: TabsModel,
     accountViewModel: AccountViewModel,
 ) {
     var open by remember { mutableStateOf(false) }
@@ -439,7 +441,7 @@ private fun TabListButton(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp).width(280.dp).focusRequester(searchFocus),
                 )
                 Column(Modifier.heightIn(max = 420.dp)) {
-                    stacks.tabs().forEach { entry ->
+                    stacks.strip().forEach { entry ->
                         key(entry.id) {
                             val title = routeTitle(entry.route, accountViewModel)
                             if (query.isBlank() || title.contains(query.trim(), ignoreCase = true)) {

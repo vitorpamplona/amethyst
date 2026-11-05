@@ -62,9 +62,9 @@ The app owns its back stack as snapshot state; `NavDisplay` only renders it. No
   `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/model/navigation/Routes.kt`.
   The back stack is saved through kotlinx-serialization, so every route argument must be
   serializable.
-- `NavBackStacks` (same package) holds `stack` (never empty, starts at `Route.Home`) and
-  `savedTabs` (the root entry of each bottom-bar tab you left, so its ViewModels and scroll
-  survive). A `NavStackEntry`'s `contentKey` is `"nav-$id"`: saved state and ViewModels key
+- `NavBackStacks` (same package) holds the window's `NavModel`: `StackModel` (`stack`, never
+  empty, starts at `Route.Home`; `savedTabs`, the root of each bottom-bar tab you left),
+  `TabsModel` or `WindowsModel`. Every navigation is a `NavRequest` the model reads its own way. A `NavStackEntry`'s `contentKey` is `"nav-$id"`: saved state and ViewModels key
   on it, so the same route opened twice is two screens.
 - `Nav` (`ui/navigation/navs/Nav.kt`) implements `INav`: `nav`, `navDrawer`, `newStack`,
   `navBottomBar`, `popBack`, `popUpTo`, each after the keyboard settles (`ImeSettler`).

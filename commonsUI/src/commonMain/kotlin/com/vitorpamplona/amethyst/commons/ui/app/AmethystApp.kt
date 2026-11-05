@@ -50,10 +50,13 @@ import com.vitorpamplona.amethyst.commons.appupdate.ui.AppUpdateHost
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.NavArrangement
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.arrangement
 import com.vitorpamplona.amethyst.commons.model.navigation.isSameRoute
 import com.vitorpamplona.amethyst.commons.model.navigation.lockScope
+import com.vitorpamplona.amethyst.commons.model.navigation.showsDeck
 import com.vitorpamplona.amethyst.commons.privacylock.LocalPrivacyLockState
 import com.vitorpamplona.amethyst.commons.privacylock.LockScope
 import com.vitorpamplona.amethyst.commons.relayClient.authCommand.compose.RelayAuthPromptHost
@@ -294,9 +297,9 @@ private fun AppNavigation(
         rememberNav {
             accountSettings.openScreens.value
                 ?.let { NavBackStacks.decode(it) }
-                ?.takeIf { it.isSingleScreen && it.mode == layout }
+                ?.takeIf { it.isSingleScreen && it.arrangement == layout.arrangement() }
         }
-    LaunchedEffect(nav, layout) { nav.stacks.changeMode(layout) }
+    LaunchedEffect(nav, layout) { nav.stacks.changeArrangement(layout.arrangement()) }
     LaunchedEffect(nav) {
         snapshotFlow { if (nav.stacks.isSingleScreen) nav.stacks.encode() else null }
             .debounce(OPEN_SCREENS_SAVE_DEBOUNCE_MS)
@@ -354,7 +357,7 @@ private fun AppNavigation(
                 suspendEdgeSwipe = root::suspendEdgeSwipe,
                 deck = rememberDeck(layout, accountViewModel, nav, root),
                 // Where the drawer docks: above the main screen and the panel beside it.
-                topStrip = if (nav.stacks.mode == NavigationLayoutType.TABS) ({ ScreenTabStrip(nav, accountViewModel) }) else null,
+                topStrip = if (nav.stacks.arrangement == NavArrangement.TABS) ({ ScreenTabStrip(nav, accountViewModel) }) else null,
             ) {
                 // Inside the providers, so the panel reads the window's layout (its hover tooltips are
                 // for large screens).
@@ -415,7 +418,7 @@ private fun rememberDeck(
     nav: Nav,
     root: AppRoot,
 ): (@Composable (Modifier) -> Unit)? {
-    if (layout != NavigationLayoutType.DECK || !LocalScreenLayout.current.hasRoomForNotificationPanel) return null
+    if (!layout.showsDeck || !LocalScreenLayout.current.hasRoomForNotificationPanel) return null
     return remember(accountViewModel, nav, root) {
         { modifier ->
             DeckArea(
