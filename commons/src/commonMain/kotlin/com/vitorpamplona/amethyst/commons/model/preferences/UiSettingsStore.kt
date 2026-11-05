@@ -30,6 +30,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.commons.browser.SearchEngines
 import com.vitorpamplona.amethyst.commons.model.AccentColorType
 import com.vitorpamplona.amethyst.commons.model.BooleanType
+import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
 import com.vitorpamplona.amethyst.commons.model.ConnectivityType
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
@@ -138,6 +139,7 @@ class UiSettingsStore(
         val UI_NOTE_LAYOUT = stringPreferencesKey("ui.note_layout")
         val UI_DOWNLOAD_TRANSLATION_MODELS = stringPreferencesKey("ui.download_translation_models")
         val UI_HIDE_WALLET_BALANCES = booleanPreferencesKey("ui.hide_wallet_balances")
+        val UI_CHAT_LAYOUT = stringPreferencesKey("ui.chat_layout")
 
         /**
          * Every setting's default matches what the old `getBoolean(key, default)`
@@ -194,6 +196,9 @@ class UiSettingsStore(
                     preferences[UI_DOWNLOAD_TRANSLATION_MODELS]?.let { name -> ConnectivityType.entries.firstOrNull { it.name == name } }
                         ?: ConnectivityType.WIFI_ONLY,
                 hideWalletBalances = preferences[UI_HIDE_WALLET_BALANCES] ?: false,
+                chatLayout =
+                    preferences[UI_CHAT_LAYOUT]?.let { name -> ChatLayoutType.entries.firstOrNull { it.name == name } }
+                        ?: ChatLayoutType.BUBBLES,
             )
         }
 
@@ -242,6 +247,7 @@ class UiSettingsStore(
             preferences[UI_NOTE_LAYOUT] = sharedSettings.noteLayout.name
             preferences[UI_DOWNLOAD_TRANSLATION_MODELS] = sharedSettings.automaticallyDownloadTranslationModels.name
             preferences[UI_HIDE_WALLET_BALANCES] = sharedSettings.hideWalletBalances
+            preferences[UI_CHAT_LAYOUT] = sharedSettings.chatLayout.name
         }
 
         /**

@@ -34,6 +34,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
@@ -48,6 +50,9 @@ import com.vitorpamplona.amethyst.commons.chats.ui.ChatSystemCaption
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
+import com.vitorpamplona.amethyst.commons.ui.screen.DisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
@@ -60,7 +65,8 @@ import kotlin.test.assertTrue
 
 /**
  * Renders a group chat offscreen (no device, no display) through `ImageComposeScene`, in the dark and
- * light themes side by side, and writes it to `commonsUI/build/chat-screen/chat.png`.
+ * light themes side by side, once per [ChatLayoutType], and writes them to
+ * `commonsUI/build/chat-screen/chat.png` (bubbles), `chat-compact.png` and `chat-open.png`.
  *
  * Bubbles, dividers, the rename caption, reaction chips and the send button are the real shared
  * composables. The header row, the bubble footer and the faces are stand-ins with the same geometry
@@ -71,7 +77,18 @@ class ChatScreenRenderTest {
     private val outDir = File("build/chat-screen").apply { mkdirs() }
 
     @Test
-    fun chat() {
+    fun chat() = render(ChatLayoutType.BUBBLES, "chat.png")
+
+    @Test
+    fun chatCompact() = render(ChatLayoutType.COMPACT, "chat-compact.png")
+
+    @Test
+    fun chatOpen() = render(ChatLayoutType.OPEN, "chat-open.png")
+
+    private fun render(
+        layout: ChatLayoutType,
+        fileName: String,
+    ) {
         val density = 2f
         val widthDp = 840
         val heightDp = 1040
@@ -80,7 +97,11 @@ class ChatScreenRenderTest {
                 width = (widthDp * density).toInt(),
                 height = (heightDp * density).toInt(),
                 density = Density(density),
-            ) { ThemeComparisonRow { SampleGroupChat() } }
+            ) {
+                CompositionLocalProvider(LocalDisplaySettings provides DisplaySettings(chatLayout = layout)) {
+                    ThemeComparisonRow { SampleGroupChat() }
+                }
+            }
         try {
             var image = scene.render(0)
             repeat(SETTLE_FRAMES) { frame ->
@@ -88,7 +109,7 @@ class ChatScreenRenderTest {
                 image = scene.render((frame + 1) * FRAME_MILLIS * 1_000_000L)
             }
             val png = image.encodeToData(EncodedImageFormat.PNG) ?: error("could not encode")
-            File(outDir, "chat.png").writeBytes(png.bytes)
+            File(outDir, fileName).writeBytes(png.bytes)
 
             val pixels = image.peekPixels() ?: error("no pixels")
             val distinct = HashSet<Int>()
@@ -106,6 +127,7 @@ class ChatScreenRenderTest {
 }
 
 private const val OUTPOST = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9"
+private const val ME = "7e2c55aa10b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d"
 private const val DAVID = "3f9e2d1c0b0a99887766554433221100ffeeddccbbaa99887766554433221100"
 
 @Composable
@@ -171,6 +193,7 @@ private fun Bubble(
     author: Pair<String, String>? = null,
     faceColor: Color = Color.Gray,
     fire: Boolean = false,
+    quote: Pair<Pair<String, String>?, String>? = null,
 ) {
     val isLight = MaterialTheme.colorScheme.isLight
     ChatBubbleLayout(
@@ -189,13 +212,42 @@ private fun Bubble(
                 null
             },
         footerRow = time?.let { { Footer(it, mine) } },
+        // Like DrawAuthorInfo, it can name the user too: the compact layout names every line.
         drawAuthorLine = {
-            author?.let { (hex, name) ->
-                Text(name, color = authorNameColorFor(hex, isLight), fontWeight = ChatAuthorNameWeight, fontSize = ChatAuthorNameSize)
-            }
+            val (hex, name) = author ?: (ME to "Me")
+            Text(name, color = authorNameColorFor(hex, isLight), fontWeight = ChatAuthorNameWeight, fontSize = ChatAuthorNameSize)
         },
         authorAvatar = if (author != null) ({ Face(faceColor) }) else null,
-    ) { Text(text) }
+    ) { bgColor ->
+        Column {
+            quote?.let { (quoted, quotedText) -> Quote(quoted, quotedText, bgColor) }
+            Text(text)
+        }
+    }
+}
+
+/** A quoted reply, the way `RenderReply` nests one message inside another. */
+@Composable
+private fun Quote(
+    author: Pair<String, String>?,
+    text: String,
+    parentBackgroundColor: MutableState<Color>,
+) {
+    val isLight = MaterialTheme.colorScheme.isLight
+    ChatBubbleLayout(
+        isLoggedInUser = author == null,
+        isDraft = false,
+        innerQuote = true,
+        drawAuthorInfo = author != null,
+        parentBackgroundColor = parentBackgroundColor,
+        onClick = { true },
+        onAuthorClick = {},
+        actionMenu = {},
+        drawAuthorLine = {
+            val (hex, name) = author ?: (ME to "Me")
+            Text(name, color = authorNameColorFor(hex, isLight), fontWeight = ChatAuthorNameWeight, fontSize = ChatAuthorNameSize)
+        },
+    ) { Text(text, style = MaterialTheme.typography.bodySmall, maxLines = 2) }
 }
 
 @Composable
@@ -234,7 +286,13 @@ private fun SampleGroupChat() {
             author = OUTPOST to "Relay Outpost",
             faceColor = Color(0xFF5A5A5A),
         )
-        Bubble("Delete the past scammers", mine = true, time = "8:59", fire = true)
+        Bubble(
+            "Delete the past scammers",
+            mine = true,
+            time = "8:59",
+            fire = true,
+            quote = (OUTPOST to "Relay Outpost") to "to prevent random users or bots out of network from sliding in DMs?",
+        )
         Bubble(
             "Big fat red alert next to the accounts that need it.",
             mine = false,
