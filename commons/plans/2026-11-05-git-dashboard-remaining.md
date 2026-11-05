@@ -64,8 +64,9 @@ Then finished (same day):
   and both menus draw the same `GitRefMenuItem` rows.
 - "push negotiation failed" was the container's global `push.negotiate=true`: plain git 2.43
   prints it against a local bare repository too. The e2e's git helper turns it off.
-- quartz comes from a JitPack build of its NIP-34 branch merged with 2.16.0 (`quartzJitpack` in the
-  catalog, substituted for every quartz dependency, the bindings' included). Quartz's
+- quartz comes from a JitPack build of quartz `main` after vitorpamplona/quartz#94 merged the NIP-34
+  work onto 2.16.0 (`quartzJitpack` in the catalog, substituted for every quartz dependency, the
+  bindings' included). Once a release carries it, empty `quartzJitpack` and bump `quartzKmp`. Quartz's
   `jitpack.yml` now publishes the Android variant, which JitPack builds lacked.
 - A read-only login (an npub) no longer sees Close, Reopen or Merge: the status buttons now need a
   signing account, like Review, comments and triage.
