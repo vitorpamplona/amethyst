@@ -94,6 +94,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
@@ -101,7 +102,13 @@ import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.gitThreadRootId
+import com.vitorpamplona.quartz.nip34Git.review.GitCodeLocation
+import com.vitorpamplona.quartz.nip34Git.review.reviewedCommit
+import com.vitorpamplona.quartz.nip34Git.review.reviewedFile
+import com.vitorpamplona.quartz.nip34Git.review.reviewedLines
+import com.vitorpamplona.quartz.nip34Git.review.tags.ReviewedLinesTag
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
@@ -175,6 +182,9 @@ open class CommentPostViewModel :
 
     var externalIdentity by mutableStateOf<ExternalId?>(null)
     var replyingTo: Note? by mutableStateOf(null)
+
+    /** For an inline code review: the file, commit and lines of the diff this comment is about. */
+    var reviewLocation: GitCodeLocation? by mutableStateOf(null)
 
     /** The geohash channel this comment is scoped to, or null when it isn't a geo-post. */
     val geohashScope: String?
@@ -692,6 +702,19 @@ open class CommentPostViewModel :
                     // the event being replied to; a no-op for non-group comments.
                     replyingToEvent?.groupId()?.let { hTag(it) }
 
+                    // An inline review comment, as gitworkshop writes it: the file, the commit
+                    // the lines are read at, the lines (`del` for removed ones), and each
+                    // maintainer's repository, so it is found under every coordinate.
+                    reviewLocation?.let { location ->
+                        reviewedFile(location.path)
+                        location.commit?.let { reviewedCommit(it) }
+                        location.startLine?.let { start -> reviewedLines(ReviewedLinesTag(start, location.endLine ?: start, location.removedSide)) }
+                        replyingToEvent?.let { item ->
+                            LocalCache.gitAuthority.coordinatesToTag(item).forEach { add(QAddressableTag.assemble(it, null)) }
+                        }
+                        alt("Inline code review comment on ${location.path}")
+                    }
+
                     val notifyPTags = tagger.pTags?.let { pTagList -> pTagList.map { it.toPTag() } } ?: emptyList()
 
                     val extraNotificationAuthors =
@@ -885,6 +908,7 @@ open class CommentPostViewModel :
 
     open fun cancel() {
         draftTag.rotate()
+        reviewLocation = null
 
         message.setTextAndPlaceCursorAtEnd("")
 

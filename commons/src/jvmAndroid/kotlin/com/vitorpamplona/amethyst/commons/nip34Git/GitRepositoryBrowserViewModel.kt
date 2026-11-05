@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.nip34Git
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.nip34Git.state.GitSignedState
+import com.vitorpamplona.quartz.nip34Git.git.GitBlame
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
+import com.vitorpamplona.quartz.nip34Git.git.GitContentMatch
 import com.vitorpamplona.quartz.nip34Git.git.GitHttpClient
 import com.vitorpamplona.quartz.nip34Git.git.GitHttpException
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
@@ -238,6 +240,25 @@ class GitRepositoryBrowserViewModel(
 
     /** Recent commits ending at the snapshot's tip, most recent first. */
     suspend fun loadHistory(snapshot: GitRepoSnapshot): List<GitCommit> = withContext(Dispatchers.IO) { client.loadHistory(snapshot.cloneUrl, snapshot.headCommit) }
+
+    /** The commits that changed the file at [path] (segments) before the snapshot's tip, newest first. */
+    suspend fun fileHistory(
+        snapshot: GitRepoSnapshot,
+        path: List<String>,
+    ): List<GitCommit> = withContext(Dispatchers.IO) { client.files.history(snapshot.cloneUrl, snapshot.headCommit, path).map { it.commit } }
+
+    /** Who last changed each line of the file at [path], or null when it has no history here. */
+    suspend fun blame(
+        snapshot: GitRepoSnapshot,
+        path: List<String>,
+    ): GitBlame? = withContext(Dispatchers.IO) { client.files.blame(snapshot.cloneUrl, snapshot.headCommit, path) }
+
+    /** Lines of the snapshot's files that contain [query], fetched in batches ([GitRepoSnapshot.searchContents]). */
+    suspend fun searchContents(
+        snapshot: GitRepoSnapshot,
+        query: String,
+        onProgress: (read: Int, total: Int) -> Unit,
+    ): List<GitContentMatch> = withContext(Dispatchers.IO) { snapshot.searchContents(query, onProgress = onProgress) }
 
     /** The diff a commit introduced (commit vs its first parent). */
     suspend fun commitDiff(

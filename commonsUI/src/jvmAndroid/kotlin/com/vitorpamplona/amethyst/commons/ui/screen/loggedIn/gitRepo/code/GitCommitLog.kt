@@ -81,14 +81,17 @@ fun GitCommitLog(
     snapshot: GitRepoSnapshot,
     viewModel: GitRepositoryBrowserViewModel,
     onBack: () -> Unit,
+    /** A file's history instead of the branch's: [title] heads it, [path] picks the commits. */
+    title: String? = null,
+    path: List<String>? = null,
 ) {
-    var openCommit by rememberSaveable(snapshot.headCommit) { mutableStateOf<String?>(null) }
+    var openCommit by rememberSaveable(snapshot.headCommit, path) { mutableStateOf<String?>(null) }
 
     val history by
-        produceState<Result<List<GitCommit>>?>(null, snapshot.headCommit) {
+        produceState<Result<List<GitCommit>>?>(null, snapshot.headCommit, path) {
             value =
                 try {
-                    Result.success(viewModel.loadHistory(snapshot))
+                    Result.success(if (path != null) viewModel.fileHistory(snapshot, path) else viewModel.loadHistory(snapshot))
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -116,7 +119,7 @@ fun GitCommitLog(
 
     PlatformBackHandler { onBack() }
     Column(Modifier.fillMaxSize()) {
-        LogHeader(title = stringRes(Res.string.git_repo_commits), onBack = onBack)
+        LogHeader(title = title ?: stringRes(Res.string.git_repo_commits), onBack = onBack)
         HorizontalDivider(thickness = 0.5.dp)
         when {
             history == null -> GitLoadingBox(stringRes(Res.string.git_repo_code_loading))

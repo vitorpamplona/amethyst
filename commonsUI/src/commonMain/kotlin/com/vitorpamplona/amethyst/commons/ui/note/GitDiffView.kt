@@ -24,13 +24,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,7 +45,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -60,6 +66,9 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_diff_binary
 import com.vitorpamplona.amethyst.commons.resources.git_diff_files_changed
+import com.vitorpamplona.amethyst.commons.resources.git_diff_split
+import com.vitorpamplona.amethyst.commons.resources.git_diff_unified
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.quartz.nip34Git.patch.CharSpan
 import com.vitorpamplona.quartz.nip34Git.patch.GitDiffFile
@@ -77,8 +86,9 @@ private val DeleteColor = Color(0xFFCF222E)
 private val DiffFontSize = 12.sp
 private val DiffLineHeight = 17.sp
 
-// Above this many diff lines we skip per-line syntax highlighting to stay snappy.
-private const val HIGHLIGHT_LINE_BUDGET = 600
+// A file with more diff lines than this is shown without syntax highlighting: highlighting runs
+// per line as a file opens, and only opened files pay for it.
+private const val FILE_HIGHLIGHT_LIMIT = 1500
 
 /**
  * Renders a parsed [ParsedPatch] as a GitHub-style file-by-file diff: a stat
@@ -90,15 +100,27 @@ private const val HIGHLIGHT_LINE_BUDGET = 600
 fun GitDiffView(
     parsed: ParsedPatch,
     modifier: Modifier = Modifier,
+    /** Tapping a line: to comment on it (a review). Null when lines can't be commented on. */
+    onLineClick: ((GitDiffFile, GitDiffLine) -> Unit)? = null,
+    /** Drawn under each line: the review comments on it, when there are any. */
+    lineAnnotations: (@Composable (GitDiffFile, GitDiffLine) -> Unit)? = null,
 ) {
     if (!parsed.hasDiff) return
-    val highlightEnabled =
-        remember(parsed) { parsed.files.sumOf { f -> f.hunks.sumOf { it.lines.size } } <= HIGHLIGHT_LINE_BUDGET }
+    // Side by side needs the width of a large window; a phone keeps the unified view.
+    val wide = LocalScreenLayout.current.isLargeScreen
+    var split by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        GitDiffStatSummary(parsed)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { GitDiffStatSummary(parsed) }
+            if (wide) {
+                FilterChip(selected = !split, onClick = { split = false }, label = { Text(stringResource(Res.string.git_diff_unified)) })
+                Spacer(Modifier.width(6.dp))
+                FilterChip(selected = split, onClick = { split = true }, label = { Text(stringResource(Res.string.git_diff_split)) })
+            }
+        }
         parsed.files.forEach { file ->
-            DiffFileCard(file, highlightEnabled)
+            DiffFileCard(file, split && wide, onLineClick, lineAnnotations)
         }
     }
 }
@@ -128,8 +150,11 @@ private const val FOLD_LINES = 200
 @Composable
 private fun DiffFileCard(
     file: GitDiffFile,
-    highlightEnabled: Boolean,
+    split: Boolean,
+    onLineClick: ((GitDiffFile, GitDiffLine) -> Unit)?,
+    lineAnnotations: (@Composable (GitDiffFile, GitDiffLine) -> Unit)?,
 ) {
+    val highlightEnabled = remember(file) { file.hunks.sumOf { it.lines.size } <= FILE_HIGHLIGHT_LIMIT }
     // A long file starts folded, so one generated lockfile doesn't bury the rest of the change.
     var expanded by rememberSaveable(file.displayPath) { mutableStateOf(file.hunks.sumOf { it.lines.size } <= FOLD_LINES) }
     val language = remember(file.displayPath) { CodeHighlighter.languageForFile(file.displayPath) }
@@ -183,14 +208,44 @@ private fun DiffFileCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(12.dp),
                 )
-            } else {
+            } else if (split) {
                 val gutterWidth = remember(file) { gutterWidthFor(file) }
-                Column(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                Column(Modifier.fillMaxWidth()) {
                     file.hunks.forEach { hunk ->
                         HunkHeaderRow(hunk.header)
                         val emphasis = remember(hunk) { IntralineDiff.emphasis(hunk.lines) }
-                        hunk.lines.forEachIndexed { index, line ->
-                            DiffLineRow(line, gutterWidth, language.takeIf { highlightEnabled }, darkMode, emphasis[index])
+                        val rows = remember(hunk) { splitRows(hunk.lines) }
+                        rows.forEach { (left, right) ->
+                            Row(Modifier.fillMaxWidth()) {
+                                SplitCell(file, left, true, emphasis, hunk.lines, gutterWidth, language.takeIf { highlightEnabled }, darkMode, onLineClick, Modifier.weight(1f))
+                                SplitCell(file, right, false, emphasis, hunk.lines, gutterWidth, language.takeIf { highlightEnabled }, darkMode, onLineClick, Modifier.weight(1f))
+                            }
+                            // Comments on either side, under the pair.
+                            lineAnnotations?.let { annotate ->
+                                left?.let { annotate(file, it) }
+                                right?.takeIf { it !== left }?.let { annotate(file, it) }
+                            }
+                        }
+                    }
+                }
+            } else {
+                val gutterWidth = remember(file) { gutterWidthFor(file) }
+                Column(Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                        file.hunks.forEach { hunk ->
+                            HunkHeaderRow(hunk.header)
+                            val emphasis = remember(hunk) { IntralineDiff.emphasis(hunk.lines) }
+                            hunk.lines.forEachIndexed { index, line ->
+                                DiffLineRow(
+                                    line,
+                                    gutterWidth,
+                                    language.takeIf { highlightEnabled },
+                                    darkMode,
+                                    emphasis[index],
+                                    onClick = onLineClick?.let { { it(file, line) } },
+                                )
+                                lineAnnotations?.invoke(file, line)
+                            }
                         }
                     }
                 }
@@ -224,6 +279,10 @@ private fun DiffLineRow(
     language: SyntaxLanguage?,
     darkMode: Boolean,
     emphasis: CharSpan?,
+    onClick: (() -> Unit)? = null,
+    showOld: Boolean = true,
+    showNew: Boolean = true,
+    modifier: Modifier = Modifier,
 ) {
     val background =
         when (line.type) {
@@ -274,11 +333,14 @@ private fun DiffLineRow(
         }
 
     Row(
-        modifier = Modifier.background(background),
+        modifier =
+            modifier
+                .background(background)
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         verticalAlignment = Alignment.Top,
     ) {
-        LineNumber(line.oldNumber, gutterWidth, numberColor)
-        LineNumber(line.newNumber, gutterWidth, numberColor)
+        if (showOld) LineNumber(line.oldNumber, gutterWidth, numberColor)
+        if (showNew) LineNumber(line.newNumber, gutterWidth, numberColor)
         Text(
             text = marker,
             fontFamily = FontFamily.Monospace,
@@ -298,6 +360,62 @@ private fun DiffLineRow(
             modifier = Modifier.padding(start = 4.dp, end = 12.dp),
         )
     }
+}
+
+/**
+ * The rows of a side-by-side hunk: an unchanged line on both sides, and each run of removed lines
+ * beside the added lines that replace it, padded with blanks where one side is longer.
+ */
+private fun splitRows(lines: List<GitDiffLine>): List<Pair<GitDiffLine?, GitDiffLine?>> {
+    val rows = ArrayList<Pair<GitDiffLine?, GitDiffLine?>>()
+    var i = 0
+    while (i < lines.size) {
+        val line = lines[i]
+        if (line.type == GitDiffLineType.CONTEXT) {
+            rows.add(line to line)
+            i++
+            continue
+        }
+        val deleted = ArrayList<GitDiffLine>()
+        while (i < lines.size && lines[i].type == GitDiffLineType.DELETE) deleted.add(lines[i++])
+        val added = ArrayList<GitDiffLine>()
+        while (i < lines.size && lines[i].type == GitDiffLineType.ADD) added.add(lines[i++])
+        for (k in 0 until maxOf(deleted.size, added.size)) rows.add(deleted.getOrNull(k) to added.getOrNull(k))
+    }
+    return rows
+}
+
+/** One side of a side-by-side row: the old side shows old numbers, the new side new ones. */
+@Composable
+private fun SplitCell(
+    file: GitDiffFile,
+    line: GitDiffLine?,
+    oldSide: Boolean,
+    emphasis: Map<Int, CharSpan>,
+    hunkLines: List<GitDiffLine>,
+    gutterWidth: Dp,
+    language: SyntaxLanguage?,
+    darkMode: Boolean,
+    onLineClick: ((GitDiffFile, GitDiffLine) -> Unit)?,
+    modifier: Modifier,
+) {
+    if (line == null) {
+        Box(modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f)).height(with(LocalDensity.current) { DiffLineHeight.toDp() }))
+        return
+    }
+    val index = hunkLines.indexOf(line)
+    // An unchanged line is drawn on both sides; each shows its own number.
+    DiffLineRow(
+        line,
+        gutterWidth,
+        language,
+        darkMode,
+        emphasis[index],
+        onClick = onLineClick?.let { { it(file, line) } },
+        showOld = oldSide,
+        showNew = !oldSide,
+        modifier = modifier.clipToBounds(),
+    )
 }
 
 @Composable

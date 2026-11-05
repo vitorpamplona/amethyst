@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_timeline_patch_revision
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_pushed
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_pushed_rebased
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_renamed
+import com.vitorpamplona.amethyst.commons.resources.git_timeline_reviewed
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_set_status
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.GitStatusPill
@@ -96,6 +97,7 @@ import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
+import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 
 private val LabelShape = RoundedCornerShape(6.dp)
@@ -113,7 +115,9 @@ fun isGitTimelineEvent(event: Event?): Boolean =
         // The rest of a patch series and its revisions: pushes, not posts.
         event is GitPatchEvent ||
         // A NIP-34 rename (`#subject`); other labels never link into a thread.
-        (event is LabelEvent && event.subjectEdit() != null)
+        (event is LabelEvent && event.subjectEdit() != null) ||
+        // A review verdict (gitworkshop's 7321).
+        event is GitReviewEvent
 
 /**
  * Cover notes (1624) are versions of the item's summary: the item shows the current one and its
@@ -138,7 +142,38 @@ fun GitThreadTimelineRow(
         is GitPullRequestUpdateEvent -> UpdateRow(event, baseNote, modifier, background, accountViewModel, nav)
         is GitPatchEvent -> PatchRow(event, baseNote, modifier, background, accountViewModel, nav)
         is LabelEvent -> RenameRow(event, baseNote, modifier, background, accountViewModel, nav)
+        is GitReviewEvent -> ReviewRow(event, baseNote, modifier, background, accountViewModel, nav)
         else -> {}
+    }
+}
+
+/** "reviewed · Changes required", with the reviewer's summary under it. A verdict decides nothing: anyone may give one. */
+@Composable
+private fun ReviewRow(
+    event: GitReviewEvent,
+    baseNote: Note,
+    modifier: Modifier,
+    background: Color,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val verdict = event.verdict()
+    TimelineRowLayout(
+        baseNote = baseNote,
+        modifier = modifier,
+        background = background,
+        symbol = if (verdict == GitReviewEvent.Verdict.ACK || verdict == GitReviewEvent.Verdict.CONCEPT_ACK) MaterialSymbols.CheckCircle else MaterialSymbols.Gavel,
+        container = MaterialTheme.colorScheme.surfaceVariant,
+        content = MaterialTheme.colorScheme.onSurfaceVariant,
+        action = stringRes(Res.string.git_timeline_reviewed),
+        authorised = true,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        inline = { verdict?.let { Text(verdictLabel(it), style = MaterialTheme.typography.labelMedium, color = verdictColor(it)) } },
+    ) {
+        if (event.content.isNotBlank()) {
+            Text(text = event.content, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
+        }
     }
 }
 

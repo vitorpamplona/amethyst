@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCardButtonHeight
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCardButtonPadding
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitReviewHooks
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_pr_changes_retry
@@ -86,6 +87,7 @@ fun GitPullRequestChanges(
     headCommit: String?,
     mergeBase: String?,
     accountViewModel: AccountViewModel,
+    review: GitReviewHooks? = null,
 ) {
     val candidates = remember(cloneUrls) { candidateUrls(cloneUrls) }
     if (candidates.isEmpty() || headCommit.isNullOrBlank()) return
@@ -146,7 +148,7 @@ fun GitPullRequestChanges(
         is ChangesState.Loaded ->
             if (s.patch.hasDiff) {
                 Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-                    GitDiffView(s.patch, Modifier.fillMaxWidth())
+                    GitDiffView(s.patch, Modifier.fillMaxWidth(), review?.onLineClick, review?.lineAnnotations)
                 }
             } else {
                 Text(

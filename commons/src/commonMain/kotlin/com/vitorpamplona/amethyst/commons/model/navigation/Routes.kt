@@ -1299,6 +1299,11 @@ sealed class Route {
         val replyTo: String? = null,
         val quote: String? = null,
         val draft: String? = null,
+        /** An inline code review: the file, commit and lines of a pull request's diff it is about. */
+        val reviewPath: String? = null,
+        val reviewCommit: String? = null,
+        val reviewLine: Int? = null,
+        val reviewRemovedSide: Boolean = false,
     ) : Route()
 
     @Serializable

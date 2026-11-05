@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.AudienceSelection
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCodeLocationBanner
 import com.vitorpamplona.amethyst.commons.nip72ModCommunities.ui.CommunityRulesViolationBanner
 import com.vitorpamplona.amethyst.commons.relayClient.communities.CommunityFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -123,6 +124,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPickerButton
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip34Git.review.GitCodeLocation
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -135,6 +137,7 @@ fun ReplyCommentPostScreen(
     attachment: String? = null,
     quoteId: HexKey? = null,
     draftId: HexKey? = null,
+    reviewLocation: GitCodeLocation? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -147,6 +150,7 @@ fun ReplyCommentPostScreen(
         replyId?.let { LocalCache.getNoteIfExists(it) }?.let {
             postViewModel.reply(it)
         }
+        reviewLocation?.let { postViewModel.reviewLocation = it }
         draftId?.let { LocalCache.getNoteIfExists(it) }?.let {
             postViewModel.editFromDraft(it)
         }
@@ -300,6 +304,10 @@ private fun GenericCommentPostBody(
                             Spacer(modifier = StdVertSpacer)
                         }
                     }
+                }
+
+                postViewModel.reviewLocation?.let {
+                    GitCodeLocationBanner(it, Modifier.padding(bottom = 8.dp))
                 }
 
                 postViewModel.replyingTo?.let {

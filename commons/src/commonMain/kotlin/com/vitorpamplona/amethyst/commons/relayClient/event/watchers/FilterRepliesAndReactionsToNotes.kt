@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
@@ -135,6 +136,8 @@ val RepliesAndReactionsKinds2 =
         GitStatusDraftEvent.KIND,
         // NIP-34 cover notes (1624) point at their issue / patch / PR with a lowercase root `e`.
         GitCoverNoteEvent.KIND,
+        // Review verdicts (7321) root at the patch / PR with a lowercase `e`.
+        GitReviewEvent.KIND,
         PollResponseEvent.KIND,
         ZapPollEvent.KIND,
         // NIP-15 bids and the merchant's confirmations name the auction VERSION by its id (`e`),

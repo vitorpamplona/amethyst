@@ -77,7 +77,9 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCiStatusBadge
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitItemReference
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitLabelTag
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitRefTag
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitReviewPanel
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusPill
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitTriageBar
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitVersionedSummary
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.MarkGitItemRead
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitMetaStyle
@@ -89,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitPullRequestUpdat
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observePreviousRevision
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.rememberGitMerge
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.rememberGitReviewHooks
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -589,7 +592,8 @@ private fun RenderGitPatchEvent(
                     Spacer(modifier = HalfDoubleVertSpacer)
                 }
                 if (inThread) {
-                    GitDiffView(parsed, Modifier.fillMaxWidth())
+                    val review = rememberGitReviewHooks(note, noteEvent.commit(), accountViewModel, nav)
+                    GitDiffView(parsed, Modifier.fillMaxWidth(), review.onLineClick, review.lineAnnotations)
                 } else {
                     GitDiffStatSummary(parsed)
                 }
@@ -599,6 +603,8 @@ private fun RenderGitPatchEvent(
         }
 
         if (!makeItShort && inThread) {
+            GitTriageBar(note, accountViewModel)
+            GitReviewPanel(note, accountViewModel)
             GitStatusActionsWithMerge(note, accountViewModel)
         }
     }
@@ -667,6 +673,7 @@ private fun RenderGitIssueEvent(
         GitCoverNoteAndDescription(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
         if (!makeItShort && isGitThreadRoot(note)) {
+            GitTriageBar(note, accountViewModel)
             GitStatusActions(note, accountViewModel)
         }
     }
@@ -765,7 +772,9 @@ private fun RenderGitPullRequestEvent(
 
         if (!makeItShort && isGitThreadRoot(note)) {
             GitCloneSection(cloneUrls)
-            GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel)
+            GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel, rememberGitReviewHooks(note, currentCommit, accountViewModel, nav))
+            GitTriageBar(note, accountViewModel)
+            GitReviewPanel(note, accountViewModel)
             GitStatusActionsWithMerge(note, accountViewModel)
         }
     }

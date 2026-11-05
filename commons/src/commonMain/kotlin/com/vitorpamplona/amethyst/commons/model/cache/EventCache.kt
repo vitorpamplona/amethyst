@@ -345,6 +345,7 @@ import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
 import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
@@ -1546,6 +1547,11 @@ open class EventCache :
                 // Only a NIP-34 rename (`#subject`) is part of the renamed item's history; other
                 // labels (hashtags, moderation) stay out of threads.
                 if (event.subjectEdit() != null) event.labeledEvents().mapNotNull { checkGetOrCreateNote(it) } else emptyList()
+            }
+
+            is GitReviewEvent -> {
+                // A review verdict sits in the reviewed patch's or PR's thread, beside its comments.
+                listOfNotNull(event.reviewedEventId()?.let { checkGetOrCreateNote(it) })
             }
 
             is GitCoverNoteEvent -> {
@@ -4147,7 +4153,7 @@ open class EventCache :
                 // NIP-34: announcements and items also join their repository.
                 is GitRepositoryEvent -> consumeBaseReplaceable(event, relay, wasVerified).also { if (it) indexGitAnnouncement(event) }
                 is GitIssueEvent, is GitPatchEvent, is GitPullRequestEvent -> consumeRegularEvent(event, relay, wasVerified).also { if (it) indexGitItem(event) }
-                is GitStatusEvent, is GitPullRequestUpdateEvent, is GitCoverNoteEvent -> consumeRegularEvent(event, relay, wasVerified)
+                is GitStatusEvent, is GitPullRequestUpdateEvent, is GitCoverNoteEvent, is GitReviewEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is ObserverFrameEvent -> false
                 is HuddleReactionEvent -> false
                 // Relay-synthesized "this huddle session is live" (48104): only produced on demand

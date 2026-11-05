@@ -296,6 +296,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.NewWorkout
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.WorkoutsScreen
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip34Git.review.GitCodeLocation
 
 /**
  * Registers every destination whose screen is shared UI: the navigation table both front ends
@@ -788,6 +789,7 @@ fun NavDestinations.sharedDestinations(
             attachment = it.attachment,
             quoteId = it.quote,
             draftId = it.draft,
+            reviewLocation = it.reviewPath?.let { path -> GitCodeLocation(path, it.reviewCommit, it.reviewLine, it.reviewLine, it.reviewRemovedSide) },
             accountViewModel,
             nav,
         )

@@ -46,6 +46,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -81,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses
+import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitShape
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitCard
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryActivity
@@ -89,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.LoadGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.RepositoryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_issue_search
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_button
 import com.vitorpamplona.amethyst.commons.resources.git_repo_filter_closed
 import com.vitorpamplona.amethyst.commons.resources.git_repo_filter_open
@@ -679,6 +682,7 @@ private fun StatusFeedScreen(
 ) {
     var bucket by rememberSaveable(persistKey) { mutableStateOf(StatusBucket.OPEN) }
     var selectedLabel by rememberSaveable(persistKey) { mutableStateOf<String?>(null) }
+    var query by rememberSaveable(persistKey) { mutableStateOf("") }
 
     val openFeedItems = rememberGitFeedItems(openViewModel)
     val closedItems = rememberGitFeedItems(closedViewModel)
@@ -722,6 +726,8 @@ private fun StatusFeedScreen(
                 selectedLabel = selectedLabel,
                 onSelectLabel = { selectedLabel = it },
                 labels = labels,
+                query = query,
+                onQuery = { query = it },
             )
         },
         floatingButton = floatingButton,
@@ -732,11 +738,18 @@ private fun StatusFeedScreen(
             accountViewModel = accountViewModel,
             nav = nav,
             onLoaded = { loaded, listState ->
-                val itemFilter: ((Note) -> Boolean)? =
+                val statusFilter: ((Note) -> Boolean)? =
                     when (bucket) {
                         StatusBucket.OPEN -> { note -> !isDraft(note) }
                         StatusBucket.DRAFT -> isDraft
                         StatusBucket.CLOSED -> null
+                    }
+                val needle = query.trim().lowercase()
+                val itemFilter: ((Note) -> Boolean)? =
+                    if (needle.isEmpty()) {
+                        statusFilter
+                    } else {
+                        { note -> (statusFilter?.invoke(note) ?: true) && matchesSearch(note, needle) }
                     }
                 GitItemFeedLoaded(loaded, listState, accountViewModel, nav, labelFilter = selectedLabel, itemFilter = itemFilter)
             },
@@ -761,7 +774,10 @@ private fun StatusFilterChips(
     selectedLabel: String?,
     onSelectLabel: (String?) -> Unit,
     labels: List<String>,
+    query: String,
+    onQuery: (String) -> Unit,
 ) {
+    var searching by rememberSaveable { mutableStateOf(query.isNotEmpty()) }
     Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
         Row(
             modifier =
@@ -780,6 +796,21 @@ private fun StatusFilterChips(
             if (labels.isNotEmpty() || selectedLabel != null) {
                 LabelMenu(selectedLabel, labels, onSelectLabel)
             }
+            IconButton(onClick = {
+                searching = !searching
+                if (!searching) onQuery("")
+            }) {
+                Icon(MaterialSymbols.Search, contentDescription = stringRes(Res.string.git_issue_search), modifier = Modifier.size(18.dp))
+            }
+        }
+        if (searching) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQuery,
+                singleLine = true,
+                placeholder = { Text(stringRes(Res.string.git_issue_search)) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+            )
         }
         HorizontalDivider(thickness = DividerThickness)
     }
@@ -942,3 +973,15 @@ private fun EmptyMessage(text: String) {
         }
     }
 }
+
+/** An issue or PR whose title, labels or text contain [needle] (lowercase). */
+private fun matchesSearch(
+    note: Note,
+    needle: String,
+): Boolean =
+    GitItemTitles.titleOf(note)?.lowercase()?.contains(needle) == true ||
+        gitLabelsOf(note).any { it.contains(needle) } ||
+        note.event
+            ?.content
+            ?.lowercase()
+            ?.contains(needle) == true

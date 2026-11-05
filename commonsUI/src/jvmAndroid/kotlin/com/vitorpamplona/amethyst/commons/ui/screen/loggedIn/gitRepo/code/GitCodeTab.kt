@@ -32,19 +32,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -69,6 +73,9 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitShape
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.RepoInfoBar
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitCard
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_file_blame
+import com.vitorpamplona.amethyst.commons.resources.git_file_history
+import com.vitorpamplona.amethyst.commons.resources.git_file_history_title
 import com.vitorpamplona.amethyst.commons.resources.git_repo_code_error
 import com.vitorpamplona.amethyst.commons.resources.git_repo_code_loading
 import com.vitorpamplona.amethyst.commons.resources.git_repo_empty_folder
@@ -78,6 +85,9 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_no_search_results
 import com.vitorpamplona.amethyst.commons.resources.git_repo_root
 import com.vitorpamplona.amethyst.commons.resources.git_repo_search_files
 import com.vitorpamplona.amethyst.commons.resources.git_repo_state_mismatch
+import com.vitorpamplona.amethyst.commons.resources.git_search_names
+import com.vitorpamplona.amethyst.commons.resources.git_search_progress
+import com.vitorpamplona.amethyst.commons.resources.git_search_text
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
@@ -87,8 +97,11 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip34Git.git.GitContentMatch
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
 import com.vitorpamplona.quartz.nip34Git.git.GitTreeEntry
+import kotlinx.coroutines.delay
+import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
 fun GitCodeTab(
@@ -150,9 +163,29 @@ private fun CodeBrowser(
 
     if (openPath != null) {
         val entry = remember(openFilePath) { snapshot.entryAt(openPath) }
+        var showFileHistory by rememberSaveable(openFilePath) { mutableStateOf(false) }
+        var showBlame by rememberSaveable(openFilePath) { mutableStateOf(false) }
+        if (showFileHistory) {
+            Column(Modifier.fillMaxSize().padding(scaffoldPaddingTop)) {
+                GitCommitLog(
+                    snapshot,
+                    viewModel,
+                    onBack = { showFileHistory = false },
+                    title = stringRes(Res.string.git_file_history_title, openPath.lastOrNull() ?: ""),
+                    path = openPath,
+                )
+            }
+            return
+        }
         PlatformBackHandler { openFilePath = null }
         Column(Modifier.fillMaxSize().padding(scaffoldPaddingTop)) {
-            FileHeader(name = openPath.lastOrNull() ?: "", onBack = { openFilePath = null })
+            FileHeader(
+                name = openPath.lastOrNull() ?: "",
+                onBack = { openFilePath = null },
+                blameOn = showBlame,
+                onHistory = { showFileHistory = true },
+                onBlame = { showBlame = !showBlame },
+            )
             HorizontalDivider(thickness = 0.5.dp)
             if (entry == null) {
                 GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(Res.string.git_repo_file_load_error))
@@ -161,6 +194,7 @@ private fun CodeBrowser(
                     snapshot = snapshot,
                     viewModel = viewModel,
                     entry = entry,
+                    blamePath = openPath.takeIf { showBlame },
                     accountViewModel = accountViewModel,
                     nav = nav,
                     modifier = Modifier.fillMaxSize(),
@@ -172,6 +206,7 @@ private fun CodeBrowser(
 
     var query by rememberSaveable(snapshot.headCommit) { mutableStateOf("") }
     var searchOpen by rememberSaveable(snapshot.headCommit) { mutableStateOf(false) }
+    var searchText by rememberSaveable(snapshot.headCommit) { mutableStateOf(false) }
     val searching = query.isNotBlank()
 
     PlatformBackHandler(enabled = searchOpen || searching || path.isNotEmpty()) {
@@ -187,7 +222,8 @@ private fun CodeBrowser(
     // A single scrolling list so the branch/search header rides along with the disappearing
     // top bar instead of staying pinned below it. The header rows are the first list items;
     // the file/search rows follow, all under one contentPadding for the scaffold inset.
-    val results = remember(snapshot, query) { if (searching) snapshot.searchFiles(query.trim()) else emptyList() }
+    val results = remember(snapshot, query, searchText) { if (searching && !searchText) snapshot.searchFiles(query.trim()) else emptyList() }
+    val textSearch = if (searching && searchText) rememberContentSearch(snapshot, viewModel, query.trim()) else null
 
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = scaffoldPaddingTop) {
         if (mismatch != null) {
@@ -211,9 +247,14 @@ private fun CodeBrowser(
             item(key = "file-search") {
                 FileSearchField(query = query, onQueryChange = { query = it })
             }
+            item(key = "search-mode") {
+                SearchModeChips(searchText) { searchText = it }
+            }
         }
 
-        if (searching) {
+        if (textSearch != null) {
+            contentSearchResults(textSearch) { path -> openFilePath = path.joinToString("/") }
+        } else if (searching) {
             if (results.isEmpty()) {
                 item(key = "no-results") {
                     GitMessageBox(MaterialSymbols.Search, stringRes(Res.string.git_repo_no_search_results), Modifier.fillParentMaxWidth())
@@ -423,6 +464,9 @@ private fun EntryRow(
 private fun FileHeader(
     name: String,
     onBack: () -> Unit,
+    blameOn: Boolean,
+    onHistory: () -> Unit,
+    onBlame: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(end = 12.dp),
@@ -437,7 +481,18 @@ private fun FileHeader(
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
         )
+        TextButton(onClick = onBlame) {
+            Text(
+                stringRes(Res.string.git_file_blame),
+                color = if (blameOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (blameOn) FontWeight.SemiBold else FontWeight.Normal,
+            )
+        }
+        IconButton(onClick = onHistory) {
+            Icon(MaterialSymbols.History, contentDescription = stringRes(Res.string.git_file_history), modifier = Modifier.size(20.dp))
+        }
     }
 }
 
@@ -464,5 +519,97 @@ private fun SignedStateMismatchBanner(mismatch: GitStateMismatch) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onErrorContainer,
         )
+    }
+}
+
+/** Where a search in file contents is: running (files read of the total) or done with its matches. */
+private class ContentSearch(
+    val read: Int,
+    val total: Int,
+    val matches: List<GitContentMatch>?,
+    val failed: Boolean = false,
+)
+
+/** Searches the files' text once the query has been still for a moment, reporting progress. */
+@Composable
+private fun rememberContentSearch(
+    snapshot: GitRepoSnapshot,
+    viewModel: GitRepositoryBrowserViewModel,
+    query: String,
+): ContentSearch {
+    val search by
+        produceState(ContentSearch(0, 0, null), snapshot.headCommit, query) {
+            delay(500)
+            value =
+                try {
+                    val matches = viewModel.searchContents(snapshot, query) { read, total -> value = ContentSearch(read, total, null) }
+                    ContentSearch(value.total, value.total, matches)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    ContentSearch(0, 0, emptyList(), failed = true)
+                }
+        }
+    return search
+}
+
+private fun LazyListScope.contentSearchResults(
+    search: ContentSearch,
+    onOpen: (List<String>) -> Unit,
+) {
+    val matches = search.matches
+    when {
+        matches == null ->
+            item(key = "text-search-progress") {
+                GitLoadingBox(
+                    if (search.total > 0) stringRes(Res.string.git_search_progress, search.read, search.total) else stringRes(Res.string.git_repo_code_loading),
+                    Modifier.fillParentMaxWidth(),
+                )
+            }
+        search.failed ->
+            item(key = "text-search-failed") {
+                GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(Res.string.git_repo_code_error), Modifier.fillParentMaxWidth())
+            }
+        matches.isEmpty() ->
+            item(key = "text-no-results") {
+                GitMessageBox(MaterialSymbols.Search, stringRes(Res.string.git_repo_no_search_results), Modifier.fillParentMaxWidth())
+            }
+        else ->
+            items(matches, key = { "text/" + it.path.joinToString("/") + ":" + it.line }) { match ->
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpen(match.path) }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        text = match.path.joinToString("/") + ":" + match.line,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = match.text,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.subtleBorder)
+            }
+    }
+}
+
+/** File names (instant, offline) or the text inside the files (fetched as it searches). */
+@Composable
+private fun SearchModeChips(
+    searchText: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(Modifier.padding(horizontal = 12.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(selected = !searchText, onClick = { onChange(false) }, label = { Text(stringRes(Res.string.git_search_names)) })
+        FilterChip(selected = searchText, onClick = { onChange(true) }, label = { Text(stringRes(Res.string.git_search_text)) })
     }
 }
