@@ -112,7 +112,9 @@ lists the codecs-extra plugin directory, and overriding it hides those plugins.
   window surface needs X11, so on Wayland the app draws through Swing with
   Skiko's CPU renderer (`desktopApp/.../platform/WaylandDisplay.kt`,
   `AppWindow.kt`). `flatpak run --env=AMETHYST_X11=1 --socket=x11
-  com.vitorpamplona.amethyst.Amethyst` puts it back on XWayland.
+  com.vitorpamplona.amethyst.Amethyst` puts it back on XWayland. The in-app
+  "Draw through XWayland" setting stays hidden without `--socket=x11`, since
+  `fallback-x11` gives a Wayland session no X display.
 - File access is limited to Downloads and Pictures. AWT's `FileDialog` calls
   the GTK file chooser directly rather than the file chooser portal, so it can
   only browse what the sandbox can see.

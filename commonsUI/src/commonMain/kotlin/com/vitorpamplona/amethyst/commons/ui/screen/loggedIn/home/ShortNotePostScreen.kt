@@ -115,6 +115,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.components.submitOnCtrlEnter
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
@@ -258,19 +259,22 @@ internal fun NewPostScreenInner(
         nav.popBack()
     }
 
+    val onPost: () -> Unit = {
+        // uses the accountViewModel scope to avoid cancelling this
+        // function when the postViewModel is released
+        accountViewModel.launchSigner {
+            postViewModel.sendPostSync()
+            nav.popBack()
+        }
+    }
+
     Scaffold(
+        modifier = Modifier.submitOnCtrlEnter(isActive = postViewModel::canPost, onSubmit = onPost),
         topBar = {
             PostingTopBar(
                 isActive = postViewModel::canPost,
                 postRes = if (postViewModel.wantsPrivateNote) Res.string.audience_send_privately else Res.string.post,
-                onPost = {
-                    // uses the accountViewModel scope to avoid cancelling this
-                    // function when the postViewModel is released
-                    accountViewModel.launchSigner {
-                        postViewModel.sendPostSync()
-                        nav.popBack()
-                    }
-                },
+                onPost = onPost,
                 onCancel = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released

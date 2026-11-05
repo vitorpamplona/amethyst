@@ -6073,7 +6073,7 @@
     <string name="ui_feature_set_type_simplified">Simplified</string>
     <string name="ui_feature_set_type_simplified_short">Simple</string>
     <string name="ui_preferences">UI Preferences</string>
-    <string name="ui_preferences_search_keywords" translatable="false">application, dark mode, light mode, theme, accent color, font, font size, language, appearance, ui mode, simple, fast, post layout, indented, full width, borderless, edge to edge, twitter, immersive scrolling, hide nav bars, deck, columns, workspaces, image preview, video playback, videos, autoplay, url preview, link preview, profile picture, media, data, wi-fi, updates, update, upgrade, version, download</string>
+    <string name="ui_preferences_search_keywords" translatable="false">application, dark mode, light mode, theme, accent color, font, font size, language, appearance, ui mode, simple, fast, post layout, indented, full width, borderless, edge to edge, twitter, immersive scrolling, hide nav bars, deck, columns, workspaces, image preview, video playback, videos, autoplay, url preview, link preview, profile picture, media, data, wi-fi, updates, update, upgrade, version, download, wayland, xwayland, x11, graphics card, gpu, rendering, smooth scrolling</string>
     <string name="ui_style">UI Mode</string>
     <string name="ui_style_description">Choose the post style</string>
     <string name="note_layout">Post Layout</string>
@@ -7422,6 +7422,9 @@
     <string name="custom_feeds_search_people">Search by name, NIP-05 or npub</string>
     <string name="deck_mode">Deck</string>
     <string name="deck_mode_description">On wide windows, show extra columns beside the main screen, each with its own screen and history. Save sets of columns as workspaces.</string>
+    <string name="xwayland_rendering">Draw through XWayland</string>
+    <string name="xwayland_rendering_description">Lets the graphics card draw the app, so scrolling is smoother on most computers. Text can look blurry when the screen uses fractional scaling.</string>
+    <string name="xwayland_rendering_restart">Restart Amethyst to apply this change.</string>
     <string name="deck_workspaces">Workspaces</string>
     <string name="deck_workspace_number">Workspace %1$d</string>
     <string name="deck_save_workspace">Save as a new workspace</string>

@@ -20,13 +20,18 @@
  */
 package com.vitorpamplona.amethyst.desktop.platform
 
+import com.vitorpamplona.amethyst.commons.ui.platform.DisplayServerChoice
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.awt.Toolkit
 import java.io.File
 import java.io.IOException
 import java.net.StandardProtocolFamily
 import java.net.UnixDomainSocketAddress
 import java.nio.channels.SocketChannel
+import java.util.Properties
 
 /**
  * Picks how the app talks to a Linux display: natively over Wayland, or over X11 (XWayland on a
@@ -39,9 +44,18 @@ import java.nio.channels.SocketChannel
  * `WLToolkit`, so on Wayland the windows draw through Swing ([WaylandWindow]) with Skiko's CPU
  * renderer.
  *
- * `AMETHYST_X11=1` keeps a Wayland session on XWayland, as before.
+ * XWayland is still there for those who want the graphics card back: Settings › App › "Draw through
+ * XWayland" ([preferXWayland], read here at the next start), or `AMETHYST_X11=1`, which wins and
+ * hides the setting.
  */
 object WaylandDisplay {
+    /**
+     * Set by [configure] on a Wayland session where both ways work (the toolkit, and an X display to
+     * fall back to): what the settings switch reads and writes. Null elsewhere, which hides it.
+     */
+    var choice: DesktopDisplayServerChoice? = null
+        private set
+
     /**
      * True when AWT runs on the Wayland toolkit, whoever picked it: [configure], or a hand-set
      * `-Dawt.toolkit.name=WLToolkit` that [configure] would have skipped. The windows must follow the
@@ -77,12 +91,24 @@ object WaylandDisplay {
         if (available) System.setProperty(DECORATION_STYLE, "server")
     }
 
-    fun configure() {
+    /** [dataDir] holds the saved choice between native Wayland and XWayland. */
+    fun configure(dataDir: File) {
         if (!PlatformInfo.host.isLinux) return
         if (System.getenv("AMETHYST_X11") == "1") return
         // No check for a toolkit picked by hand: the JDK always sets awt.toolkit.name (XToolkit).
         if (!hasWaylandSocket()) return
         if (!runtimeHasWaylandToolkit()) return
+
+        // A Flatpak on Wayland has no X11 socket (fallback-x11): there, XWayland is no choice at all.
+        if (hasX11Display()) {
+            val preference = DisplayPreference(File(dataDir, DISPLAY_PREFERENCE_FILE))
+            val preferXWayland = preference.preferXWayland()
+            choice = DesktopDisplayServerChoice(preference, usingXWayland = preferXWayland)
+            if (preferXWayland) {
+                Log.i("WaylandDisplay", "Drawing through XWayland, as picked in settings")
+                return
+            }
+        }
 
         System.setProperty("awt.toolkit.name", "WLToolkit")
         // The Wayland app_id, which docks and app switchers match against a desktop entry, as X11's
@@ -124,6 +150,17 @@ object WaylandDisplay {
         }
     }
 
+    /**
+     * An X server to draw on: `$DISPLAY`, and for a local display (`:0`) its socket. GNOME and KDE
+     * start XWayland on the first connection, but the socket is there from the start.
+     */
+    private fun hasX11Display(): Boolean {
+        val display = System.getenv("DISPLAY")?.takeIf { it.isNotBlank() } ?: return false
+        if (!display.startsWith(":")) return true
+        val number = display.substring(1).substringBefore('.')
+        return File("/tmp/.X11-unix/X$number").exists()
+    }
+
     /** The JetBrains Runtime has it; a stock JDK (a `./gradlew :desktopApp:run` on Temurin, say) does not. */
     private fun runtimeHasWaylandToolkit(): Boolean =
         try {
@@ -136,5 +173,47 @@ object WaylandDisplay {
         }
 }
 
+private const val DISPLAY_PREFERENCE_FILE = "display.properties"
 private const val WAYLAND_TOOLKIT = "sun.awt.wl.WLToolkit"
 private const val DECORATION_STYLE = "sun.awt.wl.WindowDecorationStyle"
+
+/** The saved choice, a small file in the profile's data directory, read before AWT starts. */
+class DisplayPreference(
+    private val file: File,
+) {
+    fun preferXWayland(): Boolean {
+        if (!file.isFile) return false
+        return try {
+            Properties().apply { file.inputStream().use { load(it) } }.getProperty(PREFER_XWAYLAND).toBoolean()
+        } catch (e: IOException) {
+            Log.w("DisplayPreference", "Could not read the display choice", e)
+            false
+        }
+    }
+
+    fun save(preferXWayland: Boolean) {
+        try {
+            val props = Properties().apply { setProperty(PREFER_XWAYLAND, preferXWayland.toString()) }
+            file.outputStream().use { props.store(it, null) }
+        } catch (e: IOException) {
+            Log.w("DisplayPreference", "Could not save the display choice", e)
+        }
+    }
+
+    private companion object {
+        const val PREFER_XWAYLAND = "preferXWayland"
+    }
+}
+
+class DesktopDisplayServerChoice(
+    private val preference: DisplayPreference,
+    override val usingXWayland: Boolean,
+) : DisplayServerChoice {
+    private val prefer = MutableStateFlow(usingXWayland)
+    override val preferXWayland: StateFlow<Boolean> = prefer.asStateFlow()
+
+    override fun setPreferXWayland(prefer: Boolean) {
+        this.prefer.value = prefer
+        preference.save(prefer)
+    }
+}
