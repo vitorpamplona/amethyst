@@ -349,6 +349,10 @@ features put 447 back.)
   composition and pass it down as a `String`. A `runBlocking` bridge is ruled out.
 - Hold a string reference as `StringResource` / `PluralStringResource`, not a
   `@StringRes Int`.
+- A string with a count whose noun changes form (`%1$d wallet(s)`, a hardcoded
+  `1 reply`) must be a `<plurals>`, never a `<string>` with an `(s)` hedge. No lint
+  checks plurals in the commonsUI catalog, so this is on you. CLDR categories and
+  anti-patterns: `amethyst/src/main/res/AGENTS.md` "Plural rules".
 - Format arguments must be positional (`%1$s`, `%2$d`) — compose-resources does
   not format bare `%s`/`%d`.
 - Escaping is not Android's: write `'` and `"` bare (no `\'`), and never wrap a
