@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -79,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.SimpleQrCode
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.SendState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.wallet.paymentFromUri
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.material3.Icon as Material3Icon
@@ -136,6 +138,13 @@ fun WalletSendScreen(
                     // A Lightning address has no amount of its own, so the screen asks for one.
                     val lnAddress = lightningAddressOrNull(invoiceText)
                     val amountSats = amountText.toLongOrNull()
+                    // One decision for both the button's action and whether it is enabled.
+                    val pay: (() -> Unit)? =
+                        when {
+                            lnAddress != null -> amountSats?.takeIf { it > 0 }?.let { sats -> { walletViewModel.sendToLightningAddress(lnAddress, sats) } }
+                            invoiceText.isNotBlank() -> ({ walletViewModel.sendPayment(invoiceText.trim()) })
+                            else -> null
+                        }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -157,33 +166,25 @@ fun WalletSendScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        OutlinedButton(
-                            onClick = {
-                                clipboardScope.launch { clipboard.getText()?.let { invoiceText = it } }
-                            },
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            shape = RoundedCornerShape(12.dp),
+                        InputActionButton(
+                            label = stringRes(Res.string.action_paste),
+                            onClick = { clipboardScope.launch { clipboard.getText()?.let { invoiceText = it } } },
                         ) {
                             Icon(
                                 symbol = MaterialSymbols.ContentPaste,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringRes(Res.string.action_paste))
                         }
-                        OutlinedButton(
+                        InputActionButton(
+                            label = stringRes(Res.string.action_scan),
                             onClick = { qrScanning = true },
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            shape = RoundedCornerShape(12.dp),
                         ) {
                             Material3Icon(
                                 painter = painterRes(Res.drawable.ic_qrcode, 3),
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringRes(Res.string.action_scan))
                         }
                     }
 
@@ -191,9 +192,9 @@ fun WalletSendScreen(
                         SimpleQrCodeScanner {
                             qrScanning = false
                             if (!it.isNullOrEmpty()) {
-                                // Lightning QRs usually carry the URI prefix; the
-                                // parser wants the bare invoice.
-                                invoiceText = it.removePrefix("lightning:")
+                                // Lightning QRs usually carry the URI prefix (in either
+                                // case); the parser wants the bare invoice.
+                                invoiceText = paymentFromUri(it)
                             }
                         }
                     }
@@ -214,24 +215,13 @@ fun WalletSendScreen(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Button(
-                        onClick = {
-                            if (lnAddress != null) {
-                                amountSats?.takeIf { it > 0 }?.let { walletViewModel.sendToLightningAddress(lnAddress, it) }
-                            } else if (invoiceText.isNotBlank()) {
-                                walletViewModel.sendPayment(invoiceText.trim())
-                            }
-                        },
+                        onClick = { pay?.invoke() },
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .height(56.dp),
                         shape = RoundedCornerShape(16.dp),
-                        enabled =
-                            if (lnAddress != null) {
-                                amountSats != null && amountSats > 0
-                            } else {
-                                invoiceText.isNotBlank()
-                            },
+                        enabled = pay != null,
                     ) {
                         Text(
                             stringRes(Res.string.wallet_pay),
@@ -298,5 +288,23 @@ fun WalletSendScreen(
                 }
             }
         }
+    }
+}
+
+/** Paste / Scan under the input field: an icon and a label sharing the row's width. */
+@Composable
+private fun RowScope.InputActionButton(
+    label: String,
+    onClick: () -> Unit,
+    icon: @Composable () -> Unit,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.weight(1f).height(48.dp),
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        icon()
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(label)
     }
 }

@@ -65,7 +65,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -77,7 +76,6 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_sats_amount
 import com.vitorpamplona.amethyst.commons.resources.wallet_copied
-import com.vitorpamplona.amethyst.commons.resources.wallet_copy
 import com.vitorpamplona.amethyst.commons.resources.wallet_filter_all
 import com.vitorpamplona.amethyst.commons.resources.wallet_filter_non_zaps
 import com.vitorpamplona.amethyst.commons.resources.wallet_filter_zaps
@@ -92,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_load_fai
 import com.vitorpamplona.amethyst.commons.resources.wallet_tx_amount
 import com.vitorpamplona.amethyst.commons.resources.wallet_tx_collapse
 import com.vitorpamplona.amethyst.commons.resources.wallet_tx_expand
+import com.vitorpamplona.amethyst.commons.resources.wallet_tx_fee
 import com.vitorpamplona.amethyst.commons.resources.wallet_tx_from
 import com.vitorpamplona.amethyst.commons.resources.wallet_tx_invoice
 import com.vitorpamplona.amethyst.commons.resources.wallet_tx_note
@@ -304,15 +303,14 @@ private fun TransactionFilterRow(
 }
 
 // Internal, not private: the wallet detail screen previews the first few
-// transactions with the same rows this full list renders. The preview passes
-// expandable = false and navigates to the full list instead — a details drawer
-// costs more space than the preview has.
+// transactions with the same rows this full list renders. Without [onRowTap]
+// the row expands its payment details; the preview passes one that opens the
+// full list instead — a details drawer costs more space than the preview has.
 @Composable
 internal fun TransactionItem(
     tx: NwcTransaction,
     accountViewModel: AccountViewModel,
     nav: INav,
-    expandable: Boolean = true,
     onRowTap: (() -> Unit)? = null,
 ) {
     val isIncoming = tx.type == NwcTransactionType.INCOMING
@@ -339,16 +337,6 @@ internal fun TransactionItem(
     val zappedNoteId = labels.zappedNoteId
 
     var expanded by remember(tx) { mutableStateOf(false) }
-    val clipboard = LocalClipboard.current
-    val clipboardScope = rememberCoroutineScope()
-    val shortNotice = rememberShortNotice()
-    val copiedMsg = stringRes(Res.string.wallet_copied)
-    val onCopy: (String) -> Unit = { value ->
-        clipboardScope.launch {
-            clipboard.setText(value)
-            shortNotice.show(copiedMsg)
-        }
-    }
 
     Row(
         modifier =
@@ -358,16 +346,14 @@ internal fun TransactionItem(
                     // Full list: the row expands its details. Preview: the row
                     // opens the full list. The profile and the zapped-note
                     // chevron keep their own taps.
-                    if (expandable) {
+                    if (onRowTap == null) {
                         Modifier.clickable(
                             onClickLabel = stringRes(if (expanded) Res.string.wallet_tx_collapse else Res.string.wallet_tx_expand),
                         ) {
                             expanded = !expanded
                         }
                     } else {
-                        Modifier.clickable(onClickLabel = stringRes(Res.string.wallet_transactions)) {
-                            onRowTap?.invoke()
-                        }
+                        Modifier.clickable(onClickLabel = stringRes(Res.string.wallet_transactions), onClick = onRowTap)
                     },
                 ).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -400,12 +386,7 @@ internal fun TransactionItem(
             ) {
                 Icon(
                     symbol = if (isIncoming) MaterialSymbols.ArrowDownward else MaterialSymbols.ArrowUpward,
-                    contentDescription =
-                        if (isIncoming) {
-                            stringRes(Res.string.wallet_incoming)
-                        } else {
-                            stringRes(Res.string.wallet_outgoing)
-                        },
+                    contentDescription = directionLabel,
                     modifier = Modifier.size(20.dp),
                     tint =
                         if (isIncoming) {
@@ -483,17 +464,18 @@ internal fun TransactionItem(
         }
     }
 
-    AnimatedVisibility(
-        visible = expanded,
-        enter = fadeIn() + expandVertically(),
-        exit = shrinkVertically() + fadeOut(),
-    ) {
-        TransactionItemDetails(
-            tx = tx,
-            labels = labels,
-            amountSats = amountSats,
-            onCopy = onCopy,
-        )
+    if (onRowTap == null) {
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn() + expandVertically(),
+            exit = shrinkVertically() + fadeOut(),
+        ) {
+            TransactionItemDetails(
+                tx = tx,
+                labels = labels,
+                amountSats = amountSats,
+            )
+        }
     }
 }
 
@@ -533,16 +515,26 @@ private fun TransactionItemDetails(
     tx: NwcTransaction,
     labels: TransactionRowLabels,
     amountSats: Long,
-    onCopy: (String) -> Unit,
 ) {
+    val clipboard = LocalClipboard.current
+    val clipboardScope = rememberCoroutineScope()
+    val shortNotice = rememberShortNotice()
+    val copiedMsg = stringRes(Res.string.wallet_copied)
+    val onCopy: (String) -> Unit = { value ->
+        clipboardScope.launch {
+            clipboard.setText(value)
+            shortNotice.show(copiedMsg)
+        }
+    }
+
     val isIncoming = tx.type == NwcTransactionType.INCOMING
     val counterparty =
         when (val title = labels.title) {
             is TransactionRowLabels.Title.User -> title.name ?: (title.pubkeyHex.take(8) + "...")
             is TransactionRowLabels.Title.Literal -> title.text
         }
-    val note = tx.displayDescription() ?: tx.parsedMetadata()?.displayComment()
-    val feeMsats = tx.fees_paid
+    val note = remember(tx) { tx.displayDescription() ?: tx.parsedMetadata()?.displayComment() }
+    val feeSats = (tx.fees_paid ?: 0L) / 1000L
     val whenSecs = tx.settled_at ?: tx.created_at
     val dateText =
         remember(whenSecs) {
@@ -555,124 +547,60 @@ private fun TransactionItemDetails(
                 .fillMaxWidth()
                 .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
     ) {
-        PaymentDetailRow(
+        WalletDetailRow(
             label = stringRes(if (isIncoming) Res.string.wallet_tx_from else Res.string.wallet_tx_to),
             value = counterparty,
-            trailing = dateText,
-        )
-        note?.let {
-            PaymentDetailRow(
-                label = stringRes(Res.string.wallet_tx_note),
-                value = it,
-                maxLines = 3,
-            )
-        }
-        PaymentDetailRow(
-            label = stringRes(Res.string.wallet_tx_amount),
-            value =
-                buildString {
-                    append(amountSats)
-                    append(" sats")
-                    if (feeMsats != null && feeMsats > 0) {
-                        append(" · fee ")
-                        append(feeMsats / 1000)
-                        append(" sats")
+            monospace = false,
+            trailing =
+                dateText?.let {
+                    {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 12.dp),
+                        )
                     }
                 },
         )
+        note?.let {
+            WalletDetailRow(
+                label = stringRes(Res.string.wallet_tx_note),
+                value = it,
+                monospace = false,
+                maxLines = 3,
+            )
+        }
+        WalletDetailRow(
+            label = stringRes(Res.string.wallet_tx_amount),
+            value = stringRes(Res.string.reload_mint_sats_amount, formatGrouped(amountSats)),
+            monospace = false,
+        )
+        if (feeSats > 0) {
+            WalletDetailRow(
+                label = stringRes(Res.string.wallet_tx_fee),
+                value = stringRes(Res.string.reload_mint_sats_amount, formatGrouped(feeSats)),
+                monospace = false,
+            )
+        }
 
-        tx.payment_hash?.let {
-            PaymentDetailRow(
-                label = stringRes(Res.string.wallet_tx_payment_hash),
-                value = it,
-                monospace = true,
-                copyValue = it,
-                onCopy = onCopy,
-            )
-        }
-        tx.preimage?.let {
-            PaymentDetailRow(
-                label = stringRes(Res.string.wallet_tx_preimage),
-                value = it,
-                monospace = true,
-                copyValue = it,
-                onCopy = onCopy,
-            )
-        }
-        tx.invoice?.let {
-            PaymentDetailRow(
-                label = stringRes(Res.string.wallet_tx_invoice),
-                value = it,
-                monospace = true,
-                copyValue = it,
-                onCopy = onCopy,
-            )
-        }
-    }
-}
-
-@Composable
-private fun PaymentDetailRow(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    monospace: Boolean = false,
-    maxLines: Int = 1,
-    copyValue: String? = null,
-    trailing: String? = null,
-    onCopy: (String) -> Unit = {},
-) {
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = if (monospace) middleTruncate(value) else value,
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = if (monospace) FontFamily.Monospace else null,
-                maxLines = maxLines,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        trailing?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 12.dp),
-            )
-        }
-        if (copyValue != null) {
-            IconButton(
-                onClick = { onCopy(copyValue) },
-                modifier = Modifier.size(28.dp),
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.ContentCopy,
-                    contentDescription = stringRes(Res.string.wallet_copy),
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        listOf(
+            Res.string.wallet_tx_payment_hash to tx.payment_hash,
+            Res.string.wallet_tx_preimage to tx.preimage,
+            Res.string.wallet_tx_invoice to tx.invoice,
+        ).forEach { (label, value) ->
+            if (value != null) {
+                WalletDetailRow(
+                    label = stringRes(label),
+                    // One line; the copy button carries the full value.
+                    value = shortenMiddle(value, head = 16, tail = 8),
+                    copyValue = value,
+                    onCopy = onCopy,
                 )
             }
         }
     }
 }
-
-/** Keeps long hashes and invoices to one line; the copy button carries the full value. */
-private fun middleTruncate(
-    value: String,
-    head: Int = 16,
-    tail: Int = 8,
-): String = if (value.length <= head + tail + 1) value else value.take(head) + "…" + value.takeLast(tail)
 
 /** bitcoin.design's activity green: received amounts and badges; red stays reserved for errors. */
 private val ReceivedGreen = Color(0xFF16A34A)
