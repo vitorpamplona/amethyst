@@ -41,6 +41,8 @@ object GitPrCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        // --source: push the branch's commits to the GRASP servers first, as the app and ngit do.
+        if ("--source" in rest) return GitProposeCommands.open(dataDir, rest)
         val args = Args(rest)
         val coord = args.positional(0, "repo-naddr-or-coordinates")
         val addr =
@@ -100,6 +102,7 @@ object GitPrCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if ("--source" in rest) return GitProposeCommands.update(dataDir, rest)
         val args = Args(rest)
         val prRef = args.positional(0, "pull-request-id")
         val prId =

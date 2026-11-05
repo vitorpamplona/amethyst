@@ -15,6 +15,8 @@
 #                       $RUN_DIR/profile/signup.nsec, read before --fresh clears the profile
 #   --signup "<name>"   sign up a new account as the Sign Up button does; it publishes to public
 #                       relays, and its nsec goes to $RUN_DIR/profile/signup.nsec
+#   --local-only        the app reaches 127.0.0.1 and nothing else (its proxy points at a closed
+#                       port), so a test account on AMETHYST_LOCAL_RELAYS can't publish elsewhere
 #
 # Env: AMETHYST_DISPLAY (default :99), AMETHYST_SCREEN (default 1600x1000x24),
 #      AMETHYST_RUN_DIR (default /tmp/amethyst-desktop-run: log, profile, screenshots),
@@ -74,10 +76,12 @@ case "${1:-}" in
   start)
     shift
     fresh=false
+    local_only=false
     account_options=0
     while [ $# -gt 0 ]; do
       case "$1" in
         --fresh) fresh=true ;;
+        --local-only) local_only=true ;;
         --login)
           [ $# -ge 2 ] || { echo "--login needs a key" >&2; exit 2; }
           # On the command line the key shows in `ps` and in the shell history: public keys only.
@@ -126,8 +130,16 @@ case "${1:-}" in
     ensure_xvfb
     : > "$LOG"
     # Redirected as a whole, so no process keeps the caller's stdout open: `start | tail` returns.
+    run_args="${AMETHYST_RUN_ARGS:-}"
+    if $local_only; then
+      # Every outbound connection here goes through the JVM's proxy, and 127.* skips it
+      # (http.nonProxyHosts): pointing it at a closed port leaves only this machine reachable.
+      # The app inherits the environment from Gradle; --offline keeps Gradle off the network too.
+      export JAVA_TOOL_OPTIONS="$(printf '%s' "${JAVA_TOOL_OPTIONS:-}" | sed -E 's/-Dhttps?\.proxy(Host|Port)=[^ ]*//g') -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=9 -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9"
+      run_args="$run_args --offline"
+    fi
     (cd "$REPO_ROOT" && exec nohup ./gradlew :desktopApp:run --console=plain \
-      "-Damethyst.dataDir=$DATA_DIR" -Damethyst.debug=true ${AMETHYST_RUN_ARGS:-}) >> "$LOG" 2>&1 < /dev/null &
+      "-Damethyst.dataDir=$DATA_DIR" -Damethyst.debug=true $run_args) >> "$LOG" 2>&1 < /dev/null &
     echo $! > "$PID_FILE"
     echo "Building and launching (log: $LOG, profile: $DATA_DIR, DISPLAY=$DISPLAY_NUM)..."
     deadline=$((SECONDS + TIMEOUT))

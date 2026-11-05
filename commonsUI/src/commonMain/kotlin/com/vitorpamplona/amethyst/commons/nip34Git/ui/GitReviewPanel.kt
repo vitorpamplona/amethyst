@@ -86,7 +86,8 @@ fun verdictColor(verdict: GitReviewEvent.Verdict): Color =
     when (verdict) {
         GitReviewEvent.Verdict.ACK, GitReviewEvent.Verdict.CONCEPT_ACK -> gitStateColor(StatusKind.OPEN)
         GitReviewEvent.Verdict.NACK, GitReviewEvent.Verdict.CONCEPT_NACK -> gitStateColor(StatusKind.CLOSED)
-        GitReviewEvent.Verdict.CHANGES_REQUIRED -> MaterialTheme.colorScheme.tertiary
+        // A call to act, not a refusal: the amber the palette uses for what waits on someone.
+        GitReviewEvent.Verdict.CHANGES_REQUIRED -> gitPalette().pending
     }
 
 /**

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.nip34Git
 
+import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
@@ -40,7 +41,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class GitPrivateRepositoryAuth(
     signer: NostrSigner,
-    private val cache: LocalCache = LocalCache,
+    private val cache: EventCache = LocalCache,
     private val rememberSeconds: Long = 30,
 ) : GitHttpAuth(signer) {
     private val answers = ConcurrentHashMap<String, Pair<Long, Boolean>>()

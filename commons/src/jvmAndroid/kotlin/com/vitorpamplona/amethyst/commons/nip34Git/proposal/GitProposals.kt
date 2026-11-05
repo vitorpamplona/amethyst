@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.nip34Git.proposal
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitPrivateRepositoryAuth
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
@@ -34,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip34Git.git.GitHttpAuth
@@ -89,12 +91,16 @@ sealed interface GitProposalResult {
  * the app becomes a commit on the branch's tip and opens such a pull request.
  */
 class GitProposals(
-    private val account: Account,
+    private val host: GitProposalHost,
     okHttpClient: (String) -> OkHttpClient,
-    private val cache: LocalCache = account.cache,
-    private val authority: GitAuthority = LocalCache.gitAuthority,
-    auth: GitHttpAuth? = GitPrivateRepositoryAuth(account.signer, cache),
+    private val cache: EventCache,
+    private val authority: GitAuthority,
+    auth: GitHttpAuth?,
 ) {
+    /** The app's: the account signs and publishes, its cache and authority judge. */
+    constructor(account: Account, okHttpClient: (String) -> OkHttpClient) :
+        this(AccountGitProposalHost(account), okHttpClient, account.cache, LocalCache.gitAuthority, GitPrivateRepositoryAuth(account.signer, account.cache))
+
     private val transport = GitSmartHttpTransport(okHttpClient, auth)
     private val pusher = GraspProposalPusher(GitPushClient(okHttpClient, "amethyst", auth))
 
@@ -192,8 +198,18 @@ class GitProposals(
         sourceClones: List<String>,
         tip: String,
     ): GitProposalResult {
-        val pr = pullRequest.event as? GitPullRequestEvent ?: return GitProposalResult.Failed("not a pull request")
         val prHint = pullRequest.toEventHint<GitPullRequestEvent>() ?: return GitProposalResult.Failed("not a pull request")
+        return updatePullRequest(prHint, target, sourceClones, tip)
+    }
+
+    /** [updatePullRequest] for a pull request known by its event (and where it was seen). */
+    suspend fun updatePullRequest(
+        prHint: EventHintBundle<GitPullRequestEvent>,
+        target: GitProposalTarget,
+        sourceClones: List<String>,
+        tip: String,
+    ): GitProposalResult {
+        val pr = prHint.event
         val graspClones = target.targets.grasp.map { it.cloneUrl }
         val targetClones = graspClones + target.targets.others
         val branch = pr.targetBranch() ?: target.defaultBranch
@@ -278,18 +294,7 @@ class GitProposals(
         }
 
     /** The user as git writes them: their name, and NIP-05 address (or npub) as the email. */
-    fun author(): GitPerson {
-        val me = account.userProfile()
-        val info =
-            me
-                .metadataOrNull()
-                ?.flow
-                ?.value
-                ?.info
-        val name = info?.bestName()?.takeIf { it.isNotBlank() } ?: "Anonymous"
-        val email = info?.nip05?.takeIf { it.isNotBlank() } ?: "${me.pubkeyNpub()}@nostr"
-        return GitMergeEngine.committer(name, email)
-    }
+    fun author(): GitPerson = host.author()
 
     /**
      * Signs the event built by [template] with every GRASP server as a clone URL, pushes its
@@ -308,7 +313,7 @@ class GitProposals(
     ): GitProposalResult {
         if (graspClones.isEmpty()) {
             if (newObjects.isNotEmpty()) return GitProposalResult.Failed("the repository has no GRASP server to hold a commit made here")
-            return GitProposalResult.Published(publish(target, account.signer.sign(template(fallbackClones))), emptyList())
+            return GitProposalResult.Published(publish(target, host.signer.sign(template(fallbackClones))), emptyList())
         }
         // Each round signs for the servers still in, and pushes the ref under that event's id; a
         // server that refuses drops out and the event is signed again without it, so the event
@@ -316,7 +321,7 @@ class GitProposals(
         var servers = graspClones
         var failures: Map<String, String?> = emptyMap()
         repeat(graspClones.size) {
-            val event = account.signer.sign(template(servers))
+            val event = host.signer.sign(template(servers))
             val results = pusher.push(event.id, servers, tip, newObjects, branchObjects)
             val accepted = servers.filter { results[it] == null }
             failures = results.filterValues { it != null }
@@ -327,14 +332,56 @@ class GitProposals(
         return GitProposalResult.Failed(failures.entries.joinToString("; ") { "${it.key}: ${it.value}" })
     }
 
-    private fun publish(
+    private suspend fun publish(
         target: GitProposalTarget,
         event: Event,
     ): Event {
         cache.justConsumeMyOwnEvent(event)
         // A private repository's events stay on its own relays (GRASP-08).
-        val wider = if (target.announcements.any { it.isPrivate() }) emptySet() else account.computeRelayListToBroadcast(event) + account.outboxRelays.flow.value
-        account.client.publish(event, target.relays + wider)
+        host.publish(event, target.relays, private = target.announcements.any { it.isPrivate() })
         return event
+    }
+}
+
+/** Who opens the proposals: their signer, their name as git writes it, and how their events go out. */
+interface GitProposalHost {
+    val signer: NostrSigner
+
+    fun author(): GitPerson
+
+    /** Publishes [event] to [repositoryRelays] and, unless [private], wherever the user's events go. */
+    suspend fun publish(
+        event: Event,
+        repositoryRelays: Set<NormalizedRelayUrl>,
+        private: Boolean,
+    )
+}
+
+/** The app's [GitProposalHost]: the account's signer, profile and outbox. */
+class AccountGitProposalHost(
+    private val account: Account,
+) : GitProposalHost {
+    override val signer: NostrSigner get() = account.signer
+
+    override fun author(): GitPerson {
+        val me = account.userProfile()
+        val info =
+            me
+                .metadataOrNull()
+                ?.flow
+                ?.value
+                ?.info
+        val name = info?.bestName()?.takeIf { it.isNotBlank() } ?: "Anonymous"
+        val email = info?.nip05?.takeIf { it.isNotBlank() } ?: "${me.pubkeyNpub()}@nostr"
+        return GitMergeEngine.committer(name, email)
+    }
+
+    override suspend fun publish(
+        event: Event,
+        repositoryRelays: Set<NormalizedRelayUrl>,
+        private: Boolean,
+    ) {
+        val wider = if (private) emptySet() else account.computeRelayListToBroadcast(event) + account.outboxRelays.flow.value
+        account.client.publish(event, repositoryRelays + wider)
     }
 }

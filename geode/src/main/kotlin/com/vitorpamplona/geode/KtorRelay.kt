@@ -25,6 +25,7 @@ import com.vitorpamplona.geode.server.HttpCommandSettings
 import com.vitorpamplona.geode.server.Nip11HttpRoute
 import com.vitorpamplona.geode.server.Nip86HttpRoute
 import com.vitorpamplona.geode.server.NipFEHttpRoute
+import com.vitorpamplona.geode.server.RelayHttpExtension
 import com.vitorpamplona.geode.server.WebSocketSessionPump
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
@@ -103,6 +104,8 @@ class KtorRelay(
      * header claiming 2 GB costs that much memory before any payload arrives.
      */
     val maxFrameSize: Long = DEFAULT_MAX_FRAME_SIZE,
+    /** More routes on the relay's port, beside its own (a dev GRASP git host: [com.vitorpamplona.geode.grasp.GraspGitHost]). */
+    val extensions: List<RelayHttpExtension> = emptyList(),
 ) {
     companion object {
         /** Room for a large contact list or long-form article; far below what could exhaust the heap. */
@@ -223,6 +226,7 @@ class KtorRelay(
                                 nipFERoute?.let { route ->
                                     options(path) { route.preflight(call) }
                                 }
+                                extensions.forEach { it.install(this) }
                                 webSocket(path) {
                                     if (shuttingDown) {
                                         // Just return — Ktor closes the WS for us.
