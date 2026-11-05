@@ -26,7 +26,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.commons.chats.ui.LocalChatJumboEmoji
+import com.vitorpamplona.amethyst.commons.chats.ui.chatJumboEmojiAllowed
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiCount
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiFontSize
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -59,7 +59,7 @@ fun RenderRegularTextNote(
                 note = note,
                 accountViewModel = accountViewModel,
             ) {
-                val jumboAllowed = LocalChatJumboEmoji.current
+                val jumboAllowed = chatJumboEmojiAllowed()
                 val jumboCount = remember(eventContent, jumboAllowed) { if (jumboAllowed) jumboEmojiCount(eventContent) else 0 }
 
                 // A voice message is an audio URL whose imeta carries the waveform.

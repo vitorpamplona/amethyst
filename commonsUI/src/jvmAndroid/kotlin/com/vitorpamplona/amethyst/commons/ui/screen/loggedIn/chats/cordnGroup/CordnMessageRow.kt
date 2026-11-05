@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.chats.ui.CHAT_GROUP_WINDOW_SECONDS
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatBubbleLayout
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatDivisor
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatGroupPosition
+import com.vitorpamplona.amethyst.commons.chats.ui.chatJumboEmojiAllowed
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiCount
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiFontSize
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -185,7 +186,11 @@ fun CordnMessageRow(
     // the content rather than from a `p` tag: a tag is a claim the sender makes about
     // who they addressed, while the text is what everyone in the room actually sees.
     val mentionsMe = remember(text, me) { text != null && me in CordnMentions.mentioned(text) }
-    val jumboCount = remember(text) { if (text != null) jumboEmojiCount(text) else 0 }
+    // The compact layout keeps emoji inline, as RenderRegularTextNote does for every other chat:
+    // a 48sp emoji tripled the height of a one-line-per-message layout. Decided here, before
+    // ChatBubbleLayout draws the row, so it reads the setting rather than the layout's local.
+    val jumboAllowed = chatJumboEmojiAllowed()
+    val jumboCount = remember(text, jumboAllowed) { if (text != null && jumboAllowed) jumboEmojiCount(text) else 0 }
 
     val mentionTint = MaterialTheme.colorScheme.primary.copy(alpha = MENTION_TINT_ALPHA)
 

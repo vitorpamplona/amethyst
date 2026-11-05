@@ -182,6 +182,7 @@ private val DELIVERED =
         Triple(BOB, "CI is green on main", at(0, 9, 40)),
         Triple(ME, "Translations are in. 31 locales complete.", at(0, 10, 12)),
         Triple(CAROL, "RC1 is out. Thanks everyone!", at(0, 10, 55)),
+        Triple(ALICE, "🎉", at(0, 10, 56)),
     ).mapIndexed { index, (author, text, createdAt) ->
         CordnDeliveredMessage(
             CordnEnvelope(
