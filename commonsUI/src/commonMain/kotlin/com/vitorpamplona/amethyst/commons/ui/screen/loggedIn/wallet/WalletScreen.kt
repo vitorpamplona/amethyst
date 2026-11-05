@@ -1417,7 +1417,7 @@ internal fun RestoreFoundDialog(
         title = { Text(stringRes(Res.string.wallet_backup_restore_title)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Text(stringRes(Res.string.wallet_backup_restore_found, backup.wallets.size))
+                Text(pluralStringRes(Res.plurals.wallet_backup_restore_found, backup.wallets.size, backup.wallets.size))
                 Spacer(modifier = Modifier.height(8.dp))
                 backup.wallets.forEach { candidate ->
                     val checked = candidate in selected

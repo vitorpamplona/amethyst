@@ -78,7 +78,7 @@
     <string name="action_refresh">Refresh</string>
     <string name="action_try_again">Try Again</string>
     <string name="feed_empty">Feed is empty</string>
-    <string name="error_loading_feed">Error loading feed: %s</string>
+    <string name="error_loading_feed">Error loading feed: %1$s</string>
 
     <!-- Placeholder Screens -->
     <string name="screen_search_title">Search</string>
@@ -2244,7 +2244,10 @@
     <string name="wallet_backup_found_restore">Backup found on your relays. Restore wallets</string>
     <string name="wallet_backup_searching">Searching your relays for a backup...</string>
     <string name="wallet_backup_restore_title">Restore Lightning wallets</string>
-    <string name="wallet_backup_restore_found">Found %1$d Lightning wallet(s) in your Nostr backups:</string>
+    <plurals name="wallet_backup_restore_found">
+        <item quantity="one">Found %1$d Lightning wallet in your Nostr backups:</item>
+        <item quantity="other">Found %1$d Lightning wallets in your Nostr backups:</item>
+    </plurals>
     <string name="wallet_backup_restore_confirm">Restore</string>
     <string name="wallet_backup_none_found">No Lightning wallet backup found on your relays</string>
     <string name="wallet_backup_saved_by">Saved by %1$s, %2$s</string>
@@ -9148,7 +9151,6 @@
     <string name="wot_nudge_first_action">Show my people first</string>
     <string name="wot_nudge_thread_label">Replies, your circle first</string>
     <string name="wot_nudge_you_follow">You follow</string>
-    <string name="wot_nudge_followed_by">Followed by %1$s</string>
     <plurals name="wot_nudge_thread_others">
         <item quantity="one">%1$d more from outside your circle</item>
         <item quantity="other">%1$d more from outside your circle</item>

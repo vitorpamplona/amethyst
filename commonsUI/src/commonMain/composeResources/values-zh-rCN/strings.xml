@@ -38,7 +38,7 @@
     <string name="action_refresh">刷新</string>
     <string name="action_try_again">重试</string>
     <string name="feed_empty">Feed 为空</string>
-    <string name="error_loading_feed">加载源时出错： %s</string>
+    <string name="error_loading_feed">加载源时出错： %1$s</string>
     <!-- Placeholder Screens -->
     <string name="screen_search_title">搜索</string>
     <string name="screen_search_description">搜索用户、笔记和话题标签。</string>

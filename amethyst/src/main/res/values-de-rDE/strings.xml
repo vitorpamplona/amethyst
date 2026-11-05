@@ -208,4 +208,8 @@
     <string name="mute_button">Ton ein. Zur Stummschaltung drücken</string>
     <string name="play">Abspielen</string>
     <string name="pause">Pausen</string>
+    <string name="napplet_cap_outbox">Outbox</string>
+    <string name="napplet_cap_fs">Dateien</string>
+    <string name="napplet_cap_common">Soziale Aktionen</string>
+    <string name="napplet_cap_intent">Andere Apps öffnen</string>
 </resources>

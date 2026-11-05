@@ -72,7 +72,7 @@
     <string name="action_refresh">Frissítés</string>
     <string name="action_try_again">Próbálja újra</string>
     <string name="feed_empty">A hírfolyam üres</string>
-    <string name="error_loading_feed">Hiba történt a hírfolyam betöltésekor: %s</string>
+    <string name="error_loading_feed">Hiba történt a hírfolyam betöltésekor: %1$s</string>
     <!-- Placeholder Screens -->
     <string name="screen_search_title">Keresés</string>
     <string name="screen_search_description">Keressen felhasználókat, bejegyzéseket és kulcsszavakat.</string>
