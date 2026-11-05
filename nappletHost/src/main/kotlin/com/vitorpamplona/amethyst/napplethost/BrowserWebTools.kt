@@ -107,13 +107,17 @@ object BrowserWebTools {
     /**
      * The document-start script for a browser WebView: the direct-bridge flags, the NIP-07 [shimJs], and
      * [BrowserExtrasScript]. [imeProxy] is set only for the embedded surface, which has no native keyboard.
+     *
+     * The script is registered for every frame, but only the top frame has the bridge, so the shim runs
+     * there alone. In a subframe it has nothing to talk to, and its shell transport would post a
+     * `napplet.hello` to whatever third-party page embeds the frame.
      */
     fun browserStartScript(
         shimJs: String,
         imeProxy: Boolean,
     ): String {
         val flags = if (imeProxy) " window.__nappletImeProxy = true;" else ""
-        return "if (window.top === window) { window.__nappletDirectBridge = true; window.__nappletNip07 = true;$flags }\n$shimJs\n${BrowserExtrasScript.JS}"
+        return "if (window.top === window) { window.__nappletDirectBridge = true; window.__nappletNip07 = true;$flags\n$shimJs\n}\n${BrowserExtrasScript.JS}"
     }
 
     // ---- non-web schemes ----
