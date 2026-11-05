@@ -83,10 +83,11 @@ kotlinx-coroutines-test = "1.11.0"
 # where drss moved it from 30054.
 quartzKmp = "2.16.0"
 # A quartz commit built by JitPack, used in place of the release above while no release carries what
-# the app needs (now: quartz main after vitorpamplona/quartz#94, the NIP-34 work, on top of 2.16.0).
-# The root build swaps every quartz dependency for it, the bindings' included. Empty: the release.
+# the app needs (now: quartz main after vitorpamplona/quartz#94, the NIP-34 work, on top of 2.16.0,
+# plus the jitpack.yml change that also builds the iOS variants the metadata compiles need). The root
+# build swaps every quartz dependency for it, the bindings' included. Empty: the release.
 # -PquartzDir=../quartz still wins.
-quartzJitpack = "2de1e0352565e935965ce719fb9bbb7bd138b8de"
+quartzJitpack = "787f2b146cef86c0fee35dac8e9e88d786e73b56"
 # The two MLS bindings, split out of quartz into their own libraries: Marmot (vitorpamplona/marmot-kmp)
 # and cordn (vitorpamplona/cordn-kmp). Their current releases were built against quartz 2.7.3 and run on
 # the version above: 2.9.0 removed no public API they use.

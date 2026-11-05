@@ -74,6 +74,33 @@ allprojects {
         }
     }
 
+    if (quartzJitpack != null) {
+        // JitPack rewrites the published module metadata and drops each file's classifier: the
+        // sources and metadata variants point at `quartz-jvm-<v>.jar` where the files it serves are
+        // `quartz-jvm-<v>-sources.jar` and `quartz-iosarm64-<v>-metadata.jar`. Point them back, so
+        // the KMP metadata compiles (iOS) and anything reading quartz's sources resolve.
+        mapOf(
+            "quartz-jvm" to listOf("jvmSourcesElements-published" to "sources"),
+            "quartz-android" to listOf("androidSourcesElements-published" to "sources"),
+            "quartz-iosarm64" to
+                listOf("iosArm64SourcesElements-published" to "sources", "iosArm64MetadataElements-published" to "metadata"),
+            "quartz-iossimulatorarm64" to
+                listOf("iosSimulatorArm64SourcesElements-published" to "sources", "iosSimulatorArm64MetadataElements-published" to "metadata"),
+        ).forEach { (module, variants) ->
+            dependencies.components.withModule("com.github.vitorpamplona.quartz:$module") {
+                val version = id.version
+                variants.forEach { (variant, classifier) ->
+                    withVariant(variant) {
+                        withFiles {
+                            removeAllFiles()
+                            addFile("$module-$version-$classifier.jar")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     apply(plugin = "com.diffplug.spotless")
 
     if (project === rootProject) {

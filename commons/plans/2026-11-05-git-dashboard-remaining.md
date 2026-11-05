@@ -66,7 +66,10 @@ Then finished (same day):
   prints it against a local bare repository too. The e2e's git helper turns it off.
 - quartz comes from a JitPack build of quartz `main` after vitorpamplona/quartz#94 merged the NIP-34
   work onto 2.16.0 (`quartzJitpack` in the catalog, substituted for every quartz dependency, the
-  bindings' included). Once a release carries it, empty `quartzJitpack` and bump `quartzKmp`. Quartz's
+  bindings' included). Once a release carries it, empty `quartzJitpack` and bump `quartzKmp`.
+  JitPack needed two more things: quartz's `jitpack.yml` now also builds the iOS variants (the KMP
+  metadata compiles resolve them), and the root build points the sources and metadata variants
+  back at their classified files, because JitPack's metadata rewrite drops the classifier. Quartz's
   `jitpack.yml` now publishes the Android variant, which JitPack builds lacked.
 - A read-only login (an npub) no longer sees Close, Reopen or Merge: the status buttons now need a
   signing account, like Review, comments and triage.
