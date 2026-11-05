@@ -84,6 +84,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
@@ -156,6 +157,13 @@ data class WalletInfo(
 private const val NWC_TIMEOUT_MS = 30_000L
 
 class WalletViewModel : ViewModel() {
+    companion object {
+        private const val TAG = "WalletViewModel"
+
+        /** All the bitcoin there will ever be; keeps a typed amount's msat conversion in range. */
+        const val MAX_SEND_SATS = 2_100_000_000_000_000L
+    }
+
     // Error text is resolved here rather than in the screens because a single _error
     // flow feeds several of them.
     private suspend fun text(id: StringResource) = loadStringRes(id)
@@ -461,8 +469,19 @@ class WalletViewModel : ViewModel() {
         val acc = account ?: return
         if (backupChecked) return
         backupChecked = true
-        viewModelScope.launch(Dispatchers.IO) {
-            _backupAvailable.value = acc.nwcBackup.hasBackup()
+        viewModelScope.launch {
+            val found =
+                withContext(Dispatchers.IO) {
+                    try {
+                        acc.nwcBackup.hasBackup()
+                    } catch (e: Exception) {
+                        currentCoroutineContext().ensureActive()
+                        Log.w(TAG, "Backup lookup failed", e)
+                        null
+                    }
+                }
+            // Relays not ready yet, or the lookup failed: the next visit asks again.
+            if (found == null) backupChecked = false else _backupAvailable.value = found
         }
     }
 
@@ -929,70 +948,85 @@ class WalletViewModel : ViewModel() {
         }
     }
 
+    /** The wallet a send pays from: the selected one, else the default, else the first. */
+    private fun payingWalletUri(): Nip47WalletConnect.Nip47URINorm? = getWalletUri(_selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id)
+
     fun sendPayment(bolt11: String) {
-        val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
         val acc = account ?: return
-        val walletUri = getWalletUri(walletId) ?: return
+        val walletUri = payingWalletUri() ?: return
         viewModelScope.launch(Dispatchers.IO) {
             _sendState.value = SendState.Sending
-            try {
-                acc.zaps.sendNwcRequestToWallet(walletUri, PayInvoiceMethod.create(bolt11)) { response ->
-                    viewModelScope.launch {
-                        when (response) {
-                            is PayInvoiceSuccessResponse -> {
-                                _sendState.value = SendState.Success(response.result?.preimage)
-                                fetchBalance()
-                            }
+            payInvoice(acc, walletUri, bolt11)
+        }
+    }
 
-                            is IErrorResponseLike -> {
-                                // Both PayInvoiceErrorResponse (method-specific, kept for
-                                // back-compat) and NwcErrorResponse (generic) reduce to the
-                                // same user-visible "payment failed" message.
-                                _sendState.value =
-                                    SendState.Error(
-                                        response.errorMessage() ?: text(Res.string.send_payment_failed),
-                                    )
-                            }
+    private suspend fun payInvoice(
+        acc: Account,
+        walletUri: Nip47WalletConnect.Nip47URINorm,
+        bolt11: String,
+    ) {
+        try {
+            acc.zaps.sendNwcRequestToWallet(walletUri, PayInvoiceMethod.create(bolt11)) { response ->
+                viewModelScope.launch {
+                    when (response) {
+                        is PayInvoiceSuccessResponse -> {
+                            _sendState.value = SendState.Success(response.result?.preimage)
+                            fetchBalance()
+                        }
 
-                            else -> {
-                                _sendState.value = SendState.Error(text(Res.string.wallet_connect_unreadable_response_error))
-                            }
+                        is IErrorResponseLike -> {
+                            // Both PayInvoiceErrorResponse (method-specific, kept for
+                            // back-compat) and NwcErrorResponse (generic) reduce to the
+                            // same user-visible "payment failed" message.
+                            _sendState.value =
+                                SendState.Error(
+                                    response.errorMessage() ?: text(Res.string.send_payment_failed),
+                                )
+                        }
+
+                        else -> {
+                            _sendState.value = SendState.Error(text(Res.string.wallet_connect_unreadable_response_error))
                         }
                     }
                 }
-            } catch (e: Exception) {
-                currentCoroutineContext().ensureActive()
-                _sendState.value = SendState.Error(e.message ?: text(Res.string.send_payment_failed))
             }
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            _sendState.value = SendState.Error(e.message ?: text(Res.string.send_payment_failed))
         }
     }
 
     /**
      * Pays a Lightning address: asks its LNURL-pay service for an invoice of exactly [sats], then
-     * pays that invoice from the selected wallet like [sendPayment] does.
+     * pays that invoice from the wallet [sendPayment] would use, picked before the lookup starts.
      */
     fun sendToLightningAddress(
         lnAddress: String,
         sats: Long,
     ) {
         val avm = accountViewModel ?: return
+        val acc = account ?: return
+        val walletUri = payingWalletUri() ?: return
+        if (sats !in 1..MAX_SEND_SATS) return
         viewModelScope.launch(Dispatchers.IO) {
             _sendState.value = SendState.Sending
-            try {
-                val invoice =
+            val invoice =
+                try {
                     LightningInvoiceResolver(avm.host.lnurlTransport).lnAddressInvoice(
                         lnAddress = lnAddress,
                         milliSats = sats * 1000L,
                         message = "",
                         onProgress = {},
                     )
-                sendPayment(invoice)
-            } catch (e: LightningInvoiceResolver.LightningAddressError) {
-                _sendState.value = SendState.Error(avm.noticeResolver.resolve(e.notice).message)
-            } catch (e: Exception) {
-                currentCoroutineContext().ensureActive()
-                _sendState.value = SendState.Error(e.message ?: text(Res.string.send_payment_failed))
-            }
+                } catch (e: LightningInvoiceResolver.LightningAddressError) {
+                    _sendState.value = SendState.Error(avm.noticeResolver.resolve(e.notice).message)
+                    return@launch
+                } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
+                    _sendState.value = SendState.Error(e.message ?: text(Res.string.send_payment_failed))
+                    return@launch
+                }
+            payInvoice(acc, walletUri, invoice)
         }
     }
 

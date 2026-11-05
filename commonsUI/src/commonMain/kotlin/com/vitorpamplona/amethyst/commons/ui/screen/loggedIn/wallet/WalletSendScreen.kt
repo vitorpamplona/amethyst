@@ -141,7 +141,7 @@ fun WalletSendScreen(
                     // One decision for both the button's action and whether it is enabled.
                     val pay: (() -> Unit)? =
                         when {
-                            lnAddress != null -> amountSats?.takeIf { it > 0 }?.let { sats -> { walletViewModel.sendToLightningAddress(lnAddress, sats) } }
+                            lnAddress != null -> amountSats?.takeIf { it in 1..WalletViewModel.MAX_SEND_SATS }?.let { sats -> { walletViewModel.sendToLightningAddress(lnAddress, sats) } }
                             invoiceText.isNotBlank() -> ({ walletViewModel.sendPayment(invoiceText.trim()) })
                             else -> null
                         }
