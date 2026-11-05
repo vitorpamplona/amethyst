@@ -2656,8 +2656,6 @@
     <string name="forked_from">इससे पथभेद किया गया</string>
     <string name="git_clone_address">अनुकृति :</string>
     <string name="git_branch">शाखा</string>
-    <string name="git_commit">स्थायी अभिलेखन</string>
-    <string name="git_merge_base">मूल विलय</string>
     <string name="git_pr_update_description">कर्षण अनुरोध का अद्यतन किया गया एक नए स्थायी अभिलेखन तक।</string>
     <string name="git_repo_tab_issues">समस्याएँ</string>
     <string name="git_repo_tab_patches">सुधारलेख तथा पीआर॰</string>

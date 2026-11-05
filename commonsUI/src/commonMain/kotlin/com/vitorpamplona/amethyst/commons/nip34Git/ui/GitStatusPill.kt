@@ -23,8 +23,7 @@ package com.vitorpamplona.amethyst.commons.nip34Git.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.note.GitStatusPill
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
@@ -43,19 +42,17 @@ fun GitStatusEvent.statusKind(): StatusKind =
     }
 
 /**
- * Entry point: resolves the latest NIP-34 status for [targetIdHex] from the process-wide
- * [GitStatusIndex] and renders the stateless [GitStatusPill] for it. Hidden until the index
- * finishes its first scan, and when no status exists unless [defaultIfMissing] is given.
+ * Entry point: the [GitStatusPill] for the status [item] shows ([observeGitStatus]), or
+ * [defaultIfMissing] when it has none; nothing when it has none and no default is given.
  */
 @Composable
 fun GitStatusPill(
-    targetIdHex: String,
+    item: Note,
     modifier: Modifier = Modifier,
     defaultIfMissing: StatusKind? = null,
+    /** A 1631 on an issue reads Resolved, on a patch or PR Merged. */
+    forIssue: Boolean = false,
 ) {
-    val index by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
-    val map = index ?: return // hide pill until the initial scan completes — avoids a default-then-real flicker
-    val kind = map[targetIdHex]?.statusKind() ?: defaultIfMissing ?: return
-
-    GitStatusPill(kind, modifier)
+    val kind = observeGitStatus(item)?.statusKind() ?: defaultIfMissing ?: return
+    GitStatusPill(kind, modifier, forIssue)
 }

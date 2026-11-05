@@ -295,6 +295,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.NewWorkout
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.WorkoutsScreen
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip34Git.review.GitCodeLocation
 
 /**
  * Registers every destination whose screen is shared UI: the navigation table both front ends
@@ -333,7 +334,8 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
     composableFromEndArgs<Route.Pictures> { PicturesScreen(accountViewModel, nav, it.attachments, it.message) }
     composableFromEnd<Route.Workouts> { WorkoutsScreen(accountViewModel, nav) }
-    composableFromEnd<Route.GitRepositories> { GitRepositoriesScreen(accountViewModel, nav) }
+    // The dashboard sizes its own columns; Explore caps its feed to the reading width itself.
+    composableFromEnd<Route.GitRepositories>(capWidth = false) { GitRepositoriesScreen(accountViewModel, nav) }
     composableFromEnd<Route.NewGitRepository> { NewGitRepositoryScreen(accountViewModel, nav) }
     composableFromEnd<Route.Highlights> { HighlightsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
@@ -783,6 +785,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
             attachment = it.attachment,
             quoteId = it.quote,
             draftId = it.draft,
+            reviewLocation = it.reviewPath?.let { path -> GitCodeLocation(path, it.reviewCommit, it.reviewLine, it.reviewLine, it.reviewRemovedSide) },
             accountViewModel,
             nav,
         )

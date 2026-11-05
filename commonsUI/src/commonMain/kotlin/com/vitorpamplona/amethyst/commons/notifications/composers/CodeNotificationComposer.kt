@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.notifications.composers
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
+import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
 import com.vitorpamplona.amethyst.commons.notifications.NotificationContent
 import com.vitorpamplona.amethyst.commons.notifications.NotificationDraft
 import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
@@ -44,11 +46,13 @@ import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channe
 import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_draft
 import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_open
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
@@ -73,22 +77,22 @@ object CodeNotificationComposer {
     fun compose(
         account: Account,
         event: GitIssueEvent,
-    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_issue, event.subject() ?: event.content)
+    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_issue, inRepository(event, event.subject() ?: event.content))
 
     fun compose(
         account: Account,
         event: GitPatchEvent,
-    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_patch, event.subject() ?: event.content)
+    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_patch, inRepository(event, event.subject() ?: event.content))
 
     fun compose(
         account: Account,
         event: GitPullRequestEvent,
-    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_pr, event.subject() ?: event.content)
+    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_pr, inRepository(event, event.subject() ?: event.content))
 
     fun compose(
         account: Account,
         event: GitPullRequestUpdateEvent,
-    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_pr_update, event.content)
+    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_pr_update, aboutItem(event.parentPullRequestId(), event.content))
 
     // GitReplyEvent (kind 1622) is deprecated in favour of NIP-22 comments, but
     // events already on relays still arrive and still have to be rendered.
@@ -101,7 +105,7 @@ object CodeNotificationComposer {
     fun compose(
         account: Account,
         event: GitStatusOpenEvent,
-    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_status_open, event.content)
+    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_status_open, aboutItem(event.rootEventId(), event.content))
 
     fun compose(
         account: Account,
@@ -119,7 +123,7 @@ object CodeNotificationComposer {
                 issue = Res.string.app_notification_code_channel_message_status_applied_issue,
                 fallback = Res.string.app_notification_code_channel_message_status_applied,
             ),
-        subject = event.content,
+        subject = aboutItem(event.rootEventId(), event.content),
     )
 
     fun compose(
@@ -138,13 +142,41 @@ object CodeNotificationComposer {
                 issue = Res.string.app_notification_code_channel_message_status_closed_issue,
                 fallback = Res.string.app_notification_code_channel_message_status_closed,
             ),
-        subject = event.content,
+        subject = aboutItem(event.rootEventId(), event.content),
     )
 
     fun compose(
         account: Account,
         event: GitStatusDraftEvent,
-    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_status_draft, event.content)
+    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_status_draft, aboutItem(event.rootEventId(), event.content))
+
+    /**
+     * The body of a status or PR-update notification: which issue, patch or PR it is about (its
+     * current title), then the event's own note. These events rarely carry text, so the content
+     * alone left the notification reading "Alice closed an issue" without saying which.
+     */
+    private fun aboutItem(
+        itemId: String?,
+        content: String,
+    ): String? {
+        val item = itemId?.let { LocalCache.getNoteIfExists(it) }
+        val title = item?.let { GitItemTitles.titleOf(it) }
+        val head = item?.event?.let { inRepository(it, title) } ?: title
+        return listOfNotNull(head, content.ifBlank { null }).joinToString("\n").ifBlank { null }
+    }
+
+    /**
+     * "ngit · Fix the login screen": [text] after the name of the repository [item] is filed in, the
+     * way a forge's mail subject leads with the repository, since one person often follows several.
+     */
+    private fun inRepository(
+        item: Event,
+        text: String?,
+    ): String? {
+        val address = GitAuthority.repositoriesOf(item).firstOrNull() ?: return text
+        val name = (LocalCache.getAddressableNoteIfExists(address)?.event as? GitRepositoryEvent)?.name()?.ifBlank { null } ?: address.dTag
+        return if (text.isNullOrBlank()) name else "$name · $text"
+    }
 
     /**
      * Pick a title string for a status event based on the *target*'s kind, so

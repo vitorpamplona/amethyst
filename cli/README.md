@@ -383,6 +383,7 @@ URL) **or** a raw `http(s)` clone URL. This is the git-object read side of
 | `amy git label TARGET LABEL[,LABEL] [--namespace N]` | Attach NIP-32 kind:1985 labels to an issue/patch/PR (namespace defaults to `ugc`). |
 | `amy git open TARGET [MSG]` | Publish a kind:1630 status (open / reopen / ready-for-review). |
 | `amy git applied TARGET [MSG] [--merge-commit C] [--commit C[,C]] [--patch ID[,ID]]` | Publish a kind:1631 status (applied / merged / resolved). Aliases: `merged`, `resolved`. |
+| `amy git merge PR_OR_PATCH [--yes]` | Merge a pull request or patch series on the repository's GRASP servers, as gitworkshop does: a merge commit (or the patches applied to the tip), the signed kind:30618 state published to each server's relay, the push, then a kind:1631 status naming the merge commit. Without `--yes` it prints the plan. Needs every clone URL to be a GRASP server and you to be a confirmed maintainer. |
 | `amy git close TARGET [MSG]` | Publish a kind:1632 status (closed). |
 | `amy git draft TARGET [MSG]` | Publish a kind:1633 status (draft). |
 

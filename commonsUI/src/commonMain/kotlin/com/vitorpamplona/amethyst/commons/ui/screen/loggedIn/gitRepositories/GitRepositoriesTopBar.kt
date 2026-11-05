@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -35,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedDefinition
 import com.vitorpamplona.amethyst.commons.feeds.TopNavFilterState
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_repositories
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -58,6 +60,7 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 fun GitRepositoriesTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
+    showListPicker: Boolean = true,
 ) {
     ShorterTopAppBar(
         title = {
@@ -66,6 +69,11 @@ fun GitRepositoriesTopBar(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
+                // The dashboard is the reader's own, not a list's: the picker only filters Explore.
+                if (!showListPicker) {
+                    Text(stringRes(Res.string.git_repositories))
+                    return@Column
+                }
                 val list by accountViewModel.account.settings.defaultGitRepositoriesFollowList
                     .collectAsStateWithLifecycle()
 

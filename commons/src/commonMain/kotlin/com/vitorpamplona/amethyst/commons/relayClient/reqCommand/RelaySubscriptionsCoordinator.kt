@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAss
 import com.vitorpamplona.amethyst.commons.relayClient.followPacks.FollowPacksFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.geocaches.GeocachesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.geohash.GeoHashFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.gitDashboard.GitDashboardFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepo.RepositoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.gitRepositories.GitRepositoriesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.highlights.HighlightsFilterAssembler
@@ -184,7 +185,7 @@ class RelaySubscriptionsCoordinator(
 
     val chatroom = ChatroomFilterAssembler(client)
     val community = CommunityFilterAssembler(cache, client)
-    val gitRepository = RepositoryFilterAssembler(cache, client)
+    val gitRepository = RepositoryFilterAssembler(cache, client, scope)
 
     // The items filed under the D-list headers on screen (kinds 9999/39999 by `#z`).
     val dListItems = DListItemsFilterAssembler(client)
@@ -234,6 +235,7 @@ class RelaySubscriptionsCoordinator(
     val nsites = NsitesFilterAssembler(client)
     val badges = BadgesFilterAssembler(client)
     val profileBadges = ProfileBadgesFilterAssembler(client)
+    val gitDashboard = GitDashboardFilterAssembler(client)
     val profileAppRecommendations = ProfileAppRecommendationsFilterAssembler(client)
     val browseEmojiSets = BrowseEmojiSetsFilterAssembler(client)
     val communitiesList = CommunitiesListFilterAssembler(client)
@@ -297,6 +299,7 @@ class RelaySubscriptionsCoordinator(
             softwareReleases,
             badges,
             profileBadges,
+            gitDashboard,
             profileAppRecommendations,
             browseEmojiSets,
             communitiesList,

@@ -39,7 +39,11 @@ expect fun formattedDateTime(timestamp: Long): String
 
 object ThreadLevelCalculator {
     /**
-     * This method caches signatures during each execution to avoid recalculation in longer threads
+     * This method caches signatures during each execution to avoid recalculation in longer threads.
+     *
+     * Replies at each level normally rank the thread author's first (oldest first), then mine, then
+     * my follows', then everyone else's, newest first. A [chronological] thread (an issue, patch or
+     * PR, whose replies are a history of what happened to it) lists every reply oldest first.
      */
     fun replyLevelSignature(
         note: Note,
@@ -48,6 +52,7 @@ object ThreadLevelCalculator {
         account: User,
         accountFollowingSet: Set<String>,
         now: Long,
+        chronological: Boolean = false,
     ): LevelSignature {
         val replyTo = note.replyTo
 
@@ -96,6 +101,7 @@ object ThreadLevelCalculator {
                                 account,
                                 accountFollowingSet,
                                 now,
+                                chronological,
                             ).apply { cachedSignatures.put(it, this) }
                     }.maxByOrNull { it.signature.length }
             )
@@ -103,7 +109,10 @@ object ThreadLevelCalculator {
         val parentSignature = parent?.signature?.removeSuffix(";") ?: ""
 
         val threadOrder =
-            if (noteAuthor != null && parent?.author == noteAuthor) {
+            if (chronological) {
+                // Signatures sort descending: invert the time so the oldest reply comes first.
+                "9" + formattedDateTime((parent?.createdAt ?: 0) + (now - createdAt)) + note.idHex.substring(0, 8)
+            } else if (noteAuthor != null && parent?.author == noteAuthor) {
                 // author of the thread first, in **ascending** order
                 "9" + formattedDateTime((parent.createdAt ?: 0) + (now - createdAt)) + note.idHex.substring(0, 8)
             } else if (noteAuthor != null && noteAuthor.pubkeyHex == account.pubkeyHex) {

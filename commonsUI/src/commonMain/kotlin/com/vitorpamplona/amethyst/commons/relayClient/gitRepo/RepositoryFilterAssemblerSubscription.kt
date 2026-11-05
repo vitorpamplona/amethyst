@@ -24,15 +24,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
 @Composable
 fun RepositoryFilterAssemblerSubscription(
     repository: AddressableNote,
+    event: GitRepositoryEvent,
     filterAssembler: RepositoryFilterAssembler,
 ) {
+    // A new version of the announcement can name other maintainers, and so other coordinates.
     val state =
-        remember(repository) {
-            RepositoryQueryState(repository)
+        remember(repository, event) {
+            RepositoryQueryState(repository, RepositoryQueryState.itemIdsOf(event))
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, filterAssembler)

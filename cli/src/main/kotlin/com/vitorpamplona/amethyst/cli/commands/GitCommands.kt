@@ -77,9 +77,16 @@ object GitCommands {
         |      [--parent-commit P] [--in-reply-to ID]
         |  git apply PATCH_ID [--check|--print]           apply a fetched kind:1617 patch to the local tree
         |      [--repo PATH]                                (default: `git am`; --check dry-runs; --print emits it)
+        |  git merge PR_OR_PATCH_ID [--yes]               merge it on the repo's GRASP servers (merge
+        |                                                   commit; without --yes only prints the plan)
         |  git pr REPO --commit TIP --clone URL[,URL]     publish a kind:1618 pull request [DESC arg]
         |      [--subject S] [--branch-name N] [--merge-base C] [--label L[,L]]
         |  git pr-update PR --commit TIP --clone URL[,URL] publish a kind:1619 pull-request update
+        |  git pr REPO --source URL --branch NAME          push the branch to the GRASP servers, then
+        |        [--into BRANCH] [--subject S]           publish the PR naming those that hold it
+        |  git pr-update PR --source URL [--branch NAME]  push the branch's new tip, then a kind:1619
+        |  git edit REPO --path P (--file F | --text T)   a commit setting one file on the branch's
+        |        --message M [--branch B]                signed tip, pushed and opened as a PR
         |  git issues|patches|prs REPO                    list a repo's issues/patches/PRs + status
         |      [--open|--applied|--closed|--draft|--status a,b] [--limit N]
         |  git thread EVENT_ID                            print one item + its status timeline + comments
@@ -101,7 +108,7 @@ object GitCommands {
         route(
             "git",
             tail,
-            "git <init|announce|state|list|show|grasp|browse|cat|log|issue|patch|apply|pr|comment|label|open|applied|close|draft|issues|patches|prs|thread>",
+            "git <init|announce|state|list|show|grasp|browse|cat|log|issue|patch|apply|merge|pr|comment|label|open|applied|close|draft|issues|patches|prs|thread>",
             mapOf(
                 "init" to { rest -> GitInitCommand.init(dataDir, rest) },
                 "announce" to { rest -> announce(dataDir, rest) },
@@ -118,12 +125,14 @@ object GitCommands {
                 "patches" to { rest -> GitReadCommands.patches(dataDir, rest) },
                 "pr" to { rest -> GitPrCommands.pr(dataDir, rest) },
                 "pr-update" to { rest -> GitPrCommands.prUpdate(dataDir, rest) },
+                "edit" to { rest -> GitProposeCommands.edit(dataDir, rest) },
                 "prs" to { rest -> GitReadCommands.prs(dataDir, rest) },
                 "thread" to { rest -> GitReadCommands.thread(dataDir, rest) },
                 "comment" to { rest -> GitCommentCommand.comment(dataDir, rest) },
                 "label" to { rest -> GitLabelCommand.label(dataDir, rest) },
                 "apply" to { rest -> GitApplyCommand.apply(dataDir, rest) },
                 "open" to { rest -> GitStatusCommands.open(dataDir, rest) },
+                "merge" to { rest -> GitMergeCommand.merge(dataDir, rest) },
                 "applied" to { rest -> GitStatusCommands.applied(dataDir, rest) },
                 "merged" to { rest -> GitStatusCommands.applied(dataDir, rest) },
                 "resolved" to { rest -> GitStatusCommands.applied(dataDir, rest) },
@@ -139,6 +148,9 @@ object GitCommands {
     ): Int {
         val args = Args(rest)
         val name = args.flag("name") ?: return Output.error("bad_args", "git announce requires --name")
+        // `--private true` would read as a value and leave the repository public: a flag, no value.
+        if (args.flag("private") != null) return Output.error("bad_args", "--private takes no value")
+        val private = args.bool("private")
         // `--identifier` is the spelled-out alias of `--d` (the d-tag) — read
         // eagerly so passing both spellings doesn't trip rejectUnknown().
         val identifierAlias = args.flag("identifier")
@@ -158,7 +170,10 @@ object GitCommands {
                     earliestUniqueCommit = args.flag("earliest-commit"),
                     personalFork = args.bool("personal-fork"),
                     dTag = identifier,
-                )
+                ) {
+                    // GRASP-08: its servers want a NIP-98 header, and its events stay on its relays.
+                    if (private) add(arrayOf("private", "true"))
+                }
             val signed = ctx.signer.sign(template)
             val targets = RawEventSupport.publishTargets(ctx, args)
             args.rejectUnknown()

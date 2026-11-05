@@ -88,9 +88,13 @@ variables work on a plain `./gradlew :desktopApp:run` (from the environment: `-D
 also works there, but shows in `ps`, so keep it to public keys).
 
 `AMETHYST_LOCAL_RELAYS=ws://127.0.0.1:7798[,…]` adds relays to the startup account's local relays,
-which count as its outbox, inbox and Global. With an account whose relay list names only that relay
-(set up with `amy`), a run reads and writes on a relay you started (`amy serve`) and nothing reaches
-public relays. `cli/tests/chess/chess-ui.sh` sets this up for chess: bots playing each other or you.
+which count as its outbox, inbox and Global, so a run reads and writes on a relay you started
+(`amy serve`). That alone does not keep a fresh account off public relays: until the app reads the
+account's relay list, its outbox is the default set, and it publishes a Marmot key package there at
+login. Add `start --local-only` for a run that must stay on this machine: the app's proxy points at a
+closed port, so only `127.0.0.1` answers. `cli/tests/chess/chess-ui.sh` sets this up for chess, and
+`cli/tests/git/git-grasp-e2e.sh --keep` leaves a local GRASP server and its repositories running for
+the app (log in with `--login-file cli/tests/git/state-git-grasp/m.nsec`).
 
 `./gradlew :desktopApp:run -Damethyst.debug=true -Damethyst.videoTimeline=true` logs each video's
 start step by step, stamped with the milliseconds since its card came on screen: the held open, the

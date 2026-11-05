@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,11 +27,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -47,32 +44,31 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitLoadingBox
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitMessageBox
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitMetaStyle
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_pr_no_changes
 import com.vitorpamplona.amethyst.commons.resources.git_repo_code_error
 import com.vitorpamplona.amethyst.commons.resources.git_repo_code_loading
+import com.vitorpamplona.amethyst.commons.resources.git_repo_commit
 import com.vitorpamplona.amethyst.commons.resources.git_repo_commits
 import com.vitorpamplona.amethyst.commons.resources.git_repo_file_load_error
 import com.vitorpamplona.amethyst.commons.resources.git_repo_no_commits
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.relativeTimeSpan
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
 import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -85,14 +81,17 @@ fun GitCommitLog(
     snapshot: GitRepoSnapshot,
     viewModel: GitRepositoryBrowserViewModel,
     onBack: () -> Unit,
+    /** A file's history instead of the branch's: [title] heads it, [path] picks the commits. */
+    title: String? = null,
+    path: List<String>? = null,
 ) {
-    var openCommit by rememberSaveable(snapshot.headCommit) { mutableStateOf<String?>(null) }
+    var openCommit by rememberSaveable(snapshot.headCommit, path) { mutableStateOf<String?>(null) }
 
     val history by
-        produceState<Result<List<GitCommit>>?>(null, snapshot.headCommit) {
+        produceState<Result<List<GitCommit>>?>(null, snapshot.headCommit, path) {
             value =
                 try {
-                    Result.success(viewModel.loadHistory(snapshot))
+                    Result.success(if (path != null) viewModel.fileHistory(snapshot, path) else viewModel.loadHistory(snapshot))
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -106,7 +105,8 @@ fun GitCommitLog(
         val commit = remember(openCommit, commits) { commits?.firstOrNull { it.oid == openCommit } }
         PlatformBackHandler { openCommit = null }
         Column(Modifier.fillMaxSize()) {
-            LogHeader(title = commit?.shortOid ?: "", onBack = { openCommit = null })
+            // The summary heads the diff below, so the bar only says where the reader is.
+            LogHeader(title = stringRes(Res.string.git_repo_commit), onBack = { openCommit = null })
             HorizontalDivider(thickness = 0.5.dp)
             if (commit == null) {
                 GitMessageBox(MaterialSymbols.ErrorOutline, stringRes(Res.string.git_repo_file_load_error))
@@ -119,7 +119,7 @@ fun GitCommitLog(
 
     PlatformBackHandler { onBack() }
     Column(Modifier.fillMaxSize()) {
-        LogHeader(title = stringRes(Res.string.git_repo_commits), onBack = onBack)
+        LogHeader(title = title ?: stringRes(Res.string.git_repo_commits), onBack = onBack)
         HorizontalDivider(thickness = 0.5.dp)
         when {
             history == null -> GitLoadingBox(stringRes(Res.string.git_repo_code_loading))
@@ -130,9 +130,8 @@ fun GitCommitLog(
                     items(commits, key = { it.oid }) { commit ->
                         CommitRow(commit) { openCommit = commit.oid }
                         HorizontalDivider(
-                            modifier = Modifier.padding(start = 14.dp),
                             thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                            color = MaterialTheme.colorScheme.subtleBorder,
                         )
                     }
                 }
@@ -171,14 +170,13 @@ private fun CommitDiff(
                         .padding(12.dp),
                 ) {
                     if (commit.summary.isNotBlank()) {
-                        Text(commit.summary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            text = "${commit.shortOid} · ${commit.authorName}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            modifier = Modifier.padding(bottom = 8.dp),
-                        )
+                        Text(commit.summary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     }
+                    Text(
+                        text = commit.authorName + timeAgo(commit.authorTimeSec, prefix = " · "),
+                        style = gitMetaStyle(),
+                        modifier = Modifier.padding(top = 2.dp, bottom = 12.dp),
+                    )
                     GitDiffView(r.getOrThrow(), Modifier.fillMaxWidth())
                 }
             }
@@ -195,17 +193,10 @@ private fun CommitRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(
-            symbol = MaterialSymbols.Commit,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp).padding(top = 2.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = commit.summary.ifBlank { commit.shortOid },
                 style = MaterialTheme.typography.bodyMedium,
@@ -218,21 +209,8 @@ private fun CommitRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = commit.shortOid,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                    modifier =
-                        Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                            .padding(horizontal = 5.dp, vertical = 1.dp),
-                )
-                val time by produceState("", commit.authorTimeSec) { value = relativeTime(commit.authorTimeSec) }
-                Text(
-                    text = "${commit.authorName} · $time",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    text = commit.authorName + timeAgo(commit.authorTimeSec, prefix = " · "),
+                    style = gitMetaStyle(),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -261,10 +239,3 @@ private fun LogHeader(
         )
     }
 }
-
-private suspend fun relativeTime(epochSec: Long): String =
-    if (epochSec <= 0) {
-        ""
-    } else {
-        relativeTimeSpan(epochSec, TimeUtils.now(), dayResolution = false)
-    }

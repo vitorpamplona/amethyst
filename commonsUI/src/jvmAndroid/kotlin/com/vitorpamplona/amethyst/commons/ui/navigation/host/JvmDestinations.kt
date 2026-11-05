@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.navigation.host
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitNewIssueScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitNewPullRequestScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitRepositoryCodeScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitRepositoryIssuesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitRepositoryPullsScreen
@@ -44,4 +45,5 @@ fun NavDestinations.jvmDestinations(accountViewModel: AccountViewModel) {
         CordnGroupChatScreen(it.coordinatorPubKey, it.gid, accountViewModel, nav)
     }
     composableFromEndArgs<Route.GitRepositoryNewIssue> { GitNewIssueScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+    composableFromEndArgs<Route.GitRepositoryNewPullRequest> { GitNewPullRequestScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
 }

@@ -118,7 +118,7 @@ bot alice
 step "starting the desktop app on $RELAY_URL"
 export AMETHYST_LOCAL_RELAYS="$RELAY_URL"
 [[ -n "$SCREEN" ]] && export AMETHYST_SCREEN="$SCREEN"
-"$REPO_ROOT/tools/desktop-run/run-headless.sh" start --login-file "$STATE_DIR/app.nsec" | tail -2
+"$REPO_ROOT/tools/desktop-run/run-headless.sh" start --local-only --login-file "$STATE_DIR/app.nsec" | tail -2
 
 cat <<EOF
 

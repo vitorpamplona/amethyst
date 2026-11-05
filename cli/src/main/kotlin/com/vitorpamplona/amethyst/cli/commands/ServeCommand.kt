@@ -26,12 +26,14 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.geode.KtorRelay
 import com.vitorpamplona.geode.RelayEngine
+import com.vitorpamplona.geode.grasp.GraspGitHost
 import com.vitorpamplona.quartz.buzz.relay.BuzzMembershipPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import kotlinx.coroutines.awaitCancellation
+import java.io.File
 
 /**
  * `amy serve [--host H] [--port N] [--path P] [--db FILE] [--admin NPUBS]` —
@@ -52,6 +54,8 @@ object ServeCommand {
         |  serve [--host H] [--port N] [--path P]      in-memory by default (ephemeral); --db FILE
         |        [--db FILE] [--admin NPUBS]            for a persistent SQLite store. The account's
         |        [--buzz [--members NPUBS]]             pubkey is always an admin; --admin adds more
+        |        [--git-root DIR]                       also a dev GRASP server: git smart HTTP for
+        |                                               announced repositories on the relay's port
         |                                               (comma-separated npub/hex). Blocks until
         |                                               interrupted. Defaults: 127.0.0.1:7447/
         |
@@ -72,6 +76,8 @@ object ServeCommand {
         val port = args.intFlag("port", 7447)
         val path = args.flag("path") ?: "/"
         val dbFile = args.flag("db")
+        // A dev GRASP server: git smart HTTP for announced repositories, on the relay's port.
+        val gitRoot = args.flag("git-root")
 
         fun csv(name: String) =
             args
@@ -121,7 +127,16 @@ object ServeCommand {
             } else {
                 RelayEngine(url, policyBuilder = policyBuilder, adminPubkeys = adminPubkeys)
             }
-        val server = KtorRelay(relay, host = host, port = port, path = path).start()
+        val extensions =
+            gitRoot
+                ?.let { dir ->
+                    val root = File(dir).absoluteFile
+                    if (!root.mkdirs() && !root.isDirectory) return Output.error("bad_args", "cannot create --git-root $root")
+                    // The git routes sit at the server's root, whatever --path the relay takes.
+                    val base = "http://$advertisedHost:$port"
+                    listOf(GraspGitHost(root, relay.store, publicBase = { base }))
+                }.orEmpty()
+        val server = KtorRelay(relay, host = host, port = port, path = path, extensions = extensions).start()
 
         Runtime.getRuntime().addShutdownHook(
             Thread {
@@ -137,6 +152,7 @@ object ServeCommand {
                 "port" to port,
                 "path" to path,
                 "persistent" to (dbFile != null),
+                "git_root" to gitRoot?.let { File(it).absolutePath },
                 "admin_pubkeys" to adminPubkeys.toList(),
                 "buzz" to buzz,
                 "members" to if (buzz) memberPubkeys.toList() else null,

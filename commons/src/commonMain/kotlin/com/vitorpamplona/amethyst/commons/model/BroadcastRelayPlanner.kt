@@ -22,17 +22,22 @@ package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.relays.dialableRelays
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
+import com.vitorpamplona.quartz.nip34Git.grasp.GraspServer
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
@@ -71,6 +76,32 @@ interface BroadcastRelaySource {
     /** Where a profile (kind:0) or relay list (kind:10002) goes: every relay we know of. */
     fun everywhereRelays(): Set<NormalizedRelayUrl>
 }
+
+/** How far up a reply chain the repository of a git event is looked for. */
+private const val MAX_GIT_PARENT_DEPTH = 4
+
+private const val REPOSITORY_PREFIX = "${GitRepositoryEvent.KIND}:"
+
+/** NIP-34 kinds: announcement, state, patch, PR, PR update, issue, reply, cover note, statuses, review. */
+private val GIT_KINDS =
+    setOf(
+        GitRepositoryEvent.KIND,
+        GitRepositoryStateEvent.KIND,
+        1617,
+        1618,
+        1619,
+        1621,
+        1622,
+        1624,
+        1630,
+        1631,
+        1632,
+        1633,
+        7321,
+    )
+
+/** Kinds that act on another event: a NIP-22 comment, reaction, repost, label and deletion. */
+private val ACTING_KINDS = setOf(1111, 7, 6, 16, 1985, 5)
 
 /**
  * Where an event the user publishes should go: the NIP-65 outbox model plus relay hints,
@@ -144,7 +175,122 @@ class BroadcastRelayPlanner(
         return true
     }
 
-    fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> = computeRelayListToBroadcast(event, mutableSetOf())
+    fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> = privateGitRelays(event) ?: computeRelayListToBroadcast(event, mutableSetOf())
+
+    /** Where the deletion of [notes] goes; a private repository's events' deletions stay on its relays. */
+    private fun privateDeletionRelays(notes: List<Note>): Set<NormalizedRelayUrl>? {
+        val private = notes.mapNotNull { note -> note.event?.let { privateGitRelays(it) } }
+        if (private.isEmpty()) return null
+        return private.flatMapTo(HashSet()) { it } + notes.flatMap { it.relays }
+    }
+
+    /**
+     * GRASP-08: an event of a private repository (its announcement, or anything filed under it or
+     * acting on something filed under it) goes only to that repository's relays, never to the
+     * user's or anyone's outbox. Null when the event belongs to no private repository.
+     *
+     * A repository whose announcement the cache lacks may be private: until it loads, the event
+     * goes only where the items it acts on were seen (or, with none seen, to the relay hints that
+     * name the repository), not to the outbox.
+     *
+     * Only git events and what acts on them count (see [actsOnRepository]): an ordinary note that
+     * merely names a repository in an `a` tag routes as usual, so no note can steer the replies and
+     * reactions to it onto a relay its author picked.
+     */
+    private fun privateGitRelays(event: Event): Set<NormalizedRelayUrl>? {
+        // Gift wraps, seals, rumors and NIP-29 group content have their own routing rules.
+        if (event is GiftWrapEvent || event is SealEvent || event is BaseDMGroupEvent || event.sig.isEmpty()) return null
+        if (event is GitRepositoryEvent) return if (event.isPrivate()) repositoryRelaysOf(event) else null
+        if (cache.relayGroupHostsFor(event).isNotEmpty()) return null
+        val walk = gitWalk(event)
+        if (walk.repositories.isEmpty()) return null
+        val announcements = walk.repositories.map { cache.getAddressableNoteIfExists(it)?.event as? GitRepositoryEvent }
+        val private = announcements.filterNotNull().filter { it.isPrivate() }
+        if (private.isNotEmpty()) return private.flatMapTo(HashSet()) { repositoryRelaysOf(it) }
+        if (announcements.all { it != null }) return null
+        // Unknown: where its items were seen, rather than a hint someone else wrote; nowhere known,
+        // the usual routing is all there is.
+        return walk.seenOn.ifEmpty { walk.hints }.ifEmpty { null }
+    }
+
+    /** A private repository's relays: its `relays`, or with none listed, its GRASP servers' (from its clone URLs). */
+    private fun repositoryRelaysOf(announcement: GitRepositoryEvent): Set<NormalizedRelayUrl> {
+        val listed = announcement.relaysNorm().toSet()
+        if (listed.isNotEmpty()) return listed
+        return announcement
+            .clones()
+            .filter { it.contains("/npub1") }
+            .mapNotNullTo(HashSet()) { clone -> GraspServer.relayUrl(clone)?.let { RelayUrlNormalizer.normalizeOrNull(it) } }
+    }
+
+    /** What [gitWalk] found: the repositories an event belongs to, where its items were seen, and the hints naming them. */
+    private class GitWalk(
+        val repositories: List<Address>,
+        val seenOn: Set<NormalizedRelayUrl>,
+        val hints: Set<NormalizedRelayUrl>,
+    )
+
+    /**
+     * The repositories [event] belongs to, breadth first up to [MAX_GIT_PARENT_DEPTH] levels: the
+     * ones it names when it is a git event or acts on one, else those of what it points at (e/E/q
+     * and a/A). Breadth first, so a short path to a private item is never hidden by a long one
+     * that reached the same event at the depth limit.
+     */
+    private fun gitWalk(event: Event): GitWalk {
+        val repositories = LinkedHashSet<Address>()
+        val seenOn = HashSet<NormalizedRelayUrl>()
+        val hints = HashSet<NormalizedRelayUrl>()
+        val visited = HashSet<HexKey>()
+        var level = listOf(event)
+        var depth = 0
+        while (level.isNotEmpty() && depth <= MAX_GIT_PARENT_DEPTH) {
+            val next = ArrayList<Event>()
+            for (current in level) {
+                if (!visited.add(current.id)) continue
+                // The items acted on were seen somewhere; the event being published was not.
+                if (depth > 0) cache.getNoteIfExists(current.id)?.relays?.let { seenOn.addAll(it) }
+                val own = if (actsOnRepository(current)) gitRepositoryAddresses(current, hints) else emptyList()
+                if (own.isNotEmpty()) {
+                    repositories.addAll(own)
+                    continue
+                }
+                if (depth == MAX_GIT_PARENT_DEPTH) continue
+                current.tags.fastForEach { tag ->
+                    if (tag.size < 2) return@fastForEach
+                    val parent =
+                        when (tag[0]) {
+                            "e", "E", "q" -> cache.getNoteIfExists(tag[1])?.event
+                            "a", "A" -> Address.parse(tag[1])?.let { cache.getAddressableNoteIfExists(it)?.event }
+                            else -> null
+                        }
+                    if (parent != null) next.add(parent)
+                }
+            }
+            level = next
+            depth++
+        }
+        return GitWalk(repositories.toList(), seenOn, hints)
+    }
+
+    /** Git events, and the kinds that act on them (comments, reactions, reposts, labels, deletions). */
+    private fun actsOnRepository(event: Event): Boolean = event.kind in GIT_KINDS || event.kind in ACTING_KINDS
+
+    /** The repositories [event] names (adding the hints of those tags to [hints]); a repository's own address for an announcement or its signed state. */
+    private fun gitRepositoryAddresses(
+        event: Event,
+        hints: MutableSet<NormalizedRelayUrl>,
+    ): List<Address> {
+        if (event is GitRepositoryEvent) return listOf(Address(GitRepositoryEvent.KIND, event.pubKey, event.dTag()))
+        if (event is GitRepositoryStateEvent) return listOf(Address(GitRepositoryEvent.KIND, event.pubKey, event.dTag()))
+        val found = ArrayList<Address>()
+        event.tags.fastForEach { tag ->
+            if (tag.size > 1 && (tag[0] == "a" || tag[0] == "A") && tag[1].startsWith(REPOSITORY_PREFIX)) {
+                Address.parse(tag[1])?.let { found.add(it) }
+                tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }?.let { hints.add(it) }
+            }
+        }
+        return found
+    }
 
     private fun computeRelayListToBroadcast(
         event: Event,
@@ -325,6 +471,8 @@ class BroadcastRelayPlanner(
         note: Note,
         reaction: Event,
     ): Set<NormalizedRelayUrl> {
+        // A reaction or repost of a private repository's event stays on that repository's relays.
+        privateGitRelays(reaction)?.let { return it }
         val relaysItCameFrom = note.relays
 
         val inboxRelaysOfTheAuthorOfTheOriginalNote =
@@ -391,6 +539,9 @@ class BroadcastRelayPlanner(
      * seen on — a relay can only honour a deletion it receives.
      */
     fun computeDeletionRelays(notes: List<Note>): Set<NormalizedRelayUrl> {
+        // A kind 5 names the deleted event's id and kind: for a private repository's event, that
+        // must not reach the outbox either.
+        privateDeletionRelays(notes)?.let { return it }
         val myRelayList = source.outboxRelays().toMutableSet()
         notes.forEach {
             myRelayList.addAll(it.relays)

@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
@@ -123,6 +124,8 @@ val NotificationsPerKeyKinds2 =
         GitStatusAppliedEvent.KIND,
         GitStatusClosedEvent.KIND,
         GitStatusDraftEvent.KIND,
+        // NIP-34 reviews (7321) p-tag the reviewed patch's or PR's author.
+        GitReviewEvent.KIND,
         HighlightEvent.KIND,
         CommentEvent.KIND,
         CalendarDateSlotEvent.KIND,
@@ -133,6 +136,9 @@ val NotificationsPerKeyKinds2 =
         LiveChessGameAcceptEvent.KIND,
         LiveChessMoveEvent.KIND,
     )
+
+/** The `K` (root kind) values of comments on issues, patches and pull requests. */
+val GitRootKindTags = listOf(GitIssueEvent.KIND.toString(), GitPatchEvent.KIND.toString(), GitPullRequestEvent.KIND.toString())
 
 val NotificationsPerKeyKinds3 =
     listOf(
@@ -260,6 +266,20 @@ fun filterNotificationsToPubkeys(
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to pubkeys),
                     limit = 200,
+                    since = since,
+                ),
+        ),
+        // NIP-22 comments anywhere under my issue, patch or PR. A reply to someone else's comment
+        // names me only as the root author (uppercase `P`), so the `#p` filters above never see it.
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                ExplainedFilter(
+                    purpose = SubPurpose.NOTIFICATIONS,
+                    accountPubKeys = pubkeys,
+                    kinds = listOf(CommentEvent.KIND),
+                    tags = mapOf("P" to pubkeys, "K" to GitRootKindTags),
+                    limit = 100,
                     since = since,
                 ),
         ),

@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.gitRepo
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
@@ -44,14 +46,7 @@ class RepositoryContentSubAssembler(
             keys.mapNotNull { key ->
                 val repoEvent = key.repository.event as? GitRepositoryEvent ?: return@mapNotNull null
 
-                val announcedRelays = repoEvent.relays().mapNotNull(RelayUrlNormalizer::normalizeOrNull)
-                val hintRelays =
-                    if (announcedRelays.isEmpty()) {
-                        cache.relayHints.hintsForAddress(repoEvent.addressTag())
-                    } else {
-                        emptyList()
-                    }
-                Triple(key, repoEvent, (announcedRelays + hintRelays + key.repository.relayUrls()).toSet())
+                Triple(key, repoEvent, repositoryRelays(cache, key.repository, repoEvent))
             }
 
         // One cursor per relay is shared by every repository opened on it.
@@ -64,13 +59,29 @@ class RepositoryContentSubAssembler(
         return relaysPerRepo.flatMap { (_, repoEvent, repoRelays) ->
             repoRelays.flatMap { relay ->
                 val relaySince = sinceNow?.get(relay)?.time
-                listOf(
-                    filterRepositoryContent(relay, repoEvent, relaySince),
-                    filterRepositoryCi(relay, repoEvent, relaySince),
-                )
+                filterRepositoryContent(relay, repoEvent, relaySince) + filterRepositoryCi(relay, repoEvent, relaySince)
             }
         }
     }
 
     override fun distinct(key: RepositoryQueryState) = key.repository.idHex
+}
+
+/**
+ * Where a repository's items and their activity are read: the relays its announcement lists, else
+ * the relays it was seen on and hinted at.
+ */
+fun repositoryRelays(
+    cache: ICacheProvider,
+    repository: AddressableNote,
+    event: GitRepositoryEvent,
+): Set<NormalizedRelayUrl> {
+    val announcedRelays = event.relays().mapNotNull(RelayUrlNormalizer::normalizeOrNull)
+    val hintRelays =
+        if (announcedRelays.isEmpty()) {
+            cache.relayHints.hintsForAddress(event.addressTag())
+        } else {
+            emptyList()
+        }
+    return (announcedRelays + hintRelays + repository.relayUrls()).toSet()
 }

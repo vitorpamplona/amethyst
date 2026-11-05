@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCodeLocationBanner
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
@@ -68,6 +69,7 @@ import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip34Git.review.gitCodeLocation
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
@@ -163,6 +165,15 @@ fun RenderTextEvent(
             // No in-cache parent note: this comment answers a scope rather than a note.
             // What a comment answers is context, like a quote: its card keeps the margin.
             ProvideMediaBleed(0.dp) { DisplayCommentScope(noteEvent, accountViewModel, nav) }
+        }
+    }
+
+    // An inline code-review comment (NIP-22 on a patch or PR, with `f`/`line`): say which lines.
+    if (noteEvent is CommentEvent) {
+        val location = remember(noteEvent) { noteEvent.gitCodeLocation() }
+        if (location != null) {
+            GitCodeLocationBanner(location)
+            Spacer(modifier = HalfVertSpacer)
         }
     }
 

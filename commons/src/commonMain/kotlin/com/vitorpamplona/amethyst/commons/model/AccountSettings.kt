@@ -1950,6 +1950,13 @@ class AccountSettings(
             .updateAndGet { if (route in it) it else it + Pair(route, MutableStateFlow(0L)) }
             .getValue(route)
 
+    /** Forgets the last-read markers of the routes [route] matches, for markers another one supersedes. */
+    fun dropLastRead(route: (String) -> Boolean) {
+        val before = lastReadPerRoute.value
+        val after = lastReadPerRoute.updateAndGet { map -> map.filterKeys { !route(it) } }
+        if (after.size != before.size) saveAccountSettings()
+    }
+
     fun markAsRead(
         route: String,
         timestampInSecs: Long,
