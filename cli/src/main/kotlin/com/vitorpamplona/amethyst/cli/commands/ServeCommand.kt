@@ -29,7 +29,6 @@ import com.vitorpamplona.geode.RelayEngine
 import com.vitorpamplona.geode.grasp.GraspGitHost
 import com.vitorpamplona.quartz.buzz.relay.BuzzMembershipPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
@@ -133,7 +132,9 @@ object ServeCommand {
                 ?.let { dir ->
                     val root = File(dir).absoluteFile
                     if (!root.mkdirs() && !root.isDirectory) return Output.error("bad_args", "cannot create --git-root $root")
-                    listOf(GraspGitHost(root, relay.store, publicBase = { url.toHttp().trimEnd('/') }))
+                    // The git routes sit at the server's root, whatever --path the relay takes.
+                    val base = "http://$advertisedHost:$port"
+                    listOf(GraspGitHost(root, relay.store, publicBase = { base }))
                 }.orEmpty()
         val server = KtorRelay(relay, host = host, port = port, path = path, extensions = extensions).start()
 

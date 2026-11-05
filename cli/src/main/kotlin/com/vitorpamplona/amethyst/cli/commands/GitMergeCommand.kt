@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.gitRepo.dal.isSeriesRoot
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
 import com.vitorpamplona.amethyst.commons.nip34Git.merge.GitMergeCheck
 import com.vitorpamplona.amethyst.commons.nip34Git.merge.GitMergeEngine
 import com.vitorpamplona.amethyst.commons.nip34Git.merge.GitMergeInputs
@@ -46,9 +45,6 @@ import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryMembership
-import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 
 /**
@@ -78,29 +74,16 @@ object GitMergeCommand {
             val dTag = repoTag.dTag
             val repoAddress = Address(repoTag.kind, repoTag.pubKeyHex, dTag)
 
-            // Every announcement under the identifier: the membership decides whose count.
-            val lead = GitSupport.fetchRepo(ctx, repoAddress, args)
-            val relays = GitSupport.readTargets(ctx, lead, args)
-            val announcementFilter = Filter(kinds = listOf(GitRepositoryEvent.KIND), tags = mapOf("d" to listOf(dTag)))
-            ctx.drain(relays.associateWith { listOf(announcementFilter) }, RELAY_IDLE_MS)
-            val announcements =
-                ctx.store
-                    .query<GitRepositoryEvent>(announcementFilter)
-                    .groupBy { it.pubKey }
-                    .mapValues { (_, events) -> events.maxBy { it.createdAt } }
-            val membership =
-                GitRepositoryMembership.resolveFromLead(repoTag.pubKeyHex, dTag, announcements)
+            // What threads onto the item: revisions, cover notes and renames (and a series' patches).
+            val threadFilter = Filter(kinds = listOf(GitPatchEvent.KIND, GitPullRequestEvent.KIND, GitCoverNoteEvent.KIND, LabelEvent.KIND), tags = mapOf("e" to listOf(item.id)))
+            val repo =
+                GitSupport.loadRepository(ctx, repoAddress, args, RELAY_IDLE_MS, listOf(threadFilter))
                     ?: return@use Output.error("not_found", "no announcement for ${repoTag.toTag()}")
+            val membership = repo.membership
             val me = ctx.identity.pubKeyHex
             if (!membership.isMaintainer(me)) return@use Output.error("not_maintainer", "only a confirmed maintainer can merge")
-
-            val repoRelays = relays + membership.confirmedAnnouncements.flatMap { it.relaysNorm() }
-            val authority = GitAuthority.of(mapOf(dTag to announcements))
-
-            // What threads onto the item: revisions, cover notes and renames (and a series' patches).
-            val stateFilter = Filter(kinds = listOf(GitRepositoryStateEvent.KIND), authors = membership.confirmedMaintainers, tags = mapOf("d" to listOf(dTag)))
-            val threadFilter = Filter(kinds = listOf(GitPatchEvent.KIND, GitPullRequestEvent.KIND, GitCoverNoteEvent.KIND, LabelEvent.KIND), tags = mapOf("e" to listOf(item.id)))
-            ctx.drain(repoRelays.associateWith { listOf(stateFilter, threadFilter) }, RELAY_IDLE_MS)
+            val repoRelays = repo.relays
+            val authority = repo.authority
             val threaded = ctx.store.query<Event>(threadFilter)
 
             // The series and PR updates of whatever gets merged: the item, or its latest revision.
@@ -123,14 +106,14 @@ object GitMergeCommand {
                     updatesOf = { pr -> sourceEvents.filterIsInstance<GitPullRequestUpdateEvent>().filter { it.parentPullRequestId() == pr.id } },
                     repository = repoAddress,
                     announcements = membership.confirmedAnnouncements,
-                    states = ctx.store.query<GitRepositoryStateEvent>(stateFilter),
+                    states = repo.states,
                     authority = authority,
                     authorName = nameOf(ctx, item.pubKey),
                     relayHint = repoRelays.firstOrNull(),
                 )
             val patches = inputs.patches
 
-            val engine = GitMergeEngine { ctx.okhttp }
+            val engine = GitMergeEngine({ ctx.okhttp }, repo.httpAuth(ctx))
             val email = metadataOf(ctx, me)?.contactMetaData()?.nip05?.takeIf { it.isNotBlank() } ?: "${NPub.create(me)}@nostr"
             val check = engine.check(inputs, GitMergeEngine.committer(nameOf(ctx, me) ?: "Anonymous", email))
             val ready =
@@ -161,7 +144,9 @@ object GitMergeCommand {
 
             val push = engine.push(ready, ctx.signer, ctx.client)
             if (!push.result.isSuccess) return@use Output.error("push_failed", push.result.describeFailures())
-            ctx.publish(push.state, repoRelays + ready.targets.map { it.relay } + ctx.outboxRelays())
+            // A private repository's state stays on its own relays (GRASP-08).
+            val stateRelays = repoRelays + ready.targets.map { it.relay }
+            ctx.publish(push.state, if (repo.isPrivate) stateRelays else stateRelays + ctx.outboxRelays())
 
             val coordinates = membership.confirmedCoordinates()
             val euc = membership.confirmedAnnouncements.firstNotNullOfOrNull { it.earliestUniqueCommit() }

@@ -148,6 +148,8 @@ object GitCommands {
     ): Int {
         val args = Args(rest)
         val name = args.flag("name") ?: return Output.error("bad_args", "git announce requires --name")
+        // `--private true` would read as a value and leave the repository public: a flag, no value.
+        if (args.flag("private") != null) return Output.error("bad_args", "--private takes no value")
         val private = args.bool("private")
         // `--identifier` is the spelled-out alias of `--d` (the d-tag) — read
         // eagerly so passing both spellings doesn't trip rejectUnknown().

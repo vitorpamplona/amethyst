@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
-import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
 import com.vitorpamplona.amethyst.commons.nip34Git.merge.GitMergeEngine
 import com.vitorpamplona.amethyst.commons.nip34Git.merge.GitMergeTargets
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalHost
@@ -41,13 +40,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip34Git.git.GitHttpAuth
 import com.vitorpamplona.quartz.nip34Git.git.GitPerson
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryMembership
-import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
 import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * The commit-pushing half of `amy git pr`, `amy git pr-update` and `amy git edit`: the same
@@ -82,28 +78,16 @@ object GitProposeCommands {
         address: Address,
         args: Args,
     ): Pair<GitProposalTarget, GitProposals>? {
-        val lead = GitSupport.fetchRepo(ctx, address, args) ?: return null
-        val relays = GitSupport.readTargets(ctx, lead, args)
-        val announcementFilter = Filter(kinds = listOf(GitRepositoryEvent.KIND), tags = mapOf("d" to listOf(address.dTag)))
-        ctx.drain(relays.associateWith { listOf(announcementFilter) }, RELAY_IDLE_MS)
-        val announcements =
-            ctx.store
-                .query<GitRepositoryEvent>(announcementFilter)
-                .groupBy { it.pubKey }
-                .mapValues { (_, events) -> events.maxBy { it.createdAt } }
-        val membership = GitRepositoryMembership.resolveFromLead(address.pubKeyHex, address.dTag, announcements) ?: return null
-        val repoRelays = relays + membership.confirmedAnnouncements.flatMap { it.relaysNorm() }
-        val stateFilter = Filter(kinds = listOf(GitRepositoryStateEvent.KIND), authors = membership.confirmedMaintainers, tags = mapOf("d" to listOf(address.dTag)))
-        ctx.drain(repoRelays.associateWith { listOf(stateFilter) }, RELAY_IDLE_MS)
-        val states = ctx.store.query<GitRepositoryStateEvent>(stateFilter)
+        val repo = GitSupport.loadRepository(ctx, address, args, RELAY_IDLE_MS) ?: return null
+        val lead = repo.lead ?: return null
         val target =
             GitProposalTarget(
                 address,
                 lead,
-                repoRelays.firstOrNull(),
-                membership.confirmedAnnouncements,
-                GitSignedState.latest(states),
-                GitMergeTargets.of(membership.confirmedAnnouncements),
+                repo.relays.firstOrNull(),
+                repo.membership.confirmedAnnouncements,
+                GitSignedState.latest(repo.states),
+                GitMergeTargets.of(repo.membership.confirmedAnnouncements),
             )
         val me =
             ctx.store
@@ -111,11 +95,19 @@ object GitProposeCommands {
                 .firstOrNull()
                 ?.contactMetaData()
         val host = AmyHost(ctx, me?.let { it.displayName ?: it.name }?.takeIf { it.isNotBlank() }, me?.nip05?.takeIf { it.isNotBlank() })
-        // A private repository's git requests carry the user's NIP-98 header (GRASP-08).
-        val auth = if (membership.confirmedAnnouncements.any { it.isPrivate() }) GitHttpAuth(ctx.signer) else null
-        val proposals = GitProposals(host, { ctx.okhttp }, EventCache(), GitAuthority.of(mapOf(address.dTag to announcements)), auth)
+        val proposals = GitProposals(host, { ctx.okhttp }, EventCache(), repo.authority, repo.httpAuth(ctx))
         return target to proposals
     }
+
+    /** Runs [work], reporting a transport failure (an unreachable or refusing server) as `push_failed`. */
+    private suspend fun proposing(work: suspend () -> GitProposalResult): GitProposalResult =
+        try {
+            work()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            GitProposalResult.Failed(e.message ?: e::class.simpleName ?: "failed")
+        }
 
     private fun emit(
         result: GitProposalResult,
@@ -146,8 +138,9 @@ object GitProposeCommands {
         return Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val (target, proposals) = targetOf(ctx, address, args) ?: return@use Output.error("not_found", "no announcement for ${address.toValue()}")
-            val tip = proposals.branches(source).firstOrNull { it.first == branch }?.second ?: return@use Output.error("not_found", "$source has no branch $branch")
-            emit(proposals.openPullRequest(target, listOf(source), tip, subject, description, labels, branchName = branch, targetBranch = into), mapOf("tip" to tip))
+            val branches = runCatching { proposals.branches(source) }.getOrElse { return@use Output.error("push_failed", "cannot read $source: ${it.message}") }
+            val tip = branches.firstOrNull { it.first == branch }?.second ?: return@use Output.error("not_found", "$source has no branch $branch")
+            emit(proposing { proposals.openPullRequest(target, listOf(source), tip, subject, description, labels, branchName = branch, targetBranch = into) }, mapOf("tip" to tip))
         }
     }
 
@@ -168,8 +161,9 @@ object GitProposeCommands {
             val address = pr.repositoryAddress() ?: return@use Output.error("bad_args", "$ref names no repository")
             val (target, proposals) = targetOf(ctx, address, args) ?: return@use Output.error("not_found", "no announcement for ${address.toValue()}")
             val branch = branchFlag ?: pr.branchName() ?: return@use Output.error("bad_args", "--branch: the PR names none")
-            val tip = proposals.branches(source).firstOrNull { it.first == branch }?.second ?: return@use Output.error("not_found", "$source has no branch $branch")
-            emit(proposals.updatePullRequest(EventHintBundle(pr), target, listOf(source), tip), mapOf("tip" to tip))
+            val branches = runCatching { proposals.branches(source) }.getOrElse { return@use Output.error("push_failed", "cannot read $source: ${it.message}") }
+            val tip = branches.firstOrNull { it.first == branch }?.second ?: return@use Output.error("not_found", "$source has no branch $branch")
+            emit(proposing { proposals.updatePullRequest(EventHintBundle(pr), target, listOf(source), tip) }, mapOf("tip" to tip))
         }
     }
 
@@ -184,8 +178,11 @@ object GitProposeCommands {
         val args = Args(rest)
         val address = GitSupport.resolveAddress(args.positional(0, "repo-naddr-or-coordinates")) ?: return Output.error("bad_args", "expected an naddr or kind:pubkey:identifier")
         val path = args.flag("path")?.split('/')?.filter { it.isNotEmpty() } ?: return Output.error("bad_args", "--path <file in the repository>")
+        if (!GitProposals.isSafePath(path)) return Output.error("bad_args", "--path must name a file in the repository, not .git or ..")
+        val file = args.flag("file")?.let { File(it) }
+        if (file != null && !file.isFile) return Output.error("bad_args", "--file $file is not a readable file")
         val bytes =
-            args.flag("file")?.let { File(it).readBytes() }
+            file?.readBytes()
                 ?: args.flag("text")?.encodeToByteArray()
                 ?: return Output.error("bad_args", "--file <local file> or --text <content>")
         val message = args.flag("message") ?: return Output.error("bad_args", "--message <commit message>")
@@ -197,7 +194,7 @@ object GitProposeCommands {
             val branch = branchFlag ?: target.defaultBranch ?: return@use Output.error("bad_args", "--branch: the repository signs no default branch")
             val parent = target.signedState?.commitFor(branch) ?: return@use Output.error("not_found", "the maintainers sign no tip for $branch")
             val clones = target.targets.grasp.map { it.cloneUrl } + target.targets.others
-            emit(proposals.proposeEdit(target, clones, branch, parent, mapOf(path to bytes), message, ""), mapOf("parent" to parent))
+            emit(proposing { proposals.proposeEdit(target, clones, branch, parent, mapOf(path to bytes), message, "") }, mapOf("parent" to parent))
         }
     }
 }

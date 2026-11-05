@@ -132,10 +132,11 @@ case "${1:-}" in
     # Redirected as a whole, so no process keeps the caller's stdout open: `start | tail` returns.
     run_args="${AMETHYST_RUN_ARGS:-}"
     if $local_only; then
-      # Every outbound connection here goes through the JVM's proxy, and 127.* skips it
-      # (http.nonProxyHosts): pointing it at a closed port leaves only this machine reachable.
+      # Every outbound connection here goes through the JVM's proxy, except http.nonProxyHosts.
+      # Pointing the proxy at a closed port and narrowing that list to loopback (the sandbox's
+      # list also lets LAN ranges through) leaves only this machine reachable.
       # The app inherits the environment from Gradle; --offline keeps Gradle off the network too.
-      export JAVA_TOOL_OPTIONS="$(printf '%s' "${JAVA_TOOL_OPTIONS:-}" | sed -E 's/-Dhttps?\.proxy(Host|Port)=[^ ]*//g') -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=9 -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9"
+      export JAVA_TOOL_OPTIONS="$(printf '%s' "${JAVA_TOOL_OPTIONS:-}" | sed -E 's/-Dhttps?\.(proxyHost|proxyPort|nonProxyHosts)=[^ ]*//g') -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=9 -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9 -Dhttp.nonProxyHosts=localhost|127.*|[::1]"
       run_args="$run_args --offline"
     fi
     (cd "$REPO_ROOT" && exec nohup ./gradlew :desktopApp:run --console=plain \

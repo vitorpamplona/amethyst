@@ -67,6 +67,20 @@ assert_true() {
   if eval "$1"; then info "assert: $2"; record_result "$2" pass "${3:-}"; return 0; fi
   fail_msg "$2: $1 was false (${3:-})"; record_result "$2" fail "${3:-false}"; return 1
 }
+# A refusal: the command fails AND says why (matching $2), so a crash or a typo never passes.
+# git never prints the server's text: a 403 shows as "HTTP 403", a 401 as a username prompt.
+assert_refused() {
+  local out rc
+  out="$(eval "$1" 2>&1)"; rc=$?
+  printf '%s\n' "$out" >>"$LOG_FILE"
+  if [[ $rc -ne 0 ]] && grep -qE "$2" <<<"$out"; then info "assert: $3"; record_result "$3" pass "${4:-}"; return 0; fi
+  fail_msg "$3: expected a refusal matching /$2/, got rc=$rc (${4:-})"; record_result "$3" fail "${4:-not refused}"; return 1
+}
+# A value later steps build on: without it every later assert would test "null".
+need() {
+  [[ -n "$2" && "$2" != null ]] && return 0
+  fail_msg "$1: missing, stopping"; record_result "$1" fail "missing"; exit 1
+}
 
 PIDS=()
 cleanup() {
@@ -115,10 +129,12 @@ for _ in $(seq 1 90); do
   sleep 0.5
 done
 grep -q "relay up at" "$LOG_DIR/relay.log" || { fail_msg "GRASP relay did not come up"; exit 1; }
+grep -q "relay up at" "$LOG_DIR/outbox.log" || { fail_msg "outbox relay did not come up"; exit 1; }
 
 # Accounts whose relay lists name only these relays: nothing goes to public relays. The
 # maintainer's key is kept, so the desktop app can log in as them (--keep).
 M_NSEC="$("$AMY_BIN" --json key generate 2>>"$LOG_FILE" | strip | jq -r .nsec)"
+need m_nsec "$M_NSEC"
 ( umask 077; printf '%s\n' "$M_NSEC" >"$STATE_DIR/m.nsec" )
 amy_as m init --nsec "$M_NSEC" >/dev/null
 amy_as c init >/dev/null
@@ -128,7 +144,9 @@ for who in m c; do
   amy_as "$who" relay publish-lists >/dev/null
 done
 M_NPUB="$(M whoami | jq -r .npub)"
+need m_npub "$M_NPUB"
 C_NPUB="$(C whoami | jq -r .npub)"
+need c_npub "$C_NPUB"
 info "maintainer $M_NPUB, contributor $C_NPUB"
 
 # =============================================================================
@@ -141,19 +159,21 @@ g -C "$WORK" commit -qm "initial commit"
 ROOT="$(g -C "$WORK" rev-parse HEAD)"
 UP="$HTTP/$M_NPUB/demo.git"
 ADDR="$(M git announce --name demo --d demo --clone "$UP" --relay "$RELAY" --earliest-commit "$ROOT" | jq -r .address)"
+need addr "$ADDR"
 M git state "$ADDR" --head main --branch "main=$ROOT" --relay "$RELAY" >/dev/null
 g -C "$WORK" push -q "$UP" main:main >>"$LOG_FILE" 2>&1
 assert_eq "$(g ls-remote "$UP" refs/heads/main | cut -f1)" "$ROOT" grasp.push_signed "a push the signed state names is taken"
 
 printf 'unsigned\n' >>"$WORK/README.md"
 g -C "$WORK" commit -qam "not signed"
-assert_true '! g -C "$WORK" push -q "$UP" main:main >>"$LOG_FILE" 2>&1' grasp.push_unsigned "a branch push the state does not name is refused"
+assert_refused 'g -C "$WORK" push -q "$UP" main:main' "HTTP 403" grasp.push_unsigned "a branch push the state does not name is refused"
 g -C "$WORK" reset -q --hard "$ROOT"
 
 # =============================================================================
 banner "fork and open a pull request (amy git pr --source)"
 FORK="$HTTP/$C_NPUB/demo.git"
 FADDR="$(C git announce --name demo --d demo --clone "$FORK" --relay "$RELAY" --earliest-commit "$ROOT" | jq -r .address)"
+need faddr "$FADDR"
 g -C "$WORK" checkout -qb feature
 printf 'a feature\n' >"$WORK/feature.txt"
 g -C "$WORK" add feature.txt
@@ -165,6 +185,7 @@ g -C "$WORK" push -q "$FORK" main:main feature:feature >>"$LOG_FILE" 2>&1
 PR="$(C git pr "$ADDR" --source "$FORK" --branch feature --subject "Add a feature" "Adds feature.txt" --relay "$RELAY")"
 info "pr: $PR"
 PRID="$(echo "$PR" | jq -r .event_id)"
+need prid "$PRID"
 UPDIR="$STATE_DIR/git/$M_NPUB/demo.git"
 assert_eq "$(g --git-dir "$UPDIR" rev-parse "refs/nostr/$PRID" 2>/dev/null)" "$FTIP" pr.ref "the PR's commits are on the upstream server under refs/nostr/<id>"
 assert_eq "$(echo "$PR" | jq -r '.servers[0]')" "$UP" pr.servers "the event names the server that holds them"
@@ -182,6 +203,7 @@ g -C "$WORK" push -q "$FORK" feature:feature >>"$LOG_FILE" 2>&1
 UPD="$(C git pr-update "$PRID" --source "$FORK" --relay "$RELAY")"
 info "update: $UPD"
 UPDID="$(echo "$UPD" | jq -r .event_id)"
+need updid "$UPDID"
 assert_eq "$(echo "$UPD" | jq -r .kind)" "1619" update.kind "a kind 1619"
 assert_eq "$(g --git-dir "$UPDIR" rev-parse "refs/nostr/$UPDID" 2>/dev/null)" "$FTIP2" update.ref "the new tip is under refs/nostr/<update id>"
 
@@ -190,6 +212,7 @@ banner "propose an edit (amy git edit)"
 EDIT="$(C git edit "$ADDR" --path README.md --text $'hello, edited\n' --message "Edit the README" --relay "$RELAY")"
 info "edit: $EDIT"
 EDID="$(echo "$EDIT" | jq -r .event_id)"
+need edid "$EDID"
 assert_eq "$(echo "$EDIT" | jq -r .parent)" "$ROOT" edit.parent "made on the signed tip of main"
 assert_eq "$(g --git-dir "$UPDIR" show "refs/nostr/$EDID:README.md" 2>/dev/null)" "hello, edited" edit.content "the commit made from the text is on the server"
 assert_eq "$(g --git-dir "$UPDIR" rev-parse "refs/nostr/$EDID^" 2>/dev/null)" "$ROOT" edit.on_parent "and sits on main"
@@ -207,6 +230,7 @@ assert_true 'g --git-dir "$UPDIR" merge-base --is-ancestor "$FTIP2" "$NEWMAIN"' 
 banner "private repository (GRASP-08)"
 SECRET="$HTTP/$M_NPUB/secret.git"
 SADDR="$(M git announce --name secret --d secret --private --clone "$SECRET" --relay "$RELAY" --earliest-commit "$ROOT" | jq -r .address)"
+need saddr "$SADDR"
 M git state "$SADDR" --head main --branch "main=$ROOT" --relay "$RELAY" >/dev/null
 # Seed its main from disk (git's command line has no NIP-98): what a maintainer's client would push.
 SDIR="$STATE_DIR/git/$M_NPUB/secret.git"
@@ -216,14 +240,27 @@ g --git-dir "$SDIR" config http.receivepack true
 g --git-dir "$SDIR" config uploadpack.allowFilter true
 g --git-dir "$SDIR" config uploadpack.allowAnySHA1InWant true
 g -C "$WORK" push -q "$SDIR" "$ROOT:refs/heads/main" >>"$LOG_FILE" 2>&1
-assert_true '! g ls-remote "$SECRET" >>"$LOG_FILE" 2>&1' private.anonymous "an anonymous fetch is refused"
+assert_refused 'g ls-remote "$SECRET"' "could not read Username|HTTP 401" private.anonymous "an anonymous fetch is refused"
 SEDIT="$(M git edit "$SADDR" --path README.md --text $'secret\n' --message "A private edit" --relay "$RELAY")"
 info "private edit: $SEDIT"
 SEDID="$(echo "$SEDIT" | jq -r .event_id)"
+need sedid "$SEDID"
 assert_eq "$(g --git-dir "$SDIR" show "refs/nostr/$SEDID:README.md" 2>/dev/null)" "secret" private.maintainer "a maintainer's signed requests are served"
-# Not a maintainer: the server refuses their requests, so amy fails (a non-zero exit).
-amy_rc() { local who="$1"; shift; HOME="$STATE_DIR/$who" "$AMY_BIN" --account "$who" --secret-backend plaintext --json "$@" >>"$LOG_FILE" 2>&1; }
-assert_true '! amy_rc c git edit "$SADDR" --path README.md --text x --message no --relay "$RELAY"' private.stranger "someone else's requests are refused"
+# Not a maintainer: the server refuses their signed requests.
+amy_rc() { local who="$1"; shift; HOME="$STATE_DIR/$who" "$AMY_BIN" --account "$who" --secret-backend plaintext --json "$@"; }
+assert_refused 'amy_rc c git edit "$SADDR" --path README.md --text x --message no --relay "$RELAY"' "401|sign in" private.stranger "someone else's requests are refused"
 assert_eq "$(M fetch --id "$SEDID" --relay "$OUTBOX" | jq -r '.events | length')" "0" private.not_outbox "the private PR is not on the outbox relay"
 assert_eq "$(M fetch --id "$SEDID" --relay "$RELAY" | jq -r '.events | length')" "1" private.on_repo "it is on the repository's relay"
 assert_eq "$(M fetch --id "$PRID" --relay "$OUTBOX" | jq -r '.events | length')" "1" public.outbox "a public PR does reach the outbox"
+
+# A maintainer merges the private edit: the merge reads and pushes with NIP-98, and its state stays put.
+SMERGE="$(M git merge "$SEDID" --yes --relay "$RELAY")"
+info "private merge: $SMERGE"
+assert_eq "$(g --git-dir "$SDIR" show main:README.md 2>/dev/null)" "secret" private.merge "a private merge pushes with the maintainer's signature"
+SSTATE="$(echo "$SMERGE" | jq -r '.state_event_id // empty')"
+if [[ -n "$SSTATE" ]]; then
+  assert_eq "$(M fetch --id "$SSTATE" --relay "$OUTBOX" | jq -r '.events | length')" "0" private.state_not_outbox "the private repo's new state is not on the outbox relay"
+fi
+assert_eq "$(M fetch --kind 30618 --author "$M_NPUB" --relay "$OUTBOX" | jq -r '[.events[] | select(.tags[] | .[0]=="d" and .[1]=="secret")] | length')" "0" private.no_state_outbox "no state of the private repo on the outbox relay"
+
+! grep -q $'\tfail\t' "$RESULTS_FILE"

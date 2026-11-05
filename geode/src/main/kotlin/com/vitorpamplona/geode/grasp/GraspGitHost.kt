@@ -44,6 +44,7 @@ import io.ktor.server.routing.post
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
@@ -84,7 +85,8 @@ class GraspGitHost(
                 .getAll("rest")
                 .orEmpty()
                 .joinToString("/")
-        val owner = decodePublicKeyAsHexOrNull(npub)
+        // npub paths only: a hex owner would be a second directory for the same repository.
+        val owner = if (npub.startsWith("npub1")) decodePublicKeyAsHexOrNull(npub) else null
         if (owner == null || !repo.endsWith(".git") || repo.contains("..") || rest.contains("..")) {
             return call.respondText("not a repository", status = HttpStatusCode.NotFound)
         }
@@ -106,16 +108,34 @@ class GraspGitHost(
             }
         }
 
+        val declared = call.request.headers["Content-Length"]?.toLongOrNull()
+        if (declared != null && declared > MAX_BODY_BYTES) return call.respondText("too large", status = HttpStatusCode.PayloadTooLarge)
         val body = if (call.request.httpMethod.value == "POST") call.receive<ByteArray>() else ByteArray(0)
-        val encoding = call.request.headers["Content-Encoding"]
+        if (body.size > MAX_BODY_BYTES) return call.respondText("too large", status = HttpStatusCode.PayloadTooLarge)
+        val encoding =
+            call.request.headers["Content-Encoding"]
+                ?.trim()
+                ?.lowercase()
+        var state: GitRepositoryStateEvent? = null
         if (rest == "git-receive-pack") {
-            val refusal = refuse(commandsOf(if (encoding == "gzip") gunzip(body) else body), identifier, maintainers)
+            // git http-backend inflates gzip and x-gzip alike: the check must read what it will.
+            val commandBytes =
+                when (encoding) {
+                    null, "", "identity" -> body
+                    "gzip", "x-gzip" -> gunzipHead(body) ?: return call.respondText("bad gzip", status = HttpStatusCode.BadRequest)
+                    else -> return call.respondText("unsupported Content-Encoding $encoding", status = HttpStatusCode.UnsupportedMediaType)
+                }
+            val commands = commandsOf(commandBytes)
+            // A push the check cannot read is refused, never let through unchecked.
+            if (commands.isEmpty() && commandBytes.isNotEmpty()) return call.respondText("unreadable push", status = HttpStatusCode.BadRequest)
+            state = signedState(identifier, maintainers)
+            val refusal = refuse(commands, state)
             if (refusal != null) return call.respondText(refusal, status = HttpStatusCode.Forbidden)
         }
 
-        val directory = ensureRepository(File(File(root, npub), repo))
         val output =
             withContext(Dispatchers.IO) {
+                ensureRepository(File(File(root, npub), repo))
                 runBackend(
                     pathInfo = "/$npub/$repo/$rest",
                     method = call.request.httpMethod.value,
@@ -128,32 +148,34 @@ class GraspGitHost(
                     body = body,
                 )
             }
-        if (output == null) return call.respondText("git http-backend failed for $directory", status = HttpStatusCode.InternalServerError)
+        if (output == null) return call.respondText("git http-backend failed for $npub/$repo", status = HttpStatusCode.InternalServerError)
+        // HEAD follows the maintainers' signed state, so a clone checks out their default branch.
+        state?.head()?.let { head -> withContext(Dispatchers.IO) { runCatching { run(File(File(root, npub), repo), "symbolic-ref", "HEAD", "refs/heads/$head") } } }
         respondCgi(call, output)
     }
 
-    /** Why a push is refused, or null: each ref update checked against GRASP's rules. */
-    private suspend fun refuse(
-        commands: List<Triple<String, String, String>>,
+    /** The newest state one of [maintainers] signed for [identifier]. */
+    private suspend fun signedState(
         identifier: String,
         maintainers: Set<HexKey>,
+    ): GitRepositoryStateEvent? =
+        store
+            .query<GitRepositoryStateEvent>(Filter(kinds = listOf(GitRepositoryStateEvent.KIND), authors = maintainers.toList(), tags = mapOf("d" to listOf(identifier))))
+            .maxByOrNull { it.createdAt }
+
+    /** Why a push is refused, or null: each ref update checked against GRASP's rules and the [signed] state. */
+    private fun refuse(
+        commands: List<Triple<String, String, String>>,
+        signed: GitRepositoryStateEvent?,
     ): String? {
-        if (commands.isEmpty()) return null
-        var signed: GitRepositoryStateEvent? = null
-        var loaded = false
-        for ((_, new, ref) in commands) {
+        for ((old, new, ref) in commands) {
             if (ref.startsWith("refs/nostr/")) {
                 if (!ref.removePrefix("refs/nostr/").matches(HEX64)) return "refs/nostr/ takes an event id: $ref"
+                // Anyone may create one; nobody may move or delete another's.
+                if (old != ZERO || new == ZERO) return "$ref can only be created"
                 continue
             }
             if (!ref.startsWith("refs/heads/") && !ref.startsWith("refs/tags/")) return "only branches, tags and refs/nostr/<id> are pushed here: $ref"
-            if (!loaded) {
-                signed =
-                    store
-                        .query<GitRepositoryStateEvent>(Filter(kinds = listOf(GitRepositoryStateEvent.KIND), authors = maintainers.toList(), tags = mapOf("d" to listOf(identifier))))
-                        .maxByOrNull { it.createdAt }
-                loaded = true
-            }
             val expected = signed?.refs()?.firstOrNull { it.name == ref }?.commit
             val deleting = new == ZERO
             if (deleting && expected != null) return "$ref is in the maintainers' signed state: delete it there first"
@@ -178,7 +200,20 @@ class GraspGitHost(
         return commands
     }
 
-    private fun gunzip(body: ByteArray): ByteArray = GZIPInputStream(ByteArrayInputStream(body)).use { it.readBytes() }
+    /** The start of a gzipped body, enough for the command section: never the whole of a gzip bomb. */
+    private fun gunzipHead(body: ByteArray): ByteArray? =
+        runCatching {
+            GZIPInputStream(ByteArrayInputStream(body)).use { input ->
+                val out = ByteArrayOutputStream()
+                val buffer = ByteArray(8192)
+                while (out.size() < MAX_COMMAND_BYTES) {
+                    val read = input.read(buffer, 0, minOf(buffer.size, MAX_COMMAND_BYTES - out.size()))
+                    if (read < 0) break
+                    out.write(buffer, 0, read)
+                }
+                out.toByteArray()
+            }
+        }.getOrNull()
 
     private fun ensureRepository(directory: File): File {
         if (File(directory, "HEAD").exists()) return directory
@@ -226,7 +261,10 @@ class GraspGitHost(
         val errors = Thread { stderr.append(process.errorStream.readBytes().decodeToString()) }.apply { start() }
         process.outputStream.use { it.write(body) }
         val out = process.inputStream.readBytes()
-        process.waitFor(5, TimeUnit.MINUTES)
+        if (!process.waitFor(5, TimeUnit.MINUTES)) {
+            process.destroyForcibly()
+            return null
+        }
         errors.join(1000)
         if (stderr.isNotBlank()) Log.d(TAG) { "http-backend $pathInfo: $stderr" }
         return out.takeIf { it.isNotEmpty() }
@@ -271,5 +309,11 @@ class GraspGitHost(
         private const val TAG = "GraspGitHost"
         private const val ZERO = "0000000000000000000000000000000000000000"
         private val HEX64 = Regex("^[0-9a-f]{64}$")
+
+        /** A dev server's ceiling for one request body: a push of a large repository fits, a runaway one does not. */
+        private const val MAX_BODY_BYTES = 256L * 1024 * 1024
+
+        /** The most of a gzipped push read to find its ref updates. */
+        private const val MAX_COMMAND_BYTES = 1024 * 1024
     }
 }

@@ -7,7 +7,7 @@ search downloads) is `quartz/plans/2026-11-05-git-fetch-costs.md` in the quartz 
 
 | Item | Result |
 |---|---|
-| 1. End-to-end run | Done: `amy serve --git-root` is a dev GRASP server (geode `GraspGitHost`); `amy git pr --source`, `pr-update --source` and `edit` run `GitProposals` (now on a `GitProposalHost`); `cli/tests/git/git-grasp-e2e.sh` passes 20/20, private repository included. The desktop app, as the maintainer on the same servers with `run-headless.sh --local-only`: inline comment, resolve, reopen, review verdict, label, merge, edit and propose, private repository browse and settings save, each looked at and checked on the server or relay. Not yet run in the app: New pull request and Update branch from a second account; an Android device. |
+| 1. End-to-end run | Done: `amy serve --git-root` is a dev GRASP server (geode `GraspGitHost`); `amy git pr --source`, `pr-update --source` and `edit` run `GitProposals` (now on a `GitProposalHost`); `cli/tests/git/git-grasp-e2e.sh` passes (23/23 after the final audit), private repository included. The desktop app, as the maintainer on the same servers with `run-headless.sh --local-only`: inline comment, resolve, reopen, review verdict, label, merge, edit and propose, private repository browse and settings save, each looked at and checked on the server or relay. Not yet run in the app: New pull request and Update branch from a second account; an Android device. |
 | 2. Editor | Done: a windowed editor (a lazy list of lines, one block of lines in a `TextFieldState` at a time). 15-29 ms per keystroke at 20, 256 and 430 KB, against 149 and 274 ms for the whole-file field; round trips keep CRLF and a missing final newline. The 64 KB stopgap was skipped. |
 | 3. Row colours | Done, with an offscreen render test. |
 | 4. Unknown announcement | Done in the planner: such an event goes only where the repository's events were seen, until the announcement shows it public. Composers do not yet fetch the announcement first (the planner rule covers the leak). |
@@ -22,6 +22,45 @@ package to the default public relays at login (one throwaway key's, during this 
 The in-app git features (review, PRs, edits, triage, settings, private repositories, checkout
 helpers) shipped with an audit pass. Five items stayed open, and testing them found a sixth. Each
 section says what was tested, what was found and the fix.
+
+## Final audit (2026-11-05)
+
+A last pass over everything this work added, for bugs, reuse, and whether each screen follows the
+cache and the relays. Fixed:
+
+- **Privacy.** The planner rule for an unknown announcement could be steered: any note with an `a`
+  tag naming a repository moved its replies to that repository's relays. It now applies to git
+  kinds and what acts on them (comments, reactions, labels, deletions), walks parents up to four
+  deep, and prefers relays the parents were seen on. A private repository's deletions stay on its
+  relays. Bookmarking a private repository puts it in the list's encrypted section.
+- **Reactivity.** A deletion names the event it takes back, so deleting a label, a resolution or a
+  review on another device never reached the screen: each such note is now watched
+  (`WatchGitDeletions`). A deleted label also leaves its item's `labels` (`CachePruner`). The new
+  pull request form loads the repository's announcements itself. Repository settings warn when the
+  announcement changed while open. A newer signed state no longer blanks the file being read.
+- **Editor.** Opening a line below an edited block that changed size crashed (`subList`); fixed
+  with a test. A draft is kept only for the commit it was written on.
+- **amy / GRASP.** `amy git merge` signs its git requests for a private repository and keeps the new
+  state off the outbox; one loader (`GitSupport.loadRepository`) serves merge and the proposal
+  verbs. The dev server checks the owner is an npub, caps bodies, refuses unknown encodings and
+  pushes it cannot read, and makes `refs/nostr/<id>` create-only. `amy git edit` refuses paths
+  with `.`, `..` or `.git` segments.
+- **UI.** The diff of a pull request survives leaving the thread; labels show once in a thread
+  (the triage bar, for members); replies to an inline comment show under it; Review and line
+  comments need a signing account; folded files no longer use up the highlighting budget.
+- **Tests.** The e2e script failed open: it never set its exit code, and a missing id made later
+  asserts compare "null". It now stops on a missing id, checks refusals by their message, starts
+  both relays or stops, and merges the private repository too: 23/23.
+
+Checked in the desktop app (`--local-only`, maintainer key, local GRASP): labels in the triage bar
+only; the diff shown again at once after leaving the thread; an inline comment, then a reply from a
+second account arriving from the relay under it; Resolve, then the resolution and the labels
+deleted through `amy delete`, each gone from the screen within seconds.
+
+Left as is: the branch chip of the code browser and the form's branch field stay two components
+(one is a toolbar menu with tags, the other a form field); highlighting still runs on the main
+thread, within the budget; `git push` to the dev server logs "push negotiation failed; proceeding
+anyway", harmless but unexplained.
 
 ## 1. Signing flows have never run end to end
 
