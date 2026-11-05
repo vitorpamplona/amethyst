@@ -6616,7 +6616,7 @@
     <string name="cordn_chat_empty_description">Minden ide küldött üzenet titkosítva van ehhez a csoporthoz. A koordinátor továbbítja anélkül, hogy el tudná olvasni.</string>
     <string name="cordn_chat_empty_title">Még nincsenek üzenetek</string>
     <string name="cordn_chat_unread_divider">Új üzenetek</string>
-    <string name="cordn_chat_yesterday">Tegnap</string>
+    <string name="yesterday">Tegnap</string>
     <string name="cordn_composer_hint">Üzenet</string>
     <string name="cordn_coordinators_add_action">Hozzáadás</string>
     <string name="cordn_coordinators_add_failed">Nem sikerült megnyitni azt a koordinátort.</string>

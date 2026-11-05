@@ -6614,7 +6614,7 @@
     <string name="cordn_chat_empty_description">जो भी यहाँ भेजा जाता है रहस्यीकृत होता है समूह के लिए। समायोजक इसका पुनःप्रसारण करता है उसे पढने की क्षमता के बिना।</string>
     <string name="cordn_chat_empty_title">कोई सन्देश नहीं अब तक</string>
     <string name="cordn_chat_unread_divider">नए सन्देश</string>
-    <string name="cordn_chat_yesterday">एक दिन पूर्व</string>
+    <string name="yesterday">एक दिन पूर्व</string>
     <string name="cordn_composer_hint">सन्देश</string>
     <string name="cordn_coordinators_add_action">जोडें</string>
     <string name="cordn_coordinators_add_failed">उस समायोजक को खोलने में असफल।</string>

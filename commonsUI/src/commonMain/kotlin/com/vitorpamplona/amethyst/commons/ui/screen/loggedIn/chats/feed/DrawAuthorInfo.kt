@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.buzz.ui.BuzzAgentLabel
@@ -106,21 +107,22 @@ val ChatAuthorNameWeight = FontWeight.SemiBold
 val ChatAuthorNameSize = 13.sp
 
 /**
- * The author's face beside the last bubble of their run in a group chat, with the follow mark
- * and NIP-85 trust score [BaseUserPicture] draws on every profile picture. Tapping it opens the
- * profile.
+ * The author's face in a group chat, at [size] (the layout hands it [ChatAuthorAvatarSize] for the
+ * bubble gutter, a smaller one for the open layout's header), with the follow mark and NIP-85
+ * trust score [BaseUserPicture] draws on every profile picture. Tapping it opens the profile.
  */
 @Composable
 fun ChatAuthorAvatar(
     userHex: HexKey,
     accountViewModel: AccountViewModel,
+    size: Dp = ChatAuthorAvatarSize,
     onClick: () -> Unit,
 ) {
     BaseUserPicture(
         baseUserHex = userHex,
-        size = ChatAuthorAvatarSize,
+        size = size,
         accountViewModel = accountViewModel,
-        outerModifier = Modifier.size(ChatAuthorAvatarSize).clickable(onClick = onClick),
+        outerModifier = Modifier.size(size).clickable(onClick = onClick),
     )
 }
 

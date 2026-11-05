@@ -81,6 +81,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -88,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
 import com.vitorpamplona.amethyst.commons.ui.note.CommentIcon
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalBlankLineScale
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatAuthorAvatarSize
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatPaddingGroupedModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatPaddingInnerQuoteModifier
@@ -116,7 +118,7 @@ private val ChatChipOverlapArrangement = Arrangement.spacedBy((-12).dp)
 private val ChatChipOverlapReserve = 8.dp
 
 // The column the author face sits in, beside a group chat's bubbles, and its gap to them.
-private val ChatAuthorGutterModifier = Modifier.width(28.dp)
+private val ChatAuthorGutterModifier = Modifier.width(ChatAuthorAvatarSize)
 private val ChatAuthorGutterGap = Modifier.width(6.dp)
 
 // Swipe-to-reply: releasing past the threshold fires the reply; the bubble never
@@ -150,6 +152,12 @@ private val ChatOpenPaddingGroupedModifier = Modifier.fillMaxWidth().padding(sta
 private val ChatOpenRowShape = RoundedCornerShape(8.dp)
 private val ChatOpenRowInset = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
 private val ChatOpenHeaderGap = Modifier.width(8.dp)
+
+// The face in an OPEN run's header: about one line of body text tall, so the header weighs no more
+// than a line of the message. The gutter's 28dp, beside a 13sp name, made every run open with a
+// block taller than the text under it; at 20dp a photo and its follow badge (a third of it) are
+// too small to read.
+val ChatOpenAvatarSize = 22.dp
 private val ChatOpenStackSpacing = Arrangement.spacedBy(4.dp)
 
 // Open text keeps a readable measure on wide windows: past ~75 characters a line is hard to
@@ -191,10 +199,11 @@ fun ChatBubbleLayout(
     // status glyphs). Null skips it entirely.
     footerRow: (@Composable () -> Unit)? = null,
     drawAuthorLine: @Composable () -> Unit,
-    // The author's face in a group chat, drawn OUTSIDE the bubble, beside the last bubble of
-    // the author's run (the other bubbles of the run keep its width as an indent so the run
-    // lines up). Null for one-on-one chats, own messages and quotes: no gutter at all.
-    authorAvatar: (@Composable () -> Unit)? = null,
+    // The author's face in a group chat, drawn at the size it is handed. BUBBLES and COMPACT
+    // put it OUTSIDE the bubble, beside the last bubble of the author's run (the other bubbles of
+    // the run keep its width as an indent so the run lines up); OPEN puts a smaller one in the
+    // run's header, beside the name. Null for one-on-one chats, own messages and quotes.
+    authorAvatar: (@Composable (size: Dp) -> Unit)? = null,
     // How to lay the message out; follows the user's Chat Layout setting by default.
     layout: ChatLayoutType = LocalDisplaySettings.current.chatLayout,
     inner: @Composable (MutableState<Color>) -> Unit,
@@ -454,7 +463,7 @@ fun ChatBubbleLayout(
                     ) {
                         if (authorAvatar != null && !isLoggedInUser && !innerQuote) {
                             Box(ChatAuthorGutterModifier) {
-                                if (groupPosition.isLastOfGroup) authorAvatar()
+                                if (groupPosition.isLastOfGroup) authorAvatar(ChatAuthorAvatarSize)
                             }
                             Spacer(ChatAuthorGutterGap)
                         }
@@ -705,7 +714,7 @@ private fun OpenChatMessage(
     reactionsRow: (@Composable () -> Unit)?,
     footerRow: (@Composable () -> Unit)?,
     drawAuthorLine: @Composable () -> Unit,
-    authorAvatar: (@Composable () -> Unit)?,
+    authorAvatar: (@Composable (size: Dp) -> Unit)?,
     inner: @Composable (MutableState<Color>) -> Unit,
 ) {
     val press = rememberChatPress(onClick, onDoubleTap)
@@ -724,7 +733,7 @@ private fun OpenChatMessage(
         if (drawAuthorInfo) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (authorAvatar != null) {
-                    authorAvatar()
+                    authorAvatar(ChatOpenAvatarSize)
                     Spacer(ChatOpenHeaderGap)
                 }
                 Box(Modifier.clickable(onClick = onAuthorClick)) {

@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatBubbleLayout
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatDivisor
@@ -296,7 +297,7 @@ private fun PersonMessage(
         reactionsRow = message.reaction?.let { emoji -> { ChatChipFlowRow { ReactionChipView(ReactionChip(emoji, 2, false), {}, {}) } } },
         footerRow = if (showFooter) ({ StampRow(stamp, mine) }) else null,
         drawAuthorLine = { AuthorName(message.author, isLight) },
-        authorAvatar = if (mine) null else ({ Face(message.author.face) }),
+        authorAvatar = if (mine) null else ({ size -> Face(message.author.face, size) }),
     ) { bgColor ->
         Column {
             message.quote?.let { (who, what) -> QuotedMessage(who, what, bgColor) }
@@ -364,6 +365,9 @@ private fun StampRow(
 }
 
 @Composable
-private fun Face(color: Color) {
-    Box(Modifier.size(28.dp).background(color, CircleShape))
+private fun Face(
+    color: Color,
+    size: Dp,
+) {
+    Box(Modifier.size(size).background(color, CircleShape))
 }

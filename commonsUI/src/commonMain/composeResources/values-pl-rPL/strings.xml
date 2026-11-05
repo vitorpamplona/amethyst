@@ -6937,7 +6937,7 @@
     <string name="cordn_chat_empty_description">Wszystkie wiadomości wysyłane tutaj są szyfrowane dla tej grupy. Koordynator przekazuje je dalej, nie mając możliwości ich odczytania.</string>
     <string name="cordn_chat_empty_title">Brak wiadomości</string>
     <string name="cordn_chat_unread_divider">Nowe wiadomości</string>
-    <string name="cordn_chat_yesterday">Wczoraj</string>
+    <string name="yesterday">Wczoraj</string>
     <string name="cordn_composer_hint">Wiadomość</string>
     <string name="cordn_coordinators_add_action">Dodaj</string>
     <string name="cordn_coordinators_add_failed">Nie można otworzyć tego koordynatora.</string>

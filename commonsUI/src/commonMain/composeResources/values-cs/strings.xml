@@ -6949,7 +6949,7 @@
     <string name="cordn_chat_empty_description">Vše, co sem pošlete, je zašifrováno pro tuto skupinu. Koordinátor to předává dál, aniž by to mohl přečíst.</string>
     <string name="cordn_chat_empty_title">Zatím žádné zprávy</string>
     <string name="cordn_chat_unread_divider">Nové zprávy</string>
-    <string name="cordn_chat_yesterday">Včera</string>
+    <string name="yesterday">Včera</string>
     <string name="cordn_composer_hint">Zpráva</string>
     <string name="cordn_coordinators_add_action">Přidat</string>
     <string name="cordn_coordinators_add_failed">Tohoto koordinátora se nepodařilo otevřít.</string>

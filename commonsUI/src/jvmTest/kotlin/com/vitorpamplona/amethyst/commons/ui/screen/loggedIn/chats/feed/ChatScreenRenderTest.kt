@@ -217,7 +217,7 @@ private fun Bubble(
             val (hex, name) = author ?: (ME to "Me")
             Text(name, color = authorNameColorFor(hex, isLight), fontWeight = ChatAuthorNameWeight, fontSize = ChatAuthorNameSize, maxLines = 1)
         },
-        authorAvatar = if (author != null) ({ Face(faceColor) }) else null,
+        authorAvatar = if (author != null) ({ size -> Face(faceColor, size.value.toInt()) }) else null,
     ) { bgColor ->
         Column {
             quote?.let { (quoted, quotedText) -> Quote(quoted, quotedText, bgColor) }

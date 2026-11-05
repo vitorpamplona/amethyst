@@ -6587,7 +6587,7 @@
     <string name="cordn_chat_empty_description">Allt som skickas här krypteras för den här gruppen. Koordinatorn förmedlar det utan att kunna läsa det.</string>
     <string name="cordn_chat_empty_title">Inga meddelanden ännu</string>
     <string name="cordn_chat_unread_divider">Nya meddelanden</string>
-    <string name="cordn_chat_yesterday">I går</string>
+    <string name="yesterday">I går</string>
     <string name="cordn_composer_hint">Meddelande</string>
     <string name="cordn_coordinators_add_action">Lägg till</string>
     <string name="cordn_coordinators_add_failed">Kunde inte öppna den koordinatorn.</string>

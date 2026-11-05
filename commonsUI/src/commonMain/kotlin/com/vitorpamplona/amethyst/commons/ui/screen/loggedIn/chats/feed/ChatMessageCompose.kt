@@ -406,10 +406,10 @@ fun NormalChatNote(
         // messages have none (drawAuthorInfo is already false for both).
         authorAvatar =
             if (drawAuthorInfo && !isLoggedInUser && !innerQuote) {
-                {
+                { size ->
                     note.author?.let { author ->
                         UserHoverCardAnchor(author, accountViewModel, nav) {
-                            ChatAuthorAvatar(author.pubkeyHex, accountViewModel) { nav.nav(routeFor(author)) }
+                            ChatAuthorAvatar(author.pubkeyHex, accountViewModel, size) { nav.nav(routeFor(author)) }
                         }
                     }
                 }

@@ -6833,7 +6833,6 @@
     <string name="cordn_chat_empty_description">Anything sent here is encrypted for this group. The coordinator relays it without being able to read it.</string>
     <string name="cordn_chat_empty_title">No messages yet</string>
     <string name="cordn_chat_unread_divider">New messages</string>
-    <string name="cordn_chat_yesterday">Yesterday</string>
     <string name="cordn_composer_hint">Message</string>
     <string name="cordn_coordinators_add_action">Add</string>
     <string name="cordn_coordinators_add_failed">Could not open that coordinator.</string>

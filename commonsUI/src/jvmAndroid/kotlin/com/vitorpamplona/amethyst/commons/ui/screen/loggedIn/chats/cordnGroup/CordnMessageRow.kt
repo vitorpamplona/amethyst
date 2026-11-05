@@ -268,7 +268,7 @@ fun CordnMessageRow(
                 if (isMine) {
                     null
                 } else {
-                    { ChatAuthorAvatar(message.envelope.pubKey, accountViewModel) { nav.nav(Route.Profile(message.envelope.pubKey)) } }
+                    { size -> ChatAuthorAvatar(message.envelope.pubKey, accountViewModel, size) { nav.nav(Route.Profile(message.envelope.pubKey)) } }
                 },
         ) { bgColor ->
             CordnBubbleContents(
