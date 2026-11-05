@@ -139,7 +139,7 @@ fun RenderRoomTopBar(
                     }
                 }
             },
-            popBack = nav::popBack,
+            nav = nav,
         )
     } else {
         TopBarExtensibleWithBackButton(
@@ -198,7 +198,7 @@ fun RenderRoomTopBar(
             extendableRow = {
                 GroupMembersHeader(room = room, accountViewModel = accountViewModel, nav = nav)
             },
-            popBack = nav::popBack,
+            nav = nav,
         )
     }
 }

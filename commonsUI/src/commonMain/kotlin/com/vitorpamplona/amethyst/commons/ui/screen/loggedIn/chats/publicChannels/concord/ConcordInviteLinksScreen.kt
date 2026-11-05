@@ -81,7 +81,6 @@ import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -167,7 +166,7 @@ fun ConcordInviteLinksScreen(
                     }
                 },
                 navigationIcon = {
-                    if (LocalBackArrowAllowed.current) {
+                    if (nav.canPop()) {
                         IconButton(onClick = { nav.popBack() }) {
                             SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
                         }

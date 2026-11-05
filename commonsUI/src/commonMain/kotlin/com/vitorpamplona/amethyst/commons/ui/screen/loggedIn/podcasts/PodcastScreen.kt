@@ -148,7 +148,7 @@ fun PodcastScreen(
                         Spacer(Modifier.width(Size10dp))
                     }
                 },
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
         accountViewModel = accountViewModel,

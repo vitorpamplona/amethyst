@@ -74,7 +74,13 @@ class TabsModel(
     override fun canGoBack(
         entry: NavStackEntry,
         wide: Boolean,
-    ): Boolean = !wide && openerOf(entry)?.takeIf(::isMainScreen) != null
+    ): Boolean = !wide && isMainScreen(entry) && openerOf(entry)?.takeIf(::isMainScreen) != null
+
+    /** The strip names a tab, when the window is wide enough for it; a moved-out tab's title bar names it. */
+    override fun titleShownOutside(
+        entry: NavStackEntry,
+        wide: Boolean,
+    ): Boolean = wide || !isMainScreen(entry)
 
     override fun shown(wide: Boolean): List<NavStackEntry> = if (wide) listOf(top) else chain(top).filter(::isMainScreen)
 

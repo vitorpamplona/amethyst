@@ -67,7 +67,6 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarSize
@@ -231,7 +230,7 @@ private fun FollowPackFeedTopBar(
                 },
                 navigationIcon = {
                     Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                        if (LocalBackArrowAllowed.current) {
+                        if (nav.canPop()) {
                             IconButton(
                                 onClick = nav::popBack,
                             ) {

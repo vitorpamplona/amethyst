@@ -60,7 +60,6 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_add_clink_title
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_description
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
@@ -79,7 +78,7 @@ fun AddWalletScreen(
             TopAppBar(
                 title = { Text(stringRes(Res.string.wallet_add_choose_type)) },
                 navigationIcon = {
-                    if (LocalBackArrowAllowed.current) {
+                    if (nav.canPop()) {
                         IconButton(onClick = { nav.popBack() }) {
                             Icon(
                                 symbol = MaterialSymbols.AutoMirrored.ArrowBack,

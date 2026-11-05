@@ -67,7 +67,6 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_transactions
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_view_all
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -105,7 +104,7 @@ fun WalletDetailScreen(
             TopAppBar(
                 title = { Text(walletAlias ?: walletName) },
                 navigationIcon = {
-                    if (LocalBackArrowAllowed.current) {
+                    if (nav.canPop()) {
                         IconButton(onClick = { nav.popBack() }) {
                             Icon(
                                 symbol = MaterialSymbols.AutoMirrored.ArrowBack,

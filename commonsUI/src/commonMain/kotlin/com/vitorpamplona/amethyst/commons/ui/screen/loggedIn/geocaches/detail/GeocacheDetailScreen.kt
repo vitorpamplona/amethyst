@@ -91,7 +91,6 @@ import com.vitorpamplona.amethyst.commons.resources.route_geocache_detail
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheChips
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheDetailHero
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheSpoilerHint
@@ -155,7 +154,7 @@ fun GeocacheDetailScreen(
             TopAppBar(
                 title = { Text(stringRes(Res.string.route_geocache_detail)) },
                 navigationIcon = {
-                    if (LocalBackArrowAllowed.current) {
+                    if (nav.canPop()) {
                         IconButton(onClick = { nav.popBack() }) {
                             Icon(
                                 symbol = MaterialSymbols.AutoMirrored.ArrowBack,

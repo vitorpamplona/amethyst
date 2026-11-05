@@ -121,7 +121,7 @@ fun HashtagScreen(
                 },
                 // Search this topic rather than everything: the box opens holding `#tag`.
                 actions = { SearchTopBarAction(SearchSeed.byHashtag(tag.hashtag), nav) },
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
         floatingButton = {

@@ -91,11 +91,8 @@ internal fun ObserveIncomingCalls(accountViewModel: AccountViewModel) {
 }
 
 /** The destinations whose screens only the Android app has; the shared ones register in commonsUI. */
-internal fun NavDestinations.androidDestinations(
-    accountViewModel: AccountViewModel,
-    nav: Nav,
-) {
-    jvmDestinations(accountViewModel, nav)
+internal fun NavDestinations.androidDestinations(accountViewModel: AccountViewModel) {
+    jvmDestinations(accountViewModel)
     composableFromEnd<Route.MyFitness> { MyFitnessScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.WebApp>(capWidth = false) { WebAppScreen(it.url, accountViewModel, nav) }
     composableFromEndArgs<Route.NostrApp>(capWidth = false) { NostrAppScreen(it.coordinate, accountViewModel, nav) }

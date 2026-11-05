@@ -24,7 +24,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -86,13 +85,15 @@ import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.quartz.utils.Log
 import java.awt.Desktop
 import java.awt.desktop.QuitStrategy
-import javax.swing.JFrame
 
 /**
  * The window's navigator, once a logged-in shell exists: [DesktopAppRoot] sets it from inside the
  * navigation host, so the menu bar (which lives outside the shared app) can drive it.
  */
-class DesktopNavigator {
+class DesktopNavigator(
+    /** The app's OS windows: the main one and the screen windows. */
+    val windows: DesktopWindowManager,
+) {
     var nav by mutableStateOf<INav?>(null)
     var userPubKeyHex by mutableStateOf<String?>(null)
 
@@ -113,37 +114,10 @@ class DesktopNavigator {
     /** Whether a tab or screen window holds each screen, so Cmd/Ctrl+W and +T act on those, not on the deck. */
     val singleScreen: Boolean get() = stacks?.isSingleScreen == true
 
-    /** The app's main window, raised by Show Main Window and when a section is asked for from a screen window. */
-    var mainFrame: JFrame? = null
-
-    /** False while the main window is closed with screen windows still open: the app keeps running. */
-    var mainWindowVisible by mutableStateOf(true)
-
-    /** Every open screen window, by its entry. */
-    val screenFrames = mutableStateMapOf<Long, JFrame>()
-
-    /** The screen window with the focus, if one has it: Cmd/Ctrl+W closes it. */
-    var focusedScreenWindow by mutableStateOf<Long?>(null)
-
-    /** Brings the main window back, and to the front. */
-    fun showMainWindow() {
-        mainWindowVisible = true
-        mainFrame?.let {
-            it.toFront()
-            it.requestFocus()
-        }
-    }
-
-    /** Raises every Amethyst window, the main one last so it lands on top. */
-    fun bringAllToFront() {
-        screenFrames.values.forEach { it.toFront() }
-        showMainWindow()
-    }
-
     /** Closes the focused screen window, or else the active tab. */
     fun closeCurrentScreen() {
         val stacks = stacks ?: return
-        val window = focusedScreenWindow
+        val window = windows.focusedScreenWindow
         if (window != null && stacks.windows().any { it.id == window }) {
             stacks.close(window)
         } else if (stacks.model is TabsModel) {
@@ -467,13 +441,13 @@ private fun MenuScope.ScreenWindowItems(
         Item(stringRes(Res.string.navigation_next_tab), shortcut = Command.NEXT_TAB.shortcut) { navigator.run(Command.NEXT_TAB, onQuit) }
         Item(stringRes(Res.string.navigation_previous_tab), shortcut = Command.PREVIOUS_TAB.shortcut) { navigator.run(Command.PREVIOUS_TAB, onQuit) }
     }
-    val focused = navigator.focusedScreenWindow
+    val focused = navigator.windows.focusedScreenWindow
     if (focused != null && tabsModel != null && tabsModel.windows().any { it.id == focused }) {
         Item(stringRes(Res.string.navigation_window_menu_to_tab)) { tabsModel.setDetached(focused, false) }
     }
     Separator()
-    Item(stringRes(Res.string.navigation_window_menu_show_main)) { navigator.showMainWindow() }
-    Item(stringRes(Res.string.navigation_window_menu_bring_all)) { navigator.bringAllToFront() }
+    Item(stringRes(Res.string.navigation_window_menu_show_main)) { navigator.windows.showMainWindow() }
+    Item(stringRes(Res.string.navigation_window_menu_bring_all)) { navigator.windows.bringAllToFront() }
     val windows = screens.windows()
     if (windows.isNotEmpty()) {
         Item(stringRes(Res.string.navigation_window_menu_close_all)) { windows.forEach { screens.close(it.id) } }

@@ -160,7 +160,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
@@ -258,7 +257,7 @@ fun CashuWalletScreen(
             TopAppBar(
                 title = { Text(stringRes(Res.string.cashu_wallet_title)) },
                 navigationIcon = {
-                    if (LocalBackArrowAllowed.current) {
+                    if (nav.canPop()) {
                         IconButton(onClick = { nav.popBack() }) {
                             Icon(
                                 symbol = MaterialSymbols.AutoMirrored.ArrowBack,

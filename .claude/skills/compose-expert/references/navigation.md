@@ -17,7 +17,8 @@ stack as plain snapshot state and `NavDisplay` renders it. There is no `NavContr
 | `commons/…/model/navigation/NavModel.kt` | `NavModel` (one per `NavArrangement`), `SingleScreenModel` (tabs and windows: openers, close, reopen) |
 | `commons/…/model/navigation/StackModel.kt`, `TabsModel.kt`, `WindowsModel.kt` | The stack (and the deck's main screen), the tabs layout, the windows layout |
 | `commons/…/model/navigation/NavRequest.kt`, `NavStackEntry.kt` | `NavRequest` (route, kind, origin, background); `NavStackEntry`, `EntryIds` |
-| `commonsUI/…/ui/navigation/navs/Nav.kt` | `Nav`, the shared `INav` over `NavBackStacks`, plus `LocalNavStackEntry` |
+| `commonsUI/…/ui/navigation/navs/Nav.kt` | `Nav`, the shared `INav` over `NavBackStacks`; `Nav.forEntry` (one screen's `INav`, its requests carry the screen as origin); `LocalNavStackEntry` |
+| `commonsUI/…/ui/navigation/shell/LayoutChrome.kt` | `rememberLayoutChrome`: what the layout adds around the main screen (tab strip, deck, screen windows) |
 | `commonsUI/…/ui/navigation/navs/RememberNavs.kt` | `rememberNav()`: saves the back stack across config changes and process death |
 | `commonsUI/…/ui/navigation/navs/ImeSettler.kt` | Waits for the keyboard to close before every navigation |
 | `commonsUI/…/ui/navigation/host/NavDestinations.kt` | `NavDestinations` registry, the builders, `NavFamily`, the transitions, `canOpen` |
@@ -25,9 +26,10 @@ stack as plain snapshot state and `NavDisplay` renders it. There is no `NavContr
 | `commonsUI/src/jvmAndroid/…/ui/navigation/host/JvmDestinations.kt` | `jvmDestinations`: shared screens that need the JVM (git browser, cordn group chat); Android and Desktop both register them |
 | `commonsUI/…/ui/navigation/host/NavigationHost.kt` | `NavigationHost`: the `NavDisplay` every front end shows |
 | `commonsUI/…/ui/navigation/routes/RouteNavController.kt` | `isBaseRoute<T>(nav)`, `getRouteWithArguments`, `consumesSharesInPlace` |
-| `commonsUI/…/ui/app/AmethystApp.kt` | Builds `NavDestinations` (shared + `AppRoot.registerDestinations`) for the main pane and each deck column |
+| `commonsUI/…/ui/app/AmethystApp.kt` | Builds the one `NavDestinations` (shared + `AppRoot.registerDestinations`) that the main pane, the deck columns and the screen windows all draw from |
 | `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/navigation/AppNavigation.kt` | Android: `androidDestinations` (Android-only screens), `NavigateIfIntentRequested` |
 | `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/app/DesktopAppRoot.kt` | Desktop: `jvmDestinations` + `unavailable { UnavailableScreen(nav) }` |
+| `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/app/DesktopWindowManager.kt` | Desktop: the OS windows (main one hides while screen windows stay), focus, placement, sizes |
 
 ## The back stack
 
@@ -75,13 +77,21 @@ the app. Nothing above a tab root is saved, so returning to a tab always lands o
 Saved tabs therefore keep their state while out of sight. Only `stack` goes to `NavDisplay`. When
 an entry leaves both lists, its saved state and ViewModels are cleared.
 
-Each entry provides `LocalNavStackEntry`. `INav.canPop()` and `showsBottomBar()` read it, so
-during a predictive-back swipe a screen that is leaving keeps its own back arrow.
+Each screen draws with its own `INav` (`Nav.forEntry(entry)`; a deck column wraps it in
+`DeckColumnNav`). Its requests carry the screen as their `origin`, `popBack` acts on the screen,
+and `canPop()` / `showsBottomBar()` / `titleShownOutside()` ask the model about that entry. So a
+leaving screen keeps its arrow during a predictive-back swipe, and one rule decides every back
+arrow: a top bar shows it when `nav.canPop()`; never read a composition local for it.
+`titleShownOutside()` is true where a tab or a window's title bar already names the screen;
+`TopBarWithBackButton` then drops a bar that would hold only that name. Shell chrome outside
+any screen reads `Nav` itself, which answers for `LocalNavStackEntry` or the top.
 
 ## Destinations
 
 Register each screen once. Shared screens go in `sharedDestinations`; a platform adds its own
-through `AppRoot.registerDestinations` (Android: `androidDestinations`). The builder decides the
+through `AppRoot.registerDestinations` (Android: `androidDestinations`). Content lambdas run in a
+`DestinationScope`, whose `nav` is the drawn screen's own `INav`, handed in at render time: the
+registration functions take no `nav`, and one table serves every host. The builder decides the
 motion (`NavFamily`) and whether the screen is capped to the reading column on wide panes
 (`MaybeCappedScreen`):
 

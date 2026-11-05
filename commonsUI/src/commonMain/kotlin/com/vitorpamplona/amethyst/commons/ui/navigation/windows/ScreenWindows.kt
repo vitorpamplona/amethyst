@@ -32,9 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
-import com.vitorpamplona.amethyst.commons.model.navigation.NavRequest
 import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
-import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.SingleScreenModel
 import com.vitorpamplona.amethyst.commons.model.navigation.TabsModel
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -42,10 +40,7 @@ import com.vitorpamplona.amethyst.commons.resources.navigation_window_title
 import com.vitorpamplona.amethyst.commons.ui.app.AppRoot
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.LocalNavDestinations
-import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavigationHost
-import com.vitorpamplona.amethyst.commons.ui.navigation.host.sharedDestinations
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.openInBackgroundOnModifiedClick
 import com.vitorpamplona.amethyst.commons.ui.navigation.tabs.routeTitle
@@ -53,8 +48,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelScope
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import kotlinx.coroutines.launch
-import kotlin.reflect.KClass
 
 /**
  * Screen windows: in the windows layout every screen that is not a section of the main window, in
@@ -84,7 +77,7 @@ fun ScreenWindows(
                     onClose = { nav.stacks.close(entry.id) },
                 )
             root.ScreenWindow(spec) {
-                ScreenWindowContent(entry, nav, accountViewModel, root)
+                ScreenWindowContent(entry, nav, root)
             }
         }
     }
@@ -111,18 +104,8 @@ data class ScreenWindowSpec(
 private fun ScreenWindowContent(
     entry: NavStackEntry,
     nav: Nav,
-    accountViewModel: AccountViewModel,
     root: AppRoot,
 ) {
-    val windowNav = remember(entry, nav) { ScreenWindowNav(entry, nav) }
-    val destinations =
-        remember(windowNav) {
-            NavDestinations().apply {
-                sharedDestinations(accountViewModel, windowNav)
-                root.registerDestinations(this, accountViewModel, nav)
-            }
-        }
-
     // The window's own ViewModels, gone with the window.
     val owner = remember(entry.id) { WindowViewModelStoreOwner() }
     DisposableEffect(owner) { onDispose { owner.viewModelStore.clear() } }
@@ -131,60 +114,24 @@ private fun ScreenWindowContent(
         LocalViewModelStoreOwner provides owner,
         // Laid out by the window's own size: a narrow tiled window reads like a phone column.
         LocalScreenLayout provides root.rememberScreenLayoutSpec(),
-        LocalNavDestinations provides destinations,
     ) {
         EmojiPanelScope {
             EmojiPanelHost {
                 // A Ctrl/Cmd-click here opens what it reaches without taking the focus.
                 Box(Modifier.fillMaxSize().openInBackgroundOnModifiedClick(nav)) {
+                    // The main window's destinations, drawn with this screen's navigation: back
+                    // closes the window, a replace swaps its screen, anything else opens beside it.
                     NavigationHost(
                         visible = listOf(entry),
                         retained = listOf(entry),
-                        destinations = destinations,
+                        destinations = checkNotNull(LocalNavDestinations.current),
+                        navFor = nav::forEntry,
                         animated = false,
                         onBack = {},
-                        backArrows = false,
                     )
                 }
             }
         }
-    }
-}
-
-/**
- * A screen window's navigation: it holds one screen, so there is no back arrow and no bar. Going
- * back closes the window and the next step of a flow replaces its screen. Anything else opens, or
- * raises, another window placed beside this one; a section goes to the main window.
- */
-private class ScreenWindowNav(
-    private val entry: NavStackEntry,
-    private val main: Nav,
-) : INav by main {
-    override fun nav(route: Route) = main.open(NavRequest(route, origin = entry.id))
-
-    override fun nav(computeRoute: suspend () -> Route?) = main.open(NavRequest.Kind.Push, entry.id, computeRoute)
-
-    override fun navDrawer(route: Route) = main.open(NavRequest(route, NavRequest.Kind.Drawer, origin = entry.id))
-
-    override fun navDrawer(computeRoute: suspend () -> Route?) = main.open(NavRequest.Kind.Drawer, entry.id, computeRoute)
-
-    override fun newStack(route: Route) = main.open(NavRequest(route, NavRequest.Kind.Restart, origin = entry.id))
-
-    @Composable
-    override fun canPop(): Boolean = false
-
-    @Composable
-    override fun showsBottomBar(): Boolean = false
-
-    override fun popBack() {
-        main.navigationScope.launch { main.stacks.back(entry) }
-    }
-
-    override fun <T : Route> popUpTo(
-        route: Route,
-        klass: KClass<T>,
-    ) {
-        main.open(NavRequest(route, NavRequest.Kind.Replace(klass), origin = entry.id))
     }
 }
 

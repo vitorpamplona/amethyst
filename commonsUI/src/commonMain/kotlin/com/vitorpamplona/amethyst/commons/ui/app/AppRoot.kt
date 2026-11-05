@@ -91,7 +91,6 @@ interface AppRoot {
     fun registerDestinations(
         destinations: NavDestinations,
         accountViewModel: AccountViewModel,
-        nav: Nav,
     ) {}
 
     /** Layers drawn over the navigation host inside the shell, such as embedded app surfaces. */

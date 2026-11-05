@@ -54,7 +54,6 @@ import com.vitorpamplona.amethyst.commons.resources.concord_create_relays
 import com.vitorpamplona.amethyst.commons.resources.concord_create_relays_desc
 import com.vitorpamplona.amethyst.commons.resources.concord_create_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
@@ -85,7 +84,7 @@ fun ConcordCreateScreen(
             TopAppBar(
                 title = { Text(stringRes(Res.string.concord_create_title)) },
                 navigationIcon = {
-                    if (LocalBackArrowAllowed.current) {
+                    if (nav.canPop()) {
                         IconButton(onClick = { nav.popBack() }) {
                             SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
                         }

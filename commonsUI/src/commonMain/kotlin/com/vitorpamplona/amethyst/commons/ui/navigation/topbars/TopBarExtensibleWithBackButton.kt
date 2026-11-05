@@ -37,7 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 
@@ -46,17 +46,15 @@ fun TopBarExtensibleWithBackButton(
     title: @Composable RowScope.() -> Unit,
     extendableRow: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
-    // A back arrow is meaningless when there's nothing to pop (e.g. this screen is a bottom-nav
-    // root); callers pass nav.canPop() so the arrow hides and the bottom bar takes its place.
-    showBackButton: Boolean = true,
-    popBack: () -> Unit,
+    nav: INav,
 ) {
+    // No arrow where there is nothing to go back to: a bottom-nav root, a tab, a window.
     MyExtensibleTopAppBar(
         title = title,
         extendableRow = extendableRow,
         navigationIcon =
-            if (showBackButton && LocalBackArrowAllowed.current) {
-                { IconButton(onClick = popBack) { ArrowBackIcon() } }
+            if (nav.canPop()) {
+                { IconButton(onClick = nav::popBack) { ArrowBackIcon() } }
             } else {
                 null
             },

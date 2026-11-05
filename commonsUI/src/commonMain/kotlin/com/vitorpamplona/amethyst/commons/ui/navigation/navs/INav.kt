@@ -72,6 +72,13 @@ interface INav {
     @Composable
     fun showsBottomBar(): Boolean = !canPop()
 
+    /**
+     * Whether something outside the screen already names it (a tab in the strip, a window's title
+     * bar), so a top bar holding only that name and no back arrow can be left out.
+     */
+    @Composable
+    fun titleShownOutside(): Boolean = false
+
     fun popBack()
 
     fun <T : Route> popUpTo(

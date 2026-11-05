@@ -104,7 +104,7 @@ fun GeoHashScreen(
                 },
                 // The box opens holding `geo:<geohash>`, which draws under the city's name.
                 actions = { SearchTopBarAction(SearchSeed.byGeohash(tag.geohash), nav) },
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
         floatingButton = {

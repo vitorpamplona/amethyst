@@ -388,4 +388,43 @@ class NavBackStacksLayoutsTest {
         assertEquals(Route.Note("n"), stacks.topRoute)
         assertEquals(2, stacks.tabs().size)
     }
+
+    @Test
+    fun aMovedOutTabHasNoBackArrowAndNoBar() {
+        val stacks = tabs()
+        stacks.push(Route.Note("n"))
+        val note = stacks.top
+        stacks.setDetached(note.id, true)
+
+        // Even where the main window is too narrow for the strip, a window holds one screen.
+        assertFalse(stacks.model.canGoBack(note, wide = false))
+        assertFalse(stacks.model.showsBar(note, wide = false))
+        assertTrue(stacks.model.titleShownOutside(note, wide = false))
+    }
+
+    @Test
+    fun theStripOrTheTitleBarNamesTheScreenOnlyWhereThereIsOne() {
+        val tabs = tabs()
+        tabs.push(Route.Note("n"))
+        assertTrue(tabs.model.titleShownOutside(tabs.top, wide = true))
+        // Too narrow for the strip: the screen's own top bar names it, with a back arrow to its opener.
+        assertFalse(tabs.model.titleShownOutside(tabs.top, wide = false))
+        assertTrue(tabs.model.canGoBack(tabs.top, wide = false))
+
+        val windows = windows()
+        windows.push(Route.Note("n"))
+        assertTrue(windows.model.titleShownOutside(windows.windows().single(), wide = true))
+
+        val stack = NavBackStacks()
+        stack.push(Route.Note("n"))
+        assertFalse(stack.model.titleShownOutside(stack.top, wide = true))
+    }
+
+    @Test
+    fun aDeckColumnsFirstScreenHasNoBackArrow() {
+        val column = NavBackStacks(Route.Notification())
+        assertFalse(column.model.canGoBack(column.top, wide = true))
+        column.push(Route.Note("n"))
+        assertTrue(column.model.canGoBack(column.top, wide = true))
+    }
 }

@@ -33,7 +33,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.MyExtensibleTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.elements.BannerImage
@@ -90,7 +89,7 @@ fun DvmTopBar(
             }
         },
         navigationIcon = {
-            if (LocalBackArrowAllowed.current) {
+            if (nav.canPop()) {
                 IconButton(onClick = nav::popBack) { ArrowBackIcon() }
             }
         },

@@ -83,7 +83,6 @@ import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -125,7 +124,7 @@ fun AddNwcWalletScreen(
             TopAppBar(
                 title = { Text(stringRes(Res.string.wallet_add_nwc_title)) },
                 navigationIcon = {
-                    if (LocalBackArrowAllowed.current) {
+                    if (nav.canPop()) {
                         IconButton(onClick = { nav.popBack() }) {
                             Icon(
                                 symbol = MaterialSymbols.AutoMirrored.ArrowBack,

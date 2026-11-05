@@ -69,6 +69,12 @@ class WindowsModel(
         wide: Boolean,
     ): Boolean = isMainScreen(entry)
 
+    /** A window's title bar names its screen; a section is named by the rail or the drawer. */
+    override fun titleShownOutside(
+        entry: NavStackEntry,
+        wide: Boolean,
+    ): Boolean = true
+
     override fun shown(wide: Boolean): List<NavStackEntry> = listOf(top)
 
     override fun retained(): List<NavStackEntry> = sections.toList()

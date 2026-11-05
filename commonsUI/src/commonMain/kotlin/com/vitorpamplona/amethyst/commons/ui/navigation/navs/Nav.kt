@@ -134,12 +134,18 @@ class Nav(
         klass: KClass<T>,
     ) = open(NavRequest(route, NavRequest.Kind.Replace(klass)))
 
-    override fun popBack() {
+    override fun popBack() = back(null)
+
+    /** Back from [from] (the screen on top when null), once the keyboard settles. */
+    fun back(from: NavStackEntry?) {
         navigationScope.launch {
             ime.settle()
-            stacks.back()
+            stacks.back(from)
         }
     }
+
+    /** The navigation of the screen [entry]: what its destination draws with. */
+    fun forEntry(entry: NavStackEntry): INav = EntryNav(this, entry)
 
     @Composable
     override fun canPop(): Boolean {
@@ -156,4 +162,48 @@ class Nav(
     /** Tab roots, the start screen and drawer screens show the bar; a screen window never does. */
     @Composable
     override fun showsBottomBar(): Boolean = stacks.model.showsBar(LocalNavStackEntry.current ?: stacks.top, wide = isDrawerDocked)
+}
+
+/**
+ * One screen's navigation: [host]'s, with every request marked as coming from [entry]. A tab or
+ * window then opens beside the screen that asked, a replace acts on it, back closes or pops it, and
+ * its back arrow and bar answer for it rather than for whatever is on top.
+ */
+@Stable
+private class EntryNav(
+    private val host: Nav,
+    private val entry: NavStackEntry,
+) : INav by host {
+    private fun request(
+        route: Route,
+        kind: NavRequest.Kind = NavRequest.Kind.Push,
+    ) = host.open(NavRequest(route, kind, origin = entry.id))
+
+    override fun nav(route: Route) = request(route)
+
+    override fun nav(computeRoute: suspend () -> Route?) = host.open(NavRequest.Kind.Push, entry.id, computeRoute)
+
+    override fun navDrawer(route: Route) = request(route, NavRequest.Kind.Drawer)
+
+    override fun navDrawer(computeRoute: suspend () -> Route?) = host.open(NavRequest.Kind.Drawer, entry.id, computeRoute)
+
+    override fun newStack(route: Route) = request(route, NavRequest.Kind.Restart)
+
+    override fun navBottomBar(route: Route) = request(route, NavRequest.Kind.Section)
+
+    override fun <T : Route> popUpTo(
+        route: Route,
+        klass: KClass<T>,
+    ) = request(route, NavRequest.Kind.Replace(klass))
+
+    override fun popBack() = host.back(entry)
+
+    @Composable
+    override fun canPop(): Boolean = host.stacks.model.canGoBack(entry, wide = host.isDrawerDocked)
+
+    @Composable
+    override fun showsBottomBar(): Boolean = host.stacks.model.showsBar(entry, wide = host.isDrawerDocked)
+
+    @Composable
+    override fun titleShownOutside(): Boolean = host.stacks.model.titleShownOutside(entry, wide = host.isDrawerDocked)
 }

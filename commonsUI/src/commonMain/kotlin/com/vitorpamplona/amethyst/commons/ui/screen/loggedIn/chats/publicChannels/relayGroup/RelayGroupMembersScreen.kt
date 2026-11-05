@@ -208,7 +208,7 @@ private fun RelayGroupMembers(
                         )
                     }
                 },
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
         // Only a moderator can add a member (the relay rejects a kind-9000 from anyone else).

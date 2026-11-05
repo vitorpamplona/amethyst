@@ -27,18 +27,14 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavEntry
-import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import com.vitorpamplona.amethyst.commons.model.navigation.NavArrangement
 import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 
 /**
@@ -60,34 +56,36 @@ fun NavigationHost(
     nav: Nav,
     destinations: NavDestinations,
     modifier: Modifier = Modifier,
+    navFor: (NavStackEntry) -> INav = nav::forEntry,
 ) {
     NavigationHost(
         visible = nav.shownEntries(),
         retained = nav.stacks.retained(),
         destinations = destinations,
+        navFor = navFor,
         // Switching tabs or sections swaps the screen at once; only a stack slides and fades.
         animated = !nav.stacks.isSingleScreen || nav.shownEntries().size > 1,
         onBack = { nav.stacks.back() },
-        // A tab shows its back arrow only where the window is too narrow for the strip.
-        backArrows = !nav.stacks.isSingleScreen || (nav.stacks.arrangement == NavArrangement.TABS && !nav.isDrawerDocked),
         modifier = modifier,
     )
 }
 
 /**
  * Renders [visible] (bottom to top) and keeps the state of every [retained] entry: the host behind
- * the main window's [Nav] and behind each screen window, which shows its one entry.
+ * the main window's [Nav], each deck column and each screen window, which shows its one entry. Each
+ * screen draws with the navigation [navFor] gives its entry.
  */
 @Composable
 fun NavigationHost(
     visible: List<NavStackEntry>,
     retained: List<NavStackEntry>,
     destinations: NavDestinations,
+    navFor: (NavStackEntry) -> INav,
     animated: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    backArrows: Boolean = true,
 ) {
+    val currentNavFor = rememberUpdatedState(navFor)
     // The shown entries first: the display takes the head of the decorated list.
     val all = visible + retained.filterNot { it in visible }
     val decorated =
@@ -97,37 +95,11 @@ fun NavigationHost(
                 listOf(
                     rememberSaveableStateHolderNavEntryDecorator(),
                     rememberRouteViewModelStoreNavEntryDecorator(all),
-                    rememberBackArrowNavEntryDecorator(backArrows, visible.firstOrNull()),
                 ),
-            entryProvider = destinations::entryFor,
+            entryProvider = { entry -> destinations.entryFor(entry, currentNavFor.value) },
         )
 
     Display(decorated.subList(0, visible.size), destinations, animated, onBack, modifier)
-}
-
-/**
- * Tells each screen whether it may draw a back arrow ([LocalBackArrowAllowed]): not where the host
- * has none ([backArrows], tabs and windows), and not on the screen at the bottom of the stack (a deck
- * column's first screen), which has nothing to go back to. One decorator for the host's lifetime,
- * reading both through state, so a change never re-wraps a screen and loses what it remembered.
- */
-@Composable
-private fun rememberBackArrowNavEntryDecorator(
-    backArrows: Boolean,
-    bottom: NavStackEntry?,
-): NavEntryDecorator<NavStackEntry> {
-    val allowed = rememberUpdatedState(backArrows)
-    val bottomEntry = rememberUpdatedState(bottom)
-    return remember {
-        NavEntryDecorator(
-            decorate = { entry ->
-                val navStackEntry = entry.metadata[NavDestinations.NAV_STACK_ENTRY] as? NavStackEntry
-                CompositionLocalProvider(
-                    LocalBackArrowAllowed provides (allowed.value && navStackEntry != bottomEntry.value),
-                ) { entry.Content() }
-            },
-        )
-    }
 }
 
 @Composable

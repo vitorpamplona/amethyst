@@ -20,20 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.navigation.navs
 
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.pointerInput
-
-/**
- * Whether the screens below may draw a back arrow. False where each screen holds a tab or a window
- * of its own (the tabs and windows layouts): there is nothing to go back to, the screen is closed
- * instead. Top bars that draw an arrow without asking [INav.canPop] check this.
- */
-val LocalBackArrowAllowed = compositionLocalOf { true }
 
 /**
  * Watches every press under it, before the pressed element sees it, and tells [nav] whether Ctrl or

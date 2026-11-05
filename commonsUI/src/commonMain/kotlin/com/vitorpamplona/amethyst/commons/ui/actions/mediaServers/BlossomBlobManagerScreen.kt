@@ -209,8 +209,7 @@ fun BlossomBlobManagerScreen(
         topBar = {
             TopBarExtensibleWithBackButton(
                 title = { Text(stringRes(Res.string.my_blossom_data)) },
-                showBackButton = nav.canPop(),
-                popBack = { nav.popBack() },
+                nav = nav,
                 actions = {
                     if (loading) {
                         // Keep the spinner as immediate feedback that a refresh is in flight; the

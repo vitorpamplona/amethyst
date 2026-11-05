@@ -36,6 +36,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.scene.Scene
@@ -43,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.lockScope
 import com.vitorpamplona.amethyst.commons.ui.layouts.CappedScreenContent
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalNavStackEntry
 import com.vitorpamplona.amethyst.commons.ui.privacylock.PrivacyLockGate
 import kotlinx.serialization.InternalSerializationApi
@@ -94,12 +97,22 @@ enum class NavFamily {
     NONE,
 }
 
+/**
+ * What a destination's content can reach: [nav], the navigation of the screen being drawn. It is
+ * handed in when the screen draws, not when it is registered, so one table serves every host (the
+ * main window, a deck column, a screen window) and each screen's requests carry it as their origin.
+ */
+@Stable
+class DestinationScope(
+    val nav: INav,
+)
+
 /** One destination: how it animates, whether it takes the reading-column cap, and what it draws. */
 class NavDestination(
     private val route: KClass<out Route>,
     val family: NavFamily,
     val capWidth: Boolean,
-    val content: @Composable (Route) -> Unit,
+    val content: @Composable DestinationScope.(Route) -> Unit,
 ) {
     /**
      * The route's serial name, which R8 leaves alone (unlike its class name). Resolved on first use:
@@ -131,13 +144,13 @@ class NavDestinations {
         klass: KClass<out Route>,
         family: NavFamily,
         capWidth: Boolean,
-        content: @Composable (Route) -> Unit,
+        content: @Composable DestinationScope.(Route) -> Unit,
     ) {
         destinations[klass] = NavDestination(klass, family, capWidth, content)
     }
 
     /** What a route nothing registered draws, instead of failing. Front ends that register every screen leave it unset. */
-    fun unavailable(content: @Composable (Route) -> Unit) {
+    fun unavailable(content: @Composable DestinationScope.(Route) -> Unit) {
         unavailableScreen = NavDestination(Route::class, NavFamily.END, capWidth = true, content)
     }
 
@@ -152,20 +165,25 @@ class NavDestinations {
     fun familyOf(entry: NavStackEntry?): NavFamily = entry?.let { (destinations[it.route::class] ?: unavailableScreen)?.family } ?: NavFamily.NONE
 
     /**
-     * The Navigation 3 entry for [entry]: its screen, capped as declared, with [LocalNavStackEntry]
-     * provided so `INav.canPop()` and friends answer for this screen rather than for the top.
+     * The Navigation 3 entry for [entry]: its screen, capped as declared, drawn with the navigation
+     * [navFor] gives this entry (so its requests and back arrow answer for this screen, not for the
+     * top), and with [LocalNavStackEntry] provided for shared UI around it.
      */
-    internal fun entryFor(entry: NavStackEntry): NavEntry<NavStackEntry> {
+    internal fun entryFor(
+        entry: NavStackEntry,
+        navFor: (NavStackEntry) -> INav,
+    ): NavEntry<NavStackEntry> {
         val destination = of(entry.route)
         return NavEntry(
             key = entry,
             contentKey = entry.contentKey,
             metadata = mapOf(NAV_STACK_ENTRY to entry),
         ) {
+            val scope = remember(entry) { DestinationScope(navFor(entry)) }
             CompositionLocalProvider(LocalNavStackEntry provides entry) {
                 // A screen behind a privacy lock is not composed until it is unlocked.
                 PrivacyLockGate(entry.route.lockScope()) {
-                    MaybeCappedScreen(destination.capWidth) { destination.content(entry.route) }
+                    MaybeCappedScreen(destination.capWidth) { with(destination) { scope.content(entry.route) } }
                 }
             }
         }
@@ -178,51 +196,51 @@ class NavDestinations {
 }
 
 /** Stock fade-transition destination, capped to the reading-column width on wide panes. */
-inline fun <reified T : Route> NavDestinations.composableCapped(noinline content: @Composable () -> Unit) {
+inline fun <reified T : Route> NavDestinations.composableCapped(noinline content: @Composable DestinationScope.() -> Unit) {
     register(T::class, NavFamily.NONE, capWidth = true) { content() }
 }
 
 /** [composableCapped], for a route that carries arguments. */
-inline fun <reified T : Route> NavDestinations.composableCappedArgs(noinline content: @Composable (T) -> Unit) {
+inline fun <reified T : Route> NavDestinations.composableCappedArgs(noinline content: @Composable DestinationScope.(T) -> Unit) {
     register(T::class, NavFamily.NONE, capWidth = true) { content(it as T) }
 }
 
 /** Stock fade-transition destination at full width. */
-inline fun <reified T : Route> NavDestinations.composable(noinline content: @Composable () -> Unit) {
+inline fun <reified T : Route> NavDestinations.composable(noinline content: @Composable DestinationScope.() -> Unit) {
     register(T::class, NavFamily.NONE, capWidth = false) { content() }
 }
 
 inline fun <reified T : Route> NavDestinations.composableArgs(
     capWidth: Boolean = true,
-    noinline content: @Composable (T) -> Unit,
+    noinline content: @Composable DestinationScope.(T) -> Unit,
 ) {
     register(T::class, NavFamily.NONE, capWidth) { content(it as T) }
 }
 
 inline fun <reified T : Route> NavDestinations.composableFromEnd(
     capWidth: Boolean = true,
-    noinline content: @Composable () -> Unit,
+    noinline content: @Composable DestinationScope.() -> Unit,
 ) {
     register(T::class, NavFamily.END, capWidth) { content() }
 }
 
 inline fun <reified T : Route> NavDestinations.composableFromEndArgs(
     capWidth: Boolean = true,
-    noinline content: @Composable (T) -> Unit,
+    noinline content: @Composable DestinationScope.(T) -> Unit,
 ) {
     register(T::class, NavFamily.END, capWidth) { content(it as T) }
 }
 
 inline fun <reified T : Route> NavDestinations.composableFromBottom(
     capWidth: Boolean = true,
-    noinline content: @Composable () -> Unit,
+    noinline content: @Composable DestinationScope.() -> Unit,
 ) {
     register(T::class, NavFamily.BOTTOM, capWidth) { content() }
 }
 
 inline fun <reified T : Route> NavDestinations.composableFromBottomArgs(
     capWidth: Boolean = true,
-    noinline content: @Composable (T) -> Unit,
+    noinline content: @Composable DestinationScope.(T) -> Unit,
 ) {
     register(T::class, NavFamily.BOTTOM, capWidth) { content(it as T) }
 }

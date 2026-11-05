@@ -21,8 +21,8 @@ every screen keep their types.
   - `popUpTo` replaces the screen in place.
   - `top` is the active screen, so `currentRoute`, the rail and deep links work unchanged.
 - **Back arrows.** `Nav.canPop` is false in both modes. Top bars that drew their arrow
-  without asking (`TopBarExtensibleWithBackButton` and 37 screens) now also check
-  `LocalBackArrowAllowed`, which the host sets to false while a tab or window holds one screen.
+  without asking (`TopBarExtensibleWithBackButton` and 37 screens) now ask the screen's
+  `nav.canPop()` (first built as a `LocalBackArrowAllowed` local; see the second refactor pass).
   Stack mode and deck columns are unchanged. A tabs
   window narrower than the docked drawer shows the opener chain as a stack, with a back arrow
   that closes the tab.
@@ -36,8 +36,8 @@ every screen keep their types.
   - The windows are declared inside the main window's composition, so the account and its
     subscriptions run once. Closing the main window quits the app (Phase 2a).
   - Each window has its own ViewModel store and emoji panel.
-  - Its nav (`ScreenWindowNav`) closes the window on `popBack`, replaces the screen on
-    `popUpTo`, and opens or raises other windows for everything else.
+  - Its screen's nav (`Nav.forEntry`, first built as `ScreenWindowNav`) closes the window on
+    `popBack`, replaces the screen on `popUpTo`, and opens or raises other windows for everything else.
 - **Saving.** The mode, the active screen and the openers are saved with the stack in
   `rememberSaveable`. They aren't persisted across restarts yet.
 - **Second round (after the design review):**
@@ -87,6 +87,17 @@ every screen keep their types.
   - What a screen means to one layout (pinned, moved out to a window) lives in that model, not
     on `NavStackEntry`.
   - Saving uses one serializable class per model.
+- **Refactor, second pass:**
+  - **One destination table:** content lambdas get their `nav` when they draw
+    (`DestinationScope`), from `Nav.forEntry(entry)`, so the main pane, the deck columns and the
+    screen windows share one `NavDestinations`. `ScreenWindowNav` and the per-column builds are gone.
+  - **One back-arrow rule:** a top bar shows its arrow when the screen's `nav.canPop()` says so.
+    `LocalBackArrowAllowed` and its decorator are gone. A moved-out tab has no arrow and no bar,
+    and `titleShownOutside()` (tab strip or window title) decides when a bare title bar is dropped.
+  - **Layout chrome:** `rememberLayoutChrome` gives the shell the tab strip, the deck and the
+    screen windows in one place.
+  - **`DesktopWindowManager`:** the main frame, the screen frames, the focus, placement and saved
+    sizes left `DesktopNavigator` and `DesktopAppRoot`.
 - **Not built yet:** the singleton clean-up, Android windows, the account-session split
   (Phase 2b), and per-kind window identity for window-manager rules.
 

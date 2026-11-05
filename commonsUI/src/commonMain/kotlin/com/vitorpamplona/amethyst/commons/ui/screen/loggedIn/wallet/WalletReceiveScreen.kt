@@ -78,7 +78,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedText
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.ReceiveState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
@@ -147,7 +146,7 @@ fun WalletReceiveScreen(
             TopAppBar(
                 title = { Text(stringRes(Res.string.wallet_receive)) },
                 navigationIcon = {
-                    if (LocalBackArrowAllowed.current) {
+                    if (nav.canPop()) {
                         IconButton(onClick = { nav.popBack() }) {
                             Icon(
                                 symbol = MaterialSymbols.AutoMirrored.ArrowBack,

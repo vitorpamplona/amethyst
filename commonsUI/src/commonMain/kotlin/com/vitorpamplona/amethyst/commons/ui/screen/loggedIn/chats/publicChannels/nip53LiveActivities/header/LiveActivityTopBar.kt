@@ -46,6 +46,6 @@ fun LiveActivityTopBar(
         extendableRow = {
             LongLiveActivityChannelHeader(baseChannel = baseChannel, accountViewModel = accountViewModel, nav = nav)
         },
-        popBack = nav::popBack,
+        nav = nav,
     )
 }

@@ -166,7 +166,7 @@ fun BuzzCanvasScreen(
                         }
                     }
                 },
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
         floatingActionButton = {

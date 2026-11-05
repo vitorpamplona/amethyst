@@ -57,7 +57,6 @@ import com.vitorpamplona.amethyst.commons.resources.concord_edit_title
 import com.vitorpamplona.amethyst.commons.resources.concord_timer_desc
 import com.vitorpamplona.amethyst.commons.resources.concord_timer_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordTimerPicker
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -127,7 +126,7 @@ fun ConcordEditScreen(
             TopAppBar(
                 title = { Text(stringRes(Res.string.concord_edit_title), maxLines = 1) },
                 navigationIcon = {
-                    if (LocalBackArrowAllowed.current) {
+                    if (nav.canPop()) {
                         IconButton(onClick = { nav.popBack() }) {
                             SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
                         }

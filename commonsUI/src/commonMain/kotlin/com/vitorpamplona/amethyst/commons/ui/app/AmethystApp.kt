@@ -50,13 +50,11 @@ import com.vitorpamplona.amethyst.commons.appupdate.ui.AppUpdateHost
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.navigation.NavArrangement
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.arrangement
 import com.vitorpamplona.amethyst.commons.model.navigation.isSameRoute
 import com.vitorpamplona.amethyst.commons.model.navigation.lockScope
-import com.vitorpamplona.amethyst.commons.model.navigation.showsDeck
 import com.vitorpamplona.amethyst.commons.privacylock.LocalPrivacyLockState
 import com.vitorpamplona.amethyst.commons.privacylock.LockScope
 import com.vitorpamplona.amethyst.commons.relayClient.authCommand.compose.RelayAuthPromptHost
@@ -80,7 +78,6 @@ import com.vitorpamplona.amethyst.commons.ui.keystorage.KeyStorageHost
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.TabReselectCoordinator
-import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckArea
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.AccountSwitchBottomSheet
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.AccountSwitchMenu
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerContent
@@ -95,8 +92,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.openInBackgroundOnM
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.commons.ui.navigation.shell.AppShellLayout
-import com.vitorpamplona.amethyst.commons.ui.navigation.tabs.ScreenTabStrip
-import com.vitorpamplona.amethyst.commons.ui.navigation.windows.ScreenWindows
+import com.vitorpamplona.amethyst.commons.ui.navigation.shell.rememberLayoutChrome
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.privacylock.PrivacyLockGate
@@ -325,10 +321,10 @@ private fun AppNavigation(
     // Built here rather than inside the navigation host, so the drawer, bars and menus can ask it
     // which screens exist before offering a way into one.
     val destinations =
-        remember(accountViewModel, nav) {
+        remember(accountViewModel) {
             NavDestinations().apply {
-                sharedDestinations(accountViewModel, nav)
-                root.registerDestinations(this, accountViewModel, nav)
+                sharedDestinations(accountViewModel)
+                root.registerDestinations(this, accountViewModel)
             }
         }
 
@@ -342,6 +338,8 @@ private fun AppNavigation(
         LocalUserFinderAccount provides accountViewModel.account,
         LocalEventFinder provides accountViewModel.dataSources().eventFinder,
     ) {
+        val chrome = rememberLayoutChrome(layout, nav, accountViewModel, root)
+
         // A Ctrl/Cmd-click opens what it reaches in the background (tabs and windows layouts).
         Box(Modifier.fillMaxSize().openInBackgroundOnModifiedClick(nav)) {
             AppShellLayout(
@@ -355,9 +353,7 @@ private fun AppNavigation(
                 },
                 accountSwitcherContent = { AccountSwitchBottomSheet(accountViewModel, sessionManager) },
                 suspendEdgeSwipe = root::suspendEdgeSwipe,
-                deck = rememberDeck(layout, accountViewModel, nav, root),
-                // Where the drawer docks: above the main screen and the panel beside it.
-                topStrip = if (nav.stacks.arrangement == NavArrangement.TABS) ({ ScreenTabStrip(nav, accountViewModel) }) else null,
+                chrome = chrome,
             ) {
                 // Inside the providers, so the panel reads the window's layout (its hover tooltips are
                 // for large screens).
@@ -374,7 +370,7 @@ private fun AppNavigation(
         }
 
         // Screens in windows of their own: the windows layout, or tabs moved out.
-        ScreenWindows(nav, accountViewModel, root)
+        chrome.windows?.invoke()
 
         OpenFirstRoute(firstRoute, nav)
 
@@ -402,36 +398,6 @@ private fun OpenFirstRoute(
         val currentRoute = Snapshot.withoutReadObservation { getRouteWithArguments(route::class, nav) }
         if (!isSameRoute(currentRoute, route)) {
             nav.newStack(route)
-        }
-    }
-}
-
-/**
- * The deck's columns in the deck layout, when the window is wide enough for the notification
- * panel (about 1,200 dp); null otherwise, and a narrower window shows the plain stack. Each
- * column gets the same screens as the main navigation, built against the column's own back stack.
- */
-@Composable
-private fun rememberDeck(
-    layout: NavigationLayoutType,
-    accountViewModel: AccountViewModel,
-    nav: Nav,
-    root: AppRoot,
-): (@Composable (Modifier) -> Unit)? {
-    if (!layout.showsDeck || !LocalScreenLayout.current.hasRoomForNotificationPanel) return null
-    return remember(accountViewModel, nav, root) {
-        { modifier ->
-            DeckArea(
-                accountViewModel = accountViewModel,
-                mainNav = nav,
-                destinationsFor = { columnNav, column ->
-                    NavDestinations().apply {
-                        sharedDestinations(accountViewModel, columnNav)
-                        root.registerDestinations(this, accountViewModel, column)
-                    }
-                },
-                modifier = modifier,
-            )
         }
     }
 }

@@ -78,7 +78,6 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_outgoing
 import com.vitorpamplona.amethyst.commons.resources.wallet_refresh
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
@@ -144,7 +143,7 @@ fun OnchainTransactionsScreen(
             TopAppBar(
                 title = { Text(stringRes(Res.string.wallet_onchain_transactions)) },
                 navigationIcon = {
-                    if (LocalBackArrowAllowed.current) {
+                    if (nav.canPop()) {
                         IconButton(onClick = { nav.popBack() }) {
                             Icon(
                                 symbol = MaterialSymbols.AutoMirrored.ArrowBack,

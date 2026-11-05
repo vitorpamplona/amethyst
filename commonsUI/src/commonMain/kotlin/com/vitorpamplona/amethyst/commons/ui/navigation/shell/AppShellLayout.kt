@@ -99,7 +99,8 @@ import kotlinx.coroutines.launch
  * [permanentDrawerContent] draw the modal and the docked drawer (both get the callback that opens
  * the account switcher), [accountSwitcherContent] fills the switcher sheet. [suspendEdgeSwipe] is
  * read while composing the modal drawer; returning true turns its left-edge swipe off, for a front
- * end with its own gesture near that edge (Android's embedded-tab selection handles).
+ * end with its own gesture near that edge (Android's embedded-tab selection handles). [chrome] is
+ * what the navigation layout adds around the main screen; its screen windows are declared by the caller.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,15 +111,16 @@ fun AppShellLayout(
     permanentDrawerContent: @Composable (openAccountSwitcher: () -> Unit) -> Unit,
     accountSwitcherContent: @Composable () -> Unit,
     suspendEdgeSwipe: () -> Boolean = { false },
-    /** The deck's columns, beside the main screen in place of the notification panel; null when the deck is off. */
-    deck: (@Composable (Modifier) -> Unit)? = null,
     /**
-     * A strip across the top of everything right of the docked drawer (the main screen, the deck and
-     * the notification panel), so their headers stay level below it: the tabs layout's tab strip.
+     * What the navigation layout adds: the deck's columns, beside the main screen in place of the
+     * notification panel, and a strip across the top of everything right of the docked drawer (the
+     * tabs), so the headers below it stay level.
      */
-    topStrip: (@Composable () -> Unit)? = null,
+    chrome: LayoutChrome = LayoutChrome.None,
     content: @Composable () -> Unit,
 ) {
+    val deck = chrome.deck
+    val topStrip = chrome.topStrip
     val scope = rememberCoroutineScope()
     var openAccountSwitcherBottomSheet by rememberSaveable { mutableStateOf(false) }
 

@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -281,9 +280,9 @@ fun main(args: Array<String>) {
 
         // Closing the main window while screen windows are open only hides it; the app quits once
         // the last of them closes too.
-        val navigator = root.navigator
-        LaunchedEffect(navigator) {
-            snapshotFlow { !navigator.mainWindowVisible && navigator.screenFrames.isEmpty() }
+        val windows = root.navigator.windows
+        LaunchedEffect(windows) {
+            snapshotFlow { windows.allClosed }
                 .filter { it }
                 .collect { exitApplication() }
         }
@@ -303,19 +302,14 @@ fun main(args: Array<String>) {
         CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides exceptionHandlerFactory) {
             key(windowGeneration) {
                 AppWindow(
-                    onCloseRequest = {
-                        if (navigator.screenFrames.isEmpty()) exitApplication() else navigator.mainWindowVisible = false
-                    },
+                    onCloseRequest = { windows.closeMainWindow(::exitApplication) },
                     state = windowState,
                     title = "Amethyst",
                     icon = IconResources.adaptedBitmapPainter,
                     onPreviewKeyEvent = { root.navigator.handleShortcut(it, onQuit = ::exitApplication) },
-                    visible = navigator.mainWindowVisible,
+                    visible = windows.mainWindowVisible,
                 ) {
-                    DisposableEffect(window) {
-                        navigator.mainFrame = window
-                        onDispose { if (navigator.mainFrame === window) navigator.mainFrame = null }
-                    }
+                    windows.MainWindowEffects(window)
                     // macOS: the title bar turns transparent over the app, which draws its own strip there.
                     frameScope?.applyNativeWindowChrome()
 
@@ -368,7 +362,7 @@ fun main(args: Array<String>) {
                                             Box(Modifier.weight(1f).fillMaxWidth()) {
                                                 AmethystApp(modules.sessionManager, root)
                                                 // Toasts show here unless a screen window has the focus (it shows them).
-                                                if (navigator.focusedScreenWindow == null) {
+                                                if (windows.focusedScreenWindow == null) {
                                                     SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
                                                 }
                                             }

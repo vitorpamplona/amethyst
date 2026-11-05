@@ -84,11 +84,17 @@ sealed class NavModel(
         wide: Boolean,
     ): Boolean
 
-    /** Whether [entry] shows the bottom bar: tab roots and drawer screens do, pushes don't. */
+    /** Whether [entry] shows the bottom bar: tab roots and drawer screens do, pushes and screen windows don't. */
     open fun showsBar(
         entry: NavStackEntry,
         wide: Boolean,
-    ): Boolean = entry.drawerRoot || !canGoBack(entry, wide)
+    ): Boolean = isMainScreen(entry) && (entry.drawerRoot || !canGoBack(entry, wide))
+
+    /** Whether a tab or a window's title bar names [entry] where it is shown, so its own top bar need not. */
+    open fun titleShownOutside(
+        entry: NavStackEntry,
+        wide: Boolean,
+    ): Boolean = false
 
     /** What the main window's host displays, bottom to top. */
     abstract fun shown(wide: Boolean): List<NavStackEntry>

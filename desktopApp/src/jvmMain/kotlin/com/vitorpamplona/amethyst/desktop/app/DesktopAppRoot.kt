@@ -37,10 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalWindowInfo
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.WindowPosition
-import androidx.compose.ui.window.WindowState
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
@@ -67,11 +63,8 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -81,8 +74,6 @@ import java.io.File
  * ([AppRoot.rememberScreenLayoutSpec] reads the window), so a narrow window gets the bottom bar and a
  * wide one the rail or the drawer, as on a phone or a laptop.
  */
-private const val CASCADE_STEP = 32
-
 class DesktopAppRoot(
     private val modules: DesktopAppModules,
 ) : AppRoot {
@@ -97,7 +88,7 @@ class DesktopAppRoot(
     private val host by lazy { DesktopAccountViewModelHost(modules) }
 
     /** Hands the logged-in shell's navigator to the menu bar, which lives outside the shared app. */
-    val navigator = DesktopNavigator()
+    val navigator = DesktopNavigator(DesktopWindowManager { File(modules.filesDir, "screen-windows.properties") })
 
     override fun createAccountViewModel(account: Account): AccountViewModel =
         AccountViewModel(
@@ -161,31 +152,17 @@ class DesktopAppRoot(
         }
     }
 
-    /** How big each kind of screen window was last left, so the next one opens at that size. */
-    private val screenWindowSizes by lazy { ScreenWindowSizes(File(modules.filesDir, "screen-windows.properties")) }
-
     /**
-     * A screen window: beside the window or section that opened it, at the size the last one of its
-     * kind was left at. It carries the app's shortcuts and, on macOS, its menu bar, and shows the
-     * toasts while it has the focus.
+     * A screen window: placed and sized by [DesktopWindowManager]. It carries the app's shortcuts
+     * and, on macOS, its menu bar, and shows the toasts while it has the focus.
      */
-    @OptIn(FlowPreview::class)
     @Composable
     override fun ScreenWindow(
         window: ScreenWindowSpec,
         content: @Composable () -> Unit,
     ) {
-        val state =
-            remember(window.id) {
-                val size = screenWindowSizes.sizeFor(window.kind)
-                WindowState(size = size, position = placeBeside(window.openerId, size))
-            }
-        LaunchedEffect(state) {
-            snapshotFlow { state.size }
-                .drop(1)
-                .debounce(500)
-                .collect { withContext(Dispatchers.IO) { screenWindowSizes.save(window.kind, it) } }
-        }
+        val windows = navigator.windows
+        val state = remember(window.id) { windows.initialState(window) }
         val quit = { modules.quitRequests.tryEmit(Unit) }
         AppWindow(
             onCloseRequest = window.onClose,
@@ -195,27 +172,7 @@ class DesktopAppRoot(
             onPreviewKeyEvent = { navigator.handleShortcut(it, onQuit = { quit() }) },
         ) {
             val focused = LocalWindowInfo.current.isWindowFocused
-            LaunchedEffect(focused) {
-                if (focused) {
-                    navigator.focusedScreenWindow = window.id
-                } else if (navigator.focusedScreenWindow == window.id) {
-                    navigator.focusedScreenWindow = null
-                }
-            }
-            DisposableEffect(this.window) {
-                navigator.screenFrames[window.id] = this@AppWindow.window
-                onDispose {
-                    navigator.screenFrames.remove(window.id)
-                    if (navigator.focusedScreenWindow == window.id) navigator.focusedScreenWindow = null
-                }
-            }
-            // Raised when the screen it shows is asked for again.
-            LaunchedEffect(window.focus) {
-                if (window.focus != null) {
-                    this@AppWindow.window.toFront()
-                    this@AppWindow.window.requestFocus()
-                }
-            }
+            windows.ScreenWindowEffects(window, this.window, state, focused)
             frameScope?.DesktopMenuBar(navigator, onQuit = { quit() }, installAppMenu = false)
 
             val snackbars = (LocalAppPlatform.current as? DesktopAppPlatform)?.snackbarHostState
@@ -227,40 +184,11 @@ class DesktopAppRoot(
         }
     }
 
-    /**
-     * Where a new screen window goes: right of the window that opened it when it fits on that
-     * screen, else left of it, else stepped down from it. Without an opener on screen, the main
-     * window is the anchor; without that, the OS picks.
-     */
-    private fun placeBeside(
-        openerId: Long?,
-        size: DpSize,
-    ): WindowPosition {
-        val anchor = openerId?.let { navigator.screenFrames[it] } ?: navigator.mainFrame ?: return WindowPosition.PlatformDefault
-        if (!anchor.isShowing) return WindowPosition.PlatformDefault
-        val screen = anchor.graphicsConfiguration.bounds
-        val width = size.width.value.toInt()
-        val height = size.height.value.toInt()
-        val gap = 8
-        val y = anchor.y.coerceIn(screen.y, (screen.y + screen.height - height).coerceAtLeast(screen.y))
-        val right = anchor.x + anchor.width + gap
-        val left = anchor.x - width - gap
-        val x =
-            when {
-                right + width <= screen.x + screen.width -> right
-                left >= screen.x -> left
-                else -> (anchor.x + CASCADE_STEP).coerceAtMost((screen.x + screen.width - width).coerceAtLeast(screen.x))
-            }
-        val cascadeY = if (x == anchor.x + CASCADE_STEP) (anchor.y + CASCADE_STEP).coerceAtMost((screen.y + screen.height - height).coerceAtLeast(screen.y)) else y
-        return WindowPosition(x.dp, cascadeY.dp)
-    }
-
     override fun registerDestinations(
         destinations: NavDestinations,
         accountViewModel: AccountViewModel,
-        nav: Nav,
     ) {
-        destinations.jvmDestinations(accountViewModel, nav)
+        destinations.jvmDestinations(accountViewModel)
         // Screens only Android has (Health Connect, the QR camera, share-as-image...) still have
         // ways in here: synced bar items, links, shared menus. Show a notice, not a crash.
         destinations.unavailable { UnavailableScreen(nav) }
@@ -295,10 +223,10 @@ class DesktopAppRoot(
         LaunchedEffect(nav) {
             snapshotFlow { nav.stacks.model.windowFocus }.collect { focus ->
                 val model = nav.stacks.model
-                if (focus != null && model.entries.any { it.id == focus.id && model.isMainScreen(it) }) navigator.showMainWindow()
+                if (focus != null && model.entries.any { it.id == focus.id && model.isMainScreen(it) }) navigator.windows.showMainWindow()
             }
         }
-        LaunchedEffect(nav.stacks.arrangement) { navigator.mainWindowVisible = true }
+        LaunchedEffect(nav.stacks.arrangement) { navigator.windows.showMainWindow(raise = false) }
 
         DisposableEffect(nav, accountViewModel, destinations, settingsCatalog) {
             navigator.nav = nav
