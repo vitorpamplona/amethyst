@@ -51,15 +51,10 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
-import java.awt.AlphaComposite
-import java.awt.BorderLayout
 import java.awt.Color
-import java.awt.Container
 import java.awt.Dialog
 import java.awt.EventQueue
 import java.awt.Frame
-import java.awt.Graphics
-import java.awt.Graphics2D
 import java.awt.GraphicsDevice
 import java.awt.GraphicsDevice.WindowTranslucency.PERPIXEL_TRANSLUCENT
 import java.awt.GraphicsEnvironment
@@ -67,14 +62,10 @@ import java.awt.KeyEventDispatcher
 import java.awt.KeyboardFocusManager
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
-import java.awt.event.ContainerAdapter
-import java.awt.event.ContainerEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
-import javax.swing.JComponent
 import javax.swing.JDialog
 import javax.swing.JFrame
-import javax.swing.JPanel
 import javax.swing.SwingUtilities
 import javax.swing.WindowConstants
 import kotlin.math.roundToInt
@@ -191,14 +182,12 @@ private fun WaylandWindow(
 
         frame.defaultCloseOperation = WindowConstants.DO_NOTHING_ON_CLOSE
         frame.isUndecorated = undecorated
-        val translucent = transparent && frame.graphicsConfiguration.device.isWindowTranslucencySupported(PERPIXEL_TRANSLUCENT)
-        if (translucent) {
+        if (transparent && frame.graphicsConfiguration.device.isWindowTranslucencySupported(PERPIXEL_TRANSLUCENT)) {
             frame.background = Color(0, 0, 0, 0)
             panel.background = Color(0, 0, 0, 0)
         }
         icon?.let { frame.iconImage = it.toAwtImage(Density(1f), LayoutDirection.Ltr, Size(ICON_SIZE, ICON_SIZE)) }
-        // A translucent window must blend over what is behind it, so only an opaque one paints direct.
-        if (translucent) frame.contentPane.add(panel) else frame.contentPane.add(DirectPaintHolder(panel))
+        frame.contentPane.add(panel)
 
         frame.applySize(state.size)
         when (val position = state.position) {
@@ -251,8 +240,6 @@ private fun WaylandWindow(
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(keyDispatcher)
 
         frame.isVisible = true
-        // After the panel is shown: it adds its drawing layer when it joins a visible window.
-        if (!translucent) frame.rootPane.disableSwingBackBuffer()
         frame.applyPlacement(state.placement)
 
         onDispose {
@@ -277,45 +264,6 @@ private fun WaylandWindow(
             if (size != frame.reportedSize && size.isSpecified && frame.placement() == WindowPlacement.Floating) frame.applySize(size)
         }
     }
-}
-
-/**
- * Holds the [ComposePanel] of an opaque window and has every frame copied onto the window as it is,
- * not blended in: the frame covers the whole window, so its pixels replace what was there, and Java2D
- * then copies rows instead of blending pixel by pixel. With [disableSwingBackBuffer] it cut a frame
- * of the feed by about 10% (JBR 21 on Weston, scale 1; up to 24% at scale 2 in an earlier test).
- * Either change alone gains nothing: a copy into Swing's back buffer is slower than the blend.
- */
-private class DirectPaintHolder(
-    panel: ComposePanel,
-) : JPanel(BorderLayout()) {
-    init {
-        add(panel)
-    }
-
-    override fun paintChildren(g: Graphics) {
-        (g as Graphics2D).composite = AlphaComposite.Src
-        super.paintChildren(g)
-    }
-}
-
-/**
- * Swing paints each component into a back buffer first and copies that to the window: a whole extra
- * copy of every frame. The Wayland toolkit's window surfaces are double-buffered already (the
- * compositor only sees a frame once it is complete), so on Wayland the panel paints straight onto
- * the surface. Swing buffers a repaint when the component or any ancestor asks for it, so every
- * component in the window is told not to, including the ones added later.
- */
-private fun Container.disableSwingBackBuffer() {
-    (this as? JComponent)?.isDoubleBuffered = false
-    addContainerListener(
-        object : ContainerAdapter() {
-            override fun componentAdded(e: ContainerEvent) {
-                (e.child as? Container)?.disableSwingBackBuffer()
-            }
-        },
-    )
-    components.forEach { (it as? Container)?.disableSwingBackBuffer() }
 }
 
 /**
