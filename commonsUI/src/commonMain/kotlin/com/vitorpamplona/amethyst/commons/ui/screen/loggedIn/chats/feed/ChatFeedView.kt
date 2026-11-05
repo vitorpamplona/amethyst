@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -317,103 +316,100 @@ fun ChatFeedLoaded(
         }
     }
 
-    // Every row sits under a day divider here (NewDateOrSubjectDivisor), so its time is the time of day.
-    CompositionLocalProvider(LocalChatDayDividers provides true) {
-        LazyColumn(
-            contentPadding = FeedPadding,
-            modifier = Modifier.fillMaxSize(),
-            reverseLayout = true,
-            state = listState,
-        ) {
-            itemsIndexed(
-                rows,
-                key = { _, item -> item.idHex },
-                contentType = { _, item -> if (outsideNetwork.byId.containsKey(item.idHex)) OUTSIDE_RUN_CONTENT_TYPE else chatRowContentType(item) },
-            ) { index, item ->
-                val noteEvent = item.event
-                if (avoidDraft == null || noteEvent !is DraftWrapEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
-                    // Reverse layout: index - 1 is the newer message (visually below),
-                    // index + 1 the older one (visually above).
-                    val newer = rows.getOrNull(index - 1)
-                    val older = rows.getOrNull(index + 1)
+    LazyColumn(
+        contentPadding = FeedPadding,
+        modifier = Modifier.fillMaxSize(),
+        reverseLayout = true,
+        state = listState,
+    ) {
+        itemsIndexed(
+            rows,
+            key = { _, item -> item.idHex },
+            contentType = { _, item -> if (outsideNetwork.byId.containsKey(item.idHex)) OUTSIDE_RUN_CONTENT_TYPE else chatRowContentType(item) },
+        ) { index, item ->
+            val noteEvent = item.event
+            if (avoidDraft == null || noteEvent !is DraftWrapEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
+                // Reverse layout: index - 1 is the newer message (visually below),
+                // index + 1 the older one (visually above).
+                val newer = rows.getOrNull(index - 1)
+                val older = rows.getOrNull(index + 1)
 
-                    // Send/arrival motion: new items fade in and existing ones slide to
-                    // make room, so a sent message enters instead of appearing.
-                    val itemModifier =
-                        if (accountViewModel.settings.isPerformanceMode()) {
-                            Modifier
-                        } else {
-                            Modifier.animateItem()
+                // Send/arrival motion: new items fade in and existing ones slide to
+                // make room, so a sent message enters instead of appearing.
+                val itemModifier =
+                    if (accountViewModel.settings.isPerformanceMode()) {
+                        Modifier
+                    } else {
+                        Modifier.animateItem()
+                    }
+
+                val outsideRun = outsideNetwork.byId[item.idHex]
+
+                Column(modifier = itemModifier) {
+                    if (outsideRun != null) {
+                        // The run's row, at its oldest message. The day header only: a subject change
+                        // would print the author's name and the new subject.
+                        NewDateDivisor(older, item)
+                        markersInGap?.invoke(item.event?.createdAt, older?.event?.createdAt)
+                        val newestInRun = outsideRun.members.first()
+                        LaunchedEffect(routeForLastRead, newestInRun.idHex) {
+                            accountViewModel.loadAndMarkAsRead(routeForLastRead, newestInRun.createdAt(), dismissNotificationId = newestInRun.idHex)
                         }
+                        OutsideNetworkChatRow(outsideRun.members.size) {
+                            revealed = revealed + outsideRun.members.map { it.idHex }
+                        }
+                    } else {
+                        // A day/subject header belongs ABOVE the message it introduces. `reverseLayout`
+                        // flips the order of the lazy list's items, but NOT the content inside one item:
+                        // this Column still lays out top-to-bottom, so the divisor must be composed
+                        // before the bubble. Composing it after put the header below its own message —
+                        // i.e. visually heading the NEXT (newer) message while showing this one's date,
+                        // which is why a "Jul 1, 2025" header sat on top of a Sep 23 bubble.
+                        NewDateOrSubjectDivisor(older, item, accountViewModel)
 
-                    val outsideRun = outsideNetwork.byId[item.idHex]
+                        // Per-relay paging markers for the gap toward the next-older message. Older items sit
+                        // ABOVE newer ones under `reverseLayout`, so that gap is the space above this bubble —
+                        // which means these belong before it, for the same reason the divisor does. Composed
+                        // after the bubble they rendered in the gap toward the NEWER message, contradicting the
+                        // bounds they are handed.
+                        markersInGap?.invoke(
+                            item.event?.createdAt,
+                            older?.event?.createdAt,
+                        )
 
-                    Column(modifier = itemModifier) {
-                        if (outsideRun != null) {
-                            // The run's row, at its oldest message. The day header only: a subject change
-                            // would print the author's name and the new subject.
-                            NewDateDivisor(older, item)
-                            markersInGap?.invoke(item.event?.createdAt, older?.event?.createdAt)
-                            val newestInRun = outsideRun.members.first()
-                            LaunchedEffect(routeForLastRead, newestInRun.idHex) {
-                                accountViewModel.loadAndMarkAsRead(routeForLastRead, newestInRun.createdAt(), dismissNotificationId = newestInRun.idHex)
-                            }
-                            OutsideNetworkChatRow(outsideRun.members.size) {
-                                revealed = revealed + outsideRun.members.map { it.idHex }
-                            }
+                        // A claimed row is rendered by the caller instead of as a
+                        // bubble. The date divisor above still applies — a system
+                        // row belongs under the day it happened on like anything
+                        // else — which is why the claim is checked here and not
+                        // around the whole item.
+                        val claimed = rowRenderer?.takeIf { it.claims(item) }
+                        if (claimed != null) {
+                            claimed.Render(item)
                         } else {
-                            // A day/subject header belongs ABOVE the message it introduces. `reverseLayout`
-                            // flips the order of the lazy list's items, but NOT the content inside one item:
-                            // this Column still lays out top-to-bottom, so the divisor must be composed
-                            // before the bubble. Composing it after put the header below its own message —
-                            // i.e. visually heading the NEXT (newer) message while showing this one's date,
-                            // which is why a "Jul 1, 2025" header sat on top of a Sep 23 bubble.
-                            NewDateOrSubjectDivisor(older, item, accountViewModel)
-
-                            // Per-relay paging markers for the gap toward the next-older message. Older items sit
-                            // ABOVE newer ones under `reverseLayout`, so that gap is the space above this bubble —
-                            // which means these belong before it, for the same reason the divisor does. Composed
-                            // after the bubble they rendered in the gap toward the NEWER message, contradicting the
-                            // bounds they are handed.
-                            markersInGap?.invoke(
-                                item.event?.createdAt,
-                                older?.event?.createdAt,
+                            ChatroomMessageCompose(
+                                baseNote = item,
+                                routeForLastRead = routeForLastRead,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                                onWantsToReply = onWantsToReply,
+                                onWantsToEditDraft = onWantsToEditDraft,
+                                onScrollToNote = onScrollToNote,
+                                shouldHighlight = highlightedNoteId.value == item.idHex,
+                                onHighlightFinished = { highlightedNoteId.value = null },
+                                groupPosition = watchChatGroupPosition(newer, item, older),
+                                previousNoteId = older?.idHex,
+                                onWantsToEditChatMessage = onWantsToEditChatMessage,
                             )
-
-                            // A claimed row is rendered by the caller instead of as a
-                            // bubble. The date divisor above still applies — a system
-                            // row belongs under the day it happened on like anything
-                            // else — which is why the claim is checked here and not
-                            // around the whole item.
-                            val claimed = rowRenderer?.takeIf { it.claims(item) }
-                            if (claimed != null) {
-                                claimed.Render(item)
-                            } else {
-                                ChatroomMessageCompose(
-                                    baseNote = item,
-                                    routeForLastRead = routeForLastRead,
-                                    accountViewModel = accountViewModel,
-                                    nav = nav,
-                                    onWantsToReply = onWantsToReply,
-                                    onWantsToEditDraft = onWantsToEditDraft,
-                                    onScrollToNote = onScrollToNote,
-                                    shouldHighlight = highlightedNoteId.value == item.idHex,
-                                    onHighlightFinished = { highlightedNoteId.value = null },
-                                    groupPosition = watchChatGroupPosition(newer, item, older),
-                                    previousNoteId = older?.idHex,
-                                    onWantsToEditChatMessage = onWantsToEditChatMessage,
-                                )
-                            }
                         }
                     }
                 }
             }
+        }
 
-            // Reverse layout: a trailing item sits at the highest index, i.e. the visual TOP (oldest end).
-            // That's where the caller's "load more" affordance / spinner lives.
-            if (olderBoundary != null) {
-                item(key = "olderBoundary") { olderBoundary() }
-            }
+        // Reverse layout: a trailing item sits at the highest index, i.e. the visual TOP (oldest end).
+        // That's where the caller's "load more" affordance / spinner lives.
+        if (olderBoundary != null) {
+            item(key = "olderBoundary") { olderBoundary() }
         }
     }
 }
