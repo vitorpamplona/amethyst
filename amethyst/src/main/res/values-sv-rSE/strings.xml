@@ -208,4 +208,8 @@
     <string name="mute_button">Ljud på. Klicka för att stänga av ljudet</string>
     <string name="play">Spela</string>
     <string name="pause">Pausa</string>
+    <string name="napplet_cap_outbox">Utkorg</string>
+    <string name="napplet_cap_fs">Filer</string>
+    <string name="napplet_cap_common">Sociala åtgärder</string>
+    <string name="napplet_cap_intent">Öppna andra appar</string>
 </resources>
