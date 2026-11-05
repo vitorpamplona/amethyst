@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -107,10 +108,22 @@ fun GitFileViewer(
     /** The file's path when its blame should show beside the code, else null. */
     blamePath: List<String>? = null,
 ) {
-    val blame by
-        produceState<GitBlame?>(null, entry.oid, blamePath) {
-            value = blamePath?.let { path -> runCatching { viewModel.blame(snapshot, path) }.getOrNull() }
+    // Null while loading; then the blame, or a failure (also when the file has no history here),
+    // so the gutter's progress bar stops either way.
+    val blameResult by
+        produceState<Result<GitBlame>?>(null, entry.oid, blamePath) {
+            value = null
+            val path = blamePath ?: return@produceState
+            value =
+                try {
+                    viewModel.blame(snapshot, path)?.let { Result.success(it) } ?: Result.failure(IllegalStateException("no history"))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
         }
+    val blame = blameResult?.getOrNull()
     val result by
         produceState<Result<ByteArray>?>(null, entry.oid) {
             value =
@@ -141,7 +154,7 @@ fun GitFileViewer(
                         modifier = modifier,
                     )
                 else ->
-                    HighlightedCode(data.decodeToString(), entry.name, modifier, blame.takeIf { blamePath != null }, loadingBlame = blamePath != null && blame == null)
+                    HighlightedCode(data.decodeToString(), entry.name, modifier, blame.takeIf { blamePath != null }, loadingBlame = blamePath != null && blameResult == null)
             }
         }
     }
@@ -203,7 +216,7 @@ private fun HighlightedCode(
         if (loadingBlame) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (blame?.truncated == true) {
             Text(
-                stringRes(Res.string.git_file_blame_truncated, blame.versions.size),
+                pluralStringRes(Res.plurals.git_file_blame_truncated, blame.versions.size, blame.versions.size),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp),

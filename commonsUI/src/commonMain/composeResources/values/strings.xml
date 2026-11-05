@@ -2857,7 +2857,10 @@
     <string name="git_file_history">History</string>
     <string name="git_file_history_title">History of %1$s</string>
     <string name="git_file_blame">Blame</string>
-    <string name="git_file_blame_truncated">Read from the latest %1$d versions: older lines may come from earlier commits.</string>
+    <plurals name="git_file_blame_truncated">
+        <item quantity="one">Read from the latest version only: older lines may come from earlier commits.</item>
+        <item quantity="other">Read from the latest %1$d versions: older lines may come from earlier commits.</item>
+    </plurals>
     <string name="git_search_names">File names</string>
     <string name="git_search_text">Text in files</string>
     <string name="git_search_progress">Searching %1$d of %2$d files…</string>

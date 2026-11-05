@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
+import com.vitorpamplona.quartz.nip34Git.review.gitCodeLocation
 
 @Composable
 fun verdictLabel(verdict: GitReviewEvent.Verdict): String =
@@ -181,6 +182,7 @@ private suspend fun submitReview(
 ) {
     val reviewed = item.toEventHint<Event>() ?: return
     val me = accountViewModel.account.signer.pubKey
-    val mine = item.replies.filter { (it.event as? CommentEvent)?.pubKey == me }.mapNotNull { it.toEventHint<Event>() }
+    // Only the inline comments (those with a code location), not plain replies or resolutions.
+    val mine = item.replies.filter { (it.event as? CommentEvent)?.let { c -> c.pubKey == me && c.gitCodeLocation() != null } == true }.mapNotNull { it.toEventHint<Event>() }
     accountViewModel.account.signAndComputeBroadcast(GitReviewEvent.build(verdict, summary, reviewed, mine))
 }

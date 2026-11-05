@@ -105,6 +105,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.gitThreadRootId
 import com.vitorpamplona.quartz.nip34Git.review.GitCodeLocation
+import com.vitorpamplona.quartz.nip34Git.review.gitCodeLocation
 import com.vitorpamplona.quartz.nip34Git.review.reviewedCommit
 import com.vitorpamplona.quartz.nip34Git.review.reviewedFile
 import com.vitorpamplona.quartz.nip34Git.review.reviewedLines
@@ -509,6 +510,8 @@ open class CommentPostViewModel :
 
     private fun loadFromDraft(draftEvent: CommentEvent) {
         this.externalIdentity = draftEvent.scope()
+        // An inline review comment's draft keeps its place in the diff.
+        reviewLocation = draftEvent.gitCodeLocation()
 
         canAddInvoice = accountViewModel.userProfile().lnAddress() != null
         canAddZapRaiser = accountViewModel.userProfile().lnAddress() != null

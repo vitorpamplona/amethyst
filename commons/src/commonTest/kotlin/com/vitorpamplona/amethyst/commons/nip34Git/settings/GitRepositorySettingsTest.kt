@@ -70,7 +70,8 @@ class GitRepositorySettingsTest {
         assertEquals(5_001, edited.createdAt)
         assertEquals("Repo 2", edited.name())
         assertEquals(listOf("wss://relay.one", "wss://relay.two"), edited.relays())
-        assertEquals(listOf(other), edited.maintainers())
+        // The owner keeps their place; the form only lists the others.
+        assertEquals(listOf(owner, other), edited.maintainers())
         assertEquals("c".repeat(40), edited.earliestUniqueCommit())
         assertTrue(edited.isPrivate())
         assertTrue(edited.tags.any { it[0] == "M" && it[1] == owner })
@@ -83,5 +84,16 @@ class GitRepositorySettingsTest {
         val problems = GitRepositorySettings.problems("wss://ok.relay\nnot a relay url", "npub1nope\n$other")
         assertEquals(listOf(GitSettingsProblem.Field.RELAYS, GitSettingsProblem.Field.MAINTAINERS), problems.map { it.field })
         assertEquals(listOf("npub1nope"), problems[1].entries)
+    }
+
+    @Test
+    fun savingWhatIsThereChangesNothing() {
+        fun save(
+            from: GitRepositoryEvent,
+            name: String,
+        ) = GitRepositorySettings.edit(from, name, "", "", "https://git.example/repo.git", "wss://old.relay/", Hex.decode(other).toNpub(), listOf("kotlin"))
+        val saved = save(previous, "Repo").let { signedLike(it.tags, it.createdAt) }
+        assertTrue(GitRepositorySettings.isUnchanged(saved, save(saved, "Repo")))
+        assertTrue(!GitRepositorySettings.isUnchanged(saved, save(saved, "Other")))
     }
 }

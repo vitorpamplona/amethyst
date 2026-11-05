@@ -26,10 +26,13 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -39,6 +42,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -90,6 +94,11 @@ private val DiffLineHeight = 17.sp
 // per line as a file opens, and only opened files pay for it.
 private const val FILE_HIGHLIGHT_LIMIT = 1500
 
+// Highlighted lines across a whole diff: a change of many small files (each opened at once) still
+// highlights its first files, and draws the rest plain rather than tokenising thousands of lines
+// on the main thread.
+private const val DIFF_HIGHLIGHT_BUDGET = 3000
+
 /**
  * Renders a parsed [ParsedPatch] as a GitHub-style file-by-file diff: a stat
  * summary, then one collapsible card per file with +/- line coloring, old/new
@@ -104,6 +113,8 @@ fun GitDiffView(
     onLineClick: ((GitDiffFile, GitDiffLine) -> Unit)? = null,
     /** Drawn under each line: the review comments on it, when there are any. */
     lineAnnotations: (@Composable (GitDiffFile, GitDiffLine) -> Unit)? = null,
+    /** Whether [lineAnnotations] draws anything under a line; the code around such a line scrolls on its own. */
+    hasAnnotations: (GitDiffFile, GitDiffLine) -> Boolean = { _, _ -> false },
 ) {
     if (!parsed.hasDiff) return
     // Side by side needs the width of a large window; a phone keeps the unified view.
@@ -119,8 +130,16 @@ fun GitDiffView(
                 FilterChip(selected = split, onClick = { split = true }, label = { Text(stringResource(Res.string.git_diff_split)) })
             }
         }
-        parsed.files.forEach { file ->
-            DiffFileCard(file, split && wide, onLineClick, lineAnnotations)
+        val highlighted =
+            remember(parsed) {
+                var left = DIFF_HIGHLIGHT_BUDGET
+                parsed.files.map { file ->
+                    val size = file.hunks.sumOf { it.lines.size }
+                    (size <= FILE_HIGHLIGHT_LIMIT && size <= left).also { if (it) left -= size }
+                }
+            }
+        parsed.files.forEachIndexed { index, file ->
+            DiffFileCard(file, split && wide, highlighted[index], onLineClick, lineAnnotations, hasAnnotations)
         }
     }
 }
@@ -151,10 +170,11 @@ private const val FOLD_LINES = 200
 private fun DiffFileCard(
     file: GitDiffFile,
     split: Boolean,
+    highlightEnabled: Boolean,
     onLineClick: ((GitDiffFile, GitDiffLine) -> Unit)?,
     lineAnnotations: (@Composable (GitDiffFile, GitDiffLine) -> Unit)?,
+    hasAnnotations: (GitDiffFile, GitDiffLine) -> Boolean,
 ) {
-    val highlightEnabled = remember(file) { file.hunks.sumOf { it.lines.size } <= FILE_HIGHLIGHT_LIMIT }
     // A long file starts folded, so one generated lockfile doesn't bury the rest of the change.
     var expanded by rememberSaveable(file.displayPath) { mutableStateOf(file.hunks.sumOf { it.lines.size } <= FOLD_LINES) }
     val language = remember(file.displayPath) { CodeHighlighter.languageForFile(file.displayPath) }
@@ -215,10 +235,13 @@ private fun DiffFileCard(
                         HunkHeaderRow(hunk.header)
                         val emphasis = remember(hunk) { IntralineDiff.emphasis(hunk.lines) }
                         val rows = remember(hunk) { splitRows(hunk.lines) }
-                        rows.forEach { (left, right) ->
-                            Row(Modifier.fillMaxWidth()) {
-                                SplitCell(file, left, true, emphasis, hunk.lines, gutterWidth, language.takeIf { highlightEnabled }, darkMode, onLineClick, Modifier.weight(1f))
-                                SplitCell(file, right, false, emphasis, hunk.lines, gutterWidth, language.takeIf { highlightEnabled }, darkMode, onLineClick, Modifier.weight(1f))
+                        rows.forEach { (leftIndex, rightIndex) ->
+                            val left = leftIndex?.let { hunk.lines[it] }
+                            val right = rightIndex?.let { hunk.lines[it] }
+                            // As tall as the side that wraps more, so both sides' colours fill the row.
+                            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+                                SplitCell(file, left, true, leftIndex?.let { emphasis[it] }, gutterWidth, language.takeIf { highlightEnabled }, darkMode, onLineClick, Modifier.weight(1f))
+                                SplitCell(file, right, false, rightIndex?.let { emphasis[it] }, gutterWidth, language.takeIf { highlightEnabled }, darkMode, onLineClick, Modifier.weight(1f))
                             }
                             // Comments on either side, under the pair.
                             lineAnnotations?.let { annotate ->
@@ -231,20 +254,29 @@ private fun DiffFileCard(
             } else {
                 val gutterWidth = remember(file) { gutterWidthFor(file) }
                 Column(Modifier.fillMaxWidth()) {
-                    Column(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-                        file.hunks.forEach { hunk ->
-                            HunkHeaderRow(hunk.header)
-                            val emphasis = remember(hunk) { IntralineDiff.emphasis(hunk.lines) }
-                            hunk.lines.forEachIndexed { index, line ->
-                                DiffLineRow(
-                                    line,
-                                    gutterWidth,
-                                    language.takeIf { highlightEnabled },
-                                    darkMode,
-                                    emphasis[index],
-                                    onClick = onLineClick?.let { { it(file, line) } },
-                                )
-                                lineAnnotations?.invoke(file, line)
+                    file.hunks.forEachIndexed { hunkIndex, hunk ->
+                        HunkHeaderRow(hunk.header)
+                        val emphasis = remember(hunk) { IntralineDiff.emphasis(hunk.lines) }
+                        // The code scrolls sideways; the comments under a line don't, so they wrap to
+                        // the card's width. Each run of lines up to a commented one is its own block.
+                        val runs = hunkRuns(hunk.lines) { lineAnnotations != null && hasAnnotations(file, it) }
+                        runs.forEach { run ->
+                            key(hunkIndex, run.first) {
+                                Column(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                                    for (index in run) {
+                                        val line = hunk.lines[index]
+                                        DiffLineRow(
+                                            line,
+                                            gutterWidth,
+                                            language.takeIf { highlightEnabled },
+                                            darkMode,
+                                            emphasis[index],
+                                            onClick = onLineClick?.let { { it(file, line) } },
+                                        )
+                                    }
+                                }
+                                val last = hunk.lines[run.last]
+                                if (lineAnnotations != null && hasAnnotations(file, last)) lineAnnotations(file, last)
                             }
                         }
                     }
@@ -282,6 +314,7 @@ private fun DiffLineRow(
     onClick: (() -> Unit)? = null,
     showOld: Boolean = true,
     showNew: Boolean = true,
+    wrap: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val background =
@@ -354,32 +387,51 @@ private fun DiffLineRow(
             fontFamily = FontFamily.Monospace,
             fontSize = DiffFontSize,
             lineHeight = DiffLineHeight,
-            softWrap = false,
-            maxLines = 1,
+            softWrap = wrap,
+            maxLines = if (wrap) Int.MAX_VALUE else 1,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(start = 4.dp, end = 12.dp),
+            modifier = if (wrap) Modifier.weight(1f).padding(start = 4.dp, end = 8.dp) else Modifier.padding(start = 4.dp, end = 12.dp),
         )
     }
+}
+
+/** [lines]' indices cut after each line that [breaksAfter] (one with comments under it), in order. */
+private fun hunkRuns(
+    lines: List<GitDiffLine>,
+    breaksAfter: (GitDiffLine) -> Boolean,
+): List<IntRange> {
+    if (lines.isEmpty()) return emptyList()
+    val runs = ArrayList<IntRange>()
+    var start = 0
+    lines.forEachIndexed { index, line ->
+        if (breaksAfter(line) && index < lines.lastIndex) {
+            runs.add(start..index)
+            start = index + 1
+        }
+    }
+    runs.add(start..lines.lastIndex)
+    return runs
 }
 
 /**
  * The rows of a side-by-side hunk: an unchanged line on both sides, and each run of removed lines
  * beside the added lines that replace it, padded with blanks where one side is longer.
  */
-private fun splitRows(lines: List<GitDiffLine>): List<Pair<GitDiffLine?, GitDiffLine?>> {
-    val rows = ArrayList<Pair<GitDiffLine?, GitDiffLine?>>()
+private fun splitRows(lines: List<GitDiffLine>): List<Pair<Int?, Int?>> {
+    // Indices into [lines], so each cell finds its own intraline emphasis without searching.
+    val rows = ArrayList<Pair<Int?, Int?>>()
     var i = 0
     while (i < lines.size) {
         val line = lines[i]
         if (line.type == GitDiffLineType.CONTEXT) {
-            rows.add(line to line)
+            rows.add(i to i)
             i++
             continue
         }
-        val deleted = ArrayList<GitDiffLine>()
-        while (i < lines.size && lines[i].type == GitDiffLineType.DELETE) deleted.add(lines[i++])
-        val added = ArrayList<GitDiffLine>()
-        while (i < lines.size && lines[i].type == GitDiffLineType.ADD) added.add(lines[i++])
+        val deleted = ArrayList<Int>()
+        while (i < lines.size && lines[i].type == GitDiffLineType.DELETE) deleted.add(i++)
+        val added = ArrayList<Int>()
+        while (i < lines.size && lines[i].type == GitDiffLineType.ADD) added.add(i++)
         for (k in 0 until maxOf(deleted.size, added.size)) rows.add(deleted.getOrNull(k) to added.getOrNull(k))
     }
     return rows
@@ -391,8 +443,7 @@ private fun SplitCell(
     file: GitDiffFile,
     line: GitDiffLine?,
     oldSide: Boolean,
-    emphasis: Map<Int, CharSpan>,
-    hunkLines: List<GitDiffLine>,
+    emphasis: CharSpan?,
     gutterWidth: Dp,
     language: SyntaxLanguage?,
     darkMode: Boolean,
@@ -400,21 +451,22 @@ private fun SplitCell(
     modifier: Modifier,
 ) {
     if (line == null) {
-        Box(modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f)).height(with(LocalDensity.current) { DiffLineHeight.toDp() }))
+        Box(modifier.fillMaxHeight().heightIn(min = with(LocalDensity.current) { DiffLineHeight.toDp() }).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f)))
         return
     }
-    val index = hunkLines.indexOf(line)
-    // An unchanged line is drawn on both sides; each shows its own number.
+    // An unchanged line is drawn on both sides; each shows its own number. Half a window is narrow,
+    // so long lines wrap instead of running out of sight.
     DiffLineRow(
         line,
         gutterWidth,
         language,
         darkMode,
-        emphasis[index],
+        emphasis,
         onClick = onLineClick?.let { { it(file, line) } },
         showOld = oldSide,
         showNew = !oldSide,
-        modifier = modifier.clipToBounds(),
+        wrap = true,
+        modifier = modifier.fillMaxHeight().clipToBounds(),
     )
 }
 

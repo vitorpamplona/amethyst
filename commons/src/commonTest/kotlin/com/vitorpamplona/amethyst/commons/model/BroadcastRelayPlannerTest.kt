@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
+import com.vitorpamplona.quartz.nip34Git.state.tags.RefTag
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
@@ -205,5 +207,50 @@ class BroadcastRelayPlannerTest {
             val issue = bob.sign(GitIssueEvent.build("bug", "it broke", EventHintBundle(repo), emptyList(), emptyList()))
             val issueRelays = planner.computeRelayListToBroadcast(issue)
             assertTrue(relay("grasp") in issueRelays, "the relays the repository monitors for issues: $issueRelays")
+        }
+
+    /** Bob's private repository (GRASP-08), monitored only on its own relay. */
+    private suspend fun privateRepository(cache: EventCache): GitRepositoryEvent {
+        val repo =
+            bob.sign(
+                GitRepositoryEvent.build(
+                    name = "secret",
+                    description = null,
+                    webUrls = emptyList(),
+                    cloneUrls = emptyList(),
+                    relays = listOf("wss://grasp.example.com"),
+                    maintainers = emptyList(),
+                    hashtags = emptyList(),
+                    earliestUniqueCommit = null,
+                    dTag = "secret",
+                ) { add(arrayOf("private", "true")) },
+            )
+        cache.justConsume(repo, null, true)
+        return repo
+    }
+
+    @Test
+    fun aPrivateRepositorysEventsStayOnItsRelaysEvenFarFromIt() =
+        runTest {
+            val (cache, _) = cacheWithBob()
+            val planner = planner(cache)
+            val repo = privateRepository(cache)
+            val only = setOf(relay("grasp"))
+
+            val issue = bob.sign(GitIssueEvent.build("bug", "it broke", EventHintBundle(repo), emptyList(), emptyList()))
+            cache.justConsume(issue, null, true)
+            val like = me.sign(ReactionEvent.build("+", EventHintBundle<Event>(issue)))
+            cache.justConsumeMyOwnEvent(like)
+            // Two levels down: a reaction to the reaction names no repository itself.
+            val likeOfLike = me.sign(ReactionEvent.build("+", EventHintBundle<Event>(like)))
+            assertEquals(only, planner.computeRelayListToBroadcast(likeOfLike))
+
+            // A repost goes through the reaction routing, and stays too.
+            val issueNote = cache.getNoteIfExists(issue.id)!!
+            assertEquals(only, planner.computeMyReactionToNote(issueNote, me.sign(RepostEvent.build(EventHintBundle<Event>(issue)))))
+
+            // The signed state names no repository: it is the one with its own d-tag.
+            val state = bob.sign(GitRepositoryStateEvent.build("secret", listOf(RefTag.branch("main", "a".repeat(40))), "main"))
+            assertEquals(only, planner.computeRelayListToBroadcast(state))
         }
 }

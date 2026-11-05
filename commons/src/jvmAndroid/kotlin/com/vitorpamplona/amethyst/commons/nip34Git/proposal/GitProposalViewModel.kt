@@ -21,10 +21,12 @@
 package com.vitorpamplona.amethyst.commons.nip34Git.proposal
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,13 +44,17 @@ sealed interface GitProposalUiState {
     ) : GitProposalUiState
 }
 
-/** A source's branches: loading, loaded (name and tip), or why they couldn't be read. */
+/**
+ * A source's branches: loading, loaded (name and tip, with the clone URL they were read from, so a
+ * tip is never published with another server's URL), or why they couldn't be read.
+ */
 sealed interface GitBranchesState {
     object Idle : GitBranchesState
 
     object Loading : GitBranchesState
 
     class Loaded(
+        val cloneUrl: String,
         val branches: List<Pair<String, String>>,
     ) : GitBranchesState
 
@@ -75,18 +81,27 @@ class GitProposalViewModel(
 
     fun target(repository: AddressableNote): GitProposalTarget? = proposals.targetFor(repository)
 
+    private var branchesJob: Job? = null
+
+    /** The editor's text while it differs from the file: kept here, not in saved state, since a file can be large. */
+    var editDraft: String? = null
+
     fun loadBranches(cloneUrl: String) {
+        val url = cloneUrl.trim()
+        // A slower answer for the previous URL must not land after this one.
+        branchesJob?.cancel()
         _branches.value = GitBranchesState.Loading
-        workScope.launch(Dispatchers.IO) {
-            _branches.value =
-                try {
-                    GitBranchesState.Loaded(proposals.branches(cloneUrl.trim()))
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    GitBranchesState.Failed(e.message ?: e::class.simpleName ?: "could not read the branches")
-                }
-        }
+        branchesJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                _branches.value =
+                    try {
+                        GitBranchesState.Loaded(url, proposals.branches(url))
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        GitBranchesState.Failed(e.message ?: e::class.simpleName ?: "could not read the branches")
+                    }
+            }
     }
 
     fun openPullRequest(

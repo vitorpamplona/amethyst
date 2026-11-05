@@ -595,7 +595,7 @@ private fun RenderGitPatchEvent(
                 }
                 if (inThread) {
                     val review = rememberGitReviewHooks(note, noteEvent.commit(), accountViewModel, nav)
-                    GitDiffView(parsed, Modifier.fillMaxWidth(), review.onLineClick, review.lineAnnotations)
+                    GitDiffView(parsed, Modifier.fillMaxWidth(), review.onLineClick, review.lineAnnotations, review.hasAnnotations)
                 } else {
                     GitDiffStatSummary(parsed)
                 }
@@ -778,7 +778,7 @@ private fun RenderGitPullRequestEvent(
             GitLocalCheckoutSection(note, source, cloneUrls, currentCommit)
             GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel, rememberGitReviewHooks(note, currentCommit, accountViewModel, nav))
             val repositoryNote = remember(noteEvent) { noteEvent.repositoryAddress()?.let { LocalCache.getOrCreateAddressableNote(it) } }
-            GitPullRequestUpdateButton(note, repositoryNote, accountViewModel, nav)
+            GitPullRequestUpdateButton(note, repositoryNote, currentCommit, accountViewModel, nav)
             GitTriageBar(note, accountViewModel)
             GitReviewPanel(note, accountViewModel)
             GitStatusActionsWithMerge(note, accountViewModel)

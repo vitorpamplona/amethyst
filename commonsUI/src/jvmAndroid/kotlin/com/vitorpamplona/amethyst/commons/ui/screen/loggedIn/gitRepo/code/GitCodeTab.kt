@@ -198,7 +198,8 @@ private fun CodeBrowser(
                 blameOn = showBlame,
                 onHistory = { showFileHistory = true },
                 onBlame = { showBlame = !showBlame },
-                onEdit = if (entry != null && !entry.isDirectory && !entry.isSubmodule && !entry.isSymlink) ({ editing = true }) else null,
+                // Editing ends in a signed commit and PR: not for a read-only account.
+                onEdit = if (entry != null && !entry.isDirectory && !entry.isSubmodule && !entry.isSymlink && accountViewModel.account.isWriteable()) ({ editing = true }) else null,
             )
             HorizontalDivider(thickness = 0.5.dp)
             if (entry == null) {

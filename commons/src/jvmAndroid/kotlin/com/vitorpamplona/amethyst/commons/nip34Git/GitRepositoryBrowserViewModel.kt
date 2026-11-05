@@ -250,18 +250,56 @@ class GitRepositoryBrowserViewModel(
         path: List<String>,
     ): List<GitCommit> = withContext(Dispatchers.IO) { client.files.history(snapshot.cloneUrl, snapshot.headCommit, path).map { it.commit } }
 
+    // Blame reads hundreds of commits and dozens of file versions: kept for the last few files, so
+    // turning it off and on, or coming back from a file's history, does not read them again.
+    private val blames =
+        object : LinkedHashMap<String, GitBlame?>(8, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, GitBlame?>?) = size > MAX_CACHED_BLAMES
+        }
+
     /** Who last changed each line of the file at [path], or null when it has no history here. */
     suspend fun blame(
         snapshot: GitRepoSnapshot,
         path: List<String>,
-    ): GitBlame? = withContext(Dispatchers.IO) { client.files.blame(snapshot.cloneUrl, snapshot.headCommit, path) }
+    ): GitBlame? {
+        val key = snapshot.headCommit + ":" + path.joinToString("/")
+        synchronized(blames) { if (blames.containsKey(key)) return blames[key] }
+        val blame = withContext(Dispatchers.IO) { client.files.blame(snapshot.cloneUrl, snapshot.headCommit, path) }
+        synchronized(blames) { blames[key] = blame }
+        return blame
+    }
 
-    /** Lines of the snapshot's files that contain [query], fetched in batches ([GitRepoSnapshot.searchContents]). */
+    /** The last text search that read every file: what a longer query can be filtered from. */
+    private class CompletedSearch(
+        val headCommit: String,
+        val needle: String,
+        val matches: List<GitContentMatch>,
+    )
+
+    @Volatile private var lastSearch: CompletedSearch? = null
+
+    /**
+     * Lines of the snapshot's files that contain [query], fetched in batches
+     * ([GitRepoSnapshot.searchContents]). A query that extends the last complete search ("foo"
+     * after "fo") is answered from its matches, without reading the repository again.
+     */
     suspend fun searchContents(
         snapshot: GitRepoSnapshot,
         query: String,
         onProgress: (read: Int, total: Int) -> Unit,
-    ): List<GitContentMatch> = withContext(Dispatchers.IO) { snapshot.searchContents(query, onProgress = onProgress) }
+    ): List<GitContentMatch> {
+        val needle = query.lowercase()
+        lastSearch?.let { last ->
+            // Only when nothing was cut: under the match limit, no line shortened for display, and
+            // no space at the query's ends (the kept lines are trimmed).
+            if (last.headCommit == snapshot.headCommit && needle == needle.trim() && needle.contains(last.needle) && last.matches.none { it.text.length >= MATCH_TEXT_LIMIT }) {
+                return last.matches.filter { it.text.lowercase().contains(needle) }
+            }
+        }
+        val matches = withContext(Dispatchers.IO) { snapshot.searchContents(query, limit = SEARCH_LIMIT, onProgress = onProgress) }
+        if (matches.size < SEARCH_LIMIT) lastSearch = CompletedSearch(snapshot.headCommit, needle, matches)
+        return matches
+    }
 
     /** The diff a commit introduced (commit vs its first parent). */
     suspend fun commitDiff(
@@ -285,5 +323,10 @@ class GitRepositoryBrowserViewModel(
 
     companion object {
         const val NO_CLONE_URL = "no-clone-url"
+        private const val MAX_CACHED_BLAMES = 8
+        private const val SEARCH_LIMIT = 200
+
+        // searchContents keeps the first 300 characters of a matching line.
+        private const val MATCH_TEXT_LIMIT = 300
     }
 }

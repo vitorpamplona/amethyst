@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.nip34Git.settings
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -94,8 +95,8 @@ object GitRepositorySettings {
     }
 
     /**
-     * [previous] with the form's fields replaced. The owner is never listed as their own
-     * maintainer (the announcement's author is one already), as ngit writes the tag.
+     * [previous] with the form's fields replaced. [maintainers] are the others; the owner keeps
+     * the place in the tag they had.
      */
     fun edit(
         previous: GitRepositoryEvent,
@@ -113,7 +114,10 @@ object GitRepositorySettings {
         webUrls = splitEntries(webUrls),
         cloneUrls = splitEntries(cloneUrls),
         relays = parseRelays(relays, ArrayList()),
-        maintainers = parseMaintainers(maintainers, ArrayList()).filter { it != previous.pubKey },
+        // The form lists the others; the owner stays first when the announcement listed them (ngit does).
+        maintainers =
+            (if (previous.pubKey in previous.maintainers()) listOf(previous.pubKey) else emptyList()) +
+                parseMaintainers(maintainers, ArrayList()).filter { it != previous.pubKey },
         hashtags = topics.map { it.removePrefix("#") }.filter { it.isNotBlank() && it != GitRepositoryEvent.PERSONAL_FORK }.distinct(),
         earliestUniqueCommit = previous.earliestUniqueCommit(),
         personalFork = previous.isPersonalFork(),
@@ -121,5 +125,14 @@ object GitRepositorySettings {
         createdAt = maxOf(now, previous.createdAt + 1),
     ) {
         previous.unmanagedTags().forEach { add(it) }
+    }
+
+    /** True when [template] says what [previous] already says (same tags, in any order): there is nothing to republish. */
+    fun isUnchanged(
+        previous: GitRepositoryEvent,
+        template: EventTemplate<GitRepositoryEvent>,
+    ): Boolean {
+        fun key(tags: Array<Array<String>>) = tags.map { it.joinToString("\u0000") }.sorted()
+        return previous.content == template.content && key(previous.tags) == key(template.tags)
     }
 }

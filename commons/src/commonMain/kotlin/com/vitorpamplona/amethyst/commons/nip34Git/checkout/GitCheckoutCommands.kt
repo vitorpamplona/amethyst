@@ -42,20 +42,36 @@ object GitCheckoutCommands {
     fun ngitApply(nevent: String) = "ngit pr apply $nevent"
 
     /**
-     * Plain git, no ngit: fetch [tip] from [cloneUrl] and branch it. Returns null without a clone
-     * URL or tip, since there is then nothing to fetch.
+     * Plain git, no ngit: fetch [tip] from [cloneUrl] and branch it. Both come from someone else's
+     * event and the user pastes the result into a shell, so the tip must be a commit id (40 or 64
+     * hex), the URL a plain http(s) or ssh one, and `--` ends git's options before them. Returns
+     * null when either fails, since there is then nothing safe to show.
      */
     fun gitFetchAndCheckout(
         cloneUrl: String?,
         tip: String?,
         branch: String,
     ): List<String>? {
-        if (cloneUrl.isNullOrBlank() || tip.isNullOrBlank()) return null
+        if (cloneUrl == null || !isFetchableUrl(cloneUrl) || tip == null || !isCommitId(tip)) return null
         return listOf(
-            "git fetch ${shellQuote(cloneUrl)} $tip",
+            "git fetch -- ${shellQuote(cloneUrl.trim())} $tip",
             "git checkout -b ${shellQuote(branch)} FETCH_HEAD",
         )
     }
+
+    /** A SHA-1 or SHA-256 commit id. */
+    fun isCommitId(value: String): Boolean = (value.length == 40 || value.length == 64) && value.all { it in '0'..'9' || it in 'a'..'f' }
+
+    /** A URL git fetches over the network, never one it would read as an option or a local path. */
+    fun isFetchableUrl(value: String): Boolean {
+        val url = value.trim()
+        return url.isNotEmpty() &&
+            !url.startsWith("-") &&
+            url.none { it.isWhitespace() || it.code < 0x20 } &&
+            (url.startsWith("https://") || url.startsWith("http://") || url.startsWith("ssh://") || url.matches(SCP_LIKE))
+    }
+
+    private val SCP_LIKE = Regex("^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:[^:].*$")
 
     /** VS Code's built-in git extension clones [cloneUrl] and opens it. */
     fun vsCodeClone(cloneUrl: String) = "vscode://vscode.git/clone?url=" + percentEncode(cloneUrl)

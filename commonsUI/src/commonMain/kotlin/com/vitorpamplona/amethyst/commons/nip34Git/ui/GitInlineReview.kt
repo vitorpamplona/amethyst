@@ -76,6 +76,8 @@ fun GitDiffLine.keyIn(file: GitDiffFile): GitDiffLineKey? =
 class GitReviewHooks(
     val onLineClick: ((GitDiffFile, GitDiffLine) -> Unit)?,
     val lineAnnotations: @Composable (GitDiffFile, GitDiffLine) -> Unit,
+    /** Whether [lineAnnotations] draws anything under that line. */
+    val hasAnnotations: (GitDiffFile, GitDiffLine) -> Boolean = { _, _ -> false },
 )
 
 /**
@@ -121,6 +123,7 @@ fun rememberGitReviewHooks(
             val comments = key?.let { byLine[it] }
             if (!comments.isNullOrEmpty()) InlineThreads(item, comments, accountViewModel, nav)
         },
+        hasAnnotations = { file, line -> line.keyIn(file)?.let { byLine.containsKey(it) } == true },
     )
 }
 
@@ -149,16 +152,18 @@ private fun InlineThread(
     val replies by observeNoteReplies(comment)
     val itemEvent = item.event ?: return
     val me = accountViewModel.account.signer.pubKey
-    // A thread is resolved while an authorised member's resolution stands (gitworkshop's rule).
+    // Who may judge is read from the repository's announcements, which can arrive after this does.
+    val announcements = observeGitRepositoryAnnouncements(itemEvent)
+    // A thread is resolved while a resolution by someone who may resolve stands: the item's author
+    // or a maintainer, the same rule that offers the button (gitworkshop's).
     val resolutions =
-        remember(replies, comment) {
+        remember(replies, comment, announcements) {
             comment.replies.filter { reply ->
                 val event = reply.event as? CommentEvent ?: return@filter false
-                event.isGitThreadResolution() && LocalCache.gitAuthority.isMemberAt(event.pubKey, itemEvent, event.createdAt)
+                event.isGitThreadResolution() && LocalCache.gitAuthority.isMaintainerAt(event.pubKey, itemEvent, event.createdAt)
             }
         }
-    // The item's author or a maintainer, as gitworkshop lets them resolve.
-    val canJudge = remember(itemEvent, me) { LocalCache.gitAuthority.isMaintainerAt(me, itemEvent, TimeUtils.now()) }
+    val canJudge = remember(itemEvent, me, announcements) { accountViewModel.account.isWriteable() && LocalCache.gitAuthority.isMaintainerAt(me, itemEvent, TimeUtils.now()) }
     val mine = resolutions.filter { it.author?.pubkeyHex == me }
 
     NoteCompose(

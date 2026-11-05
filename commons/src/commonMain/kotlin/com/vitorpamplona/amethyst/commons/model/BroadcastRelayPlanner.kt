@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
@@ -72,6 +73,9 @@ interface BroadcastRelaySource {
     /** Where a profile (kind:0) or relay list (kind:10002) goes: every relay we know of. */
     fun everywhereRelays(): Set<NormalizedRelayUrl>
 }
+
+/** How far up a reply chain the repository of a git event is looked for. */
+private const val MAX_GIT_PARENT_DEPTH = 4
 
 /**
  * Where an event the user publishes should go: the NIP-65 outbox model plus relay hints,
@@ -154,18 +158,7 @@ class BroadcastRelayPlanner(
      */
     private fun privateGitRelays(event: Event): Set<NormalizedRelayUrl>? {
         if (event is GitRepositoryEvent) return if (event.isPrivate()) event.relaysNorm().toSet() else null
-        val repositories =
-            buildList {
-                addAll(gitRepositoryAddresses(event))
-                if (isEmpty()) {
-                    // A status, comment or review: the repository of the item it acts on.
-                    event.tags.forEach { tag ->
-                        if (tag.size > 1 && (tag[0] == "e" || tag[0] == "E")) {
-                            cache.getNoteIfExists(tag[1])?.event?.let { addAll(gitRepositoryAddresses(it)) }
-                        }
-                    }
-                }
-            }
+        val repositories = gitRepositoriesOf(event, 0, HashSet())
         if (repositories.isEmpty()) return null
         val private =
             repositories.mapNotNull { (cache.getAddressableNoteIfExists(it)?.event as? GitRepositoryEvent)?.takeIf { announcement -> announcement.isPrivate() } }
@@ -173,10 +166,40 @@ class BroadcastRelayPlanner(
         return private.flatMapTo(HashSet()) { it.relaysNorm() }
     }
 
-    private fun gitRepositoryAddresses(event: Event): List<Address> =
-        event.tags.mapNotNull { tag ->
-            if (tag.size > 1 && tag[0] == "a" && tag[1].startsWith("${GitRepositoryEvent.KIND}:")) Address.parse(tag[1]) else null
+    /**
+     * The repositories [event] belongs to: those it names, its own for a signed state (30618, which
+     * names none), else those of what it acts on (a status, comment, review, reaction, deletion or
+     * repost: the e/E/q/a/A it points at), followed a few levels up, so a reaction to a comment on
+     * a private PR is still that repository's.
+     */
+    private fun gitRepositoriesOf(
+        event: Event,
+        depth: Int,
+        visited: MutableSet<HexKey>,
+    ): List<Address> {
+        if (!visited.add(event.id)) return emptyList()
+        val own = gitRepositoryAddresses(event)
+        if (own.isNotEmpty() || depth >= MAX_GIT_PARENT_DEPTH) return own
+        val found = ArrayList<Address>()
+        event.tags.forEach { tag ->
+            if (tag.size < 2) return@forEach
+            val parent =
+                when (tag[0]) {
+                    "e", "E", "q" -> cache.getNoteIfExists(tag[1])?.event
+                    "a", "A" -> Address.parse(tag[1])?.let { cache.getAddressableNoteIfExists(it)?.event }
+                    else -> null
+                }
+            if (parent != null) found.addAll(gitRepositoriesOf(parent, depth + 1, visited))
         }
+        return found
+    }
+
+    private fun gitRepositoryAddresses(event: Event): List<Address> {
+        if (event is GitRepositoryStateEvent) return listOf(Address(GitRepositoryEvent.KIND, event.pubKey, event.dTag()))
+        return event.tags.mapNotNull { tag ->
+            if (tag.size > 1 && (tag[0] == "a" || tag[0] == "A") && tag[1].startsWith("${GitRepositoryEvent.KIND}:")) Address.parse(tag[1]) else null
+        }
+    }
 
     private fun computeRelayListToBroadcast(
         event: Event,
@@ -357,6 +380,8 @@ class BroadcastRelayPlanner(
         note: Note,
         reaction: Event,
     ): Set<NormalizedRelayUrl> {
+        // A reaction or repost of a private repository's event stays on that repository's relays.
+        privateGitRelays(reaction)?.let { return it }
         val relaysItCameFrom = note.relays
 
         val inboxRelaysOfTheAuthorOfTheOriginalNote =

@@ -149,7 +149,7 @@ fun GitPullRequestChanges(
         is ChangesState.Loaded ->
             if (s.patch.hasDiff) {
                 Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-                    GitDiffView(s.patch, Modifier.fillMaxWidth(), review?.onLineClick, review?.lineAnnotations)
+                    GitDiffView(s.patch, Modifier.fillMaxWidth(), review?.onLineClick, review?.lineAnnotations, review?.hasAnnotations ?: { _, _ -> false })
                 }
             } else {
                 Text(

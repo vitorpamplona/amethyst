@@ -528,7 +528,7 @@ private fun GitRepositoryPulls(
         accountViewModel = accountViewModel,
         nav = nav,
         floatingButton =
-            if (event != null) {
+            if (event != null && accountViewModel.account.isWriteable()) {
                 { NewIssueFab(Res.string.git_pr_new_title) { nav.nav(Route.GitRepositoryNewPullRequest(note.address)) } }
             } else {
                 null

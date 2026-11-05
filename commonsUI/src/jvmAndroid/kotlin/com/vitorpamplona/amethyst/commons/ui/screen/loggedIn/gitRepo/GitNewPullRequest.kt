@@ -69,12 +69,16 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitBranchesState
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalResult
+import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalTarget
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalUiState
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposals
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitShape
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitPalette
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.normalizeLabel
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryAnnouncements
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitSignedState
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_edit_message
 import com.vitorpamplona.amethyst.commons.resources.git_edit_propose
@@ -94,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_pr_new_working
 import com.vitorpamplona.amethyst.commons.resources.git_pr_update_action
 import com.vitorpamplona.amethyst.commons.resources.git_pr_update_submit
 import com.vitorpamplona.amethyst.commons.resources.git_pr_update_title
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -106,6 +111,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import kotlin.reflect.KClass
 
 private class GitProposalViewModelFactory(
@@ -155,6 +161,22 @@ private fun OpenWhenPublished(
     }
 }
 
+/**
+ * The repository a proposal goes into, recomputed as its announcements, their memberships and the
+ * maintainers' signed state load, so a screen opened cold does not keep the first, empty answer.
+ */
+@Composable
+private fun rememberGitProposalTarget(
+    repoNote: AddressableNote,
+    viewModel: GitProposalViewModel,
+    accountViewModel: AccountViewModel,
+): GitProposalTarget? {
+    val event by observeNoteEvent<GitRepositoryEvent>(repoNote, accountViewModel)
+    val announcements = observeGitRepositoryAnnouncements(repoNote.address.dTag)
+    val signedState = observeGitSignedState(repoNote.address, accountViewModel)
+    return remember(event, announcements, signedState) { viewModel.target(repoNote) }
+}
+
 @Composable
 fun GitNewPullRequestScreen(
     address: Address,
@@ -179,26 +201,34 @@ private fun GitNewPullRequestForm(
     nav: INav,
 ) {
     val viewModel = rememberGitProposals(repoNote.idHex, accountViewModel)
-    val target = remember(repoNote) { viewModel.target(repoNote) }
+    val target = rememberGitProposalTarget(repoNote, viewModel, accountViewModel)
     val branchesState by viewModel.branches.collectAsStateWithLifecycle()
     val working = viewModel.state.collectAsStateWithLifecycle().value is GitProposalUiState.Working
 
-    var source by rememberSaveable {
-        mutableStateOf(
+    var source by rememberSaveable { mutableStateOf("") }
+    var sourceBranch by rememberSaveable { mutableStateOf<String?>(null) }
+    var targetBranch by rememberSaveable { mutableStateOf<String?>(null) }
+    // Opened cold, the announcement and its signed state arrive after the first frame: fill the
+    // defaults in when they do, without overwriting what the user already chose.
+    LaunchedEffect(target) {
+        if (source.isBlank()) {
             target
                 ?.targets
                 ?.grasp
                 ?.firstOrNull()
-                ?.cloneUrl ?: "",
-        )
+                ?.cloneUrl
+                ?.let { source = it }
+        }
+        if (targetBranch == null) targetBranch = target?.defaultBranch
     }
-    var sourceBranch by rememberSaveable { mutableStateOf<String?>(null) }
-    var targetBranch by rememberSaveable { mutableStateOf(target?.defaultBranch) }
     var title by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var labels by rememberSaveable { mutableStateOf("") }
 
-    val loaded = (branchesState as? GitBranchesState.Loaded)?.branches.orEmpty()
+    // Branches read from another URL than the one in the field are not offered: their tip would be
+    // published with a clone URL that may not serve it.
+    val loadedState = (branchesState as? GitBranchesState.Loaded)?.takeIf { it.cloneUrl == source.trim() }
+    val loaded = loadedState?.branches.orEmpty()
     val tip = loaded.firstOrNull { it.first == sourceBranch }?.second
     val targetBranches =
         remember(target) {
@@ -209,7 +239,7 @@ private fun GitNewPullRequestForm(
                 ?.map { it.shortName }
                 .orEmpty()
         }
-    val canCreate = target != null && tip != null && title.isNotBlank() && !working
+    val canCreate = target != null && tip != null && loadedState != null && title.isNotBlank() && !working && accountViewModel.account.isWriteable()
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -226,10 +256,10 @@ private fun GitNewPullRequestForm(
                         enabled = canCreate,
                         onClick = {
                             val branch = sourceBranch
-                            if (target != null && tip != null && branch != null) {
+                            if (target != null && tip != null && branch != null && loadedState != null) {
                                 viewModel.openPullRequest(
                                     target,
-                                    source,
+                                    loadedState.cloneUrl,
                                     tip,
                                     branch,
                                     targetBranch,
@@ -351,17 +381,30 @@ private fun BranchPicker(
 fun GitPullRequestUpdateButton(
     pullRequest: Note,
     repository: AddressableNote?,
+    currentTip: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val event = pullRequest.event as? GitPullRequestEvent ?: return
-    if (event.pubKey != accountViewModel.account.signer.pubKey || repository == null) return
+    val account = accountViewModel.account
+    if (event.pubKey != account.signer.pubKey || repository == null || !account.isWriteable()) return
     val viewModel = rememberGitProposals(pullRequest.idHex, accountViewModel)
     var open by rememberSaveable { mutableStateOf(false) }
-    TextButton(onClick = { open = true }) { Text(stringRes(Res.string.git_pr_update_action)) }
+    TextButton(onClick = {
+        // A result that arrived after the dialog was last closed is not this attempt's.
+        viewModel.reset()
+        open = true
+    }) { Text(stringRes(Res.string.git_pr_update_action)) }
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(state) {
+        if ((state as? GitProposalUiState.Done)?.result is GitProposalResult.Published) {
+            viewModel.reset()
+            open = false
+        }
+    }
     if (!open) return
 
-    val target = remember(repository) { viewModel.target(repository) }
+    val target = rememberGitProposalTarget(repository, viewModel, accountViewModel)
     val branchesState by viewModel.branches.collectAsStateWithLifecycle()
     var source by rememberSaveable {
         mutableStateOf(
@@ -373,15 +416,10 @@ fun GitPullRequestUpdateButton(
         )
     }
     var branch by rememberSaveable { mutableStateOf(event.branchName()) }
-    val loaded = (branchesState as? GitBranchesState.Loaded)?.branches.orEmpty()
+    val loadedState = (branchesState as? GitBranchesState.Loaded)?.takeIf { it.cloneUrl == source.trim() }
+    val loaded = loadedState?.branches.orEmpty()
     val tip = loaded.firstOrNull { it.first == branch }?.second
-    val state by viewModel.state.collectAsStateWithLifecycle()
-    LaunchedEffect(state) {
-        if ((state as? GitProposalUiState.Done)?.result is GitProposalResult.Published) {
-            viewModel.reset()
-            open = false
-        }
-    }
+    val working = state is GitProposalUiState.Working
 
     AlertDialog(
         onDismissRequest = { if (state !is GitProposalUiState.Working) open = false },
@@ -401,11 +439,12 @@ fun GitPullRequestUpdateButton(
         },
         confirmButton = {
             Button(
-                enabled = target != null && tip != null && tip != event.currentCommit() && state !is GitProposalUiState.Working,
-                onClick = { if (target != null && tip != null) viewModel.updatePullRequest(pullRequest, target, source, tip) },
+                // The tip it already points at (its latest update's, else its own) is no update.
+                enabled = target != null && tip != null && loadedState != null && tip != (currentTip ?: event.currentCommit()) && !working,
+                onClick = { if (target != null && tip != null && loadedState != null) viewModel.updatePullRequest(pullRequest, target, loadedState.cloneUrl, tip) },
             ) { Text(stringRes(Res.string.git_pr_update_submit)) }
         },
-        dismissButton = { TextButton(onClick = { open = false }) { Text(stringRes(Res.string.git_merge_cancel)) } },
+        dismissButton = { TextButton(onClick = { open = false }, enabled = !working) { Text(stringRes(Res.string.git_merge_cancel)) } },
     )
 }
 
@@ -426,17 +465,28 @@ fun GitFileEditor(
     onCancel: () -> Unit,
 ) {
     val viewModel = rememberGitProposals(repository.idHex + path.joinToString("/"), accountViewModel)
-    val target = remember(repository) { viewModel.target(repository) }
-    var text by rememberSaveable { mutableStateOf(initial) }
+    val target = rememberGitProposalTarget(repository, viewModel, accountViewModel)
+    // The text lives in the view model, not saved state: a file of a few hundred KB would overflow
+    // Android's saved-instance bundle.
+    var text by remember { mutableStateOf(viewModel.editDraft ?: initial) }
+    val changed = remember(text) { text != initial }
     var message by rememberSaveable { mutableStateOf("Update ${path.lastOrNull() ?: ""}") }
     val working = viewModel.state.collectAsStateWithLifecycle().value is GitProposalUiState.Working
+    // A result left from an earlier visit (published or failed after the editor closed) is not this one's.
+    LaunchedEffect(Unit) { viewModel.reset() }
+    // While the commit is pushed, back does nothing: leaving would hide the result it is waiting for.
+    PlatformBackHandler(enabled = working) {}
 
     Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringRes(Res.string.git_edit_title, path.joinToString("/")), style = MaterialTheme.typography.titleSmall, fontFamily = FontFamily.Monospace)
         OpenWhenPublished(viewModel, accountViewModel, nav, leaveFirst = onCancel) { reason -> Text(reason, color = MaterialTheme.colorScheme.error) }
         OutlinedTextField(
             value = text,
-            onValueChange = { text = it },
+            onValueChange = {
+                text = it
+                viewModel.editDraft = it.takeIf { it != initial }
+            },
+            readOnly = working,
             textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
             modifier = Modifier.fillMaxWidth().weight(1f),
         )
@@ -450,7 +500,7 @@ fun GitFileEditor(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(onClick = onCancel, enabled = !working) { Text(stringRes(Res.string.git_merge_cancel)) }
             Button(
-                enabled = target != null && message.isNotBlank() && text != initial && !working,
+                enabled = target != null && message.isNotBlank() && changed && !working && accountViewModel.account.isWriteable(),
                 onClick = { if (target != null) viewModel.proposeEdit(target, sourceClones, branch, parent, path, text, message.trim()) },
             ) { Text(stringRes(Res.string.git_edit_propose)) }
         }

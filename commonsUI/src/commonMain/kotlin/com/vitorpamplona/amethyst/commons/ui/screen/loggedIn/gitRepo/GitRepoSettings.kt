@@ -114,7 +114,10 @@ fun GitRepoSettingsDialog(
                 ?.map { it.shortName }
                 .orEmpty()
         }
-    var defaultBranch by rememberSaveable { mutableStateOf(signedState?.headBranch) }
+    // Null until the user picks one: a newer signed state that arrives while the dialog is open
+    // must not be overwritten with the HEAD shown when it opened.
+    var pickedBranch by rememberSaveable { mutableStateOf<String?>(null) }
+    val defaultBranch = pickedBranch ?: signedState?.headBranch
     val problems = GitRepositorySettings.problems(relays, maintainers)
     var name by rememberSaveable { mutableStateOf(event.name() ?: event.dTag()) }
     var description by rememberSaveable { mutableStateOf(event.description() ?: "") }
@@ -247,7 +250,7 @@ fun GitRepoSettingsDialog(
                             branches.forEach { branch ->
                                 FilterChip(
                                     selected = branch == defaultBranch,
-                                    onClick = { defaultBranch = branch },
+                                    onClick = { pickedBranch = branch },
                                     label = { Text(branch, fontFamily = FontFamily.Monospace) },
                                 )
                             }
@@ -261,7 +264,7 @@ fun GitRepoSettingsDialog(
                 enabled = name.isNotBlank() && problems.isEmpty(),
                 onClick = {
                     val allTopics = (topicList + NewGitRepository.splitList(topicDraft).map { it.removePrefix("#").lowercase() }).distinct()
-                    val newHead = defaultBranch?.takeIf { it != signedState?.headBranch }
+                    val newHead = pickedBranch?.takeIf { it != signedState?.headBranch }
                     saveRepository(accountViewModel, event, name, description, webUrls, cloneUrls, relays, maintainers, allTopics, signedState, newHead)
                     onDismiss()
                 },
@@ -302,7 +305,8 @@ private fun saveRepository(
     accountViewModel.launchSigner {
         val template = GitRepositorySettings.edit(event, name, description, webUrls, cloneUrls, relays, maintainers, topics)
         val account = accountViewModel.account
-        account.sendAutomatic(account.signer.sign(template))
+        // Changing only the default branch publishes only the signed state.
+        if (!GitRepositorySettings.isUnchanged(event, template)) account.sendAutomatic(account.signer.sign(template))
         if (newHead != null && signedState != null) {
             account.sendAutomatic(account.signer.sign(GitRepositoryStateEvent.changeHead(signedState.event, newHead)))
         }

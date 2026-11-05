@@ -39,12 +39,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip34Git.title.GitItemTitles
-import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteReplies
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_merge_cancel
 import com.vitorpamplona.amethyst.commons.resources.git_triage_add_label
@@ -73,13 +73,17 @@ fun GitTriageBar(
 ) {
     val itemEvent = item.event ?: return
     val me = accountViewModel.account.signer.pubKey
-    val canTriage = remember(itemEvent, me) { LocalCache.gitAuthority.isMemberAt(me, itemEvent, TimeUtils.now()) }
+    // Membership is read from the repository's announcements, which can arrive after the item.
+    val announcements = observeGitRepositoryAnnouncements(itemEvent)
+    val canTriage = remember(itemEvent, me, announcements) { accountViewModel.account.isWriteable() && LocalCache.gitAuthority.isMemberAt(me, itemEvent, TimeUtils.now()) }
     if (!canTriage) return
 
-    val replies by observeNoteReplies(item)
-    val labels = remember(replies, item.labels) { GitItemTitles.labelsOf(item) }
+    // Hashtag labels change the item's labels, not its replies: follow that flow, so an added or
+    // removed label shows at once.
+    val labelState by remember(item) { item.flow().labels.stateFlow }.collectAsStateWithLifecycle()
+    val labels = observeGitItemLabels(item)
     // The labels this user added (theirs to take back); one in the item's own tags is not.
-    val mine = remember(item.labels, me) { item.labels.filterValues { notes -> notes.any { it.author?.pubkeyHex == me } }.keys }
+    val mine = remember(labelState, me) { item.labels.filterValues { notes -> notes.any { it.author?.pubkeyHex == me } }.keys }
 
     var renaming by rememberSaveable { mutableStateOf(false) }
     var adding by rememberSaveable { mutableStateOf(false) }
