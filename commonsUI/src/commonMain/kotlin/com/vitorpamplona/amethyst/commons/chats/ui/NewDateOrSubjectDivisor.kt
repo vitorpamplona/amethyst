@@ -28,13 +28,15 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chat_subject_changed_by
 import com.vitorpamplona.amethyst.commons.resources.chat_subject_changed_by_you
-import com.vitorpamplona.amethyst.commons.resources.never
 import com.vitorpamplona.amethyst.commons.resources.today
-import com.vitorpamplona.amethyst.commons.ui.note.dateFormatter
+import com.vitorpamplona.amethyst.commons.resources.yesterday
+import com.vitorpamplona.amethyst.commons.ui.note.calendarYearAndDay
+import com.vitorpamplona.amethyst.commons.ui.note.chatDayLabelWith
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip14Subject.subject
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * The quiet rows between messages: a day divider when the date changes, and a one-line caption
@@ -49,9 +51,10 @@ fun NewDateOrSubjectDivisor(
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    if (previous == null) return
-
     NewDateDivisor(previous, note)
+
+    // The oldest loaded message has nothing to rename from.
+    if (previous == null) return
 
     val newSubject = remember(previous, note) { subjectChangeOf(previous.event, note.event) }
     if (newSubject != null) {
@@ -70,7 +73,11 @@ fun NewDateOrSubjectDivisor(
 }
 
 /**
- * The day header alone: [note]'s date when it differs from [previous]'s. For a row that must not
+ * The day header alone: [note]'s day when it differs from [previous]'s, and always above the oldest
+ * loaded message ([previous] null), so every message sits under a divider naming its day. The day
+ * pill and docked day bar (ChatFeedDayIndicator) hide while that divider is in view. Days are
+ * calendar days ("Today", "Yesterday", "Aug 20"): a message from 11 PM last night is not "Today"
+ * at 10 AM. For a row that must not
  * show a subject change (it names the author), like a collapsed run of messages from outside the
  * network.
  */
@@ -79,18 +86,20 @@ fun NewDateDivisor(
     previous: Note?,
     note: Note,
 ) {
-    if (previous == null) return
-
-    val never = stringRes(Res.string.never)
     val today = stringRes(Res.string.today)
+    val yesterday = stringRes(Res.string.yesterday)
 
-    val prevDate = remember(previous) { dateFormatter(previous.event?.createdAt, never, today) }
-    val date = remember(note) { dateFormatter(note.event?.createdAt, never, today) }
+    val prevDay = remember(previous) { previous?.event?.createdAt?.let { chatDayKey(it) } }
+    val day = remember(note) { note.event?.createdAt?.let { chatDayKey(it) } } ?: return
 
-    if (prevDate != date) {
-        ChatDivisor(date)
+    if (prevDay != day) {
+        val label = remember(note, today, yesterday) { chatDayLabelWith(note.event?.createdAt ?: 0L, TimeUtils.nowMillis(), today, yesterday) }
+        ChatDivisor(label)
     }
 }
+
+/** The calendar day of a Unix timestamp, comparable between messages: year * 1000 + day of year. */
+fun chatDayKey(timeSeconds: Long): Int = calendarYearAndDay(timeSeconds * 1000)
 
 /**
  * The subject [newer] sets, or null when it sets none or repeats the one [older] already carried.

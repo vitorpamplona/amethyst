@@ -6074,6 +6074,7 @@
     <string name="chat_layout_bubbles">Bubbles</string>
     <string name="chat_layout_compact">Compact</string>
     <string name="chat_layout_open">Open</string>
+    <string name="yesterday">Yesterday</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Unable to create a lightning invoice before sending the zap. The receiver's lightning wallet sent the following error: %1$s</string>
     <string name="unable_to_share_image">Unable to share image, please try again later…</string>
     <string name="unable_to_share_video">Unable to share video, please try again later…</string>
