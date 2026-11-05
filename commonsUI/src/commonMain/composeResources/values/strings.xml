@@ -78,7 +78,7 @@
     <string name="action_refresh">Refresh</string>
     <string name="action_try_again">Try Again</string>
     <string name="feed_empty">Feed is empty</string>
-    <string name="error_loading_feed">Error loading feed: %s</string>
+    <string name="error_loading_feed">Error loading feed: %1$s</string>
 
     <!-- Placeholder Screens -->
     <string name="screen_search_title">Search</string>

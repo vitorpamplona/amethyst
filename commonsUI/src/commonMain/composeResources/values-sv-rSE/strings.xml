@@ -72,7 +72,7 @@
     <string name="action_refresh">Uppdatera</string>
     <string name="action_try_again">Försök igen</string>
     <string name="feed_empty">Flödet är tomt</string>
-    <string name="error_loading_feed">Fel vid laddning av flöde: %s</string>
+    <string name="error_loading_feed">Fel vid laddning av flöde: %1$s</string>
     <!-- Placeholder Screens -->
     <string name="screen_search_title">Sök</string>
     <string name="screen_search_description">Sök efter användare, inlägg och hashtaggar.</string>

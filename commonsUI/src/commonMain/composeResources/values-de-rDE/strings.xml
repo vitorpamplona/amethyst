@@ -72,7 +72,7 @@
     <string name="action_refresh">Aktualisieren</string>
     <string name="action_try_again">Erneut versuchen</string>
     <string name="feed_empty">Feed ist leer</string>
-    <string name="error_loading_feed">Fehler beim Laden des Feeds: %s</string>
+    <string name="error_loading_feed">Fehler beim Laden des Feeds: %1$s</string>
     <!-- Placeholder Screens -->
     <string name="screen_search_title">Suche</string>
     <string name="screen_search_description">Suche nach Benutzern, Notizen und Hashtags.</string>

@@ -72,7 +72,7 @@
     <string name="action_refresh">Obnovit</string>
     <string name="action_try_again">Zkusit znovu</string>
     <string name="feed_empty">Kanál je prázdný</string>
-    <string name="error_loading_feed">Chyba při načítání kanálu: %s</string>
+    <string name="error_loading_feed">Chyba při načítání kanálu: %1$s</string>
     <!-- Placeholder Screens -->
     <string name="screen_search_title">Hledat</string>
     <string name="screen_search_description">Vyhledávejte uživatele, poznámky a hashtagy.</string>
