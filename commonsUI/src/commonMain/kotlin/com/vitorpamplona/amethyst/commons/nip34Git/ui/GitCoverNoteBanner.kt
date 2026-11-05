@@ -20,17 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.nip34Git.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -38,113 +36,110 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
-import com.vitorpamplona.amethyst.commons.nip34Git.coverNote.GitCoverNoteIndex
 import com.vitorpamplona.amethyst.commons.nip34Git.coverNote.GitCoverNotes
-import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_cover_note
+import com.vitorpamplona.amethyst.commons.resources.git_summary_edited_by
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayEditStatus
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
+import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
 private val BannerShape = RoundedCornerShape(8.dp)
 
 /**
- * The pinned cover note (kind 1624) of a NIP-34 issue, patch or PR, drawn above its description.
- * Shows the latest note by the item's author or a repository maintainer ([GitCoverNotes]); notes
- * by anyone else never reach this banner. Renders nothing when there is no such note.
+ * The summary of a NIP-34 issue, patch or PR, with its cover notes (kind 1624) as versions of it.
+ *
+ * A cover note by the item's author or a confirmed repository member supersedes the item's own
+ * description as its summary; anyone else's never counts ([observeCoverNoteVersions]). The latest
+ * one shows, in the pinned cover-note frame, and the edit pencil steps through the older ones and
+ * then the item's own description ("Original"), the way kind-1 edits do ([EditState]).
+ *
+ * [description] draws the item's own text. When [descriptionIsSummary] is false (a patch, whose
+ * body is the diff) it stays under every version; otherwise it shows only as the Original.
  */
 @Composable
-fun GitCoverNoteBanner(
-    rootIdHex: HexKey,
-    rootAuthor: HexKey,
-    repositoryAddress: Address?,
+fun GitVersionedSummary(
+    item: Note,
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
-    modifier: Modifier = Modifier,
+    coverModifier: Modifier = Modifier,
+    descriptionIsSummary: Boolean = true,
+    description: @Composable () -> Unit,
 ) {
-    val index by GitCoverNoteIndex.byRoot.collectAsStateWithLifecycle()
-    val notes = index?.get(rootIdHex) ?: return
+    val versions = observeCoverNoteVersions(item)
+    if (versions.isEmpty()) {
+        description()
+        return
+    }
 
-    if (repositoryAddress == null) {
-        ResolvedCoverNote(notes, rootIdHex, GitCoverNotes.authorisedAuthors(rootAuthor, null, null), canPreview, quotesLeft, backgroundColor, accountViewModel, nav, modifier)
-    } else {
-        LoadAddressableNote(repositoryAddress) { repoNote ->
-            val repository = repoNote?.let { observeRepository(it, accountViewModel) }
-            val authorised = remember(rootAuthor, repositoryAddress, repository) { GitCoverNotes.authorisedAuthors(rootAuthor, repositoryAddress, repository) }
-            ResolvedCoverNote(notes, rootIdHex, authorised, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, modifier)
+    val editState = remember(versions) { EditState().apply { updateModifications(versions) } }
+    val shown by editState.modificationToShow
+    val cover = shown?.event as? GitCoverNoteEvent
+
+    if (cover != null) {
+        CoverNoteBox(cover, descriptionIsSummary, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, coverModifier) {
+            DisplayEditStatus(editState)
         }
+        if (!descriptionIsSummary) description()
+    } else {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            DisplayEditStatus(editState)
+        }
+        description()
     }
 }
 
+/**
+ * The cover notes on [item] that count, as notes, oldest first ([GitCoverNotes.versions], the one
+ * rule the banner and every other reader share). The last one is the item's current summary.
+ */
 @Composable
-private fun observeRepository(
-    note: AddressableNote,
-    accountViewModel: AccountViewModel,
-): GitRepositoryEvent? {
-    val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
-    return event
+fun observeCoverNoteVersions(item: Note): List<Note> {
+    val versions = observeGitCoverNotes(item)
+    return remember(versions) { versions.mapNotNull { LocalCache.getNoteIfExists(it.id) } }
 }
 
-@Composable
-private fun ResolvedCoverNote(
-    notes: List<GitCoverNoteEvent>,
-    rootIdHex: HexKey,
-    authorised: Set<HexKey>,
-    canPreview: Boolean,
-    quotesLeft: Int,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    modifier: Modifier,
-) {
-    val cover = remember(notes, rootIdHex, authorised) { GitCoverNotes.latestAuthorised(notes, rootIdHex, authorised) } ?: return
-    CoverNoteBox(cover, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, modifier)
-}
-
+/**
+ * The current cover note, drawn as the item's description itself, since that is what it is now,
+ * with one muted line saying who wrote this version. On a patch, whose description is its commit
+ * message, it reads as a note above the diff instead ([asDescription] false).
+ */
 @Composable
 private fun CoverNoteBox(
     cover: GitCoverNoteEvent,
+    asDescription: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier,
+    trailing: @Composable () -> Unit,
 ) {
     Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clip(BannerShape)
-                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), BannerShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.06f))
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        GitCoverNoteHeader(cover, accountViewModel)
-
         val tags = remember(cover) { cover.tags.toImmutableListOfLists() }
         TranslatableRichTextViewer(
             content = cover.content,
@@ -158,15 +153,51 @@ private fun CoverNoteBox(
             accountViewModel = accountViewModel,
             nav = nav,
         )
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            // The version pencil ([trailing]) already marks an edit; a patch's note gets a pin.
+            if (!asDescription) {
+                Icon(
+                    symbol = MaterialSymbols.PushPin,
+                    contentDescription = null,
+                    modifier = Modifier.size(13.dp),
+                    tint = MaterialTheme.colorScheme.grayText,
+                )
+            }
+            Text(
+                text = stringRes(if (asDescription) Res.string.git_summary_edited_by else Res.string.git_cover_note),
+                style = gitMetaStyle(),
+                maxLines = 1,
+            )
+            LoadUser(baseUserHex = cover.pubKey) { user ->
+                if (user != null) {
+                    ProvideTextStyle(gitMetaStyle()) {
+                        UsernameDisplay(
+                            user,
+                            Modifier.weight(1f, fill = false),
+                            fontWeight = FontWeight.SemiBold,
+                            textColor = MaterialTheme.colorScheme.grayText,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
+                }
+            }
+            Text(text = timeAgo(cover.createdAt, prefix = "· "), style = gitMetaStyle(), maxLines = 1)
+            trailing()
+        }
     }
 }
 
-/** The "Cover note · author · time" line shared by the banner and the standalone card. */
+/** The "Cover note · author · time" line shared by the banner and the standalone card; [trailing] holds the version pencil. */
 @Composable
 fun GitCoverNoteHeader(
     cover: GitCoverNoteEvent,
     accountViewModel: AccountViewModel,
     showAuthor: Boolean = true,
+    trailing: @Composable () -> Unit = {},
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -193,5 +224,6 @@ fun GitCoverNoteHeader(
         }
         Spacer(Modifier.weight(1f))
         TimeAgo(cover.createdAt)
+        trailing()
     }
 }

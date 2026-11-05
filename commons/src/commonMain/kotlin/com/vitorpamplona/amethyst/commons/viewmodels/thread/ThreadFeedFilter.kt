@@ -29,6 +29,9 @@ import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
 import com.vitorpamplona.amethyst.commons.model.ThreadLevelCalculator
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableSet
 
@@ -77,6 +80,9 @@ class ThreadFeedFilter(
 
             val eventsInHex = filteredThreadInfo.allNotes.map { it.idHex }.toSet()
             val now = TimeUtils.now()
+            // An issue, patch or PR thread is its history: comments, status changes and pushes in
+            // the order they happened, as forges and gitworkshop list them.
+            val chronological = eventsToWatch.root.event.let { it is GitIssueEvent || it is GitPatchEvent || it is GitPullRequestEvent }
 
             val signatures =
                 filteredThreadInfo.allNotes.associateWith {
@@ -88,6 +94,7 @@ class ThreadFeedFilter(
                             me,
                             followingKeySet,
                             now,
+                            chronological,
                         ).signature
                 }
 

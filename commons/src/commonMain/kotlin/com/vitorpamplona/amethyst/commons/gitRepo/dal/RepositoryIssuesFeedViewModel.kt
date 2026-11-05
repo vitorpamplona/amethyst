@@ -27,24 +27,30 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.gitRepo.dal.RepositoryIssuesFeedFilter
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.nip34Git.observeGitRepositoryActivity
 import com.vitorpamplona.amethyst.commons.viewmodels.AndroidFeedViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
 
+@OptIn(FlowPreview::class)
 class RepositoryIssuesFeedViewModel(
     val note: AddressableNote,
     val account: Account,
     val showClosed: Boolean,
 ) : AndroidFeedViewModel(RepositoryIssuesFeedFilter(note, account, showClosed)) {
     init {
-        // Status events (kinds 1630-1633) don't mutate the issue note, so the additive
-        // feed update can't move an item between the Open/Closed buckets on its own.
-        // Watch the status index and force a full re-partition whenever it changes.
+        // A status doesn't change the item's note, and a co-maintainer's announcement can bring items
+        // filed under their coordinate into the list: re-partition when the repository changes.
         viewModelScope.launch(Dispatchers.IO) {
-            GitStatusIndex.latestByTarget.collect { invalidateData() }
+            LocalCache
+                .observeGitRepositoryActivity(note.address.dTag)
+                .debounce(250)
+                .collect { invalidateData() }
         }
     }
 

@@ -70,6 +70,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
@@ -195,6 +196,7 @@ class NotificationFeedFilter(
                 GitStatusAppliedEvent.KIND,
                 GitStatusClosedEvent.KIND,
                 GitStatusDraftEvent.KIND,
+                GitReviewEvent.KIND,
                 HighlightEvent.KIND,
                 TextNoteEvent.KIND,
                 ReactionEvent.KIND,
@@ -286,9 +288,20 @@ class NotificationFeedFilter(
                 return true
             }
 
+            if (event is GitStatusEvent || event is GitPullRequestUpdateEvent) {
+                // Anyone can publish a status or a PR update that p-tags the user. Only one by the
+                // item's author or a confirmed repository member changes the item, so only those
+                // notify (gitworkshop drops the rest from its notifications the same way).
+                // While the item or its repository's announcements haven't loaded (a cold start, a
+                // push) there is nothing to judge by, and dropping it would lose a maintainer's
+                // change for good, since nothing re-checks it: it notifies.
+                val item = note.replyTo?.lastOrNull()?.event ?: return true
+                val authority = LocalCache.gitAuthority
+                return !authority.canJudge(item) || authority.isAuthorisedChange(event, item)
+            }
+
             if (event is GitIssueEvent || event is GitPatchEvent ||
-                event is GitPullRequestEvent || event is GitPullRequestUpdateEvent ||
-                event is GitReplyEvent || event is GitStatusEvent
+                event is GitPullRequestEvent || event is GitReplyEvent || event is GitReviewEvent
             ) {
                 // NIP-34 events reach the notifications tab only via the p-tag
                 // relay filter, which already selected them because the current

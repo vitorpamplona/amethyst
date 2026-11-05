@@ -41,11 +41,16 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
 import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
 import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
@@ -99,6 +104,19 @@ val RootScopedRepliesKinds =
         CiWorkflowProgressEvent.KIND,
     )
 
+/**
+ * What only a NIP-34 issue, patch or PR collects: NIP-32 labels (1985), which rename (`#subject`)
+ * and label (`#t`) it after the fact, and the rest of a patch series and its revisions, which name
+ * the root patch. Both use `e`. Asked in a filter of their own, for git items only: in the shared
+ * [RepliesAndReactionsKinds2] filter, a note that labelling bots tag heavily would fill its limit
+ * with labels and push out the statuses, poll responses and bids of every other note in the batch.
+ */
+val GitItemThreadKinds =
+    listOf(
+        LabelEvent.KIND,
+        GitPatchEvent.KIND,
+    )
+
 val RepliesAndReactionsKinds2 =
     listOf(
         DeletionRequestEvent.KIND,
@@ -109,7 +127,7 @@ val RepliesAndReactionsKinds2 =
         // NIP-34 status events (1630/1631/1632/1633). Rooted at the target
         // patch/PR/issue via a `root`-marked `e` tag, so an `e=<targetId>`
         // engagement fetch surfaces every open/applied/closed/draft transition —
-        // the signal GitStatusIndex needs to answer isClosedOrResolved() for
+        // the signal GitStatuses needs to answer isClosedOrResolved() for
         // repo rows. PR revisions (1619) anchor with `E` instead and are pulled
         // by [RootScopedRepliesKinds]; listing them here matched nothing.
         GitStatusOpenEvent.KIND,
@@ -118,6 +136,8 @@ val RepliesAndReactionsKinds2 =
         GitStatusDraftEvent.KIND,
         // NIP-34 cover notes (1624) point at their issue / patch / PR with a lowercase root `e`.
         GitCoverNoteEvent.KIND,
+        // Review verdicts (7321) root at the patch / PR with a lowercase `e`.
+        GitReviewEvent.KIND,
         PollResponseEvent.KIND,
         ZapPollEvent.KIND,
         // NIP-15 bids and the merchant's confirmations name the auction VERSION by its id (`e`),
@@ -132,6 +152,15 @@ fun filterRepliesAndReactionsToNotes(
     accountPubKey: HexKey? = null,
 ): List<RelayBasedFilter>? {
     if (events.isEmpty()) return null
+
+    val perRelayGitItemIds =
+        mapOfSet {
+            events.forEach { note ->
+                val event = note.event
+                if (event !is GitIssueEvent && event !is GitPatchEvent && event !is GitPullRequestEvent) return@forEach
+                note.relayUrlsForReactions().forEach { relay -> add(relay, note.idHex) }
+            }
+        }
 
     val perRelayEventIds =
         mapOfSet {
@@ -214,7 +243,27 @@ fun filterRepliesAndReactionsToNotes(
                             limit = 1000,
                         ),
                 ),
-            )
+            ) +
+                perRelayGitItemIds[relay].orEmpty().sorted().let { gitItemIds ->
+                    if (gitItemIds.isEmpty()) {
+                        emptyList()
+                    } else {
+                        listOf(
+                            RelayBasedFilter(
+                                relay = relay,
+                                filter =
+                                    ExplainedFilter(
+                                        purpose = SubPurpose.ENGAGEMENT,
+                                        accountPubKeys = listOfNotNull(accountPubKey),
+                                        kinds = GitItemThreadKinds,
+                                        tags = mapOf("e" to gitItemIds),
+                                        since = since,
+                                        limit = 500,
+                                    ),
+                            ),
+                        )
+                    }
+                }
         } else {
             emptyList()
         }

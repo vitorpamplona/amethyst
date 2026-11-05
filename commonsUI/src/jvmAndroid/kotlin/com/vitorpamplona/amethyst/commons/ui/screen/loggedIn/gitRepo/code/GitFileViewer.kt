@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,6 +34,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,11 +45,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -64,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitLoadingBox
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitMessageBox
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.git_file_blame_truncated
 import com.vitorpamplona.amethyst.commons.resources.git_repo_binary_file
 import com.vitorpamplona.amethyst.commons.resources.git_repo_code_loading
 import com.vitorpamplona.amethyst.commons.resources.git_repo_copy_file
@@ -74,8 +77,11 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip34Git.git.GitBlame
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
 import com.vitorpamplona.quartz.nip34Git.git.GitTreeEntry
 import kotlinx.coroutines.Dispatchers
@@ -99,7 +105,25 @@ fun GitFileViewer(
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier = Modifier,
+    /** The file's path when its blame should show beside the code, else null. */
+    blamePath: List<String>? = null,
 ) {
+    // Null while loading; then the blame, or a failure (also when the file has no history here),
+    // so the gutter's progress bar stops either way.
+    val blameResult by
+        produceState<Result<GitBlame>?>(null, entry.oid, blamePath) {
+            value = null
+            val path = blamePath ?: return@produceState
+            value =
+                try {
+                    viewModel.blame(snapshot, path)?.let { Result.success(it) } ?: Result.failure(IllegalStateException("no history"))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
+        }
+    val blame = blameResult?.getOrNull()
     val result by
         produceState<Result<ByteArray>?>(null, entry.oid) {
             value =
@@ -130,7 +154,7 @@ fun GitFileViewer(
                         modifier = modifier,
                     )
                 else ->
-                    HighlightedCode(data.decodeToString(), entry.name, modifier)
+                    HighlightedCode(data.decodeToString(), entry.name, modifier, blame.takeIf { blamePath != null }, loadingBlame = blamePath != null && blameResult == null)
             }
         }
     }
@@ -170,8 +194,12 @@ private fun HighlightedCode(
     code: String,
     fileName: String,
     modifier: Modifier,
+    blame: GitBlame? = null,
+    loadingBlame: Boolean = false,
 ) {
-    val darkMode = isSystemInDarkTheme()
+    // The app's theme, not the system's: they differ when the user picks one in Settings, and
+    // the highlighter paints plain code and punctuation for the background it is told about.
+    val darkMode = !MaterialTheme.colorScheme.isLight
     val language = remember(fileName) { CodeHighlighter.languageForFile(fileName) }
 
     val annotated by
@@ -185,7 +213,16 @@ private fun HighlightedCode(
     Column(modifier.fillMaxSize()) {
         CodeBar(languageLabel = language?.name?.let(::prettyLanguage) ?: stringRes(Res.string.git_repo_plain_text), code = code)
         HorizontalDivider(thickness = 0.5.dp)
-        CodeWithLineNumbers(annotated, Modifier.fillMaxSize())
+        if (loadingBlame) LinearProgressIndicator(Modifier.fillMaxWidth())
+        if (blame?.truncated == true) {
+            Text(
+                pluralStringRes(Res.plurals.git_file_blame_truncated, blame.versions.size, blame.versions.size),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp),
+            )
+        }
+        CodeWithLineNumbers(annotated, Modifier.fillMaxSize(), blame)
     }
 }
 
@@ -235,6 +272,7 @@ private fun CodeBar(
 private fun CodeWithLineNumbers(
     annotated: AnnotatedString,
     modifier: Modifier,
+    blame: GitBlame? = null,
 ) {
     val lineRanges = remember(annotated) { computeLineRanges(annotated.text) }
     val gutterDigits = lineRanges.size.toString().length
@@ -245,6 +283,7 @@ private fun CodeWithLineNumbers(
     val gutterColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
 
     Row(modifier.verticalScroll(verticalScroll)) {
+        if (blame != null) BlameGutter(blame, lineRanges.size, gutterColor)
         // Sticky line-number gutter (only the code area scrolls horizontally).
         Column(
             modifier =
@@ -285,6 +324,49 @@ private fun CodeWithLineNumbers(
         }
     }
 }
+
+/**
+ * Who last changed each line: the commit and author beside the first line of each run a commit
+ * wrote, shaded per run so a change reads as one block, as `git blame` views show it.
+ */
+@Composable
+private fun BlameGutter(
+    blame: GitBlame,
+    lineCount: Int,
+    textColor: Color,
+) {
+    val shade = MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
+    Column(
+        modifier =
+            Modifier
+                .width(BlameGutterWidth)
+                .padding(vertical = 8.dp),
+    ) {
+        var band = false
+        for (i in 0 until lineCount) {
+            val owner = blame.lines.getOrNull(i) ?: -1
+            val startsRun = i == 0 || owner != blame.lines.getOrNull(i - 1)
+            if (startsRun) band = !band
+            val version = blame.versions.getOrNull(owner)
+            Text(
+                text = if (startsRun && version != null) version.commit.shortOid + " " + version.commit.authorName else "",
+                fontFamily = FontFamily.Monospace,
+                fontSize = CodeFontSize,
+                lineHeight = CodeLineHeight,
+                color = textColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(if (band) shade else Color.Transparent)
+                        .padding(horizontal = 6.dp),
+            )
+        }
+    }
+}
+
+private val BlameGutterWidth = 170.dp
 
 /** Splits text into per-line character ranges, dropping a single trailing newline's empty line. */
 private fun computeLineRanges(text: String): List<Pair<Int, Int>> {

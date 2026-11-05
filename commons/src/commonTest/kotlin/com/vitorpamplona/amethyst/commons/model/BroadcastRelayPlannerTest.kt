@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
+import com.vitorpamplona.quartz.nip34Git.state.tags.RefTag
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
@@ -205,5 +207,116 @@ class BroadcastRelayPlannerTest {
             val issue = bob.sign(GitIssueEvent.build("bug", "it broke", EventHintBundle(repo), emptyList(), emptyList()))
             val issueRelays = planner.computeRelayListToBroadcast(issue)
             assertTrue(relay("grasp") in issueRelays, "the relays the repository monitors for issues: $issueRelays")
+        }
+
+    /** Bob's private repository (GRASP-08), monitored only on its own relay. */
+    private suspend fun privateRepository(cache: EventCache): GitRepositoryEvent {
+        val repo =
+            bob.sign(
+                GitRepositoryEvent.build(
+                    name = "secret",
+                    description = null,
+                    webUrls = emptyList(),
+                    cloneUrls = emptyList(),
+                    relays = listOf("wss://grasp.example.com"),
+                    maintainers = emptyList(),
+                    hashtags = emptyList(),
+                    earliestUniqueCommit = null,
+                    dTag = "secret",
+                ) { add(arrayOf("private", "true")) },
+            )
+        cache.justConsume(repo, null, true)
+        return repo
+    }
+
+    @Test
+    fun aPrivateRepositorysEventsStayOnItsRelaysEvenFarFromIt() =
+        runTest {
+            val (cache, _) = cacheWithBob()
+            val planner = planner(cache)
+            val repo = privateRepository(cache)
+            val only = setOf(relay("grasp"))
+
+            val issue = bob.sign(GitIssueEvent.build("bug", "it broke", EventHintBundle(repo), emptyList(), emptyList()))
+            cache.justConsume(issue, null, true)
+            val like = me.sign(ReactionEvent.build("+", EventHintBundle<Event>(issue)))
+            cache.justConsumeMyOwnEvent(like)
+            // Two levels down: a reaction to the reaction names no repository itself.
+            val likeOfLike = me.sign(ReactionEvent.build("+", EventHintBundle<Event>(like)))
+            assertEquals(only, planner.computeRelayListToBroadcast(likeOfLike))
+
+            // A repost goes through the reaction routing, and stays too.
+            val issueNote = cache.getNoteIfExists(issue.id)!!
+            assertEquals(only, planner.computeMyReactionToNote(issueNote, me.sign(RepostEvent.build(EventHintBundle<Event>(issue)))))
+
+            // The signed state names no repository: it is the one with its own d-tag.
+            val state = bob.sign(GitRepositoryStateEvent.build("secret", listOf(RefTag.branch("main", "a".repeat(40))), "main"))
+            assertEquals(only, planner.computeRelayListToBroadcast(state))
+        }
+
+    @Test
+    fun anEventUnderARepositoryNotYetLoadedStaysWhereThatRepositoryWasSeen() =
+        runTest {
+            val (cache, _) = cacheWithBob()
+            val planner = planner(cache)
+            // The announcement is signed but never reaches this cache: it could be private.
+            val repo = privateRepository(EventCache())
+            val issue = bob.sign(GitIssueEvent.build("bug", "it broke", EventHintBundle(repo, relay("grasp")), emptyList(), emptyList()))
+            cache.justConsume(issue, null, true)
+            cache.getNoteIfExists(issue.id)!!.addRelay(seenOn)
+
+            val like = me.sign(ReactionEvent.build("+", EventHintBundle<Event>(issue)))
+            cache.justConsumeMyOwnEvent(like)
+            val relays = planner.computeRelayListToBroadcast(like)
+            assertTrue(myOutbox.none { it in relays }, "not to the outbox while the repository may be private: $relays")
+            assertTrue(seenOn in relays || relay("grasp") in relays, "where the repository's events were seen: $relays")
+
+            // Once a public announcement arrives, the usual routing applies.
+            val publicRepo =
+                bob.sign(
+                    GitRepositoryEvent.build(
+                        name = "secret",
+                        description = null,
+                        webUrls = emptyList(),
+                        cloneUrls = emptyList(),
+                        relays = listOf("wss://grasp.example.com"),
+                        maintainers = emptyList(),
+                        hashtags = emptyList(),
+                        earliestUniqueCommit = null,
+                        dTag = "secret",
+                        createdAt = repo.createdAt + 1,
+                    ),
+                )
+            cache.justConsume(publicRepo, null, true)
+            assertTrue(planner.computeRelayListToBroadcast(like).containsAll(myOutbox), "public: the outbox again")
+        }
+
+    @Test
+    fun aNoteThatOnlyNamesARepositoryCannotSteerItsReplies() =
+        runTest {
+            val (cache, _) = cacheWithBob()
+            val planner = planner(cache)
+            // A plain note naming a repository nobody has loaded, with a relay hint of its choosing.
+            val bait = bob.sign(TextNoteEvent.build("look") { add(arrayOf("a", "30617:${"f".repeat(64)}:x", "wss://evil.example.com")) })
+            cache.justConsume(bait, null, true)
+            cache.getNoteIfExists(bait.id)!!.addRelay(seenOn)
+            val like = me.sign(ReactionEvent.build("+", EventHintBundle<Event>(bait)))
+            cache.justConsumeMyOwnEvent(like)
+            val relays = planner.computeRelayListToBroadcast(like)
+            assertTrue(relays.containsAll(myOutbox), "the usual routing: $relays")
+            assertTrue(relay("evil") !in relays || relays.size > 1, "never only the note's hint: $relays")
+        }
+
+    @Test
+    fun deletingAPrivateRepositorysEventStaysOnItsRelays() =
+        runTest {
+            val (cache, _) = cacheWithBob()
+            val planner = planner(cache)
+            val repo = privateRepository(cache)
+            val issue = me.sign(GitIssueEvent.build("bug", "it broke", EventHintBundle(repo), emptyList(), emptyList()))
+            cache.justConsumeMyOwnEvent(issue)
+            val relays = planner.computeDeletionRelays(listOf(cache.getNoteIfExists(issue.id)!!))
+            assertTrue(myOutbox.none { it in relays } && myBroadcast.none { it in relays }, "not the outbox: $relays")
+            assertTrue(relay("grasp") in relays, "the repository's relay: $relays")
         }
 }

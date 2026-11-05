@@ -24,9 +24,9 @@ import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 
@@ -35,30 +35,34 @@ class RepositoryPatchesFeedFilter(
     val account: Account,
     val showClosed: Boolean,
 ) : AdditiveFeedFilter<Note>() {
-    private val repositoryAddressId = repositoryNote.address.toValue()
-
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-patches-" + (if (showClosed) "closed-" else "open-") + repositoryNote.idHex
 
     override fun feed(): List<Note> {
-        val result =
-            LocalCache.notes.mapNotNullIntoSet { _, note ->
-                if (matches(note)) note else null
-            }
-        return sort(result)
+        // The repository's own items, as the cache filed them: no scan of every cached note.
+        val repository = LocalCache.getGitRepositoryIfExists(repositoryNote.address.dTag) ?: return emptyList()
+        val coordinates = repositoryCoordinateSet(repositoryNote.address)
+        return sort(repository.items.filterIntoSet { _, note -> matches(note, coordinates) })
     }
 
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { matches(it) }
+    override fun applyFilter(newItems: Set<Note>): Set<Note> {
+        val coordinates = repositoryCoordinateSet(repositoryNote.address)
+        return newItems.filterTo(HashSet()) { matches(it, coordinates) }
+    }
 
-    private fun matches(note: Note): Boolean {
+    private fun matches(
+        note: Note,
+        coordinates: Set<String>,
+    ): Boolean {
         val event = note.event ?: return false
-        val belongsToRepo =
+        val listed =
             when (event) {
-                is GitPatchEvent -> event.repositoryAddress()?.toValue() == repositoryAddressId
-                is GitPullRequestEvent -> event.repositoryAddress()?.toValue() == repositoryAddressId
+                // Only the first patch of a series gets a row; the rest are in its thread.
+                is GitPatchEvent -> event.isSeriesRoot() && isFiledUnder(event, coordinates)
+                is GitPullRequestEvent -> isFiledUnder(event, coordinates)
                 else -> false
             }
-        if (!belongsToRepo) return false
-        return GitStatusIndex.isClosedOrResolved(note.idHex) == showClosed
+        if (!listed) return false
+        return GitStatuses.isClosedOrResolved(note, LocalCache.gitAuthority) == showClosed
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()

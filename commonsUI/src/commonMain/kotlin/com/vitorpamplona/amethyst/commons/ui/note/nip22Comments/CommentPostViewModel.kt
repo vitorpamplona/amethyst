@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -93,6 +94,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
@@ -100,6 +102,14 @@ import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip34Git.gitThreadRootId
+import com.vitorpamplona.quartz.nip34Git.review.GitCodeLocation
+import com.vitorpamplona.quartz.nip34Git.review.gitCodeLocation
+import com.vitorpamplona.quartz.nip34Git.review.reviewedCommit
+import com.vitorpamplona.quartz.nip34Git.review.reviewedFile
+import com.vitorpamplona.quartz.nip34Git.review.reviewedLines
+import com.vitorpamplona.quartz.nip34Git.review.tags.ReviewedLinesTag
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
@@ -173,6 +183,9 @@ open class CommentPostViewModel :
 
     var externalIdentity by mutableStateOf<ExternalId?>(null)
     var replyingTo: Note? by mutableStateOf(null)
+
+    /** For an inline code review: the file, commit and lines of the diff this comment is about. */
+    var reviewLocation: GitCodeLocation? by mutableStateOf(null)
 
     /** The geohash channel this comment is scoped to, or null when it isn't a geo-post. */
     val geohashScope: String?
@@ -497,6 +510,8 @@ open class CommentPostViewModel :
 
     private fun loadFromDraft(draftEvent: CommentEvent) {
         this.externalIdentity = draftEvent.scope()
+        // An inline review comment's draft keeps its place in the diff.
+        reviewLocation = draftEvent.gitCodeLocation()
 
         canAddInvoice = accountViewModel.userProfile().lnAddress() != null
         canAddZapRaiser = accountViewModel.userProfile().lnAddress() != null
@@ -683,15 +698,25 @@ open class CommentPostViewModel :
             if (replyingTo != null) {
                 val eventHint = replyingTo.toEventHint<Event>() ?: return null
 
-                CommentEvent.replyBuilder(
-                    msg = tagger.message,
-                    replyingTo = eventHint,
-                ) {
+                val replyTags: TagArrayBuilder<CommentEvent>.() -> Unit = {
                     // A reply inside a NIP-29 group thread must carry the group's `h`
                     // tag, or the host relay won't accept it and no other member (or
                     // other NIP-29 client, e.g. Flotilla) will see it. Inherit it from
                     // the event being replied to; a no-op for non-group comments.
                     replyingToEvent?.groupId()?.let { hTag(it) }
+
+                    // An inline review comment, as gitworkshop writes it: the file, the commit
+                    // the lines are read at, the lines (`del` for removed ones), and each
+                    // maintainer's repository, so it is found under every coordinate.
+                    reviewLocation?.let { location ->
+                        reviewedFile(location.path)
+                        location.commit?.let { reviewedCommit(it) }
+                        location.startLine?.let { start -> reviewedLines(ReviewedLinesTag(start, location.endLine ?: start, location.removedSide)) }
+                        replyingToEvent?.let { item ->
+                            LocalCache.gitAuthority.coordinatesToTag(item).forEach { add(QAddressableTag.assemble(it, null)) }
+                        }
+                        alt("Inline code review comment on ${location.path}")
+                    }
 
                     val notifyPTags = tagger.pTags?.let { pTagList -> pTagList.map { it.toPTag() } } ?: emptyList()
 
@@ -731,6 +756,21 @@ open class CommentPostViewModel :
                     emojis(emojis)
                     imetas(usedAttachments)
                     geoHash?.let { geohash(it) }
+                }
+
+                // NIP-34: a status, PR update, cover note or legacy reply is part of an issue's or
+                // PR's thread, which clients read by the item (`#E`). Root the comment there, still
+                // answering the event it replies to; rooted at that event, nobody would find it.
+                val gitItem =
+                    replyingToEvent
+                        ?.gitThreadRootId()
+                        ?.takeIf { it != replyingToEvent.id }
+                        ?.let { LocalCache.getNoteIfExists(it)?.toEventHint<Event>() }
+
+                if (gitItem != null) {
+                    CommentEvent.replyBuilder(tagger.message, root = gitItem, replyingTo = eventHint, initializer = replyTags)
+                } else {
+                    CommentEvent.replyBuilder(tagger.message, replyingTo = eventHint, initializer = replyTags)
                 }
             } else {
                 val externalIdentity = externalIdentity ?: return null
@@ -871,6 +911,7 @@ open class CommentPostViewModel :
 
     open fun cancel() {
         draftTag.rotate()
+        reviewLocation = null
 
         message.setTextAndPlaceCursorAtEnd("")
 

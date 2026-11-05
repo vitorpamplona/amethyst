@@ -23,25 +23,43 @@ package com.vitorpamplona.amethyst.commons.relayClient.gitRepo
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
 import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
+import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 
-val RepositoryContentKinds =
+/** A repository's items: its issues, patches and pull requests. */
+val RepositoryItemKinds =
     listOf(
         GitIssueEvent.KIND,
         GitPatchEvent.KIND,
         GitPullRequestEvent.KIND,
+    )
+
+/**
+ * What happens to those items that names the repository too: PR updates and statuses carrying an
+ * `a`. A filter of its own, so a busy repository's statuses cannot use up the items' limit: on ngit
+ * one filter for both, at 500, left a third of the issues unloaded. Statuses without an `a`, and
+ * labels and cover notes (which never carry one), come by `#e` ([filterRepositoryItemEssentials]).
+ */
+val RepositoryActivityKinds =
+    listOf(
         GitPullRequestUpdateEvent.KIND,
         GitStatusOpenEvent.KIND,
         GitStatusAppliedEvent.KIND,
@@ -53,18 +71,60 @@ fun filterRepositoryContent(
     relay: NormalizedRelayUrl,
     repository: GitRepositoryEvent,
     since: Long?,
-): RelayBasedFilter =
-    RelayBasedFilter(
-        relay = relay,
-        filter =
-            ExplainedFilter(
-                purpose = SubPurpose.TOPIC_FEED,
-                tags = mapOf("a" to listOf(repository.addressTag())),
-                kinds = RepositoryContentKinds,
-                limit = 500,
-                since = since,
-            ),
+): List<RelayBasedFilter> =
+    listOf(RepositoryItemKinds, RepositoryActivityKinds).map { kinds ->
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                ExplainedFilter(
+                    purpose = SubPurpose.TOPIC_FEED,
+                    tags = mapOf("a" to repositoryCoordinates(repository)),
+                    kinds = kinds,
+                    limit = 500,
+                    since = since,
+                ),
+        )
+    }
+
+/**
+ * What decides an item's state but may not name the repository: its statuses (older ngit wrote
+ * them with only an `e`), its labels and renames (1985), its cover notes (1624) and their
+ * withdrawals (5), all by `#e`, and its PR updates by `#E`. gitworkshop loads the same set for every
+ * listed item (`ItemEssentialEventsModel`), so both clients count states over the same events.
+ */
+val RepositoryItemEssentialKinds =
+    listOf(
+        GitStatusOpenEvent.KIND,
+        GitStatusAppliedEvent.KIND,
+        GitStatusClosedEvent.KIND,
+        GitStatusDraftEvent.KIND,
+        LabelEvent.KIND,
+        GitCoverNoteEvent.KIND,
+        GitReviewEvent.KIND,
+        DeletionRequestEvent.KIND,
     )
+
+/** Item ids per filter: a relay clamps a filter's results, and each item has a few essentials. */
+const val ITEM_ESSENTIALS_IDS_PER_FILTER = 100
+
+fun filterRepositoryItemEssentials(
+    relay: NormalizedRelayUrl,
+    itemIds: Collection<HexKey>,
+    since: Long?,
+): List<RelayBasedFilter> =
+    itemIds.sorted().chunked(ITEM_ESSENTIALS_IDS_PER_FILTER).flatMap { ids ->
+        listOf(
+            RelayBasedFilter(
+                relay = relay,
+                filter = ExplainedFilter(purpose = SubPurpose.TOPIC_FEED, tags = mapOf("e" to ids), kinds = RepositoryItemEssentialKinds + GitReplyEvent.KIND, since = since),
+            ),
+            RelayBasedFilter(
+                relay = relay,
+                // The items' comments too: the lists show how many each has.
+                filter = ExplainedFilter(purpose = SubPurpose.TOPIC_FEED, tags = mapOf("E" to ids), kinds = listOf(GitPullRequestUpdateEvent.KIND, CommentEvent.KIND), since = since),
+            ),
+        )
+    }
 
 /**
  * The CI kinds a repository's PR / patch list needs for its status badges: Workflow Results (9842,
@@ -80,10 +140,11 @@ val RepositoryCiKinds =
     )
 
 /**
- * Every coordinate a CI event may tag the repository with: CI events carry one `a` per maintainer
- * announcement, so the owner's coordinate alone would miss runs tagged under a maintainer's.
+ * Every coordinate an issue, PR, patch or CI event may tag the repository with: they carry one `a`
+ * per maintainer announcement, so the owner's coordinate alone would miss items filed under a
+ * co-maintainer's. Display then keeps only confirmed members' coordinates.
  */
-fun repositoryCoordinates(repository: GitRepositoryEvent): List<String> = (listOf(repository.pubKey) + repository.maintainers()).distinct().map { Address.assemble(GitRepositoryEvent.KIND, it, repository.dTag()) }
+fun repositoryCoordinates(repository: GitRepositoryEvent): List<String> = repository.namedPubKeys().map { Address.assemble(GitRepositoryEvent.KIND, it, repository.dTag()) }
 
 fun filterRepositoryCi(
     relay: NormalizedRelayUrl,

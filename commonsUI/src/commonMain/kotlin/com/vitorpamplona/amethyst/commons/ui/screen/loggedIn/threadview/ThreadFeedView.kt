@@ -47,6 +47,7 @@ import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -82,6 +83,11 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitThreadTimelineRow
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.LocalGitThreadRoot
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.isGitTimelineEvent
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.isHiddenInGitThread
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryAnnouncements
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.listingStatus
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ClassifiedsOpenMarketsDetails
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ListingStatusBadge
@@ -204,6 +210,10 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.review.isGitThreadResolution
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
@@ -267,14 +277,31 @@ fun RenderThreadFeed(
             if (!verdicts.isActive) emptySet() else outOfNetworkReplies(items.list, levels, noteId, verdicts)
         }
 
+    // A review thread an authorised member marked resolved (NIP-22 reply with `["l","resolved"]`)
+    // also starts collapsed, as gitworkshop folds it.
+    val rootEvent = items.list.firstOrNull()?.event
+    val gitAnnouncements = observeGitRepositoryAnnouncements(rootEvent)
+    val resolvedThreads =
+        remember(items, rootEvent, gitAnnouncements) {
+            if (rootEvent !is GitIssueEvent && rootEvent !is GitPatchEvent && rootEvent !is GitPullRequestEvent) {
+                emptySet()
+            } else {
+                items.list.mapNotNullTo(HashSet()) { note ->
+                    val event = note.event as? CommentEvent
+                    if (event != null && event.isGitThreadResolution() && LocalCache.gitAuthority.isMemberAt(event.pubKey, rootEvent, event.createdAt)) note.replyTo?.lastOrNull()?.idHex else null
+                }
+            }
+        }
+    val collapsedByDefault = remember(outsideNetwork, resolvedThreads) { if (resolvedThreads.isEmpty()) outsideNetwork else outsideNetwork + resolvedThreads }
+
     // Hides every descendant of a collapsed reply and counts how many were hidden. The feed is
     // ordered depth-first, so a note's descendants are the contiguous items that follow it with a
     // strictly deeper reply level.
     val visible by
-        remember(items, levels, outsideNetwork) {
+        remember(items, levels, collapsedByDefault) {
             derivedStateOf {
                 val full = items.list
-                if (viewModel.collapsedReplies.isEmpty() && outsideNetwork.isEmpty()) {
+                if (viewModel.collapsedReplies.isEmpty() && collapsedByDefault.isEmpty()) {
                     VisibleThread(full, emptyMap())
                 } else {
                     val result = ArrayList<Note>(full.size)
@@ -292,7 +319,7 @@ fun RenderThreadFeed(
                         collapsedAncestorId = null
                         result.add(note)
 
-                        if (viewModel.isCollapsed(note.idHex, outsideNetwork)) {
+                        if (viewModel.isCollapsed(note.idHex, collapsedByDefault)) {
                             hideDeeperThan = level
                             collapsedAncestorId = note.idHex
                         }
@@ -302,7 +329,17 @@ fun RenderThreadFeed(
             }
         }
 
-    val visibleItems = visible.items
+    // A NIP-34 status or PR update whose issue / patch / PR is in this thread draws as a timeline
+    // row: the item it acts on is already on screen, so its feed card (which quotes that item)
+    // would only repeat it. Cover notes on that item are versions of its summary, reached through
+    // the item's edit pencil, so they are left out. The note this thread was opened on is neither:
+    // tapping a patch row opens that patch to read its diff, and a cover note opened from a
+    // notification or a quote is what the user came to see.
+    val threadIds = remember(items) { items.list.mapTo(HashSet()) { it.idHex } }
+    val visibleItems =
+        remember(visible, threadIds, noteId) {
+            visible.items.filterNot { it.idHex != noteId && isHiddenInGitThread(it.event) && it.replyTo?.lastOrNull()?.idHex in threadIds }
+        }
     val position = visibleItems.indexOfFirst { it.idHex == noteId }
 
     LaunchedEffect(noteId, position) {
@@ -343,7 +380,7 @@ fun RenderThreadFeed(
             contentType = { index, item ->
                 when {
                     index == 0 -> "master"
-                    viewModel.isCollapsed(item.idHex, outsideNetwork) -> "collapsed"
+                    viewModel.isCollapsed(item.idHex, collapsedByDefault) -> "collapsed"
                     else -> "reply"
                 }
             },
@@ -368,20 +405,33 @@ fun RenderThreadFeed(
 
             if (index == 0) {
                 ProvideTextStyle(TextStyle(fontSize = 18.sp, lineHeight = 1.20.em)) {
-                    NoteMaster(
-                        baseNote = item,
-                        modifier = modifier,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                    // A git item's tools (diff, clone, status buttons) belong to its own thread.
+                    CompositionLocalProvider(LocalGitThreadRoot provides item.idHex) {
+                        NoteMaster(
+                            baseNote = item,
+                            modifier = modifier,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 }
-            } else if (viewModel.isCollapsed(item.idHex, outsideNetwork)) {
+            } else if (item.idHex != noteId && isGitTimelineEvent(item.event) && item.replyTo?.lastOrNull()?.idHex in threadIds) {
+                // Before the out-of-network collapse: a maintainer outside the viewer's network
+                // still changed the item, and a stranger's change already reads as "Proposed".
+                GitThreadTimelineRow(
+                    baseNote = item,
+                    modifier = modifier,
+                    background = if (item.idHex == noteId) MaterialTheme.colorScheme.selectedNote else Color.Transparent,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            } else if (viewModel.isCollapsed(item.idHex, collapsedByDefault)) {
                 CollapsedNoteCompose(
                     baseNote = item,
                     modifier = modifier,
                     hiddenReplyCount = visible.hiddenCounts[item.idHex] ?: 0,
                     outsideNetwork = item.idHex in outsideNetwork,
-                    onExpand = { viewModel.toggleCollapsed(item.idHex, outsideNetwork) },
+                    onExpand = { viewModel.toggleCollapsed(item.idHex, collapsedByDefault) },
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -396,7 +446,7 @@ fun RenderThreadFeed(
                 // drafts: those open the edit-draft screen so the post can be resumed, matching
                 // the behavior everywhere else a draft is tapped.
                 val onClick =
-                    remember(item, outsideNetwork) {
+                    remember(item, collapsedByDefault) {
                         {
                             if (item.isDraft()) {
                                 nav.nav {
@@ -405,7 +455,7 @@ fun RenderThreadFeed(
                                     }
                                 }
                             } else {
-                                viewModel.toggleCollapsed(item.idHex, outsideNetwork)
+                                viewModel.toggleCollapsed(item.idHex, collapsedByDefault)
                             }
                         }
                     }

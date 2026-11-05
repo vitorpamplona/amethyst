@@ -29,6 +29,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
@@ -44,8 +45,12 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.issue.notify
+import com.vitorpamplona.quartz.nip34Git.issue.repository
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -216,19 +221,28 @@ class GitNewIssueViewModel : ViewModel() {
 
         val usedIMetas = iMetaAttachments.filterIsIn(findURLs(body).toSet())
 
+        // File it under every confirmed co-maintainer's coordinate too (one `a` each, and a `p` so
+        // each is notified), as gitworkshop does: whichever announcement a client opens finds it.
+        val coMaintainers =
+            LocalCache.gitAuthority
+                .coordinatesToTag(repoNote.address)
+                .filter { it != repoNote.address }
+
         val template =
             GitIssueEvent.build(subject.trim(), body, repositoryHint, emptyList(), parseLabels(labels)) {
+                coMaintainers.forEach { repository(ATag(it)) }
+                notify(coMaintainers.map { PTag(it.pubKeyHex) })
                 if (usedIMetas.isNotEmpty()) imetas(usedIMetas)
             }
-        val signed = account.signer.sign(template)
-        account.sendAutomatic(signed)
+        account.signAndComputeBroadcast(template)
     }
 }
 
 /** Splits a free-text label field on commas/whitespace, stripping any leading `#`. */
 internal fun parseLabels(raw: String): List<String> =
     raw
-        .split(',', ' ', '\n', '\t')
+        // Commas and lines separate labels; a space belongs to one ("good first issue").
+        .split(',', '\n', '\t')
         .map { it.trim().removePrefix("#") }
         .filter { it.isNotEmpty() }
         .distinct()

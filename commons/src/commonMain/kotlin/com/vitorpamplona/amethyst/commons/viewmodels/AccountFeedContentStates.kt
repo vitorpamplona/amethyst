@@ -80,6 +80,8 @@ import com.vitorpamplona.amethyst.commons.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.commons.webBookmarks.dal.WebBookmarkFeedFilter
 import com.vitorpamplona.amethyst.commons.workouts.dal.WorkoutFeedFilter
 import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -173,6 +175,18 @@ class AccountFeedContentStates(
         // references that would otherwise keep pruned cache objects alive.
         scope.launch(Dispatchers.IO) {
             memoryPressure.collect { trimFeedsToSize(200) }
+        }
+
+        // Co-maintainers' announcements merge repository cards into one per repository
+        // (GitRepositoriesFeedFilter.sort), and a membership is only known once they arrive, which
+        // the additive path never re-checks: rebuild the list when the memberships change.
+        scope.launch(Dispatchers.IO) {
+            @OptIn(FlowPreview::class)
+            LocalCache
+                .observeEvents<GitRepositoryEvent>(Filter(kinds = listOf(GitRepositoryEvent.KIND)))
+                .drop(1)
+                .debounce(500)
+                .collect { gitRepositoriesFeed.invalidateData() }
         }
 
         // Marmot group list changes (new group, group marked known, group

@@ -324,6 +324,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeohashChat
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeohashPresence
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitCoverNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitRepositoryState
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitReviewEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitStatusEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupAdmins
@@ -773,6 +774,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
 import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
@@ -2063,6 +2065,10 @@ internal fun RenderNoteRow(
 
             is GitStatusEvent -> {
                 RenderGitStatusEvent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is GitReviewEvent -> {
+                RenderGitReviewEvent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is GitCoverNoteEvent -> {

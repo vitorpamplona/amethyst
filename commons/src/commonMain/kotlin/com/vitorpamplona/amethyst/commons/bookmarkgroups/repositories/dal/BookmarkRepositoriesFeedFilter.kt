@@ -33,12 +33,12 @@ class BookmarkRepositoriesFeedFilter(
     val account: Account,
 ) : FeedFilter<Note>() {
     override fun feedKey(): String =
-        account.gitRepositoryListState.publicRepositoryAddressSet.value
+        account.gitRepositoryListState.repositoryAddressSet.value
             .hashCode()
             .toString()
 
     override fun feed(): List<Note> =
-        account.gitRepositoryListState.publicRepositoryAddressSet.value
+        account.gitRepositoryListState.repositoryAddressSet.value
             .map { account.cache.getOrCreateAddressableNote(it) }
             .sortedByDescending { it.createdAt() ?: 0L }
 }
