@@ -34,6 +34,7 @@ dependencyResolutionManagement {
             "com.github.lincollincol",
             "com.github.rikkahub.jlatexmath-android",
             "com.github.vitorpamplona.compose-richtext",
+            "com.github.vitorpamplona.quartz", // a quartz commit, while quartzJitpack is set
         )
     repositories {
         mavenLocal()

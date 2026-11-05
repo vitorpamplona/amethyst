@@ -52,11 +52,26 @@ plugins {
 // Desktop packageVersion inherits via project.version in desktopApp/build.gradle.kts.
 val appVersion = libs.versions.app.get()
 
+// quartz from a JitPack build of one commit (`quartzJitpack` in the catalog) instead of its release,
+// for every module and for marmot's and cordn's own dependency on it, so only one quartz is on any
+// classpath. A local checkout (-PquartzDir) is substituted in settings and takes precedence.
+val quartzJitpack =
+    libs.versions.quartzJitpack
+        .get()
+        .takeIf { it.isNotBlank() && !providers.gradleProperty("quartzDir").isPresent }
+
 allprojects {
     version = appVersion
 
     configurations.configureEach {
         resolutionStrategy.cacheChangingModulesFor(0, "seconds")
+        if (quartzJitpack != null) {
+            resolutionStrategy.dependencySubstitution {
+                substitute(module("com.vitorpamplona.quartz:quartz"))
+                    .using(module("com.github.vitorpamplona.quartz:quartz:$quartzJitpack"))
+                    .because("quartzJitpack in gradle/libs.versions.toml")
+            }
+        }
     }
 
     apply(plugin = "com.diffplug.spotless")
