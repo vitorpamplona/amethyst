@@ -33,6 +33,8 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.application_preferences
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -75,6 +77,8 @@ fun routeTitle(
             }
         }
         is Route.Hashtag -> return "#${route.hashtag}"
+        // Its name alone ("Settings") is the same as All Settings'; the screen calls itself this.
+        is Route.Settings -> return stringRes(Res.string.application_preferences)
         else -> {}
     }
     val section = NavBarCatalog.values.firstOrNull { it.resolveRoute(accountViewModel)::class == route::class }

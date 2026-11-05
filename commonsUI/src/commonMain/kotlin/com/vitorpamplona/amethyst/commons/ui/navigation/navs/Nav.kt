@@ -180,9 +180,10 @@ class Nav(
     }
 
     /**
-     * Hidden on tab roots (reached via the bottom nav) and on Home (the start destination): nothing
-     * sits below either that a back arrow could return to. Every other entry is a push on top of
-     * Home, so it can always pop.
+     * Hidden on tab roots (reached via the bottom nav), on Home (the start destination) and on the
+     * screen at the bottom of the stack (a deck column's first screen): nothing sits below any of
+     * them that a back arrow could return to, and [NavBackStacks.pop] never pops the last screen.
+     * A screen already popped is out of the stack and keeps its arrow while it animates away.
      *
      * A tab or a window holds one screen and has no back arrow: it is closed instead. Only a tabs
      * window too narrow for the strip shows one, on a tab another tab opened: back closes it and
@@ -190,7 +191,8 @@ class Nav(
      */
     private fun canPop(entry: NavStackEntry): Boolean =
         when (stacks.mode) {
-            NavigationLayoutType.STACK, NavigationLayoutType.DECK -> !entry.tabRoot && entry.route != Route.Home
+            NavigationLayoutType.STACK, NavigationLayoutType.DECK ->
+                !entry.tabRoot && entry.route != Route.Home && stacks.stack.firstOrNull() != entry
             NavigationLayoutType.TABS -> !isDrawerDocked && stacks.openerOf(entry) != null
             NavigationLayoutType.WINDOWS -> false
         }
