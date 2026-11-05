@@ -42,6 +42,8 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 
 private const val MAX_TITLE = 40
 
+private val CamelCaseBoundary = Regex("(?<=[a-z0-9])(?=[A-Z])")
+
 /**
  * A short name for the screen [route] shows, for a tab or a window title: the person's name on a
  * profile (updated as their metadata arrives), a note's first line, the hashtag, the bar's label
@@ -54,7 +56,8 @@ fun routeTitle(
 ): String {
     when (route) {
         is Route.Profile -> {
-            val user = remember(route.id) { LocalCache.getUserIfExists(route.id) }
+            // Created if missing, so a tab restored before the person loaded follows them as they arrive.
+            val user = remember(route.id) { LocalCache.checkGetOrCreateUser(route.id) }
             if (user != null) {
                 val info by observeUserInfo(user, accountViewModel)
                 return (info?.info?.bestName() ?: user.toBestDisplayName()).take(MAX_TITLE)
@@ -122,7 +125,7 @@ fun rememberRouteActivity(
 ): Int? =
     when (route) {
         is Route.Note -> {
-            val note = remember(route.id) { LocalCache.getNoteIfExists(route.id) }
+            val note = remember(route.id) { LocalCache.checkGetOrCreateNote(route.id) }
             if (note == null) {
                 null
             } else {
@@ -145,6 +148,6 @@ fun rememberRouteActivity(
 /** "NewShortNote" to "New short note". */
 internal fun spellOut(className: String): String =
     className
-        .replace(Regex("(?<=[a-z0-9])(?=[A-Z])"), " ")
+        .replace(CamelCaseBoundary, " ")
         .lowercase()
         .replaceFirstChar { it.uppercase() }

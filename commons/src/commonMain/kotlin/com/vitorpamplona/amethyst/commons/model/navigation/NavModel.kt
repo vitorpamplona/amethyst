@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.navigation
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -133,8 +134,8 @@ sealed class SingleScreenModel(
     /** Which screen opened which, by entry id: closing a screen returns to its opener. */
     protected val openers: SnapshotStateMap<Long, Long> = mutableStateMapOf<Long, Long>().apply { putAll(initialOpeners) }
 
-    /** What was closed, newest last. */
-    private val closed = ArrayDeque<Route>()
+    /** What was closed, newest last. Snapshot state, so menus reading [canReopen] follow it. */
+    private val closed = mutableStateListOf<Route>()
 
     val canReopen: Boolean get() = closed.isNotEmpty()
 
@@ -191,8 +192,8 @@ sealed class SingleScreenModel(
         openers.entries.filter { it.value == entry.id }.map { it.key }.forEach { child ->
             if (opener != null) openers[child] = opener else openers.remove(child)
         }
-        closed.addLast(entry.route)
-        while (closed.size > MAX_CLOSED) closed.removeFirst()
+        closed.add(entry.route)
+        while (closed.size > MAX_CLOSED) closed.removeAt(0)
     }
 
     /** Remembers that [opener] opened [entry]: never for sections and drawer screens, places of their own. */

@@ -109,11 +109,13 @@ import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelScope
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.withContext
 
 /**
  * The whole app below the platform's window: the login screens while logged off, and the logged-in
@@ -297,9 +299,13 @@ private fun AppNavigation(
         }
     LaunchedEffect(nav, layout) { nav.stacks.changeArrangement(layout.arrangement()) }
     LaunchedEffect(nav) {
-        snapshotFlow { if (nav.stacks.isSingleScreen) nav.stacks.encode() else null }
+        // A cheap copy on every change; the JSON only once they settle, off the main thread.
+        snapshotFlow { if (nav.stacks.isSingleScreen) nav.stacks.savedState() else null }
             .debounce(OPEN_SCREENS_SAVE_DEBOUNCE_MS)
-            .collect { accountSettings.updateOpenScreens(it) }
+            .collect { state ->
+                val encoded = state?.let { withContext(Dispatchers.Default) { NavBackStacks.encode(it) } }
+                accountSettings.updateOpenScreens(encoded)
+            }
     }
 
     // Shows the "log in to this relay?" dialog when a NIP-42 challenge needs the user to decide.

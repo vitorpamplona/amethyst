@@ -138,6 +138,8 @@ fun ScreenTabStrip(
     val stacks = nav.stacks.model as? TabsModel ?: return
     val tabs = stacks.strip()
     val activeId = stacks.top.id
+    // Read once here and handed only to the tab it is for, so a flash recomposes that tab alone.
+    val attention = stacks.attention
     val colors = MaterialTheme.colorScheme
 
     Column(modifier.fillMaxWidth().background(colors.surfaceContainerLow)) {
@@ -180,6 +182,7 @@ fun ScreenTabStrip(
                                 entry = entry,
                                 width = if (stacks.isPinned(entry)) PinnedTabWidth else tabWidth,
                                 selected = entry.id == activeId,
+                                flash = attention?.takeIf { it.id == entry.id }?.serial,
                                 stacks = stacks,
                                 accountViewModel = accountViewModel,
                             )
@@ -201,6 +204,7 @@ private fun ScreenTab(
     entry: NavStackEntry,
     width: Dp,
     selected: Boolean,
+    flash: Int?,
     stacks: TabsModel,
     accountViewModel: AccountViewModel,
 ) {
@@ -210,12 +214,11 @@ private fun ScreenTab(
     var menu by remember { mutableStateOf(false) }
 
     // A flash when the tab is asked for again while open, or opens in the background.
-    val flash = remember { Animatable(0f) }
-    val attention = stacks.attention
-    LaunchedEffect(attention) {
-        if (attention?.id == entry.id) {
-            flash.snapTo(1f)
-            flash.animateTo(0f, tween(900))
+    val glow = remember { Animatable(0f) }
+    LaunchedEffect(flash) {
+        if (flash != null) {
+            glow.snapTo(1f)
+            glow.animateTo(0f, tween(900))
         }
     }
 
@@ -231,7 +234,7 @@ private fun ScreenTab(
             hovered -> colors.onSurface.copy(alpha = 0.07f)
             else -> Color.Transparent
         }
-    val background = colors.primary.copy(alpha = 0.35f * flash.value).compositeOver(base.compositeOver(colors.surfaceContainerLow))
+    val background = colors.primary.copy(alpha = 0.35f * glow.value).compositeOver(base.compositeOver(colors.surfaceContainerLow))
     val accent = colors.primary
     val currentWidth by rememberUpdatedState(width)
     val density = LocalDensity.current

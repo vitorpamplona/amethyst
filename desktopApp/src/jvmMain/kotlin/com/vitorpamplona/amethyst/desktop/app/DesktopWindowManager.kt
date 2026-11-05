@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
+import com.vitorpamplona.amethyst.commons.model.navigation.NavArrangement
 import com.vitorpamplona.amethyst.commons.ui.navigation.windows.ScreenWindowSpec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -69,12 +70,36 @@ class DesktopWindowManager(
     var focusedScreenWindow by mutableStateOf<Long?>(null)
         private set
 
-    /** Nothing is left on screen: the app should quit. */
+    /** The layout the main window was hidden in. */
+    private var hiddenIn: NavArrangement? = null
+
+    /** Nothing is left on screen: the main window is hidden and the last screen window is gone. */
     val allClosed: Boolean get() = !mainWindowVisible && screenFrames.isEmpty()
 
-    /** Closing the main window quits, unless screen windows are open: then it only hides. */
-    fun closeMainWindow(exit: () -> Unit) {
-        if (screenFrames.isEmpty()) exit() else mainWindowVisible = false
+    /** Closing the main window in [layout] quits, unless screen windows are open: then it only hides. */
+    fun closeMainWindow(
+        layout: NavArrangement?,
+        exit: () -> Unit,
+    ) {
+        if (screenFrames.isEmpty()) {
+            exit()
+        } else {
+            hiddenIn = layout
+            mainWindowVisible = false
+        }
+    }
+
+    /**
+     * Called once [allClosed] holds, with the [layout] the app is in now. The user closed the last
+     * window: quit. A layout switch closed them instead (it drops the screen windows in the same
+     * frame): bring the main window back. Telling the two apart by the layout, rather than by which
+     * effect runs first, keeps a settings change from quitting the app.
+     */
+    fun onAllClosed(
+        layout: NavArrangement?,
+        exit: () -> Unit,
+    ) {
+        if (layout == hiddenIn) exit() else showMainWindow(raise = false)
     }
 
     /** Brings the main window back, and to the front when [raise]. */

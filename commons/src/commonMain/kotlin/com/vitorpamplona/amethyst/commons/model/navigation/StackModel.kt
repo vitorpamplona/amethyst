@@ -61,7 +61,11 @@ class StackModel(
         }
     }
 
-    override fun back(from: NavStackEntry?): Boolean = pop()
+    /** Pops the top. Asked by a screen that is no longer on top (already popped, or covered since), does nothing. */
+    override fun back(from: NavStackEntry?): Boolean {
+        if (from != null && from != top) return false
+        return pop()
+    }
 
     /**
      * Hidden on tab roots (reached via the bottom nav), on Home (the start destination) and on the

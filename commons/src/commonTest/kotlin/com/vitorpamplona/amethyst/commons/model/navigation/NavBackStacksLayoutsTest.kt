@@ -427,4 +427,67 @@ class NavBackStacksLayoutsTest {
         column.push(Route.Note("n"))
         assertTrue(column.model.canGoBack(column.top, wide = true))
     }
+
+    @Test
+    fun aTabOpenedFromAMovedOutWindowRaisesTheMainWindow() {
+        val stacks = tabs()
+        stacks.push(Route.Note("n"))
+        val note = stacks.top.id
+        stacks.setDetached(note, true)
+
+        stacks.open(NavRequest(Route.Profile("p"), origin = note))
+
+        val profile = stacks.tabs().single { it.route == Route.Profile("p") }
+        assertEquals(profile, stacks.top)
+        assertEquals(profile.id, stacks.windowFocus?.id)
+    }
+
+    @Test
+    fun aTabOpenedFromTheMainWindowDoesNotRaiseIt() {
+        val stacks = tabs()
+        val before = stacks.windowFocus
+        stacks.open(NavRequest(Route.Profile("p"), origin = stacks.top.id))
+
+        assertEquals(before, stacks.windowFocus)
+    }
+
+    @Test
+    fun sectionsAndDrawerScreensFromAStackHaveNoOpener() {
+        val stacks = NavBackStacks()
+        stacks.switchTab(Route.Message)
+        stacks.push(Route.Note("n"))
+        stacks.changeArrangement(NavArrangement.TABS)
+
+        val message = stacks.tabs().single { it.route == Route.Message }
+        val note = stacks.tabs().single { it.route == Route.Note("n") }
+        assertNull(stacks.openerOf(message))
+        assertEquals(message, stacks.openerOf(note))
+        // A narrow window: the pinned section has nothing to go back to.
+        assertFalse(stacks.model.canGoBack(message, wide = false))
+    }
+
+    @Test
+    fun aScreenNoLongerOnTopDoesNotPopAnother() {
+        val stacks = NavBackStacks()
+        stacks.push(Route.Note("a"))
+        val a = stacks.top
+        stacks.push(Route.Note("b"))
+
+        assertFalse(stacks.back(a))
+        assertEquals(Route.Note("b"), stacks.topRoute)
+        assertTrue(stacks.back(stacks.top))
+        assertEquals(Route.Note("a"), stacks.topRoute)
+    }
+
+    @Test
+    fun aSavedStateEncodesLikeTheLiveModel() {
+        val stacks = tabs()
+        stacks.push(Route.Note("n"))
+        val state = stacks.savedState()
+        stacks.push(Route.Profile("p"))
+
+        val restored = NavBackStacks.decode(NavBackStacks.encode(state))
+        assertNotNull(restored)
+        assertEquals(listOf<Route>(Route.Home, Route.Note("n")), restored.stack.map { it.route })
+    }
 }

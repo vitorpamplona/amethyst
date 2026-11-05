@@ -122,10 +122,22 @@ class NavBackStacks private constructor(
         return if (entries.firstOrNull()?.route == Route.Home) entries else listOf(ids.entry(Route.Home)) + entries
     }
 
-    fun encode(): String = json.encodeToString(Saved.serializer(), Saved(model.toSaved(), ids.next))
+    /**
+     * The screens as [encode] writes them, copied out without serializing: cheap enough to take on
+     * every change (it reads every piece of state, so a snapshotFlow over it follows them all),
+     * then [encode] once the changes settle, on any thread.
+     */
+    fun savedState(): SavedState = SavedState(Saved(model.toSaved(), ids.next))
+
+    fun encode(): String = encode(savedState())
+
+    /** An immutable copy of a window's screens, for [encode]. */
+    class SavedState internal constructor(
+        internal val saved: Saved,
+    )
 
     @Serializable
-    private class SavedEntry(
+    internal class SavedEntry(
         val route: Route,
         val id: Long,
         val tabRoute: Route? = null,
@@ -134,7 +146,7 @@ class NavBackStacks private constructor(
     )
 
     @Serializable
-    private sealed class SavedModel {
+    internal sealed class SavedModel {
         @Serializable
         @SerialName("stack")
         class Stack(
@@ -163,13 +175,16 @@ class NavBackStacks private constructor(
     }
 
     @Serializable
-    private class Saved(
+    internal class Saved(
         val model: SavedModel,
         val nextId: Long,
     )
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
+
+        /** Writes [state] for [decode]. Touches no snapshot state, so it can run off the main thread. */
+        fun encode(state: SavedState): String = json.encodeToString(Saved.serializer(), state.saved)
 
         private fun NavStackEntry.toSaved() = SavedEntry(route, id, tabRoute, drawerRoot, routeVersion)
 

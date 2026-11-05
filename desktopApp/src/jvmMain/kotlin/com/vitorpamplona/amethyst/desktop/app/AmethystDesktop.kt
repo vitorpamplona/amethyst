@@ -284,7 +284,7 @@ fun main(args: Array<String>) {
         LaunchedEffect(windows) {
             snapshotFlow { windows.allClosed }
                 .filter { it }
-                .collect { exitApplication() }
+                .collect { windows.onAllClosed(root.navigator.stacks?.arrangement, ::exitApplication) }
         }
 
         // Bumped to rebuild the window after a crash the user reports from the crash window: the
@@ -302,7 +302,7 @@ fun main(args: Array<String>) {
         CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides exceptionHandlerFactory) {
             key(windowGeneration) {
                 AppWindow(
-                    onCloseRequest = { windows.closeMainWindow(::exitApplication) },
+                    onCloseRequest = { windows.closeMainWindow(root.navigator.stacks?.arrangement, ::exitApplication) },
                     state = windowState,
                     title = "Amethyst",
                     icon = IconResources.adaptedBitmapPainter,

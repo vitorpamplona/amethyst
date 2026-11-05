@@ -30,6 +30,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 /**
  * Watches every press under it, before the pressed element sees it, and tells [nav] whether Ctrl or
  * Cmd was held: a link or note clicked that way opens in the background (tabs and windows layouts).
+ * The flag lasts for that one click: once the release has reached everything under it (where a
+ * click navigates), it is cleared, so a modified click that opened nothing leaves no trace on the
+ * next navigation, from the keyboard or a menu.
  */
 fun Modifier.openInBackgroundOnModifiedClick(nav: Nav): Modifier =
     pointerInput(nav) {
@@ -39,6 +42,13 @@ fun Modifier.openInBackgroundOnModifiedClick(nav: Nav): Modifier =
                 if (event.type == PointerEventType.Press) {
                     nav.openNextInBackground = event.keyboardModifiers.isCtrlPressed || event.keyboardModifiers.isMetaPressed
                 }
+            }
+        }
+    }.pointerInput(nav) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Final)
+                if (event.type == PointerEventType.Release) nav.openNextInBackground = false
             }
         }
     }

@@ -93,7 +93,7 @@ class TabsModel(
         }
         existing(request)?.let { open ->
             if (request.kind == NavRequest.Kind.Section) open.tabRoute = request.route
-            if (!request.background) activate(open.id)
+            if (!request.background) show(open.id, request)
             flash(open.id)
             return
         }
@@ -109,7 +109,21 @@ class TabsModel(
             tabs.add(if (at >= 0) maxOf(at + 1, pinnedCount()) else tabs.size, entry)
         }
         rememberOpener(entry, opener, request.kind)
-        if (request.background) flash(entry.id) else activate(entry.id)
+        if (request.background) flash(entry.id) else show(entry.id, request)
+    }
+
+    /**
+     * Activates [id] for [request]. A tab asked for from a moved-out window also raises the main
+     * window, which may be behind that window or hidden; asked for from the main window, it is
+     * already in front.
+     */
+    private fun show(
+        id: Long,
+        request: NavRequest,
+    ) {
+        activate(id)
+        val fromWindow = request.origin?.let { origin -> tabs.firstOrNull { it.id == origin } }?.let { !isMainScreen(it) } == true
+        if (fromWindow && isMainScreen(tabs.first { it.id == id })) raise(id)
     }
 
     override fun activate(id: Long) {
@@ -234,8 +248,13 @@ class TabsModel(
             ids: EntryIds,
             stack: List<NavStackEntry>,
         ): TabsModel {
-            val openers = stack.zipWithNext { below, above -> above.id to below.id }.toMap()
             val sections = stack.filter { it.tabRoot || it.route == Route.Home }
+            // Sections and drawer screens are places of their own, opened by nothing (as rememberOpener files them).
+            val openers =
+                stack
+                    .zipWithNext { below, above -> above to below }
+                    .filter { (above, _) -> above !in sections && !above.drawerRoot }
+                    .associate { (above, below) -> above.id to below.id }
             return TabsModel(
                 ids = ids,
                 initialTabs = sections + stack.filterNot { it in sections },
