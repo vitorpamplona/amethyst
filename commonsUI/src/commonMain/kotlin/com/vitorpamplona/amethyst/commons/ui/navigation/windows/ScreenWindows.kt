@@ -109,6 +109,7 @@ private fun ScreenWindowContent(
                     destinations = destinations,
                     animated = false,
                     onBack = {},
+                    backArrows = false,
                 )
             }
         }

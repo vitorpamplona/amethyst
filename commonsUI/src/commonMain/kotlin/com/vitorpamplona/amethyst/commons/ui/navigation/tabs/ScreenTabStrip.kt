@@ -88,7 +88,12 @@ fun ScreenTabStrip(
                 }
             }
             IconButton(onClick = { stacks.open(Route.Search(), forceNew = true) }, modifier = Modifier.size(36.dp)) {
-                Icon(MaterialSymbols.Add, contentDescription = stringRes(Res.string.navigation_new_tab), modifier = Modifier.size(18.dp))
+                Icon(
+                    MaterialSymbols.Add,
+                    contentDescription = stringRes(Res.string.navigation_new_tab),
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
         HorizontalDivider(Modifier.align(Alignment.BottomCenter))
@@ -129,7 +134,12 @@ private fun ScreenTab(
             modifier = Modifier.weight(1f),
         )
         IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-            Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.navigation_close_tab), modifier = Modifier.size(16.dp))
+            Icon(
+                MaterialSymbols.Close,
+                contentDescription = stringRes(Res.string.navigation_close_tab),
+                modifier = Modifier.size(16.dp),
+                tint = if (selected) colors.onBackground else colors.onSurfaceVariant,
+            )
         }
     }
 }

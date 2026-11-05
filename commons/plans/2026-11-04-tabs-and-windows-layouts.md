@@ -20,7 +20,10 @@ every screen keep their types.
   - `pop` closes the active tab, which falls back to its opener.
   - `popUpTo` replaces the screen in place.
   - `top` is the active screen, so `currentRoute`, the rail and deep links work unchanged.
-- **Back arrows.** `Nav.canPop` is false in both modes, so every back arrow goes away. A tabs
+- **Back arrows.** `Nav.canPop` is false in both modes. Top bars that drew their arrow
+  without asking (`TopBarExtensibleWithBackButton` and 37 screens) now also check
+  `LocalBackArrowAllowed`, which the host sets to false while a tab or window holds one screen.
+  Stack mode and deck columns are unchanged. A tabs
   window narrower than the docked drawer shows the opener chain as a stack, with a back arrow
   that closes the tab.
 - **Tabs.** `ScreenTabStrip` sits above the main pane while the drawer is docked:

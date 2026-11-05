@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -139,8 +140,10 @@ private fun EmojiPackScreenView(
                     }
                 },
                 navigationIcon = {
-                    IconButton(nav::popBack) {
-                        ArrowBackIcon()
+                    if (LocalBackArrowAllowed.current) {
+                        IconButton(nav::popBack) {
+                            ArrowBackIcon()
+                        }
                     }
                 },
                 actions = {

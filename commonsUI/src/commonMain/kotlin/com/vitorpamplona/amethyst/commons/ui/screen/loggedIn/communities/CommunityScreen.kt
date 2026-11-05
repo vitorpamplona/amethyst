@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
@@ -147,7 +148,9 @@ fun CommunityScreen(
                     },
                     navigationIcon = {
                         Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                            if (LocalBackArrowAllowed.current) {
+                                IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                            }
                         }
                     },
                     actions = {

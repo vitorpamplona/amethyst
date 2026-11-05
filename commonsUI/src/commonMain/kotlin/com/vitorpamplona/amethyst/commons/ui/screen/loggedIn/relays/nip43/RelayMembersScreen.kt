@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_members_title
 import com.vitorpamplona.amethyst.commons.resources.relay_members_unverifiable
 import com.vitorpamplona.amethyst.commons.resources.relay_members_you_are_member
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
@@ -189,11 +190,13 @@ fun RelayMembersScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        Icon(
-                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = null,
-                        )
+                    if (LocalBackArrowAllowed.current) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            Icon(
+                                symbol = MaterialSymbols.AutoMirrored.ArrowBack,
+                                contentDescription = null,
+                            )
+                        }
                     }
                 },
             )

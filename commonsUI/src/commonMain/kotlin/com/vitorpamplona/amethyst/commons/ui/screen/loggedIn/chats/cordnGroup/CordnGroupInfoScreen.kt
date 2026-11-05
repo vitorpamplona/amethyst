@@ -125,6 +125,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedText
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
@@ -197,8 +198,10 @@ private fun InfoTopBar(
 ) {
     TopAppBar(
         navigationIcon = {
-            IconButton(onClick = { nav.popBack() }) {
-                Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+            if (LocalBackArrowAllowed.current) {
+                IconButton(onClick = { nav.popBack() }) {
+                    Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                }
             }
         },
         title = { Text(stringRes(Res.string.cordn_group_info)) },

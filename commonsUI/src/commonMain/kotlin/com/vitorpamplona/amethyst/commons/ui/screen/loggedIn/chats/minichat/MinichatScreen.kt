@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalSuppressReplyToNoteId
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploader
@@ -186,8 +187,10 @@ fun MinichatScreen(
             TopAppBar(
                 title = { Text(stringRes(Res.string.chat_minichat_title), maxLines = 1) },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                    if (LocalBackArrowAllowed.current) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                        }
                     }
                 },
                 actions = {

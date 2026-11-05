@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
@@ -96,7 +97,9 @@ private fun GitNewIssueForm(
                 title = { Text(stringRes(Res.string.git_new_issue_title)) },
                 navigationIcon = {
                     Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                        if (LocalBackArrowAllowed.current) {
+                            IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                        }
                     }
                 },
                 actions = {

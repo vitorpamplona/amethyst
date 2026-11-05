@@ -27,11 +27,15 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalBackArrowAllowed
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 
 /**
@@ -61,6 +65,8 @@ fun NavigationHost(
         // Switching tabs or sections swaps the screen at once; only a stack slides and fades.
         animated = !nav.stacks.isSingleScreen || nav.shownEntries().size > 1,
         onBack = { nav.stacks.pop() },
+        // A tab shows its back arrow only where the window is too narrow for the strip.
+        backArrows = nav.stacks.mode == NavigationLayoutType.STACK || (nav.stacks.mode == NavigationLayoutType.TABS && !nav.isDrawerDocked),
         modifier = modifier,
     )
 }
@@ -77,6 +83,7 @@ fun NavigationHost(
     animated: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    backArrows: Boolean = true,
 ) {
     // The shown entries first: the display takes the head of the decorated list.
     val all = visible + retained.filterNot { it in visible }
@@ -91,8 +98,21 @@ fun NavigationHost(
             entryProvider = destinations::entryFor,
         )
 
+    CompositionLocalProvider(LocalBackArrowAllowed provides backArrows) {
+        Display(decorated.subList(0, visible.size), destinations, animated, onBack, modifier)
+    }
+}
+
+@Composable
+private fun Display(
+    entries: List<NavEntry<NavStackEntry>>,
+    destinations: NavDestinations,
+    animated: Boolean,
+    onBack: () -> Unit,
+    modifier: Modifier,
+) {
     NavDisplay(
-        entries = decorated.subList(0, visible.size),
+        entries = entries,
         modifier = modifier.background(MaterialTheme.colorScheme.background),
         transitionSpec = { if (animated) destinations.pushTransition(this) else NoTransition },
         popTransitionSpec = { if (animated) destinations.popTransition(this) else NoTransition },
