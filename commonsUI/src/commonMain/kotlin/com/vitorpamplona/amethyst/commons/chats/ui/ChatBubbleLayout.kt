@@ -42,15 +42,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -62,7 +68,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
@@ -73,10 +81,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
 import com.vitorpamplona.amethyst.commons.ui.note.CommentIcon
+import com.vitorpamplona.amethyst.commons.ui.richtext.LocalBlankLineScale
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatAuthorAvatarSize
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatPaddingGroupedModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatPaddingInnerQuoteModifier
@@ -105,13 +118,61 @@ private val ChatChipOverlapArrangement = Arrangement.spacedBy((-12).dp)
 private val ChatChipOverlapReserve = 8.dp
 
 // The column the author face sits in, beside a group chat's bubbles, and its gap to them.
-private val ChatAuthorGutterModifier = Modifier.width(28.dp)
+private val ChatAuthorGutterModifier = Modifier.width(ChatAuthorAvatarSize)
 private val ChatAuthorGutterGap = Modifier.width(6.dp)
 
 // Swipe-to-reply: releasing past the threshold fires the reply; the bubble never
 // drags further than the max.
 private val SwipeReplyThreshold = 56.dp
 private val SwipeReplyMaxDrag = 72.dp
+
+// COMPACT (IRC/Twitch): one dense line per message. A gap opens a new author run; lines of one
+// run sit almost flush, told apart by the name every line starts with.
+private val ChatCompactPaddingModifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 8.dp)
+private val ChatCompactPaddingGroupedModifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 2.dp)
+
+// The author column of a COMPACT line: a fixed width, names right-aligned against the text, so
+// every message starts at the same x and the eye can run down one left edge. Longer names
+// ellipsize. A repeated name (same author as the line above) is dimmed: it still marks where a
+// message starts, without six identical bright labels down the column.
+private val ChatCompactNameColumn = Modifier.width(96.dp)
+private const val CHAT_COMPACT_REPEATED_NAME_ALPHA = 0.4f
+private val ChatCompactNameGap = Modifier.width(8.dp)
+private val ChatCompactRowShape = RoundedCornerShape(4.dp)
+private val ChatCompactRowInset = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+
+// ChatChipFlowRow insets its chips 8dp so they clear a bubble's rounded corner; with no bubble
+// that inset only knocks them off the text's left edge.
+private val ChatChipBubbleInsetUndo = Modifier.offset(x = (-8).dp)
+
+// OPEN (AI-assistant style): someone else's message is open text with no bubble. A message's own
+// blank lines are ~20dp tall, so messages need at least that between them to read as separate.
+private val ChatOpenPaddingModifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 20.dp, bottom = 1.dp)
+private val ChatOpenPaddingGroupedModifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 1.dp)
+private val ChatOpenRowShape = RoundedCornerShape(8.dp)
+private val ChatOpenRowInset = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+private val ChatOpenHeaderGap = Modifier.width(8.dp)
+
+// The face in an OPEN run's header: about one line of body text tall, so the header weighs no more
+// than a line of the message. The gutter's 28dp, beside a 13sp name, made every run open with a
+// block taller than the text under it; at 20dp a photo and its follow badge (a third of it) are
+// too small to read.
+val ChatOpenAvatarSize = 22.dp
+private val ChatOpenStackSpacing = Arrangement.spacedBy(4.dp)
+
+// Open text keeps a readable measure on wide windows: past ~75 characters a line is hard to
+// track back to the start of the next.
+private val ChatOpenMaxWidth = Modifier.widthIn(max = 680.dp)
+
+// Without a bubble edge, a blank line inside a message must be clearly shorter than the gap to
+// the next message: half a line (~10dp) under OPEN's 12dp, and COMPACT marks each message with a name.
+private const val CHAT_OPEN_BLANK_LINE_SCALE = 0.5f
+
+// A quoted reply in the COMPACT and OPEN layouts: a tinted block with a bar down its leading edge
+// instead of a bubble inside a bubble.
+private val ChatQuoteBlockShape = RoundedCornerShape(6.dp)
+private val ChatQuoteBarWidth = 3.dp
+private val ChatQuoteBlockInset = Modifier.padding(start = ChatQuoteBarWidth + 8.dp, end = 8.dp, top = 4.dp, bottom = 4.dp)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -138,10 +199,13 @@ fun ChatBubbleLayout(
     // status glyphs). Null skips it entirely.
     footerRow: (@Composable () -> Unit)? = null,
     drawAuthorLine: @Composable () -> Unit,
-    // The author's face in a group chat, drawn OUTSIDE the bubble, beside the last bubble of
-    // the author's run (the other bubbles of the run keep its width as an indent so the run
-    // lines up). Null for one-on-one chats, own messages and quotes: no gutter at all.
-    authorAvatar: (@Composable () -> Unit)? = null,
+    // The author's face in a group chat, drawn at the size it is handed. BUBBLES and COMPACT
+    // put it OUTSIDE the bubble, beside the last bubble of the author's run (the other bubbles of
+    // the run keep its width as an indent so the run lines up); OPEN puts a smaller one in the
+    // run's header, beside the name. Null for one-on-one chats, own messages and quotes.
+    authorAvatar: (@Composable (size: Dp) -> Unit)? = null,
+    // How to lay the message out; follows the user's Chat Layout setting by default.
+    layout: ChatLayoutType = LocalDisplaySettings.current.chatLayout,
     inner: @Composable (MutableState<Color>) -> Unit,
 ) {
     val loggedInColors = MaterialTheme.colorScheme.chatBubbleMe
@@ -152,12 +216,24 @@ fun ChatBubbleLayout(
     // Keyed on the theme-derived inputs so bubbles recolor when the user switches
     // light/dark or accent while the chat is composed (MaterialTheme recomposes
     // in place — nothing recreates this composable on a theme change).
+    // Rows without a bubble: every COMPACT line and, in OPEN, everyone else's messages. They sit
+    // straight on the screen's background, so that is the color their content composites over.
+    // Quoted replies keep their tint in every layout.
+    val openRow =
+        !innerQuote &&
+            when (layout) {
+                ChatLayoutType.BUBBLES -> false
+                ChatLayoutType.COMPACT -> true
+                ChatLayoutType.OPEN -> !isLoggedInUser
+            }
+
     val parentBg = parentBackgroundColor?.value
     val bgColor =
-        remember(isLoggedInUser, isDraft, loggedInColors, otherColors, draftColor, defaultBackground, parentBg) {
+        remember(isLoggedInUser, isDraft, openRow, loggedInColors, otherColors, draftColor, defaultBackground, parentBg) {
             val base = parentBg ?: defaultBackground
             val bubble =
                 when {
+                    openRow -> Color.Transparent
                     isLoggedInUser && isDraft -> draftColor
                     isLoggedInUser -> loggedInColors
                     else -> otherColors
@@ -177,8 +253,11 @@ fun ChatBubbleLayout(
     }
 
     val highlightColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+    // An open row has no fill of its own: it rests fully transparent and only the scroll-to
+    // highlight tints it, fading in and back out like a bubble's would.
+    val restingColor = if (openRow) bgColor.value.copy(alpha = 0f) else bgColor.value
     val animatedColor by animateColorAsState(
-        targetValue = if (highlightActive.value) highlightColor.compositeOver(bgColor.value) else bgColor.value,
+        targetValue = if (highlightActive.value) highlightColor.compositeOver(bgColor.value) else restingColor,
         animationSpec = tween(durationMillis = if (highlightActive.value) 300 else 800),
         label = "highlightAnimation",
     )
@@ -192,7 +271,7 @@ fun ChatBubbleLayout(
     val swipeScope = rememberCoroutineScope()
     // The caller passes a fresh onSwipeReply lambda every recomposition (it captures
     // the note), so read it through updated-state and key pointerInput on the stable
-    // isLoggedInUser instead. Keying on the lambda would tear down and restart the
+    // swipe direction instead. Keying on the lambda would tear down and restart the
     // detector on every recomposition — stranding an in-flight drag and churning the
     // gesture coroutine on every idle row update.
     val latestOnSwipeReply by rememberUpdatedState(onSwipeReply)
@@ -200,10 +279,18 @@ fun ChatBubbleLayout(
     val swipeThresholdPx = remember(density) { with(density) { SwipeReplyThreshold.toPx() } }
     val swipeMaxPx = remember(density) { with(density) { SwipeReplyMaxDrag.toPx() } }
 
+    // The swipe pulls a message toward the middle of the screen: from the right for a message on
+    // the right, from the left for one on the left. COMPACT puts every message on the left.
+    val swipeFromEnd = isLoggedInUser && layout != ChatLayoutType.COMPACT
+
     Box(
         modifier =
             when {
                 innerQuote -> ChatPaddingInnerQuoteModifier
+                layout == ChatLayoutType.COMPACT && groupPosition.isConnectedAbove -> ChatCompactPaddingGroupedModifier
+                layout == ChatLayoutType.COMPACT -> ChatCompactPaddingModifier
+                openRow && groupPosition.isConnectedAbove -> ChatOpenPaddingGroupedModifier
+                openRow -> ChatOpenPaddingModifier
                 groupPosition.isConnectedAbove -> ChatPaddingGroupedModifier
                 else -> ChatPaddingModifier
             },
@@ -218,7 +305,7 @@ fun ChatBubbleLayout(
                 Box(
                     modifier =
                         Modifier
-                            .align(if (isLoggedInUser) Alignment.CenterEnd else Alignment.CenterStart)
+                            .align(if (swipeFromEnd) Alignment.CenterEnd else Alignment.CenterStart)
                             .graphicsLayer {
                                 val progress = (abs(dragOffset) / swipeThresholdPx).coerceIn(0f, 1f)
                                 alpha = progress
@@ -235,7 +322,7 @@ fun ChatBubbleLayout(
             if (onSwipeReply != null) {
                 Modifier
                     .graphicsLayer { translationX = dragOffset }
-                    .pointerInput(isLoggedInUser) {
+                    .pointerInput(swipeFromEnd) {
                         // Drag toward the screen center only; a haptic tick marks the
                         // commit point, releasing past it fires the reply.
                         var crossedThreshold = false
@@ -249,7 +336,7 @@ fun ChatBubbleLayout(
 
                         val applyDrag = { dragAmount: Float ->
                             val newOffset =
-                                if (isLoggedInUser) {
+                                if (swipeFromEnd) {
                                     (dragOffset + dragAmount).coerceIn(-swipeMaxPx, 0f)
                                 } else {
                                     (dragOffset + dragAmount).coerceIn(0f, swipeMaxPx)
@@ -309,38 +396,98 @@ fun ChatBubbleLayout(
                 Modifier
             }
 
-        // A top-level bubble's row spans the screen so the bubble can sit on its side. A quoted
-        // reply is drawn INSIDE another bubble, where filling the width pushed that bubble out to
-        // its maximum: a one-word answer to a one-word message stretched across the screen.
-        Row(
-            modifier = (if (innerQuote) Modifier else Modifier.fillMaxWidth()).then(swipeModifier),
-            horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
-            verticalAlignment = Alignment.Bottom,
+        CompositionLocalProvider(
+            LocalBlankLineScale provides if (layout == ChatLayoutType.BUBBLES) LocalBlankLineScale.current else CHAT_OPEN_BLANK_LINE_SCALE,
         ) {
-            if (authorAvatar != null && !isLoggedInUser && !innerQuote) {
-                Box(ChatAuthorGutterModifier) {
-                    if (groupPosition.isLastOfGroup) authorAvatar()
+            when {
+                innerQuote && layout != ChatLayoutType.BUBBLES -> {
+                    ChatQuoteBlock(
+                        isLoggedInUser = isLoggedInUser,
+                        // A filled card is a second block inside a one-line layout; compact keeps the bar only.
+                        filled = layout != ChatLayoutType.COMPACT,
+                        drawAuthorInfo = drawAuthorInfo || layout == ChatLayoutType.COMPACT,
+                        animatedColor = animatedColor,
+                        bgColor = bgColor,
+                        onClick = onClick,
+                        onDoubleTap = onDoubleTap,
+                        onAuthorClick = onAuthorClick,
+                        actionMenu = actionMenu,
+                        drawAuthorLine = drawAuthorLine,
+                        inner = inner,
+                    )
                 }
-                Spacer(ChatAuthorGutterGap)
+
+                layout == ChatLayoutType.COMPACT -> {
+                    CompactChatLine(
+                        modifier = swipeModifier,
+                        repeatsAuthorAbove = groupPosition.isConnectedAbove,
+                        animatedColor = animatedColor,
+                        bgColor = bgColor,
+                        onClick = onClick,
+                        onDoubleTap = onDoubleTap,
+                        onAuthorClick = onAuthorClick,
+                        actionMenu = actionMenu,
+                        reactionsRow = reactionsRow,
+                        footerRow = footerRow,
+                        drawAuthorLine = drawAuthorLine,
+                        inner = inner,
+                    )
+                }
+
+                openRow -> {
+                    OpenChatMessage(
+                        modifier = swipeModifier,
+                        drawAuthorInfo = drawAuthorInfo,
+                        animatedColor = animatedColor,
+                        bgColor = bgColor,
+                        onClick = onClick,
+                        onDoubleTap = onDoubleTap,
+                        onAuthorClick = onAuthorClick,
+                        actionMenu = actionMenu,
+                        reactionsRow = reactionsRow,
+                        footerRow = footerRow,
+                        drawAuthorLine = drawAuthorLine,
+                        authorAvatar = authorAvatar,
+                        inner = inner,
+                    )
+                }
+
+                else -> {
+                    // A top-level bubble's row spans the screen so the bubble can sit on its side. A quoted
+                    // reply is drawn INSIDE another bubble, where filling the width pushed that bubble out to
+                    // its maximum: a one-word answer to a one-word message stretched across the screen.
+                    Row(
+                        modifier = (if (innerQuote) Modifier else Modifier.fillMaxWidth()).then(swipeModifier),
+                        horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
+                        verticalAlignment = Alignment.Bottom,
+                    ) {
+                        if (authorAvatar != null && !isLoggedInUser && !innerQuote) {
+                            Box(ChatAuthorGutterModifier) {
+                                if (groupPosition.isLastOfGroup) authorAvatar(ChatAuthorAvatarSize)
+                            }
+                            Spacer(ChatAuthorGutterGap)
+                        }
+                        InnerChatBubble(
+                            isLoggedInUser = isLoggedInUser,
+                            innerQuote = innerQuote,
+                            drawAuthorInfo = drawAuthorInfo,
+                            groupPosition = groupPosition,
+                            transparentBubble = transparentBubble,
+                            animatedColor = animatedColor,
+                            highlightActive = highlightActive.value,
+                            bgColor = bgColor,
+                            onClick = onClick,
+                            onDoubleTap = onDoubleTap,
+                            onAuthorClick = onAuthorClick,
+                            actionMenu = actionMenu,
+                            reactionsRow = reactionsRow,
+                            footerRow = footerRow,
+                            drawAuthorLine = drawAuthorLine,
+                            inner = inner,
+                        )
+                    }
+                }
             }
-            InnerChatBubble(
-                isLoggedInUser = isLoggedInUser,
-                innerQuote = innerQuote,
-                drawAuthorInfo = drawAuthorInfo,
-                groupPosition = groupPosition,
-                transparentBubble = transparentBubble,
-                animatedColor = animatedColor,
-                highlightActive = highlightActive.value,
-                bgColor = bgColor,
-                onClick = onClick,
-                onDoubleTap = onDoubleTap,
-                onAuthorClick = onAuthorClick,
-                actionMenu = actionMenu,
-                reactionsRow = reactionsRow,
-                footerRow = footerRow,
-                drawAuthorLine = drawAuthorLine,
-                inner = inner,
-            )
         }
     }
 }
@@ -365,45 +512,8 @@ private fun InnerChatBubble(
     drawAuthorLine: @Composable () -> Unit,
     inner: @Composable (MutableState<Color>) -> Unit,
 ) {
-    val haptic = LocalHapticFeedback.current
-    val popupExpanded = remember { mutableStateOf(false) }
-
-    val pressInteractionSource = remember { MutableInteractionSource() }
-    val isPressed by pressInteractionSource.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(if (isPressed) 0.97f else 1f, label = "bubblePressScale")
-
-    val indication = LocalIndication.current
-    // The modifier is built once, so it reads the callbacks through these: capturing them directly
-    // kept the first composition's onClick, which scrolls to a quoted message by an index from the
-    // list as it was then, off by however many messages arrived since.
-    val currentOnClick by rememberUpdatedState(onClick)
-    val currentOnDoubleTap by rememberUpdatedState(onDoubleTap)
-    val hasDoubleTap = onDoubleTap != null
-    val clickableModifier =
-        remember(hasDoubleTap, indication) {
-            Modifier.combinedClickable(
-                interactionSource = pressInteractionSource,
-                indication = indication,
-                onClick = {
-                    // Only inner-quote bubbles do anything on tap (scroll to the quoted
-                    // message); a normal bubble tap is a no-op.
-                    currentOnClick()
-                },
-                onLongClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    popupExpanded.value = true
-                },
-                onDoubleClick =
-                    if (hasDoubleTap) {
-                        {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            currentOnDoubleTap?.invoke()
-                        }
-                    } else {
-                        null
-                    },
-            )
-        }
+    val press = rememberChatPress(onClick, onDoubleTap)
+    val pressScale by press.scale
 
     Column(
         horizontalAlignment = if (isLoggedInUser) Alignment.End else Alignment.Start,
@@ -417,7 +527,7 @@ private fun InnerChatBubble(
             color = if (transparentBubble && !highlightActive) Color.Transparent else animatedColor,
             shape = chatBubbleShapeFor(isLoggedInUser, if (innerQuote) ChatGroupPosition.SINGLE else groupPosition),
             modifier =
-                clickableModifier.graphicsLayer {
+                press.modifier.graphicsLayer {
                     scaleX = pressScale
                     scaleY = pressScale
                 },
@@ -453,11 +563,241 @@ private fun InnerChatBubble(
         reactionsRow?.invoke()
     }
 
-    if (popupExpanded.value) {
+    ChatActionMenuHost(press, actionMenu)
+}
+
+/** Tap, long-press (the action menu) and double-tap handling shared by every chat layout. */
+private class ChatPressState(
+    val modifier: Modifier,
+    val popupExpanded: MutableState<Boolean>,
+    val scale: State<Float>,
+)
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun rememberChatPress(
+    onClick: () -> Boolean,
+    onDoubleTap: (() -> Unit)?,
+): ChatPressState {
+    val haptic = LocalHapticFeedback.current
+    val popupExpanded = remember { mutableStateOf(false) }
+
+    val pressInteractionSource = remember { MutableInteractionSource() }
+    val isPressed by pressInteractionSource.collectIsPressedAsState()
+    val pressScale = animateFloatAsState(if (isPressed) 0.97f else 1f, label = "bubblePressScale")
+
+    val indication = LocalIndication.current
+    // The modifier is built once, so it reads the callbacks through these: capturing them directly
+    // kept the first composition's onClick, which scrolls to a quoted message by an index from the
+    // list as it was then, off by however many messages arrived since.
+    val currentOnClick by rememberUpdatedState(onClick)
+    val currentOnDoubleTap by rememberUpdatedState(onDoubleTap)
+    val hasDoubleTap = onDoubleTap != null
+    val clickableModifier =
+        remember(hasDoubleTap, indication) {
+            Modifier.combinedClickable(
+                interactionSource = pressInteractionSource,
+                indication = indication,
+                onClick = {
+                    // Only inner-quote bubbles do anything on tap (scroll to the quoted
+                    // message); a normal bubble tap is a no-op.
+                    currentOnClick()
+                },
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    popupExpanded.value = true
+                },
+                onDoubleClick =
+                    if (hasDoubleTap) {
+                        {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            currentOnDoubleTap?.invoke()
+                        }
+                    } else {
+                        null
+                    },
+            )
+        }
+
+    return remember(clickableModifier, pressScale) { ChatPressState(clickableModifier, popupExpanded, pressScale) }
+}
+
+@Composable
+private fun ChatActionMenuHost(
+    press: ChatPressState,
+    actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
+) {
+    if (press.popupExpanded.value) {
         actionMenu {
-            popupExpanded.value = false
+            press.popupExpanded.value = false
         }
     }
+}
+
+/**
+ * The COMPACT (IRC/Twitch) line: the author's colored name, then the message in the rest of the
+ * width, then the footer (time, delivery, glyphs) at the end. Every line names its author, the
+ * user included, since nothing else tells one side from the other.
+ */
+@Composable
+private fun CompactChatLine(
+    modifier: Modifier,
+    repeatsAuthorAbove: Boolean,
+    animatedColor: Color,
+    bgColor: MutableState<Color>,
+    onClick: () -> Boolean,
+    onDoubleTap: (() -> Unit)?,
+    onAuthorClick: () -> Unit,
+    actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
+    reactionsRow: (@Composable () -> Unit)?,
+    footerRow: (@Composable () -> Unit)?,
+    drawAuthorLine: @Composable () -> Unit,
+    inner: @Composable (MutableState<Color>) -> Unit,
+) {
+    val press = rememberChatPress(onClick, onDoubleTap)
+
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(ChatCompactRowShape)
+                .background(animatedColor)
+                .then(press.modifier)
+                .then(ChatCompactRowInset),
+        verticalAlignment = Alignment.Top,
+    ) {
+        // Baseline-aligned with the first line of the message; a body that reports no baseline
+        // (media) falls back to the top, which is where the name belongs beside it anyway.
+        Box(
+            modifier =
+                ChatCompactNameColumn
+                    .alignByBaseline()
+                    .graphicsLayer { alpha = if (repeatsAuthorAbove) CHAT_COMPACT_REPEATED_NAME_ALPHA else 1f },
+            contentAlignment = Alignment.TopEnd,
+        ) {
+            Box(Modifier.clickable(onClick = onAuthorClick)) {
+                drawAuthorLine()
+            }
+        }
+        Spacer(ChatCompactNameGap)
+        // The footer goes under the text, not beside it: beside it, a long timestamp narrowed
+        // every line of the message and left a ragged second column down the right.
+        Column(Modifier.weight(1f).alignByBaseline()) {
+            CompositionLocalProvider(LocalChatJumboEmoji provides false) {
+                inner(bgColor)
+            }
+            if (reactionsRow != null) {
+                Box(ChatChipBubbleInsetUndo) { reactionsRow() }
+            }
+            footerRow?.invoke()
+        }
+    }
+
+    ChatActionMenuHost(press, actionMenu)
+}
+
+/**
+ * Someone else's message in the OPEN layout: open, full-width text with no bubble, like a reply in
+ * an AI assistant's conversation view. The first message of a group chat run opens with the
+ * author's face and name; reactions and the footer follow underneath.
+ */
+@Composable
+private fun OpenChatMessage(
+    modifier: Modifier,
+    drawAuthorInfo: Boolean,
+    animatedColor: Color,
+    bgColor: MutableState<Color>,
+    onClick: () -> Boolean,
+    onDoubleTap: (() -> Unit)?,
+    onAuthorClick: () -> Unit,
+    actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
+    reactionsRow: (@Composable () -> Unit)?,
+    footerRow: (@Composable () -> Unit)?,
+    drawAuthorLine: @Composable () -> Unit,
+    authorAvatar: (@Composable (size: Dp) -> Unit)?,
+    inner: @Composable (MutableState<Color>) -> Unit,
+) {
+    val press = rememberChatPress(onClick, onDoubleTap)
+
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .then(ChatOpenMaxWidth)
+                .clip(ChatOpenRowShape)
+                .background(animatedColor)
+                .then(press.modifier)
+                .then(ChatOpenRowInset),
+        verticalArrangement = ChatOpenStackSpacing,
+    ) {
+        if (drawAuthorInfo) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (authorAvatar != null) {
+                    authorAvatar(ChatOpenAvatarSize)
+                    Spacer(ChatOpenHeaderGap)
+                }
+                Box(Modifier.clickable(onClick = onAuthorClick)) {
+                    drawAuthorLine()
+                }
+            }
+        }
+
+        inner(bgColor)
+
+        if (reactionsRow != null) {
+            Box(ChatChipBubbleInsetUndo) { reactionsRow() }
+        }
+
+        if (footerRow != null) {
+            footerRow()
+        }
+    }
+
+    ChatActionMenuHost(press, actionMenu)
+}
+
+/**
+ * A quoted reply in the COMPACT and OPEN layouts: a tinted block with a bar down its leading
+ * edge, the author's name over a preview of what they said. Tapping it goes to the message.
+ */
+@Composable
+private fun ChatQuoteBlock(
+    isLoggedInUser: Boolean,
+    filled: Boolean,
+    drawAuthorInfo: Boolean,
+    animatedColor: Color,
+    bgColor: MutableState<Color>,
+    onClick: () -> Boolean,
+    onDoubleTap: (() -> Unit)?,
+    onAuthorClick: () -> Unit,
+    actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
+    drawAuthorLine: @Composable () -> Unit,
+    inner: @Composable (MutableState<Color>) -> Unit,
+) {
+    val press = rememberChatPress(onClick, onDoubleTap)
+    val barColor = if (isLoggedInUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.placeholderText
+
+    // The bar is drawn behind rather than laid out as a child, so the block never has to ask its
+    // content for intrinsic sizes (a quoted message can hold media that cannot answer that).
+    Column(
+        modifier =
+            Modifier
+                .clip(ChatQuoteBlockShape)
+                .background(if (filled) animatedColor else Color.Transparent)
+                .drawBehind { drawRect(barColor, size = Size(ChatQuoteBarWidth.toPx(), size.height)) }
+                .then(press.modifier)
+                .then(ChatQuoteBlockInset),
+        verticalArrangement = RowColSpacing5dp,
+    ) {
+        if (drawAuthorInfo) {
+            Box(Modifier.clickable(onClick = onAuthorClick)) {
+                drawAuthorLine()
+            }
+        }
+        inner(bgColor)
+    }
+
+    ChatActionMenuHost(press, actionMenu)
 }
 
 @Preview

@@ -28,6 +28,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import com.vitorpamplona.amethyst.commons.model.AccentColorType
 import com.vitorpamplona.amethyst.commons.model.BooleanType
+import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
 import com.vitorpamplona.amethyst.commons.model.ConnectivityType
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
@@ -75,6 +76,7 @@ class UiSettingsStoreTest {
             assertEquals(FontSizeType.NORMAL, settings.fontSize)
             assertEquals("", settings.composeSignature)
             assertEquals(NoteLayoutType.AUTHOR_COLUMN, settings.noteLayout)
+            assertEquals(ChatLayoutType.BUBBLES, settings.chatLayout)
             assertEquals(ConnectivityType.WIFI_ONLY, settings.automaticallyDownloadTranslationModels)
 
             // Not a constant, and not the data class default either: UiSettings()
@@ -147,6 +149,7 @@ class UiSettingsStoreTest {
                     noteLayout = NoteLayoutType.EDGE_TO_EDGE,
                     automaticallyDownloadTranslationModels = ConnectivityType.ALWAYS,
                     hideWalletBalances = true,
+                    chatLayout = ChatLayoutType.COMPACT,
                 )
 
             store.save(settings)

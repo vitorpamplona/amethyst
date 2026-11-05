@@ -77,7 +77,24 @@ data class UiSettings(
     // default: a feed full of languages would otherwise pull several of them over mobile data.
     val automaticallyDownloadTranslationModels: ConnectivityType = ConnectivityType.WIFI_ONLY,
     val hideWalletBalances: Boolean = false,
+    // How a chat room draws its messages: bubbles, compact IRC-style lines, or open full-width text.
+    val chatLayout: ChatLayoutType = ChatLayoutType.BUBBLES,
 )
+
+/**
+ * How chat rooms (DMs, public chats, groups) draw their messages.
+ *
+ * - [BUBBLES]: messenger bubbles, the user's own on the right and everyone else's on the left.
+ * - [COMPACT]: one dense left-aligned line per message, `Name  text` with each author in their own
+ *   color, like IRC and Twitch chat. Every line names its author, the user included.
+ * - [OPEN]: the user's own messages in soft bubbles on the right and everyone else's as open,
+ *   full-width text with no bubble, like the conversation view of AI assistant apps.
+ */
+enum class ChatLayoutType {
+    BUBBLES,
+    COMPACT,
+    OPEN,
+}
 
 /**
  * How feed notes place their author and media. [AUTHOR_COLUMN] keeps the picture in a column to

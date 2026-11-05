@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Icon
@@ -33,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,10 +88,19 @@ import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WebxdcSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.richtext.dropBlankLinesAroundBlocks
+import com.vitorpamplona.amethyst.commons.richtext.isBlankLine
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideZoomSourceGroup
 import com.vitorpamplona.amethyst.commons.ui.note.WebxdcPostCard
+
+/**
+ * How tall a blank line between paragraphs renders, as a fraction of a text line. 1 everywhere by
+ * default. The open and compact chat layouts set it lower: there a message has no bubble edge, and
+ * a full-height blank line inside one is as tall as the gap to the next message, so one message's
+ * paragraphs read as separate messages.
+ */
+val LocalBlankLineScale = compositionLocalOf { 1f }
 
 /**
  * Cross-platform rich-text renderer. Owns everything identical on every front
@@ -115,6 +127,13 @@ fun RichTextViewer(
     val baseStyle = LocalTextStyle.current
     val paragraphStyle = remember(baseStyle) { baseStyle.copy(lineHeight = 1.3.em) }
     val paragraphs = remember(state, canPreview) { dropBlankLinesAroundBlocks(state.paragraphs, canPreview) }
+    val blankLineScale = LocalBlankLineScale.current
+    val density = LocalDensity.current
+    val blankLineHeight =
+        remember(paragraphStyle, blankLineScale, density) {
+            val fontSize = if (paragraphStyle.fontSize.isSp) paragraphStyle.fontSize else 16.sp
+            with(density) { (fontSize * 1.3f * blankLineScale).toDp() }
+        }
 
     // Only this text's own media may run past its column; cards and quotes it embeds keep theirs in.
     val mediaBleed = LocalMediaBleed.current
@@ -125,7 +144,9 @@ fun RichTextViewer(
             Column(modifier) {
                 paragraphs.forEach { paragraph ->
                     val align = if (paragraph.isRTL) Alignment.End else Alignment.Start
-                    if (paragraph is ImageGalleryParagraph) {
+                    if (blankLineScale != 1f && paragraph.isBlankLine()) {
+                        Spacer(Modifier.height(blankLineHeight))
+                    } else if (paragraph is ImageGalleryParagraph) {
                         ProvideMediaBleed(mediaBleed) {
                             renderer.Gallery(paragraph, state, Modifier.align(align))
                         }

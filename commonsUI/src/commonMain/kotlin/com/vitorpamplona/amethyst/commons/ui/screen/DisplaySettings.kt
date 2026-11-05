@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.NoteLayoutType
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
@@ -52,6 +53,8 @@ data class DisplaySettings(
     val noteLayout: NoteLayoutType = NoteLayoutType.AUTHOR_COLUMN,
     /** Complete UI mode: a note's header adds a second row (NIP-05, status or npub) under the name. */
     val completeUiMode: Boolean = false,
+    /** How chat rooms draw their messages: bubbles, compact IRC-style lines, or open text. */
+    val chatLayout: ChatLayoutType = ChatLayoutType.BUBBLES,
 ) {
     /** Robohash fallbacks are skipped in performance mode (a plain face icon instead). */
     val loadRobohash: Boolean get() = !performanceMode
@@ -84,14 +87,16 @@ fun collectDisplaySettings(settings: UiSettingsState): DisplaySettings {
     val featureSet by settings.uiSettingsFlow.featureSet.collectAsStateWithLifecycle()
     val autoPlayVideos by settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
     val noteLayout by settings.uiSettingsFlow.noteLayout.collectAsStateWithLifecycle()
+    val chatLayout by settings.uiSettingsFlow.chatLayout.collectAsStateWithLifecycle()
 
-    return remember(showProfilePictures, featureSet, autoPlayVideos, noteLayout) {
+    return remember(showProfilePictures, featureSet, autoPlayVideos, noteLayout, chatLayout) {
         DisplaySettings(
             showProfilePictures = showProfilePictures,
             performanceMode = featureSet == FeatureSetType.PERFORMANCE,
             autoPlayVideos = autoPlayVideos,
             noteLayout = noteLayout,
             completeUiMode = featureSet == FeatureSetType.COMPLETE,
+            chatLayout = chatLayout,
         )
     }
 }

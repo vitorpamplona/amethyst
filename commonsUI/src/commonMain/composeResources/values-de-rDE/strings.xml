@@ -6587,7 +6587,7 @@
     <string name="cordn_chat_empty_description">Alles, was hier gesendet wird, ist für diese Gruppe verschlüsselt. Der Koordinator leitet es weiter, ohne es lesen zu können.</string>
     <string name="cordn_chat_empty_title">Noch keine Nachrichten</string>
     <string name="cordn_chat_unread_divider">Neue Nachrichten</string>
-    <string name="cordn_chat_yesterday">Gestern</string>
+    <string name="yesterday">Gestern</string>
     <string name="cordn_composer_hint">Nachricht</string>
     <string name="cordn_coordinators_add_action">Hinzufügen</string>
     <string name="cordn_coordinators_add_failed">Dieser Koordinator konnte nicht geöffnet werden.</string>

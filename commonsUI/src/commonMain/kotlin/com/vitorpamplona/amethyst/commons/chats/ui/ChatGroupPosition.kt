@@ -27,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.privateChats.isSubjectOnlyChatMessage
-import com.vitorpamplona.amethyst.commons.ui.note.dateFormatter
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMeBottom
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMeMiddle
@@ -128,10 +127,8 @@ private fun groupsWith(
     // A subject header renders as a divisor above the newer message.
     if (newerEvent.subject() != null) return false
 
-    // Same rendered date as the day divisor uses (the strings only matter for
-    // null/today sentinels, which compare equal for same-day timestamps).
-    return dateFormatter(newerEvent.createdAt, "never", "today") ==
-        dateFormatter(olderEvent.createdAt, "never", "today")
+    // The same calendar day the day divisor compares.
+    return chatDayKey(newerEvent.createdAt) == chatDayKey(olderEvent.createdAt)
 }
 
 /**
