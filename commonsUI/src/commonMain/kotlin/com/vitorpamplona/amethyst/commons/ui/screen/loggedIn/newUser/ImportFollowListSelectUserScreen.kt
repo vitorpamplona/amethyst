@@ -137,7 +137,7 @@ fun ImportFollowListSelectUserScreen(
         topBar = {
             TopBarExtensibleWithBackButton(
                 title = {},
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
     ) { padding ->

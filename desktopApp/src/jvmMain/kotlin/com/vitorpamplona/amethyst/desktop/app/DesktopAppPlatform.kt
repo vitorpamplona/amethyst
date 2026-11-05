@@ -29,6 +29,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
@@ -82,6 +83,9 @@ class DesktopAppPlatform(
     private val nappletHost: DesktopNappletHost? = null,
 ) : AppPlatform {
     override val appFlavor: String get() = "desktop"
+
+    // A desktop window is desktop-size: it offers tabs and one window per screen next to the stack.
+    override val navigationLayouts: List<NavigationLayoutType> get() = NavigationLayoutType.entries
 
     /** Where the shared app's toasts show up: a snackbar at the bottom of the window. */
     val snackbarHostState = SnackbarHostState()

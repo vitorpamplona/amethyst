@@ -104,11 +104,13 @@ fun WalletDetailScreen(
             TopAppBar(
                 title = { Text(walletAlias ?: walletName) },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        Icon(
-                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(Res.string.back),
-                        )
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            Icon(
+                                symbol = MaterialSymbols.AutoMirrored.ArrowBack,
+                                contentDescription = stringRes(Res.string.back),
+                            )
+                        }
                     }
                 },
                 actions = {

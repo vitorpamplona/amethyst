@@ -186,8 +186,10 @@ fun MinichatScreen(
             TopAppBar(
                 title = { Text(stringRes(Res.string.chat_minichat_title), maxLines = 1) },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                        }
                     }
                 },
                 actions = {

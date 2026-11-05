@@ -30,10 +30,10 @@ import com.vitorpamplona.amethyst.commons.resources.automatically_play_videos
 import com.vitorpamplona.amethyst.commons.resources.automatically_show_profile_picture
 import com.vitorpamplona.amethyst.commons.resources.automatically_show_url_preview
 import com.vitorpamplona.amethyst.commons.resources.autoplay_videos
-import com.vitorpamplona.amethyst.commons.resources.deck_mode
 import com.vitorpamplona.amethyst.commons.resources.font_family
 import com.vitorpamplona.amethyst.commons.resources.font_size
 import com.vitorpamplona.amethyst.commons.resources.language
+import com.vitorpamplona.amethyst.commons.resources.navigation_layout
 import com.vitorpamplona.amethyst.commons.resources.relays
 import com.vitorpamplona.amethyst.commons.resources.theme
 import com.vitorpamplona.amethyst.commons.resources.ui_preferences
@@ -60,7 +60,7 @@ class UiPreferencesSearchKeywordsTest {
             Res.string.language,
             Res.string.ui_style,
             Res.string.automatically_hide_nav_bars,
-            Res.string.deck_mode,
+            Res.string.navigation_layout,
             Res.string.automatically_load_images_gifs,
             Res.string.automatically_play_videos,
             Res.string.autoplay_videos,

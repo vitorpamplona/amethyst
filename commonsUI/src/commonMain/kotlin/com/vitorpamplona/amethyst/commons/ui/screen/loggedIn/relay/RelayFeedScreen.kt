@@ -98,7 +98,7 @@ fun RelayFeedScreen(
                     Text(normalizedUrl.url, modifier = Modifier.weight(1f))
                     RelayFeedActionOptions(normalizedUrl, accountViewModel)
                 },
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
         floatingButton = {

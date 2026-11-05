@@ -77,7 +77,7 @@ fun LoadRedirectScreen(
         topBar = {
             TopBarExtensibleWithBackButton(
                 title = { Text(stringRes(Res.string.looking_for_event_title)) },
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
         accountViewModel = accountViewModel,

@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
+import com.vitorpamplona.amethyst.commons.model.navigation.NavRequest
 import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +42,11 @@ import kotlin.reflect.KClass
  */
 val LocalNavStackEntry = staticCompositionLocalOf<NavStackEntry?> { null }
 
+/**
+ * The navigation every screen calls, for any layout: each verb becomes one [NavRequest] that the
+ * window's [NavBackStacks] model reads its own way (a push, a tab, a window). Requests run after the
+ * keyboard settles.
+ */
 @Stable
 class Nav(
     val stacks: NavBackStacks,
@@ -61,6 +67,39 @@ class Nav(
     /** The screen on top. Snapshot state: composables reading it recompose when it changes. */
     val currentRoute: Route get() = stacks.topRoute
 
+    /**
+     * Set by the shell when the press that is about to navigate held Ctrl or Cmd: the next request
+     * then opens in the background (a tab or window that does not take the focus). Read once.
+     */
+    var openNextInBackground: Boolean = false
+
+    /** What the navigation host displays: the stack, or the one screen of a tab or section. */
+    fun shownEntries(): List<NavStackEntry> = stacks.shown(wide = isDrawerDocked)
+
+    /** Runs [request] once the keyboard settles: the one way every navigation reaches the model. */
+    fun open(request: NavRequest) {
+        val asked = if (openNextInBackground) request.copy(background = true) else request
+        openNextInBackground = false
+        navigationScope.launch {
+            ime.settle()
+            stacks.open(asked)
+        }
+    }
+
+    /** [open] for a route that has to be resolved first; nothing opens when it resolves to null. */
+    fun open(
+        kind: NavRequest.Kind,
+        origin: Long? = null,
+        computeRoute: suspend () -> Route?,
+    ) {
+        val background = openNextInBackground
+        openNextInBackground = false
+        navigationScope.launch {
+            ime.settle()
+            computeRoute()?.let { stacks.open(NavRequest(it, kind, origin, background)) }
+        }
+    }
+
     override fun closeDrawer() {
         navigationScope.launch { drawerState.close() }
     }
@@ -72,53 +111,41 @@ class Nav(
         navigationScope.launch { drawerState.open() }
     }
 
-    override fun nav(route: Route) {
-        navigationScope.launch {
-            ime.settle()
-            stacks.push(route)
-        }
-    }
+    override fun nav(route: Route) = open(NavRequest(route))
 
-    override fun nav(computeRoute: suspend () -> Route?) {
-        navigationScope.launch {
-            ime.settle()
-            computeRoute()?.let { stacks.push(it) }
-        }
-    }
+    override fun nav(computeRoute: suspend () -> Route?) = open(NavRequest.Kind.Push, computeRoute = computeRoute)
 
-    /** Same push as [nav], marked [NavStackEntry.drawerRoot] so [showsBottomBar] keeps the bar on it. */
-    override fun navDrawer(route: Route) {
-        navigationScope.launch {
-            ime.settle()
-            stacks.push(route, drawerRoot = true)
-        }
-    }
+    /** Opened from the drawer: a top-level place that keeps the bar (see [showsBottomBar]). */
+    override fun navDrawer(route: Route) = open(NavRequest(route, NavRequest.Kind.Drawer))
 
-    override fun navDrawer(computeRoute: suspend () -> Route?) {
-        navigationScope.launch {
-            ime.settle()
-            computeRoute()?.let { stacks.push(it, drawerRoot = true) }
-        }
-    }
+    override fun navDrawer(computeRoute: suspend () -> Route?) = open(NavRequest.Kind.Drawer, computeRoute = computeRoute)
 
-    override fun newStack(route: Route) {
-        navigationScope.launch {
-            ime.settle()
-            stacks.newStack(route)
-        }
-    }
+    override fun newStack(route: Route) = open(NavRequest(route, NavRequest.Kind.Restart))
 
     /**
-     * A nav-bar tap asks for a tab, never for whatever the user pushed on top of one; see
-     * [NavBackStacks.switchTab]. On phones the bar shows only on tab roots and on drawer screens, but
-     * the large-screen rail stays on screen the whole time and is routinely tapped from three deep.
+     * A nav-bar tap asks for a section, never for whatever the user pushed on top of one. On phones
+     * the bar shows only on tab roots and on drawer screens, but the large-screen rail stays on
+     * screen the whole time and is routinely tapped from three deep.
      */
-    override fun navBottomBar(route: Route) {
+    override fun navBottomBar(route: Route) = open(NavRequest(route, NavRequest.Kind.Section))
+
+    override fun <T : Route> popUpTo(
+        route: Route,
+        klass: KClass<T>,
+    ) = open(NavRequest(route, NavRequest.Kind.Replace(klass)))
+
+    override fun popBack() = back(null)
+
+    /** Back from [from] (the screen on top when null), once the keyboard settles. */
+    fun back(from: NavStackEntry?) {
         navigationScope.launch {
             ime.settle()
-            stacks.switchTab(route)
+            stacks.back(from)
         }
     }
+
+    /** The navigation of the screen [entry]: what its destination draws with. */
+    fun forEntry(entry: NavStackEntry): INav = EntryNav(this, entry)
 
     @Composable
     override fun canPop(): Boolean {
@@ -129,38 +156,54 @@ class Nav(
         // composing its top bar. Reading the top there dropped the arrow before the outgoing screen
         // had finished leaving. An entry is intrinsic to its screen, so the arrow stays put until
         // the screen itself is gone. Outside a destination (shell chrome, drawer) use the top.
-        return canPop(LocalNavStackEntry.current ?: stacks.top)
+        return stacks.model.canGoBack(LocalNavStackEntry.current ?: stacks.top, wide = isDrawerDocked)
     }
 
+    /** Tab roots, the start screen and drawer screens show the bar; a screen window never does. */
     @Composable
-    override fun showsBottomBar(): Boolean {
-        val entry = LocalNavStackEntry.current ?: stacks.top
-        // Drawer destinations can pop (they sit on whatever screen the drawer was opened over),
-        // but they are top-level sections, so they keep the bar the tab roots have.
-        return entry.drawerRoot || !canPop(entry)
-    }
+    override fun showsBottomBar(): Boolean = stacks.model.showsBar(LocalNavStackEntry.current ?: stacks.top, wide = isDrawerDocked)
+}
 
-    /**
-     * Hidden on tab roots (reached via the bottom nav) and on Home (the start destination): nothing
-     * sits below either that a back arrow could return to. Every other entry is a push on top of
-     * Home, so it can always pop.
-     */
-    private fun canPop(entry: NavStackEntry): Boolean = !entry.tabRoot && entry.route != Route.Home
+/**
+ * One screen's navigation: [host]'s, with every request marked as coming from [entry]. A tab or
+ * window then opens beside the screen that asked, a replace acts on it, back closes or pops it, and
+ * its back arrow and bar answer for it rather than for whatever is on top.
+ */
+@Stable
+private class EntryNav(
+    private val host: Nav,
+    private val entry: NavStackEntry,
+) : INav by host {
+    private fun request(
+        route: Route,
+        kind: NavRequest.Kind = NavRequest.Kind.Push,
+    ) = host.open(NavRequest(route, kind, origin = entry.id))
 
-    override fun popBack() {
-        navigationScope.launch {
-            ime.settle()
-            stacks.pop()
-        }
-    }
+    override fun nav(route: Route) = request(route)
+
+    override fun nav(computeRoute: suspend () -> Route?) = host.open(NavRequest.Kind.Push, entry.id, computeRoute)
+
+    override fun navDrawer(route: Route) = request(route, NavRequest.Kind.Drawer)
+
+    override fun navDrawer(computeRoute: suspend () -> Route?) = host.open(NavRequest.Kind.Drawer, entry.id, computeRoute)
+
+    override fun newStack(route: Route) = request(route, NavRequest.Kind.Restart)
+
+    override fun navBottomBar(route: Route) = request(route, NavRequest.Kind.Section)
 
     override fun <T : Route> popUpTo(
         route: Route,
         klass: KClass<T>,
-    ) {
-        navigationScope.launch {
-            ime.settle()
-            stacks.popUpTo(route, klass)
-        }
-    }
+    ) = request(route, NavRequest.Kind.Replace(klass))
+
+    override fun popBack() = host.back(entry)
+
+    @Composable
+    override fun canPop(): Boolean = host.stacks.model.canGoBack(entry, wide = host.isDrawerDocked)
+
+    @Composable
+    override fun showsBottomBar(): Boolean = host.stacks.model.showsBar(entry, wide = host.isDrawerDocked)
+
+    @Composable
+    override fun titleShownOutside(): Boolean = host.stacks.model.titleShownOutside(entry, wide = host.isDrawerDocked)
 }

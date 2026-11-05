@@ -209,11 +209,13 @@ fun MarmotGroupInfoScreen(
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        Icon(
-                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(Res.string.back),
-                        )
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            Icon(
+                                symbol = MaterialSymbols.AutoMirrored.ArrowBack,
+                                contentDescription = stringRes(Res.string.back),
+                            )
+                        }
                     }
                 },
                 title = { Text(stringRes(Res.string.marmot_group_info_title)) },

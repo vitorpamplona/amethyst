@@ -345,8 +345,11 @@ private fun GitRepositoryHome(
             ShorterTopAppBar(
                 title = { RepoTitleBar(event = event, fallback = note.dTag(), accountViewModel = accountViewModel, nav = nav) },
                 navigationIcon = {
-                    Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                    // No arrow in a tab or a window of its own: nothing to go back to.
+                    if (nav.canPop()) {
+                        Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                        }
                     }
                 },
                 actions = {
@@ -561,8 +564,11 @@ private fun GitRepoSubScreenScaffold(
                 ShorterTopAppBar(
                     title = { TopBarTitle(event = event, fallback = fallbackTitle, section = section) },
                     navigationIcon = {
-                        Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                        // No arrow in a tab or a window of its own: nothing to go back to.
+                        if (nav.canPop()) {
+                            Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                            }
                         }
                     },
                 )

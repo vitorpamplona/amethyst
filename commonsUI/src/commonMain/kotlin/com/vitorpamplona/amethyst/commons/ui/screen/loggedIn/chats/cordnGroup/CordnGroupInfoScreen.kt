@@ -197,8 +197,10 @@ private fun InfoTopBar(
 ) {
     TopAppBar(
         navigationIcon = {
-            IconButton(onClick = { nav.popBack() }) {
-                Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+            if (nav.canPop()) {
+                IconButton(onClick = { nav.popBack() }) {
+                    Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                }
             }
         },
         title = { Text(stringRes(Res.string.cordn_group_info)) },

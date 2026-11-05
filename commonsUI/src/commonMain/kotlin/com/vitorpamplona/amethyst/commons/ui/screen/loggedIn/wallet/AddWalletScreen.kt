@@ -80,11 +80,13 @@ fun AddWalletScreen(
             TopAppBar(
                 title = { Text(stringRes(Res.string.wallet_add_choose_type)) },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        Icon(
-                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(Res.string.back),
-                        )
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            Icon(
+                                symbol = MaterialSymbols.AutoMirrored.ArrowBack,
+                                contentDescription = stringRes(Res.string.back),
+                            )
+                        }
                     }
                 },
             )

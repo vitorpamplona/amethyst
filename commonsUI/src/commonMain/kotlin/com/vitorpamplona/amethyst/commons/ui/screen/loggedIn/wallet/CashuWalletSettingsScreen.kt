@@ -133,11 +133,13 @@ fun CashuWalletSettingsScreen(
             TopAppBar(
                 title = { Text(stringRes(Res.string.cashu_settings_title)) },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        Icon(
-                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(Res.string.back),
-                        )
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            Icon(
+                                symbol = MaterialSymbols.AutoMirrored.ArrowBack,
+                                contentDescription = stringRes(Res.string.back),
+                            )
+                        }
                     }
                 },
             )

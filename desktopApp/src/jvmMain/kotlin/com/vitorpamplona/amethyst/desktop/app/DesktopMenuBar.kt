@@ -41,7 +41,11 @@ import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.MenuScope
 import androidx.compose.ui.window.WindowPlacement
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
+import com.vitorpamplona.amethyst.commons.model.navigation.NavRequest
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.SingleScreenModel
+import com.vitorpamplona.amethyst.commons.model.navigation.TabsModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.deck_add_column
 import com.vitorpamplona.amethyst.commons.resources.deck_close_column
@@ -56,11 +60,23 @@ import com.vitorpamplona.amethyst.commons.resources.desktop_menu_report_issue
 import com.vitorpamplona.amethyst.commons.resources.desktop_menu_website
 import com.vitorpamplona.amethyst.commons.resources.desktop_menu_window
 import com.vitorpamplona.amethyst.commons.resources.desktop_menu_zoom
+import com.vitorpamplona.amethyst.commons.resources.navigation_close_tab
+import com.vitorpamplona.amethyst.commons.resources.navigation_new_tab
+import com.vitorpamplona.amethyst.commons.resources.navigation_next_tab
+import com.vitorpamplona.amethyst.commons.resources.navigation_previous_tab
+import com.vitorpamplona.amethyst.commons.resources.navigation_reopen_closed
+import com.vitorpamplona.amethyst.commons.resources.navigation_window_menu_bring_all
+import com.vitorpamplona.amethyst.commons.resources.navigation_window_menu_close_all
+import com.vitorpamplona.amethyst.commons.resources.navigation_window_menu_reopen
+import com.vitorpamplona.amethyst.commons.resources.navigation_window_menu_show_main
+import com.vitorpamplona.amethyst.commons.resources.navigation_window_menu_to_tab
 import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckCommand
 import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckCommandBus
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerSectionsNavigateFirst
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.commons.ui.navigation.tabs.routeTitle
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -74,7 +90,10 @@ import java.awt.desktop.QuitStrategy
  * The window's navigator, once a logged-in shell exists: [DesktopAppRoot] sets it from inside the
  * navigation host, so the menu bar (which lives outside the shared app) can drive it.
  */
-class DesktopNavigator {
+class DesktopNavigator(
+    /** The app's OS windows: the main one and the screen windows. */
+    val windows: DesktopWindowManager,
+) {
     var nav by mutableStateOf<INav?>(null)
     var userPubKeyHex by mutableStateOf<String?>(null)
 
@@ -88,6 +107,23 @@ class DesktopNavigator {
     // The last shortcut run and when it last fired, to tell a held key's auto-repeat from a press.
     internal var lastShortcut: Key? = null
     internal var lastShortcutAtMillis = 0L
+
+    /** The open screens, once the shell runs: the tabs and screen windows the Window menu lists. */
+    val stacks: NavBackStacks? get() = (nav as? Nav)?.stacks
+
+    /** Whether a tab or screen window holds each screen, so Cmd/Ctrl+W and +T act on those, not on the deck. */
+    val singleScreen: Boolean get() = stacks?.isSingleScreen == true
+
+    /** Closes the focused screen window, or else the active tab. */
+    fun closeCurrentScreen() {
+        val stacks = stacks ?: return
+        val window = windows.focusedScreenWindow
+        if (window != null && stacks.windows().any { it.id == window }) {
+            stacks.close(window)
+        } else if (stacks.model is TabsModel) {
+            stacks.close(stacks.top.id)
+        }
+    }
 
     fun go(route: Route) {
         nav?.nav(route)
@@ -118,6 +154,10 @@ internal enum class Command(
     val needsLogin: Boolean = true,
     /** For the deck's focus commands, which column (0-based). */
     val column: Int = -1,
+    /** Acts on tabs and screen windows; takes its keys from the deck's while each screen has its own. */
+    val forScreens: Boolean = false,
+    /** Ctrl on every platform, as Ctrl+Tab is everywhere (Cmd+Tab switches apps on macOS). */
+    val ctrlEverywhere: Boolean = false,
 ) {
     NEW_POST(Key.N),
     SETTINGS(Key.Comma),
@@ -138,6 +178,13 @@ internal enum class Command(
     MOVE_COLUMN_LEFT(Key.PageUp, shift = true),
     MOVE_COLUMN_RIGHT(Key.PageDown, shift = true),
     SAVE_WORKSPACE(Key.S, shift = true),
+
+    // The tabs and windows layouts': they take Cmd/Ctrl+T and +W from the deck while those run.
+    NEW_TAB(Key.T, forScreens = true),
+    CLOSE_TAB(Key.W, forScreens = true),
+    REOPEN_CLOSED(Key.T, shift = true, forScreens = true),
+    NEXT_TAB(Key.Tab, forScreens = true, ctrlEverywhere = true),
+    PREVIOUS_TAB(Key.Tab, shift = true, forScreens = true, ctrlEverywhere = true),
     FOCUS_COLUMN_1(Key.One, alt = true, column = 0),
     FOCUS_COLUMN_2(Key.Two, alt = true, column = 1),
     FOCUS_COLUMN_3(Key.Three, alt = true, column = 2),
@@ -150,7 +197,7 @@ internal enum class Command(
     ;
 
     val shortcut: KeyShortcut
-        get() = if (isMac) KeyShortcut(key, meta = true, shift = shift, alt = alt) else KeyShortcut(key, ctrl = true, shift = shift, alt = alt)
+        get() = if (isMac && !ctrlEverywhere) KeyShortcut(key, meta = true, shift = shift, alt = alt) else KeyShortcut(key, ctrl = true, shift = shift, alt = alt)
 
     /** The deck's commands, which only apply while a deck is on screen. */
     val forDeck: Boolean get() = column >= 0 || this in DECK_COMMANDS
@@ -185,6 +232,11 @@ private fun DesktopNavigator.run(
         Command.FOCUS_COLUMN_4, Command.FOCUS_COLUMN_5, Command.FOCUS_COLUMN_6,
         Command.FOCUS_COLUMN_7, Command.FOCUS_COLUMN_8, Command.FOCUS_COLUMN_9,
         -> DeckCommandBus.send(DeckCommand.FocusColumn(command.column))
+        Command.NEW_TAB -> stacks?.open(NavRequest(Route.Search(), forceNew = true))
+        Command.CLOSE_TAB -> closeCurrentScreen()
+        Command.REOPEN_CLOSED -> (stacks?.model as? SingleScreenModel)?.reopenClosed()
+        Command.NEXT_TAB -> (stacks?.model as? TabsModel)?.cycle(1)
+        Command.PREVIOUS_TAB -> (stacks?.model as? TabsModel)?.cycle(-1)
     }
 }
 
@@ -198,7 +250,9 @@ fun DesktopNavigator.handleShortcut(
 ): Boolean {
     if (isMac || event.type != KeyEventType.KeyDown) return false
     if (!event.isCtrlPressed || event.isMetaPressed) return false
-    val command = Command.entries.firstOrNull { it.key == event.key && it.shift == event.isShiftPressed && it.alt == event.isAltPressed } ?: return false
+    val matching = Command.entries.filter { it.key == event.key && it.shift == event.isShiftPressed && it.alt == event.isAltPressed }
+    // Cmd/Ctrl+T and +W belong to the tabs and windows while each screen has its own, to the deck otherwise.
+    val command = (if (singleScreen) matching.firstOrNull { it.forScreens } else null) ?: matching.firstOrNull { !it.forScreens } ?: return false
     if (command.needsLogin && nav == null) return false
     // With no deck showing, the keys stay with whatever has focus (Ctrl+W in a text field, say).
     if (command.forDeck && !DeckCommandBus.active) return false
@@ -225,12 +279,16 @@ fun DesktopNavigator.handleShortcut(
 fun FrameWindowScope.DesktopMenuBar(
     navigator: DesktopNavigator,
     onQuit: () -> Unit,
+    /** The main window installs the app menu's handlers; a screen window's menu bar leaves them be. */
+    installAppMenu: Boolean = true,
 ) {
     if (!isMac) return
 
-    DisposableEffect(navigator) {
-        installAppMenuHandlers(navigator, onQuit)
-        onDispose { removeAppMenuHandlers() }
+    if (installAppMenu) {
+        DisposableEffect(navigator) {
+            installAppMenuHandlers(navigator, onQuit)
+            onDispose { removeAppMenuHandlers() }
+        }
     }
 
     val accountViewModel = navigator.accountViewModel
@@ -256,11 +314,18 @@ fun FrameWindowScope.DesktopMenuBar(
     val deckListeners by DeckCommandBus.listeners.collectAsState()
     val deckEnabled = navigator.nav != null && deckListeners > 0
 
+    val singleScreen = navigator.singleScreen
+
+    // While each screen has its own tab or window, Cmd+T and Cmd+W are theirs, not the deck's.
     @Composable
     fun MenuScope.CommandItem(
         label: String,
         command: Command,
-    ) = Item(label, enabled = deckEnabled || !command.forDeck, shortcut = command.shortcut) { navigator.run(command, onQuit) }
+    ) = Item(
+        label,
+        enabled = deckEnabled || !command.forDeck,
+        shortcut = command.shortcut.takeUnless { command.forDeck && singleScreen && Command.entries.any { it.forScreens && it.key == command.key && it.shift == command.shift } },
+    ) { navigator.run(command, onQuit) }
 
     MenuBar {
         drawer.forEach { menu -> Menu(stringRes(menu.label)) { MenuEntries(menu.entries) } }
@@ -283,6 +348,7 @@ fun FrameWindowScope.DesktopMenuBar(
             Item(stringRes(Res.string.desktop_menu_zoom)) {
                 window.placement = if (window.placement == WindowPlacement.Maximized) WindowPlacement.Floating else WindowPlacement.Maximized
             }
+            if (singleScreen) ScreenWindowItems(navigator, onQuit)
         }
         Menu(stringRes(Res.string.desktop_menu_help)) {
             Item(stringRes(Res.string.desktop_menu_website)) { DesktopBrowser.open(PROJECT_URL) }
@@ -349,3 +415,45 @@ private fun removeAppMenuHandlers() {
 private const val AUTO_REPEAT_WINDOW_MS = 700L
 
 private const val PROJECT_URL = "https://github.com/vitorpamplona/amethyst"
+
+/**
+ * The Window menu's part for the tabs and windows layouts: the tab and window commands, the main
+ * window, and every open screen window, a click raising it.
+ */
+@Composable
+private fun MenuScope.ScreenWindowItems(
+    navigator: DesktopNavigator,
+    onQuit: () -> Unit,
+) {
+    val screens = navigator.stacks?.model as? SingleScreenModel ?: return
+    val accountViewModel = navigator.accountViewModel ?: return
+    val tabsModel = screens as? TabsModel
+    val tabs = tabsModel != null
+    Separator()
+    Item(stringRes(Res.string.navigation_new_tab), shortcut = Command.NEW_TAB.shortcut) { navigator.run(Command.NEW_TAB, onQuit) }
+    Item(stringRes(Res.string.navigation_close_tab), shortcut = Command.CLOSE_TAB.shortcut) { navigator.run(Command.CLOSE_TAB, onQuit) }
+    Item(
+        stringRes(if (tabs) Res.string.navigation_reopen_closed else Res.string.navigation_window_menu_reopen),
+        enabled = screens.canReopen,
+        shortcut = Command.REOPEN_CLOSED.shortcut,
+    ) { navigator.run(Command.REOPEN_CLOSED, onQuit) }
+    if (tabs) {
+        Item(stringRes(Res.string.navigation_next_tab), shortcut = Command.NEXT_TAB.shortcut) { navigator.run(Command.NEXT_TAB, onQuit) }
+        Item(stringRes(Res.string.navigation_previous_tab), shortcut = Command.PREVIOUS_TAB.shortcut) { navigator.run(Command.PREVIOUS_TAB, onQuit) }
+    }
+    val focused = navigator.windows.focusedScreenWindow
+    if (focused != null && tabsModel != null && tabsModel.windows().any { it.id == focused }) {
+        Item(stringRes(Res.string.navigation_window_menu_to_tab)) { tabsModel.setDetached(focused, false) }
+    }
+    Separator()
+    Item(stringRes(Res.string.navigation_window_menu_show_main)) { navigator.windows.showMainWindow() }
+    Item(stringRes(Res.string.navigation_window_menu_bring_all)) { navigator.windows.bringAllToFront() }
+    val windows = screens.windows()
+    if (windows.isNotEmpty()) {
+        Item(stringRes(Res.string.navigation_window_menu_close_all)) { windows.forEach { screens.close(it.id) } }
+        Separator()
+        windows.forEach { entry ->
+            Item(routeTitle(entry.route, accountViewModel)) { screens.activate(entry.id) }
+        }
+    }
+}

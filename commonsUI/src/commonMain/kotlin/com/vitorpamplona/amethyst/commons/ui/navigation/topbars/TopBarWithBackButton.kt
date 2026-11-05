@@ -29,13 +29,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 
+private val NoActions: @Composable RowScope.() -> Unit = {}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBarWithBackButton(
     caption: String,
     nav: INav,
-    actions: @Composable RowScope.() -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = NoActions,
 ) {
+    // In a tab or a window of its own the strip or the title bar already names the screen, and there
+    // is no back arrow: a bar holding nothing but that name again is left out.
+    if (nav.titleShownOutside() && actions === NoActions) return
+
     ShorterTopAppBar(
         title = {
             Text(
@@ -46,9 +52,7 @@ fun TopBarWithBackButton(
         },
         actions = actions,
         navigationIcon = {
-            // Suppress the back arrow when this is the bottom of the back stack
-            // (i.e. the user landed here via the bottom nav, which clears the stack
-            // with popUpTo(route) { inclusive = true }).
+            // No arrow where there is nothing to go back to: a bottom-nav root, a tab, a window.
             if (nav.canPop()) {
                 IconButton(nav::popBack) {
                     ArrowBackIcon()

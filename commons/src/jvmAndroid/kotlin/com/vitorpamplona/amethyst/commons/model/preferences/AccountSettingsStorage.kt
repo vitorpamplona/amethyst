@@ -191,6 +191,7 @@ class AccountSettingsStores(
                         ?.let { FeedDefinitionSerializer.serializeList(it) },
                 deckLayoutJson = settings.deck.value.toJson(),
                 accentColor = settings.accentColor.value?.name,
+                openScreensJson = settings.openScreens.value,
             ),
         )
         notificationPrefs(npub).save(
@@ -585,6 +586,7 @@ suspend fun AccountSettingsSource.toAccountSettings(): AccountSettings =
             relayGroupViewMode = MutableStateFlow(inboxPrefs.relayGroupViewMode),
             customFeeds = MutableStateFlow(inboxPrefs.customFeeds),
             deck = MutableStateFlow(inboxPrefs.deck),
+            openScreens = MutableStateFlow(inboxPrefs.openScreens),
             concordViewMode = MutableStateFlow(inboxPrefs.concordViewMode),
             accentColor = MutableStateFlow(inboxPrefs.accentColor),
             enabledChatFeeds = MutableStateFlow(inboxPrefs.enabledChatFeeds),
@@ -780,6 +782,7 @@ private class InboxPrefs(
     val customFeeds: List<FeedDefinition>,
     val deck: DeckLayout,
     val accentColor: AccentColorType?,
+    val openScreens: String?,
 )
 
 private fun readInboxPrefs(
@@ -803,4 +806,5 @@ private fun readInboxPrefs(
     customFeeds = feedVisibility.customFeedsJson?.let { FeedDefinitionSerializer.deserializeList(it) }.orEmpty(),
     deck = feedVisibility.deckLayoutJson?.let { DeckLayout.fromJson(it) } ?: DeckLayout(),
     accentColor = feedVisibility.accentColor?.let { name -> AccentColorType.entries.firstOrNull { it.name == name } },
+    openScreens = feedVisibility.openScreensJson,
 )

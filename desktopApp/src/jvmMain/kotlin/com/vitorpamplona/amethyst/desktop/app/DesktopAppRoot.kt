@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.desktop.app
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,6 +33,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalWindowInfo
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
@@ -50,15 +55,19 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.UnavailableScreen
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.jvmDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.commons.ui.navigation.windows.ScreenWindowSpec
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.buildSettingsCatalog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.desktop.platform.AppWindow
+import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * The desktop's answers to the shared app root. The window size comes from the default
@@ -79,7 +88,7 @@ class DesktopAppRoot(
     private val host by lazy { DesktopAccountViewModelHost(modules) }
 
     /** Hands the logged-in shell's navigator to the menu bar, which lives outside the shared app. */
-    val navigator = DesktopNavigator()
+    val navigator = DesktopNavigator(DesktopWindowManager { File(modules.filesDir, "screen-windows.properties") })
 
     override fun createAccountViewModel(account: Account): AccountViewModel =
         AccountViewModel(
@@ -143,12 +152,43 @@ class DesktopAppRoot(
         }
     }
 
+    /**
+     * A screen window: placed and sized by [DesktopWindowManager]. It carries the app's shortcuts
+     * and, on macOS, its menu bar, and shows the toasts while it has the focus.
+     */
+    @Composable
+    override fun ScreenWindow(
+        window: ScreenWindowSpec,
+        content: @Composable () -> Unit,
+    ) {
+        val windows = navigator.windows
+        val state = remember(window.id) { windows.initialState(window) }
+        val quit = { modules.quitRequests.tryEmit(Unit) }
+        AppWindow(
+            onCloseRequest = window.onClose,
+            state = state,
+            title = window.title,
+            icon = IconResources.adaptedBitmapPainter,
+            onPreviewKeyEvent = { navigator.handleShortcut(it, onQuit = { quit() }) },
+        ) {
+            val focused = LocalWindowInfo.current.isWindowFocused
+            windows.ScreenWindowEffects(window, this.window, state, focused)
+            frameScope?.DesktopMenuBar(navigator, onQuit = { quit() }, installAppMenu = false)
+
+            val snackbars = (LocalAppPlatform.current as? DesktopAppPlatform)?.snackbarHostState
+            Box(Modifier.fillMaxSize()) {
+                content()
+                // Toasts show in the window the user is in.
+                if (focused && snackbars != null) SnackbarHost(snackbars, Modifier.align(Alignment.BottomCenter))
+            }
+        }
+    }
+
     override fun registerDestinations(
         destinations: NavDestinations,
         accountViewModel: AccountViewModel,
-        nav: Nav,
     ) {
-        destinations.jvmDestinations(accountViewModel, nav)
+        destinations.jvmDestinations(accountViewModel)
         // Screens only Android has (Health Connect, the QR camera, share-as-image...) still have
         // ways in here: synced bar items, links, shared menus. Show a notice, not a crash.
         destinations.unavailable { UnavailableScreen(nav) }
@@ -178,6 +218,15 @@ class DesktopAppRoot(
                     hasKeyStorage = hasKeyStorage,
                 )
             }
+
+        // A section asked for from a screen window, or a layout switch, brings the main window back.
+        LaunchedEffect(nav) {
+            snapshotFlow { nav.stacks.model.windowFocus }.collect { focus ->
+                val model = nav.stacks.model
+                if (focus != null && model.entries.any { it.id == focus.id && model.isMainScreen(it) }) navigator.windows.showMainWindow()
+            }
+        }
+        LaunchedEffect(nav.stacks.arrangement) { navigator.windows.showMainWindow(raise = false) }
 
         DisposableEffect(nav, accountViewModel, destinations, settingsCatalog) {
             navigator.nav = nav

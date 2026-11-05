@@ -96,7 +96,7 @@ fun UrlScreen(
                 title = {
                     Text(stringRes(Res.string.external_content_title))
                 },
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
         floatingButton = {

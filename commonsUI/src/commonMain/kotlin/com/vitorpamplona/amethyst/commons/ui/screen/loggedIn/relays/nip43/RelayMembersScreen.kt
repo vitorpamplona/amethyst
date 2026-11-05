@@ -189,11 +189,13 @@ fun RelayMembersScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        Icon(
-                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = null,
-                        )
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            Icon(
+                                symbol = MaterialSymbols.AutoMirrored.ArrowBack,
+                                contentDescription = null,
+                            )
+                        }
                     }
                 },
             )

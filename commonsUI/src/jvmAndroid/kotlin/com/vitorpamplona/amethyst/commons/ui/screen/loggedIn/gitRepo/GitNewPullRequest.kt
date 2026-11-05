@@ -253,9 +253,12 @@ private fun GitNewPullRequestForm(
             ShorterTopAppBar(
                 title = { Text(stringRes(Res.string.git_pr_new_title), fontWeight = FontWeight.SemiBold, maxLines = 1) },
                 navigationIcon = {
-                    Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                        // Leaving while the commits are pushed would hide the result it waits for.
-                        IconButton(onClick = nav::popBack, enabled = !working) { ArrowBackIcon() }
+                    // No arrow in a tab or a window of its own: nothing to go back to.
+                    if (nav.canPop()) {
+                        Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
+                            // Leaving while the commits are pushed would hide the result it waits for.
+                            IconButton(onClick = nav::popBack, enabled = !working) { ArrowBackIcon() }
+                        }
                     }
                 },
                 actions = {

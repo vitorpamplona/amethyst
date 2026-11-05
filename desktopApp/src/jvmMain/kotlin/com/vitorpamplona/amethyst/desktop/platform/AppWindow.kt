@@ -99,14 +99,16 @@ fun AppWindow(
     alwaysOnTop: Boolean = false,
     fullscreenDevice: GraphicsDevice? = null,
     onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
+    visible: Boolean = true,
     content: @Composable AppWindowScope.() -> Unit,
 ) {
     if (WaylandDisplay.isActive) {
-        WaylandWindow(onCloseRequest, state, title, icon, undecorated, transparent, resizable, alwaysOnTop, fullscreenDevice, onPreviewKeyEvent, content)
+        WaylandWindow(onCloseRequest, state, title, icon, undecorated, transparent, resizable, alwaysOnTop, fullscreenDevice, onPreviewKeyEvent, visible, content)
     } else {
         Window(
             onCloseRequest = onCloseRequest,
             state = state,
+            visible = visible,
             title = title,
             icon = icon,
             undecorated = undecorated,
@@ -145,6 +147,7 @@ private fun WaylandWindow(
     alwaysOnTop: Boolean,
     fullscreenDevice: GraphicsDevice?,
     onPreviewKeyEvent: (KeyEvent) -> Boolean,
+    visible: Boolean,
     content: @Composable AppWindowScope.() -> Unit,
 ) {
     val currentContent by rememberUpdatedState(content)
@@ -163,6 +166,7 @@ private fun WaylandWindow(
         if (frame.title != title) frame.title = title
         if (frame.isResizable != resizable) frame.isResizable = resizable
         if (frame.isAlwaysOnTop != alwaysOnTop) frame.isAlwaysOnTop = alwaysOnTop
+        if (frame.isDisplayable && frame.isVisible != visible) frame.isVisible = visible
         frame.fullscreenDevice = fullscreenDevice
     }
 
@@ -239,7 +243,7 @@ private fun WaylandWindow(
             }
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(keyDispatcher)
 
-        frame.isVisible = true
+        frame.isVisible = visible
         frame.applyPlacement(state.placement)
 
         onDispose {

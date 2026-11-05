@@ -164,11 +164,13 @@ fun WalletTransactionsScreen(
             TopAppBar(
                 title = { Text(stringRes(Res.string.wallet_transactions)) },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        Icon(
-                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(Res.string.back),
-                        )
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            Icon(
+                                symbol = MaterialSymbols.AutoMirrored.ArrowBack,
+                                contentDescription = stringRes(Res.string.back),
+                            )
+                        }
                     }
                 },
                 actions = {

@@ -48,8 +48,11 @@ import com.vitorpamplona.amethyst.commons.account.ui.LoginOrSignupScreen
 import com.vitorpamplona.amethyst.commons.account.ui.RemoteSignerAuthPrompt
 import com.vitorpamplona.amethyst.commons.appupdate.ui.AppUpdateHost
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.arrangement
 import com.vitorpamplona.amethyst.commons.model.navigation.isSameRoute
 import com.vitorpamplona.amethyst.commons.model.navigation.lockScope
 import com.vitorpamplona.amethyst.commons.privacylock.LocalPrivacyLockState
@@ -75,7 +78,6 @@ import com.vitorpamplona.amethyst.commons.ui.keystorage.KeyStorageHost
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.TabReselectCoordinator
-import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckArea
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.AccountSwitchBottomSheet
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.AccountSwitchMenu
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerContent
@@ -86,9 +88,12 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavTransitionTier
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavigationHost
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.sharedDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.openInBackgroundOnModifiedClick
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.commons.ui.navigation.shell.AppShellLayout
+import com.vitorpamplona.amethyst.commons.ui.navigation.shell.rememberLayoutChrome
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.privacylock.PrivacyLockGate
 import com.vitorpamplona.amethyst.commons.ui.privacylock.PrivacyLockHost
@@ -104,9 +109,13 @@ import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelScope
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.withContext
 
 /**
  * The whole app below the platform's window: the login screens while logged off, and the logged-in
@@ -266,6 +275,7 @@ private fun ObserveAntiSpamFilterSettings(accountViewModel: AccountViewModel) {
     LocalCache.antiSpam.active = isSpamActive
 }
 
+@OptIn(FlowPreview::class)
 @Composable
 private fun AppNavigation(
     accountViewModel: AccountViewModel,
@@ -273,7 +283,30 @@ private fun AppNavigation(
     sessionManager: AccountSessionManager,
     root: AppRoot,
 ) {
-    val nav = rememberNav()
+    // Stack, tabs or windows, as the user picked, among the layouts this front end offers.
+    val layoutChoice by accountViewModel.settings.uiSettingsFlow.navigationLayout
+        .collectAsState()
+    val layouts = LocalAppPlatform.current.navigationLayouts
+    val layout = if (layoutChoice in layouts) layoutChoice else NavigationLayoutType.STACK
+
+    // The tabs or windows the last run left open come back, in the layout they were opened in.
+    val accountSettings = accountViewModel.account.settings
+    val nav =
+        rememberNav {
+            accountSettings.openScreens.value
+                ?.let { NavBackStacks.decode(it) }
+                ?.takeIf { it.isSingleScreen && it.arrangement == layout.arrangement() }
+        }
+    LaunchedEffect(nav, layout) { nav.stacks.changeArrangement(layout.arrangement()) }
+    LaunchedEffect(nav) {
+        // A cheap copy on every change; the JSON only once they settle, off the main thread.
+        snapshotFlow { if (nav.stacks.isSingleScreen) nav.stacks.savedState() else null }
+            .debounce(OPEN_SCREENS_SAVE_DEBOUNCE_MS)
+            .collect { state ->
+                val encoded = state?.let { withContext(Dispatchers.Default) { NavBackStacks.encode(it) } }
+                accountSettings.updateOpenScreens(encoded)
+            }
+    }
 
     // Shows the "log in to this relay?" dialog when a NIP-42 challenge needs the user to decide.
     // Hosted here rather than per account so one dialog serves the whole shell: challenges
@@ -294,10 +327,10 @@ private fun AppNavigation(
     // Built here rather than inside the navigation host, so the drawer, bars and menus can ask it
     // which screens exist before offering a way into one.
     val destinations =
-        remember(accountViewModel, nav) {
+        remember(accountViewModel) {
             NavDestinations().apply {
-                sharedDestinations(accountViewModel, nav)
-                root.registerDestinations(this, accountViewModel, nav)
+                sharedDestinations(accountViewModel)
+                root.registerDestinations(this, accountViewModel)
             }
         }
 
@@ -311,31 +344,39 @@ private fun AppNavigation(
         LocalUserFinderAccount provides accountViewModel.account,
         LocalEventFinder provides accountViewModel.dataSources().eventFinder,
     ) {
-        AppShellLayout(
-            accountViewModel = accountViewModel,
-            nav = nav,
-            drawerContent = { openAccountSwitcher -> DrawerContent(nav, openAccountSwitcher, accountViewModel) },
-            permanentDrawerContent = { openAccountSwitcher ->
-                PermanentDrawerContent(nav, openAccountSwitcher, accountViewModel) { expanded, onDismiss ->
-                    AccountSwitchMenu(expanded, onDismiss, accountViewModel, sessionManager)
-                }
-            },
-            accountSwitcherContent = { AccountSwitchBottomSheet(accountViewModel, sessionManager) },
-            suspendEdgeSwipe = root::suspendEdgeSwipe,
-            deck = rememberDeck(accountViewModel, nav, root),
-        ) {
-            // Inside the providers, so the panel reads the window's layout (its hover tooltips are
-            // for large screens).
-            EmojiPanelHost {
-                Box(Modifier.fillMaxSize()) {
-                    BuildNavigation(nav, destinations, root)
-                    // Each pinned nsite/napplet's manifest, pulled into LocalCache and kept on the device,
-                    // so a favorite opens, and serves as an intent handler, on every platform.
-                    FavoriteAppManifestPreloader(accountViewModel)
-                    root.ShellOverlay(accountViewModel)
+        val chrome = rememberLayoutChrome(layout, nav, accountViewModel, root)
+
+        // A Ctrl/Cmd-click opens what it reaches in the background (tabs and windows layouts).
+        Box(Modifier.fillMaxSize().openInBackgroundOnModifiedClick(nav)) {
+            AppShellLayout(
+                accountViewModel = accountViewModel,
+                nav = nav,
+                drawerContent = { openAccountSwitcher -> DrawerContent(nav, openAccountSwitcher, accountViewModel) },
+                permanentDrawerContent = { openAccountSwitcher ->
+                    PermanentDrawerContent(nav, openAccountSwitcher, accountViewModel) { expanded, onDismiss ->
+                        AccountSwitchMenu(expanded, onDismiss, accountViewModel, sessionManager)
+                    }
+                },
+                accountSwitcherContent = { AccountSwitchBottomSheet(accountViewModel, sessionManager) },
+                suspendEdgeSwipe = root::suspendEdgeSwipe,
+                chrome = chrome,
+            ) {
+                // Inside the providers, so the panel reads the window's layout (its hover tooltips are
+                // for large screens).
+                EmojiPanelHost {
+                    Box(Modifier.fillMaxSize()) {
+                        BuildNavigation(nav, destinations, root)
+                        // Each pinned nsite/napplet's manifest, pulled into LocalCache and kept on the device,
+                        // so a favorite opens, and serves as an intent handler, on every platform.
+                        FavoriteAppManifestPreloader(accountViewModel)
+                        root.ShellOverlay(accountViewModel)
+                    }
                 }
             }
         }
+
+        // Screens in windows of their own: the windows layout, or tabs moved out.
+        chrome.windows?.invoke()
 
         OpenFirstRoute(firstRoute, nav)
 
@@ -363,37 +404,6 @@ private fun OpenFirstRoute(
         val currentRoute = Snapshot.withoutReadObservation { getRouteWithArguments(route::class, nav) }
         if (!isSameRoute(currentRoute, route)) {
             nav.newStack(route)
-        }
-    }
-}
-
-/**
- * The deck's columns when the user turned the deck on and the window is wide enough for the
- * notification panel (about 1,200 dp); null otherwise. Each column gets the same screens as the
- * main navigation, built against the column's own back stack.
- */
-@Composable
-private fun rememberDeck(
-    accountViewModel: AccountViewModel,
-    nav: Nav,
-    root: AppRoot,
-): (@Composable (Modifier) -> Unit)? {
-    val deckMode by accountViewModel.settings.uiSettingsFlow.deckMode
-        .collectAsState()
-    if (!deckMode || !LocalScreenLayout.current.hasRoomForNotificationPanel) return null
-    return remember(accountViewModel, nav, root) {
-        { modifier ->
-            DeckArea(
-                accountViewModel = accountViewModel,
-                mainNav = nav,
-                destinationsFor = { columnNav, column ->
-                    NavDestinations().apply {
-                        sharedDestinations(accountViewModel, columnNav)
-                        root.registerDestinations(this, accountViewModel, column)
-                    }
-                },
-                modifier = modifier,
-            )
         }
     }
 }
@@ -435,6 +445,9 @@ private fun RelockOnLeave(nav: Nav) {
 }
 
 private const val RELOCK_AFTER_LEAVE_MS = 500L
+
+/** Open tabs and windows are saved this long after the last change, not on every click. */
+private const val OPEN_SCREENS_SAVE_DEBOUNCE_MS = 1_000L
 
 /** Tells [root] which screen is on top, by its route's name only: never which profile or note. */
 @Composable

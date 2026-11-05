@@ -54,7 +54,7 @@ fun GeohashTeleportScreen(
         topBar = {
             TopBarExtensibleWithBackButton(
                 title = { Text(stringRes(Res.string.geohash_teleport_title)) },
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
     ) { pad ->

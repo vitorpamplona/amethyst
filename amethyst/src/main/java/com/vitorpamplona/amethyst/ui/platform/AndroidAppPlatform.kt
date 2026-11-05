@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginViewModel
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
@@ -99,6 +100,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedOff.legal.TermsGate as FlavorT
 /** Android's [AppPlatform]: the app's own shell pieces, camera scanner, app launcher and icon caches. */
 object AndroidAppPlatform : AppPlatform {
     override val isCastingAvailable: Boolean get() = BuildConfig.IS_CASTING_AVAILABLE
+
+    // The deck works on any window wide enough for it (tablets, Chromebooks); tabs and windows are desktop's for now.
+    override val navigationLayouts: List<NavigationLayoutType> get() = listOf(NavigationLayoutType.STACK, NavigationLayoutType.DECK)
 
     // NestActivity.launch adds FLAG_ACTIVITY_NEW_TASK, so the application context can start it.
     override fun openNestRoom(addressValue: String) = NestActivity.launch(Amethyst.instance.appContext, addressValue)

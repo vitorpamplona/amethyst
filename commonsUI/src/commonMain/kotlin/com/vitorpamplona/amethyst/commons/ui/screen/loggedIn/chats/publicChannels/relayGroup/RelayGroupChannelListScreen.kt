@@ -414,7 +414,6 @@ fun RelayGroupChannelListScreen(
     // A pinned relay works both as a pushed detail (from the drawer or another screen) and as a
     // bottom-nav tab. Read once here (it is @Composable): the back arrow shows only when pushed;
     // as a bottom-nav root the bar below takes its place and the arrow hides.
-    val canPop = nav.canPop()
     val selfRoute = remember(relay) { Route.RelayGroupServer(relay.url) }
 
     Scaffold(
@@ -427,8 +426,7 @@ fun RelayGroupChannelListScreen(
                         overflow = TextOverflow.MiddleEllipsis,
                     )
                 },
-                showBackButton = canPop,
-                popBack = nav::popBack,
+                nav = nav,
                 actions = {
                     if (isBuzz) {
                         BuzzWorkspaceOverflowMenu(

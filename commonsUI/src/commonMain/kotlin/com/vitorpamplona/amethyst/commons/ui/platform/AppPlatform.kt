@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginViewModel
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
@@ -64,6 +65,13 @@ data class NostrConnectApp(
  */
 @Stable
 interface AppPlatform {
+    /**
+     * The navigation layouts this front end offers in Settings › App; the stack is always first.
+     * The deck needs a wide window and tabs and windows a desktop-size front end; with only the
+     * stack on offer the setting is not shown.
+     */
+    val navigationLayouts: List<NavigationLayoutType> get() = listOf(NavigationLayoutType.STACK)
+
     /** Whether this build can cast media to a TV (the Play flavour's Cast SDK). */
     val isCastingAvailable: Boolean get() = false
 

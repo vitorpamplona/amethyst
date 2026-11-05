@@ -118,7 +118,7 @@ import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.commons.ui.layouts.ScreenLayoutSpec
-import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.LocalNavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavigationHost
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
@@ -135,14 +135,13 @@ private val ColumnScreenLayout = ScreenLayoutSpec(NavigationStyle.NAV_RAIL, hasR
  * The deck: the active workspace's columns to the right of the main screen, in a horizontal scroll.
  * Each column is a [Route] with its own back stack, so every shared screen works as a column. A
  * strip on the left switches workspaces and adds columns; each column's header moves, resets and
- * closes it, and the handle on its left edge resizes it. [destinationsFor] builds the screens a
- * column can show, against that column's navigation.
+ * closes it, and the handle on its left edge resizes it. Columns draw from the main window's
+ * [LocalNavDestinations], each screen with its column's navigation.
  */
 @Composable
 fun DeckArea(
     accountViewModel: AccountViewModel,
     mainNav: INav,
-    destinationsFor: (columnNav: INav, column: Nav) -> NavDestinations,
     modifier: Modifier = Modifier,
 ) {
     val settings = accountViewModel.account.settings
@@ -194,7 +193,6 @@ fun DeckArea(
                             onFocus = { DeckFocus.columnId = column.id },
                             settings = settings,
                             mainNav = mainNav,
-                            destinationsFor = destinationsFor,
                         )
                     }
                 }
@@ -334,12 +332,10 @@ private fun DeckColumnPane(
     onFocus: () -> Unit,
     settings: AccountSettings,
     mainNav: INav,
-    destinationsFor: (INav, Nav) -> NavDestinations,
 ) {
     val scope = rememberCoroutineScope()
     val inner = remember(column.id) { Nav(NavBackStacks(column.root), scope) }
-    val columnNav = remember(inner, mainNav) { DeckColumnNav(inner, mainNav) }
-    val destinations = remember(columnNav) { destinationsFor(columnNav, inner) }
+    val destinations = checkNotNull(LocalNavDestinations.current)
 
     // Every column keeps its own ViewModels: entry keys restart at nav-0 in each back stack, and
     // under one owner two columns would share them.
@@ -394,7 +390,7 @@ private fun DeckColumnPane(
                 // A composer in this column docks the emoji panel here, under the column. Back reaches
                 // this column only while it is focused, so the panel closes when it loses focus.
                 EmojiPanelHost(active = focused) {
-                    NavigationHost(inner, destinations)
+                    NavigationHost(inner, destinations, navFor = { DeckColumnNav(inner.forEntry(it), mainNav) })
                 }
             }
         }

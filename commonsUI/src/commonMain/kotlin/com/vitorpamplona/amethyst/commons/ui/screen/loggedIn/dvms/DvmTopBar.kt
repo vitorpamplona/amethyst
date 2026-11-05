@@ -88,7 +88,11 @@ fun DvmTopBar(
                 }
             }
         },
-        navigationIcon = { IconButton(onClick = nav::popBack) { ArrowBackIcon() } },
+        navigationIcon = {
+            if (nav.canPop()) {
+                IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+            }
+        },
         actions = {
             // The route passes the event's hex id, so LoadNote returns a plain Note,
             // not the AddressableNote the toggle needs. Derive the AddressableNote

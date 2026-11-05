@@ -59,11 +59,11 @@ class UiSettingsFlow(
     val showOnchainWallet: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showPayToZapChip: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val searchEngine: MutableStateFlow<String> = MutableStateFlow(SearchEngines.DEFAULT.id),
-    val deckMode: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val spellCheck: MutableStateFlow<SpellCheckType> = MutableStateFlow(SpellCheckType.AUTOMATIC),
     val noteLayout: MutableStateFlow<NoteLayoutType> = MutableStateFlow(NoteLayoutType.AUTHOR_COLUMN),
     val automaticallyDownloadTranslationModels: MutableStateFlow<ConnectivityType> = MutableStateFlow(ConnectivityType.WIFI_ONLY),
     val hideWalletBalances: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val navigationLayout: MutableStateFlow<NavigationLayoutType> = MutableStateFlow(NavigationLayoutType.STACK),
     val chatLayout: MutableStateFlow<ChatLayoutType> = MutableStateFlow(ChatLayoutType.BUBBLES),
 ) {
     val listOfFlows: List<Flow<Any?>> =
@@ -99,11 +99,11 @@ class UiSettingsFlow(
             showOnchainWallet,
             showPayToZapChip,
             searchEngine,
-            deckMode,
             spellCheck,
             noteLayout,
             automaticallyDownloadTranslationModels,
             hideWalletBalances,
+            navigationLayout,
             chatLayout,
         )
 
@@ -143,11 +143,11 @@ class UiSettingsFlow(
                 flows[28] as Boolean,
                 flows[29] as Boolean,
                 flows[30] as String,
-                flows[31] as Boolean,
-                flows[32] as SpellCheckType,
-                flows[33] as NoteLayoutType,
-                flows[34] as ConnectivityType,
-                flows[35] as Boolean,
+                flows[31] as SpellCheckType,
+                flows[32] as NoteLayoutType,
+                flows[33] as ConnectivityType,
+                flows[34] as Boolean,
+                flows[35] as NavigationLayoutType,
                 flows[36] as ChatLayoutType,
             )
         }
@@ -185,11 +185,11 @@ class UiSettingsFlow(
             showOnchainWallet.value,
             showPayToZapChip.value,
             searchEngine.value,
-            deckMode.value,
             spellCheck.value,
             noteLayout.value,
             automaticallyDownloadTranslationModels.value,
             hideWalletBalances.value,
+            navigationLayout.value,
             chatLayout.value,
         )
 
@@ -320,10 +320,6 @@ class UiSettingsFlow(
             searchEngine.tryEmit(torSettings.searchEngine)
             any = true
         }
-        if (deckMode.value != torSettings.deckMode) {
-            deckMode.tryEmit(torSettings.deckMode)
-            any = true
-        }
         if (spellCheck.value != torSettings.spellCheck) {
             spellCheck.tryEmit(torSettings.spellCheck)
             any = true
@@ -338,6 +334,10 @@ class UiSettingsFlow(
         }
         if (hideWalletBalances.value != torSettings.hideWalletBalances) {
             hideWalletBalances.tryEmit(torSettings.hideWalletBalances)
+            any = true
+        }
+        if (navigationLayout.value != torSettings.navigationLayout) {
+            navigationLayout.tryEmit(torSettings.navigationLayout)
             any = true
         }
         if (chatLayout.value != torSettings.chatLayout) {
@@ -400,11 +400,11 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.showOnchainWallet),
                 MutableStateFlow(uiSettings.showPayToZapChip),
                 MutableStateFlow(uiSettings.searchEngine),
-                MutableStateFlow(uiSettings.deckMode),
                 MutableStateFlow(uiSettings.spellCheck),
                 MutableStateFlow(uiSettings.noteLayout),
                 MutableStateFlow(uiSettings.automaticallyDownloadTranslationModels),
                 MutableStateFlow(uiSettings.hideWalletBalances),
+                MutableStateFlow(uiSettings.navigationLayout),
                 MutableStateFlow(uiSettings.chatLayout),
             )
     }

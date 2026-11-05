@@ -120,7 +120,7 @@ fun RelayGroupBrowseScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                 },
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
     ) { padding ->

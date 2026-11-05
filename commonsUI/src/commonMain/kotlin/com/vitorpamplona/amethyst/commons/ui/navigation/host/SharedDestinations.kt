@@ -30,7 +30,6 @@ import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.BlossomBlobMan
 import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.BlossomImportScreen
 import com.vitorpamplona.amethyst.commons.ui.actions.nestsServers.NestsServersScreen
 import com.vitorpamplona.amethyst.commons.ui.actions.paymentTargets.PaymentTargetsScreen
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.PayViaIntentScreen
 import com.vitorpamplona.amethyst.commons.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.ReplyCommentPostScreen
@@ -303,10 +302,7 @@ import com.vitorpamplona.quartz.nip34Git.review.GitCodeLocation
  * render. A front end adds its own platform-only screens to the same [NavDestinations] after
  * calling this (Android: `appDestinations` in `AppNavigation.kt`).
  */
-fun NavDestinations.sharedDestinations(
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
+fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableCapped<Route.Home> { HomeScreen(accountViewModel, nav) }
     composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
     composableArgs<Route.Video> { VideoScreen(accountViewModel, nav, it.attachments, it.message) }

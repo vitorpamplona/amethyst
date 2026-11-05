@@ -121,7 +121,7 @@ fun NewGeohashChatScreen(
         topBar = {
             TopBarExtensibleWithBackButton(
                 title = { Text(stringRes(Res.string.new_geohash_chat_title)) },
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
     ) { pad ->

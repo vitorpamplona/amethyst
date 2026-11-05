@@ -22,221 +22,122 @@ package com.vitorpamplona.amethyst.commons.model.navigation
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.compose.runtime.snapshots.SnapshotStateMap
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.reflect.KClass
 
 /**
- * One screen on the back stack. Two entries for the same [route] are still two screens (a profile
- * opened twice), so identity is the [id], never the route; [contentKey] is what Navigation 3 keys
- * the screen's saved UI state and ViewModels by.
- *
- * Everything else is state because it can change on an entry already on screen: [NavBackStacks.newStack]
- * hands the screen on top new arguments in place, and tapping the tab the user is standing on marks
- * it a tab root.
- */
-@Stable
-class NavStackEntry(
-    route: Route,
-    val id: Long,
-    tabRoute: Route? = null,
-    drawerRoot: Boolean = false,
-    routeVersion: Int = 0,
-) {
-    /** What this screen shows. Replaced in place when the same destination is reopened with other arguments. */
-    var route by mutableStateOf(route)
-        private set
-
-    /**
-     * How many times [route] was replaced in place. The screen is built anew for each version, with
-     * ViewModels and saved UI state of its own, so the previous arguments' ViewModels are cleared
-     * instead of living on in the entry until it is popped (which, for a tab root, is never).
-     */
-    var routeVersion by mutableStateOf(routeVersion)
-        private set
-
-    /** Hands this screen other arguments, as a new version of it. */
-    internal fun reArgue(newRoute: Route) {
-        if (newRoute == route) return
-        route = newRoute
-        routeVersion++
-    }
-
-    /**
-     * The bottom-bar route this entry is the root of, or null when it is not a tab root. Kept apart
-     * from [route] because the two can diverge — a deep link reopens the Notifications tab as
-     * `Notification(eventId)` — while the tab must still be found again under the route the bar asks for.
-     */
-    var tabRoute by mutableStateOf(tabRoute)
-
-    /** Reached from the bottom bar or rail: no back arrow, and tab switches fade instead of slide. */
-    val tabRoot: Boolean get() = tabRoute != null
-
-    /** Opened from the navigation drawer: it can pop, but keeps the bottom bar like a tab root. */
-    var drawerRoot by mutableStateOf(drawerRoot)
-
-    val contentKey: String get() = "nav-$id"
-
-    override fun equals(other: Any?): Boolean = other is NavStackEntry && other.id == id
-
-    override fun hashCode(): Int = id.hashCode()
-
-    override fun toString(): String = "NavStackEntry($id, $route, v$routeVersion, tabRoute=$tabRoute, drawerRoot=$drawerRoot)"
-}
-
-/**
- * The app's back stack, owned by the app (Navigation 3 renders whatever this holds).
- *
- * [stack] is what is on screen, bottom to top; it is never empty and normally starts at
- * [Route.Home]. [savedTabs] holds the root entry of every bottom-bar tab the user left: a tab
- * survives being left — its ViewModels and scroll position — because its entry stays here, and so
- * stays in the list whose state Navigation 3 keeps alive. Nothing *above* a tab root is ever saved:
- * switching tabs drops it first, so returning to a tab always lands on the tab itself.
+ * A window's navigation state, owned by the app (Navigation 3 renders whatever this holds): the
+ * [model] of the current [NavArrangement] (a [StackModel], a [TabsModel] or a [WindowsModel]), and the
+ * conversions between them as the user switches layouts. Every navigation goes through [open]; the
+ * stack calls ([push], [pop], [newStack], [popUpTo], [switchTab]) are shorthands for its requests.
  */
 @Stable
 class NavBackStacks private constructor(
-    initialStack: List<NavStackEntry>,
-    initialSavedTabs: Map<Route, NavStackEntry>,
-    private var nextId: Long,
+    private val ids: EntryIds,
+    initialModel: (EntryIds) -> NavModel,
 ) {
-    constructor(start: Route = Route.Home) : this(listOf(NavStackEntry(start, 0)), emptyMap(), 1)
+    constructor(start: Route = Route.Home) : this(EntryIds(0), { ids -> StackModel(ids, listOf(ids.entry(start))) })
 
-    val stack: SnapshotStateList<NavStackEntry> = mutableStateListOf<NavStackEntry>().apply { addAll(initialStack) }
+    var model: NavModel by mutableStateOf(initialModel(ids))
+        private set
 
-    val savedTabs: SnapshotStateMap<Route, NavStackEntry> = mutableStateMapOf<Route, NavStackEntry>().apply { putAll(initialSavedTabs) }
+    val arrangement: NavArrangement get() = model.arrangement
 
-    val top: NavStackEntry get() = stack.last()
+    /** Whether each screen is a tab or a window of its own, closed instead of left. */
+    val isSingleScreen: Boolean get() = model is SingleScreenModel
+
+    val top: NavStackEntry get() = model.top
 
     val topRoute: Route get() = top.route
 
-    /** Every entry whose state must stay alive: the visible stack, then the tabs the user left. */
-    fun retained(): List<NavStackEntry> = stack + savedTabs.values
+    /** Every screen the model holds, in its own order: the stack bottom to top, the tabs in strip order. */
+    val stack: List<NavStackEntry> get() = model.entries
 
-    private fun newEntry(
-        route: Route,
-        tabRoute: Route? = null,
-        drawerRoot: Boolean = false,
-    ) = NavStackEntry(route, nextId++, tabRoute, drawerRoot)
+    /** The bar's places the stack layout keeps alive while the user is elsewhere; empty in the other layouts. */
+    val savedTabs: Map<Route, NavStackEntry> get() = (model as? StackModel)?.savedTabs ?: emptyMap()
 
-    /** Pushes [route], unless it is already the screen on top. Returns whether it pushed. */
+    fun open(request: NavRequest) = model.open(request)
+
+    fun back(from: NavStackEntry? = null): Boolean = model.back(from)
+
+    fun shown(wide: Boolean): List<NavStackEntry> = model.shown(wide)
+
+    fun retained(): List<NavStackEntry> = model.retained()
+
+    fun windows(): List<NavStackEntry> = model.windows()
+
+    /** Closes the tab or window [id]; the stack has nothing to close. */
+    fun close(id: Long): Boolean = (model as? SingleScreenModel)?.close(id) ?: false
+
+    /** Pushes [route], unless it is already the screen on top (in the stack). Returns whether anything opened. */
     fun push(
         route: Route,
         drawerRoot: Boolean = false,
     ): Boolean {
-        if (topRoute == route) return false
-        stack.add(newEntry(route, drawerRoot = drawerRoot))
+        (model as? StackModel)?.let { return it.push(route, drawerRoot) }
+        open(NavRequest(route, if (drawerRoot) NavRequest.Kind.Drawer else NavRequest.Kind.Push))
         return true
     }
 
-    /** Pops the top screen; the last one is never popped. Returns whether it popped. */
-    fun pop(): Boolean {
-        if (stack.size <= 1) return false
-        stack.removeAt(stack.lastIndex)
-        return true
-    }
+    fun pop(): Boolean = back()
 
-    /**
-     * Opens [route] as the start of a fresh stretch of history: drops the most recent copy of
-     * [route] and everything above it, then shows [route] once. When the screen left on top is the
-     * same destination with other arguments, that screen takes the new arguments in place rather
-     * than stacking a second copy — the same entry, so its root flags carry over and nothing
-     * animates, as Navigation 2's single-top launch behaved. Its content is a new
-     * [NavStackEntry.routeVersion], though: the previous arguments' ViewModels are cleared.
-     */
-    fun newStack(route: Route) {
-        val existing = stack.indexOfLast { it.route == route }
-        if (existing >= 0) removeFrom(existing)
-        if (stack.isNotEmpty() && topRoute::class == route::class) {
-            top.reArgue(route)
-        } else {
-            stack.add(newEntry(route))
-        }
-    }
+    fun newStack(route: Route) = open(NavRequest(route, NavRequest.Kind.Restart))
 
-    /** Drops the most recent screen of [klass] and everything above it, then pushes [route]. */
     fun <T : Route> popUpTo(
         route: Route,
         klass: KClass<T>,
-    ) {
-        val existing = stack.indexOfLast { klass.isInstance(it.route) }
-        if (existing >= 0) removeFrom(existing)
-        stack.add(newEntry(route))
-    }
+    ) = open(NavRequest(route, NavRequest.Kind.Replace(klass)))
+
+    fun switchTab(route: Route) = open(NavRequest(route, NavRequest.Kind.Section))
 
     /**
-     * A bottom-bar or rail tap: lands on [route]'s tab itself, never on something pushed on top of a
-     * tab. The tab being left keeps its root (and so its state) in [savedTabs]; [Route.Home] stays at
-     * the bottom so back from any tab returns to Home, and back from Home leaves the app.
+     * Switches to [target]. Every switch goes through a stack: leaving the tabs keeps the active tab
+     * and the tabs that opened it, leaving the windows keeps the main window's section. Entering the
+     * tabs makes each screen of that stack a tab opened by the one below it; entering the windows
+     * keeps only its sections, in the main window.
      */
-    fun switchTab(route: Route) {
-        popPushesAboveTabRoot()
-
-        // Dropping those pushes is often the whole job: re-tapping the tab the user is inside, and
-        // every tap of Home from somewhere inside Home, end here.
-        if (isTab(top, route)) {
-            top.tabRoute = route
-            return
-        }
-
-        val homeIndex = stack.indexOfFirst { it.route == Route.Home }
-        if (homeIndex >= 0) {
-            // Only a tab root can sit above Home now; keep it, with its state, for the next visit,
-            // filed under the route the bar will ask for it by.
-            while (stack.lastIndex > homeIndex) {
-                val left = stack.removeAt(stack.lastIndex)
-                left.tabRoute?.let { savedTabs[it] = left }
+    fun changeArrangement(target: NavArrangement) {
+        if (target == arrangement) return
+        val stack = asStack()
+        model =
+            when (target) {
+                NavArrangement.STACK -> StackModel(ids, stack)
+                NavArrangement.TABS -> TabsModel.fromStack(ids, stack)
+                NavArrangement.WINDOWS -> WindowsModel.fromStack(ids, stack)
             }
-        }
-
-        if (isTab(top, route)) {
-            top.tabRoute = route
-            return
-        }
-
-        stack.add(savedTabs.remove(route)?.also { it.tabRoute = route } ?: newEntry(route, tabRoute = route))
     }
 
-    /** Whether [entry] is [route]'s tab: the screen itself, or the tab root the bar opened as [route]. */
-    private fun isTab(
-        entry: NavStackEntry,
-        route: Route,
-    ) = entry.route == route || entry.tabRoute == route
+    /** The current screens as a stack, Home at the bottom. */
+    private fun asStack(): List<NavStackEntry> {
+        val entries =
+            when (val current = model) {
+                is StackModel -> current.stack.toList()
+                is TabsModel -> current.chain(current.top).filter(current::isMainScreen)
+                is WindowsModel -> listOf(current.top)
+            }
+        return if (entries.firstOrNull()?.route == Route.Home) entries else listOf(ids.entry(Route.Home)) + entries
+    }
 
     /**
-     * Drops every screen the user pushed on top of the tab root they are in (or on top of Home,
-     * which is a tab root the user may never have tapped because the app starts there).
+     * The screens as [encode] writes them, copied out without serializing: cheap enough to take on
+     * every change (it reads every piece of state, so a snapshotFlow over it follows them all),
+     * then [encode] once the changes settle, on any thread.
      */
-    private fun popPushesAboveTabRoot() {
-        while (stack.size > 1) {
-            val top = top
-            if (top.tabRoot || top.route == Route.Home) return
-            stack.removeAt(stack.lastIndex)
-        }
-    }
+    fun savedState(): SavedState = SavedState(Saved(model.toSaved(), ids.next))
 
-    /** Removes [index] and everything above it; every caller then adds a screen, so the stack never stays empty. */
-    private fun removeFrom(index: Int) {
-        while (stack.lastIndex >= index) stack.removeAt(stack.lastIndex)
-    }
+    fun encode(): String = encode(savedState())
 
-    fun encode(): String =
-        json.encodeToString(
-            Saved.serializer(),
-            Saved(
-                stack = stack.map { it.toSaved() },
-                savedTabs = savedTabs.values.map { it.toSaved() },
-                nextId = nextId,
-            ),
-        )
+    /** An immutable copy of a window's screens, for [encode]. */
+    class SavedState internal constructor(
+        internal val saved: Saved,
+    )
 
     @Serializable
-    private class SavedEntry(
+    internal class SavedEntry(
         val route: Route,
         val id: Long,
         val tabRoute: Route? = null,
@@ -245,31 +146,79 @@ class NavBackStacks private constructor(
     )
 
     @Serializable
-    private class Saved(
-        val stack: List<SavedEntry>,
-        val savedTabs: List<SavedEntry>,
+    internal sealed class SavedModel {
+        @Serializable
+        @SerialName("stack")
+        class Stack(
+            val stack: List<SavedEntry>,
+            val savedTabs: List<SavedEntry> = emptyList(),
+        ) : SavedModel()
+
+        @Serializable
+        @SerialName("tabs")
+        class Tabs(
+            val tabs: List<SavedEntry>,
+            val activeId: Long,
+            val openers: Map<Long, Long> = emptyMap(),
+            val pinned: Set<Long> = emptySet(),
+            val detached: Set<Long> = emptySet(),
+        ) : SavedModel()
+
+        @Serializable
+        @SerialName("windows")
+        class Windows(
+            val sections: List<SavedEntry>,
+            val activeId: Long,
+            val windows: List<SavedEntry> = emptyList(),
+            val openers: Map<Long, Long> = emptyMap(),
+        ) : SavedModel()
+    }
+
+    @Serializable
+    internal class Saved(
+        val model: SavedModel,
         val nextId: Long,
     )
-
-    private fun NavStackEntry.toSaved() = SavedEntry(route, id, tabRoute, drawerRoot, routeVersion)
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
 
+        /** Writes [state] for [decode]. Touches no snapshot state, so it can run off the main thread. */
+        fun encode(state: SavedState): String = json.encodeToString(Saved.serializer(), state.saved)
+
+        private fun NavStackEntry.toSaved() = SavedEntry(route, id, tabRoute, drawerRoot, routeVersion)
+
         private fun SavedEntry.toEntry() = NavStackEntry(route, id, tabRoute, drawerRoot, routeVersion)
+
+        private fun NavModel.toSaved(): SavedModel =
+            when (this) {
+                is StackModel -> SavedModel.Stack(stack.map { it.toSaved() }, savedTabs.values.map { it.toSaved() })
+                is TabsModel -> SavedModel.Tabs(tabs.map { it.toSaved() }, activeTabId, openerMap(), pinnedIds(), detachedIds())
+                is WindowsModel -> SavedModel.Windows(sections.map { it.toSaved() }, activeSectionId, windows().map { it.toSaved() }, openerMap())
+            }
 
         /** Restores what [encode] wrote, or null when it can't be read (an app update renamed a route). */
         fun decode(encoded: String): NavBackStacks? =
             runCatching {
                 val saved = json.decodeFromString(Saved.serializer(), encoded)
-                if (saved.stack.isEmpty()) return null
-                NavBackStacks(
-                    initialStack = saved.stack.map { it.toEntry() },
-                    // Filed under the route the bar asks for, as switchTab files them: a tab re-argued
-                    // in place by newStack no longer matches its own route.
-                    initialSavedTabs = saved.savedTabs.map { it.toEntry() }.associateBy { it.tabRoute ?: it.route },
-                    nextId = saved.nextId,
-                )
+                NavBackStacks(EntryIds(saved.nextId)) { ids ->
+                    when (val model = saved.model) {
+                        is SavedModel.Stack -> {
+                            require(model.stack.isNotEmpty())
+                            // Filed under the route the bar asks for, as switchTab files them: a tab re-argued
+                            // in place no longer matches its own route.
+                            StackModel(ids, model.stack.map { it.toEntry() }, model.savedTabs.map { it.toEntry() }.associateBy { it.tabRoute ?: it.route })
+                        }
+                        is SavedModel.Tabs -> {
+                            require(model.tabs.any { it.id !in model.detached })
+                            TabsModel(ids, model.tabs.map { it.toEntry() }, model.activeId, model.openers, model.pinned, model.detached)
+                        }
+                        is SavedModel.Windows -> {
+                            require(model.sections.isNotEmpty())
+                            WindowsModel(ids, model.sections.map { it.toEntry() }, model.activeId, model.windows.map { it.toEntry() }, model.openers)
+                        }
+                    }
+                }
             }.getOrNull()
     }
 }

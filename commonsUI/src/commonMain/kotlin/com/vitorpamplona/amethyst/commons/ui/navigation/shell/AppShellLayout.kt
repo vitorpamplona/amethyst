@@ -29,11 +29,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -97,7 +99,8 @@ import kotlinx.coroutines.launch
  * [permanentDrawerContent] draw the modal and the docked drawer (both get the callback that opens
  * the account switcher), [accountSwitcherContent] fills the switcher sheet. [suspendEdgeSwipe] is
  * read while composing the modal drawer; returning true turns its left-edge swipe off, for a front
- * end with its own gesture near that edge (Android's embedded-tab selection handles).
+ * end with its own gesture near that edge (Android's embedded-tab selection handles). [chrome] is
+ * what the navigation layout adds around the main screen; its screen windows are declared by the caller.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,10 +111,16 @@ fun AppShellLayout(
     permanentDrawerContent: @Composable (openAccountSwitcher: () -> Unit) -> Unit,
     accountSwitcherContent: @Composable () -> Unit,
     suspendEdgeSwipe: () -> Boolean = { false },
-    /** The deck's columns, beside the main screen in place of the notification panel; null when the deck is off. */
-    deck: (@Composable (Modifier) -> Unit)? = null,
+    /**
+     * What the navigation layout adds: the deck's columns, beside the main screen in place of the
+     * notification panel, and a strip across the top of everything right of the docked drawer (the
+     * tabs), so the headers below it stay level.
+     */
+    chrome: LayoutChrome = LayoutChrome.None,
     content: @Composable () -> Unit,
 ) {
+    val deck = chrome.deck
+    val topStrip = chrome.topStrip
     val scope = rememberCoroutineScope()
     var openAccountSwitcherBottomSheet by rememberSaveable { mutableStateOf(false) }
 
@@ -178,7 +187,7 @@ fun AppShellLayout(
     }
 
     if (docked) {
-        PermanentDrawerShell(accountViewModel, nav, { permanentDrawerContent(openSheetFunction) }, deckSlot, notificationPanelCollapsePrefs, movableContent)
+        PermanentDrawerShell(accountViewModel, nav, { permanentDrawerContent(openSheetFunction) }, deckSlot, notificationPanelCollapsePrefs, topStrip, movableContent)
     } else {
         ModalDrawerShell(accountViewModel, nav, { drawerContent(openSheetFunction) }, suspendEdgeSwipe, deckSlot, notificationPanelCollapsePrefs, movableContent)
     }
@@ -263,6 +272,7 @@ private fun ModalDrawerShell(
                     leading = { AppNavigationRail(nav, accountViewModel) },
                     deck = deck,
                     notificationPanelCollapsePrefs = notificationPanelCollapsePrefs,
+                    topStrip = null,
                     content = content,
                 )
             } else {
@@ -292,6 +302,7 @@ private fun MultiPaneShell(
     leading: @Composable () -> Unit,
     deck: (@Composable (Modifier) -> Unit)?,
     notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences,
+    topStrip: (@Composable () -> Unit)?,
     content: @Composable () -> Unit,
 ) {
     val paneWidthPrefs = LocalAppServices.current.paneWidthPrefs
@@ -330,67 +341,75 @@ private fun MultiPaneShell(
             VerticalDivider(thickness = DividerThickness)
         }
 
-        if (deck != null) {
-            // The deck takes the notification panel's place. Like the panel, its columns take back
-            // the window-controls inset that only the leading pane sits under.
-            DeckSplit(
-                Modifier.weight(1f).fillMaxHeight(),
-                { CenterPane(Modifier.unfocusDeckOnPress(), content) },
-                { Box(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) { deck(Modifier) } },
-            )
-        } else {
-            // The content takes back the window-controls inset itself (see AppShellLayout).
-            CenterPane(Modifier.weight(1f), content)
+        Column(Modifier.weight(1f).fillMaxHeight()) {
+            if (topStrip != null) {
+                // Right of the drawer only, which is what sits under macOS's traffic lights.
+                Box(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) { topStrip() }
+            }
+            Row(Modifier.weight(1f).fillMaxWidth()) {
+                if (deck != null) {
+                    // The deck takes the notification panel's place. Like the panel, its columns take back
+                    // the window-controls inset that only the leading pane sits under.
+                    DeckSplit(
+                        Modifier.weight(1f).fillMaxHeight(),
+                        { CenterPane(Modifier.unfocusDeckOnPress(), content) },
+                        { Box(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) { deck(Modifier) } },
+                    )
+                } else {
+                    // The content takes back the window-controls inset itself (see AppShellLayout).
+                    CenterPane(Modifier.weight(1f), content)
 
-            // Only the leading pane sits under window controls drawn over the app (macOS's traffic
-            // lights): the panel to the right takes that inset back, so its header reaches the
-            // window's edge instead of growing a band under an empty title bar.
-            if (showPanel) {
-                // The panel keeps the width it fits at when open while it slides in or out, so a
-                // fold doesn't squeeze the feed into the strip on its way out.
-                val openPanelWidth =
-                    if (showFoldedStrip) {
-                        fitPaneWidths(windowWidth, widths.drawer, widths.notifications, resizableLeading, true).notifications
-                    } else {
-                        fitted.notifications
-                    }
-                // Folding slides the panel out to its strip and unfolding slides it back: the size
-                // animates (clipped, the content pinned to its leading edge, so the panel reveals
-                // from the left like a drawer) while the strip and the panel cross-fade over the
-                // theme background, not the window's, which shows through a half-faded pane.
-                AnimatedContent(
-                    targetState = panelFolded,
-                    modifier =
-                        Modifier
-                            .fillMaxHeight()
-                            .background(MaterialTheme.colorScheme.background)
-                            .consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current)),
-                    contentAlignment = Alignment.TopStart,
-                    transitionSpec = {
-                        fadeIn(tween(PANEL_FOLD_FADE_MS)) togetherWith fadeOut(tween(PANEL_FOLD_FADE_MS)) using
-                            SizeTransform(clip = true) { _, _ -> tween(PANEL_FOLD_MS, easing = FastOutSlowInEasing) }
-                    },
-                    label = "NotificationPanelFold",
-                ) { folded ->
-                    if (folded) {
-                        Row(Modifier.fillMaxHeight()) {
-                            VerticalDivider(thickness = DividerThickness)
-                            CollapsedNotificationPanel(
-                                accountViewModel = accountViewModel,
-                                collapsedAt = foldedAt,
-                                onExpand = collapsePrefs::expand,
-                            )
-                        }
-                    } else {
-                        Row(Modifier.fillMaxHeight()) {
-                            // Dragging the line left widens the panel.
-                            PaneSplitter(onDrag = { delta -> paneWidthPrefs.setNotifications((fitted.notifications - delta).coerceIn(NotificationPanelWidthRange)) })
-                            NotificationSidePanel(
-                                accountViewModel = accountViewModel,
-                                nav = nav,
-                                modifier = Modifier.width(openPanelWidth.dp),
-                                onCollapse = { collapsePrefs.collapse(TimeUtils.now()) },
-                            )
+                    // Only the leading pane sits under window controls drawn over the app (macOS's traffic
+                    // lights): the panel to the right takes that inset back, so its header reaches the
+                    // window's edge instead of growing a band under an empty title bar.
+                    if (showPanel) {
+                        // The panel keeps the width it fits at when open while it slides in or out, so a
+                        // fold doesn't squeeze the feed into the strip on its way out.
+                        val openPanelWidth =
+                            if (showFoldedStrip) {
+                                fitPaneWidths(windowWidth, widths.drawer, widths.notifications, resizableLeading, true).notifications
+                            } else {
+                                fitted.notifications
+                            }
+                        // Folding slides the panel out to its strip and unfolding slides it back: the size
+                        // animates (clipped, the content pinned to its leading edge, so the panel reveals
+                        // from the left like a drawer) while the strip and the panel cross-fade over the
+                        // theme background, not the window's, which shows through a half-faded pane.
+                        AnimatedContent(
+                            targetState = panelFolded,
+                            modifier =
+                                Modifier
+                                    .fillMaxHeight()
+                                    .background(MaterialTheme.colorScheme.background)
+                                    .consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current)),
+                            contentAlignment = Alignment.TopStart,
+                            transitionSpec = {
+                                fadeIn(tween(PANEL_FOLD_FADE_MS)) togetherWith fadeOut(tween(PANEL_FOLD_FADE_MS)) using
+                                    SizeTransform(clip = true) { _, _ -> tween(PANEL_FOLD_MS, easing = FastOutSlowInEasing) }
+                            },
+                            label = "NotificationPanelFold",
+                        ) { folded ->
+                            if (folded) {
+                                Row(Modifier.fillMaxHeight()) {
+                                    VerticalDivider(thickness = DividerThickness)
+                                    CollapsedNotificationPanel(
+                                        accountViewModel = accountViewModel,
+                                        collapsedAt = foldedAt,
+                                        onExpand = collapsePrefs::expand,
+                                    )
+                                }
+                            } else {
+                                Row(Modifier.fillMaxHeight()) {
+                                    // Dragging the line left widens the panel.
+                                    PaneSplitter(onDrag = { delta -> paneWidthPrefs.setNotifications((fitted.notifications - delta).coerceIn(NotificationPanelWidthRange)) })
+                                    NotificationSidePanel(
+                                        accountViewModel = accountViewModel,
+                                        nav = nav,
+                                        modifier = Modifier.width(openPanelWidth.dp),
+                                        onCollapse = { collapsePrefs.collapse(TimeUtils.now()) },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -469,6 +488,7 @@ private fun PermanentDrawerShell(
     drawer: @Composable () -> Unit,
     deck: (@Composable (Modifier) -> Unit)?,
     notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences,
+    topStrip: (@Composable () -> Unit)?,
     content: @Composable () -> Unit,
 ) {
     MultiPaneShell(
@@ -478,6 +498,7 @@ private fun PermanentDrawerShell(
         leading = drawer,
         deck = deck,
         notificationPanelCollapsePrefs = notificationPanelCollapsePrefs,
+        topStrip = topStrip,
         content = content,
     )
 }

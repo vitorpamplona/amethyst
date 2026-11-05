@@ -87,8 +87,7 @@ object AndroidAppRoot : AppRoot {
     override fun registerDestinations(
         destinations: NavDestinations,
         accountViewModel: AccountViewModel,
-        nav: Nav,
-    ) = destinations.androidDestinations(accountViewModel, nav)
+    ) = destinations.androidDestinations(accountViewModel)
 
     @Composable
     override fun ShellOverlay(accountViewModel: AccountViewModel) {

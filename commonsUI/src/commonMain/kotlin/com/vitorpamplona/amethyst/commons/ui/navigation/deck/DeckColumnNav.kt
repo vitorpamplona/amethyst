@@ -22,14 +22,13 @@ package com.vitorpamplona.amethyst.commons.ui.navigation.deck
 
 import androidx.compose.material3.DrawerState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 
 /**
- * A deck column's navigation: its own back stack ([column]), while the drawer stays the app's
- * ([main]), so a screen in a column that opens the drawer opens the real one.
+ * A deck column screen's navigation: its column's back stack ([column]), while the drawer stays the
+ * app's ([main]), so a screen in a column that opens the drawer opens the real one.
  */
 class DeckColumnNav(
-    val column: Nav,
+    private val column: INav,
     private val main: INav,
 ) : INav by column {
     override val drawerState: DrawerState get() = main.drawerState

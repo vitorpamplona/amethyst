@@ -144,8 +144,10 @@ fun CordnInvitationsScreen(
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                        }
                     }
                 },
                 title = { Text(stringRes(Res.string.cordn_invitations_title)) },

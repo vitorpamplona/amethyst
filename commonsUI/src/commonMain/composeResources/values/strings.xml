@@ -6264,7 +6264,7 @@
     <string name="ui_feature_set_type_simplified">Simplified</string>
     <string name="ui_feature_set_type_simplified_short">Simple</string>
     <string name="ui_preferences">UI Preferences</string>
-    <string name="ui_preferences_search_keywords" translatable="false">application, dark mode, light mode, theme, accent color, font, font size, language, appearance, ui mode, simple, fast, post layout, indented, full width, borderless, edge to edge, twitter, chat layout, chat bubbles, compact, irc, twitch, open, assistant, immersive scrolling, hide nav bars, deck, columns, workspaces, image preview, video playback, videos, autoplay, url preview, link preview, profile picture, media, data, wi-fi, updates, update, upgrade, version, download, wayland, xwayland, x11, graphics card, gpu, rendering, smooth scrolling</string>
+    <string name="ui_preferences_search_keywords" translatable="false">application, dark mode, light mode, theme, accent color, font, font size, language, appearance, ui mode, simple, fast, post layout, indented, full width, borderless, edge to edge, twitter, chat layout, chat bubbles, compact, irc, twitch, open, assistant, immersive scrolling, hide nav bars, navigation layout, stack, deck, columns, workspaces, tabs, windows, image preview, video playback, videos, autoplay, url preview, link preview, profile picture, media, data, wi-fi, updates, update, upgrade, version, download, wayland, xwayland, x11, graphics card, gpu, rendering, smooth scrolling</string>
     <string name="ui_style">UI Mode</string>
     <string name="ui_style_description">Choose the post style</string>
     <string name="note_layout">Post Layout</string>
@@ -7618,6 +7618,33 @@
     <string name="custom_feeds_search_people">Search by name, NIP-05 or npub</string>
     <string name="deck_mode">Deck</string>
     <string name="deck_mode_description">On wide windows, show extra columns beside the main screen, each with its own screen and history. Save sets of columns as workspaces.</string>
+    <string name="navigation_layout">Navigation layout</string>
+    <string name="navigation_layout_description">How screens open: on one stack, with deck columns beside it on wide windows, each in its own tab, or each in its own window. Tabs and windows have no back button: close them instead.</string>
+    <string name="navigation_layout_stack">Stack</string>
+    <string name="navigation_layout_deck">Deck</string>
+    <string name="navigation_layout_tabs">Tabs</string>
+    <string name="navigation_layout_windows">Windows</string>
+    <string name="navigation_new_tab">New tab</string>
+    <string name="navigation_close_tab">Close tab</string>
+    <string name="navigation_window_title">%1$s — Amethyst</string>
+    <string name="navigation_tab_list">Open tabs</string>
+    <string name="navigation_tab_search">Search open tabs</string>
+    <string name="navigation_tab_duplicate">Duplicate</string>
+    <string name="navigation_tab_pin">Pin tab</string>
+    <string name="navigation_tab_unpin">Unpin tab</string>
+    <string name="navigation_tab_copy_link">Copy link</string>
+    <string name="navigation_tab_to_window">Move to new window</string>
+    <string name="navigation_tab_close_others">Close other tabs</string>
+    <string name="navigation_tab_close_right">Close tabs to the right</string>
+    <string name="navigation_tab_close_opened">Close tabs opened from here (%1$d)</string>
+    <string name="navigation_reopen_closed">Reopen closed tab</string>
+    <string name="navigation_next_tab">Next tab</string>
+    <string name="navigation_previous_tab">Previous tab</string>
+    <string name="navigation_window_menu_show_main">Show main window</string>
+    <string name="navigation_window_menu_bring_all">Bring all to front</string>
+    <string name="navigation_window_menu_close_all">Close all screen windows</string>
+    <string name="navigation_window_menu_reopen">Reopen closed window</string>
+    <string name="navigation_window_menu_to_tab">Move into a tab</string>
     <string name="xwayland_rendering">Draw through XWayland</string>
     <string name="xwayland_rendering_description">Lets the graphics card draw the app, so scrolling is smoother on most computers. Text can look blurry when the screen uses fractional scaling.</string>
     <string name="xwayland_rendering_restart">Restart Amethyst to apply this change.</string>

@@ -20,13 +20,21 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.navigation.host
 
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 
 /**
@@ -48,27 +56,69 @@ fun NavigationHost(
     nav: Nav,
     destinations: NavDestinations,
     modifier: Modifier = Modifier,
+    navFor: (NavStackEntry) -> INav = nav::forEntry,
 ) {
-    val visible = nav.stacks.stack.toList()
-    val retained = visible + nav.stacks.savedTabs.values
+    NavigationHost(
+        visible = nav.shownEntries(),
+        retained = nav.stacks.retained(),
+        destinations = destinations,
+        navFor = navFor,
+        // Switching tabs or sections swaps the screen at once; only a stack slides and fades.
+        animated = !nav.stacks.isSingleScreen || nav.shownEntries().size > 1,
+        onBack = { nav.stacks.back() },
+        modifier = modifier,
+    )
+}
+
+/**
+ * Renders [visible] (bottom to top) and keeps the state of every [retained] entry: the host behind
+ * the main window's [Nav], each deck column and each screen window, which shows its one entry. Each
+ * screen draws with the navigation [navFor] gives its entry.
+ */
+@Composable
+fun NavigationHost(
+    visible: List<NavStackEntry>,
+    retained: List<NavStackEntry>,
+    destinations: NavDestinations,
+    navFor: (NavStackEntry) -> INav,
+    animated: Boolean,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val currentNavFor = rememberUpdatedState(navFor)
+    // The shown entries first: the display takes the head of the decorated list.
+    val all = visible + retained.filterNot { it in visible }
     val decorated =
         rememberDecoratedNavEntries(
-            backStack = retained,
+            backStack = all,
             entryDecorators =
                 listOf(
                     rememberSaveableStateHolderNavEntryDecorator(),
-                    rememberRouteViewModelStoreNavEntryDecorator(retained),
+                    rememberRouteViewModelStoreNavEntryDecorator(all),
                 ),
-            entryProvider = destinations::entryFor,
+            entryProvider = { entry -> destinations.entryFor(entry, currentNavFor.value) },
         )
 
+    Display(decorated.subList(0, visible.size), destinations, animated, onBack, modifier)
+}
+
+@Composable
+private fun Display(
+    entries: List<NavEntry<NavStackEntry>>,
+    destinations: NavDestinations,
+    animated: Boolean,
+    onBack: () -> Unit,
+    modifier: Modifier,
+) {
     NavDisplay(
-        entries = decorated.subList(0, visible.size),
+        entries = entries,
         modifier = modifier.background(MaterialTheme.colorScheme.background),
-        transitionSpec = { destinations.pushTransition(this) },
-        popTransitionSpec = { destinations.popTransition(this) },
+        transitionSpec = { if (animated) destinations.pushTransition(this) else NoTransition },
+        popTransitionSpec = { if (animated) destinations.popTransition(this) else NoTransition },
         // A back gesture runs the same motion as a back press, scrubbed by the finger.
-        predictivePopTransitionSpec = { destinations.popTransition(this) },
-        onBack = { nav.stacks.pop() },
+        predictivePopTransitionSpec = { if (animated) destinations.popTransition(this) else NoTransition },
+        onBack = onBack,
     )
 }
+
+private val NoTransition: ContentTransform = EnterTransition.None togetherWith ExitTransition.None

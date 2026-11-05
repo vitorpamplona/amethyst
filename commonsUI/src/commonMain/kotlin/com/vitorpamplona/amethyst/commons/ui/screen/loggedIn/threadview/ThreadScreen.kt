@@ -65,7 +65,7 @@ fun ThreadScreen(
         topBar = {
             TopBarExtensibleWithBackButton(
                 title = { Text(stringRes(id = Res.string.thread_title)) },
-                popBack = nav::popBack,
+                nav = nav,
             )
         },
         accountViewModel = accountViewModel,

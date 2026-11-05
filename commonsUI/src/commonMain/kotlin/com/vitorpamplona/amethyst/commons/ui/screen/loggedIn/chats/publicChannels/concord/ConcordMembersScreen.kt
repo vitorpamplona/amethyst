@@ -205,8 +205,10 @@ fun ConcordMembersScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                        }
                     }
                 },
             )

@@ -290,6 +290,8 @@ class AccountSettings(
     val customFeeds: MutableStateFlow<List<FeedDefinition>> = MutableStateFlow(emptyList()),
     /** The deck's workspaces and columns, shown beside the main screen on wide windows when the deck is on. */
     val deck: MutableStateFlow<DeckLayout> = MutableStateFlow(DeckLayout()),
+    /** The open tabs or windows of the tabs and windows layouts (`NavBackStacks.encode()`), restored on the next start. */
+    val openScreens: MutableStateFlow<String?> = MutableStateFlow(null),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
     var backupBolt12Offers: Bolt12OfferListEvent? = null,
@@ -1036,6 +1038,13 @@ class AccountSettings(
                 before.firstOrNull { it.id == current.id } != now -> flow.value = TopFilter.CustomFeed(current.id)
             }
         }
+    }
+
+    /** Keeps the open tabs or windows for the next start, saving when they changed. */
+    fun updateOpenScreens(encoded: String?) {
+        if (openScreens.value == encoded) return
+        openScreens.value = encoded
+        saveAccountSettings()
     }
 
     /** Applies [transform] to the deck layout and saves it when it changed. */

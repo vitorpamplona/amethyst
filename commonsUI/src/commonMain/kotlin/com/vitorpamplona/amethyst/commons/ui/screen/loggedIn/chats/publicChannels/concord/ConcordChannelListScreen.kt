@@ -394,8 +394,7 @@ fun ConcordChannelListScreen(
                         }
                     },
                 // Back arrow only when pushed from elsewhere; as a bottom-nav tab the bar takes its place.
-                showBackButton = canPop,
-                popBack = nav::popBack,
+                nav = nav,
                 actions = {
                     // One overflow instead of four icons: at phone width the icons squeezed the name, and
                     // none of these is a daily action. Destructive membership actions stay at the bottom,

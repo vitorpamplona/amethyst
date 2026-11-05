@@ -139,8 +139,10 @@ private fun EmojiPackScreenView(
                     }
                 },
                 navigationIcon = {
-                    IconButton(nav::popBack) {
-                        ArrowBackIcon()
+                    if (nav.canPop()) {
+                        IconButton(nav::popBack) {
+                            ArrowBackIcon()
+                        }
                     }
                 },
                 actions = {

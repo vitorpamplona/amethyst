@@ -147,7 +147,9 @@ fun CommunityScreen(
                     },
                     navigationIcon = {
                         Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                            if (nav.canPop()) {
+                                IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+                            }
                         }
                     },
                     actions = {
