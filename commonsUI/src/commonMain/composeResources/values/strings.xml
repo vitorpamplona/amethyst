@@ -9151,7 +9151,6 @@
     <string name="wot_nudge_first_action">Show my people first</string>
     <string name="wot_nudge_thread_label">Replies, your circle first</string>
     <string name="wot_nudge_you_follow">You follow</string>
-    <string name="wot_nudge_followed_by">Followed by %1$s</string>
     <plurals name="wot_nudge_thread_others">
         <item quantity="one">%1$d more from outside your circle</item>
         <item quantity="other">%1$d more from outside your circle</item>

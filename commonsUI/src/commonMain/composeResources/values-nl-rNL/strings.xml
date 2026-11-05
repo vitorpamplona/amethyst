@@ -5695,19 +5695,19 @@
     <string name="scheduled_posts_error_prefix">Fout: %1$s</string>
     <string name="scheduled_posts_event_id_copied">Note-ID gekopieerd</string>
     <plurals name="scheduled_posts_logout_toast">
-        <item quantity="one">Uitgelogd · %d gepland bericht verwijderd</item>
-        <item quantity="other">Uitgelogd · %d geplande berichten verwijderd</item>
+        <item quantity="one">Uitgelogd · %1$d gepland bericht verwijderd</item>
+        <item quantity="other">Uitgelogd · %1$d geplande berichten verwijderd</item>
     </plurals>
     <string name="scheduled_posts_logout_toast_zero">Uitgelogd</string>
     <plurals name="scheduled_posts_logout_warning">
-        <item quantity="one">Je hebt %d gepland bericht dat nog niet is gepubliceerd. Uitloggen verwijdert dit permanent.</item>
-        <item quantity="other">Je hebt %d geplande berichten die nog niet zijn gepubliceerd. Uitloggen verwijdert ze permanent.</item>
+        <item quantity="one">Je hebt %1$d gepland bericht dat nog niet is gepubliceerd. Uitloggen verwijdert dit permanent.</item>
+        <item quantity="other">Je hebt %1$d geplande berichten die nog niet zijn gepubliceerd. Uitloggen verwijdert ze permanent.</item>
     </plurals>
     <string name="scheduled_posts_notification_failed_title">Gepland bericht mislukt</string>
     <string name="scheduled_posts_notification_sent_title">Gepland bericht gepubliceerd</string>
     <plurals name="scheduled_posts_relay_count">
-        <item quantity="one">naar %d relay</item>
-        <item quantity="other">naar %d relays</item>
+        <item quantity="one">naar %1$d relay</item>
+        <item quantity="other">naar %1$d relays</item>
     </plurals>
     <string name="scheduled_posts_status_cancelled">Geannuleerd</string>
     <string name="scheduled_posts_status_failed">Mislukt</string>
@@ -5715,12 +5715,12 @@
     <string name="scheduled_posts_status_publishing">Verzenden…</string>
     <string name="scheduled_posts_status_sent">Verzonden</string>
     <plurals name="scheduled_posts_subtitle_due_suffix">
-        <item quantity="one"> · %d moet over 1u</item>
-        <item quantity="other"> · %d moeten over 1u</item>
+        <item quantity="one"> · %1$d moet over 1u</item>
+        <item quantity="other"> · %1$d moeten over 1u</item>
     </plurals>
     <plurals name="scheduled_posts_subtitle_queued">
-        <item quantity="one">%d in wachtrij</item>
-        <item quantity="other">%d in wachtrij</item>
+        <item quantity="one">%1$d in wachtrij</item>
+        <item quantity="other">%1$d in wachtrij</item>
     </plurals>
     <string name="search_relays_not_found_examples">Goede opties zijn:\n%1$s</string>
     <string name="search_relays_title">Zoek-relays</string>

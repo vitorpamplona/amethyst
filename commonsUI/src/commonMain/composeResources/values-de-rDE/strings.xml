@@ -9048,7 +9048,6 @@
     <string name="wot_nudge_first_action">Meine Leute zuerst zeigen</string>
     <string name="wot_nudge_thread_label">Antworten, dein Kreis zuerst</string>
     <string name="wot_nudge_you_follow">Du folgst</string>
-    <string name="wot_nudge_followed_by">Gefolgt von %1$s</string>
     <string name="wot_nudge_thread_title">Freunde zuerst in jedem Thread</string>
     <string name="wot_nudge_thread_body">Lies zuerst die Leute, die du kennst. Der Rest ist nur einen Tipp entfernt.</string>
     <string name="wot_nudge_friends_title_one">%1$s stellt die eigenen Leute an erste Stelle</string>

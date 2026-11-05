@@ -9622,7 +9622,6 @@
     <string name="wot_nudge_first_action">Zobrazit mé lidi jako první</string>
     <string name="wot_nudge_thread_label">Odpovědi, nejprve váš okruh</string>
     <string name="wot_nudge_you_follow">Sledujete</string>
-    <string name="wot_nudge_followed_by">Sleduje ho %1$s</string>
     <string name="wot_nudge_thread_title">Přátelé jako první v každém vlákně</string>
     <string name="wot_nudge_thread_body">Čtěte nejdřív lidi, které znáte. Ostatní jsou na jedno klepnutí.</string>
     <string name="wot_nudge_friends_title_one">%1$s dává přednost svým lidem</string>

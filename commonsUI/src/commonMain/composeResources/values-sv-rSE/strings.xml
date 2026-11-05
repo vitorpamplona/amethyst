@@ -9046,7 +9046,6 @@
     <string name="wot_nudge_first_action">Visa mina personer först</string>
     <string name="wot_nudge_thread_label">Svar, din krets först</string>
     <string name="wot_nudge_you_follow">Du följer</string>
-    <string name="wot_nudge_followed_by">Följs av %1$s</string>
     <string name="wot_nudge_thread_title">Vänner först i varje tråd</string>
     <string name="wot_nudge_thread_body">Hör från personerna du känner före alla andra. Resten finns ett tryck bort.</string>
     <string name="wot_nudge_friends_title_one">%1$s sätter sina personer först</string>
