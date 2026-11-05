@@ -40,9 +40,35 @@ every screen keep their types.
     `popUpTo`, and opens or raises other windows for everything else.
 - **Saving.** The mode, the active screen and the openers are saved with the stack in
   `rememberSaveable`. They aren't persisted across restarts yet.
-- **Not built yet:** keyboard shortcuts, *Open in new tab* menu items, a background open on
-  Ctrl+click, persisting across restarts, the singleton clean-up, Android windows, and the
-  account-session split (Phase 2b).
+- **Second round (after the design review):**
+  - **Strip:** it now spans the main screen and the notification panel, so their headers line
+    up. The active tab has a pill and an accent. Tabs show an icon or the person's picture,
+    shrink from 220 to 120 dp before scrolling, and the active tab scrolls into view. The ×
+    shows only on the active or hovered tab.
+  - **Pinned sections:** Home and the bar's sections are icon-only tabs at the start of the
+    strip.
+  - **Tab menu (right-click):** Duplicate, Pin, Copy link, Move to new window, Close, Close
+    others, Close to the right, and Close tabs opened from here. A tab can also be dragged to
+    reorder it.
+  - **Tab list:** a list of open tabs with a search field.
+  - **Activity and flashes:** a dot shows new replies or messages on background tabs. A tab
+    flashes when it is asked for again, or when it opens in the background.
+  - **Shortcuts:** Ctrl/Cmd+T, +W, +Shift+T (reopen closed), Ctrl+Tab and Ctrl+Shift+Tab.
+    These take the deck's keys while each screen has its own tab or window. Ctrl/Cmd-click
+    opens a screen in the background.
+  - **Screen windows:**
+    - they open beside their opener, at the size their kind was last left at;
+    - they carry the shortcuts and the macOS menu bar;
+    - the Window menu has Show main window, Bring all to front, Close all, Move into a tab,
+      and the list of windows;
+    - toasts show in the window that has the focus;
+    - closing the main window keeps the app running while screen windows are open.
+  - **Restart:** open tabs and windows come back, through `AccountSettings.openScreens`.
+    Transient (`--login`) accounts save no settings, so theirs don't.
+  - **Titles:** a top bar holding nothing but its caption is dropped while a tab or window
+    already names the screen.
+- **Not built yet:** the singleton clean-up, Android windows, the account-session split
+  (Phase 2b), and per-kind window identity for window-manager rules.
 
 The rest of this document is the full design.
 

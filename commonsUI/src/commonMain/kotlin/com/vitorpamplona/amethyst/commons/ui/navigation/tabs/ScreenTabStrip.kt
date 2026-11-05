@@ -54,6 +54,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -322,7 +323,19 @@ private fun TabIcon(
     val pictureOf =
         when (route) {
             is Route.Profile -> route.id
-            is Route.Note -> LocalCache.getNoteIfExists(route.id)?.author?.pubkeyHex
+            is Route.Note -> {
+                // Follows the note, so a tab restored before its note arrived gets the author's picture.
+                val note = remember(route.id) { LocalCache.checkGetOrCreateNote(route.id) }
+                if (note != null) {
+                    val state by note
+                        .flow()
+                        .metadata.stateFlow
+                        .collectAsState()
+                    state.note.author?.pubkeyHex
+                } else {
+                    null
+                }
+            }
             else -> null
         }
     if (pictureOf != null) {

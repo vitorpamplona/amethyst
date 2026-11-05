@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -57,14 +58,22 @@ fun routeTitle(
                 return (info?.info?.bestName() ?: user.toBestDisplayName()).take(MAX_TITLE)
             }
         }
-        is Route.Note ->
-            LocalCache
-                .getNoteIfExists(route.id)
-                ?.event
-                ?.content
-                ?.lineSequence()
-                ?.firstOrNull { it.isNotBlank() }
-                ?.let { return it.trim().take(MAX_TITLE) }
+        is Route.Note -> {
+            // A tab restored at start shows its note's first line as soon as the note arrives.
+            val note = remember(route.id) { LocalCache.checkGetOrCreateNote(route.id) }
+            if (note != null) {
+                if (note.event == null) EventFinderFilterAssemblerSubscription(note)
+                val state by note
+                    .flow()
+                    .metadata.stateFlow
+                    .collectAsState()
+                state.note.event
+                    ?.content
+                    ?.lineSequence()
+                    ?.firstOrNull { it.isNotBlank() }
+                    ?.let { return it.trim().take(MAX_TITLE) }
+            }
+        }
         is Route.Hashtag -> return "#${route.hashtag}"
         else -> {}
     }
