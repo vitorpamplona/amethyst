@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -60,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_restore_default
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavItemIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SimpleImage35Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
@@ -138,12 +140,15 @@ fun PickerSectionHeader(title: String) {
 
 /** A category/destination glyph in a soft accent-tinted circle. */
 @Composable
-fun LeadingGlyph(icon: MaterialSymbol) {
+fun LeadingGlyph(
+    icon: MaterialSymbol,
+    imageVector: ImageVector? = null,
+) {
     Box(
         modifier = SimpleImage35Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(symbol = icon, contentDescription = null, modifier = Size19Modifier, tint = MaterialTheme.colorScheme.primary)
+        NavItemIcon(symbol = icon, imageVector = imageVector, contentDescription = null, modifier = Size19Modifier, tint = MaterialTheme.colorScheme.primary)
     }
 }
 

@@ -254,12 +254,14 @@ fun WalletDetailScreen(
                         tx = tx,
                         accountViewModel = accountViewModel,
                         nav = nav,
+                        onRowTap = { nav.nav(Route.WalletTransactions(walletId)) },
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Transactions button
             OutlinedButton(
                 onClick = { nav.nav(Route.WalletTransactions(walletId)) },
                 modifier =

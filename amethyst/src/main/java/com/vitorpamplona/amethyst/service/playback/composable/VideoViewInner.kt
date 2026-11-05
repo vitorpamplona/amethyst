@@ -53,7 +53,10 @@ fun VideoViewInner(
     nostrUriCallback: String? = null,
     automaticallyStartPlayback: Boolean,
     isLiveStream: Boolean = false,
-    controllerVisible: MutableState<Boolean> = mutableStateOf(false),
+    // Remembered: an unremembered default made a new state on every recomposition, so a live
+    // stream lost its tap-to-show controls once its kind 30311 event was republished. Keyed on
+    // the URI so a new video in the same slot starts with the controls hidden.
+    controllerVisible: MutableState<Boolean> = remember(videoUri) { mutableStateOf(false) },
     onZoom: (() -> Unit)? = null,
     hasBlurhash: Boolean = false,
     isFullscreen: Boolean = false,

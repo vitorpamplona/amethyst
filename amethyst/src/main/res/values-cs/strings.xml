@@ -222,4 +222,8 @@
     <string name="mute_button">Zvuk zapnutý. Klikněte pro ztlumení</string>
     <string name="play">Hrát</string>
     <string name="pause">Pozastavit</string>
+    <string name="napplet_cap_outbox">Outbox</string>
+    <string name="napplet_cap_fs">Soubory</string>
+    <string name="napplet_cap_common">Sociální akce</string>
+    <string name="napplet_cap_intent">Otevírat jiné aplikace</string>
 </resources>

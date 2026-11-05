@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.components.submitOnCtrlEnter
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
@@ -203,7 +204,17 @@ fun GenericCommentPostScreen(
         nav.popBack()
     }
 
+    val onPost: () -> Unit = {
+        // uses the accountViewModel scope to avoid cancelling this
+        // function when the postViewModel is released
+        accountViewModel.launchSigner {
+            postViewModel.sendPostSync()
+            nav.popBack()
+        }
+    }
+
     Scaffold(
+        modifier = Modifier.submitOnCtrlEnter(isActive = postViewModel::canPost, onSubmit = onPost),
         topBar = {
             PostingTopBar(
                 isActive = postViewModel::canPost,
@@ -216,14 +227,7 @@ fun GenericCommentPostScreen(
                     }
                     nav.popBack()
                 },
-                onPost = {
-                    // uses the accountViewModel scope to avoid cancelling this
-                    // function when the postViewModel is released
-                    accountViewModel.launchSigner {
-                        postViewModel.sendPostSync()
-                        nav.popBack()
-                    }
-                },
+                onPost = onPost,
             )
         },
     ) { pad ->

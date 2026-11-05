@@ -132,6 +132,9 @@ interface AppPlatform {
      */
     val spellCheck: SpellCheckService? get() = null
 
+    /** Linux on Wayland: native Wayland or XWayland, picked in settings. Null where there is no such choice. */
+    val displayServerChoice: DisplayServerChoice? get() = null
+
     /** The terms-of-use checkbox the login and sign-up forms show where [requiresTermsAcceptance]. */
     @Composable
     fun TermsGate(

@@ -49,7 +49,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.insets.KeyboardState
@@ -290,8 +289,9 @@ internal fun NotifiableIcon(
     accountViewModel: AccountViewModel,
 ) {
     Box(Size27Modifier, contentAlignment = Alignment.Center) {
-        Icon(
+        NavItemIcon(
             symbol = def.icon,
+            imageVector = def.imageVector,
             contentDescription = stringRes(def.labelRes),
             modifier = Size25Modifier,
             tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface65,

@@ -35,6 +35,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -109,13 +110,18 @@ private fun HorizontalLinearProgressIndicator(
     var isDragging by remember { mutableStateOf(false) }
     var dragProgress by remember { mutableFloatStateOf(0f) }
 
+    // The detectors below are keyed on Unit and outlive recompositions; onSeek captures the
+    // Player, which GetVideoController swaps when late captions rebuild the media item. Read the
+    // latest one so a seek never goes to a released controller.
+    val currentOnSeek by rememberUpdatedState(onSeek)
+
     Canvas(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = rectHeightDp * 2.5f)
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
-                    onSeek(offset.x / this.size.width.toFloat())
+                    currentOnSeek(offset.x / this.size.width.toFloat())
                 }
             }.pointerInput(Unit) {
                 detectDragGestures(
@@ -128,7 +134,7 @@ private fun HorizontalLinearProgressIndicator(
                         dragProgress = (change.position.x / this.size.width.toFloat()).coerceIn(0f, 1f)
                     },
                     onDragEnd = {
-                        onSeek(dragProgress)
+                        currentOnSeek(dragProgress)
                         isDragging = false
                     },
                     onDragCancel = {

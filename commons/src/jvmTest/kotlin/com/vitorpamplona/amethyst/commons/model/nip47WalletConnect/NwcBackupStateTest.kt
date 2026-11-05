@@ -415,6 +415,36 @@ class NwcBackupStateTest {
         }
 
     @Test
+    fun hasBackupSeesAPublishedBackupWithoutDecryptingAndNotADeletedOne() =
+        runTest {
+            val w = world(outbox = setOf(relayA), verdicts = mapOf(relayA to Verdict.Accept))
+            assertEquals(false, w.backup.hasBackup())
+
+            w.backup.publishNow()
+            assertEquals(true, w.backup.hasBackup())
+
+            w.backup.deleteBackup()
+            assertEquals(false, w.backup.hasBackup())
+        }
+
+    @Test
+    fun hasBackupSeesAnotherAppsBackup() =
+        runTest {
+            val w = world(outbox = setOf(relayA), verdicts = emptyMap())
+            w.plant(relayA, NwcBackupFormat.ZAPCOOKING_D_TAG, bareUri("there@zap.example"), createdAt = 1_000)
+
+            assertEquals(true, w.backup.hasBackup())
+        }
+
+    @Test
+    fun hasBackupIsUnknownWithoutRelaysToAsk() =
+        runTest {
+            val w = world(outbox = emptySet(), verdicts = emptyMap())
+
+            assertNull(w.backup.hasBackup())
+        }
+
+    @Test
     fun aNewerTombstoneOnAnotherRelayHidesTheBackup() =
         runTest {
             val w = world(outbox = setOf(relayA, relayB), verdicts = emptyMap())

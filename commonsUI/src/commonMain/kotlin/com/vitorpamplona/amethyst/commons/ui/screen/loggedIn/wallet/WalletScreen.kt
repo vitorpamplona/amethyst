@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -59,6 +60,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -79,6 +81,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -88,8 +91,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.clink.ui.ClinkBudgetDialog
-import com.vitorpamplona.amethyst.commons.hashtags.Cashu
-import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.icons.brand.PaymentBrandIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -119,6 +121,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_backup_disclaimer
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_dismiss
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_enable_confirm
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_enable_title
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_found_restore
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_none_found
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_published
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_relays_title
@@ -172,6 +175,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 import androidx.compose.material3.Icon as Material3Icon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -267,8 +271,17 @@ fun WalletScreen(
             }
         },
     ) { padding ->
+        if (showOnchainWallet) {
+            // Landing here is an explicit "show me my balance", so it forces a fresh
+            // fetch, once per visit, wherever the card below happens to sit. Shared
+            // with the zap picker's on-chain gating, which reads the same balance.
+            val onchainWallet = accountViewModel.account.onchainWalletState
+            LaunchedEffect(onchainWallet) { onchainWallet.refresh(force = true) }
+        }
         Column(modifier = Modifier.padding(padding)) {
-            if (showOnchainWallet) {
+            // With wallets the card is the list's first item and scrolls with them; the
+            // loading and empty states have no list, so it stays pinned above them.
+            if (showOnchainWallet && !hasWallet) {
                 OnchainSection(
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -306,6 +319,8 @@ fun WalletScreen(
                     cashuBalanceSats = cashuBalanceSats,
                     cashuMintCount = cashuMints.size,
                     hideBalance = hideBalances,
+                    accountViewModel = accountViewModel,
+                    showOnchainWallet = showOnchainWallet,
                 )
             }
         }
@@ -370,12 +385,29 @@ private fun NoWalletSetup(
 @Composable
 private fun RestoreBackupLink(walletViewModel: WalletViewModel) {
     val backupBusy by walletViewModel.backupBusy.collectAsState()
+    val backupAvailable by walletViewModel.backupAvailable.collectAsState()
 
-    TextButton(
+    LaunchedEffect(walletViewModel) { walletViewModel.checkForBackup() }
+
+    // A known backup earns the prominent button; otherwise a quiet link.
+    RestoreBackupButton(
+        busy = backupBusy,
+        idleLabel = if (backupAvailable) Res.string.wallet_backup_found_restore else Res.string.wallet_backup_restore,
+        prominent = backupAvailable,
         onClick = { walletViewModel.lookForBackupToRestore() },
-        enabled = !backupBusy,
-    ) {
-        if (backupBusy) {
+    )
+}
+
+/** Restore-from-backup action: a full-width tonal button, or a text link when not [prominent]. */
+@Composable
+internal fun RestoreBackupButton(
+    busy: Boolean,
+    idleLabel: StringResource,
+    prominent: Boolean,
+    onClick: () -> Unit,
+) {
+    val content: @Composable RowScope.() -> Unit = {
+        if (busy) {
             CircularProgressIndicator(
                 modifier = Modifier.size(16.dp),
                 strokeWidth = 2.dp,
@@ -383,16 +415,23 @@ private fun RestoreBackupLink(walletViewModel: WalletViewModel) {
             Spacer(modifier = Modifier.width(8.dp))
         }
         Text(
-            text =
-                stringRes(
-                    if (backupBusy) {
-                        Res.string.wallet_backup_searching
-                    } else {
-                        Res.string.wallet_backup_restore
-                    },
-                ),
-            style = MaterialTheme.typography.bodySmall,
+            text = stringRes(if (busy) Res.string.wallet_backup_searching else idleLabel),
+            style = if (prominent) LocalTextStyle.current else MaterialTheme.typography.bodySmall,
         )
+    }
+    if (prominent) {
+        FilledTonalButton(
+            onClick = onClick,
+            enabled = !busy,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+            shape = RoundedCornerShape(12.dp),
+            content = content,
+        )
+    } else {
+        TextButton(onClick = onClick, enabled = !busy, content = content)
     }
 }
 
@@ -429,6 +468,8 @@ private fun MultiWalletHomeContent(
     cashuBalanceSats: Long,
     cashuMintCount: Int,
     hideBalance: Boolean,
+    accountViewModel: AccountViewModel,
+    showOnchainWallet: Boolean,
 ) {
     val walletInfoList by walletViewModel.walletInfoList.collectAsState()
     val nwcWallets by walletViewModel.wallets.collectAsState()
@@ -461,6 +502,15 @@ private fun MultiWalletHomeContent(
                 .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (showOnchainWallet) {
+            item(key = "onchain") {
+                OnchainSection(
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            }
+        }
         items(walletInfoList, key = { info -> info.walletId }) { walletInfo ->
             WalletCard(
                 walletInfo = walletInfo,
@@ -789,7 +839,7 @@ private fun WalletCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (nwcWallet != null) {
-                    NwcChip()
+                    BrandMark(PaymentBrandIcons.Nwc)
                     Spacer(modifier = Modifier.width(12.dp))
                 }
                 Column(modifier = Modifier.weight(1f)) {
@@ -950,7 +1000,7 @@ private fun WalletCard(
                         modifier = Modifier.height(36.dp),
                         shape = RoundedCornerShape(8.dp),
                     ) {
-                        Icon(MaterialSymbols.AutoMirrored.Send, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Icon(MaterialSymbols.ArrowUpward, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(stringRes(Res.string.wallet_send), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                     }
@@ -1328,7 +1378,7 @@ private fun WalletSettingsSheet(
 }
 
 @Composable
-private fun BackupEnableDialog(
+internal fun BackupEnableDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -1367,7 +1417,7 @@ internal fun RestoreFoundDialog(
         title = { Text(stringRes(Res.string.wallet_backup_restore_title)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Text(stringRes(Res.string.wallet_backup_restore_found, backup.wallets.size))
+                Text(pluralStringRes(Res.plurals.wallet_backup_restore_found, backup.wallets.size, backup.wallets.size))
                 Spacer(modifier = Modifier.height(8.dp))
                 backup.wallets.forEach { candidate ->
                     val checked = candidate in selected
@@ -1451,12 +1501,15 @@ internal fun BalanceDots(pulsing: Boolean) {
     )
 }
 
+/** A labelled value with an optional copy button; shared with the transaction details. */
 @Composable
-private fun WalletDetailRow(
+internal fun WalletDetailRow(
     label: String,
     value: String,
-    copyValue: String?,
-    onCopy: (String) -> Unit,
+    copyValue: String? = null,
+    onCopy: (String) -> Unit = {},
+    monospace: Boolean = true,
+    maxLines: Int = 1,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     Row(
@@ -1475,8 +1528,8 @@ private fun WalletDetailRow(
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
-                maxLines = 1,
+                fontFamily = if (monospace) FontFamily.Monospace else null,
+                maxLines = maxLines,
                 overflow = TextOverflow.Ellipsis,
             )
         }
@@ -1497,26 +1550,17 @@ private fun WalletDetailRow(
     }
 }
 
+// A rail's official full-color mark, sized like the Bitcoin chip so the three
+// rails line up.
 @Composable
-private fun NwcChip() {
-    Box(
-        modifier =
-            Modifier
-                .size(28.dp)
-                .clip(CircleShape)
-                .background(color = NwcViolet),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            symbol = MaterialSymbols.Bolt,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(18.dp),
-        )
-    }
+private fun BrandMark(icon: ImageVector) {
+    Material3Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = Color.Unspecified,
+        modifier = Modifier.size(28.dp),
+    )
 }
-
-private val NwcViolet = Color(0xFF8B5CF6)
 
 internal const val BALANCE_DOTS = "\u2022\u2022\u2022"
 
@@ -1526,30 +1570,11 @@ private fun relayHostOf(wallet: NwcWalletEntryNorm): String =
         .removePrefix("ws://")
         .trimEnd('/')
 
-private fun shortenMiddle(value: String): String = if (value.length <= 20) value else value.take(12) + "\u2026" + value.takeLast(6)
-
-// Mirrors OnchainSection's BitcoinChip so both payment rails render their
-// logo the same way, a filled circular chip with a white glyph. Cashu uses
-// the theme primary in place of bitcoin orange to keep the two rails
-// distinct at a glance.
-@Composable
-private fun CashuChip() {
-    Box(
-        modifier =
-            Modifier
-                .size(28.dp)
-                .clip(CircleShape)
-                .background(color = MaterialTheme.colorScheme.primary),
-        contentAlignment = Alignment.Center,
-    ) {
-        Material3Icon(
-            imageVector = CustomHashTagIcons.Cashu,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(18.dp),
-        )
-    }
-}
+internal fun shortenMiddle(
+    value: String,
+    head: Int = 12,
+    tail: Int = 6,
+): String = if (value.length <= head + tail + 2) value else value.take(head) + "\u2026" + value.takeLast(tail)
 
 @Composable
 private fun CashuWalletRow(
@@ -1566,7 +1591,13 @@ private fun CashuWalletRow(
                 .fillMaxWidth()
                 .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        // Same rail-card treatment as the on-chain card: a 2dp brand stroke over
+        // a faint tint of the brand color.
+        border = BorderStroke(2.dp, PaymentBrandIcons.CashuAccent),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = PaymentBrandIcons.CashuAccent.copy(alpha = 0.12f),
+            ),
     ) {
         Row(
             modifier =
@@ -1575,7 +1606,7 @@ private fun CashuWalletRow(
                     .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            CashuChip()
+            BrandMark(PaymentBrandIcons.Cashu)
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(

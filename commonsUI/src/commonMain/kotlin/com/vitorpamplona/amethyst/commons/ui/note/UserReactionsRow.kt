@@ -90,7 +90,8 @@ fun UserReactionsRow(
             UserReactionModel(model)
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) {
+        // Zap totals run longer than the other counts, so this column gets the extra room.
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1.4f)) {
             UserZapModel(model)
         }
     }
@@ -179,6 +180,8 @@ fun UserZapReaction(model: NotificationSummaryState) {
         amount,
         fontWeight = FontWeight.Bold,
         fontSize = summaryCountSize(),
+        maxLines = 1,
+        softWrap = false,
     )
 }
 

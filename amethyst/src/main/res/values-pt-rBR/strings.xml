@@ -208,4 +208,8 @@
     <string name="mute_button">Som ligado. Clique para silenciar</string>
     <string name="play">Reproduzir</string>
     <string name="pause">Pausar</string>
+    <string name="napplet_cap_outbox">Caixa de saída</string>
+    <string name="napplet_cap_fs">Arquivos</string>
+    <string name="napplet_cap_common">Ações sociais</string>
+    <string name="napplet_cap_intent">Abrir outros apps</string>
 </resources>
