@@ -240,7 +240,7 @@ private fun SectionCard(
             val mandatory = item in MandatoryDrawerItems
             val visible = state.isVisible(item)
             CatalogRow(
-                leading = { LeadingGlyph(def.icon) },
+                leading = { LeadingGlyph(def.icon, def.imageVector) },
                 label = stringRes(def.labelRes),
                 onToggle = if (mandatory) null else ({ state.toggle(item) }),
             ) {

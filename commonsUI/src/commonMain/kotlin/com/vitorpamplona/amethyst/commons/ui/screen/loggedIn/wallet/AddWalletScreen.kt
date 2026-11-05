@@ -35,7 +35,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -44,10 +43,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.brand.PaymentBrandIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -62,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import androidx.compose.material3.Icon as Material3Icon
 
 /**
  * Wallet-type chooser. Each card routes to a dedicated setup screen for the
@@ -97,7 +99,7 @@ fun AddWalletScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             WalletTypeCard(
-                icon = MaterialSymbols.Bolt,
+                icon = PaymentBrandIcons.Nwc,
                 title = stringRes(Res.string.wallet_add_nwc_title),
                 description = stringRes(Res.string.wallet_add_nwc_description),
                 // Replace the chooser in the back stack rather than stacking
@@ -108,7 +110,7 @@ fun AddWalletScreen(
                 onClick = { nav.popUpTo(Route.WalletAddNwc(), Route.WalletAdd::class) },
             )
             WalletTypeCard(
-                icon = MaterialSymbols.AccountBalanceWallet,
+                icon = PaymentBrandIcons.Cashu,
                 title = stringRes(Res.string.wallet_add_cashu_title),
                 description = stringRes(Res.string.wallet_add_cashu_description),
                 // Route through the find-or-create wizard, not straight to the
@@ -118,7 +120,7 @@ fun AddWalletScreen(
                 onClick = { nav.popUpTo(Route.CashuWalletWizard, Route.WalletAdd::class) },
             )
             WalletTypeCard(
-                icon = MaterialSymbols.Bolt,
+                icon = PaymentBrandIcons.Clink,
                 title = stringRes(Res.string.wallet_add_clink_title),
                 description = stringRes(Res.string.wallet_add_clink_description),
                 onClick = { nav.popUpTo(Route.WalletAddClinkDebit(), Route.WalletAdd::class) },
@@ -129,7 +131,7 @@ fun AddWalletScreen(
 
 @Composable
 private fun WalletTypeCard(
-    icon: MaterialSymbol,
+    icon: ImageVector,
     title: String,
     description: String,
     onClick: () -> Unit,
@@ -148,7 +150,7 @@ private fun WalletTypeCard(
 
 @Composable
 private fun WalletTypeCardContent(
-    icon: MaterialSymbol,
+    icon: ImageVector,
     title: String,
     description: String,
 ) {
@@ -159,11 +161,12 @@ private fun WalletTypeCardContent(
                 .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            symbol = icon,
+        Material3Icon(
+            imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(32.dp),
-            tint = MaterialTheme.colorScheme.primary,
+            // Brand marks carry their own colors; Unspecified keeps them.
+            tint = Color.Unspecified,
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {

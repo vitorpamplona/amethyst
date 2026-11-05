@@ -41,6 +41,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -80,6 +81,8 @@ import com.vitorpamplona.amethyst.commons.onchain.ui.labelRes
 import com.vitorpamplona.amethyst.commons.onchain.ui.technicalDetail
 import com.vitorpamplona.amethyst.commons.onchain.ui.userMessageText
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_scan_qr_code
+import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_amount
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_broadcast_no_receipt
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_button_amount
@@ -125,7 +128,9 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.sats
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
@@ -585,6 +590,8 @@ private fun RecipientSection(
         return
     }
 
+    var qrScanning by remember { mutableStateOf(false) }
+
     // Tight column: no extra parent spacing between the field and its
     // suggestion dropdown — the dropdown sits flush under the field.
     OutlinedTextField(
@@ -598,7 +605,27 @@ private fun RecipientSection(
                 searchInput.length > 50 &&
                 decodePublicKeyAsHexOrNull(searchInput.trim()) == null,
         modifier = Modifier.fillMaxWidth(),
+        trailingIcon = {
+            IconButton(onClick = { qrScanning = true }) {
+                Icon(
+                    painter = painterRes(Res.drawable.ic_qrcode, 3),
+                    contentDescription = stringRes(id = Res.string.accessibility_scan_qr_code),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        },
     )
+
+    if (qrScanning) {
+        SimpleQrCodeScanner {
+            qrScanning = false
+            if (!it.isNullOrEmpty()) {
+                // Profile QRs usually carry the nostr: URI prefix; the
+                // resolver wants the bare npub / NIP-05.
+                onSearchChange(it.removePrefix("nostr:"))
+            }
+        }
+    }
 
     // Inline Namecoin lookup feedback. Local-cache suggestions can race
     // ahead of the on-chain resolution (especially when the user has

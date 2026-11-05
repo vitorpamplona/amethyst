@@ -47,7 +47,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -105,13 +104,11 @@ fun OnchainSection(
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
-    // Shared with the zap picker's on-chain gating, so opening this screen also
-    // warms the balance those chips read (and vice versa). Landing here is an
-    // explicit "show me my balance", so it always forces a fresh fetch.
+    // Shared with the zap picker's on-chain gating. The screen hosting this card
+    // forces the fresh fetch once per visit (see WalletScreen); here, inside a
+    // lazy list, an effect would refetch every time the card scrolled back in.
     val onchainWallet = accountViewModel.account.onchainWalletState
     val address = onchainWallet.address
-
-    LaunchedEffect(onchainWallet) { onchainWallet.refresh(force = true) }
 
     val funds by onchainWallet.funds.collectAsStateWithLifecycle()
     val balanceState by onchainWallet.status.collectAsStateWithLifecycle()
@@ -396,7 +393,7 @@ private fun ActionRow(
                 ),
         ) {
             Icon(
-                symbol = MaterialSymbols.AutoMirrored.Send,
+                symbol = MaterialSymbols.ArrowUpward,
                 contentDescription = null,
                 modifier = Modifier.size(14.dp),
             )

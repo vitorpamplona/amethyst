@@ -20,8 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,6 +41,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -48,9 +56,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.TransactionRo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_sats_amount
+import com.vitorpamplona.amethyst.commons.resources.wallet_copied
 import com.vitorpamplona.amethyst.commons.resources.wallet_filter_all
 import com.vitorpamplona.amethyst.commons.resources.wallet_filter_non_zaps
 import com.vitorpamplona.amethyst.commons.resources.wallet_filter_zaps
@@ -72,13 +87,28 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_outgoing
 import com.vitorpamplona.amethyst.commons.resources.wallet_refresh
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_load_failed
+import com.vitorpamplona.amethyst.commons.resources.wallet_tx_amount
+import com.vitorpamplona.amethyst.commons.resources.wallet_tx_collapse
+import com.vitorpamplona.amethyst.commons.resources.wallet_tx_expand
+import com.vitorpamplona.amethyst.commons.resources.wallet_tx_fee
+import com.vitorpamplona.amethyst.commons.resources.wallet_tx_from
+import com.vitorpamplona.amethyst.commons.resources.wallet_tx_invoice
+import com.vitorpamplona.amethyst.commons.resources.wallet_tx_note
+import com.vitorpamplona.amethyst.commons.resources.wallet_tx_payment_hash
+import com.vitorpamplona.amethyst.commons.resources.wallet_tx_preimage
+import com.vitorpamplona.amethyst.commons.resources.wallet_tx_to
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.note.rememberMonthDayTimeFormatter
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.TransactionFilter
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -86,6 +116,7 @@ import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransactionType
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -217,7 +248,11 @@ fun WalletTransactionsScreen(
                     TransactionFilterRow(currentFilter) { walletViewModel.setTransactionFilter(it) }
                 }
                 items(transactions) { tx ->
-                    TransactionItem(tx, accountViewModel, nav)
+                    TransactionItem(
+                        tx = tx,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
                     HorizontalDivider()
                 }
                 if (isLoadingMore) {
@@ -268,11 +303,16 @@ private fun TransactionFilterRow(
     }
 }
 
+// Internal, not private: the wallet detail screen previews the first few
+// transactions with the same rows this full list renders. Without [onRowTap]
+// the row expands its payment details; the preview passes one that opens the
+// full list instead — a details drawer costs more space than the preview has.
 @Composable
 internal fun TransactionItem(
     tx: NwcTransaction,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onRowTap: (() -> Unit)? = null,
 ) {
     val isIncoming = tx.type == NwcTransactionType.INCOMING
     val amountSats = (tx.amount ?: 0L) / 1000L
@@ -297,19 +337,24 @@ internal fun TransactionItem(
     val counterpartyPubkeyHex = (labels.title as? TransactionRowLabels.Title.User)?.pubkeyHex
     val zappedNoteId = labels.zappedNoteId
 
+    var expanded by remember(tx) { mutableStateOf(false) }
+
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .then(
-                    // Before the padding, so the whole row height is the target. The
-                    // picture keeps its own tap (profile): picture -> profile, row -> note.
-                    if (zappedNoteId != null) {
-                        Modifier.clickable(onClickLabel = stringRes(Res.string.wallet_open_zapped_note)) {
-                            nav.nav(Route.Note(zappedNoteId))
+                    // Full list: the row expands its details. Preview: the row
+                    // opens the full list. The profile and the zapped-note
+                    // chevron keep their own taps.
+                    if (onRowTap == null) {
+                        Modifier.clickable(
+                            onClickLabel = stringRes(if (expanded) Res.string.wallet_tx_collapse else Res.string.wallet_tx_expand),
+                        ) {
+                            expanded = !expanded
                         }
                     } else {
-                        Modifier
+                        Modifier.clickable(onClickLabel = stringRes(Res.string.wallet_transactions), onClick = onRowTap)
                     },
                 ).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -323,22 +368,35 @@ internal fun TransactionItem(
             )
             Spacer(modifier = Modifier.width(12.dp))
         } else {
-            Icon(
-                symbol = if (isIncoming) MaterialSymbols.ArrowDownward else MaterialSymbols.ArrowUpward,
-                contentDescription =
-                    if (isIncoming) {
-                        stringRes(Res.string.wallet_incoming)
-                    } else {
-                        stringRes(Res.string.wallet_outgoing)
-                    },
-                modifier = Modifier.size(40.dp),
-                tint =
-                    if (isIncoming) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-            )
+            // No contact to show: a subtle directional badge (bitcoin.design's
+            // activity rows) — green for received, neutral for sent. Nothing is
+            // lost when a face takes this slot instead.
+            Box(
+                modifier =
+                    Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isIncoming) {
+                                ReceivedGreen.copy(alpha = 0.16f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    symbol = if (isIncoming) MaterialSymbols.ArrowDownward else MaterialSymbols.ArrowUpward,
+                    contentDescription = directionLabel,
+                    modifier = Modifier.size(20.dp),
+                    tint =
+                        if (isIncoming) {
+                            ReceivedGreen
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                )
+            }
             Spacer(modifier = Modifier.width(12.dp))
         }
 
@@ -374,26 +432,50 @@ internal fun TransactionItem(
             )
         }
 
+        // Keeps a truncated note from running into the amount.
+        Spacer(modifier = Modifier.width(12.dp))
+
         Text(
             text = stringRes(Res.string.reload_mint_sats_amount, formattedAmount),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             color =
                 if (isIncoming) {
-                    MaterialTheme.colorScheme.primary
+                    ReceivedGreen
                 } else {
                     MaterialTheme.colorScheme.onBackground
                 },
         )
 
+        // Only a row with a zapped note carries the chevron; rows without
+        // one let the amount run to the row's own right padding.
         if (zappedNoteId != null) {
             Spacer(modifier = Modifier.width(4.dp))
-            Icon(
-                symbol = MaterialSymbols.ChevronRight,
-                // The row's onClickLabel already announces it.
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            IconButton(
+                onClick = { nav.nav(Route.Note(zappedNoteId)) },
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.ChevronRight,
+                    contentDescription = stringRes(Res.string.wallet_open_zapped_note),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+
+    if (onRowTap == null) {
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn() + expandVertically(),
+            exit = shrinkVertically() + fadeOut(),
+        ) {
+            TransactionItemDetails(
+                tx = tx,
+                labels = labels,
+                amountSats = amountSats,
+                accountViewModel = accountViewModel,
             )
         }
     }
@@ -423,3 +505,110 @@ private fun TransactionUserName(
         }
     }
 }
+
+/**
+ * The expanded block under a transaction row, Sidecar's payment-details set.
+ * The top rows are human-readable and carry no copy button; only the machine
+ * strings (hash, preimage, invoice) do, since their full values never fit on
+ * screen and are useless to retype.
+ */
+@Composable
+private fun TransactionItemDetails(
+    tx: NwcTransaction,
+    labels: TransactionRowLabels,
+    amountSats: Long,
+    accountViewModel: AccountViewModel,
+) {
+    val clipboard = LocalClipboard.current
+    val clipboardScope = rememberCoroutineScope()
+    val shortNotice = rememberShortNotice()
+    val copiedMsg = stringRes(Res.string.wallet_copied)
+    val onCopy: (String) -> Unit = { value ->
+        clipboardScope.launch {
+            clipboard.setText(value)
+            shortNotice.show(copiedMsg)
+        }
+    }
+
+    val isIncoming = tx.type == NwcTransactionType.INCOMING
+    val counterparty =
+        when (val title = labels.title) {
+            // The profile name, as the row above shows it; the zap request's name is only a fallback.
+            is TransactionRowLabels.Title.User ->
+                observeUserNameByHex(title.pubkeyHex, accountViewModel)
+                    .takeUnless { it == title.pubkeyHex.take(8) && title.name != null }
+                    ?: title.name.orEmpty()
+            is TransactionRowLabels.Title.Literal -> title.text
+        }
+    val note = remember(tx) { tx.displayDescription() ?: tx.parsedMetadata()?.displayComment() }
+    val feeSats = (tx.fees_paid ?: 0L) / 1000L
+    val whenSecs = tx.settled_at ?: tx.created_at
+    val dateText =
+        remember(whenSecs) {
+            whenSecs?.let { formatDateTime(it * 1000L, DateTimeStyle.MEDIUM, DateTimeStyle.MEDIUM) }
+        }
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+    ) {
+        WalletDetailRow(
+            label = stringRes(if (isIncoming) Res.string.wallet_tx_from else Res.string.wallet_tx_to),
+            value = counterparty,
+            monospace = false,
+            trailing =
+                dateText?.let {
+                    {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 12.dp),
+                        )
+                    }
+                },
+        )
+        note?.let {
+            WalletDetailRow(
+                label = stringRes(Res.string.wallet_tx_note),
+                value = it,
+                monospace = false,
+                maxLines = 3,
+            )
+        }
+        WalletDetailRow(
+            label = stringRes(Res.string.wallet_tx_amount),
+            value = stringRes(Res.string.reload_mint_sats_amount, formatGrouped(amountSats)),
+            monospace = false,
+        )
+        if (feeSats > 0) {
+            WalletDetailRow(
+                label = stringRes(Res.string.wallet_tx_fee),
+                value = stringRes(Res.string.reload_mint_sats_amount, formatGrouped(feeSats)),
+                monospace = false,
+            )
+        }
+
+        listOf(
+            Res.string.wallet_tx_payment_hash to tx.payment_hash,
+            Res.string.wallet_tx_preimage to tx.preimage,
+            Res.string.wallet_tx_invoice to tx.invoice,
+        ).forEach { (label, value) ->
+            // Some wallets report an empty preimage for a received payment: nothing to show or copy.
+            if (!value.isNullOrBlank()) {
+                WalletDetailRow(
+                    label = stringRes(label),
+                    // One line; the copy button carries the full value.
+                    value = shortenMiddle(value, head = 16, tail = 8),
+                    copyValue = value,
+                    onCopy = onCopy,
+                )
+            }
+        }
+    }
+}
+
+/** bitcoin.design's activity green: received amounts and badges; red stays reserved for errors. */
+private val ReceivedGreen = Color(0xFF16A34A)

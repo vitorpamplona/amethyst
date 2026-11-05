@@ -478,7 +478,7 @@ private fun CategoryCard(
                 }
             } else {
                 AvailableRow(
-                    leading = { LeadingGlyph(def.icon) },
+                    leading = { LeadingGlyph(def.icon, def.imageVector) },
                     label = stringRes(def.labelRes),
                     pinned = entry.stableKey in pinnedKeys,
                     onToggle = { onTogglePin(entry) },
