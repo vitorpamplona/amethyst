@@ -108,6 +108,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.note.rememberMonthDayTimeFormatter
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.TransactionFilter
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -474,6 +475,7 @@ internal fun TransactionItem(
                 tx = tx,
                 labels = labels,
                 amountSats = amountSats,
+                accountViewModel = accountViewModel,
             )
         }
     }
@@ -515,6 +517,7 @@ private fun TransactionItemDetails(
     tx: NwcTransaction,
     labels: TransactionRowLabels,
     amountSats: Long,
+    accountViewModel: AccountViewModel,
 ) {
     val clipboard = LocalClipboard.current
     val clipboardScope = rememberCoroutineScope()
@@ -530,7 +533,11 @@ private fun TransactionItemDetails(
     val isIncoming = tx.type == NwcTransactionType.INCOMING
     val counterparty =
         when (val title = labels.title) {
-            is TransactionRowLabels.Title.User -> title.name ?: (title.pubkeyHex.take(8) + "...")
+            // The profile name, as the row above shows it; the zap request's name is only a fallback.
+            is TransactionRowLabels.Title.User ->
+                observeUserNameByHex(title.pubkeyHex, accountViewModel)
+                    .takeUnless { it == title.pubkeyHex.take(8) && title.name != null }
+                    ?: title.name.orEmpty()
             is TransactionRowLabels.Title.Literal -> title.text
         }
     val note = remember(tx) { tx.displayDescription() ?: tx.parsedMetadata()?.displayComment() }
@@ -589,7 +596,8 @@ private fun TransactionItemDetails(
             Res.string.wallet_tx_preimage to tx.preimage,
             Res.string.wallet_tx_invoice to tx.invoice,
         ).forEach { (label, value) ->
-            if (value != null) {
+            // Some wallets report an empty preimage for a received payment: nothing to show or copy.
+            if (!value.isNullOrBlank()) {
                 WalletDetailRow(
                     label = stringRes(label),
                     // One line; the copy button carries the full value.
