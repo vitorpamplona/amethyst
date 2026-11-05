@@ -542,7 +542,8 @@ private fun EditOpenFile(
                 if (bytes.size > EDITABLE_FILE_BYTES || bytes.any { it == 0.toByte() }) {
                     Result.failure(IllegalStateException("binary"))
                 } else {
-                    Result.success(bytes.decodeToString())
+                    // Strict, so a file in another encoding is not offered: saving lossy text would rewrite it.
+                    Result.success(bytes.decodeToString(throwOnInvalidSequence = true))
                 }
             } catch (e: CancellationException) {
                 throw e

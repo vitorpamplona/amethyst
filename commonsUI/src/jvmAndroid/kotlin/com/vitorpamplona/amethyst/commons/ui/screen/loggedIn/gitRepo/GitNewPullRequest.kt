@@ -225,12 +225,13 @@ private fun GitNewPullRequestForm(
                     Button(
                         enabled = canCreate,
                         onClick = {
-                            if (target != null && tip != null && sourceBranch != null) {
+                            val branch = sourceBranch
+                            if (target != null && tip != null && branch != null) {
                                 viewModel.openPullRequest(
                                     target,
                                     source,
                                     tip,
-                                    sourceBranch!!,
+                                    branch,
                                     targetBranch,
                                     title.trim(),
                                     description.trim(),
