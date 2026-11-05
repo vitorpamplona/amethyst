@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatBubbleLayout
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatGroupPosition
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiCount
+import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
@@ -62,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.DisplayZapS
 import com.vitorpamplona.amethyst.commons.ui.note.hovercard.UserHoverCardAnchor
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.commons.ui.note.types.observeChatMessageEdit
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderBuzzActivityRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderBuzzDiff
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderBuzzEditedNote
@@ -320,6 +322,12 @@ fun NormalChatNote(
     // reserve that space for an empty row, leaving a dead gap under the text.
     val hasEngagement = !innerQuote && hasChatEngagement(note, accountViewModel)
 
+    // In the OPEN layout someone else's message is bare text, and a message's own blank lines are
+    // as tall as the gap to the next message, so nothing but its time shows where it ends. Every
+    // one of their messages carries it, not just the last of the run.
+    val timeOnEveryMessage = LocalDisplaySettings.current.chatLayout == ChatLayoutType.OPEN && !isLoggedInUser
+    val showTime = groupPosition.isLastOfGroup || timeOnEveryMessage
+
     ChatBubbleLayout(
         isLoggedInUser = isLoggedInUser,
         isDraft = note.event is DraftWrapEvent,
@@ -374,12 +382,12 @@ fun NormalChatNote(
                 null
             },
         footerRow =
-            if (!innerQuote && (groupPosition.isLastOfGroup || footerHasMeta)) {
+            if (!innerQuote && (showTime || footerHasMeta)) {
                 {
                     ChatMessageFooter(
                         note = note,
                         isLoggedInUser = isLoggedInUser,
-                        showTime = groupPosition.isLastOfGroup,
+                        showTime = showTime,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

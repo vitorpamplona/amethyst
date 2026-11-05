@@ -215,7 +215,7 @@ private fun Bubble(
         // Like DrawAuthorInfo, it can name the user too: the compact layout names every line.
         drawAuthorLine = {
             val (hex, name) = author ?: (ME to "Me")
-            Text(name, color = authorNameColorFor(hex, isLight), fontWeight = ChatAuthorNameWeight, fontSize = ChatAuthorNameSize)
+            Text(name, color = authorNameColorFor(hex, isLight), fontWeight = ChatAuthorNameWeight, fontSize = ChatAuthorNameSize, maxLines = 1)
         },
         authorAvatar = if (author != null) ({ Face(faceColor) }) else null,
     ) { bgColor ->
@@ -245,7 +245,7 @@ private fun Quote(
         actionMenu = {},
         drawAuthorLine = {
             val (hex, name) = author ?: (ME to "Me")
-            Text(name, color = authorNameColorFor(hex, isLight), fontWeight = ChatAuthorNameWeight, fontSize = ChatAuthorNameSize)
+            Text(name, color = authorNameColorFor(hex, isLight), fontWeight = ChatAuthorNameWeight, fontSize = ChatAuthorNameSize, maxLines = 1)
         },
     ) { Text(text, style = MaterialTheme.typography.bodySmall, maxLines = 2) }
 }
@@ -301,7 +301,7 @@ private fun SampleGroupChat() {
             faceColor = Color(0xFFD9825B),
         )
         Bubble(
-            "Unlike every other nostr app that give you no useful warnings at all.",
+            "Unlike every other nostr app that give you no useful warnings at all.\n\nAnd a second paragraph, so blank lines inside a message can be told from the gap between two.",
             mine = false,
             position = ChatGroupPosition.BOTTOM,
             time = "9:08",

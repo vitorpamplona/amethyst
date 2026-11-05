@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -52,6 +53,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
@@ -121,27 +123,37 @@ private val ChatAuthorGutterGap = Modifier.width(6.dp)
 private val SwipeReplyThreshold = 56.dp
 private val SwipeReplyMaxDrag = 72.dp
 
-// COMPACT (IRC/Twitch): one dense line per message. A small gap opens a new author run; lines of
-// one run sit almost flush.
-private val ChatCompactPaddingModifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 5.dp)
-private val ChatCompactPaddingGroupedModifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 1.dp)
+// COMPACT (IRC/Twitch): one dense line per message. A gap opens a new author run; lines of one
+// run sit almost flush, told apart by the name every line starts with.
+private val ChatCompactPaddingModifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 8.dp)
+private val ChatCompactPaddingGroupedModifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 2.dp)
 
-// The author column of a COMPACT line: names longer than this ellipsize instead of squeezing the
-// message into a sliver.
-private val ChatCompactNameModifier = Modifier.widthIn(max = 130.dp)
+// The author column of a COMPACT line: a fixed width, names right-aligned against the text, so
+// every message starts at the same x and the eye can run down one left edge. Longer names
+// ellipsize. A repeated name (same author as the line above) is dimmed: it still marks where a
+// message starts, without six identical bright labels down the column.
+private val ChatCompactNameColumn = Modifier.width(96.dp)
+private const val CHAT_COMPACT_REPEATED_NAME_ALPHA = 0.4f
 private val ChatCompactNameGap = Modifier.width(8.dp)
-private val ChatCompactFooterGap = Modifier.width(6.dp)
 private val ChatCompactRowShape = RoundedCornerShape(4.dp)
 private val ChatCompactRowInset = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
 
-// OPEN (AI-assistant style): someone else's message is open text with no bubble, so paragraphs of
-// one run need a real gap between them where bubbles would have had their own edges.
-private val ChatOpenPaddingModifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 1.dp)
-private val ChatOpenPaddingGroupedModifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 1.dp)
+// ChatChipFlowRow insets its chips 8dp so they clear a bubble's rounded corner; with no bubble
+// that inset only knocks them off the text's left edge.
+private val ChatChipBubbleInsetUndo = Modifier.offset(x = (-8).dp)
+
+// OPEN (AI-assistant style): someone else's message is open text with no bubble. A message's own
+// blank lines are ~20dp tall, so messages need at least that between them to read as separate.
+private val ChatOpenPaddingModifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 20.dp, bottom = 1.dp)
+private val ChatOpenPaddingGroupedModifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 1.dp)
 private val ChatOpenRowShape = RoundedCornerShape(8.dp)
 private val ChatOpenRowInset = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
 private val ChatOpenHeaderGap = Modifier.width(8.dp)
 private val ChatOpenStackSpacing = Arrangement.spacedBy(4.dp)
+
+// Open text keeps a readable measure on wide windows: past ~75 characters a line is hard to
+// track back to the start of the next.
+private val ChatOpenMaxWidth = Modifier.widthIn(max = 680.dp)
 
 // A quoted reply in the COMPACT and OPEN layouts: a tinted block with a bar down its leading edge
 // instead of a bubble inside a bubble.
@@ -374,6 +386,8 @@ fun ChatBubbleLayout(
             innerQuote && layout != ChatLayoutType.BUBBLES -> {
                 ChatQuoteBlock(
                     isLoggedInUser = isLoggedInUser,
+                    // A filled card is a second block inside a one-line layout; compact keeps the bar only.
+                    filled = layout != ChatLayoutType.COMPACT,
                     drawAuthorInfo = drawAuthorInfo || layout == ChatLayoutType.COMPACT,
                     animatedColor = animatedColor,
                     bgColor = bgColor,
@@ -389,6 +403,7 @@ fun ChatBubbleLayout(
             layout == ChatLayoutType.COMPACT -> {
                 CompactChatLine(
                     modifier = swipeModifier,
+                    repeatsAuthorAbove = groupPosition.isConnectedAbove,
                     animatedColor = animatedColor,
                     bgColor = bgColor,
                     onClick = onClick,
@@ -609,6 +624,7 @@ private fun ChatActionMenuHost(
 @Composable
 private fun CompactChatLine(
     modifier: Modifier,
+    repeatsAuthorAbove: Boolean,
     animatedColor: Color,
     bgColor: MutableState<Color>,
     onClick: () -> Boolean,
@@ -634,19 +650,28 @@ private fun CompactChatLine(
     ) {
         // Baseline-aligned with the first line of the message; a body that reports no baseline
         // (media) falls back to the top, which is where the name belongs beside it anyway.
-        Box(ChatCompactNameModifier.alignByBaseline().clickable(onClick = onAuthorClick)) {
-            drawAuthorLine()
+        Box(
+            modifier =
+                ChatCompactNameColumn
+                    .alignByBaseline()
+                    .graphicsLayer { alpha = if (repeatsAuthorAbove) CHAT_COMPACT_REPEATED_NAME_ALPHA else 1f },
+            contentAlignment = Alignment.TopEnd,
+        ) {
+            Box(Modifier.clickable(onClick = onAuthorClick)) {
+                drawAuthorLine()
+            }
         }
         Spacer(ChatCompactNameGap)
+        // The footer goes under the text, not beside it: beside it, a long timestamp narrowed
+        // every line of the message and left a ragged second column down the right.
         Column(Modifier.weight(1f).alignByBaseline()) {
-            inner(bgColor)
-            reactionsRow?.invoke()
-        }
-        if (footerRow != null) {
-            Spacer(ChatCompactFooterGap)
-            Box(Modifier.alignByBaseline()) {
-                footerRow()
+            CompositionLocalProvider(LocalChatJumboEmoji provides false) {
+                inner(bgColor)
             }
+            if (reactionsRow != null) {
+                Box(ChatChipBubbleInsetUndo) { reactionsRow() }
+            }
+            footerRow?.invoke()
         }
     }
 
@@ -680,6 +705,7 @@ private fun OpenChatMessage(
         modifier =
             modifier
                 .fillMaxWidth()
+                .then(ChatOpenMaxWidth)
                 .clip(ChatOpenRowShape)
                 .background(animatedColor)
                 .then(press.modifier)
@@ -700,7 +726,9 @@ private fun OpenChatMessage(
 
         inner(bgColor)
 
-        reactionsRow?.invoke()
+        if (reactionsRow != null) {
+            Box(ChatChipBubbleInsetUndo) { reactionsRow() }
+        }
 
         if (footerRow != null) {
             footerRow()
@@ -717,6 +745,7 @@ private fun OpenChatMessage(
 @Composable
 private fun ChatQuoteBlock(
     isLoggedInUser: Boolean,
+    filled: Boolean,
     drawAuthorInfo: Boolean,
     animatedColor: Color,
     bgColor: MutableState<Color>,
@@ -736,7 +765,7 @@ private fun ChatQuoteBlock(
         modifier =
             Modifier
                 .clip(ChatQuoteBlockShape)
-                .background(animatedColor)
+                .background(if (filled) animatedColor else Color.Transparent)
                 .drawBehind { drawRect(barColor, size = Size(ChatQuoteBarWidth.toPx(), size.height)) }
                 .then(press.modifier)
                 .then(ChatQuoteBlockInset),

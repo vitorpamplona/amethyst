@@ -20,10 +20,17 @@
  */
 package com.vitorpamplona.amethyst.commons.chats.ui
 
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.util.codePointAtKmp
 import com.vitorpamplona.amethyst.commons.util.codePointCharCount
+
+/**
+ * Whether an emoji-only message may render as jumbo emoji here. The compact chat layout turns it
+ * off: a 48sp emoji tripled the height of a layout whose point is one short line per message.
+ */
+val LocalChatJumboEmoji = compositionLocalOf { true }
 
 /** A message of up to this many emoji renders as jumbo emoji without a bubble. */
 const val MAX_JUMBO_EMOJI = 3
