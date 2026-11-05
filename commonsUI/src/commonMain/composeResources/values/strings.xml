@@ -2244,7 +2244,10 @@
     <string name="wallet_backup_found_restore">Backup found on your relays. Restore wallets</string>
     <string name="wallet_backup_searching">Searching your relays for a backup...</string>
     <string name="wallet_backup_restore_title">Restore Lightning wallets</string>
-    <string name="wallet_backup_restore_found">Found %1$d Lightning wallet(s) in your Nostr backups:</string>
+    <plurals name="wallet_backup_restore_found">
+        <item quantity="one">Found %1$d Lightning wallet in your Nostr backups:</item>
+        <item quantity="other">Found %1$d Lightning wallets in your Nostr backups:</item>
+    </plurals>
     <string name="wallet_backup_restore_confirm">Restore</string>
     <string name="wallet_backup_none_found">No Lightning wallet backup found on your relays</string>
     <string name="wallet_backup_saved_by">Saved by %1$s, %2$s</string>
