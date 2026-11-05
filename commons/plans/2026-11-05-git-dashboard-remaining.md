@@ -12,7 +12,7 @@ search downloads) is `quartz/plans/2026-11-05-git-fetch-costs.md` in the quartz 
 | 3. Row colours | Done, with an offscreen render test. |
 | 4. Unknown announcement | Done in the planner: such an event goes only where the repository's events were seen, until the announcement shows it public. Composers do not yet fetch the announcement first (the planner rule covers the leak). |
 | 5. Inline threads | Done: rendered under their line in the desktop app on a real thread. |
-| 6. Blame and search waits | With the quartz plan; the app picks it up at the next quartz release. |
+| 6. Blame and search waits | Done in quartz (`quartz/plans/archive/2026-11-05-git-fetch-costs.md`): blame on the amethyst repository answered in under 6 s in the desktop app (was 30 to 60 s); search skips binary files and streams packs. The app picks it up at the next quartz release. |
 
 Found on the way: `AMETHYST_LOCAL_RELAYS` alone let a fresh test account publish its Marmot key
 package to the default public relays at login (one throwaway key's, during this testing).
