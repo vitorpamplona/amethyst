@@ -9,8 +9,8 @@ Add a setting, *Settings › App › Navigation layout*, with three choices:
 | Layout | What it does | Why |
 |---|---|---|
 | **Stack** (default, what ships today) | One back stack per window. The bottom bar or rail switches tabs inside that stack. | Keep the current behaviour for everyone who wants it. |
-| **Tabs** | The main pane holds several independent back stacks shown as browser-style tabs. You can open a screen in a new tab, switch between tabs, close them, and reorder them. | Follow many things at once (a thread, a profile, a hashtag, a DM) without losing your place in any of them. |
-| **Windows** | Each screen opens in its own OS window. Back closes the window. | Break Amethyst into pieces a window manager (i3, sway, Hyprland, macOS Stage Manager, Android desktop windowing) can tile, stack and place. |
+| **Tabs** | Every screen opens in its own browser-style tab in the main pane. A tab holds one screen and has no back button: you close it instead. You can switch, close and reorder tabs. | Follow many things at once (a thread, a profile, a hashtag, a DM) without losing your place in any of them. |
+| **Windows** | Each screen opens in its own OS window. A window holds one screen and has no back button: you close it instead. | Break Amethyst into pieces a window manager (i3, sway, Hyprland, macOS Stage Manager, Android desktop windowing) can tile, stack and place. |
 
 **Desktop sizes only.** On phones and in narrow windows, anything other than a nav stack gets
 too complicated: there's no room for a tab strip, and windows mean nothing there. So:
@@ -18,8 +18,8 @@ too complicated: there's no room for a tab strip, and windows mean nothing there
 - **Tabs** apply only while the window is on the permanent-drawer tier
   (`NavigationStyle.PERMANENT_DRAWER`). The desktop app, a landscape tablet, and Android on a
   laptop or in desktop windowing all qualify. Below that tier the same window falls back to the
-  stack: it shows the active tab's back stack with the bar or rail, keeps the other tabs, and
-  brings the strip back when the window widens again.
+  stack: it shows the active tab with the bar or rail and a back arrow to the tab that opened
+  it. It keeps the other tabs, and brings the strip back when the window widens again.
 - **Windows** apply only on desktop-class devices: the desktop app, and Android in desktop
   windowing (Android 16+, ChromeOS, DeX). Within that, each window lays itself out by its own
   size. A narrow tiled window still renders its one screen like a phone column, because the
@@ -31,7 +31,7 @@ too complicated: there's no room for a tab strip, and windows mean nothing there
 
 | Component | Where | Use in this plan |
 |---|---|---|
-| `NavBackStacks` / `NavStackEntry` (headless back stack, JSON `encode`/`decode`) | `commons/…/model/navigation/NavBackStacks.kt` | **Reused as-is.** Each tab and each window owns one. |
+| `NavBackStacks` / `NavStackEntry` (headless back stack, JSON `encode`/`decode`) | `commons/…/model/navigation/NavBackStacks.kt` | **Reused as-is.** Each tab and each window renders through a one-entry stack, so the host and its decorators work unchanged. |
 | `Nav : INav` (each op runs after `ImeSettler`), `rememberNav()` | `commonsUI/…/ui/navigation/navs/Nav.kt`, `RememberNavs.kt` | **Reused.** The tab and window navs wrap it the way `DeckColumnNav` and `TwoPaneNav` do. |
 | `INav` | `commonsUI/…/ui/navigation/navs/INav.kt` | **Extended** with one method (`openNew`) that defaults to `nav(route)`, so the ~hundreds of call sites don't change. |
 | Deck: `DeckArea`, `DeckColumnPane`, `DeckColumnNav`, `DeckLayout` in `AccountSettings.deck` | `commonsUI/…/ui/navigation/deck/`, `commons/…/model/deck/DeckLayout.kt` | **The template to copy.** A deck column already gets its own back stack, its own `ViewModelStoreOwner` (entry keys restart at `nav-0` in each stack), its own `NavigationEventDispatcherOwner` (back goes only to the focused column), and its own `EmojiPanelHost`. Columns are persisted as JSON, and a column whose route no longer decodes is dropped instead of breaking the whole layout. Tabs and windows need all of that. |
@@ -118,20 +118,55 @@ reuse the deck's pieces, or pull them out into shared helpers, before writing ne
   `destinations.serialNameOf` and the deck's `columnChoices` labels, and observe the user and
   note for the dynamic parts.
 
+### One screen per tab or window: no back button
+
+In both layouts a tab or a window holds exactly **one** screen. With no history to go back
+through, there's no back arrow, no back gesture and no Esc-to-go-back. You leave a screen by
+closing it: the tab's ×, Ctrl/Cmd+W, middle-click on the tab, or the window manager's close.
+
+- **Every navigation opens a new tab or window.** `nav(route)` opens one next to the current one
+  and switches to it; a modifier-click or middle-click opens it in the background.
+  - If a tab or window already shows an equal route, that one is focused instead of a duplicate
+    being opened.
+  - Sections (Home, Notifications, Messages, Bookmarks, Settings, …: the drawer, rail and
+    menu-bar roots) are found and focused the same way.
+  - Search is the exception: every search is its own tab or window.
+- **One shared base, `SingleScreenNav : INav`,** behind both `TabbedNav` and `WindowNav`:
+  - `canPop()` returns `false`. About 30 shared top bars draw their back arrow only when
+    `nav.canPop()` (`TopBarWithBackButton`, `TopBarExtensibleWithBackButton`,
+    `SettingsSearchTopBar`, `UserDrawerSearchTopBar`, the chat headers, …), so every back arrow
+    disappears without changing a single screen. Phase 1 adds one audit: grep for back icons
+    wired straight to `popBack()` without that check, and gate them.
+  - `showsBottomBar()` returns `false`. The drawer tier has no bottom bar anyway, and screen
+    windows have no bar.
+  - `popBack()` **closes this tab or window and focuses its opener.** About 180 call sites in
+    `commonsUI` call `popBack()` when a job is finished: posting from a composer, leaving or
+    deleting a group, finishing a picker. They keep working: the finished job's tab or window
+    closes.
+  - `newStack(route)` and `popUpTo(route, klass)` replace this tab's or window's screen in place
+    (a new `routeVersion`, as `NavBackStacks.newStack` does today), which multi-step flows rely
+    on.
+  - No back handler is registered, so Esc stays with text fields, menus and dialogs.
+- **Each tab and window still renders through a one-entry `NavBackStacks`.** That way
+  `NavigationHost` and the ViewModel and saved-state decorators are reused unchanged; the
+  stack is never pushed onto.
+- **What stays inside a screen:** list/detail screens (`TwoPaneNav`: Messages, groups) keep
+  their in-screen detail pane, because that's layout rather than history. Dialogs and bottom
+  sheets stay dialogs.
+
 ### Tabs (Phase 1, shared UI, desktop-size windows on either platform)
 
 **Model (headless, `commons/…/model/navigation/NavTabs.kt`).** This is a direct analogue of
 `DeckLayout`:
 
 ```kotlin
-@Serializable data class NavTabSaved(val id: String, val stack: String /* NavBackStacks.encode() */, val openerId: String? = null, val pinned: Boolean = false)
+@Serializable data class NavTabSaved(val id: String, val route: Route, val routeVersion: Int = 0, val openerId: String? = null, val pinned: Boolean = false)
 @Stable class NavTabs { val tabs: SnapshotStateList<NavTab>; var activeId; fun open(route, after, background); fun close(id); fun move(id, delta); fun activate(id); fun reopenClosed(); fun encode()/decode() }
-class NavTab(val id: String, val stacks: NavBackStacks, var openerId: String?, var pinned: Boolean)
+class NavTab(val id: String, val screen: NavBackStacks /* always one entry */, var openerId: String?, var pinned: Boolean)
 ```
 
-- Each tab is a full `NavBackStacks`, so the bottom bar and rail keep their exact meaning
-  *inside the active tab* (`switchTab`). Modifier-clicking a bar item opens that section in a new
-  tab.
+- A tab is one screen (see above). A new tab is inserted right after the tab that opened it, so
+  related tabs sit together. The opener is remembered for closing and for the narrow fallback.
 - Closing the last tab opens a fresh Home tab, so the list is never empty. Closing the active
   tab activates its opener if that tab is still open, and otherwise the tab next to it, as
   browsers do.
@@ -140,15 +175,13 @@ class NavTab(val id: String, val stacks: NavBackStacks, var openerId: String?, v
   decodes" rule. Tabs come back after a restart; on Android, `rememberSaveable` also covers
   process death.
 - Cap tabs at about 30. Past about 8 live tabs, the least recently used ones are *discarded*: the
-  route and the stack stay, the ViewModels and saved UI state go, and the tab is rebuilt when you
-  next open it. Browsers keep memory bounded the same way.
+  route stays, the ViewModels and saved UI state go, and the tab is rebuilt when you next open
+  it. Browsers keep memory bounded the same way.
 
-**Navigation (`commonsUI/…/ui/navigation/tabs/TabbedNav.kt`).** `TabbedNav : INav by activeTabNav`
-delegates to the active tab's `Nav` and overrides `openNew` (and `nav` when `OpenIntentState`
-is set). Back and Esc pop the active tab. At a tab's root, back closes the tab *if it has an
-opener*, so a link opened in a new tab is dismissed back to where it came from. Deep links,
-intents and OS notifications open in a new foreground tab (`NavigationEffects` /
-`NavigateIfIntentRequested` and `DesktopDeepLinks` call `openNew` instead of `newStack`).
+**Navigation (`commonsUI/…/ui/navigation/tabs/TabbedNav.kt`).** `TabbedNav : SingleScreenNav`
+implements the rules above over `NavTabs`. Deep links, intents and OS notifications open (or
+focus) a tab in the foreground: `NavigationEffects` / `NavigateIfIntentRequested` and
+`DesktopDeepLinks` call `openNew` instead of `newStack`.
 
 **Rendering.** For each tab, one `NavigationHost` inside a `key(tab.id)` with its own
 `ViewModelStoreOwner` (child of the account store), a `SaveableStateHolder` slot and an
@@ -160,12 +193,13 @@ that's out of scope here.
 **Chrome.**
 - *Drawer tier only:* a tab strip across the top of the content area, right of the drawer and
   left of the deck or notification panel. Each tab has a title, a close button and
-  drag-to-reorder; middle-click closes. A `+` button opens Home. Overflow scrolls horizontally,
-  like `DeckArea`'s column row.
-- *A window that narrows to the rail or bottom-bar tier* drops the strip and shows only the
-  active tab's stack. Nothing is closed, and the strip and the other tabs come back when the
-  window widens. There's no tab switcher on small screens, and the bar and rail behave as they
-  do today.
+  drag-to-reorder; middle-click closes. A `+` button opens a new Search tab. Overflow scrolls
+  horizontally, like `DeckArea`'s column row.
+- *A window that narrows to the rail or bottom-bar tier* drops the strip and becomes a stack
+  again. The stack is built from the active tab's opener chain (Home › #nostr › Thread), so
+  the back arrow returns, and pressing it shows the tab that opened this one. Nothing is
+  closed, and the strip and every tab come back when the window widens. There's no tab
+  switcher on small screens, and the bar and rail behave as they do today.
 - *Entry points:* modifier-click and middle-click, plus *Open in new tab* in the existing note,
   profile and link drop-down menus (right-click on desktop). The menu item shows only while
   `effectiveLayout` is `TABS`.
@@ -174,20 +208,20 @@ that's out of scope here.
   *Window* menu lists the open tabs.
 
 **Deck in tabs mode.** Deck columns stay where they are, to the right of the tabbed main pane.
-Later, a column header can get *Open in tab* and a tab can get *Pin as column*, since both hold
-a `Route` plus a stack.
+Later, a column header can get *Open in tab* and a tab can get *Pin as column*. Columns keep
+their own back stacks; only the tabbed main pane is single-screen.
 
 ### Windows on Desktop (Phase 2)
 
 **Model.** `AppWindows` (headless, in `commons/…/model/navigation/`) holds a list of
-`ScreenWindowSpec(id, stack: NavBackStacks, openerId, kind: NavFamily, bounds)`, persisted per
+`ScreenWindowSpec(id, route: Route, routeVersion, openerId, kind: NavFamily, bounds)`, persisted per
 account like the tabs so the window manager gets the same windows back on the next start.
 `desktopApp` renders it: inside the main window's composition (the `DesktopNappletWindows`
 precedent), `appWindows.forEach { key(it.id) { ScreenWindow(it) } }`.
 
 **Each `ScreenWindow`** is an `AppWindow` with:
 - `ShellWindow` running in *single-screen chrome*: no drawer, no bar or rail, and the screen's own
-  top bar with its back arrow. `LocalScreenLayout` comes from the window's own size
+  top bar **without a back arrow** (`SingleScreenNav`). `LocalScreenLayout` comes from the window's own size
   (`AppRoot.rememberScreenLayoutSpec()` already reads the window), so a narrow tiled window
   lays out like a phone column and a wide one like a desktop.
 - Its own `Nav`, `ViewModelStoreOwner`, `NavigationEventDispatcherOwner`, `DesktopNavigator` and
@@ -203,15 +237,12 @@ precedent), `appWindows.forEach { key(it.id) { ScreenWindow(it) } }`.
 
 | Call | Effect |
 |---|---|
-| `nav(route)` (drill-in or fade family) | Opens a new top-level window next to the opener |
+| `nav(route)` (drill-in or fade family) | Opens a new top-level window next to the opener, or focuses one already showing that route |
 | `nav(route)` (modal family: composers, pickers) | Opens an **owned** child window. Window managers float transient windows, which suits a composer |
 | `openNew` / modifier-click | Same as `nav`, but stays behind the opener (background) |
-| `newStack(route)` | Focuses an open window already showing that route, or else opens one |
+| `newStack(route)` / `popUpTo` | Replaces this window's screen in place (multi-step flows) |
 | `navBottomBar(route)` / menu-bar sections | Home, Notifications, Messages, Search, … are **singletons**: focus the one that exists, or else open it |
-| `popBack()` | Pops inside the window if it has history, or else closes the window and focuses its opener |
-
-Optionally (see Decisions), a per-user "push inside the window, modifier-click for a new window"
-variant reuses the same nav with the table's first row swapped.
+| `popBack()` | Closes the window and focuses its opener. No back arrow is drawn; screens call it when a job is done |
 
 **Main window and lifetime.** The main window keeps the full shell (drawer, rail, Home) as the
 hub, the place to log in, switch accounts and find everything. In Phase 2a it also hosts
@@ -252,10 +283,14 @@ never reach this code.
 ### Moving between modes (Phase 4, polish)
 
 - Tab context menu: *Move to new window*. Window menu: *Move into a tab of the main window*.
-  Both carry the `NavBackStacks` across intact through `encode`/`decode`.
-- Switching the setting at runtime: Stack → Tabs makes the current stack the first tab. Tabs →
-  Windows turns each tab into a window, with a confirmation when there are more than 5. Going
-  back collapses windows into tabs, or into the active stack for Stack mode.
+  Both carry the route and the opener across.
+- Switching the setting at runtime:
+  - Stack → Tabs turns each screen of the current stack into a tab, in order, each opened by
+    the one before it.
+  - Tabs → Windows turns each tab into a window, with a confirmation when there are more
+    than 5.
+  - Going back to Stack rebuilds the stack from the active tab's or window's opener chain,
+    the same as the narrow fallback.
 
 ## Phasing
 
@@ -278,8 +313,13 @@ singleton bugs above for the deck.
   `AppWindowsTest` (singleton routes, opener focus on pop, persistence). Model them on
   `NavBackStacksTest` and the deck tests.
 - **Nav tests in `commonsUI` `commonTest`:** `TabbedNavTest` and `WindowNavTest`, run the way
-  `NavBottomBarStackTest` and `NavDrawerTest` are (`runTest`, no mocks), including the
-  modifier-click → `openNew` path.
+  `NavBottomBarStackTest` and `NavDrawerTest` are (`runTest`, no mocks). They cover:
+  - `canPop()` is false;
+  - `popBack()` closes and focuses the opener;
+  - an equal route focuses instead of duplicating;
+  - `newStack` replaces in place;
+  - the modifier-click → `openNew` path;
+  - the opener-chain stack used by the narrow fallback.
 - **Subscription regression:** two `ShellWindow`s over one `AccountSession`. Close one, and the
   account's REQs must still be open. This is the failure mode found in the survey.
 - **Run the app:** `tools/desktop-run/run-headless.sh start`, with screenshots of:
@@ -296,13 +336,13 @@ singleton bugs above for the deck.
    and Ctrl/Cmd+1/2/3 are Home, Messages and Notifications. Proposal: under Tabs, the browser
    keys go to tabs and the deck moves to Ctrl/Cmd+Alt+T/W. Ctrl/Cmd+1…3 keep opening sections,
    and Alt+1…9 (now the deck's focus keys) select tabs when the deck is off.
-2. **Windows drill-in policy.** Should every push open a window (the pure "each screen is a
-   window" model, best for tiling window managers), or only modifier-clicks, with plain clicks
-   pushing inside the window? Proposal: pure by default, with the other as a sub-option.
+2. **Close shortcut only, or Esc too?** Proposal: only Ctrl/Cmd+W (and the tab's × or the window
+   manager's close) closes a tab or window. Esc stays with text fields and dialogs, so a stray
+   Esc never throws away a screen.
 3. **Hub lifetime.** Is Phase 2a's "closing the main window quits" acceptable for a first
    release, or is 2b a blocker?
 4. **Tab persistence.** Restore tabs and windows after a restart (proposed, per account), or
    start fresh each launch?
-5. **Default for links in Tabs mode.** Plain clicks stay in the tab and modifier-clicks or the
-   right-click menu open a new one (proposed, as browsers do). The alternative is "notes and
-   profiles always open in a new tab".
+5. **Duplicates.** Proposal: opening a route that is already open focuses the existing tab or
+   window. The alternative is to always open a new one, as browsers do, which grows the strip
+   faster.
