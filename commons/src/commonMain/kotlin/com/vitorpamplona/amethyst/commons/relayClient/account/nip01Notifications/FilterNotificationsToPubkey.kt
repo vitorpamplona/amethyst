@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
@@ -123,6 +124,8 @@ val NotificationsPerKeyKinds2 =
         GitStatusAppliedEvent.KIND,
         GitStatusClosedEvent.KIND,
         GitStatusDraftEvent.KIND,
+        // NIP-34 reviews (7321) p-tag the reviewed patch's or PR's author.
+        GitReviewEvent.KIND,
         HighlightEvent.KIND,
         CommentEvent.KIND,
         CalendarDateSlotEvent.KIND,

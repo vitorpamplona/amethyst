@@ -32,13 +32,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitActivityTarget
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.rememberIsAuthorisedChange
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.statusKind
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.verdictColor
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.verdictLabel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_proposed_explanation
+import com.vitorpamplona.amethyst.commons.resources.git_timeline_reviewed
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_set_status
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.GitStatusPill
@@ -48,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 
 /**
@@ -86,6 +91,51 @@ fun RenderGitStatusEvent(
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(top = 2.dp),
         )
+    }
+
+    if (event.content.isNotBlank()) {
+        Spacer(modifier = StdVertSpacer)
+        Text(
+            text = event.content,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+
+    if (note.replyTo?.lastOrNull() != null) {
+        Spacer(modifier = StdVertSpacer)
+        GitActivityTarget(note, quotesLeft, backgroundColor, accountViewModel, nav)
+    }
+}
+
+/**
+ * A review verdict (kind 7321) as a feed row: "reviewed [Approve (ACK)]", its summary, then the
+ * patch or pull request it reviews. Anyone may review; merging stays with the maintainers.
+ */
+@Composable
+fun RenderGitReviewEvent(
+    note: Note,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = note.event as? GitReviewEvent ?: return
+    val verdict = remember(event) { event.verdict() }
+
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = stringRes(Res.string.git_timeline_reviewed),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.grayText,
+        )
+        if (verdict != null) {
+            Text(
+                text = verdictLabel(verdict),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = verdictColor(verdict),
+            )
+        }
     }
 
     if (event.content.isNotBlank()) {

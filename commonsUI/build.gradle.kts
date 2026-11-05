@@ -285,21 +285,30 @@ tasks.named("compileAndroidMain") { mustRunAfter("compileKotlinJvm") }
 // NoteComposeKindCoverageTest checks that every class quartz's EventFactory builds has a feed card,
 // and reads that list from EventFactory's source. quartz lives in its own repo, so the test gets the
 // source from the checkout -PquartzDir builds, or else from quartz's published JVM sources jar.
+// A JitPack build (quartzJitpack in the catalog) is asked for that jar by its classifier: JitPack's
+// rewrite of the module metadata points the JVM sources variant at the binary jar.
+val quartzJitpack = libs.versions.quartzJitpack.get().takeIf { it.isNotBlank() }
 val quartzSources =
     configurations.register("quartzSources") {
         isCanBeConsumed = false
         isTransitive = false
-        attributes {
-            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
-            attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType.SOURCES))
-            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
-            attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.STANDARD_JVM))
-            attribute(KotlinPlatformType.attribute, KotlinPlatformType.jvm)
+        if (quartzJitpack == null) {
+            attributes {
+                attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+                attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType.SOURCES))
+                attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+                attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.STANDARD_JVM))
+                attribute(KotlinPlatformType.attribute, KotlinPlatformType.jvm)
+            }
         }
     }
 
 dependencies {
-    "quartzSources"(libs.quartz)
+    if (quartzJitpack == null) {
+        "quartzSources"(libs.quartz)
+    } else {
+        "quartzSources"("com.github.vitorpamplona.quartz:quartz-jvm:$quartzJitpack:sources")
+    }
 }
 
 tasks.named<Test>("jvmTest") {

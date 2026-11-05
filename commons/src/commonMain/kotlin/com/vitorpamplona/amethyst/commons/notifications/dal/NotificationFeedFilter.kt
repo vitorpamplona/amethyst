@@ -70,6 +70,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
@@ -195,6 +196,7 @@ class NotificationFeedFilter(
                 GitStatusAppliedEvent.KIND,
                 GitStatusClosedEvent.KIND,
                 GitStatusDraftEvent.KIND,
+                GitReviewEvent.KIND,
                 HighlightEvent.KIND,
                 TextNoteEvent.KIND,
                 ReactionEvent.KIND,
@@ -299,7 +301,7 @@ class NotificationFeedFilter(
             }
 
             if (event is GitIssueEvent || event is GitPatchEvent ||
-                event is GitPullRequestEvent || event is GitReplyEvent
+                event is GitPullRequestEvent || event is GitReplyEvent || event is GitReviewEvent
             ) {
                 // NIP-34 events reach the notifications tab only via the p-tag
                 // relay filter, which already selected them because the current

@@ -70,9 +70,14 @@ Then finished (same day):
 - A read-only login (an npub) no longer sees Close, Reopen or Merge: the status buttons now need a
   signing account, like Review, comments and triage.
 
+- Reviews (kind 7321) have a feed card ("reviewed Approve (ACK)", the summary, the item) and reach
+  the reviewed item's author in notifications. `NoteComposeKindCoverageTest` caught the missing
+  card once it read the JitPack quartz's `EventFactory`.
+
 Looked at in the desktop app on the JitPack quartz: as the maintainer's npub, a PR thread with no
 Review, triage or status buttons and a Kotlin diff coloured in both the unified and split views; as
-the maintainer, the New pull request form's branch fields and their menus.
+the maintainer, the New pull request form's branch fields and their menus; a review left by the
+maintainer, in the contributor's notifications.
 
 ## 1. Signing flows have never run end to end
 
