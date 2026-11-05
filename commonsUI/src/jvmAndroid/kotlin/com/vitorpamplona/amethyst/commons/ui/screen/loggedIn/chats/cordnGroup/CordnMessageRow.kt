@@ -54,10 +54,12 @@ import com.vitorpamplona.amethyst.commons.chats.ui.CHAT_GROUP_WINDOW_SECONDS
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatBubbleLayout
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatDivisor
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatGroupPosition
+import com.vitorpamplona.amethyst.commons.chats.ui.chatJumboEmojiAllowed
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiCount
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiFontSize
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -71,7 +73,6 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_action_pin
 import com.vitorpamplona.amethyst.commons.resources.cordn_action_reply
 import com.vitorpamplona.amethyst.commons.resources.cordn_action_unpin
 import com.vitorpamplona.amethyst.commons.resources.cordn_chat_unread_divider
-import com.vitorpamplona.amethyst.commons.resources.cordn_chat_yesterday
 import com.vitorpamplona.amethyst.commons.resources.cordn_delete_confirm_body
 import com.vitorpamplona.amethyst.commons.resources.cordn_delete_confirm_title
 import com.vitorpamplona.amethyst.commons.resources.cordn_delivery_accepted
@@ -84,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_message_edited
 import com.vitorpamplona.amethyst.commons.resources.cordn_reactions_title
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.today
+import com.vitorpamplona.amethyst.commons.resources.yesterday
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
@@ -93,13 +95,14 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
-import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
-import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
+import com.vitorpamplona.amethyst.commons.ui.note.chatDayLabelWith
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ActionTile
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatAuthorAvatar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatAuthorNameSize
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatAuthorNameWeight
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatChipFlowRow
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatTimestamp
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.MoreActionsToggle
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ReactionChip
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ReactionChipView
@@ -122,6 +125,7 @@ import com.vitorpamplona.cordn.spec02Envelopes.CordnAnnotationIndex
 import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Duration
@@ -182,9 +186,17 @@ fun CordnMessageRow(
     // the content rather than from a `p` tag: a tag is a claim the sender makes about
     // who they addressed, while the text is what everyone in the room actually sees.
     val mentionsMe = remember(text, me) { text != null && me in CordnMentions.mentioned(text) }
-    val jumboCount = remember(text) { if (text != null) jumboEmojiCount(text) else 0 }
+    // The compact layout keeps emoji inline, as RenderRegularTextNote does for every other chat:
+    // a 48sp emoji tripled the height of a one-line-per-message layout. Decided here, before
+    // ChatBubbleLayout draws the row, so it reads the setting rather than the layout's local.
+    val jumboAllowed = chatJumboEmojiAllowed()
+    val jumboCount = remember(text, jumboAllowed) { if (text != null && jumboAllowed) jumboEmojiCount(text) else 0 }
 
     val mentionTint = MaterialTheme.colorScheme.primary.copy(alpha = MENTION_TINT_ALPHA)
+
+    // As in NormalChatNote: in the OPEN layout someone else's message is bare text, and only its
+    // time shows where it ends, so each of their messages carries one.
+    val showTime = groupPosition.isLastOfGroup || (LocalDisplaySettings.current.chatLayout == ChatLayoutType.OPEN && !isMine)
 
     Box(if (mentionsMe) Modifier.fillMaxWidth().background(mentionTint) else Modifier.fillMaxWidth()) {
         ChatBubbleLayout(
@@ -240,7 +252,7 @@ fun CordnMessageRow(
             // Mirrors chatFooterHasMeta: the footer earns its row on the last message
             // of a burst (for the time) or on any message carrying a marker of its own.
             footerRow =
-                if (groupPosition.isLastOfGroup || isEdited || isPinned) {
+                if (showTime || isEdited || isPinned) {
                     {
                         CordnMessageFooter(
                             message = message,
@@ -249,7 +261,7 @@ fun CordnMessageRow(
                             accountViewModel = accountViewModel,
                             isEdited = isEdited,
                             isPinned = isPinned,
-                            showTime = groupPosition.isLastOfGroup,
+                            showTime = showTime,
                         )
                     }
                 } else {
@@ -261,7 +273,7 @@ fun CordnMessageRow(
                 if (isMine) {
                     null
                 } else {
-                    { ChatAuthorAvatar(message.envelope.pubKey, accountViewModel) { nav.nav(Route.Profile(message.envelope.pubKey)) } }
+                    { size -> ChatAuthorAvatar(message.envelope.pubKey, accountViewModel, size) { nav.nav(Route.Profile(message.envelope.pubKey)) } }
                 },
         ) { bgColor ->
             CordnBubbleContents(
@@ -650,17 +662,12 @@ private fun CordnMessageFooter(
         if (showTime) {
             ClickableBox(onClick = { showDetails = true }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    ToggleableTimeAgoText(
-                        timestamp = message.envelope.createdAt,
-                        style = TimeAgoStyle.Short,
-                        color = MaterialTheme.colorScheme.placeholderText,
-                        fontSize = Font12SP,
-                        // The tap belongs to the details sheet, as it does in the shared
-                        // footer. Left toggleable, the same tap flipped relative/absolute
-                        // here and opened delivery detail everywhere else; the absolute
-                        // time is in the sheet instead.
-                        toggleable = false,
-                    )
+                    // The shared chat stamp, as every other chat: the time of day under
+                    // the room's pinned day (pill or docked bar), the day spelled out
+                    // in the open layout. It was relative ("3d"), which under a pill
+                    // reading "Nov 2" said the same thing twice in two ways. The tap
+                    // belongs to the details sheet, as it does in the shared footer.
+                    ChatTimestamp(message.envelope.createdAt)
 
                     // Anything of yours that is in this list was accepted by the
                     // coordinator: `post` returns the cursor it was filed under, and
@@ -992,21 +999,13 @@ fun DaySeparator(
     createdAt: Long,
     today: LocalDate,
 ) {
-    val day = remember(createdAt) { localDayOf(createdAt) }
-
-    val label =
-        when (day) {
-            today -> stringRes(Res.string.today)
-            today.minusDays(1) -> stringRes(Res.string.cordn_chat_yesterday)
-            // Year included only when it is not this one: printing 2026 on every
-            // divider all year is noise.
-            else ->
-                day.format(
-                    DateTimeFormatter.ofPattern(
-                        if (day.year == today.year) "d MMM" else "d MMM yyyy",
-                    ),
-                )
-        }
+    // The labels every other chat's dividers use ("Today", "Yesterday", "Aug 20", "Jan 5, 2024",
+    // in the locale's own order), so this divider and the pinned day pill or bar above the room
+    // always read alike. The year is left out when it is this one. [today] only keys the label:
+    // it changes at midnight and relabels "Today" as "Yesterday".
+    val todayLabel = stringRes(Res.string.today)
+    val yesterdayLabel = stringRes(Res.string.yesterday)
+    val label = remember(createdAt, today, todayLabel, yesterdayLabel) { chatDayLabelWith(createdAt, TimeUtils.nowMillis(), todayLabel, yesterdayLabel) }
 
     ChatDivisor(label)
 }

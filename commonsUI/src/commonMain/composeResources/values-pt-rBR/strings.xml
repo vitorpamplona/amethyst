@@ -6585,7 +6585,7 @@
     <string name="cordn_chat_empty_description">Tudo o que for enviado aqui é criptografado para este grupo. O coordenador repassa as mensagens sem conseguir lê-las.</string>
     <string name="cordn_chat_empty_title">Nenhuma mensagem ainda</string>
     <string name="cordn_chat_unread_divider">Novas mensagens</string>
-    <string name="cordn_chat_yesterday">Ontem</string>
+    <string name="yesterday">Ontem</string>
     <string name="cordn_composer_hint">Mensagem</string>
     <string name="cordn_coordinators_add_action">Adicionar</string>
     <string name="cordn_coordinators_add_failed">Não foi possível abrir esse coordenador.</string>

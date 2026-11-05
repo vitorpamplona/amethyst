@@ -64,6 +64,7 @@ class UiSettingsFlow(
     val automaticallyDownloadTranslationModels: MutableStateFlow<ConnectivityType> = MutableStateFlow(ConnectivityType.WIFI_ONLY),
     val hideWalletBalances: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val navigationLayout: MutableStateFlow<NavigationLayoutType> = MutableStateFlow(NavigationLayoutType.STACK),
+    val chatLayout: MutableStateFlow<ChatLayoutType> = MutableStateFlow(ChatLayoutType.BUBBLES),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -103,6 +104,7 @@ class UiSettingsFlow(
             automaticallyDownloadTranslationModels,
             hideWalletBalances,
             navigationLayout,
+            chatLayout,
         )
 
     // emits at every change in any of the propertyes.
@@ -146,6 +148,7 @@ class UiSettingsFlow(
                 flows[33] as ConnectivityType,
                 flows[34] as Boolean,
                 flows[35] as NavigationLayoutType,
+                flows[36] as ChatLayoutType,
             )
         }
 
@@ -187,6 +190,7 @@ class UiSettingsFlow(
             automaticallyDownloadTranslationModels.value,
             hideWalletBalances.value,
             navigationLayout.value,
+            chatLayout.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -336,6 +340,10 @@ class UiSettingsFlow(
             navigationLayout.tryEmit(torSettings.navigationLayout)
             any = true
         }
+        if (chatLayout.value != torSettings.chatLayout) {
+            chatLayout.tryEmit(torSettings.chatLayout)
+            any = true
+        }
 
         return any
     }
@@ -397,6 +405,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.automaticallyDownloadTranslationModels),
                 MutableStateFlow(uiSettings.hideWalletBalances),
                 MutableStateFlow(uiSettings.navigationLayout),
+                MutableStateFlow(uiSettings.chatLayout),
             )
     }
 }

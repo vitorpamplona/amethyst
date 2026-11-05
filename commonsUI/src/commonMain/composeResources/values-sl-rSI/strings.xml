@@ -6980,7 +6980,7 @@
     <string name="cordn_chat_empty_description">Vse, kar je poslano sem, je šifrirano za to skupino. Koordinator to posreduje, ne da bi lahko bral.</string>
     <string name="cordn_chat_empty_title">Ni še sporočil</string>
     <string name="cordn_chat_unread_divider">Nova sporočila</string>
-    <string name="cordn_chat_yesterday">Včeraj</string>
+    <string name="yesterday">Včeraj</string>
     <string name="cordn_composer_hint">Sporočilo</string>
     <string name="cordn_coordinators_add_action">Dodaj</string>
     <string name="cordn_coordinators_add_failed">Tega koordinatorja ni bilo mogoče odpreti.</string>

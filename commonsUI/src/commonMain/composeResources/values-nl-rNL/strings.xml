@@ -6614,7 +6614,7 @@
     <string name="cordn_chat_empty_description">Alles wat je hier verstuurt, is versleuteld voor deze groep. De coördinator stuurt het door zonder het te kunnen lezen.</string>
     <string name="cordn_chat_empty_title">Nog geen berichten</string>
     <string name="cordn_chat_unread_divider">Nieuwe berichten</string>
-    <string name="cordn_chat_yesterday">Gisteren</string>
+    <string name="yesterday">Gisteren</string>
     <string name="cordn_composer_hint">Bericht</string>
     <string name="cordn_coordinators_add_action">Toevoegen</string>
     <string name="cordn_coordinators_add_failed">Kon die coördinator niet openen.</string>

@@ -27,6 +27,9 @@ import com.vitorpamplona.amethyst.commons.resources.accent_color_orange
 import com.vitorpamplona.amethyst.commons.resources.accent_color_pink
 import com.vitorpamplona.amethyst.commons.resources.accent_color_purple
 import com.vitorpamplona.amethyst.commons.resources.accent_color_red
+import com.vitorpamplona.amethyst.commons.resources.chat_layout_bubbles
+import com.vitorpamplona.amethyst.commons.resources.chat_layout_compact
+import com.vitorpamplona.amethyst.commons.resources.chat_layout_open
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_always
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_never
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_unmetered_wifi_only
@@ -123,6 +126,14 @@ val NoteLayoutType.resourceId: StringResource
             NoteLayoutType.AUTHOR_COLUMN -> Res.string.note_layout_author_column
             NoteLayoutType.FULL_WIDTH -> Res.string.note_layout_full_width
             NoteLayoutType.EDGE_TO_EDGE -> Res.string.note_layout_edge_to_edge
+        }
+
+val ChatLayoutType.resourceId: StringResource
+    get() =
+        when (this) {
+            ChatLayoutType.BUBBLES -> Res.string.chat_layout_bubbles
+            ChatLayoutType.COMPACT -> Res.string.chat_layout_compact
+            ChatLayoutType.OPEN -> Res.string.chat_layout_open
         }
 
 val WarningType.resourceId: StringResource

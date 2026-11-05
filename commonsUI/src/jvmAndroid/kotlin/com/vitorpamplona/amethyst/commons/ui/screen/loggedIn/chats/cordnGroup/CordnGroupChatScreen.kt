@@ -44,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.chats.ui.AutoScrollToNewest
 import com.vitorpamplona.amethyst.commons.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -109,6 +111,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.RecordAudioBox
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioPlayer
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnComposer
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnMessageRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnQuotedMessage
@@ -117,6 +120,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.Un
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.cordnGroupPositionFor
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.rememberToday
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.sameDayAs
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatFeedDayIndicator
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatDayShownByFeed
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadState
@@ -390,113 +395,137 @@ private fun CordnGroupChat(
                 )
             }
 
-            LazyColumn(
-                state = listState,
-                // Anchored at the bottom like every other chat: a room opens on
-                // its newest message. `messages` is oldest-first, so the rows
-                // are reversed to match.
-                reverseLayout = true,
-                contentPadding = FeedPadding,
-                // No weight while the empty state holds the space, or the two would
-                // split the screen and the placeholder would sit in half of it.
-                modifier =
-                    if (rows.isEmpty()) {
-                        Modifier.fillMaxWidth()
-                    } else {
-                        Modifier.weight(1f).fillMaxWidth()
-                    }.padding(horizontal = 12.dp),
-            ) {
-                itemsIndexed(rows, key = { _, it -> it.envelope.id }) { index, message ->
-                    // `rows` runs newest-first and the list is reverse-laid-out,
-                    // so the next index is the older message and renders above.
-                    val older = rows.getOrNull(index + 1)
-                    val newer = rows.getOrNull(index - 1)
+            // The day of what is at the top, pinned the way the shared chat feed pins it:
+            // a pill over bubbles, a docked bar over compact lines, nothing in the open
+            // layout, whose stamps name the day themselves. Under a pinned day the stamps
+            // are the time of day (LocalChatDayShownByFeed, read by ChatTimestamp).
+            val chatLayout = LocalDisplaySettings.current.chatLayout
+            val pinsDay = chatLayout != ChatLayoutType.OPEN
 
-                    // Send/arrival motion, as in the shared feed: a new row fades
-                    // in and the ones above slide to make room, so a sent message
-                    // enters instead of appearing.
-                    val itemModifier =
-                        if (accountViewModel.settings.isPerformanceMode()) {
-                            Modifier
+            CompositionLocalProvider(LocalChatDayShownByFeed provides pinsDay) {
+                Box(
+                    // No weight while the empty state holds the space, or the two would
+                    // split the screen and the placeholder would sit in half of it. The
+                    // side padding is the Box's, so the docked bar lines up with the
+                    // dividers in the list.
+                    modifier =
+                        if (rows.isEmpty()) {
+                            Modifier.fillMaxWidth()
                         } else {
-                            Modifier.animateItem()
-                        }
+                            Modifier.weight(1f).fillMaxWidth()
+                        }.padding(horizontal = 12.dp),
+                ) {
+                    LazyColumn(
+                        state = listState,
+                        // Anchored at the bottom like every other chat: a room opens on
+                        // its newest message. `messages` is oldest-first, so the rows
+                        // are reversed to match.
+                        reverseLayout = true,
+                        contentPadding = FeedPadding,
+                        modifier = if (rows.isEmpty()) Modifier.fillMaxWidth() else Modifier.fillMaxSize(),
+                    ) {
+                        itemsIndexed(rows, key = { _, it -> it.envelope.id }) { index, message ->
+                            // `rows` runs newest-first and the list is reverse-laid-out,
+                            // so the next index is the older message and renders above.
+                            val older = rows.getOrNull(index + 1)
+                            val newer = rows.getOrNull(index - 1)
 
-                    // One Column, so the item is a single placeable. `reverseLayout`
-                    // mirrors each of an item's placeables about the main axis, which
-                    // inverts the order of siblings emitted side by side — but it does
-                    // not reach inside a layout, so this Column still reads top to
-                    // bottom. Both headers are therefore composed BEFORE the bubble
-                    // they introduce: the date above the whole day, then the unread
-                    // line immediately against the message.
-                    Column(modifier = itemModifier) {
-                        // Starts a new day when it differs from the older row, which
-                        // under reverseLayout is the one rendered above.
-                        if (!message.sameDayAs(older)) {
-                            DaySeparator(message.envelope.createdAt, today)
-                        }
-
-                        if (message.envelope.id == firstUnreadId) {
-                            UnreadDivider()
-                        }
-
-                        CordnMessageRow(
-                            message = message,
-                            room = room,
-                            annotations = annotations,
-                            me = me,
-                            // Grouped when the same person keeps talking inside the
-                            // shared chat window: one avatar and name per burst
-                            // instead of per line, and the bubbles of a burst square
-                            // off against each other — which is most of what makes a
-                            // wall of messages readable.
-                            groupPosition =
-                                remember(newer?.envelope?.id, message.envelope.id, older?.envelope?.id) {
-                                    cordnGroupPositionFor(newer, message, older)
-                                },
-                            // The edit if there is one, and nothing at all if the
-                            // message was withdrawn: rendering the original text of
-                            // a deleted message would defeat the deletion.
-                            text = if (annotations.isDeleted(message.envelope.id)) null else annotations.contentOf(message.envelope.id),
-                            isEdited = annotations.isEdited(message.envelope.id),
-                            shouldHighlight = highlighted == message.envelope.id,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                            onHighlightFinished = { highlighted = null },
-                            onScrollToMessage = jumpTo,
-                            onReply = {
-                                replyingTo = message
-                                editing = null
-                            },
-                            onEdit = {
-                                editing = message
-                                replyingTo = null
-                                room.draft.value = annotations.contentOf(message.envelope.id).orEmpty()
-                            },
-                            onDelete = {
-                                // Through trySend like the rest: a deletion is an
-                                // annotation, and an annotation of your own comes back
-                                // as an Echo too, so deleting your own message used to
-                                // look like nothing had happened until someone else's
-                                // traffic refreshed the fold.
-                                scope.launch { trySend { it.post(room.gid, deleteTo = message.target()) } }
-                            },
-                            onTogglePin = {
-                                val pinned = annotations.isPinned(message.envelope.id)
-                                scope.launch {
-                                    trySend {
-                                        it.post(
-                                            gid = room.gid,
-                                            pinTo = message.target(),
-                                            pinOp = if (pinned) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
-                                        )
-                                    }
+                            // Send/arrival motion, as in the shared feed: a new row fades
+                            // in and the ones above slide to make room, so a sent message
+                            // enters instead of appearing.
+                            val itemModifier =
+                                if (accountViewModel.settings.isPerformanceMode()) {
+                                    Modifier
+                                } else {
+                                    Modifier.animateItem()
                                 }
-                            },
-                            onReact = { emoji ->
-                                scope.launch { trySend { it.post(room.gid, emoji, reactionTo = message.target()) } }
-                            },
-                        )
+
+                            // One Column, so the item is a single placeable. `reverseLayout`
+                            // mirrors each of an item's placeables about the main axis, which
+                            // inverts the order of siblings emitted side by side — but it does
+                            // not reach inside a layout, so this Column still reads top to
+                            // bottom. Both headers are therefore composed BEFORE the bubble
+                            // they introduce: the date above the whole day, then the unread
+                            // line immediately against the message.
+                            Column(modifier = itemModifier) {
+                                // Starts a new day when it differs from the older row, which
+                                // under reverseLayout is the one rendered above.
+                                if (!message.sameDayAs(older)) {
+                                    DaySeparator(message.envelope.createdAt, today)
+                                }
+
+                                if (message.envelope.id == firstUnreadId) {
+                                    UnreadDivider()
+                                }
+
+                                CordnMessageRow(
+                                    message = message,
+                                    room = room,
+                                    annotations = annotations,
+                                    me = me,
+                                    // Grouped when the same person keeps talking inside the
+                                    // shared chat window: one avatar and name per burst
+                                    // instead of per line, and the bubbles of a burst square
+                                    // off against each other — which is most of what makes a
+                                    // wall of messages readable.
+                                    groupPosition =
+                                        remember(newer?.envelope?.id, message.envelope.id, older?.envelope?.id) {
+                                            cordnGroupPositionFor(newer, message, older)
+                                        },
+                                    // The edit if there is one, and nothing at all if the
+                                    // message was withdrawn: rendering the original text of
+                                    // a deleted message would defeat the deletion.
+                                    text = if (annotations.isDeleted(message.envelope.id)) null else annotations.contentOf(message.envelope.id),
+                                    isEdited = annotations.isEdited(message.envelope.id),
+                                    shouldHighlight = highlighted == message.envelope.id,
+                                    accountViewModel = accountViewModel,
+                                    nav = nav,
+                                    onHighlightFinished = { highlighted = null },
+                                    onScrollToMessage = jumpTo,
+                                    onReply = {
+                                        replyingTo = message
+                                        editing = null
+                                    },
+                                    onEdit = {
+                                        editing = message
+                                        replyingTo = null
+                                        room.draft.value = annotations.contentOf(message.envelope.id).orEmpty()
+                                    },
+                                    onDelete = {
+                                        // Through trySend like the rest: a deletion is an
+                                        // annotation, and an annotation of your own comes back
+                                        // as an Echo too, so deleting your own message used to
+                                        // look like nothing had happened until someone else's
+                                        // traffic refreshed the fold.
+                                        scope.launch { trySend { it.post(room.gid, deleteTo = message.target()) } }
+                                    },
+                                    onTogglePin = {
+                                        val pinned = annotations.isPinned(message.envelope.id)
+                                        scope.launch {
+                                            trySend {
+                                                it.post(
+                                                    gid = room.gid,
+                                                    pinTo = message.target(),
+                                                    pinOp = if (pinned) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
+                                                )
+                                            }
+                                        }
+                                    },
+                                    onReact = { emoji ->
+                                        scope.launch { trySend { it.post(room.gid, emoji, reactionTo = message.target()) } }
+                                    },
+                                )
+                            }
+                        }
+                    }
+
+                    // Every row that opens a day carries its DaySeparator at its top, the oldest
+                    // included (sameDayAs is false without an older row), which is what the
+                    // indicator reads the list's geometry against.
+                    if (pinsDay && rows.isNotEmpty()) {
+                        ChatFeedDayIndicator(listState, rows.size, docked = chatLayout == ChatLayoutType.COMPACT) { index ->
+                            rows.getOrNull(index)?.envelope?.createdAt
+                        }
                     }
                 }
             }

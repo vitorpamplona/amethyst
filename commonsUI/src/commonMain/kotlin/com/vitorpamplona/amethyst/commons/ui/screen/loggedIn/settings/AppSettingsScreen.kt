@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.BooleanType
+import com.vitorpamplona.amethyst.commons.model.ChatLayoutType
 import com.vitorpamplona.amethyst.commons.model.ConnectivityType
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
@@ -80,6 +81,8 @@ import com.vitorpamplona.amethyst.commons.resources.automatically_show_url_previ
 import com.vitorpamplona.amethyst.commons.resources.automatically_show_url_preview_description
 import com.vitorpamplona.amethyst.commons.resources.autoplay_videos
 import com.vitorpamplona.amethyst.commons.resources.autoplay_videos_description
+import com.vitorpamplona.amethyst.commons.resources.chat_layout
+import com.vitorpamplona.amethyst.commons.resources.chat_layout_description
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_always
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_never
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_unmetered_wifi_only_short
@@ -211,6 +214,8 @@ fun SettingsScreen(
             UiModeTile(sharedPrefs)
             SettingsDivider()
             NoteLayoutTile(sharedPrefs)
+            SettingsDivider()
+            ChatLayoutTile(sharedPrefs)
             SettingsDivider()
             ImmersiveScrollingTile(sharedPrefs)
             val layouts = LocalAppPlatform.current.navigationLayouts
@@ -361,6 +366,20 @@ private fun NoteLayoutTile(sharedPrefs: UiSettingsFlow) {
         labelRes = { it.resourceId },
         selected = noteLayout,
         onSelect = { sharedPrefs.noteLayout.tryEmit(it) },
+    )
+}
+
+@Composable
+private fun ChatLayoutTile(sharedPrefs: UiSettingsFlow) {
+    val chatLayout by sharedPrefs.chatLayout.collectAsState()
+    SegmentedChoiceTile(
+        icon = MaterialSymbols.AutoMirrored.Chat,
+        title = Res.string.chat_layout,
+        description = Res.string.chat_layout_description,
+        options = ChatLayoutType.entries,
+        labelRes = { it.resourceId },
+        selected = chatLayout,
+        onSelect = { sharedPrefs.chatLayout.tryEmit(it) },
     )
 }
 

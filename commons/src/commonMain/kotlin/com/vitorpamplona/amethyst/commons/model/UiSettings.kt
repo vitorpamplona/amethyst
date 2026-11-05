@@ -77,6 +77,8 @@ data class UiSettings(
     val hideWalletBalances: Boolean = false,
     // How a wide window arranges screens: one stack (today), deck columns, one screen per tab, or one per window.
     val navigationLayout: NavigationLayoutType = NavigationLayoutType.STACK,
+    // How a chat room draws its messages: bubbles, compact IRC-style lines, or open full-width text.
+    val chatLayout: ChatLayoutType = ChatLayoutType.BUBBLES,
 )
 
 /**
@@ -90,6 +92,21 @@ enum class NavigationLayoutType {
     DECK,
     TABS,
     WINDOWS,
+}
+
+/**
+ * How chat rooms (DMs, public chats, groups) draw their messages.
+ *
+ * - [BUBBLES]: messenger bubbles, the user's own on the right and everyone else's on the left.
+ * - [COMPACT]: one dense left-aligned line per message, `Name  text` with each author in their own
+ *   color, like IRC and Twitch chat. Every line names its author, the user included.
+ * - [OPEN]: the user's own messages in soft bubbles on the right and everyone else's as open,
+ *   full-width text with no bubble, like the conversation view of AI assistant apps.
+ */
+enum class ChatLayoutType {
+    BUBBLES,
+    COMPACT,
+    OPEN,
 }
 
 /**

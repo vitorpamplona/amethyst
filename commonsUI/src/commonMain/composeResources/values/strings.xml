@@ -6264,7 +6264,7 @@
     <string name="ui_feature_set_type_simplified">Simplified</string>
     <string name="ui_feature_set_type_simplified_short">Simple</string>
     <string name="ui_preferences">UI Preferences</string>
-    <string name="ui_preferences_search_keywords" translatable="false">application, dark mode, light mode, theme, accent color, font, font size, language, appearance, ui mode, simple, fast, post layout, indented, full width, borderless, edge to edge, twitter, immersive scrolling, hide nav bars, navigation layout, stack, deck, columns, workspaces, tabs, windows, image preview, video playback, videos, autoplay, url preview, link preview, profile picture, media, data, wi-fi, updates, update, upgrade, version, download, wayland, xwayland, x11, graphics card, gpu, rendering, smooth scrolling</string>
+    <string name="ui_preferences_search_keywords" translatable="false">application, dark mode, light mode, theme, accent color, font, font size, language, appearance, ui mode, simple, fast, post layout, indented, full width, borderless, edge to edge, twitter, chat layout, chat bubbles, compact, irc, twitch, open, assistant, immersive scrolling, hide nav bars, navigation layout, stack, deck, columns, workspaces, tabs, windows, image preview, video playback, videos, autoplay, url preview, link preview, profile picture, media, data, wi-fi, updates, update, upgrade, version, download, wayland, xwayland, x11, graphics card, gpu, rendering, smooth scrolling</string>
     <string name="ui_style">UI Mode</string>
     <string name="ui_style_description">Choose the post style</string>
     <string name="note_layout">Post Layout</string>
@@ -6272,6 +6272,12 @@
     <string name="note_layout_author_column">Indented</string>
     <string name="note_layout_full_width">Full Width</string>
     <string name="note_layout_edge_to_edge">Borderless</string>
+    <string name="chat_layout">Chat Layout</string>
+    <string name="chat_layout_description">Messenger bubbles, compact one-line messages like IRC and Twitch, or open full-width replies with only your own messages in bubbles, like AI assistant chats</string>
+    <string name="chat_layout_bubbles">Bubbles</string>
+    <string name="chat_layout_compact">Compact</string>
+    <string name="chat_layout_open">Open</string>
+    <string name="yesterday">Yesterday</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Unable to create a lightning invoice before sending the zap. The receiver's lightning wallet sent the following error: %1$s</string>
     <string name="unable_to_share_image">Unable to share image, please try again later…</string>
     <string name="unable_to_share_video">Unable to share video, please try again later…</string>
@@ -7030,7 +7036,6 @@
     <string name="cordn_chat_empty_description">Anything sent here is encrypted for this group. The coordinator relays it without being able to read it.</string>
     <string name="cordn_chat_empty_title">No messages yet</string>
     <string name="cordn_chat_unread_divider">New messages</string>
-    <string name="cordn_chat_yesterday">Yesterday</string>
     <string name="cordn_composer_hint">Message</string>
     <string name="cordn_coordinators_add_action">Add</string>
     <string name="cordn_coordinators_add_failed">Could not open that coordinator.</string>
