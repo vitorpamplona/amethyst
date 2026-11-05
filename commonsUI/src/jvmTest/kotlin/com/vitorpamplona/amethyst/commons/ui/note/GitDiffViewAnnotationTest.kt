@@ -28,6 +28,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.quartz.nip34Git.patch.UnifiedDiffParser
+import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.EncodedImageFormat
 import java.io.File
 import kotlin.test.AfterTest
@@ -89,5 +90,25 @@ class GitDiffViewAnnotationTest {
 
         assertEquals(1, commentsDrawn, "only the commented line draws its comments")
         assertTrue(commentWidth in 1..width, "the comment is as wide as the card ($commentWidth px), not the scrolled code")
+    }
+
+    @Test
+    fun aShortChangedLineIsColouredAcrossTheCard() {
+        val parsed = UnifiedDiffParser.parse(patch)
+        val width = 400
+        scene = ImageComposeScene(width = width, height = 600, density = Density(1f)) { GitDiffView(parsed, Modifier.width(width.dp)) }
+        val image = scene!!.render()
+        val bitmap = Bitmap.makeFromImage(image)
+        // The short removed line `old()` is the third row of the card; its red background must
+        // reach the card's right edge, not stop after the text.
+        val y = (0 until bitmap.height).first { y -> isRedTint(bitmap.getColor(width / 2, y)) || isRedTint(bitmap.getColor(width - 6, y)) }
+        assertTrue(isRedTint(bitmap.getColor(width - 6, y)), "the removed row's colour reaches the card's edge")
+    }
+
+    private fun isRedTint(argb: Int): Boolean {
+        val r = (argb shr 16) and 0xff
+        val g = (argb shr 8) and 0xff
+        val b = argb and 0xff
+        return r > g + 12 && r > b + 12
     }
 }

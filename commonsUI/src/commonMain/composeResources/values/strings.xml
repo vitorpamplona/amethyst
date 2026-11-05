@@ -2933,6 +2933,8 @@
     <string name="git_edit_message">Commit message</string>
     <string name="git_edit_propose">Propose change</string>
     <string name="git_edit_action">Edit</string>
+    <string name="git_edit_block_done">Done</string>
+    <string name="git_edit_tap_hint">Tap a line to edit it and the lines around it.</string>
     <string name="git_checkout_title">Check out locally</string>
     <string name="git_checkout_copy_patch">Copy patch</string>
     <string name="git_checkout_open_vscode">Clone in VS Code</string>

@@ -25,6 +25,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -36,6 +37,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -253,30 +255,42 @@ private fun DiffFileCard(
                 }
             } else {
                 val gutterWidth = remember(file) { gutterWidthFor(file) }
-                Column(Modifier.fillMaxWidth()) {
-                    file.hunks.forEachIndexed { hunkIndex, hunk ->
-                        HunkHeaderRow(hunk.header)
-                        val emphasis = remember(hunk) { IntralineDiff.emphasis(hunk.lines) }
-                        // The code scrolls sideways; the comments under a line don't, so they wrap to
-                        // the card's width. Each run of lines up to a commented one is its own block.
-                        val runs = hunkRuns(hunk.lines) { lineAnnotations != null && hasAnnotations(file, it) }
-                        runs.forEach { run ->
-                            key(hunkIndex, run.first) {
-                                Column(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-                                    for (index in run) {
-                                        val line = hunk.lines[index]
-                                        DiffLineRow(
-                                            line,
-                                            gutterWidth,
-                                            language.takeIf { highlightEnabled },
-                                            darkMode,
-                                            emphasis[index],
-                                            onClick = onLineClick?.let { { it(file, line) } },
-                                        )
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val cardWidth = maxWidth
+                    Column(Modifier.fillMaxWidth()) {
+                        file.hunks.forEachIndexed { hunkIndex, hunk ->
+                            HunkHeaderRow(hunk.header)
+                            val emphasis = remember(hunk) { IntralineDiff.emphasis(hunk.lines) }
+                            // The code scrolls sideways; the comments under a line don't, so they wrap to
+                            // the card's width. Each run of lines up to a commented one is its own block.
+                            val runs = hunkRuns(hunk.lines) { lineAnnotations != null && hasAnnotations(file, it) }
+                            runs.forEach { run ->
+                                key(hunkIndex, run.first) {
+                                    // At least the card's width and as wide as its longest line, with
+                                    // every row filling it, so a row's colour spans the card.
+                                    Column(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState())
+                                            .widthIn(min = cardWidth)
+                                            .width(IntrinsicSize.Max),
+                                    ) {
+                                        for (index in run) {
+                                            val line = hunk.lines[index]
+                                            DiffLineRow(
+                                                line,
+                                                gutterWidth,
+                                                language.takeIf { highlightEnabled },
+                                                darkMode,
+                                                emphasis[index],
+                                                onClick = onLineClick?.let { { it(file, line) } },
+                                                modifier = Modifier.fillMaxWidth(),
+                                            )
+                                        }
                                     }
+                                    val last = hunk.lines[run.last]
+                                    if (lineAnnotations != null && hasAnnotations(file, last)) lineAnnotations(file, last)
                                 }
-                                val last = hunk.lines[run.last]
-                                if (lineAnnotations != null && hasAnnotations(file, last)) lineAnnotations(file, last)
                             }
                         }
                     }

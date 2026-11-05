@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
@@ -155,15 +156,50 @@ class BroadcastRelayPlanner(
      * GRASP-08: an event of a private repository (its announcement, or anything filed under it or
      * replying to something filed under it) goes only to that repository's relays, never to the
      * user's or anyone's outbox. Null when the event belongs to no private repository.
+     *
+     * A repository whose announcement the cache lacks may be private: until it loads, the event
+     * goes only where that repository's events were seen (the relay hints that name it, and the
+     * relays the items it acts on came from), not to the outbox.
      */
     private fun privateGitRelays(event: Event): Set<NormalizedRelayUrl>? {
         if (event is GitRepositoryEvent) return if (event.isPrivate()) event.relaysNorm().toSet() else null
         val repositories = gitRepositoriesOf(event, 0, HashSet())
         if (repositories.isEmpty()) return null
-        val private =
-            repositories.mapNotNull { (cache.getAddressableNoteIfExists(it)?.event as? GitRepositoryEvent)?.takeIf { announcement -> announcement.isPrivate() } }
-        if (private.isEmpty()) return null
-        return private.flatMapTo(HashSet()) { it.relaysNorm() }
+        val announcements = repositories.map { it to (cache.getAddressableNoteIfExists(it)?.event as? GitRepositoryEvent) }
+        val private = announcements.mapNotNull { (_, announcement) -> announcement?.takeIf { it.isPrivate() } }
+        if (private.isNotEmpty()) return private.flatMapTo(HashSet()) { it.relaysNorm() }
+        if (announcements.all { it.second != null }) return null
+        // Unknown: where its events were seen. With nowhere known, the usual routing is all there is.
+        return whereGitEventsWereSeen(event, 0, HashSet()).ifEmpty { null }
+    }
+
+    /** The relay hints of [event]'s repository tags and the relays the items it acts on were seen on, a few levels up. */
+    private fun whereGitEventsWereSeen(
+        event: Event,
+        depth: Int,
+        visited: MutableSet<HexKey>,
+    ): Set<NormalizedRelayUrl> {
+        if (!visited.add(event.id)) return emptySet()
+        val found = HashSet<NormalizedRelayUrl>()
+        cache.getNoteIfExists(event.id)?.relays?.let { found.addAll(it) }
+        event.tags.forEach { tag ->
+            if (tag.size < 2) return@forEach
+            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            when (tag[0]) {
+                "a", "A" -> {
+                    if (tag[1].startsWith("${GitRepositoryEvent.KIND}:")) {
+                        hint?.let { found.add(it) }
+                    } else if (depth < MAX_GIT_PARENT_DEPTH) {
+                        Address.parse(tag[1])?.let { cache.getAddressableNoteIfExists(it)?.event }?.let { found.addAll(whereGitEventsWereSeen(it, depth + 1, visited)) }
+                    }
+                }
+                "e", "E", "q" -> {
+                    hint?.let { found.add(it) }
+                    if (depth < MAX_GIT_PARENT_DEPTH) cache.getNoteIfExists(tag[1])?.event?.let { found.addAll(whereGitEventsWereSeen(it, depth + 1, visited)) }
+                }
+            }
+        }
+        return found
     }
 
     /**

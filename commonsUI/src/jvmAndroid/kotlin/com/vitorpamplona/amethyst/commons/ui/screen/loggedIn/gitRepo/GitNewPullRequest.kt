@@ -46,6 +46,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,6 +75,8 @@ import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalUiState
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposals
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitShape
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitTextEditor
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitTextEditorState
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.gitPalette
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.normalizeLabel
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitRepositoryAnnouncements
@@ -82,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_edit_message
 import com.vitorpamplona.amethyst.commons.resources.git_edit_propose
+import com.vitorpamplona.amethyst.commons.resources.git_edit_tap_hint
 import com.vitorpamplona.amethyst.commons.resources.git_edit_title
 import com.vitorpamplona.amethyst.commons.resources.git_merge_cancel
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_subject
@@ -467,9 +471,11 @@ fun GitFileEditor(
     val viewModel = rememberGitProposals(repository.idHex + path.joinToString("/"), accountViewModel)
     val target = rememberGitProposalTarget(repository, viewModel, accountViewModel)
     // The text lives in the view model, not saved state: a file of a few hundred KB would overflow
-    // Android's saved-instance bundle.
-    var text by remember { mutableStateOf(viewModel.editDraft ?: initial) }
-    val changed = remember(text) { text != initial }
+    // Android's saved-instance bundle. It is edited a block of lines at a time, so a keystroke
+    // costs the block's layout, not the file's.
+    val editor = remember { GitTextEditorState(viewModel.editDraft ?: initial) }
+    DisposableEffect(editor) { onDispose { viewModel.editDraft = editor.text().takeIf { it != initial } } }
+    val changed = editor.isChanged || viewModel.editDraft != null
     var message by rememberSaveable { mutableStateOf("Update ${path.lastOrNull() ?: ""}") }
     val working = viewModel.state.collectAsStateWithLifecycle().value is GitProposalUiState.Working
     // A result left from an earlier visit (published or failed after the editor closed) is not this one's.
@@ -480,16 +486,8 @@ fun GitFileEditor(
     Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringRes(Res.string.git_edit_title, path.joinToString("/")), style = MaterialTheme.typography.titleSmall, fontFamily = FontFamily.Monospace)
         OpenWhenPublished(viewModel, accountViewModel, nav, leaveFirst = onCancel) { reason -> Text(reason, color = MaterialTheme.colorScheme.error) }
-        OutlinedTextField(
-            value = text,
-            onValueChange = {
-                text = it
-                viewModel.editDraft = it.takeIf { it != initial }
-            },
-            readOnly = working,
-            textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-            modifier = Modifier.fillMaxWidth().weight(1f),
-        )
+        Text(stringRes(Res.string.git_edit_tap_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+        GitTextEditor(editor, readOnly = working, modifier = Modifier.fillMaxWidth().weight(1f))
         OutlinedTextField(
             value = message,
             onValueChange = { message = it },
@@ -501,7 +499,10 @@ fun GitFileEditor(
             TextButton(onClick = onCancel, enabled = !working) { Text(stringRes(Res.string.git_merge_cancel)) }
             Button(
                 enabled = target != null && message.isNotBlank() && changed && !working && accountViewModel.account.isWriteable(),
-                onClick = { if (target != null) viewModel.proposeEdit(target, sourceClones, branch, parent, path, text, message.trim()) },
+                onClick = {
+                    val text = editor.text()
+                    if (target != null && text != initial) viewModel.proposeEdit(target, sourceClones, branch, parent, path, text, message.trim())
+                },
             ) { Text(stringRes(Res.string.git_edit_propose)) }
         }
     }

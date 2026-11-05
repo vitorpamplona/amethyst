@@ -253,4 +253,41 @@ class BroadcastRelayPlannerTest {
             val state = bob.sign(GitRepositoryStateEvent.build("secret", listOf(RefTag.branch("main", "a".repeat(40))), "main"))
             assertEquals(only, planner.computeRelayListToBroadcast(state))
         }
+
+    @Test
+    fun anEventUnderARepositoryNotYetLoadedStaysWhereThatRepositoryWasSeen() =
+        runTest {
+            val (cache, _) = cacheWithBob()
+            val planner = planner(cache)
+            // The announcement is signed but never reaches this cache: it could be private.
+            val repo = privateRepository(EventCache())
+            val issue = bob.sign(GitIssueEvent.build("bug", "it broke", EventHintBundle(repo, relay("grasp")), emptyList(), emptyList()))
+            cache.justConsume(issue, null, true)
+            cache.getNoteIfExists(issue.id)!!.addRelay(seenOn)
+
+            val like = me.sign(ReactionEvent.build("+", EventHintBundle<Event>(issue)))
+            cache.justConsumeMyOwnEvent(like)
+            val relays = planner.computeRelayListToBroadcast(like)
+            assertTrue(myOutbox.none { it in relays }, "not to the outbox while the repository may be private: $relays")
+            assertTrue(seenOn in relays || relay("grasp") in relays, "where the repository's events were seen: $relays")
+
+            // Once a public announcement arrives, the usual routing applies.
+            val publicRepo =
+                bob.sign(
+                    GitRepositoryEvent.build(
+                        name = "secret",
+                        description = null,
+                        webUrls = emptyList(),
+                        cloneUrls = emptyList(),
+                        relays = listOf("wss://grasp.example.com"),
+                        maintainers = emptyList(),
+                        hashtags = emptyList(),
+                        earliestUniqueCommit = null,
+                        dTag = "secret",
+                        createdAt = repo.createdAt + 1,
+                    ),
+                )
+            cache.justConsume(publicRepo, null, true)
+            assertTrue(planner.computeRelayListToBroadcast(like).containsAll(myOutbox), "public: the outbox again")
+        }
 }
