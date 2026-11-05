@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -95,10 +96,13 @@ fun RenderCenterButtons(
     // Auto-hide controls 3s after playback begins — but stay visible while
     // casting so the user can see the disabled transport controls and find
     // the cast-stop button in the top bar without tapping the screen first.
+    // Read through rememberUpdatedState: the effect outlives recompositions, and hiding a
+    // controllerVisible the caller has since replaced would leave the drawn controls up.
+    val currentControllerVisible by rememberUpdatedState(controllerVisible)
     if (!state.showPlay && !isCastingThisVideo) {
         LaunchedEffect(state.showPlay) {
             delay(3000)
-            controllerVisible.value = false
+            currentControllerVisible.value = false
         }
     }
 }

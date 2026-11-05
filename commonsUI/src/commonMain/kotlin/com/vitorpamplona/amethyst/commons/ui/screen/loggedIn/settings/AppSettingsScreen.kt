@@ -109,12 +109,16 @@ import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_performa
 import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_simplified_short
 import com.vitorpamplona.amethyst.commons.resources.ui_style
 import com.vitorpamplona.amethyst.commons.resources.ui_style_description
+import com.vitorpamplona.amethyst.commons.resources.xwayland_rendering
+import com.vitorpamplona.amethyst.commons.resources.xwayland_rendering_description
+import com.vitorpamplona.amethyst.commons.resources.xwayland_rendering_restart
 import com.vitorpamplona.amethyst.commons.ui.components.LocalTranslationPlatform
 import com.vitorpamplona.amethyst.commons.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.platform.DisplayServerChoice
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SegmentedChoiceTile
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsBlockTile
@@ -211,6 +215,10 @@ fun SettingsScreen(
             ImmersiveScrollingTile(sharedPrefs)
             SettingsDivider()
             DeckModeTile(sharedPrefs)
+            LocalAppPlatform.current.displayServerChoice?.let {
+                SettingsDivider()
+                XWaylandTile(it)
+            }
         }
 
         LocalAppUpdates.current?.let { AppUpdateSettingsSection(it) }
@@ -467,6 +475,20 @@ private fun DeckModeTile(sharedPrefs: UiSettingsFlow) {
         checked = deckMode,
         onCheckedChange = { sharedPrefs.deckMode.tryEmit(it) },
     )
+}
+
+@Composable
+private fun XWaylandTile(choice: DisplayServerChoice) {
+    val prefer by choice.preferXWayland.collectAsState()
+    SettingsControlRow(
+        icon = MaterialSymbols.DesktopWindows,
+        title = stringRes(Res.string.xwayland_rendering),
+        // Read once at startup: say so while the switch and the running app disagree.
+        description = stringRes(if (prefer != choice.usingXWayland) Res.string.xwayland_rendering_restart else Res.string.xwayland_rendering_description),
+        onClick = { choice.setPreferXWayland(!prefer) },
+    ) {
+        Switch(checked = prefer, onCheckedChange = choice::setPreferXWayland)
+    }
 }
 
 // Language can't be a segmented row (50+ locales), so it reads as a disclosure row — icon + title +

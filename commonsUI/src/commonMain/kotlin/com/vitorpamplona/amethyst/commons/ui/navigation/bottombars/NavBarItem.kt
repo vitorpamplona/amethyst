@@ -20,6 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.navigation.bottombars
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.vitorpamplona.amethyst.commons.icons.WalletIcon
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.GeocacheTab
@@ -88,13 +94,42 @@ import com.vitorpamplona.amethyst.commons.resources.web_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.workouts
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import org.jetbrains.compose.resources.StringResource
+import androidx.compose.material3.Icon as Material3Icon
 
 data class NavBarItemDef(
     val id: NavBarItem,
     val labelRes: StringResource,
     val icon: MaterialSymbol,
     val resolveRoute: (AccountViewModel) -> Route,
+    /** When set, drawn instead of [icon]: for marks that are not Material Symbols. */
+    val imageVector: ImageVector? = null,
 )
+
+/** Renders a nav entry's mark: the custom vector when present, else the symbol. */
+@Composable
+fun NavItemIcon(
+    symbol: MaterialSymbol,
+    imageVector: ImageVector?,
+    contentDescription: String?,
+    modifier: Modifier,
+    tint: Color,
+) {
+    if (imageVector != null) {
+        Material3Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            tint = tint,
+        )
+    } else {
+        Icon(
+            symbol = symbol,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            tint = tint,
+        )
+    }
+}
 
 val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
     linkedMapOf(
@@ -212,6 +247,7 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 labelRes = Res.string.wallet,
                 icon = MaterialSymbols.AccountBalanceWallet,
                 resolveRoute = { Route.Wallet },
+                imageVector = WalletIcon,
             ),
         NavBarItem.NOSTR_SIGNER to
             NavBarItemDef(

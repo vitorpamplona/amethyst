@@ -62,6 +62,7 @@
     <!-- Common Actions -->
     <string name="action_copy">Copy</string>
     <string name="action_paste">Paste</string>
+    <string name="action_scan">Scan</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_ok">OK</string>
     <string name="action_save">Save</string>
@@ -77,7 +78,7 @@
     <string name="action_refresh">Refresh</string>
     <string name="action_try_again">Try Again</string>
     <string name="feed_empty">Feed is empty</string>
-    <string name="error_loading_feed">Error loading feed: %s</string>
+    <string name="error_loading_feed">Error loading feed: %1$s</string>
 
     <!-- Placeholder Screens -->
     <string name="screen_search_title">Search</string>
@@ -2192,7 +2193,7 @@
     <string name="wallet_settings">Settings</string>
     <string name="wallet_looking">Looking for your wallets…</string>
     <string name="wallet_sats">sats</string>
-    <string name="wallet_paste_invoice">Paste a BOLT-11 invoice</string>
+    <string name="wallet_paste_invoice">Paste a BOLT-11 invoice or Lightning address</string>
     <string name="wallet_pay">Pay</string>
     <string name="wallet_payment_success">Payment successful</string>
     <string name="wallet_payment_sending">Sending payment…</string>
@@ -2206,6 +2207,16 @@
     <string name="wallet_loading">Loading…</string>
     <string name="wallet_incoming">Received</string>
     <string name="wallet_open_zapped_note">Open zapped note</string>
+    <string name="wallet_tx_from">From</string>
+    <string name="wallet_tx_to">To</string>
+    <string name="wallet_tx_note">Note</string>
+    <string name="wallet_tx_amount">Amount</string>
+    <string name="wallet_tx_fee">Fee</string>
+    <string name="wallet_tx_payment_hash">Payment hash</string>
+    <string name="wallet_tx_preimage">Preimage</string>
+    <string name="wallet_tx_invoice">Invoice</string>
+    <string name="wallet_tx_expand">Show payment details</string>
+    <string name="wallet_tx_collapse">Hide payment details</string>
     <string name="wallet_outgoing">Sent</string>
     <string name="wallet_refresh">Refresh</string>
     <string name="wallet_filter_all">All</string>
@@ -2230,9 +2241,13 @@
     <string name="wallet_backup_disclaimer">NWC connection strings are encrypted with your Nostr key and stored on your relays. Keep your private key safe to guard your funds. Set spending limits in your wallet.</string>
     <string name="wallet_backup_caption">Wallets are encrypted and backed up to your relays. Keep your private key safe to protect your funds.</string>
     <string name="wallet_backup_restore">Restore Lightning wallets from backup</string>
+    <string name="wallet_backup_found_restore">Backup found on your relays. Restore wallets</string>
     <string name="wallet_backup_searching">Searching your relays for a backup...</string>
     <string name="wallet_backup_restore_title">Restore Lightning wallets</string>
-    <string name="wallet_backup_restore_found">Found %1$d Lightning wallet(s) in your Nostr backups:</string>
+    <plurals name="wallet_backup_restore_found">
+        <item quantity="one">Found %1$d Lightning wallet in your Nostr backups:</item>
+        <item quantity="other">Found %1$d Lightning wallets in your Nostr backups:</item>
+    </plurals>
     <string name="wallet_backup_restore_confirm">Restore</string>
     <string name="wallet_backup_none_found">No Lightning wallet backup found on your relays</string>
     <string name="wallet_backup_saved_by">Saved by %1$s, %2$s</string>
@@ -6061,7 +6076,7 @@
     <string name="ui_feature_set_type_simplified">Simplified</string>
     <string name="ui_feature_set_type_simplified_short">Simple</string>
     <string name="ui_preferences">UI Preferences</string>
-    <string name="ui_preferences_search_keywords" translatable="false">application, dark mode, light mode, theme, accent color, font, font size, language, appearance, ui mode, simple, fast, post layout, indented, full width, borderless, edge to edge, twitter, chat layout, chat bubbles, compact, irc, twitch, open, assistant, immersive scrolling, hide nav bars, deck, columns, workspaces, image preview, video playback, videos, autoplay, url preview, link preview, profile picture, media, data, wi-fi, updates, update, upgrade, version, download</string>
+    <string name="ui_preferences_search_keywords" translatable="false">application, dark mode, light mode, theme, accent color, font, font size, language, appearance, ui mode, simple, fast, post layout, indented, full width, borderless, edge to edge, twitter, chat layout, chat bubbles, compact, irc, twitch, open, assistant, immersive scrolling, hide nav bars, deck, columns, workspaces, image preview, video playback, videos, autoplay, url preview, link preview, profile picture, media, data, wi-fi, updates, update, upgrade, version, download, wayland, xwayland, x11, graphics card, gpu, rendering, smooth scrolling</string>
     <string name="ui_style">UI Mode</string>
     <string name="ui_style_description">Choose the post style</string>
     <string name="note_layout">Post Layout</string>
@@ -7415,6 +7430,9 @@
     <string name="custom_feeds_search_people">Search by name, NIP-05 or npub</string>
     <string name="deck_mode">Deck</string>
     <string name="deck_mode_description">On wide windows, show extra columns beside the main screen, each with its own screen and history. Save sets of columns as workspaces.</string>
+    <string name="xwayland_rendering">Draw through XWayland</string>
+    <string name="xwayland_rendering_description">Lets the graphics card draw the app, so scrolling is smoother on most computers. Text can look blurry when the screen uses fractional scaling.</string>
+    <string name="xwayland_rendering_restart">Restart Amethyst to apply this change.</string>
     <string name="deck_workspaces">Workspaces</string>
     <string name="deck_workspace_number">Workspace %1$d</string>
     <string name="deck_save_workspace">Save as a new workspace</string>
@@ -9138,7 +9156,6 @@
     <string name="wot_nudge_first_action">Show my people first</string>
     <string name="wot_nudge_thread_label">Replies, your circle first</string>
     <string name="wot_nudge_you_follow">You follow</string>
-    <string name="wot_nudge_followed_by">Followed by %1$s</string>
     <plurals name="wot_nudge_thread_others">
         <item quantity="one">%1$d more from outside your circle</item>
         <item quantity="other">%1$d more from outside your circle</item>

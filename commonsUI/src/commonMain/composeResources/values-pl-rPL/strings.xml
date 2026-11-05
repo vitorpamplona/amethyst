@@ -72,7 +72,7 @@
     <string name="action_refresh">Odśwież</string>
     <string name="action_try_again">Spróbuj ponownie</string>
     <string name="feed_empty">Brak zawartości</string>
-    <string name="error_loading_feed">Błąd ładowania kanału: %s</string>
+    <string name="error_loading_feed">Błąd ładowania kanału: %1$s</string>
     <!-- Placeholder Screens -->
     <string name="screen_search_title">Szukaj</string>
     <string name="screen_search_description">Szukaj użytkowników, notatek i hasztagów.</string>

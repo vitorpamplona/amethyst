@@ -135,9 +135,13 @@ fun main(args: Array<String>) {
         }
     }
 
-    // Linux: native Wayland when the session has it. Like the macOS properties below, it must be
-    // decided before AWT starts.
-    WaylandDisplay.configure()
+    val filesDir =
+        File(System.getProperty("amethyst.dataDir") ?: File(System.getProperty("user.home"), ".amethyst/app").path)
+            .apply { mkdirs() }
+
+    // Linux: native Wayland when the session has it, unless settings pick XWayland. Like the macOS
+    // properties below, it must be decided before AWT starts.
+    WaylandDisplay.configure(filesDir)
     // X11: the desktop's scale (Xft.dpi), read while nothing else talks to the X server yet.
     DesktopUiScale.readXResources()
 
@@ -158,10 +162,6 @@ fun main(args: Array<String>) {
     val isDebug = System.getProperty("amethyst.debug") == "true"
     Log.minLevel = if (isDebug) LogLevel.DEBUG else LogLevel.INFO
     QuicLogBridge.install()
-
-    val filesDir =
-        File(System.getProperty("amethyst.dataDir") ?: File(System.getProperty("user.home"), ".amethyst/app").path)
-            .apply { mkdirs() }
 
     // Deep links: on Linux and Windows the OS starts a new process with the URI as argv (%u / %1).
     // Hand it to the running instance over the instance bus and exit; on a cold start, queue it so

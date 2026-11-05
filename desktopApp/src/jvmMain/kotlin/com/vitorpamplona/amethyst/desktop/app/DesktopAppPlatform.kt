@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.DisplayServerChoice
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberDecryptedConcordImageModel
@@ -48,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletHost
 import com.vitorpamplona.amethyst.desktop.napplet.InlineNappletPane
+import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
 import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopGeocacheMapTab
 import com.vitorpamplona.amethyst.desktop.ui.qrcode.DesktopQrScannerDialog
@@ -110,6 +112,8 @@ class DesktopAppPlatform(
 
     // The engine loads when a composer first asks for it (SpellCheckService.activate).
     override val spellCheck: SpellCheckService? get() = desktopSpellCheck?.service
+
+    override val displayServerChoice: DisplayServerChoice? get() = WaylandDisplay.choice
 
     // The shared bar, imported under another name: inside this override the bare name is the override.
     @Composable
