@@ -78,8 +78,14 @@ val LocalChatDayShownByFeed = compositionLocalOf { false }
  * plain text with no toggle of its own.
  */
 @Composable
-fun ChatTimeAgo(baseNote: Note) {
-    val createdAt = baseNote.createdAt() ?: 0L
+fun ChatTimeAgo(baseNote: Note) = ChatTimestamp(baseNote.createdAt() ?: 0L)
+
+/**
+ * [ChatTimeAgo] for any chat message by its Unix timestamp, for rooms whose messages are not
+ * [Note]s (cordn). Same rule: the time of day under a pinned day, the day named otherwise.
+ */
+@Composable
+fun ChatTimestamp(createdAt: Long) {
     if (createdAt <= 0L) {
         ChatTimeText(timeAbsoluteNoDot(createdAt), Modifier)
         return
