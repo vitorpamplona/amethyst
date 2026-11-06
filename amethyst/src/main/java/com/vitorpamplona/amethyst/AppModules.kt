@@ -173,6 +173,7 @@ import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.service.wot.TrustNetworkSyncWorker
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
 import com.vitorpamplona.amethyst.ui.tor.TorManager
+import com.vitorpamplona.amethyst.ui.tor.TorProgressNotifier
 import com.vitorpamplona.amethyst.ui.tor.TorService
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -381,6 +382,17 @@ class AppModules(
 
     private val torService = TorService(appContext, applicationIOScope)
     val torManager = TorManager(torPrefs, torService, applicationIOScope)
+
+    // Opt-in Tor startup-progress notification (TorSettings.progressNotification). Watches the
+    // backend's status, not torManager.status, so it never starts Tor by itself.
+    private val torProgressNotifier =
+        TorProgressNotifier(
+            context = appContext,
+            scope = applicationIOScope,
+            enabled = torPrefs.value.progressNotification,
+            status = torService.status,
+            bootstrapProgress = torService.bootstrapProgress,
+        ).also { it.start() }
 
     // Network identity change (wifi↔cellular, regained from offline, captive portal
     // cleared) — the old network's guards/circuits are dead, and Arti's in-memory

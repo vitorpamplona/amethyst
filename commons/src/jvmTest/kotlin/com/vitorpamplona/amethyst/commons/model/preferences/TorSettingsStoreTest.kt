@@ -103,6 +103,7 @@ class TorSettingsStoreTest {
                     moneyOperationsViaTor = true,
                     nip05VerificationsViaTor = true,
                     mediaUploadsViaTor = true,
+                    progressNotification = true,
                 )
 
             TorSettingsStore.save(settings, store)

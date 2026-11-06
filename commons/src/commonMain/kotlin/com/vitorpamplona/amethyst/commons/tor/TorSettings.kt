@@ -34,6 +34,11 @@ data class TorSettings(
     val moneyOperationsViaTor: Boolean = false,
     val nip05VerificationsViaTor: Boolean = false,
     val mediaUploadsViaTor: Boolean = false,
+    /**
+     * Opt-in: show a notification with the internal Tor client's startup progress. Android only;
+     * a display preference, so presets ignore it.
+     */
+    val progressNotification: Boolean = false,
 )
 
 enum class TorType(
