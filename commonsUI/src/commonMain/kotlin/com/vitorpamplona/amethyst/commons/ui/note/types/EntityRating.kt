@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
@@ -71,6 +72,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
+import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.ResolveDListConcept
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.isDListItemPage
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.presentAmongMany
@@ -86,6 +89,7 @@ import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.ratings.RatingMark
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyOnlyAsHexOrNull
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -165,11 +169,27 @@ fun RenderEntityRating(
             // between a review of something and a row of stars floating on its own.
             val identifier = remember(noteEvent) { noteEvent.targetIdentifier() }
 
-            if (identifier.isNotEmpty()) {
+            // A `profile` rating names a pubkey. Printed as is, that is 64 hex characters under a
+            // generic person icon; resolved, it is the person's picture and name.
+            val ratedPubKey =
+                remember(noteEvent) {
+                    if (mark == RatingMark.PROFILE) decodePublicKeyOnlyAsHexOrNull(identifier) else null
+                }
+
+            if (ratedPubKey != null) {
+                LoadUser(ratedPubKey) { user ->
+                    if (user != null) {
+                        RatedProfileCard(user, mark, accountViewModel, nav)
+                    } else {
+                        RatedTargetCard(mark = mark, title = identifier, subtitle = null, onClick = null)
+                    }
+                }
+            } else if (identifier.isNotEmpty()) {
                 RatedTargetCard(mark = mark, title = identifier, subtitle = null, onClick = null)
             }
 
-            stars?.let { RatingStarsRow(it, mark) }
+            // The avatar already says a person was rated, so the `profile` chip would only repeat it.
+            stars?.let { RatingStarsRow(it, mark, showMark = ratedPubKey == null && mark !in MARKS_WITH_A_CARD) }
         }
 
         if (noteEvent.content.isNotBlank()) {
@@ -455,6 +475,45 @@ private fun RatedNoteCard(
         onClick = { nav.nav(Route.Note(targetNote.idHex)) },
     )
 }
+
+/**
+ * A rated person: their picture in the cover slot, their name as the title and the opening of their
+ * bio as the second line, which is what tells a reader who this is. Observing the metadata asks the
+ * relays for the kind-0, so a profile the reader has never met fills in instead of staying an npub.
+ */
+@Composable
+private fun RatedProfileCard(
+    user: User,
+    mark: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val userInfo by observeUserInfo(user, accountViewModel)
+
+    val title = userInfo?.info?.bestName() ?: user.pubkeyDisplayHex()
+    // Bios are paragraphs: kept as written, a blank line after the first sentence spends the card's
+    // second line on nothing but an ellipsis. Folded to one line, the two lines show the bio.
+    val about = userInfo?.info?.about
+    val subtitle =
+        remember(about) {
+            about
+                ?.replace(WhitespaceRun, " ")
+                ?.trim()
+                ?.ifBlank { null }
+        }
+
+    RatedTargetCard(
+        mark = mark,
+        title = title,
+        subtitle = subtitle,
+        onClick = { nav.nav(routeFor(user)) },
+        cover = { UserPicture(user = user, size = ProfileCoverSize, accountViewModel = accountViewModel, nav = nav) },
+    )
+}
+
+private val ProfileCoverSize = 44.dp
+
+private val WhitespaceRun = Regex("\\s+")
 
 /**
  * One card shape for every kind of rated thing: a cover when there is one, the mark's icon when
