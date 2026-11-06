@@ -186,7 +186,8 @@ fun RenderEntityRating(
                     if (user != null) {
                         RatedProfileCard(user, mark, accountViewModel, nav)
                     } else {
-                        RatedTargetCard(mark, identifier)
+                        // Only until LoadUser creates the cache entry, normally the next frame.
+                        RatedTargetCard(mark, ratedPubKey.take(8))
                     }
                 }
             } else if (identifier.isNotEmpty()) {
