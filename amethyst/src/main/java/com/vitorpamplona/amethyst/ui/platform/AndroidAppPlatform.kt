@@ -181,6 +181,8 @@ object AndroidAppPlatform : AppPlatform {
     @Composable
     override fun NotificationCategorySettings() = AndroidNotificationCategorySettings()
 
+    override val hasTorProgressNotification: Boolean = true
+
     @Composable
     override fun rememberAppLanguages(): ImmutableMap<String, String> {
         val context = LocalContext.current

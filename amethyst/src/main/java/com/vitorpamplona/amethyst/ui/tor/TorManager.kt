@@ -478,6 +478,33 @@ class TorManager(
     }
 
     /**
+     * Called when the user picks "Restart Tor" on the connection-failure dialog. Unlike the
+     * watchdog this ignores the self-heal cooldown, because the user asked for it.
+     *
+     * A stalled directory download gets the warm [TorBackend.reset], which keeps the partial
+     * consensus in `arti/cache` so the next attempt resumes instead of starting over. Any other
+     * stuck state (no client, no proxy) gets [TorBackend.resetWithCleanState], since the persisted
+     * state is then the likeliest culprit.
+     *
+     * Clears the failure flags so the dialog closes and the new attempt gets its own full
+     * [BOOTSTRAP_TIMEOUT_MS], and primes [lastSelfHealAtMs] so the watchdog doesn't reset the new
+     * attempt right away.
+     */
+    fun restartTor() {
+        val downloading = status.value is TorServiceStatus.Bootstrapping
+        tryingSinceMs = 0L
+        lastTryingTransitionMs = 0L
+        failureRaised = false
+        consecutiveGentleResets = 0
+        lastSelfHealAtMs = nowMs()
+        Log.w("TorManager") { "User restarted Tor (${if (downloading) "drop client, keep cache" else "drop client + wipe state"})" }
+        scope.launch(ioDispatcher) {
+            if (downloading) service.reset() else service.resetWithCleanState()
+            resetEpoch.update { it + 1 }
+        }
+    }
+
+    /**
      * Network identity changed (wifi↔cellular, captive portal cleared, regained from
      * offline). The old network's guards and circuits are dead, but Arti's in-memory
      * TorClient doesn't always notice — and even if it does, on-disk `state/` can hold

@@ -873,6 +873,78 @@ class TorManagerTest {
         }
 
     // ------------------------------------------------------------------
+    // restartTor — the dialog's "Restart Tor" button
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `restartTor closes the prompt and re-inits Tor`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            val epoch = 1_700_000_000_000L
+            val manager = buildManager(backend = backend, clock = { epoch + testScheduler.currentTime })
+            val sub = launch { manager.status.collect { } }
+            val subFail = launch { manager.connectionFailure.collect { } }
+            advanceUntilIdle()
+
+            advanceTimeBy(TorManager.BOOTSTRAP_TIMEOUT_MS + 1_000L)
+            runCurrent()
+            assertTrue("prompt should be up", manager.connectionFailure.value)
+            val startsBefore = backend.startCount
+            val resetsBefore = backend.resetCount + backend.resetWithCleanStateCount
+
+            manager.restartTor()
+            runCurrent()
+
+            assertFalse("restart should close the prompt", manager.connectionFailure.value)
+            assertEquals(resetsBefore + 1, backend.resetCount + backend.resetWithCleanStateCount)
+            assertTrue("re-init should call start() again", backend.startCount > startsBefore)
+
+            // The new attempt earns a full timeout of its own before the prompt can return.
+            advanceTimeBy(TorManager.BOOTSTRAP_TIMEOUT_MS - 1_000L)
+            runCurrent()
+            assertFalse("prompt came back before the new attempt timed out", manager.connectionFailure.value)
+
+            sub.cancel()
+            subFail.cancel()
+        }
+
+    @Test
+    fun `restartTor keeps the cache for a stalled download`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            val manager = buildManager(backend = backend)
+            val sub = launch { manager.status.collect { } }
+            advanceUntilIdle()
+            backend.setBootstrapping()
+            runCurrent()
+            val resetsBefore = backend.resetCount
+
+            manager.restartTor()
+            runCurrent()
+
+            assertEquals(resetsBefore + 1, backend.resetCount)
+            assertEquals("must not wipe a partial consensus", 0, backend.resetWithCleanStateCount)
+            sub.cancel()
+        }
+
+    @Test
+    fun `restartTor wipes state when no client comes up`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            backend.startFailsToConnect = true
+            val manager = buildManager(backend = backend)
+            val sub = launch { manager.status.collect { } }
+            advanceUntilIdle()
+            runCurrent()
+
+            manager.restartTor()
+            runCurrent()
+
+            assertEquals(1, backend.resetWithCleanStateCount)
+            sub.cancel()
+        }
+
+    // ------------------------------------------------------------------
     // helpers
     // ------------------------------------------------------------------
 

@@ -198,6 +198,13 @@ interface AppPlatform {
     @Composable
     fun NotificationCategorySettings() {}
 
+    /**
+     * Whether this platform can show a notification with Tor's startup progress
+     * ([com.vitorpamplona.amethyst.commons.tor.TorSettings.progressNotification]). Only Android has the
+     * notifier, so the Tor settings show the switch only where this is true.
+     */
+    val hasTorProgressNotification: Boolean get() = false
+
     /** A button that reads [name] aloud with the platform's text-to-speech; nothing where there is none. */
     @Composable
     fun SpeakNameButton(name: String) {}

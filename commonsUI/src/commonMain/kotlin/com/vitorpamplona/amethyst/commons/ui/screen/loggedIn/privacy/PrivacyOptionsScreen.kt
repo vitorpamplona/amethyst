@@ -65,6 +65,8 @@ import com.vitorpamplona.amethyst.commons.resources.settings_section_tor_engine
 import com.vitorpamplona.amethyst.commons.resources.settings_section_tor_routing
 import com.vitorpamplona.amethyst.commons.resources.tor_preset
 import com.vitorpamplona.amethyst.commons.resources.tor_preset_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_progress_notification_description
+import com.vitorpamplona.amethyst.commons.resources.tor_progress_notification_title
 import com.vitorpamplona.amethyst.commons.resources.tor_use_dm_relays
 import com.vitorpamplona.amethyst.commons.resources.tor_use_dm_relays_explainer
 import com.vitorpamplona.amethyst.commons.resources.tor_use_images
@@ -102,6 +104,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SegmentedChoiceTile
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsBlockTile
@@ -162,6 +165,18 @@ fun PrivacyOptionsContent(
                 Column {
                     SettingsDivider()
                     OrbotPortTile(torSettings)
+                }
+            }
+            if (LocalAppPlatform.current.hasTorProgressNotification) {
+                AnimatedVisibility(
+                    visible = torType == TorType.INTERNAL,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    Column {
+                        SettingsDivider()
+                        TorSwitchTile(torSettings.progressNotification, MaterialSymbols.Notifications, Res.string.tor_progress_notification_title, Res.string.tor_progress_notification_description)
+                    }
                 }
             }
         }

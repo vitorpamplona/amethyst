@@ -2111,8 +2111,18 @@
     <string name="tor_connection_failed_body">Amethyst couldn't finish bootstrapping Tor. Use a regular (non-Tor) connection so the feed can load? We'll remember this choice for the next hour and re-try Tor after that.</string>
     <string name="tor_continue_without_for_session">Use regular connection</string>
     <string name="tor_keep_waiting">Keep waiting</string>
+    <string name="tor_restart">Restart Tor</string>
     <string name="tor_splash_connecting">Connecting to Tor…</string>
     <string name="tor_status_connected">Connected to Tor</string>
+    <string name="tor_progress_notification_title">Tor connection progress</string>
+    <string name="tor_progress_notification_description">Show a notification with Tor's startup progress while it connects</string>
+    <string name="tor_progress_channel_id" translatable="false">TorProgressID</string>
+    <string name="tor_progress_channel_name">Tor connection progress</string>
+    <string name="tor_progress_channel_description">Shows how far Tor has got while it connects.</string>
+    <string name="tor_progress_starting">Starting the Tor client</string>
+    <string name="tor_progress_downloading">Downloading the Tor network directory: %1$d%</string>
+    <string name="tor_progress_downloading_unknown">Downloading the Tor network directory</string>
+    <string name="tor_progress_ready">Tor is ready. Connections are now private.</string>
     <string name="tor_waiting">Waiting for Tor</string>
     <plurals name="tor_waiting_relays">
         <item quantity="one">Tor is not connecting. %1$d relay waits for it.</item>
