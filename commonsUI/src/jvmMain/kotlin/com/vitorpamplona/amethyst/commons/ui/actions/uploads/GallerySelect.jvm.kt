@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.resources.upload_image
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.StringMediaUri
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.platform.showModalDialog
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import java.awt.FileDialog
@@ -36,8 +37,8 @@ import java.io.File
 import java.io.FilenameFilter
 import java.nio.file.Files
 
-// The system's file dialog. It is modal, so it runs on the UI thread like any desktop dialog; the
-// window keeps painting through its nested event loop.
+// The system's file dialog. It is modal, so it opens through showModalDialog: blocking inside the
+// composition's dispatcher crashes the event thread when the window paints in its nested loop.
 
 internal val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "gif", "webp", "svg", "avif", "heic", "bmp")
 private val MEDIA_EXTENSIONS = IMAGE_EXTENSIONS + setOf("mp4", "webm", "mov", "mkv", "m4v", "mp3", "m4a", "ogg", "opus", "wav", "flac", "aac")
@@ -62,19 +63,20 @@ private fun mimeTypeOf(file: File): String? =
             else -> null
         }
 
-internal fun pickFiles(
+internal suspend fun pickFiles(
     title: String,
     multiple: Boolean,
     extensions: Set<String>,
-): List<File> {
-    val dialog =
-        FileDialog(null as Frame?, title, FileDialog.LOAD).apply {
-            isMultipleMode = multiple
-            filenameFilter = FilenameFilter { _, name -> name.substringAfterLast('.', "").lowercase() in extensions }
-        }
-    dialog.isVisible = true
-    return dialog.files?.toList().orEmpty()
-}
+): List<File> =
+    showModalDialog {
+        val dialog =
+            FileDialog(null as Frame?, title, FileDialog.LOAD).apply {
+                isMultipleMode = multiple
+                filenameFilter = FilenameFilter { _, name -> name.substringAfterLast('.', "").lowercase() in extensions }
+            }
+        dialog.isVisible = true
+        dialog.files?.toList().orEmpty()
+    }
 
 internal fun File.toSelectedMedia() = SelectedMedia(StringMediaUri(absolutePath), mimeTypeOf(this))
 
