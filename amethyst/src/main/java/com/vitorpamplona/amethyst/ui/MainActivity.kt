@@ -26,6 +26,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.navigationevent.NavigationEventDispatcher
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
@@ -37,6 +38,7 @@ import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.NotificationRelayService
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
+import com.vitorpamplona.amethyst.ui.navigation.FiniteBackProgressInput
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.launch
@@ -51,12 +53,23 @@ class MainActivity : AppCompatActivity() {
             private set
     }
 
+    private var finiteBackInput: FiniteBackProgressInput? = null
+
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         Log.d("ActivityLifecycle") { "MainActivity.onCreate $this" }
+
+        // Some OEM builds send back gestures with a NaN progress, which crashes the nav host's
+        // predictive-back seek. This input takes the gesture first and keeps the progress in 0..1.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            finiteBackInput =
+                FiniteBackProgressInput(onBackInvokedDispatcher).also {
+                    navigationEventDispatcher.addInput(it, NavigationEventDispatcher.PRIORITY_DEFAULT)
+                }
+        }
 
         setContent {
             AmethystTheme {
@@ -117,6 +130,9 @@ class MainActivity : AppCompatActivity() {
         Log.d("ActivityLifecycle") { "MainActivity.onDestroy $this" }
 
         BackgroundMedia.removeBackgroundControllerAndReleaseIt()
+
+        finiteBackInput?.let { navigationEventDispatcher.removeInput(it) }
+        finiteBackInput = null
 
         super.onDestroy()
     }
