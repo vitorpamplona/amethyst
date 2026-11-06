@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.qr_scanner_no_code_in_image
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_paste
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_scan_image
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.platform.showModalDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
@@ -141,10 +142,11 @@ fun DesktopQrScannerDialog(
                 TextButton(
                     enabled = !busy,
                     onClick = {
+                        // enabled only catches up at the next recomposition; a second click can land first.
+                        if (busy) return@TextButton
                         busy = true
                         scope.launch {
                             try {
-                                // The system dialog is modal and runs on the UI thread, like GallerySelect's.
                                 val file = pickImageFile(pickTitle) ?: return@launch
                                 val code = withContext(Dispatchers.IO) { readImageFile(file)?.let(::decodeQrCode) }
                                 if (code == null) notice = noCodeInImage else submit(code)
@@ -159,6 +161,7 @@ fun DesktopQrScannerDialog(
                 TextButton(
                     enabled = !busy,
                     onClick = {
+                        if (busy) return@TextButton
                         busy = true
                         scope.launch {
                             try {
@@ -206,14 +209,19 @@ fun DesktopQrScannerDialog(
     }
 }
 
-private fun pickImageFile(title: String): File? {
-    val dialog =
-        FileDialog(null as Frame?, title, FileDialog.LOAD).apply {
-            filenameFilter = FilenameFilter { _, name -> name.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS }
-        }
-    dialog.isVisible = true
-    return dialog.files?.firstOrNull()
-}
+/**
+ * The system's file dialog. It is modal, so it opens through [showModalDialog]: called straight from
+ * the click's coroutine it crashed the event thread with a `CoroutinesInternalError`.
+ */
+private suspend fun pickImageFile(title: String): File? =
+    showModalDialog {
+        val dialog =
+            FileDialog(null as Frame?, title, FileDialog.LOAD).apply {
+                filenameFilter = FilenameFilter { _, name -> name.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS }
+            }
+        dialog.isVisible = true
+        dialog.files?.firstOrNull()
+    }
 
 /** ImageIO for the formats it knows, Skia for the rest (WebP). Null when neither can read it. */
 private fun readImageFile(file: File): BufferedImage? =

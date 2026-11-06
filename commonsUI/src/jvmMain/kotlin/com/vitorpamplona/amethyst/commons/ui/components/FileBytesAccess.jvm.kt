@@ -22,34 +22,40 @@ package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.ui.platform.showModalDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
 
-// The system's file dialog. It is modal, so it runs on the UI thread like any desktop dialog; the
-// window keeps painting through its nested event loop. The bytes move on the IO dispatcher.
+// The system's file dialog. It is modal, so it opens through showModalDialog: blocking inside the
+// composition's dispatcher crashes the event thread when the window paints in its nested loop.
+// The bytes move on the IO dispatcher.
 private object DesktopFileBytesAccess : FileBytesAccess {
     override suspend fun save(
         suggestedName: String,
         mimeType: String,
         content: suspend () -> ByteArray,
     ): Boolean {
-        val dialog = FileDialog(null as Frame?, suggestedName, FileDialog.SAVE).apply { file = suggestedName }
-        dialog.isVisible = true
-        val name = dialog.file ?: return false
-        val target = File(dialog.directory, name)
+        val target =
+            showModalDialog {
+                val dialog = FileDialog(null as Frame?, suggestedName, FileDialog.SAVE).apply { file = suggestedName }
+                dialog.isVisible = true
+                dialog.file?.let { File(dialog.directory, it) }
+            } ?: return false
         val bytes = content()
         withContext(Dispatchers.IO) { target.writeBytes(bytes) }
         return true
     }
 
     override suspend fun open(mimeTypes: List<String>): ByteArray? {
-        val dialog = FileDialog(null as Frame?, "", FileDialog.LOAD)
-        dialog.isVisible = true
-        val name = dialog.file ?: return null
-        val source = File(dialog.directory, name)
+        val source =
+            showModalDialog {
+                val dialog = FileDialog(null as Frame?, "", FileDialog.LOAD)
+                dialog.isVisible = true
+                dialog.file?.let { File(dialog.directory, it) }
+            } ?: return null
         return withContext(Dispatchers.IO) { source.readBytes() }
     }
 }
