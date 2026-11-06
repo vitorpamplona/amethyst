@@ -83,6 +83,11 @@ class AmethystWindowExceptionHandlerFactory(
 ) : WindowExceptionHandlerFactory {
     override fun exceptionHandler(window: Window): WindowExceptionHandler =
         WindowExceptionHandler { throwable ->
+            if (isClosedLayerMeasured(throwable)) {
+                // The popup is already gone and the scene dropped it; only this one event is lost.
+                Log.w("CrashWindow", "Ignored Compose measuring a popup layer it had just closed", throwable)
+                return@WindowExceptionHandler
+            }
             Log.e("CrashWindow", "Uncaught exception in the window's UI", throwable)
             val report = throwable.stackTraceToString()
             val choice =
@@ -100,6 +105,25 @@ class AmethystWindowExceptionHandlerFactory(
                 throw throwable
             }
         }
+}
+
+/**
+ * Compose Multiplatform's bug (1.12.2, still in 1.13.0-beta02): before handling a pointer event or
+ * drawing, `CanvasLayersComposeSceneImpl.doMeasureAndLayout` lays out the main content and then
+ * every popup layer, from a list copied before the loop. When the main content's layout closes a
+ * popup (a popup inside a lazy item or `BoxWithConstraints` that the new size disposes), the loop
+ * still reaches that popup's owner and its `require(!isDisposed)` throws. The scene has already
+ * detached the layer, so the next event or frame lays out fine: the throw only drops the event it
+ * came with, and is not a reason to close the window.
+ */
+internal fun isClosedLayerMeasured(throwable: Throwable): Boolean {
+    if (throwable !is IllegalArgumentException || throwable.message != "RootNodeOwner is already disposed") return false
+    val stack = throwable.stackTrace
+    if (stack.size < 2) return false
+    return stack[0].className == "androidx.compose.ui.node.RootNodeOwner" &&
+        stack[0].methodName == "measureAndLayout" &&
+        stack[1].className == "androidx.compose.ui.scene.CanvasLayersComposeSceneImpl" &&
+        stack[1].methodName == "doMeasureAndLayout"
 }
 
 private enum class CrashChoice { SEND, CLOSE }
