@@ -50,12 +50,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.decentralizedLists.dListItemView
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
@@ -63,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.resources.rating_stars_out_of_five
@@ -70,7 +73,9 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.ResolveDListConcept
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.isDListItemPage
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.presentAmongMany
@@ -86,6 +91,7 @@ import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.ratings.RatingMark
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyOnlyAsHexOrNull
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -94,9 +100,12 @@ private val StarSize = Modifier.size(Size18dp)
 // A 2:3 portrait thumbnail — the aspect ratio of a book cover and a film poster alike, which is
 // what the two richly-rendered marks need. Hoisted so the shape isn't rebuilt per recomposition.
 private val CoverShape = RoundedCornerShape(6.dp)
+
+// Also the avatar size when the rated thing is a person, so a profile card lines up with a book's.
+private val CoverWidth = 44.dp
 private val CoverModifier =
     Modifier
-        .width(44.dp)
+        .width(CoverWidth)
         .height(66.dp)
         .clip(CoverShape)
 
@@ -154,7 +163,7 @@ fun RenderEntityRating(
                 if (targetNote != null) {
                     RatedNoteCard(targetNote, mark, accountViewModel, nav)
                 } else {
-                    RatedTargetCard(mark = mark, title = targetEventId.take(8), subtitle = null, onClick = null)
+                    RatedTargetCard(mark, targetEventId.take(8))
                 }
             }
 
@@ -165,11 +174,27 @@ fun RenderEntityRating(
             // between a review of something and a row of stars floating on its own.
             val identifier = remember(noteEvent) { noteEvent.targetIdentifier() }
 
-            if (identifier.isNotEmpty()) {
-                RatedTargetCard(mark = mark, title = identifier, subtitle = null, onClick = null)
+            // A `profile` rating names a pubkey. Printed as is, that is 64 hex characters under a
+            // generic person icon; resolved, it is the person's picture and name.
+            val ratedPubKey =
+                remember(mark, identifier) {
+                    if (mark == RatingMark.PROFILE) decodePublicKeyOnlyAsHexOrNull(identifier) else null
+                }
+
+            if (ratedPubKey != null) {
+                LoadUser(ratedPubKey) { user ->
+                    if (user != null) {
+                        RatedProfileCard(user, mark, accountViewModel, nav)
+                    } else {
+                        // Only until LoadUser creates the cache entry, normally the next frame.
+                        RatedTargetCard(mark, ratedPubKey.take(8))
+                    }
+                }
+            } else if (identifier.isNotEmpty()) {
+                RatedTargetCard(mark, identifier)
             }
 
-            stars?.let { RatingStarsRow(it, mark) }
+            stars?.let { RatingStarsRow(it, mark, cardNamesTarget = ratedPubKey != null) }
         }
 
         if (noteEvent.content.isNotBlank()) {
@@ -199,10 +224,12 @@ fun RenderEntityRating(
 private fun RatingStarsRow(
     stars: Double,
     mark: String,
-    showMark: Boolean = mark !in MARKS_WITH_A_CARD,
+    // True when the card above names and pictures the target (a loaded publication, a titled
+    // list item, a resolved person), so the mark chip beside the stars would only repeat it.
+    cardNamesTarget: Boolean = false,
 ) {
     Box(Modifier.padding(top = Size5dp)) {
-        RatingStars(stars, mark, showMark)
+        RatingStars(stars, mark, showMark = !cardNamesTarget && mark !in MARKS_WITH_A_CARD)
     }
 }
 
@@ -313,7 +340,7 @@ private fun RatedAddressableCard(
         val publication = event as? PublicationIndexEvent
         RatedPublicationCard(targetNote, publication, mark, fallbackIdentifier, accountViewModel, nav)
         // A loaded publication names itself; until then the slug title needs the mark beside it.
-        stars?.let { RatingStarsRow(it, mark, showMark = publication == null && mark !in MARKS_WITH_A_CARD) }
+        stars?.let { RatingStarsRow(it, mark, cardNamesTarget = publication != null) }
     }
 }
 
@@ -383,7 +410,7 @@ private fun RatedDListItemCard(
         )
 
         // A titled item names itself; an untitled one falls back to its slug, which the mark explains.
-        stars?.let { RatingStarsRow(it, mark, showMark = view.title == null && mark !in MARKS_WITH_A_CARD) }
+        stars?.let { RatingStarsRow(it, mark, cardNamesTarget = view.title != null) }
     }
 }
 
@@ -457,6 +484,43 @@ private fun RatedNoteCard(
 }
 
 /**
+ * A rated person: their picture in the cover slot, their name as the title and the opening of their
+ * bio as the second line, which is what tells a reader who this is. Observing the metadata asks the
+ * relays for the kind-0, so a profile the reader has never met fills in instead of staying an npub.
+ */
+@Composable
+private fun RatedProfileCard(
+    user: User,
+    mark: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    // The name the reader knows this person by (their own nickname for them first), the same one
+    // every other user row shows. This also holds the relay subscription for the kind-0.
+    val title by observeUserName(user, accountViewModel)
+
+    // Read straight from the cache: the name above already subscribes for this user's metadata.
+    val userInfo by user.metadata().flow.collectAsStateWithLifecycle()
+
+    // Bios are paragraphs: kept as written, a blank line after the first sentence spends the card's
+    // second line on nothing but an ellipsis. Folded to one line, the two lines show the bio.
+    val about = userInfo?.info?.about
+    val subtitle = remember(about) { about?.replace(WhitespaceRun, " ")?.trim() }
+
+    RatedTargetCard(
+        mark = mark,
+        title = title,
+        subtitle = subtitle,
+        onClick = { nav.nav(routeFor(user)) },
+        // Not UserPicture: the whole card is already the link to the profile, so the avatar needs
+        // neither its own click target nor a hover card.
+        cover = { BaseUserPicture(user, CoverWidth, accountViewModel) },
+    )
+}
+
+private val WhitespaceRun = Regex("\\s+")
+
+/**
  * One card shape for every kind of rated thing: a cover when there is one, the mark's icon when
  * there is not, and a title plus optional second line. Shared so the resolvable and unresolvable
  * cases cannot drift apart visually.
@@ -465,8 +529,8 @@ private fun RatedNoteCard(
 private fun RatedTargetCard(
     mark: String,
     title: String,
-    subtitle: String?,
-    onClick: (() -> Unit)?,
+    subtitle: String? = null,
+    onClick: (() -> Unit)? = null,
     cover: @Composable () -> Unit = { CoverPlaceholder(mark) },
 ) {
     Row(
@@ -593,12 +657,7 @@ fun RatedTargetCardPreview() {
                 subtitle = "Collection of selected fables from the ancient Greek philosopher, known as Aesop.",
                 onClick = {},
             )
-            RatedTargetCard(
-                mark = RatingMark.HASHTAG,
-                title = "bookstr",
-                subtitle = null,
-                onClick = null,
-            )
+            RatedTargetCard(mark = RatingMark.HASHTAG, title = "bookstr")
         }
     }
 }
