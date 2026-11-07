@@ -34,6 +34,13 @@ sourceSets {
 
 kotlin {
     jvmToolchain(21)
+    compilerOptions {
+        // Desktop start-up: lambdas, SAM conversions and string templates as compiled classes, not
+        // invokedynamic call sites the JVM spins a class for on first use (~6k in a desktop start,
+        // and the JIT time they drew starved the UI). Android's D8 already turns them into
+        // classes. desktopApp/plans/2026-11-07-desktop-startup-performance.md
+        freeCompilerArgs.addAll("-Xlambdas=class", "-Xsam-conversions=class", "-Xstring-concat=inline")
+    }
 }
 
 // apksig reads APKs for `amy releases publish` (commons' ApkInspector); the desktop app never
@@ -154,12 +161,28 @@ dependencies {
 // start step by step (VideoTimeline). Only the dev `run` gets them, never a packaged app.
 // Added at execution: the Compose plugin sets the task's jvmArgs after this script configures it.
 tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
-    val overrides = listOf("amethyst.platform", "amethyst.appearance", "amethyst.accent", "amethyst.login", "amethyst.signup", "amethyst.videoTimeline")
+    val overrides =
+        listOf(
+            "amethyst.platform",
+            "amethyst.appearance",
+            "amethyst.accent",
+            "amethyst.login",
+            "amethyst.signup",
+            "amethyst.videoTimeline",
+        )
     val dockIcon = project.file("src/jvmMain/resources/icon.icns")
     val videoPlayerDir = layout.buildDirectory.dir("macVideoPlayer")
+    // AppCDS: the JVM keeps the classes a run loaded in this archive and maps them on the next start
+    // instead of loading and verifying them again. It cut the window's first frame from ~3.3 s to
+    // ~0.9 s and the settled home feed from ~5.6 s to ~3.4 s (desktopApp/plans/2026-11-07-desktop-startup-performance.md). A
+    // rebuilt jar invalidates it; the JVM then runs without it and writes a new one when it exits.
+    val cdsArchive = layout.buildDirectory.file("appcds/run.jsa")
     dependsOn("buildMacVideoPlayer")
     doFirst {
         overrides.forEach { key -> System.getProperty(key)?.let { jvmArgs("-D$key=$it") } }
+        val cdsDir = cdsArchive.get().asFile.parentFile
+        check(cdsDir.isDirectory || cdsDir.mkdirs()) { "Could not create $cdsDir" }
+        jvmArgs("-XX:+AutoCreateSharedArchive", "-XX:SharedArchiveFile=${cdsArchive.get().asFile.absolutePath}")
         // macOS: names the Dock's entry for the plain JVM `run` starts (the packaged app takes its
         // name from its Info.plist). The app switcher still says "java": it reads the name of the
         // bundle the binary sits in, and the JDK's java is its own bundle.

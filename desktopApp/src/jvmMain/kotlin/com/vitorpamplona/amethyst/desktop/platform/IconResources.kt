@@ -80,7 +80,13 @@ object IconResources {
      * matches the dock icon shape on macOS.
      */
     val adaptedBitmapPainter: BitmapPainter by lazy {
-        // Straight from the pixels: a PNG round-trip of the 1024 px icon cost an encode and a decode.
-        BitmapPainter((adaptedBufferedImage ?: rawBufferedImage).toComposeImageBitmap())
+        if (PlatformInfo.host == Platform.MACOS) {
+            // Straight from the pixels: a PNG round-trip of the 1024 px icon cost an encode and a decode.
+            BitmapPainter((adaptedBufferedImage ?: rawBufferedImage).toComposeImageBitmap())
+        } else {
+            // Elsewhere the adapted icon is the PNG itself: Skia decodes it natively, where ImageIO
+            // plus a pixel-by-pixel copy cost ~200 ms of the window's creation on the UI thread.
+            rawBitmapPainter
+        }
     }
 }
