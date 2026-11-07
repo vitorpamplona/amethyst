@@ -60,6 +60,7 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -75,6 +76,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LocalPinnableContainer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.LinkAnnotation
@@ -248,6 +250,8 @@ private fun DrawerContentBody(
 
     LazyColumn(Modifier.fillMaxHeight()) {
         item(key = "header", contentType = "header") {
+            // The name opens the account menu, which owns its dialogs: see [KeepComposedOnceShown].
+            if (accountMenu != null) KeepComposedOnceShown()
             Column {
                 ProfileContent(
                     baseAccountUser = accountViewModel.account.userProfile(),
@@ -714,15 +718,40 @@ fun rememberDrawerSections(accountViewModel: AccountViewModel): List<DrawerSecti
 
     val fixedRows = sections.map { it.hasVisibleFixedRows() }
 
-    return remember(sections, hidden, collapsed, fixedRows) {
-        sections.mapIndexedNotNull { index, section ->
-            val rows = DrawerSectionVisibility.visibleItems(section, hidden)
-            if (rows.isEmpty() && !fixedRows[index]) {
-                null
-            } else {
-                DrawerSectionRows(section, rows, fixedRows[index], expanded = section.id !in collapsed)
-            }
+    return remember(sections, hidden, collapsed, fixedRows) { drawerSectionRows(sections, hidden, collapsed, fixedRows) }
+}
+
+/**
+ * [rememberDrawerSections]' rules without the composition: [hasFixedRows] holds, per section, whether
+ * its fixed rows show in this build. A row listed twice in a section shows once: the lazy list keys
+ * rows by section and item, and a repeated key would crash it.
+ */
+fun drawerSectionRows(
+    sections: List<DrawerSection>,
+    hidden: Set<NavBarItem>,
+    collapsed: Set<DrawerSectionId>,
+    hasFixedRows: List<Boolean>,
+): List<DrawerSectionRows> =
+    sections.mapIndexedNotNull { index, section ->
+        val rows = DrawerSectionVisibility.visibleItems(section, hidden).distinct()
+        if (rows.isEmpty() && !hasFixedRows[index]) {
+            null
+        } else {
+            DrawerSectionRows(section, rows, hasFixedRows[index], expanded = section.id !in collapsed)
         }
+    }
+
+/**
+ * Keeps the lazy item it is in composed once it has been, as a plain column would. For rows that
+ * own state the user is in the middle of: the account menu holds its Add account and Log out
+ * dialogs, and the scope a logout runs in, and scrolling its row out of view must not close them.
+ */
+@Composable
+private fun KeepComposedOnceShown() {
+    val pinnable = LocalPinnableContainer.current
+    DisposableEffect(pinnable) {
+        val handle = pinnable?.pin()
+        onDispose { handle?.release() }
     }
 }
 
@@ -797,6 +826,7 @@ private fun AccountsRow(
     accountMenu: AccountMenu?,
 ) {
     if (accountMenu != null) {
+        KeepComposedOnceShown()
         var expanded by remember { mutableStateOf(false) }
         Box {
             IconRow(

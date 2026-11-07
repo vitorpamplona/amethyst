@@ -26,10 +26,12 @@ import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.metadat
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Dials the relays a freshly loaded [Account] is about to ask, before anything asks them.
@@ -43,7 +45,8 @@ import kotlinx.coroutines.withContext
  * subscriptions to take over, then lets go: a relay nothing asks for by then closes as usual.
  * Dials the relays [pickAccountDataRelays] reads the account's own events from, and the outbox
  * relays of the follows as known now (on a cold cache, the hint and fallback relays the home feed
- * starts on). Blocked relays are left out.
+ * starts on). Blocked relays are left out, and since the blocked list often loads after the
+ * login, a relay it adds while held is let go at once.
  */
 class AccountRelayPreconnect(
     private val client: INostrClient,
@@ -61,15 +64,30 @@ class AccountRelayPreconnect(
         return (ownData + follows) - account.blockedRelayList.flow.value
     }
 
-    fun preconnect(account: Account) {
-        val relays = relaysFor(account)
-        if (relays.isEmpty()) return
+    fun preconnect(account: Account) = hold(relaysFor(account), account.blockedRelayList.flow)
+
+    /**
+     * Holds [relays] for [holdMs], letting go of each one as soon as [blocked] lists it: keepConnected
+     * bypasses the client's blocked-relay filter, which only stops REQs.
+     */
+    fun hold(
+        relays: Set<NormalizedRelayUrl>,
+        blocked: Flow<Collection<NormalizedRelayUrl>>,
+    ): Job? {
+        if (relays.isEmpty()) return null
         relays.forEach { client.keepConnected(it) }
-        scope.launch {
+        return scope.launch {
+            val held = relays.toMutableSet()
             try {
-                delay(holdMs)
+                withTimeoutOrNull(holdMs) {
+                    blocked.collect { nowBlocked ->
+                        val release = held.filter { it in nowBlocked }
+                        held.removeAll(release.toSet())
+                        release.forEach { client.releaseConnection(it) }
+                    }
+                }
             } finally {
-                withContext(NonCancellable) { relays.forEach { client.releaseConnection(it) } }
+                withContext(NonCancellable) { held.forEach { client.releaseConnection(it) } }
             }
         }
     }

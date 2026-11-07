@@ -39,7 +39,7 @@ import org.jetbrains.compose.resources.StringResource
 /**
  * The drawer's layout: which destinations it lists, under which heading, in which order.
  *
- * One list drives two screens — [ListContent] renders the visible rows of each section, and the Side
+ * One list drives two screens — [drawerSectionItems] renders the visible rows of each section, and the Side
  * Menu settings screen renders the same sections as its show/hide catalog. Adding a destination to a
  * section's list therefore surfaces it in the drawer *and* in its configuration screen without
  * touching either, and DrawerSectionsTest fails the build if a newly added [NavBarCatalog] id isn't
@@ -56,11 +56,11 @@ data class DrawerSection(
     val icon: MaterialSymbol,
     val items: List<NavBarItem>,
     /**
-     * True for a section that renders rows of its own on top of its catalog items (see [CatalogSection]).
+     * True for a section that renders rows of its own on top of its catalog items (see [drawerSectionItems]).
      * Such a section stays in the drawer even with every catalog row switched off, and — since a fixed
      * row is not a catalog destination — it never appears in the Side Menu settings screen's counts.
      * A fixed row can still be build-gated (HLS upload needs the front end's screen); when every fixed
-     * row of a section is gated off, CatalogSection drops the section like any other empty one.
+     * row of a section is gated off, [drawerSectionRows] drops the section like any other empty one.
      */
     val hasFixedRows: Boolean = false,
 )
