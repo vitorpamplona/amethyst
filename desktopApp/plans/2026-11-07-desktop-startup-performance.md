@@ -1,6 +1,6 @@
 # Desktop startup: time to a settled home feed
 
-Status: in progress. Measurement tooling and four changes landed; the largest win (AppCDS) is on
+Status: in progress. Measurement tooling and seven changes landed; the largest win (AppCDS) is on
 for the dev `run` only and still needs a packaging story.
 
 ## What is measured
@@ -48,6 +48,42 @@ The ranges don't overlap: account loaded 1663–1836 ms vs 1357–1459 ms, windo
 2912–3059 ms. "Logged-in window up" is the shell's first composition applied, when its
 subscriptions start.
 
+### The logged-in window on screen, without AppCDS
+
+Polling the Xvfb screen from outside the app for when the drawer's labels first show, 8 alternating
+boots of the build before this round and after it (window gate, class-compiled lambdas, warm-up
+v2):
+
+| Variant | account loaded | logged-in shell visible | follows known | first posts |
+|---|---|---|---|---|
+| before | 1642 | **8837** (7857–9394) | 3993 | 5094 |
+| after | 1616 | **4483** (4037–4856, two boots at 7318 and 8433) | 3574 | 4506 |
+
+In the two slow "after" boots the app drew its shell at 4.4 and 5.9 s (the first-draw mark) but
+the poller saw the drawer 2.5–3 s later; not explained yet.
+
+## Where a cold start's CPU goes
+
+The start is CPU-bound: from `main()` the process runs ~3.3 of the container's 4 cores, ~10
+CPU-seconds by the time the logged-in window is up. Per thread at 3.1 s (`/proc/<pid>/task`):
+C2 compiler ~50%, C1 ~11%, UI thread ~13%, coroutine workers ~11%, main ~8%. JFR's compilation
+events put ~7 s of C2 time in the first 4 s, nearly all JDK code: `java.lang.invoke` and its ASM
+(spinning a class for each Kotlin lambda and string template on first use: ~7.9k such classes in
+4 s, 6.2k of them ours), class loading, and the TLS handshakes' EC maths.
+
+Reordering work across threads stops paying here: warming the drawer's labels in the background
+made the shell compose ~0.2 s faster and delayed the login by as much (dropped). Removing work, or
+JIT settings, are what move it:
+
+| JIT flag (8+8 boots) | view model | window up | settled |
+|---|---|---|---|
+| none | 1735 | 3217 | 5528 |
+| `-XX:CICompilerCount=2` | 1514 | 2776 | 5124 |
+| `-XX:TieredStopAtLevel=1` (C1 only: an upper bound, not shippable) | 1297 | 2458 | 4548 |
+
+Not shipped: the compiler-thread default scales with cores, and only this 4-core container was
+measured.
+
 ## Changes
 
 1. **AppCDS on `:desktopApp:run`** (`desktopApp/build.gradle.kts`): `-XX:+AutoCreateSharedArchive`
@@ -58,7 +94,7 @@ subscriptions start.
    so the TLS handshakes overlap the first composition of the logged-in shell (~1.0–1.2 s, which
    every screen subscription waits for) instead of following it.
 
-3. **`StartupWarmUp`** (desktop `main()`): two daemon threads load, without initializing, the ~9k
+3. **`StartupWarmUp`** (desktop `main()`): two daemon threads load, without initializing, the ~15k
    classes a start reads from the app's jars (`resources/startup/preload-classes.txt`, in load
    order), and load the secp256k1 native library before the login needs it. All-thread samples
    of a cold start showed the main thread and the login running one step after another on one
@@ -69,7 +105,18 @@ subscriptions start.
    a stale list only loses speed.
 4. **`setDockIcon`** asks whether the taskbar takes an icon image (macOS only) before decoding
    it: ~85 ms less on the main thread on Linux and Windows.
-
+5. **The window composes the app only once it has a size** (`AmethystDesktop.kt`). Its size
+   reads 0 x 0 until its first layout; composed before then, the shell picked the phone layout
+   (bottom bar, modal drawer), composed all of it (~1.2 s of UI thread) and threw it away for the
+   real one. In-app first draw 5244 → 4071 ms (A/B on one build).
+6. **Lambdas, SAM conversions and string templates compiled as classes** on the JVM targets of
+   `commons`, `commonsUI` and `desktopApp` (`-Xlambdas=class -Xsam-conversions=class
+   -Xstring-concat=inline`; Android's D8 already desugars them). Runtime-spun classes in the first
+   4 s: 7925 → 1375. Logged-in window up 3255 → 3076 ms, view model 2008 → 1730 ms (with item 7).
+7. **Warm-up v2**: the TLS setup (trust store, `SSLContext`, ~250 ms of main thread inside
+   `OkHttpClientFactory`) on a warm-up thread; the window icon decoded by Skia off the UI thread
+   (ImageIO plus a per-pixel copy cost ~200 ms of window creation; Linux and Windows); the class
+   list read off the main thread; `StartupTimeline` no longer loads JMX when off.
 ## Tried and dropped
 
 - `sample()` → a leading-edge throttle on the home REQ's outbox-set trigger and on the follows'
@@ -97,10 +144,11 @@ subscriptions start.
    `$APPDIR`/`$BINDIR`/`$ROOTDIR` in `java-options` (checked in its binary), so it cannot point
    `AutoCreateSharedArchive` at a per-user folder. Options: a newer JDK's launcher or AOT cache, a
    first-run training step that writes next to the user's data, or a small native launcher.
-2. Open the window sooner: the account is loaded at ~1.4 s but the logged-in shell starts
-   composing at ~1.9 s, after the rest of `main()` and the window's theme and icon fonts.
-3. Compose less in the first frame of the logged-in shell: a lazy drawer catalog, cheaper
-   `NavBarItem` init, string reads off the first frame.
+2. Compose less in the first frame of the logged-in shell (~1.1–1.3 s on the UI thread): the
+   permanent drawer is half of it, and `NavBarCatalog`'s initializer alone a quarter, because each
+   label touches a generated Compose Resources chunk that builds 100 lazy accessors at once.
+   Labels resolved on demand, or a drawer that composes only what shows, would remove that work.
+3. Its first layout and draw (~1 s here, software rendering under Xvfb; likely far less on a GPU).
 4. Keep the follows' relay lists across restarts so the home REQ can leave at login.
 5. Measure the saved-account path (follow list from the account's backup instead of relays) and a
    real network with Tor on.

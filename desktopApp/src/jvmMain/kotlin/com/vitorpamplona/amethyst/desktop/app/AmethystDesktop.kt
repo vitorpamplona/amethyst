@@ -37,11 +37,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.LocalWindowExceptionHandlerFactory
 import androidx.compose.ui.window.WindowPlacement
@@ -221,6 +224,7 @@ fun main(args: Array<String>) {
     StartupTimeline.mark("modules-built")
     StartupTimeline.watchSession(modules.sessionManager.accountContent, modules.client, modules.applicationIOScope)
     modules.initiate()
+    StartupTimeline.mark("initiated")
 
     // Napplets (NIP-5D) run in a sandboxed Chromium, started the first time one opens.
     val nappletHost = DesktopNappletHost(modules)
@@ -252,11 +256,13 @@ fun main(args: Array<String>) {
             nappletHost = nappletHost,
         )
     val root = DesktopAppRoot(modules)
+    StartupTimeline.mark("application-call")
 
     // Chromium has to shut down before the JVM starts exiting, while the app's threads still run: on
     // macOS it must go on the main thread, and jcefmaven's own exit hook would otherwise do it on the
     // AWT thread and crash the app as it quits.
     application(exitProcessOnExit = false) {
+        StartupTimeline.mark("application-composing")
         // Opens where it was left; the first time, or when that spot is off every screen now, at the
         // default size in the middle of the screen.
         val savedBounds = remember { SavedWindowBounds(File(filesDir, "window-bounds.properties")) }
@@ -317,6 +323,13 @@ fun main(args: Array<String>) {
                     onPreviewKeyEvent = { root.navigator.handleShortcut(it, onQuit = ::exitApplication) },
                     visible = windows.mainWindowVisible,
                 ) {
+                    StartupTimeline.mark("window-content")
+                    if (StartupTimeline.enabled) {
+                        LaunchedEffect(Unit) {
+                            withFrameNanos { }
+                            StartupTimeline.mark("first-frame-tick")
+                        }
+                    }
                     windows.MainWindowEffects(window)
                     // macOS: the title bar turns transparent over the app, which draws its own strip there.
                     frameScope?.applyNativeWindowChrome()
@@ -367,9 +380,25 @@ fun main(args: Array<String>) {
                                         // Android under the status bar. Full screen has no title bar.
                                         val titleBar = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else titleBarInsetTop
                                         ProvideTitleBarInsets(titleBar) {
-                                            Box(Modifier.weight(1f).fillMaxWidth()) {
-                                                if (StartupTimeline.enabled) SideEffect { StartupTimeline.mark("first-composition") }
-                                                AmethystApp(modules.sessionManager, root)
+                                            // The window's size reads 0 x 0 until its first layout. Composed before
+                                            // then, the app picked the phone layout, composed all of it and threw it
+                                            // away a frame later for the real one: ~1.2 s of a cold start's UI thread.
+                                            val windowSized = LocalWindowInfo.current.containerSize != IntSize.Zero
+                                            val drawMark =
+                                                if (StartupTimeline.enabled && windowSized) {
+                                                    Modifier.drawWithContent {
+                                                        drawContent()
+                                                        StartupTimeline.mark("first-draw")
+                                                    }
+                                                } else {
+                                                    Modifier
+                                                }
+                                            Box(Modifier.weight(1f).fillMaxWidth().then(drawMark)) {
+                                                if (windowSized) {
+                                                    StartupTimeline.mark("amethyst-app")
+                                                    if (StartupTimeline.enabled) SideEffect { StartupTimeline.mark("first-composition") }
+                                                    AmethystApp(modules.sessionManager, root)
+                                                }
                                                 // Toasts show here unless a screen window has the focus (it shows them).
                                                 if (windows.focusedScreenWindow == null) {
                                                     SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))

@@ -21,8 +21,11 @@
 package com.vitorpamplona.amethyst.desktop.app
 
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
+import com.vitorpamplona.amethyst.desktop.platform.Platform
+import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
+import okhttp3.OkHttpClient
 import kotlin.concurrent.thread
 
 /**
@@ -49,15 +52,24 @@ object StartupWarmUp {
     fun start() {
         // Off for recording a new class list (the order must be the app's own) and for A/B runs.
         if (System.getProperty("amethyst.startupWarmUp") == "false") return
-        val names = readClassList()
+        // Read once, by whichever loader gets there first, off the main thread.
+        val names = lazy { readClassList() }
+        val isMac = PlatformInfo.host == Platform.MACOS
         repeat(LOADERS) { index ->
             thread(isDaemon = true, name = "startup-warm-up-$index") {
+                // One-time setups, each ahead of its first use, then the classes.
                 if (index == 0) {
-                    // Native setup the login needs, ahead of everything else on this thread.
+                    // The login's crypto, then the window's icon, which also loads Skiko's native
+                    // library before the window does. Not on macOS: its icon is drawn with Java2D,
+                    // which must not start before main() sets the macOS AWT properties.
                     step("secp256k1") { Secp256k1Instance.isPrivateKeyValid(ByteArray(32) { 1 }) }
+                    if (!isMac) step("icon") { IconResources.adaptedBitmapPainter }
+                } else {
+                    // The first TLS setup (the trust store's certificates, the SSLContext), ~250 ms
+                    // the HTTP client managers otherwise pay on the main thread; the JDK keeps it.
+                    step("tls") { OkHttpClient.Builder().build() }
                 }
-                step("classes") { preload(names, index) }
-                if (index == 0) step("icon") { IconResources.adaptedBufferedImage }
+                step("classes") { preload(names.value, index) }
             }
         }
     }

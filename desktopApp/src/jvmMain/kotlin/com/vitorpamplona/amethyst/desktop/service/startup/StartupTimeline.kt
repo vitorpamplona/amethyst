@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.startup
 
+import com.sun.management.OperatingSystemMXBean
 import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
@@ -61,8 +62,9 @@ object StartupTimeline {
         System.getProperty("amethyst.startupTimeline") == "true" ||
             System.getenv("AMETHYST_STARTUP_TIMELINE").let { it == "1" || it == "true" }
 
+    // Only when on: JMX's classes cost a cold start ~40 ms.
     private val jvmStart: Long =
-        runCatching { ManagementFactory.getRuntimeMXBean().startTime }.getOrDefault(System.currentTimeMillis())
+        if (enabled) runCatching { ManagementFactory.getRuntimeMXBean().startTime }.getOrDefault(System.currentTimeMillis()) else 0L
 
     private val file: File? =
         if (!enabled) {
@@ -104,12 +106,18 @@ object StartupTimeline {
                     }
                 val now = sinceStart()
                 stacks.forEach { (t, stack) ->
+                    // The main and UI threads in any state (waiting on a lock or in native code is
+                    // where a start loses time too); the others only while running app code.
+                    val always = t.name == "main" || t.name.startsWith("AWT-EventQueue")
                     val inApp = !allThreads || stack.any { it.className.startsWith("com.vitorpamplona") }
-                    if (stack.isNotEmpty() && t.state == Thread.State.RUNNABLE && inApp && t !== Thread.currentThread()) {
+                    val keep = always || (t.state == Thread.State.RUNNABLE && inApp)
+                    if (stack.isNotEmpty() && keep && t !== Thread.currentThread()) {
                         lines
                             .append(now)
                             .append('\t')
                             .append(t.name)
+                            .append(':')
+                            .append(t.state)
                             .append('\t')
                         stack.take(120).joinTo(lines, ";") { "${it.className}.${it.methodName}" }
                         lines.append('\n')
@@ -130,8 +138,14 @@ object StartupTimeline {
     ) {
         if (!enabled) return
         synchronized(seen) { if (!seen.add(name)) return }
-        write("mark", name, detail())
+        // The process's CPU time so far: near cores x wall time means the start is CPU-bound.
+        write("mark", name, "${detail()}\tcpu=${processCpuMs()}")
     }
+
+    private fun processCpuMs(): Long =
+        (ManagementFactory.getOperatingSystemMXBean() as? OperatingSystemMXBean)
+            ?.processCpuTime
+            ?.let { it / 1_000_000 } ?: -1
 
     private fun write(
         type: String,

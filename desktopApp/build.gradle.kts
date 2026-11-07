@@ -34,6 +34,13 @@ sourceSets {
 
 kotlin {
     jvmToolchain(21)
+    compilerOptions {
+        // Desktop start-up: lambdas, SAM conversions and string templates as compiled classes, not
+        // invokedynamic call sites the JVM spins a class for on first use (~6k in a desktop start,
+        // and the JIT time they drew starved the UI). Android's D8 already turns them into
+        // classes. desktopApp/plans/2026-11-07-desktop-startup-performance.md
+        freeCompilerArgs.addAll("-Xlambdas=class", "-Xsam-conversions=class", "-Xstring-concat=inline")
+    }
 }
 
 // apksig reads APKs for `amy releases publish` (commons' ApkInspector); the desktop app never

@@ -74,7 +74,7 @@ def main():
     ap.add_argument("files", nargs="+")
     args = ap.parse_args()
 
-    cols = ["first-composition", "account-loaded", "account-viewmodel", "logged-in-effects", "first-relay", "follows-known", f"{args.feed}-first-posts"]
+    cols = ["account-loaded", "account-viewmodel", "first-composition", "first-draw", "first-relay", "follows-known", f"{args.feed}-first-posts"]
     print("run\t" + "\t".join(cols) + "\tsettled\ttop-changes\tposts\tend")
     settled_all, first_all = [], []
     per_col = {c: [] for c in cols}
