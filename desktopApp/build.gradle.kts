@@ -2,6 +2,7 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.compose.desktop.application.tasks.AbstractJLinkTask
 import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
 import org.jetbrains.compose.desktop.application.tasks.AbstractJvmToolOperationTask
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.DataInputStream
 import java.net.URI
 import java.nio.file.FileSystems
@@ -32,9 +33,18 @@ sourceSets {
     }
 }
 
+// Compiled by the JDK Gradle runs on, as Java 21 bytecode. The packages bundle that JDK (JDK 25 in
+// CI), and a dev run on JDK 21 still works; a toolchain would make CI install a second JDK just to
+// compile.
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+tasks.withType<JavaCompile>().configureEach { options.release.set(21) }
+
 kotlin {
-    jvmToolchain(21)
     compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_21)
         // Desktop start-up: lambdas, SAM conversions and string templates as compiled classes, not
         // invokedynamic call sites the JVM spins a class for on first use (~6k in a desktop start,
         // and the JIT time they drew starved the UI). Android's D8 already turns them into
@@ -299,6 +309,16 @@ compose.desktop {
         }
 
         jvmArgs += "-Xmx2g"
+
+        // JDK 24 and later warn at every start, and will refuse in a later release, when a class
+        // path library loads native code (JNA, secp256k1, Skiko, SQLite) or calls sun.misc.Unsafe's
+        // memory methods (DataStore's protobuf). Both are the libraries' own design, so the app
+        // allows them. The packages and `run` use the JDK Gradle runs on; JDK 21 has no
+        // --sun-misc-unsafe-memory-access.
+        if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_24)) {
+            jvmArgs += "--enable-native-access=ALL-UNNAMED"
+            jvmArgs += "--sun-misc-unsafe-memory-access=allow"
+        }
 
         // The shared app reads its version from here (there is no BuildConfig on desktop).
         jvmArgs += "-Damethyst.version=$appVersion"

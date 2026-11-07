@@ -29,7 +29,9 @@ secrets it needs, the distribution channels, and one-time bootstrap steps.
 
 All platforms:
 
-- **JDK 21** (Zulu or Temurin recommended)
+- **JDK 21** or newer (Zulu or Temurin recommended). The desktop release packages are built on
+  **JDK 25**, the runtime they bundle (see [Wayland and X11 on Linux](#wayland-and-x11-on-linux));
+  JDK 21 still builds and runs everything.
 - **Git**
 
 Platform-specific:
@@ -796,8 +798,9 @@ Every Linux package (`.deb`, `.rpm`, AppImage, tar.gz, Flatpak) draws natively
 on Wayland, with no XWayland, and through X11 on an X11 session. Two pieces
 make that work:
 
-- **The runtime.** The packages bundle the JetBrains Runtime instead of
-  Temurin: stock OpenJDK's AWT only speaks X11, while JBR's has a Wayland
+- **The runtime.** The packages bundle the JDK Gradle runs on: JDK 25, the
+  JetBrains Runtime (JBR) on Linux and Temurin on macOS and Windows. On Linux it
+  is JBR instead of Temurin: stock OpenJDK's AWT only speaks X11, while JBR's has a Wayland
   toolkit (`WLToolkit`). Release CI builds the Linux legs on it and fails a
   build whose runtime lacks `lib/libawt_wlawt.so`.
 - **The window.** On a Wayland session (`$WAYLAND_DISPLAY` names a live
