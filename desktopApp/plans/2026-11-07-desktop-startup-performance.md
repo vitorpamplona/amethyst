@@ -1,6 +1,6 @@
 # Desktop startup: time to a settled home feed
 
-Status: in progress. Measurement tooling and seven changes landed; the largest win (AppCDS) is on
+Status: in progress. Measurement tooling and ten changes landed; the largest win (AppCDS) is on
 for the dev `run` only and still needs a packaging story.
 
 ## What is measured
@@ -117,6 +117,35 @@ measured.
    `OkHttpClientFactory`) on a warm-up thread; the window icon decoded by Skia off the UI thread
    (ImageIO plus a per-pixel copy cost ~200 ms of window creation; Linux and Windows); the class
    list read off the main thread; `StartupTimeline` no longer loads JMX when off.
+8. **Nav catalog labels resolved when read** (`NavBarItemDef.label`, `labelRes` now a getter):
+   each generated `Res.string` accessor initializes its whole file of 100 lazy accessors, and the
+   54 labels sat in 32 files, ~3,200 accessors built on the UI thread before the drawer drew a row
+   (`NavBarItemKt.<clinit>`, 24% of the shell's composition → 0.5%). `BottomBarCategories` is
+   `by lazy` for the same reason.
+9. **The drawer is a `LazyColumn`** (`DrawerContent.kt`): header, each section's heading, fixed
+   rows and catalog rows as keyed items, then Accounts and the footer, so a start composes only the
+   rows on screen. Same order and look; the weight spacers it replaces did nothing inside a
+   scrolling column. Folding a section animates its rows with `animateItem`.
+10. **The desktop Settings catalog is built when first read**: only the macOS menu bar reads it,
+   and building it read all 53 Settings labels (~9% of the first frame's UI thread on Linux).
+
+### The drawer (8–10 above), measured on a slower replacement container
+
+The session moved to another machine (~10–15% slower), so these compare against the previous
+commit on the same machine, 12 alternating boots each:
+
+| | view model → composed | first draw | follows known |
+|---|---|---|---|
+| before | 1224–1456 ms (median ~1360) | median 4468 (4227–5824) | 3906 |
+| after | 852–1101 ms (median ~1060) | median 4777 (3951–5623) | 3435 |
+
+The composition is ~0.3 s shorter with no overlap, and UI-thread samples from the view model to
+the first draw fell ~12% (the drawer's share halved: 61–71 → 31–37 samples). The first draw did not
+move: with the window composed sooner, the subscriptions start sooner and the incoming events'
+processing takes the CPU the first layout and draw needed (the sampler itself got fewer turns in
+the "after" boots). On this saturated 4-core container less UI work does not show as an earlier
+frame; on a machine with spare cores it should.
+
 ## Tried and dropped
 
 - `sample()` → a leading-edge throttle on the home REQ's outbox-set trigger and on the follows'
@@ -144,10 +173,10 @@ measured.
    `$APPDIR`/`$BINDIR`/`$ROOTDIR` in `java-options` (checked in its binary), so it cannot point
    `AutoCreateSharedArchive` at a per-user folder. Options: a newer JDK's launcher or AOT cache, a
    first-run training step that writes next to the user's data, or a small native launcher.
-2. Compose less in the first frame of the logged-in shell (~1.1–1.3 s on the UI thread): the
-   permanent drawer is half of it, and `NavBarCatalog`'s initializer alone a quarter, because each
-   label touches a generated Compose Resources chunk that builds 100 lazy accessors at once.
-   Labels resolved on demand, or a drawer that composes only what shows, would remove that work.
+2. Compose less in the first frame of the logged-in shell. Items 8–10 took the drawer from half
+   of it to about a quarter; what remains is the notification side panel and the home screen, and
+   generated string files touched one label at a time (each still builds 100 accessors). Android's
+   modal drawer still composes its content while closed.
 3. Its first layout and draw (~1 s here, software rendering under Xvfb; likely far less on a GPU).
 4. Keep the follows' relay lists across restarts so the home REQ can leave at login.
 5. Measure the saved-account path (follow list from the account's backup instead of relays) and a

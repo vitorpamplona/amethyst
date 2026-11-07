@@ -216,18 +216,22 @@ class DesktopAppRoot(
         val uriHandler = LocalUriHandler.current
         val platform = LocalAppPlatform.current
         val hasKeyStorage = LocalKeyStorage.current != null
+        // Built when first read: only the macOS menu bar reads it, and building it reads every
+        // Settings label, which cost the first frame ~9% of its UI-thread time elsewhere for nothing.
         val settingsCatalog =
             remember(accountViewModel, nav, destinations, uriHandler, platform, hasKeyStorage) {
-                buildSettingsCatalog(
-                    nav = nav,
-                    uriHandler = uriHandler,
-                    hasPrivateKey = accountViewModel.account.settings.keyPair.privKey != null,
-                    legal = platform.legalSettingsCategory(uriHandler),
-                    // Its confirmation dialog belongs to the Settings screen; a menu has none.
-                    onResetMarmot = null,
-                    canOpen = { route -> destinations?.has(route) ?: true },
-                    hasKeyStorage = hasKeyStorage,
-                )
+                lazy {
+                    buildSettingsCatalog(
+                        nav = nav,
+                        uriHandler = uriHandler,
+                        hasPrivateKey = accountViewModel.account.settings.keyPair.privKey != null,
+                        legal = platform.legalSettingsCategory(uriHandler),
+                        // Its confirmation dialog belongs to the Settings screen; a menu has none.
+                        onResetMarmot = null,
+                        canOpen = { route -> destinations?.has(route) ?: true },
+                        hasKeyStorage = hasKeyStorage,
+                    )
+                }
             }
 
         // A section asked for from a screen window, or a layout switch, brings the main window back.
@@ -251,7 +255,7 @@ class DesktopAppRoot(
                     navigator.userPubKeyHex = null
                     navigator.accountViewModel = null
                     navigator.destinations = null
-                    navigator.settingsCatalog = emptyList()
+                    navigator.settingsCatalog = lazyOf(emptyList())
                 }
             }
         }

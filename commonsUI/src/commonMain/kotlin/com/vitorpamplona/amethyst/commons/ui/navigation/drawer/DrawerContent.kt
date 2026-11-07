@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.navigation.drawer
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -46,11 +45,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Badge
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -60,10 +60,10 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -107,7 +107,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserStatuses
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.account_switch_select_account
 import com.vitorpamplona.amethyst.commons.resources.bookmarks
-import com.vitorpamplona.amethyst.commons.resources.drafts
 import com.vitorpamplona.amethyst.commons.resources.drawer_accounts
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_feeds
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_you
@@ -115,8 +114,6 @@ import com.vitorpamplona.amethyst.commons.resources.followers
 import com.vitorpamplona.amethyst.commons.resources.following
 import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.commons.resources.ic_tor
-import com.vitorpamplona.amethyst.commons.resources.longs
-import com.vitorpamplona.amethyst.commons.resources.pictures
 import com.vitorpamplona.amethyst.commons.resources.profile
 import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.resources.profile_image
@@ -228,6 +225,12 @@ fun PermanentDrawerContent(
     }
 }
 
+/**
+ * The drawer as one lazy list: the account header, then each section's heading and rows, then the
+ * Accounts row and the footer. Lazy so a start composes only the rows that fit on screen: as a
+ * scrolling Column every row of every open section composed on the first frame, about half of the
+ * logged-in window's first composition on a desktop cold start.
+ */
 @Composable
 private fun DrawerContentBody(
     nav: INav,
@@ -240,47 +243,48 @@ private fun DrawerContentBody(
         nav.closeDrawer()
     }
 
-    Column(
-        Modifier
-            .fillMaxHeight()
-            .verticalScroll(rememberScrollState()),
-    ) {
-        ProfileContent(
-            baseAccountUser = accountViewModel.account.userProfile(),
-            modifier = profileContentHeaderModifier,
-            accountViewModel,
-            onClickUser,
-            accountMenu,
-        )
+    val sections = rememberDrawerSections(accountViewModel)
+    val collapsePrefs = LocalAppServices.current.drawerSectionCollapsePrefs
 
-        Column(drawerSpacing) {
-            EditStatusBoxes(accountViewModel.account.userProfile(), accountViewModel, nav)
+    LazyColumn(Modifier.fillMaxHeight()) {
+        item(key = "header", contentType = "header") {
+            Column {
+                ProfileContent(
+                    baseAccountUser = accountViewModel.account.userProfile(),
+                    modifier = profileContentHeaderModifier,
+                    accountViewModel,
+                    onClickUser,
+                    accountMenu,
+                )
+
+                Column(drawerSpacing) {
+                    EditStatusBoxes(accountViewModel.account.userProfile(), accountViewModel, nav)
+                }
+
+                FollowingAndFollowerCounts(accountViewModel.account, accountViewModel, onClickUser)
+
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                    modifier = Modifier.padding(top = 20.dp),
+                )
+
+                Spacer(modifier = StdHorzSpacer)
+            }
         }
 
-        FollowingAndFollowerCounts(accountViewModel.account, accountViewModel, onClickUser)
+        drawerSectionItems(sections, onToggleExpand = { collapsePrefs.toggle(it) }, accountViewModel, nav)
 
-        HorizontalDivider(
-            thickness = DividerThickness,
-            modifier = Modifier.padding(top = 20.dp),
-        )
+        item(key = "accounts", contentType = "accounts") {
+            AccountsRow(openSheet, accountMenu)
+        }
 
-        Spacer(modifier = StdHorzSpacer)
-
-        ListContent(
-            modifier = Modifier.fillMaxWidth(),
-            openSheet,
-            accountViewModel,
-            nav,
-            accountMenu,
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        BottomContent(
-            accountViewModel.account.userProfile(),
-            accountViewModel,
-            nav,
-        )
+        item(key = "footer", contentType = "footer") {
+            BottomContent(
+                accountViewModel.account.userProfile(),
+                accountViewModel,
+                nav,
+            )
+        }
     }
 }
 
@@ -677,66 +681,139 @@ fun DisplayFollowerCount(
     )
 }
 
+/** One drawer section as the list shows it: the rows left after the user's hidden items. */
+@Immutable
+class DrawerSectionRows(
+    val section: DrawerSection,
+    val rows: List<NavBarItem>,
+    val hasFixedRows: Boolean,
+    val expanded: Boolean,
+)
+
+/**
+ * The sections the drawer shows, each with the rows the user hasn't switched off. A section with
+ * nothing left to show is left out: an empty, permanently collapsed heading is just noise. System
+ * always has something: it carries the relay-status row (not a catalog destination, it shows a live
+ * counter). Create is entirely gated fixed rows, so it shows only while one of them is available
+ * (see [DrawerSection.hasVisibleFixedRows]).
+ */
 @Composable
-fun ListContent(
-    modifier: Modifier,
-    openSheet: () -> Unit,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    accountMenu: AccountMenu? = null,
-) {
+fun rememberDrawerSections(accountViewModel: AccountViewModel): List<DrawerSectionRows> {
     // Per-account, synced through the NIP-78 app-specific data event, and edited on the
     // Side Menu settings screen. Empty (the default) means the full stock drawer.
     val hidden by accountViewModel.hiddenDrawerItemsFlow().collectAsStateWithLifecycle()
 
     // Device-global and never synced: which headings the user folded away, restored from disk at
-    // startup so the menu opens the way they left it. Collected once here rather than per section —
-    // one collector feeds every heading. See DrawerSectionCollapsePreferences.
-    val collapsePrefs = LocalAppServices.current.drawerSectionCollapsePrefs
-    val collapsed by collapsePrefs.flow.collectAsStateWithLifecycle()
+    // startup so the menu opens the way they left it. See DrawerSectionCollapsePreferences.
+    val collapsed by LocalAppServices.current.drawerSectionCollapsePrefs.flow
+        .collectAsStateWithLifecycle()
 
     // The bottom bar already holds the main destinations; without it, they lead the menu.
     val sections =
         if (LocalScreenLayout.current.navigationStyle == NavigationStyle.BOTTOM_BAR) DrawerSections else DrawerSectionsNavigateFirst
 
-    Column(modifier) {
-        sections.forEach { section ->
-            // Keyed by section: hiding the last row of a section removes it from the drawer
-            // entirely, and without a key the sections below would slide up into its slots and
-            // inherit its animateContentSize state, animating a height they never had.
-            key(section.id) {
-                CatalogSection(
-                    section = section,
-                    hidden = hidden,
-                    expanded = section.id !in collapsed,
-                    onToggleExpand = { collapsePrefs.toggle(section.id) },
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
+    val fixedRows = sections.map { it.hasVisibleFixedRows() }
+
+    return remember(sections, hidden, collapsed, fixedRows) {
+        sections.mapIndexedNotNull { index, section ->
+            val rows = DrawerSectionVisibility.visibleItems(section, hidden)
+            if (rows.isEmpty() && !fixedRows[index]) {
+                null
+            } else {
+                DrawerSectionRows(section, rows, fixedRows[index], expanded = section.id !in collapsed)
+            }
+        }
+    }
+}
+
+/**
+ * Each section's heading, then, while it is open, its fixed rows and its catalog rows, as items of
+ * the drawer's lazy list. Profile gets the primary-colored tint; every other item uses onBackground.
+ * Keyed by section and item, so hiding a row or folding a section moves only what changed.
+ */
+fun LazyListScope.drawerSectionItems(
+    sections: List<DrawerSectionRows>,
+    onToggleExpand: (DrawerSectionId) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    sections.forEach { entry ->
+        val section = entry.section
+        item(key = "heading:${section.id}", contentType = "heading") {
+            SectionHeading(
+                title = section.titleRes,
+                expanded = entry.expanded,
+                onToggleExpand = { onToggleExpand(section.id) },
+                modifier = Modifier.animateItem(),
+            )
+        }
+
+        if (!entry.expanded) return@forEach
+
+        if (entry.hasFixedRows) {
+            item(key = "fixed:${section.id}", contentType = "fixed:${section.id}") {
+                Column(Modifier.animateItem()) {
+                    when (section.id) {
+                        DrawerSectionId.CREATE -> CreateRows(nav)
+                        DrawerSectionId.SYSTEM ->
+                            IconRowRelays(
+                                accountViewModel = accountViewModel,
+                                onClick = {
+                                    nav.closeDrawer()
+                                    nav.nav(Route.EditRelays)
+                                },
+                            )
+                        else -> {}
+                    }
+                }
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
-
-        if (accountMenu != null) {
-            var expanded by remember { mutableStateOf(false) }
-            Box {
-                IconRow(
-                    title = Res.string.drawer_accounts,
-                    icon = MaterialSymbols.GroupAdd,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    onClick = { expanded = true },
-                )
-                accountMenu(expanded) { expanded = false }
+        items(entry.rows, key = { "row:${section.id}:${it.name}" }, contentType = { "row" }) { id ->
+            NavBarCatalog[id]?.let { def ->
+                // In a permanent drawer the Navigate rows are the bar (no bar or rail is shown), so
+                // they switch tabs as its items do. As pushes, every click added a screen (and its
+                // ViewModels) to a back stack nothing ever unwound: a permanent drawer is used for
+                // hours without a back press. A modal drawer (beside a bar or a rail, which hold
+                // these tabs) keeps opening them as pushes.
+                val opensAsTab =
+                    section.id == DrawerSectionId.NAVIGATE && LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
+                val tint = if (def.id == NavBarItem.PROFILE) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                Box(Modifier.animateItem()) {
+                    if (def.id == NavBarItem.SCHEDULED_POSTS) {
+                        ScheduledPostsNavigationRow(def, tint, accountViewModel, nav)
+                    } else {
+                        CatalogNavigationRow(def, tint, accountViewModel, nav, opensAsTab)
+                    }
+                }
             }
-        } else {
+        }
+    }
+}
+
+@Composable
+private fun AccountsRow(
+    openSheet: () -> Unit,
+    accountMenu: AccountMenu?,
+) {
+    if (accountMenu != null) {
+        var expanded by remember { mutableStateOf(false) }
+        Box {
             IconRow(
                 title = Res.string.drawer_accounts,
                 icon = MaterialSymbols.GroupAdd,
                 tint = MaterialTheme.colorScheme.onBackground,
-                onClick = openSheet,
+                onClick = { expanded = true },
             )
+            accountMenu(expanded) { expanded = false }
         }
+    } else {
+        IconRow(
+            title = Res.string.drawer_accounts,
+            icon = MaterialSymbols.GroupAdd,
+            tint = MaterialTheme.colorScheme.onBackground,
+            onClick = openSheet,
+        )
     }
 }
 
@@ -765,7 +842,7 @@ private fun CreateRows(nav: INav) {
 }
 
 /**
- * Whether the section's fixed rows — the ones [CatalogSection]'s `when (section.id)` branch draws on
+ * Whether the section's fixed rows — the ones [drawerSectionItems]' `when (section.id)` branch draws on
  * top of the catalog — actually show in this build. Each is gated (HLS upload on the front end
  * having the screen), and a heading over zero rows is noise: an
  * all-gated-off section renders nothing, the same rule as one with no visible catalog rows. Gates
@@ -777,63 +854,6 @@ private fun DrawerSection.hasVisibleFixedRows(): Boolean =
         DrawerSectionId.CREATE -> canShowHlsUploadRow()
         else -> hasFixedRows
     }
-
-/**
- * Renders one drawer section: its fixed rows, if it has any, then the catalog rows the user hasn't
- * switched off. Profile gets the primary-colored tint; every other item uses onBackground.
- *
- * A section with nothing left to show renders nothing at all — an empty, permanently collapsed
- * heading is just noise. System always has something: it carries the relay-status row (not a catalog
- * destination — it shows a live counter). Create is entirely gated fixed rows, so it shows only
- * while one of them is available (see [DrawerSection.hasVisibleFixedRows]).
- */
-@Composable
-fun CatalogSection(
-    section: DrawerSection,
-    hidden: Set<NavBarItem>,
-    expanded: Boolean,
-    onToggleExpand: () -> Unit,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val primary = MaterialTheme.colorScheme.primary
-    val onBackground = MaterialTheme.colorScheme.onBackground
-
-    val visible = remember(section, hidden) { DrawerSectionVisibility.visibleItems(section, hidden) }
-    if (visible.isEmpty() && !section.hasVisibleFixedRows()) return
-
-    // In a permanent drawer the Navigate rows are the bar (no bar or rail is shown), so they switch
-    // tabs as its items do. As pushes, every click added a screen (and its ViewModels) to a back
-    // stack nothing ever unwound: a permanent drawer is used for hours without a back press. A
-    // modal drawer (beside a bar or a rail, which hold these tabs) keeps opening them as pushes.
-    val opensAsTab = section.id == DrawerSectionId.NAVIGATE && LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
-
-    CollapsibleSection(title = section.titleRes, expanded = expanded, onToggleExpand = onToggleExpand) {
-        when (section.id) {
-            DrawerSectionId.CREATE -> CreateRows(nav)
-            DrawerSectionId.SYSTEM ->
-                IconRowRelays(
-                    accountViewModel = accountViewModel,
-                    onClick = {
-                        nav.closeDrawer()
-                        nav.nav(Route.EditRelays)
-                    },
-                )
-            else -> {}
-        }
-
-        visible.forEach { id ->
-            NavBarCatalog[id]?.let { def ->
-                val tint = if (def.id == NavBarItem.PROFILE) primary else onBackground
-                if (def.id == NavBarItem.SCHEDULED_POSTS) {
-                    ScheduledPostsNavigationRow(def, tint, accountViewModel, nav)
-                } else {
-                    CatalogNavigationRow(def, tint, accountViewModel, nav, opensAsTab)
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun ScheduledPostsNavigationRow(
@@ -942,37 +962,31 @@ fun CatalogNavigationRow(
 }
 
 @Composable
-private fun CollapsibleSection(
+private fun SectionHeading(
     title: StringResource,
     expanded: Boolean,
     onToggleExpand: () -> Unit,
-    content: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val sectionTitle = stringRes(title)
 
-    Column(modifier = Modifier.animateContentSize()) {
-        Row(
-            modifier = DrawerSectionHeaderModifier.clickable(onClick = onToggleExpand),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                modifier = Modifier.weight(1f),
-                text = sectionTitle,
-                fontSize = LocalDrawerMetrics.current.headerText,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Icon(
-                symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-                contentDescription = sectionTitle,
-                modifier = Size22Modifier,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        if (expanded) {
-            content()
-        }
+    Row(
+        modifier = modifier.then(DrawerSectionHeaderModifier).clickable(onClick = onToggleExpand),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            modifier = Modifier.weight(1f),
+            text = sectionTitle,
+            fontSize = LocalDrawerMetrics.current.headerText,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Icon(
+            symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
+            contentDescription = sectionTitle,
+            modifier = Size22Modifier,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -1255,58 +1269,37 @@ private fun relaysWaitingForTor(
 
 @Preview
 @Composable
-private fun CollapsibleSectionPreview() {
+private fun SectionHeadingPreview() {
     ThemeComparisonColumn {
         Column {
-            CollapsibleSection(title = Res.string.drawer_section_you, expanded = true, onToggleExpand = {}) {
-                IconRow(
-                    title = Res.string.profile,
-                    icon = MaterialSymbols.AccountCircle,
-                    tint = MaterialTheme.colorScheme.primary,
-                    onClick = {},
-                )
-                IconRow(
-                    title = Res.string.bookmarks,
-                    icon = MaterialSymbols.CollectionsBookmark,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    onClick = {},
-                )
-                IconRow(
-                    title = Res.string.drafts,
-                    icon = MaterialSymbols.Drafts,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    onClick = {},
-                )
-            }
-            // Collapsed, to preview the other half of the heading: its rows are hidden and the
-            // chevron points down. Real collapse state lives in DrawerSectionCollapsePreferences.
-            CollapsibleSection(title = Res.string.drawer_section_feeds, expanded = false, onToggleExpand = {}) {
-                IconRow(
-                    title = Res.string.pictures,
-                    icon = MaterialSymbols.Photo,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    onClick = {},
-                )
-                IconRow(
-                    title = Res.string.longs,
-                    icon = MaterialSymbols.SmartDisplay,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    onClick = {},
-                )
-            }
+            SectionHeading(title = Res.string.drawer_section_you, expanded = true, onToggleExpand = {})
+            IconRow(
+                title = Res.string.profile,
+                icon = MaterialSymbols.AccountCircle,
+                tint = MaterialTheme.colorScheme.primary,
+                onClick = {},
+            )
+            IconRow(
+                title = Res.string.bookmarks,
+                icon = MaterialSymbols.CollectionsBookmark,
+                tint = MaterialTheme.colorScheme.onBackground,
+                onClick = {},
+            )
+            // Collapsed, to preview the other half of the heading: the chevron points down. Real
+            // collapse state lives in DrawerSectionCollapsePreferences.
+            SectionHeading(title = Res.string.drawer_section_feeds, expanded = false, onToggleExpand = {})
         }
     }
 }
 
 @Preview(widthDp = 320, heightDp = 1400)
 @Composable
-private fun ListContentPreview() {
+private fun DrawerSectionsPreview() {
     ThemeComparisonColumn {
-        ListContent(
-            modifier = Modifier.fillMaxWidth(),
-            openSheet = {},
-            accountViewModel = mockAccountViewModel(),
-            nav = EmptyNav(),
-        )
+        val accountViewModel = mockAccountViewModel()
+        val sections = rememberDrawerSections(accountViewModel)
+        LazyColumn(Modifier.fillMaxWidth()) {
+            drawerSectionItems(sections, onToggleExpand = {}, accountViewModel, EmptyNav())
+        }
     }
 }
