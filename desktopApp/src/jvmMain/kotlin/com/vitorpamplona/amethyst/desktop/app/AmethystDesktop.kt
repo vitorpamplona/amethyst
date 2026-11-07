@@ -41,6 +41,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.LocalWindowExceptionHandlerFactory
 import androidx.compose.ui.window.WindowPlacement
@@ -126,6 +127,9 @@ fun main(args: Array<String>) {
 
     // CI runs this on each packaged build: the OS keyring must work in what ships, not only in dev.
     if (args.contains("--keyring-self-test")) exitProcess(runKeyringSelfTest())
+
+    // First-time native and TLS setup for what the start needs later, on a spare core.
+    StartupWarmUp.start()
 
     // Which copy of the app this is, settled before anything opens Tor or a cache folder.
     DesktopInstance.claim()
@@ -359,8 +363,14 @@ fun main(args: Array<String>) {
                                         // Android under the status bar. Full screen has no title bar.
                                         val titleBar = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else titleBarInsetTop
                                         ProvideTitleBarInsets(titleBar) {
+                                            // The window's size reads 0 x 0 until its first layout. Composed before
+                                            // then, the app picked the phone layout, composed all of it and threw it
+                                            // away a frame later for the real one: ~1.2 s of a cold start's UI thread.
+                                            val windowSized = LocalWindowInfo.current.containerSize != IntSize.Zero
                                             Box(Modifier.weight(1f).fillMaxWidth()) {
-                                                AmethystApp(modules.sessionManager, root)
+                                                if (windowSized) {
+                                                    AmethystApp(modules.sessionManager, root)
+                                                }
                                                 // Toasts show here unless a screen window has the focus (it shows them).
                                                 if (windows.focusedScreenWindow == null) {
                                                     SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
@@ -465,10 +475,11 @@ private fun setX11WindowClass() {
  */
 private fun setDockIcon() {
     try {
-        val image = IconResources.adaptedBufferedImage ?: return
+        // Asked first: only macOS takes an icon image, and decoding it cost ~85 ms of the start.
         if (!Taskbar.isTaskbarSupported()) return
         val taskbar = Taskbar.getTaskbar()
-        if (taskbar.isSupported(Taskbar.Feature.ICON_IMAGE)) taskbar.iconImage = image
+        if (!taskbar.isSupported(Taskbar.Feature.ICON_IMAGE)) return
+        taskbar.iconImage = IconResources.adaptedBufferedImage ?: return
     } catch (e: Exception) {
         Log.w("AmethystDesktop", "Could not set the dock icon", e)
     }
