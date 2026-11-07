@@ -8,6 +8,7 @@
 #   tools/desktop-run/startup-bench.sh capture             # while run-headless.sh's app runs: keep its java command
 #   tools/desktop-run/startup-bench.sh run [N] [seconds]   # N boots (default 5) of `seconds` each (default 90)
 #   tools/desktop-run/startup-bench.sh report [files...]   # re-read saved timelines
+#   tools/desktop-run/startup-bench.sh classes             # one boot: rewrite StartupWarmUp's class list
 #
 # The account: AMETHYST_BENCH_KEY_FILE (default $RUN_DIR/profile/signup.nsec, what
 # `run-headless.sh start --signup` leaves), logged in transiently as --login-file does. Unset it and
@@ -90,6 +91,40 @@ case "${1:-}" in
     done
     echo "--- $out"
     python3 "$SETTLE" --top "$TOP" "${files[@]}"
+    ;;
+  classes)
+    # The classes a boot loads from the app's jars until the logged-in window is up, in load order,
+    # for StartupWarmUp to preload on spare cores. A stale list only loses speed: missing names are
+    # skipped and new classes load as usual. Regenerate after large changes to the start or the shell.
+    [ -s "$CMD_FILE" ] || { echo "No command captured: see 'capture'" >&2; exit 1; }
+    list="$REPO_ROOT/desktopApp/src/jvmMain/resources/startup/preload-classes.txt"
+    log="$RUN_DIR/classload.log"
+    rm -f "$log"
+    AMETHYST_BENCH_JVM_ARGS="${AMETHYST_BENCH_JVM_ARGS:-} -Damethyst.startupWarmUp=false -Xlog:class+load=info:file=$log:uptime" \
+      AMETHYST_BENCH_LABEL=classes "$0" run 1 "${2:-20}" > /dev/null 2>&1
+    python3 - "$log" "$RUN_DIR/bench/classes/run1.tsv" "$list" << 'PY'
+import re, sys
+log, timeline, out = sys.argv[1:4]
+until = None
+for line in open(timeline):
+    parts = line.rstrip("\n").split("\t")
+    if len(parts) >= 3 and parts[1] == "mark" and parts[2] == "logged-in-effects":
+        until = int(parts[0]) / 1000 + 0.5
+if until is None:
+    sys.exit("The boot never reached the logged-in window: no list written")
+seen, names = set(), []
+for line in open(log):
+    m = re.match(r"\[(\d+\.\d+)s\] (\S+) source: (\S+)", line)
+    if not m or float(m.group(1)) > until or "/" in m.group(2):
+        continue
+    if m.group(3).startswith(("file:", "jar:")) and m.group(2) not in seen:
+        seen.add(m.group(2))
+        names.append(m.group(2))
+with open(out, "w") as f:
+    f.write("# Written by tools/desktop-run/startup-bench.sh classes; read by StartupWarmUp.\n")
+    f.write("\n".join(names) + "\n")
+print(f"{len(names)} classes to {out}")
+PY
     ;;
   report)
     shift

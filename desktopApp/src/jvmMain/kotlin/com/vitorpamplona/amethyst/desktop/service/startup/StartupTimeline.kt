@@ -77,30 +77,48 @@ object StartupTimeline {
     private val seen = HashSet<String>()
 
     init {
-        // A stack sampler of the UI thread for the first seconds, for finding what a slow first
-        // composition spends its time on: `-Damethyst.startupTimeline.sampleUi=<file>`.
-        System.getProperty("amethyst.startupTimeline.sampleUi")?.let { out -> if (enabled) sampleUiThread(File(out)) }
+        // Stack samplers for the first seconds, for finding what a slow start spends its time on:
+        // `-Damethyst.startupTimeline.sampleUi=<file>` samples the UI thread,
+        // `-Damethyst.startupTimeline.sampleAll=<file>` every running thread that is in app code.
+        if (enabled) {
+            System.getProperty("amethyst.startupTimeline.sampleUi")?.let { sample(File(it), allThreads = false) }
+            System.getProperty("amethyst.startupTimeline.sampleAll")?.let { sample(File(it), allThreads = true) }
+        }
     }
 
-    private fun sampleUiThread(out: File) {
+    private fun sample(
+        out: File,
+        allThreads: Boolean,
+    ) {
         Thread({
             val until = System.currentTimeMillis() + 10_000
             val lines = StringBuilder()
             var ui: Thread? = null
             while (System.currentTimeMillis() < until) {
-                if (ui == null) ui = Thread.getAllStackTraces().keys.firstOrNull { it.name.startsWith("AWT-EventQueue") }
-                ui?.let { t ->
-                    val stack = t.stackTrace
-                    if (stack.isNotEmpty() && t.state == Thread.State.RUNNABLE) {
-                        lines.append(sinceStart()).append('\t')
-                        stack.take(80).joinTo(lines, ";") { "${it.className}.${it.methodName}" }
+                val stacks: Map<Thread, Array<StackTraceElement>> =
+                    if (allThreads) {
+                        Thread.getAllStackTraces()
+                    } else {
+                        if (ui == null) ui = Thread.getAllStackTraces().keys.firstOrNull { it.name.startsWith("AWT-EventQueue") }
+                        ui?.let { mapOf(it to it.stackTrace) } ?: emptyMap()
+                    }
+                val now = sinceStart()
+                stacks.forEach { (t, stack) ->
+                    val inApp = !allThreads || stack.any { it.className.startsWith("com.vitorpamplona") }
+                    if (stack.isNotEmpty() && t.state == Thread.State.RUNNABLE && inApp && t !== Thread.currentThread()) {
+                        lines
+                            .append(now)
+                            .append('\t')
+                            .append(t.name)
+                            .append('\t')
+                        stack.take(120).joinTo(lines, ";") { "${it.className}.${it.methodName}" }
                         lines.append('\n')
                     }
                 }
-                Thread.sleep(2)
+                Thread.sleep(if (allThreads) 5 else 2)
             }
             out.writeText(lines.toString())
-        }, "startup-ui-sampler").apply { isDaemon = true }.start()
+        }, "startup-sampler").apply { isDaemon = true }.start()
     }
 
     fun sinceStart() = System.currentTimeMillis() - jvmStart

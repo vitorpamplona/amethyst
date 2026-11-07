@@ -135,7 +135,9 @@ After a code change, rebuild the jars (`./gradlew :desktopApp:jar`): the capture
 them from their build folders. `AMETHYST_BENCH_JVM_ARGS` adds JVM options to every boot (an AppCDS
 archive: `-XX:+AutoCreateSharedArchive -XX:SharedArchiveFile=…`, warmed by one boot first);
 `AMETHYST_BENCH_CMD_FILE` boots another captured command, for an A/B against a saved build.
-Alternate the A and B boots: relay latency drifts over minutes. Set the Tor engine to Off first
+Alternate the A and B boots: relay latency drifts over minutes. `-Damethyst.startupWarmUp=false`
+turns off `StartupWarmUp`'s class preloading, and `startup-bench.sh classes` rewrites its class list
+from one boot. Set the Tor engine to Off first
 (see Traps), or the outbox relays wait for a Tor that never starts.
 
 ## Expected noise (not your bug)

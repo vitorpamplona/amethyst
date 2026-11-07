@@ -130,6 +130,9 @@ fun main(args: Array<String>) {
     // CI runs this on each packaged build: the OS keyring must work in what ships, not only in dev.
     if (args.contains("--keyring-self-test")) exitProcess(runKeyringSelfTest())
 
+    // First-time class loading and native setup for what the start needs later, on a spare core.
+    StartupWarmUp.start()
+
     // Which copy of the app this is, settled before anything opens Tor or a cache folder.
     DesktopInstance.claim()
     // The primary clears the caches of copies no longer running, off the startup path.
@@ -471,10 +474,11 @@ private fun setX11WindowClass() {
  */
 private fun setDockIcon() {
     try {
-        val image = IconResources.adaptedBufferedImage ?: return
+        // Asked first: only macOS takes an icon image, and decoding it cost ~85 ms of the start.
         if (!Taskbar.isTaskbarSupported()) return
         val taskbar = Taskbar.getTaskbar()
-        if (taskbar.isSupported(Taskbar.Feature.ICON_IMAGE)) taskbar.iconImage = image
+        if (!taskbar.isSupported(Taskbar.Feature.ICON_IMAGE)) return
+        taskbar.iconImage = IconResources.adaptedBufferedImage ?: return
     } catch (e: Exception) {
         Log.w("AmethystDesktop", "Could not set the dock icon", e)
     }

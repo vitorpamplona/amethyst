@@ -111,6 +111,7 @@ import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostScheduler
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostStore
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.OsScheduler
+import com.vitorpamplona.amethyst.desktop.service.startup.StartupTimeline
 import com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager
 import com.vitorpamplona.amethyst.desktop.update.DesktopAppUpdates
 import com.vitorpamplona.amethyst.desktop.update.InstallChannel
@@ -820,6 +821,7 @@ class DesktopAppModules(
         }
 
         applicationIOScope.launch {
+            StartupTimeline.mark("login-start")
             when {
                 startupKey != null -> startupLogin(startupKey)
                 startupSignUpName != null -> startupSignUp(startupSignUpName)

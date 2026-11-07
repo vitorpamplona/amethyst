@@ -1,6 +1,6 @@
 # Desktop startup: time to a settled home feed
 
-Status: in progress. Measurement tooling and two changes landed; the largest win (AppCDS) is on
+Status: in progress. Measurement tooling and four changes landed; the largest win (AppCDS) is on
 for the dev `run` only and still needs a packaging story.
 
 ## What is measured
@@ -35,6 +35,19 @@ A/B on the same build with AppCDS, 8 alternating boots each:
 | no preconnect | 2044 | 2472 | 3433 | **4452** |
 | `AccountRelayPreconnect` | 1517 | 2221 | 3238 | **4241** |
 
+### Login and the logged-in window, without AppCDS (what installed apps run)
+
+A/B on one build with `-Damethyst.startupWarmUp=false`, 8 alternating boots each:
+
+| Variant | account loaded | logged-in window up | follows known | first posts | **settled** |
+|---|---|---|---|---|---|
+| warm-up off | 1751 | 3508 | 4040 | 5090 | **5750** |
+| `StartupWarmUp` on | 1418 | 2952 | 3384 | 4407 | **5062** |
+
+The ranges don't overlap: account loaded 1663–1836 ms vs 1357–1459 ms, window up 3374–3594 ms vs
+2912–3059 ms. "Logged-in window up" is the shell's first composition applied, when its
+subscriptions start.
+
 ## Changes
 
 1. **AppCDS on `:desktopApp:run`** (`desktopApp/build.gradle.kts`): `-XX:+AutoCreateSharedArchive`
@@ -44,6 +57,18 @@ A/B on the same build with AppCDS, 8 alternating boots each:
    account's own-data relays and its follows' current outbox relays with `keepConnected` for 30 s,
    so the TLS handshakes overlap the first composition of the logged-in shell (~1.0–1.2 s, which
    every screen subscription waits for) instead of following it.
+
+3. **`StartupWarmUp`** (desktop `main()`): two daemon threads load, without initializing, the ~9k
+   classes a start reads from the app's jars (`resources/startup/preload-classes.txt`, in load
+   order), and load the secp256k1 native library before the login needs it. All-thread samples
+   of a cold start showed the main thread and the login running one step after another on one
+   core, mostly in class loading: ~250 ms secp256k1 in the login, most of `Account.<init>`'s
+   ~650 ms, about half of the logged-in window's ~1.7 s first composition. Release builds keep
+   class names (`-dontobfuscate`), so the list applies there too; shrunk-away names are skipped.
+   Regenerate the list with `startup-bench.sh classes` after large changes to the start or shell:
+   a stale list only loses speed.
+4. **`setDockIcon`** asks whether the taskbar takes an icon image (macOS only) before decoding
+   it: ~85 ms less on the main thread on Linux and Windows.
 
 ## Tried and dropped
 
@@ -72,8 +97,10 @@ A/B on the same build with AppCDS, 8 alternating boots each:
    `$APPDIR`/`$BINDIR`/`$ROOTDIR` in `java-options` (checked in its binary), so it cannot point
    `AutoCreateSharedArchive` at a per-user folder. Options: a newer JDK's launcher or AOT cache, a
    first-run training step that writes next to the user's data, or a small native launcher.
-2. Compose less in the first frame of the logged-in shell: a lazy drawer catalog, cheaper
+2. Open the window sooner: the account is loaded at ~1.4 s but the logged-in shell starts
+   composing at ~1.9 s, after the rest of `main()` and the window's theme and icon fonts.
+3. Compose less in the first frame of the logged-in shell: a lazy drawer catalog, cheaper
    `NavBarItem` init, string reads off the first frame.
-3. Keep the follows' relay lists across restarts so the home REQ can leave at login.
-4. Measure the saved-account path (follow list from the account's backup instead of relays) and a
+4. Keep the follows' relay lists across restarts so the home REQ can leave at login.
+5. Measure the saved-account path (follow list from the account's backup instead of relays) and a
    real network with Tor on.
