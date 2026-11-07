@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.relayFrameDecoder
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyCoordinator
+import com.vitorpamplona.amethyst.commons.relayClient.preload.AccountRelayPreconnect
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.health.FileRelayHealthPersistence
@@ -805,6 +806,17 @@ class DesktopAppModules(
                     loaded.values.forEach { restorer.restore(it) }
                 }
             }
+        }
+
+        // Dials the logged-in account's relays as soon as it loads, while the window is still
+        // composing the shell whose subscriptions will ask them: the TLS handshakes overlap the
+        // first composition instead of following it.
+        applicationIOScope.launch {
+            val preconnect = AccountRelayPreconnect(client, applicationIOScope)
+            sessionManager.accountContent
+                .map { (it as? AccountState.LoggedIn)?.account }
+                .distinctUntilChanged()
+                .collect { account -> account?.let { preconnect.preconnect(it) } }
         }
 
         applicationIOScope.launch {

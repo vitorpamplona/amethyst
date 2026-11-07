@@ -28,6 +28,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -91,6 +92,7 @@ import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.runHeadlessPublish
+import com.vitorpamplona.amethyst.desktop.service.startup.StartupTimeline
 import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
 import com.vitorpamplona.amethyst.desktop.ui.media.GlobalFullscreenOverlay
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
@@ -120,6 +122,7 @@ import kotlin.system.exitProcess
  */
 @OptIn(ExperimentalComposeUiApi::class, FlowPreview::class)
 fun main(args: Array<String>) {
+    StartupTimeline.mark("main")
     // The OS timer relaunches the app this way to publish scheduled posts while it is closed: no
     // window, no keyring, just the pre-signed posts that are due.
     if (args.contains("--publish-scheduled")) exitProcess(runHeadlessPublish())
@@ -212,6 +215,8 @@ fun main(args: Array<String>) {
         imageClientFor = modules.roleBasedHttpClientBuilder::okHttpClientForImage,
     )
 
+    StartupTimeline.mark("modules-built")
+    StartupTimeline.watchSession(modules.sessionManager.accountContent, modules.client, modules.applicationIOScope)
     modules.initiate()
 
     // Napplets (NIP-5D) run in a sandboxed Chromium, started the first time one opens.
@@ -360,6 +365,7 @@ fun main(args: Array<String>) {
                                         val titleBar = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else titleBarInsetTop
                                         ProvideTitleBarInsets(titleBar) {
                                             Box(Modifier.weight(1f).fillMaxWidth()) {
+                                                if (StartupTimeline.enabled) SideEffect { StartupTimeline.mark("first-composition") }
                                                 AmethystApp(modules.sessionManager, root)
                                                 // Toasts show here unless a screen window has the focus (it shows them).
                                                 if (windows.focusedScreenWindow == null) {

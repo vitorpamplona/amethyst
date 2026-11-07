@@ -116,6 +116,28 @@ size known and the first frame. `grep VideoTimeline` the log; `grep 'first frame
 - The container has no OS keyring, so a key that is remembered goes to the NIP-49 password file.
   The login screen says so, and that is expected here.
 
+## Startup benchmark
+
+`startup-bench.sh` measures how long a start takes to show a home feed whose top no longer
+changes: it boots the app's JVM directly (no Gradle in the timing) with `StartupTimeline` on, N
+times, and `startup_settle.py` reports the milestones (first frame, account loaded, first relay,
+follow list known, first posts) and when the top 5 posts settled, leaving out posts made after the
+start. Results and the setup behind them: `desktopApp/plans/2026-11-07-desktop-startup-performance.md`.
+
+```bash
+tools/desktop-run/run-headless.sh start --signup "Startup Bench"   # then import a follow list in the app
+tools/desktop-run/startup-bench.sh capture                         # keep the running app's java command
+tools/desktop-run/run-headless.sh stop
+tools/desktop-run/startup-bench.sh run 5 30                        # 5 boots of 30 s, on profile/signup.nsec
+```
+
+After a code change, rebuild the jars (`./gradlew :desktopApp:jar`): the captured command reads
+them from their build folders. `AMETHYST_BENCH_JVM_ARGS` adds JVM options to every boot (an AppCDS
+archive: `-XX:+AutoCreateSharedArchive -XX:SharedArchiveFile=…`, warmed by one boot first);
+`AMETHYST_BENCH_CMD_FILE` boots another captured command, for an A/B against a saved build.
+Alternate the A and B boots: relay latency drifts over minutes. Set the Tor engine to Off first
+(see Traps), or the outbox relays wait for a Tor that never starts.
+
 ## Expected noise (not your bug)
 
 - `Can't play this video ... Failed to create native player`: no native media engine in the

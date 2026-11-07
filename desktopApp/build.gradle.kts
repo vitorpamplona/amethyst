@@ -151,15 +151,35 @@ dependencies {
 // Previews another OS's look on this machine: `./gradlew :desktopApp:run -Damethyst.platform=MACOS
 // -Damethyst.appearance=light`; `-Damethyst.login=npub1...` opens logged in with that key and
 // `-Damethyst.signup=Name` signs up a new account, `-Damethyst.videoTimeline=true` logs each video's
-// start step by step (VideoTimeline). Only the dev `run` gets them, never a packaged app.
+// start step by step (VideoTimeline), `-Damethyst.startupTimeline=true` logs where a start spends
+// its time (StartupTimeline, tools/desktop-run/startup-bench.sh). Only the dev `run` gets them,
+// never a packaged app.
 // Added at execution: the Compose plugin sets the task's jvmArgs after this script configures it.
 tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
-    val overrides = listOf("amethyst.platform", "amethyst.appearance", "amethyst.accent", "amethyst.login", "amethyst.signup", "amethyst.videoTimeline")
+    val overrides =
+        listOf(
+            "amethyst.platform",
+            "amethyst.appearance",
+            "amethyst.accent",
+            "amethyst.login",
+            "amethyst.signup",
+            "amethyst.videoTimeline",
+            "amethyst.startupTimeline",
+            "amethyst.startupTimeline.file",
+        )
     val dockIcon = project.file("src/jvmMain/resources/icon.icns")
     val videoPlayerDir = layout.buildDirectory.dir("macVideoPlayer")
+    // AppCDS: the JVM keeps the classes a run loaded in this archive and maps them on the next start
+    // instead of loading and verifying them again. It cut the window's first frame from ~3.3 s to
+    // ~0.9 s and the settled home feed from ~5.6 s to ~3.4 s (startup-bench.sh, 260 follows). A
+    // rebuilt jar invalidates it; the JVM then runs without it and writes a new one when it exits.
+    val cdsArchive = layout.buildDirectory.file("appcds/run.jsa")
     dependsOn("buildMacVideoPlayer")
     doFirst {
         overrides.forEach { key -> System.getProperty(key)?.let { jvmArgs("-D$key=$it") } }
+        val cdsDir = cdsArchive.get().asFile.parentFile
+        check(cdsDir.isDirectory || cdsDir.mkdirs()) { "Could not create $cdsDir" }
+        jvmArgs("-XX:+AutoCreateSharedArchive", "-XX:SharedArchiveFile=${cdsArchive.get().asFile.absolutePath}")
         // macOS: names the Dock's entry for the plain JVM `run` starts (the packaged app takes its
         // name from its Info.plist). The app switcher still says "java": it reads the name of the
         // bundle the binary sits in, and the JDK's java is its own bundle.

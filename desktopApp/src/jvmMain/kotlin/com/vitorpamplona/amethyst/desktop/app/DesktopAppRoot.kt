@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
+import com.vitorpamplona.amethyst.desktop.service.startup.StartupTimeline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -90,8 +91,10 @@ class DesktopAppRoot(
     /** Hands the logged-in shell's navigator to the menu bar, which lives outside the shared app. */
     val navigator = DesktopNavigator(DesktopWindowManager { File(modules.filesDir, "screen-windows.properties") })
 
-    override fun createAccountViewModel(account: Account): AccountViewModel =
-        AccountViewModel(
+    override fun createAccountViewModel(account: Account): AccountViewModel {
+        // The logged-in shell starts composing here; "logged-in-effects" marks its effects running.
+        StartupTimeline.mark("account-viewmodel")
+        return AccountViewModel(
             account = account,
             settings = modules.uiState,
             torSettings = modules.torPrefs.value,
@@ -100,6 +103,7 @@ class DesktopAppRoot(
             nip05ClientBuilder = { modules.nip05Client },
             host = host,
         ).also { host.notices.target = it.toastManager }
+    }
 
     /** Keeps the relay pool and the HTTP clients alive while the window is open. */
     @Composable
@@ -133,6 +137,13 @@ class DesktopAppRoot(
         val focused = remember { MutableStateFlow(windowInfo.isWindowFocused) }
         LaunchedEffect(windowInfo) {
             snapshotFlow { windowInfo.isWindowFocused }.collect { focused.value = it }
+        }
+        if (StartupTimeline.enabled) {
+            LaunchedEffect(accountViewModel) {
+                StartupTimeline.mark("logged-in-effects")
+                StartupTimeline.watchFeed("home", accountViewModel.feedStates.homeNewThreads, this)
+                StartupTimeline.watchFeed("everything", accountViewModel.feedStates.homeEverything, this)
+            }
         }
         DisposableEffect(accountViewModel.account) {
             val job = modules.notifications.watch(accountViewModel.account, modules.cache, focused)
