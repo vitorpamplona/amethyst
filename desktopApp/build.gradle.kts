@@ -180,9 +180,12 @@ tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
     dependsOn("buildMacVideoPlayer")
     doFirst {
         overrides.forEach { key -> System.getProperty(key)?.let { jvmArgs("-D$key=$it") } }
-        val cdsDir = cdsArchive.get().asFile.parentFile
-        check(cdsDir.isDirectory || cdsDir.mkdirs()) { "Could not create $cdsDir" }
-        jvmArgs("-XX:+AutoCreateSharedArchive", "-XX:SharedArchiveFile=${cdsArchive.get().asFile.absolutePath}")
+        // AutoCreateSharedArchive came with Java 19: an older JVM would refuse to start on it.
+        if (javaVersion.isCompatibleWith(JavaVersion.VERSION_19)) {
+            val cdsDir = cdsArchive.get().asFile.parentFile
+            check(cdsDir.isDirectory || cdsDir.mkdirs()) { "Could not create $cdsDir" }
+            jvmArgs("-XX:+AutoCreateSharedArchive", "-XX:SharedArchiveFile=${cdsArchive.get().asFile.absolutePath}")
+        }
         // macOS: names the Dock's entry for the plain JVM `run` starts (the packaged app takes its
         // name from its Info.plist). The app switcher still says "java": it reads the name of the
         // bundle the binary sits in, and the JDK's java is its own bundle.

@@ -106,6 +106,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.awt.Taskbar
 import java.awt.Toolkit
@@ -366,7 +367,16 @@ fun main(args: Array<String>) {
                                             // The window's size reads 0 x 0 until its first layout. Composed before
                                             // then, the app picked the phone layout, composed all of it and threw it
                                             // away a frame later for the real one: ~1.2 s of a cold start's UI thread.
-                                            val windowSized = LocalWindowInfo.current.containerSize != IntSize.Zero
+                                            // Latched: once sized, a later 0 x 0 report (a hidden or minimized window on
+                                            // some platforms) must not tear down the account, its screens and subscriptions.
+                                            val windowInfo = LocalWindowInfo.current
+                                            var windowSized by remember { mutableStateOf(windowInfo.containerSize != IntSize.Zero) }
+                                            if (!windowSized) {
+                                                LaunchedEffect(windowInfo) {
+                                                    snapshotFlow { windowInfo.containerSize }.first { it != IntSize.Zero }
+                                                    windowSized = true
+                                                }
+                                            }
                                             Box(Modifier.weight(1f).fillMaxWidth()) {
                                                 if (windowSized) {
                                                     AmethystApp(modules.sessionManager, root)
