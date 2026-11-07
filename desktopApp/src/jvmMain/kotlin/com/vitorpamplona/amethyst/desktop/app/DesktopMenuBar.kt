@@ -101,8 +101,11 @@ class DesktopNavigator(
     var accountViewModel by mutableStateOf<AccountViewModel?>(null)
     var destinations by mutableStateOf<NavDestinations?>(null)
 
-    /** The Settings screen's categories, built inside the shell where its links and platform live. */
-    var settingsCatalog by mutableStateOf<List<SettingsCategory>>(emptyList())
+    /**
+     * The Settings screen's categories, built inside the shell where its links and platform live,
+     * and only when first read (the macOS menu bar; no other platform has one).
+     */
+    var settingsCatalog by mutableStateOf<Lazy<List<SettingsCategory>>>(lazyOf(emptyList()))
 
     // The last shortcut run and when it last fired, to tell a held key's auto-repeat from a press.
     internal var lastShortcut: Key? = null
@@ -301,7 +304,7 @@ fun FrameWindowScope.DesktopMenuBar(
                 drawerMenus(
                     sections = DrawerSectionsNavigateFirst,
                     hidden = hidden,
-                    settings = settings,
+                    settings = settings.value,
                     canOpen = { route -> destinations?.has(route) ?: true },
                     resolveRoute = { def -> def.resolveRoute(accountViewModel) },
                     actions = navigator.menuActions(onQuit),
