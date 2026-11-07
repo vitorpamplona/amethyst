@@ -98,12 +98,20 @@ import androidx.compose.material3.Icon as Material3Icon
 
 data class NavBarItemDef(
     val id: NavBarItem,
-    val labelRes: StringResource,
+    /**
+     * Looked up when read, not when the catalog is built: each generated `Res.string` accessor
+     * initializes its whole file of 100 lazy accessors on first touch, and the catalog's 54 labels
+     * sit in 32 such files. Building them all up front cost ~3,200 accessors on the UI thread at
+     * start, before the drawer drew a row.
+     */
+    val label: () -> StringResource,
     val icon: MaterialSymbol,
     val resolveRoute: (AccountViewModel) -> Route,
     /** When set, drawn instead of [icon]: for marks that are not Material Symbols. */
     val imageVector: ImageVector? = null,
-)
+) {
+    val labelRes: StringResource get() = label()
+}
 
 /** Renders a nav entry's mark: the custom vector when present, else the symbol. */
 @Composable
@@ -136,14 +144,14 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
         NavBarItem.HOME to
             NavBarItemDef(
                 id = NavBarItem.HOME,
-                labelRes = Res.string.route_home,
+                label = { Res.string.route_home },
                 icon = MaterialSymbols.Home,
                 resolveRoute = { Route.Home },
             ),
         NavBarItem.MESSAGES to
             NavBarItemDef(
                 id = NavBarItem.MESSAGES,
-                labelRes = Res.string.route_messages,
+                label = { Res.string.route_messages },
                 icon = MaterialSymbols.Mail,
                 resolveRoute = { Route.Message },
             ),
@@ -153,98 +161,98 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
         NavBarItem.VIDEO to
             NavBarItemDef(
                 id = NavBarItem.VIDEO,
-                labelRes = Res.string.route_media,
+                label = { Res.string.route_media },
                 icon = MaterialSymbols.Subscriptions,
                 resolveRoute = { Route.Video() },
             ),
         NavBarItem.DISCOVER to
             NavBarItemDef(
                 id = NavBarItem.DISCOVER,
-                labelRes = Res.string.route_discover,
+                label = { Res.string.route_discover },
                 icon = MaterialSymbols.Sensors,
                 resolveRoute = { Route.Discover() },
             ),
         NavBarItem.NOTIFICATIONS to
             NavBarItemDef(
                 id = NavBarItem.NOTIFICATIONS,
-                labelRes = Res.string.route_notifications,
+                label = { Res.string.route_notifications },
                 icon = MaterialSymbols.Notifications,
                 resolveRoute = { Route.Notification() },
             ),
         NavBarItem.PROFILE to
             NavBarItemDef(
                 id = NavBarItem.PROFILE,
-                labelRes = Res.string.profile,
+                label = { Res.string.profile },
                 icon = MaterialSymbols.AccountCircle,
                 resolveRoute = { Route.Profile(it.userProfile().pubkeyHex) },
             ),
         NavBarItem.MY_LISTS to
             NavBarItemDef(
                 id = NavBarItem.MY_LISTS,
-                labelRes = Res.string.my_lists,
+                label = { Res.string.my_lists },
                 icon = MaterialSymbols.AutoMirrored.FormatListBulleted,
                 resolveRoute = { Route.Lists },
             ),
         NavBarItem.BOOKMARKS to
             NavBarItemDef(
                 id = NavBarItem.BOOKMARKS,
-                labelRes = Res.string.bookmarks,
+                label = { Res.string.bookmarks },
                 icon = MaterialSymbols.CollectionsBookmark,
                 resolveRoute = { Route.BookmarkGroups },
             ),
         NavBarItem.WEB_BOOKMARKS to
             NavBarItemDef(
                 id = NavBarItem.WEB_BOOKMARKS,
-                labelRes = Res.string.web_bookmarks,
+                label = { Res.string.web_bookmarks },
                 icon = MaterialSymbols.Language,
                 resolveRoute = { Route.WebBookmarks },
             ),
         NavBarItem.DRAFTS to
             NavBarItemDef(
                 id = NavBarItem.DRAFTS,
-                labelRes = Res.string.drafts,
+                label = { Res.string.drafts },
                 icon = MaterialSymbols.Drafts,
                 resolveRoute = { Route.Drafts },
             ),
         NavBarItem.SCHEDULED_POSTS to
             NavBarItemDef(
                 id = NavBarItem.SCHEDULED_POSTS,
-                labelRes = Res.string.scheduled_posts,
+                label = { Res.string.scheduled_posts },
                 icon = MaterialSymbols.Schedule,
                 resolveRoute = { Route.ScheduledPosts },
             ),
         NavBarItem.INTEREST_SETS to
             NavBarItemDef(
                 id = NavBarItem.INTEREST_SETS,
-                labelRes = Res.string.interest_sets_title,
+                label = { Res.string.interest_sets_title },
                 icon = MaterialSymbols.Tag,
                 resolveRoute = { Route.InterestSets },
             ),
         NavBarItem.FAVORITE_ALGO_FEEDS to
             NavBarItemDef(
                 id = NavBarItem.FAVORITE_ALGO_FEEDS,
-                labelRes = Res.string.favorite_dvms_title,
+                label = { Res.string.favorite_dvms_title },
                 icon = MaterialSymbols.AutoAwesome,
                 resolveRoute = { Route.EditFavoriteAlgoFeeds },
             ),
         NavBarItem.BLOSSOM_DATA to
             NavBarItemDef(
                 id = NavBarItem.BLOSSOM_DATA,
-                labelRes = Res.string.my_blossom_data,
+                label = { Res.string.my_blossom_data },
                 icon = MaterialSymbols.Storage,
                 resolveRoute = { Route.ManageBlossomBlobs },
             ),
         NavBarItem.EMOJI_PACKS to
             NavBarItemDef(
                 id = NavBarItem.EMOJI_PACKS,
-                labelRes = Res.string.manage_emoji_packs,
+                label = { Res.string.manage_emoji_packs },
                 icon = MaterialSymbols.EmojiEmotions,
                 resolveRoute = { Route.EmojiPacks },
             ),
         NavBarItem.WALLET to
             NavBarItemDef(
                 id = NavBarItem.WALLET,
-                labelRes = Res.string.wallet,
+                label = { Res.string.wallet },
                 icon = MaterialSymbols.AccountBalanceWallet,
                 resolveRoute = { Route.Wallet },
                 imageVector = WalletIcon,
@@ -252,105 +260,105 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
         NavBarItem.NOSTR_SIGNER to
             NavBarItemDef(
                 id = NavBarItem.NOSTR_SIGNER,
-                labelRes = Res.string.nip46_signer_title,
+                label = { Res.string.nip46_signer_title },
                 icon = MaterialSymbols.Key,
                 resolveRoute = { Route.Nip46Signer() },
             ),
         NavBarItem.COMMUNITIES to
             NavBarItemDef(
                 id = NavBarItem.COMMUNITIES,
-                labelRes = Res.string.communities,
+                label = { Res.string.communities },
                 icon = MaterialSymbols.Groups,
                 resolveRoute = { Route.Communities },
             ),
         NavBarItem.ARTICLES to
             NavBarItemDef(
                 id = NavBarItem.ARTICLES,
-                labelRes = Res.string.discover_reads,
+                label = { Res.string.discover_reads },
                 icon = MaterialSymbols.AutoMirrored.Article,
                 resolveRoute = { Route.Articles },
             ),
         NavBarItem.PICTURES to
             NavBarItemDef(
                 id = NavBarItem.PICTURES,
-                labelRes = Res.string.pictures,
+                label = { Res.string.pictures },
                 icon = MaterialSymbols.Photo,
                 resolveRoute = { Route.Pictures() },
             ),
         NavBarItem.WORKOUTS to
             NavBarItemDef(
                 id = NavBarItem.WORKOUTS,
-                labelRes = Res.string.workouts,
+                label = { Res.string.workouts },
                 icon = MaterialSymbols.DirectionsRun,
                 resolveRoute = { Route.Workouts },
             ),
         NavBarItem.MY_FITNESS to
             NavBarItemDef(
                 id = NavBarItem.MY_FITNESS,
-                labelRes = Res.string.my_fitness,
+                label = { Res.string.my_fitness },
                 icon = MaterialSymbols.AutoMirrored.ShowChart,
                 resolveRoute = { Route.MyFitness },
             ),
         NavBarItem.GIT_REPOSITORIES to
             NavBarItemDef(
                 id = NavBarItem.GIT_REPOSITORIES,
-                labelRes = Res.string.git_repositories,
+                label = { Res.string.git_repositories },
                 icon = MaterialSymbols.Code,
                 resolveRoute = { Route.GitRepositories },
             ),
         NavBarItem.HIGHLIGHTS to
             NavBarItemDef(
                 id = NavBarItem.HIGHLIGHTS,
-                labelRes = Res.string.highlights,
+                label = { Res.string.highlights },
                 icon = MaterialSymbols.FormatQuote,
                 resolveRoute = { Route.Highlights },
             ),
         NavBarItem.SOFTWARE_APPS to
             NavBarItemDef(
                 id = NavBarItem.SOFTWARE_APPS,
-                labelRes = Res.string.software_apps,
+                label = { Res.string.software_apps },
                 icon = MaterialSymbols.Apps,
                 resolveRoute = { Route.SoftwareApps },
             ),
         NavBarItem.NAPPLETS to
             NavBarItemDef(
                 id = NavBarItem.NAPPLETS,
-                labelRes = Res.string.napplets,
+                label = { Res.string.napplets },
                 icon = MaterialSymbols.Apps,
                 resolveRoute = { Route.Napplets },
             ),
         NavBarItem.NSITES to
             NavBarItemDef(
                 id = NavBarItem.NSITES,
-                labelRes = Res.string.nsites,
+                label = { Res.string.nsites },
                 icon = MaterialSymbols.Language,
                 resolveRoute = { Route.Nsites },
             ),
         NavBarItem.BROWSER to
             NavBarItemDef(
                 id = NavBarItem.BROWSER,
-                labelRes = Res.string.browser,
+                label = { Res.string.browser },
                 icon = MaterialSymbols.Language,
                 resolveRoute = { Route.Browser },
             ),
         NavBarItem.FAVORITE_APPS to
             NavBarItemDef(
                 id = NavBarItem.FAVORITE_APPS,
-                labelRes = Res.string.favorite_apps,
+                label = { Res.string.favorite_apps },
                 icon = MaterialSymbols.Star,
                 resolveRoute = { Route.FavoriteApps },
             ),
         NavBarItem.CALENDARS to
             NavBarItemDef(
                 id = NavBarItem.CALENDARS,
-                labelRes = Res.string.route_calendars,
+                label = { Res.string.route_calendars },
                 icon = MaterialSymbols.CalendarMonth,
                 resolveRoute = { Route.Calendars },
             ),
         NavBarItem.CALENDAR_COLLECTIONS to
             NavBarItemDef(
                 id = NavBarItem.CALENDAR_COLLECTIONS,
-                labelRes = Res.string.route_calendar_collections,
+                label = { Res.string.route_calendar_collections },
                 icon = MaterialSymbols.AutoMirrored.FormatListBulleted,
                 resolveRoute = { Route.CalendarCollections },
             ),
@@ -359,56 +367,56 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
         NavBarItem.SHORTS to
             NavBarItemDef(
                 id = NavBarItem.SHORTS,
-                labelRes = Res.string.shorts,
+                label = { Res.string.shorts },
                 icon = MaterialSymbols.PlayCircle,
                 resolveRoute = { Route.Shorts() },
             ),
         NavBarItem.MUSIC_TRACKS to
             NavBarItemDef(
                 id = NavBarItem.MUSIC_TRACKS,
-                labelRes = Res.string.route_music_tracks,
+                label = { Res.string.route_music_tracks },
                 icon = MaterialSymbols.MusicNote,
                 resolveRoute = { Route.MusicTracks },
             ),
         NavBarItem.MUSIC_PLAYLISTS to
             NavBarItemDef(
                 id = NavBarItem.MUSIC_PLAYLISTS,
-                labelRes = Res.string.route_music_playlists,
+                label = { Res.string.route_music_playlists },
                 icon = MaterialSymbols.AutoMirrored.PlaylistAdd,
                 resolveRoute = { Route.MusicPlaylists },
             ),
         NavBarItem.PODCAST_EPISODES to
             NavBarItemDef(
                 id = NavBarItem.PODCAST_EPISODES,
-                labelRes = Res.string.route_podcast_episodes,
+                label = { Res.string.route_podcast_episodes },
                 icon = MaterialSymbols.Headphones,
                 resolveRoute = { Route.PodcastEpisodes },
             ),
         NavBarItem.PODCASTS to
             NavBarItemDef(
                 id = NavBarItem.PODCASTS,
-                labelRes = Res.string.route_podcasts,
+                label = { Res.string.route_podcasts },
                 icon = MaterialSymbols.Podcasts,
                 resolveRoute = { Route.Podcasts },
             ),
         NavBarItem.PUBLIC_CHATS to
             NavBarItemDef(
                 id = NavBarItem.PUBLIC_CHATS,
-                labelRes = Res.string.public_chats,
+                label = { Res.string.public_chats },
                 icon = MaterialSymbols.AutoMirrored.Chat,
                 resolveRoute = { Route.PublicChats },
             ),
         NavBarItem.RELAY_GROUPS to
             NavBarItemDef(
                 id = NavBarItem.RELAY_GROUPS,
-                labelRes = Res.string.relay_groups_title,
+                label = { Res.string.relay_groups_title },
                 icon = MaterialSymbols.Forum,
                 resolveRoute = { Route.RelayGroups },
             ),
         NavBarItem.CONCORD to
             NavBarItemDef(
                 id = NavBarItem.CONCORD,
-                labelRes = Res.string.concord_home_title,
+                label = { Res.string.concord_home_title },
                 icon = MaterialSymbols.Group,
                 resolveRoute = { Route.Concords },
             ),
@@ -421,7 +429,7 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 // other catalog entry is one, so a Compose resource cannot be
                 // referenced without changing the type for all ~60 of them. Crowdin
                 // manages both resource sets, so this one gets translated too.
-                labelRes = Res.string.marmot_groups_title,
+                label = { Res.string.marmot_groups_title },
                 // Lock, not Group: the rooms list already labels a Marmot room
                 // with this symbol, so it is the signifier users have learned
                 // for these, and it keeps the row distinct from Concord's.
@@ -431,7 +439,7 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
         NavBarItem.CORDN_GROUPS to
             NavBarItemDef(
                 id = NavBarItem.CORDN_GROUPS,
-                labelRes = Res.string.cordn_groups_title,
+                label = { Res.string.cordn_groups_title },
                 // Dns, the symbol every other cordn surface uses: a coordinator
                 // is a server, and that is the one thing that distinguishes
                 // these from the Marmot rooms directly above.
@@ -441,91 +449,91 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
         NavBarItem.GEOHASH_CHATS to
             NavBarItemDef(
                 id = NavBarItem.GEOHASH_CHATS,
-                labelRes = Res.string.location_channels,
+                label = { Res.string.location_channels },
                 icon = MaterialSymbols.LocationOn,
                 resolveRoute = { Route.GeohashChats },
             ),
         NavBarItem.FOLLOW_PACKS to
             NavBarItemDef(
                 id = NavBarItem.FOLLOW_PACKS,
-                labelRes = Res.string.follow_packs,
+                label = { Res.string.follow_packs },
                 icon = MaterialSymbols.CollectionsBookmark,
                 resolveRoute = { Route.FollowPacks },
             ),
         NavBarItem.LIVE_STREAMS to
             NavBarItemDef(
                 id = NavBarItem.LIVE_STREAMS,
-                labelRes = Res.string.live_streams,
+                label = { Res.string.live_streams },
                 icon = MaterialSymbols.Sensors,
                 resolveRoute = { Route.LiveStreams },
             ),
         NavBarItem.NESTS to
             NavBarItemDef(
                 id = NavBarItem.NESTS,
-                labelRes = Res.string.nests,
+                label = { Res.string.nests },
                 icon = MaterialSymbols.Mic,
                 resolveRoute = { Route.Nests },
             ),
         NavBarItem.LONGS to
             NavBarItemDef(
                 id = NavBarItem.LONGS,
-                labelRes = Res.string.longs,
+                label = { Res.string.longs },
                 icon = MaterialSymbols.SmartDisplay,
                 resolveRoute = { Route.Longs },
             ),
         NavBarItem.POLLS to
             NavBarItemDef(
                 id = NavBarItem.POLLS,
-                labelRes = Res.string.polls,
+                label = { Res.string.polls },
                 icon = MaterialSymbols.Poll,
                 resolveRoute = { Route.Polls },
             ),
         NavBarItem.GEOCACHES to
             NavBarItemDef(
                 id = NavBarItem.GEOCACHES,
-                labelRes = Res.string.route_geocaches,
+                label = { Res.string.route_geocaches },
                 icon = MaterialSymbols.Explore,
                 resolveRoute = { Route.Geocaches() },
             ),
         NavBarItem.GEOCACHE_HUNTS to
             NavBarItemDef(
                 id = NavBarItem.GEOCACHE_HUNTS,
-                labelRes = Res.string.route_geocache_hunts,
+                label = { Res.string.route_geocache_hunts },
                 icon = MaterialSymbols.Hiking,
                 resolveRoute = { Route.Geocaches(GeocacheTab.HUNTS) },
             ),
         NavBarItem.CHESS to
             NavBarItemDef(
                 id = NavBarItem.CHESS,
-                labelRes = Res.string.route_chess,
+                label = { Res.string.route_chess },
                 icon = MaterialSymbols.ChessKnight,
                 resolveRoute = { Route.Chess },
             ),
         NavBarItem.BADGES to
             NavBarItemDef(
                 id = NavBarItem.BADGES,
-                labelRes = Res.string.badges,
+                label = { Res.string.badges },
                 icon = MaterialSymbols.MilitaryTech,
                 resolveRoute = { Route.Badges },
             ),
         NavBarItem.PRODUCTS to
             NavBarItemDef(
                 id = NavBarItem.PRODUCTS,
-                labelRes = Res.string.discover_marketplace,
+                label = { Res.string.discover_marketplace },
                 icon = MaterialSymbols.Storefront,
                 resolveRoute = { Route.Products },
             ),
         NavBarItem.EMOJI_SETS to
             NavBarItemDef(
                 id = NavBarItem.EMOJI_SETS,
-                labelRes = Res.string.emoji_sets,
+                label = { Res.string.emoji_sets },
                 icon = MaterialSymbols.EmojiEmotions,
                 resolveRoute = { Route.BrowseEmojiSets },
             ),
         NavBarItem.SETTINGS to
             NavBarItemDef(
                 id = NavBarItem.SETTINGS,
-                labelRes = Res.string.settings,
+                label = { Res.string.settings },
                 icon = MaterialSymbols.Settings,
                 resolveRoute = { Route.AllSettings },
             ),
@@ -548,7 +556,7 @@ data class NavBarCategory(
  * catalog id must appear here exactly once (asserted by BottomBarCategoriesTest), so a newly added
  * screen surfaces in the picker under a deliberate heading rather than vanishing.
  */
-val BottomBarCategories: List<NavBarCategory> =
+val BottomBarCategories: List<NavBarCategory> by lazy {
     listOf(
         NavBarCategory(
             Res.string.bottom_bar_category_main,
@@ -641,3 +649,4 @@ val BottomBarCategories: List<NavBarCategory> =
             ),
         ),
     )
+}
