@@ -65,6 +65,8 @@ fun AudioPlayer(
     seed: String = url,
     shape: Shape = RoundedCornerShape(16.dp),
     startMillis: () -> Long? = { null },
+    // Shown beside the format before anything loads ("MP3 · 4.8 MB").
+    sizeBytes: Long? = null,
 ) {
     // Only this file's playback: every other audio card on screen would otherwise recompose on each
     // clock tick of whichever track is playing.
@@ -83,12 +85,12 @@ fun AudioPlayer(
     DisposableEffect(url) { onDispose { GlobalMediaPlayer.releasePreparedAudio(url) } }
 
     val info =
-        remember(url, title, artist, mimeType, waveform, artworkUrl, seed) {
+        remember(url, title, artist, mimeType, waveform, artworkUrl, seed, sizeBytes) {
             AudioCardInfo(
                 title = title,
                 artist = artist,
                 format = mediaFormatLabel(mimeType, url),
-                sizeBytes = null,
+                sizeBytes = sizeBytes,
                 seed = seed,
                 waveform = waveform?.wave,
                 artworkUrl = artworkUrl,

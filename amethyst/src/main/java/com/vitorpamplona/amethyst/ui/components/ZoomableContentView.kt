@@ -97,12 +97,15 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedMediaUrl
 import com.vitorpamplona.amethyst.commons.richtext.localJavaFile
 import com.vitorpamplona.amethyst.commons.service.image.BlossomFetcher
+import com.vitorpamplona.amethyst.commons.ui.cartridges.CartSizeLabel
+import com.vitorpamplona.amethyst.commons.ui.cartridges.LocalMediaIsCart
 import com.vitorpamplona.amethyst.commons.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayUrlWithLoadingSymbol
+import com.vitorpamplona.amethyst.commons.ui.components.IconWithSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.commons.ui.components.InformationDialog
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
@@ -110,10 +113,14 @@ import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.MediaDownloadCard
+import com.vitorpamplona.amethyst.commons.ui.components.MediaDownloadRow
+import com.vitorpamplona.amethyst.commons.ui.components.MediaKind
 import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
+import com.vitorpamplona.amethyst.commons.ui.components.rememberMediaSize
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
@@ -324,6 +331,7 @@ fun ZoomableContentView(
                             isLiveStream = content.isLiveStream,
                             hash = content.hash,
                             captions = content.captions,
+                            sizeBytes = content.sizeBytes,
                         )
                     }
                 }
@@ -679,6 +687,10 @@ fun UrlImageView(
                 }
             }
         } else {
+            // Only a held-back image asks for its size: one that loads never sends the request.
+            val size = rememberMediaSize(content, accountViewModel)
+            // A game cartridge has its Play button in the middle: only the size goes under it.
+            val isCart = LocalMediaIsCart.current
             if ((content.blurhash != null || content.thumbhash != null) && ratio != null) {
                 val modifier =
                     if (contentScale == ContentScale.Crop) {
@@ -694,14 +706,25 @@ fun UrlImageView(
                     modifier,
                     thumbhash = content.thumbhash,
                 )
-                IconButton(
-                    modifier = Modifier.size(Size75dp),
-                    onClick = { showImage.value = true },
-                ) {
-                    DownloadForOfflineIcon(Size75dp, Color.White)
+                if (isCart) {
+                    CartSizeLabel(size)
+                } else {
+                    IconWithSizeLabel(MediaKind.IMAGE, size) {
+                        IconButton(
+                            modifier = Modifier.size(Size75dp),
+                            onClick = { showImage.value = true },
+                        ) {
+                            DownloadForOfflineIcon(Size75dp, Color.White)
+                        }
+                    }
                 }
+            } else if (contentScale == ContentScale.Crop || ratio != null) {
+                // In a grid (Crop) the cell sizes the tile, so the card fills it; elsewhere it takes the
+                // image's own shape.
+                val cardRatio = if (contentScale == ContentScale.Crop) null else ratio
+                MediaDownloadCard(content.url, MediaKind.IMAGE, size, cardRatio, loadedImageModifier, underCartPlay = isCart) { showImage.value = true }
             } else {
-                ImageUrlWithDownloadButton(content.url, showImage)
+                MediaDownloadRow(content.url, MediaKind.IMAGE, size, Modifier) { showImage.value = true }
             }
         }
     }
