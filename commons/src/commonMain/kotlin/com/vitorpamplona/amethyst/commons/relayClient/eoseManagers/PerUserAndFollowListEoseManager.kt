@@ -54,6 +54,30 @@ abstract class PerUserAndFollowListEoseManager<T, U : Any>(
     private val latestEOSEs = EOSEAccountKey<U>()
     private val userSubscriptionMap = mutableMapOf<User, String>()
 
+    /**
+     * The object that holds the notes this key's cursors vouch for: the feed that renders them.
+     * Null (the default) keeps the cursors for as long as the LRU does. When it returns a different
+     * object than the one that earned the user's cursors, they are dropped and the next REQ starts
+     * from scratch, since the notes they covered may already be gone (see [FeedOwnerTracker]).
+     */
+    protected open fun feedOwner(key: T): Any? = null
+
+    /** Runs after the cursors of [key]'s user were dropped for a new feed; for state kept elsewhere. */
+    protected open fun onFeedOwnerChanged(key: T) {}
+
+    private val feedOwners = FeedOwnerTracker<User>()
+
+    private fun dropCursorsIfFeedChanged(
+        user: User,
+        key: T,
+    ) {
+        val owner = feedOwner(key) ?: return
+        if (feedOwners.ownerChanged(user, owner)) {
+            latestEOSEs.removeDataFor(user)
+            onFeedOwnerChanged(key)
+        }
+    }
+
     fun since(key: T) = latestEOSEs.since(user(key), list(key))
 
     /**
@@ -128,6 +152,7 @@ abstract class PerUserAndFollowListEoseManager<T, U : Any>(
 
         uniqueSubscribedAccounts.forEach {
             val user = user(it)
+            dropCursorsIfFeedChanged(user, it)
             watchChatFeeds(user, it)
             val sub = findOrCreateSubFor(it)
             val newFilters =

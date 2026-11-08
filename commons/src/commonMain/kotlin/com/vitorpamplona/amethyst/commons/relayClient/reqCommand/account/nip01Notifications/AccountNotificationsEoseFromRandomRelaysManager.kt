@@ -46,6 +46,9 @@ class AccountNotificationsEoseFromRandomRelaysManager(
 ) : PerUserEoseManager<AccountUiQueryState>(client, allKeys) {
     override fun user(key: AccountUiQueryState) = key.account.userProfile()
 
+    // A new AccountViewModel's notifications feed starts empty: the old cursors would skip what it lost.
+    override fun feedOwner(key: AccountUiQueryState): Any = key.feedContentStates
+
     /**
      * Most notifications arrive on the user's own inbox relays. This is the straggler probe for the
      * rest: other clients sometimes deliver a mention to the author's own relays instead of the

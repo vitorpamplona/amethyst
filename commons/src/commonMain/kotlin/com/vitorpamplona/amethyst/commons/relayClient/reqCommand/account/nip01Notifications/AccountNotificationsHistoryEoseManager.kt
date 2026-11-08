@@ -79,6 +79,18 @@ class AccountNotificationsHistoryEoseManager(
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
+    // Background keys carry no feed and leave the cursors alone.
+    override fun feedOwner(key: AccountQueryState): Any? = key.feedContentStates
+
+    /**
+     * The paging cursors live on the [Account] and outlive the feed they filled. Pointing a new, empty
+     * feed at them would resume paging below the depth the old one reached, so everything between the
+     * live tail and that depth (collected with the old feed) would never be asked for again.
+     */
+    override fun onFeedOwnerChanged(key: AccountQueryState) {
+        key.account.notificationHistory.reset()
+    }
+
     // A modest page: each marker-triggered advance pulls ~500 older notifications, digestible to render
     // and enough to fill a scroll, rather than the gift-wrap default (a whole encrypted-blob band at once).
     private val pager = BackwardRelayPager("notifications.history", pageLimit = 500)

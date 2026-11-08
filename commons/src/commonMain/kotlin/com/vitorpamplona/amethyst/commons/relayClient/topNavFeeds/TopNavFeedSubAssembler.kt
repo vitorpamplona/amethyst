@@ -60,6 +60,13 @@ abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
 
     override fun list(key: K) = key.listName.value
 
+    /**
+     * The feed the cursors fill. Each AccountViewModel builds its own, so a new one means the account
+     * was switched away and back (or its window reopened) and the notes behind the old cursors may
+     * have been collected. Keys with no feed fall back to the scope of the view model that built them.
+     */
+    override fun feedOwner(key: K): Any = key.feeds.firstOrNull() ?: key.scope
+
     /** Runs when the key's top-nav selection changes, right before the filters are re-issued. */
     protected open fun onListChanged(key: K) {}
 

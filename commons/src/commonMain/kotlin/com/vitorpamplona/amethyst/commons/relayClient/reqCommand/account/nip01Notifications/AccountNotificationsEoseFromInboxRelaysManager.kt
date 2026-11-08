@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip01N
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.filterNotificationsToPubkeys
 import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.filterSummaryNotificationsToPubkeys
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.FeedOwnerTracker
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.MergedAuthorTracker
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountQueryState
@@ -84,6 +85,16 @@ class AccountNotificationsEoseFromInboxRelaysManager(
         keys: List<AccountQueryState>,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
+        // Accounts whose notifications feed is not the one that earned the relays' cursors: a switch
+        // away and back builds a new, empty feed, and the notes the cursors vouch for may be gone.
+        // Background keys carry no feed and never count.
+        val newFeeds =
+            keys.mapNotNullTo(mutableSetOf()) { key ->
+                val feeds = key.feedContentStates ?: return@mapNotNullTo null
+                val user = key.account.userProfile()
+                if (feedOwners.ownerChanged(user, feeds)) user.pubkeyHex else null
+            }
+
         val accountsPerRelay = mutableMapOf<NormalizedRelayUrl, MutableList<AccountQueryState>>()
         keys.forEach { key ->
             key.account.notificationRelays.flow.value.forEach { relay ->
@@ -98,7 +109,9 @@ class AccountNotificationsEoseFromInboxRelaysManager(
             // the cursor the earlier accounts earned, and never ask for anything older than it. Drop
             // the stored cursor AND ignore it for this pass — not just the former, which would leave
             // the refetch depending on `since` being a live view of the map we just mutated.
-            val gained = authorsPerRelay.gainedAuthors(relay, pubkeys)
+            //
+            // An account back with a new feed refetches the same way: its cursor is the earlier one's.
+            val gained = authorsPerRelay.gainedAuthors(relay, pubkeys) || pubkeys.any { it in newFeeds }
             if (gained) clearEoseFor(relay)
 
             // A cold-start floor, NOT paging — backward paging lives in
@@ -153,6 +166,8 @@ class AccountNotificationsEoseFromInboxRelaysManager(
      */
     private val authorsPerRelay = MergedAuthorTracker()
 
+    private val feedOwners = FeedOwnerTracker<User>()
+
     private val userJobMap = mutableMapOf<User, List<Job>>()
 
     @OptIn(FlowPreview::class)
@@ -192,6 +207,7 @@ class AccountNotificationsEoseFromInboxRelaysManager(
 
     override fun destroy() {
         authorsPerRelay.clear()
+        feedOwners.clear()
         userJobMap.values.forEach { jobs -> jobs.forEach { it.cancel() } }
         userJobMap.clear()
         super.destroy()
