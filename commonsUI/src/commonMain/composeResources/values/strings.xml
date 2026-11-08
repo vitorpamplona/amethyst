@@ -9446,4 +9446,9 @@
     <string name="highlight_source_doi">DOI %1$s</string>
     <string name="highlight_source_isan">ISAN %1$s</string>
     <string name="highlight_source_more_from">Notes and highlights about %1$s</string>
+    <string name="media_kind_image">Image</string>
+    <string name="media_kind_video">Video</string>
+    <string name="media_kind_audio">Audio</string>
+    <string name="media_kind_pdf">PDF</string>
+    <string name="media_type_and_size">%1$s · %2$s</string>
 </resources>
