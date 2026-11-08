@@ -25,4 +25,4 @@ import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuild
 internal actual suspend fun IRoleBasedHttpClientBuilder.headContentLength(
     url: String,
     role: MediaSizeRole,
-): Long? = null
+): HeadAnswer = HeadAnswer.NoSize

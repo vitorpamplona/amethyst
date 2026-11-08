@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -94,10 +93,28 @@ suspend fun IRoleBasedHttpClientBuilder.resolveMediaSize(
 ): Long? {
     if (MediaSizeCache.isAnswered(url)) return MediaSizeCache.get(url)
     if (mayHoldVideo(mimeType, url) && MediaTrackProbeCache.get(url) == null) {
-        withTimeoutOrNull(trackProbeWaitMs) { MediaTrackProbeCache.answers.map { it[url] }.first { it != null } }
+        awaitTrackProbe(url, trackProbeWaitMs)
     }
     // Answers from the cache when the track probe recorded a size meanwhile.
     return probeMediaSize(url, mimeType, role)
+}
+
+/** How long a track probe the same screen is starting gets to show up before the `HEAD` goes out. */
+private const val TRACK_PROBE_START_GRACE_MS = 300L
+
+/**
+ * Waits, at most [maxWaitMs], for a track probe reading [url] to finish, so its range answer can give
+ * the size without a second request. When no probe shows up within a short grace (gallery tiles, cover
+ * images, a scrolled-away probe) it returns at once instead of sitting out the whole wait.
+ */
+private suspend fun awaitTrackProbe(
+    url: String,
+    maxWaitMs: Long,
+) {
+    withTimeoutOrNull(maxWaitMs) {
+        val started = withTimeoutOrNull(TRACK_PROBE_START_GRACE_MS) { MediaTrackProbeCache.inFlight.first { url in it } } != null
+        if (started) MediaTrackProbeCache.inFlight.first { url !in it }
+    }
 }
 
 /**
@@ -113,16 +130,33 @@ suspend fun IRoleBasedHttpClientBuilder.probeMediaSize(
     if (MediaSizeCache.isAnswered(url)) return MediaSizeCache.get(url)
     if (!url.startsWith("http://") && !url.startsWith("https://")) return null
     if (isHlsMedia(url, mimeType)) return null
-    val size = headContentLength(url, role)
-    MediaSizeCache.put(url, size)
-    return size
+    return when (val answer = headContentLength(url, role)) {
+        is HeadAnswer.Size -> answer.bytes.also { MediaSizeCache.put(url, it) }
+        HeadAnswer.NoSize -> null.also { MediaSizeCache.put(url, null) }
+        // Not the host's answer, so not remembered: the next placeholder for this file asks again.
+        HeadAnswer.Failed -> null
+    }
 }
 
-/** A 2xx `HEAD` answer's positive, unencoded `Content-Length`, or null. iOS has no HTTP client yet. */
+/** What a `HEAD` said about a file's size. */
+internal sealed interface HeadAnswer {
+    /** A 2xx answer with a positive, unencoded `Content-Length`. */
+    class Size(
+        val bytes: Long,
+    ) : HeadAnswer
+
+    /** The host answered without a usable length (an error page, no header, a compressed body). */
+    data object NoSize : HeadAnswer
+
+    /** No answer at all (offline, a timeout, Tor still connecting). */
+    data object Failed : HeadAnswer
+}
+
+/** Asks for [url]'s size with a `HEAD` over [role]'s client. iOS has no HTTP client yet. */
 internal expect suspend fun IRoleBasedHttpClientBuilder.headContentLength(
     url: String,
     role: MediaSizeRole,
-): Long?
+): HeadAnswer
 
 /** The total in a `Content-Range` header (`bytes 0-1023/12400000`), or null when it is unknown or absent. */
 fun parseContentRangeTotal(header: String?): Long? =

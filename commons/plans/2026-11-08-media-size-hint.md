@@ -106,32 +106,35 @@ internal expect suspend fun IRoleBasedHttpClientBuilder.headContentLength(url: S
 object MediaSizeCache   // 500 entries, readable from composition; stores misses too
 ```
 
-`resolveMediaSize` is what the UI calls. When the URL is one the MP4 track probe may read
-(`mayHoldVideo(mimeType, url)`) and that probe has not answered yet, it first waits for the
-answer, observed through a public `MediaTrackProbeCache.answers` flow, for at most
-`trackProbeWaitMs`. The limit matters: gallery tiles, cover images and a probe cancelled by
-scrolling never record an answer, and an unbounded wait would leave the size blank forever.
-Then it returns the cached size if there is one, and otherwise calls `probeMediaSize`.
+`resolveMediaSize` is what the UI calls. It returns a cached answer at once. When the URL is one
+the MP4 track probe may read (`mayHoldVideo(mimeType, url)`) and that probe has not answered, it
+waits only for a probe that is actually running: `probeMediaTracks` marks the URLs it is reading
+in `MediaTrackProbeCache.inFlight`. A probe the same screen is starting gets 300 ms to show up;
+when none does (gallery tiles, cover images, a probe cancelled by scrolling), the `HEAD` goes out
+at once. A running probe is waited on for at most `trackProbeWaitMs` (2 s). Then it returns the
+size the probe recorded, if any, and otherwise calls `probeMediaSize`.
 
 `probeMediaSize`:
 - returns a cached answer (hit or miss) without a request;
 - returns null without a request for anything but `http(s)` URLs (`blossom:` and the like) and
   for HLS (`isHlsMedia`), since a playlist's length means nothing;
-- otherwise calls `headContentLength` and caches the result.
+- otherwise calls `headContentLength`, caches a size or a "no size" answer, and caches nothing
+  when the request itself failed, so a later placeholder for the file asks again.
 
 `headContentLength` (`jvmAndroid`) sends a `HEAD` with `Accept-Encoding: identity` through the
 role's client, which applies the user's Tor routing, and follows redirects (OkHttp's default):
-- a 2xx with `Content-Length` > 0 and no `Content-Encoding` returns the length;
-- any other answer, or an exception other than cancellation, returns null (logged at debug
-  level);
+- a 2xx with `Content-Length` > 0 and no `Content-Encoding` returns the length (`HeadAnswer.Size`);
+- any other answer, or a URL OkHttp can't request, returns `HeadAnswer.NoSize`;
+- an `IOException` (offline, a timeout, Tor still connecting) returns `HeadAnswer.Failed`, which
+  is not cached (both logged at debug level);
 - cancellation propagates;
 - it uses the role client's own timeouts.
 
-No in-flight deduplication: the cache stops repeat requests, and the rare duplicate when two
-placeholders show the same URL at once is cheaper than a shared request that one caller's
-cancellation can break.
+No in-flight deduplication of `HEAD`s: the cache stops repeat requests, and the rare duplicate
+when two placeholders show the same URL at once is cheaper than a shared request that one
+caller's cancellation can break.
 
-The iOS actual returns null.
+The iOS actual answers `NoSize`.
 
 **The track probe feeds the same cache.** `readMp4AudioOnly` (`MediaTrackProbe.jvmAndroid.kt`)
 records the total from its first answer into `MediaSizeCache`: the `Content-Range` total of
@@ -213,11 +216,12 @@ numbers about 5 % larger and correct for the unit it prints. `formatBytes` and
 | Situation | Result |
 |---|---|
 | Size declared in the event | Shown on the first frame, no request |
-| MP4 video the track probe reads | Size appears when the probe's first answer lands; `HEAD` if the probe ends without one or hasn't answered within 2 s |
+| MP4 video the track probe reads | Size appears when the probe's first answer lands; `HEAD` if the probe ends without one, or is still running after 2 s |
+| MP4 nothing reads (gallery tile, cover image) | `HEAD` after a 300 ms grace for a probe that is about to start |
 | `HEAD` in flight | Type only; size fades in |
 | Non-2xx (403 error page, 404, 401 read auth, 405 `HEAD` not allowed) | Type only, cached as a miss |
 | 2xx without `Content-Length`, or with `Content-Encoding` | Type only, cached as a miss |
-| Network error or timeout | Type only, cached as a miss for this process |
+| Network error or timeout | Type only, not cached: the next placeholder for the file asks again |
 | `blossom:` URI, HLS playlist | Type only, no request |
 | Placeholder leaves composition mid-request | Request cancelled; nothing cached |
 

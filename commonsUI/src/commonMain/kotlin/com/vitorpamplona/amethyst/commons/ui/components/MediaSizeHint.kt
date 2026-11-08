@@ -130,7 +130,7 @@ fun rememberMediaSize(
         val size by remember(url) {
             MediaSizeCache.entries.map { it[url]?.takeIf { bytes -> bytes > 0 } }.distinctUntilChanged()
         }.collectAsState(MediaSizeCache.get(url))
-        LaunchedEffect(url) { accountViewModel.httpClientBuilder.resolveMediaSize(url, mimeType, kind.role) }
+        LaunchedEffect(url, mimeType, kind) { accountViewModel.httpClientBuilder.resolveMediaSize(url, mimeType, kind.role) }
         size
     }
 }

@@ -49,14 +49,19 @@ suspend fun IRoleBasedHttpClientBuilder.probeMediaTracks(
 ): MediaTracks {
     MediaTrackProbeCache.get(url)?.let { return it }
     if (!isMp4FamilyMedia(mimeType, url)) return MediaTracks.UNKNOWN
-    val result =
-        when (readMp4AudioOnly(url)) {
-            true -> MediaTracks.AUDIO_ONLY
-            false -> MediaTracks.HAS_VIDEO
-            null -> MediaTracks.UNKNOWN
-        }
-    MediaTrackProbeCache.put(url, result)
-    return result
+    MediaTrackProbeCache.begin(url)
+    try {
+        val result =
+            when (readMp4AudioOnly(url)) {
+                true -> MediaTracks.AUDIO_ONLY
+                false -> MediaTracks.HAS_VIDEO
+                null -> MediaTracks.UNKNOWN
+            }
+        MediaTrackProbeCache.put(url, result)
+        return result
+    } finally {
+        MediaTrackProbeCache.end(url)
+    }
 }
 
 /** [probeMp4AudioOnly] over this platform's HTTP client: null when it can't tell. */
@@ -71,8 +76,14 @@ object MediaTrackProbeCache {
     private const val MAX_ENTRIES = 500
     private val entries = MutableStateFlow<Map<String, MediaTracks>>(emptyMap())
 
-    /** Every answer by URL, for code that waits on a probe it didn't start (the media size lookup). */
-    val answers: StateFlow<Map<String, MediaTracks>> = entries
+    private val running = MutableStateFlow<Set<String>>(emptySet())
+
+    /** URLs whose tracks are being read right now: the media size lookup waits for these instead of asking twice. */
+    val inFlight: StateFlow<Set<String>> = running
+
+    internal fun begin(url: String) = running.update { it + url }
+
+    internal fun end(url: String) = running.update { it - url }
 
     fun get(url: String): MediaTracks? = entries.value[url]
 

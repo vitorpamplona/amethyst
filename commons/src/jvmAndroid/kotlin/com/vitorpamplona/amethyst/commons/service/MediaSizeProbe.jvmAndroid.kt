@@ -28,6 +28,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.coroutines.executeAsync
+import java.io.IOException
 
 private const val TAG = "MediaSizeProbe"
 
@@ -37,7 +38,7 @@ internal fun Response.fileLength(): Long? = header("Content-Length")?.toLongOrNu
 internal actual suspend fun IRoleBasedHttpClientBuilder.headContentLength(
     url: String,
     role: MediaSizeRole,
-): Long? =
+): HeadAnswer =
     withContext(Dispatchers.IO) {
         val client =
             when (role) {
@@ -55,11 +56,17 @@ internal actual suspend fun IRoleBasedHttpClientBuilder.headContentLength(
                     .header("Accept-Encoding", "identity")
                     .build()
             client.newCall(request).executeAsync().use { response ->
-                if (response.isSuccessful) response.fileLength() else null
+                val length = if (response.isSuccessful) response.fileLength() else null
+                if (length != null) HeadAnswer.Size(length) else HeadAnswer.NoSize
             }
+        } catch (e: IOException) {
+            // A failed request, not the host's answer: worth asking again later.
+            Log.d(TAG, "size probe failed", e)
+            HeadAnswer.Failed
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.d(TAG, "size probe failed", e)
-            null
+            // Anything else (a URL OkHttp can't request, a client error): asking again won't change it.
+            Log.d(TAG, "size probe gave up", e)
+            HeadAnswer.NoSize
         }
     }

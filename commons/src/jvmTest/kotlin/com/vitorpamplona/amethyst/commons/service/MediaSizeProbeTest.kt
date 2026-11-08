@@ -28,13 +28,15 @@ import com.vitorpamplona.amethyst.commons.audio.probeMediaTracks
 import com.vitorpamplona.amethyst.commons.service.http.SingleRoleBasedHttpClientBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.util.Collections
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -168,15 +170,61 @@ class MediaSizeProbeTest {
     @Test
     fun cancelledProbeCachesNothing() =
         runBlocking {
+            val arrived = CountDownLatch(1)
             serve("slow.jpg") { exchange ->
+                arrived.countDown()
                 Thread.sleep(2_000)
                 exchange.responseHeaders.add("Content-Length", "100")
                 exchange.sendResponseHeaders(200, -1)
             }
             val job = launch(Dispatchers.IO) { clients.probeMediaSize(url("slow.jpg"), null, MediaSizeRole.IMAGE) }
-            delay(100)
+            // Cancel only once the request is really in flight, so the test can't pass without one.
+            assertTrue(withContext(Dispatchers.IO) { arrived.await(5, TimeUnit.SECONDS) })
             job.cancelAndJoin()
             assertFalse(MediaSizeCache.isAnswered(url("slow.jpg")))
+        }
+
+    @Test
+    fun networkFailureIsNotCached() =
+        runBlocking {
+            // Nothing listens on a stopped server's port: the request fails, which is not the host
+            // declining to say. Recording a miss would hide the size until the app restarts.
+            val dead = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply { start() }
+            val url = "http://127.0.0.1:${dead.address.port}/offline.jpg"
+            dead.stop(0)
+            assertNull(clients.probeMediaSize(url, null, MediaSizeRole.IMAGE))
+            assertFalse(MediaSizeCache.isAnswered(url))
+        }
+
+    @Test
+    fun resolveDoesNotWaitWhenNoTrackProbeRuns() =
+        runBlocking {
+            // A gallery tile's `.mp4`: nothing will read its tracks, so the HEAD must not sit out the full wait.
+            headAnswer("tile.mp4", 200, "Content-Length" to "3300000")
+            val started = System.nanoTime()
+            assertEquals(3_300_000L, clients.resolveMediaSize(url("tile.mp4"), "video/mp4", MediaSizeRole.VIDEO))
+            assertTrue(System.nanoTime() - started < 1_000_000_000L)
+        }
+
+    @Test
+    fun resolveWaitsForRunningTrackProbe() =
+        runBlocking {
+            serve("feed.mp4") { exchange ->
+                Thread.sleep(500)
+                val range =
+                    exchange.requestHeaders
+                        .getFirst("Range")!!
+                        .removePrefix("bytes=")
+                        .split('-')
+                val length = range[1].toInt() - range[0].toInt() + 1
+                exchange.responseHeaders.add("Content-Range", "bytes ${range[0]}-${range[1]}/12400000")
+                exchange.sendResponseHeaders(206, length.toLong())
+                exchange.responseBody.write(ByteArray(length))
+            }
+            val probe = launch(Dispatchers.IO) { clients.probeMediaTracks(url("feed.mp4"), "video/mp4") }
+            assertEquals(12_400_000L, clients.resolveMediaSize(url("feed.mp4"), "video/mp4", MediaSizeRole.VIDEO))
+            probe.join()
+            assertTrue(requests.none { it.startsWith("HEAD") })
         }
 
     @Test
