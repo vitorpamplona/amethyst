@@ -45,6 +45,7 @@ import coil3.compose.LocalPlatformContext
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.media_type_and_size
 import com.vitorpamplona.amethyst.commons.resources.pdf_loading
 import com.vitorpamplona.amethyst.commons.resources.pdf_page_count
 import com.vitorpamplona.amethyst.commons.resources.pdf_tap_to_load
@@ -56,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.FileAttachmentRow
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
+import com.vitorpamplona.amethyst.commons.ui.components.rememberMediaSize
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -63,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size6dp
 import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.commons.util.extractFilename
+import com.vitorpamplona.amethyst.commons.util.formatFileSize
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -136,7 +139,7 @@ fun PdfPreviewCard(
     if (showPdf.value) {
         LoadedPdfPreviewCard(content, accountViewModel, onOpen, onLongPress)
     } else {
-        PlaceholderPdfCard(content) { showPdf.value = true }
+        PlaceholderPdfCard(content, accountViewModel) { showPdf.value = true }
     }
 }
 
@@ -232,16 +235,20 @@ private fun LoadedPdfPreviewCard(
 @Composable
 private fun PlaceholderPdfCard(
     content: MediaUrlPdf,
+    accountViewModel: AccountViewModel,
     onLoad: () -> Unit,
 ) {
     val filename = remember(content.url) { extractFilename(content.url) }
+    val size = rememberMediaSize(content, accountViewModel)
+    val tapToLoad = stringRes(Res.string.pdf_tap_to_load)
+    val subtitle = if (size != null) stringRes(Res.string.media_type_and_size, tapToLoad, formatFileSize(size)) else tapToLoad
     Column(
         modifier =
             MaterialTheme.colorScheme.innerPostModifier
                 .fillMaxWidth()
                 .combinedClickable(onClick = onLoad, onLongClick = onLoad),
     ) {
-        FilenameRow(filename = filename, subtitle = stringRes(Res.string.pdf_tap_to_load))
+        FilenameRow(filename = filename, subtitle = subtitle)
         Spacer(modifier = DoubleVertSpacer)
     }
 }

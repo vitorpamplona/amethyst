@@ -50,7 +50,16 @@ abstract class MediaUrlContent(
     mimeType: String? = null,
     thumbhash: String? = null,
     val authorPubKey: String? = null,
+    sizeBytes: Long? = null,
 ) : BaseMediaContent(description, dim, blurhash, thumbhash) {
+    /**
+     * The file's size in bytes as the event declares it (imeta or URL fragment `size`, or a file
+     * message's `size` tag): a held-back placeholder and the audio card show it before anything loads.
+     * Zero or less means the uploader didn't know; kept as null so the placeholder asks the host
+     * instead of showing "1 KB".
+     */
+    val sizeBytes: Long? = sizeBytes?.takeIf { it > 0 }
+
     /**
      * Repaired at construction rather than at each of the eight call sites that build a model from
      * an author-supplied `m` tag — a bare subtype reaching this field is what puts `Intent.type =
@@ -74,7 +83,8 @@ open class MediaUrlImage(
     authorPubKey: String? = null,
     /** The note's `imeta` tags when they may link game carts: see [CartLinks.forEntry]. */
     val cartImetas: Map<String, IMetaTag>? = null,
-) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash, authorPubKey)
+    sizeBytes: Long? = null,
+) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash, authorPubKey, sizeBytes = sizeBytes)
 
 class EncryptedMediaUrlImage(
     url: String,
@@ -90,7 +100,8 @@ class EncryptedMediaUrlImage(
     val encryptionNonce: ByteArray,
     thumbhash: String? = null,
     authorPubKey: String? = null,
-) : MediaUrlImage(url, description, hash, blurhash, dim, uri, contentWarning, mimeType, thumbhash, authorPubKey)
+    sizeBytes: Long? = null,
+) : MediaUrlImage(url, description, hash, blurhash, dim, uri, contentWarning, mimeType, thumbhash, authorPubKey, sizeBytes = sizeBytes)
 
 @Immutable
 open class MediaUrlPdf(
@@ -103,7 +114,8 @@ open class MediaUrlPdf(
     mimeType: String? = null,
     thumbhash: String? = null,
     authorPubKey: String? = null,
-) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash, authorPubKey)
+    sizeBytes: Long? = null,
+) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash, authorPubKey, sizeBytes = sizeBytes)
 
 @Immutable
 open class MediaUrlVideo(
@@ -122,14 +134,13 @@ open class MediaUrlVideo(
     authorPubKey: String? = null,
     // NIP-71 `text-track` captions resolved for this video, for the player to side-load.
     val captions: ImmutableList<CaptionTrack> = persistentListOf(),
-    // The imeta `size`, in bytes: an audio card shows it before the player has loaded anything.
-    val sizeBytes: Long? = null,
+    sizeBytes: Long? = null,
     // The imeta `waveform` (NIP-A0 amplitudes, not normalised): an audio card draws it as its seek bar.
     val waveform: List<Float>? = null,
     // The imeta `duration`, in seconds: an audio card shows it, and offers picture-in-picture for long
     // audio, before the player has probed the file.
     val durationSeconds: Double? = null,
-) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash, authorPubKey)
+) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash, authorPubKey, sizeBytes = sizeBytes)
 
 @Immutable
 class EncryptedMediaUrlVideo(
@@ -148,4 +159,5 @@ class EncryptedMediaUrlVideo(
     val encryptionNonce: ByteArray,
     thumbhash: String? = null,
     authorPubKey: String? = null,
-) : MediaUrlVideo(url, description, hash, dim, uri, artworkUri, authorName, blurhash, contentWarning, mimeType, thumbhash, authorPubKey = authorPubKey)
+    sizeBytes: Long? = null,
+) : MediaUrlVideo(url, description, hash, dim, uri, artworkUri, authorName, blurhash, contentWarning, mimeType, thumbhash, authorPubKey = authorPubKey, sizeBytes = sizeBytes)

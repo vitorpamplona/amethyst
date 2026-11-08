@@ -94,15 +94,15 @@ class DrawerSectionsTest {
 
     @Test
     fun aSectionWithNoCatalogItemsRendersFixedRowsOrNothingAtAll() {
-        // hasFixedRows is declared on the section but consumed by CatalogSection's `when (section.id)`,
+        // hasFixedRows is declared on the section but consumed by drawerSectionItems' `when (section.id)`,
         // in another file — so the flag and the branch that honours it can drift apart with no compile
         // error. A section that carries neither is unreachable in both directions at once: the settings
-        // screen skips it on items.isEmpty(), and CatalogSection returns before rendering a heading.
+        // screen skips it on items.isEmpty(), and drawerSectionRows drops it before a heading renders.
         val unreachable = DrawerSections.filter { it.items.isEmpty() && !it.hasFixedRows }
 
         assertEquals(
             "a drawer section has no catalog items and no fixed rows, so it renders nowhere — " +
-                "give it items, set hasFixedRows and a branch in CatalogSection, or delete it",
+                "give it items, set hasFixedRows and a branch in drawerSectionItems, or delete it",
             emptyList<Any>(),
             unreachable.map { it.id },
         )
