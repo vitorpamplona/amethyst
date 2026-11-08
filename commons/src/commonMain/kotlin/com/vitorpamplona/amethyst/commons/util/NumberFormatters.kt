@@ -96,3 +96,34 @@ fun countToHumanReadableBytes(counter: Long): String =
         counter >= 1_000 -> "${(counter / 1_000f).roundToInt()} KB"
         else -> "$counter B"
     }
+
+private const val NO_BREAK_SPACE = "\u00A0"
+
+private fun roundedDiv(
+    value: Long,
+    divisor: Long,
+): Long = (value + divisor / 2) / divisor
+
+/**
+ * A file size for people, in decimal units (1 MB = 1,000,000 bytes, as Android's own formatter does):
+ * "850 KB", "12.4 MB", "140 MB", "1.2 GB". KB is always whole and anything under 1 KB reads "1 KB";
+ * MB and GB keep one decimal below 100. A no-break space keeps the number and its unit on one line.
+ */
+fun formatFileSize(bytes: Long): String {
+    val kb = roundedDiv(bytes, 1_000)
+    if (kb < 1_000) return "${kb.coerceAtLeast(1)}${NO_BREAK_SPACE}KB"
+    return formatLargeUnit(bytes, 1_000_000, "MB") ?: formatLargeUnit(bytes, 1_000_000_000, "GB", last = true)!!
+}
+
+/** [bytes] in the unit worth [unitBytes], or null when it reaches 1000 of them and a bigger unit fits. */
+private fun formatLargeUnit(
+    bytes: Long,
+    unitBytes: Long,
+    unit: String,
+    last: Boolean = false,
+): String? {
+    val tenths = roundedDiv(bytes, unitBytes / 10)
+    if (tenths < 1_000) return "${tenths / 10}.${tenths % 10}$NO_BREAK_SPACE$unit"
+    val whole = roundedDiv(bytes, unitBytes)
+    return if (whole < 1_000 || last) "$whole$NO_BREAK_SPACE$unit" else null
+}
