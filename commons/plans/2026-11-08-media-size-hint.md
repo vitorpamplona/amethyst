@@ -3,8 +3,11 @@
 Status: implemented 2026-11-08 on `feat/media-size-hint` (plan:
 `2026-11-08-media-size-hint-implementation.md`). Unit tests and the pre-push checks pass. Checked on
 an Android emulator and a Pixel 9a: images, videos, audio, PDFs, gallery tiles, long-form covers,
-game carts, encrypted and plain DM images, offline recovery and Tor. Not run on Desktop: the
-headless run needs Xvfb, which the macOS host lacks.
+game carts, encrypted and plain DM images, offline recovery and Tor. Checked on Desktop (macOS,
+Video Playback = Never): video placeholders, the PDF card and the long-form cover show their size
+and load on click; a game cart shows Play without a size and audio still auto-loads, because
+Desktop note images and Desktop audio ignore the setting (see "Out of scope"), so no placeholder
+is drawn to carry the label.
 
 Where the build departs from the text below:
 - `MediaSizeLabel` takes an optional `color`, so the label reads on the neutral cards.
