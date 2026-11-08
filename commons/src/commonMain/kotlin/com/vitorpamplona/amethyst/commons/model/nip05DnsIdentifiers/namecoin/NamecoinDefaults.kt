@@ -31,6 +31,16 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
  * To refresh a certificate: `echo | openssl s_client -connect HOST:PORT 2>/dev/null | openssl x509 -outform PEM`
  */
 
+/**
+ * Whole-lookup budget for resolving one Namecoin identifier, across all
+ * ElectrumX attempts. Quartz's own default is 20s, which is ample on clearnet
+ * (a full nameShow is 3-4 round trips, ~2s direct) but too tight over Tor:
+ * a single round trip on a slow circuit can take 5-10s, so the same lookup
+ * needs 20s+ and the user sees "Resolution timed out" even with healthy
+ * servers. Doubling to 40s covers slow-circuit Tor lookups.
+ */
+const val NAMECOIN_LOOKUP_TIMEOUT_MS = 40_000L
+
 /** nmc2.bitcoins.sk:57002 / 46.229.238.187:57002, self-signed, expires 2030-10-22. */
 private val NMC2_BITCOINS_SK_CERT_PEM =
     """

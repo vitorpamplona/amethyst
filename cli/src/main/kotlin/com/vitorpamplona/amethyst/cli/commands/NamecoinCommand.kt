@@ -57,7 +57,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutc
  *                          more `host:port[:tcp]` entries, same form the apps
  *                          accept; TLS by default, `:tcp` for plaintext;
  *                          default: the same hard-coded mainnet set the apps ship with)
- *   --timeout SECS         overall lookup timeout (default 20)
+ *   --timeout SECS         overall lookup timeout (default 40)
  *
  * Exit codes follow amy convention:
  *   0   success (Output.emit was called)
@@ -84,14 +84,14 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutc
  *   }
  */
 object NamecoinCommand {
-    private val DEFAULT_TIMEOUT_SECS = 20L
+    private val DEFAULT_TIMEOUT_SECS = 40L
 
     val USAGE: String =
         """
         |Namecoin (stateless — no account, talks to ElectrumX over TLS):
         |  namecoin resolve IDENT       resolve a Namecoin identifier (.bit, d/, id/, alice@x.bit)
         |    [--server URL[,URL]]         to a Nostr pubkey + relays via the Namecoin blockchain
-        |    [--timeout SECS]             (--server: host:port[:tcp] entries; default timeout 20s)
+        |    [--timeout SECS]             (--server: host:port[:tcp] entries; default timeout 40s)
         |  namecoin servers             print the default ElectrumX server list
         """.trimMargin()
 
