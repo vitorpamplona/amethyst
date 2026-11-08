@@ -132,9 +132,10 @@ Known limits, accepted:
 ### 3. Composable hook
 
 In `commonsUI`:
-`@Composable fun rememberMediaSize(url: String, declaredSize: Long?, role: MediaSizeRole, accountViewModel): Long?`,
-plus a `MediaUrlContent` overload that passes `url`, `sizeBytes` and the role for the
-content's type.
+`@Composable fun rememberMediaSize(url: String, mimeType: String?, declaredSize: Long?, kind: MediaKind, accountViewModel): Long?`,
+plus a `MediaUrlContent` overload that passes the content's `url`, `mimeType`, `sizeBytes` and
+kind. `MediaKind` (Image, Video, Audio, PDF) names the label's type word and maps to a
+`MediaSizeRole` (Audio uses the video client, PDF the preview client).
 
 - With `declaredSize` set, it returns that at once and sends nothing.
 - Otherwise it reads `MediaSizeCache` and observes it, so a size recorded later by the track
