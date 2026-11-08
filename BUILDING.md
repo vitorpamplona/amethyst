@@ -848,20 +848,22 @@ Every package has the first, and each has one of the other two:
 
 - **The runtime's archive** (`lib/server/classes.jsa` in the bundled runtime, JDK
   classes only). jlink makes it only with `bin/java`, which the packages strip,
-  so a step after jlink dumps it, with the app's `--add-opens`/`--add-exports`
-  (a mismatch costs the archived module graph and an error line at every start) (`desktopApp/build.gradle.kts`, "The runtime's
-  own class archive").
+  so a step after jlink dumps it (`desktopApp/build.gradle.kts`, "The runtime's
+  own class archive"), with the app's `--add-opens`/`--add-exports`: a mismatch
+  costs the archived module graph and an error line at every start.
 - **The per-user archive**, in the `.deb`, `.rpm`, `.dmg`, `.msi` and the Windows
   `.zip`. The launcher passes `-XX:+AutoCreateSharedArchive` with a file in the
-  user's cache folder (`~/.cache/amethyst-desktop/startup.jsa`,
-  `~/Library/Caches/Amethyst/startup.jsa`, `%LOCALAPPDATA%\Amethyst\startup.jsa`):
-  the JVM writes it as the first start exits (~140 MB; that exit takes a few
-  seconds) and maps
-  it from the next start on, and writes it again after an update. The launcher
-  expands the variable since JDK 25; the app creates the folder
-  (`StartupArchive`). The OS timer's `--publish-scheduled` runs read it but don't
-  write it (`_JAVA_OPTIONS` in `OsScheduler`), so a short headless run can't leave
-  an archive of its few classes behind.
+  user's cache folder (`~/.cache/amethyst-desktop/startup-<version>.jsa`,
+  `~/Library/Caches/Amethyst/…`, `%LOCALAPPDATA%\Amethyst\…`): the JVM writes it
+  as the first start exits (~140 MB; that exit takes a few seconds) and maps it
+  from the next start on. The launcher expands the variable since JDK 25. The JVM
+  rewrites a missing archive but not one whose jars changed, so the name carries
+  the version, and the app (`StartupArchive`) creates the folder, deletes other
+  versions' archives, and deletes one older than any jar (a same-version
+  reinstall), which the next start then replaces. The OS timer's
+  `--publish-scheduled` runs read it but don't write it (`_JAVA_OPTIONS` in
+  `OsScheduler`), so a short headless run can't leave an archive of its few
+  classes behind.
 - **The trained AOT cache**, in the tarball, the AppImage and the Flatpak bundle
   (`lib/app/amethyst.aot`). `trainReleaseAotCache` starts the release image logged
   in read-only, lets it load the home feed, and builds the cache from that run.

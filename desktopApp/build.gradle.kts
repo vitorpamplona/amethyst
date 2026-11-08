@@ -167,15 +167,17 @@ dependencies {
 }
 
 // The per-user class archive of a package without a trained AOT cache (BUILDING.md, "Startup
-// archives"): the JVM writes it at the exit of a start that found it missing or stale (the first,
-// and the first after an update) and maps it on the next ones. Packages are built on the OS they
+// archives"): the JVM writes it at the exit of a start that found none (the first, and the first
+// after an update) and maps it on the next ones. Packages are built on the OS they
 // ship for, and their launcher expands the variable (JDK 25 and later; an older one would pass it on
-// as it is). The app creates the folder (StartupArchive), which the JVM can't.
+// as it is). The app creates the folder (StartupArchive), which the JVM can't. The name carries the
+// version because the JVM only rewrites a missing archive, not one whose jars changed (checked on
+// JDK 21 and 25): an update then starts on a new file, and the app deletes the old one.
 val perUserArchive =
     when {
-        System.getProperty("os.name").startsWith("Mac") -> "\$HOME/Library/Caches/Amethyst/startup.jsa"
-        System.getProperty("os.name").startsWith("Windows") -> "\$LOCALAPPDATA/Amethyst/startup.jsa"
-        else -> "\$HOME/.cache/amethyst-desktop/startup.jsa"
+        System.getProperty("os.name").startsWith("Mac") -> "\$HOME/Library/Caches/Amethyst/startup-$appVersion.jsa"
+        System.getProperty("os.name").startsWith("Windows") -> "\$LOCALAPPDATA/Amethyst/startup-$appVersion.jsa"
+        else -> "\$HOME/.cache/amethyst-desktop/startup-$appVersion.jsa"
     }
 val perUserArchiveArgs =
     if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_25)) {

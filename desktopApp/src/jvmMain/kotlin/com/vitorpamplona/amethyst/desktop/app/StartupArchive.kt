@@ -30,10 +30,12 @@ import kotlin.system.exitProcess
  * of BUILDING.md). The JVM does the rest from the launcher's options.
  *
  * A package without a trained AOT cache keeps a per-user archive of the app's classes: its launcher
- * passes `-XX:+AutoCreateSharedArchive` with a file in the user's cache folder, and the JVM writes
- * it when a start finds it missing or stale (the first start, or the first after an update) and
- * maps it on the next ones. The JVM cannot create the folder, and fails the write, exiting with 1,
- * when it is missing; [prepare] creates it.
+ * passes `-XX:+AutoCreateSharedArchive` with `startup-<version>.jsa` in the user's cache folder,
+ * and the JVM writes it as a start that found none exits, and maps it on the next ones. The JVM
+ * can't create the folder (it fails the write and exits with 1), and rewrites a missing archive but
+ * not one whose jars changed (checked on JDK 21 and 25): [prepare] creates the folder, deletes the
+ * archives of other versions, and deletes one older than a jar (a same-version reinstall), so the
+ * next start writes a new one.
  *
  * The release build trains the AOT cache by starting the packaged app logged in and letting it
  * load the feed; [prepare] ends that run on time with a normal exit, which is when the JVM writes
@@ -44,6 +46,10 @@ object StartupArchive {
 
     /** The per-user archive, as the launcher expanded it (`$HOME/...`), when the package uses one. */
     const val ARCHIVE_PROPERTY = "amethyst.startupArchive"
+
+    /** The per-user archive is `startup-<version>.jsa` (desktopApp/build.gradle.kts). */
+    private const val ARCHIVE_PREFIX = "startup-"
+    private const val ARCHIVE_SUFFIX = ".jsa"
 
     /** Seconds after which a training run of the release build exits. */
     const val TRAINING_EXIT_PROPERTY = "amethyst.exitAfterSeconds"
@@ -56,9 +62,43 @@ object StartupArchive {
     private fun createFolderOf(path: String) {
         // The launcher leaves a variable it can't resolve as it is: no folder for a literal "$HOME".
         if (path.isBlank() || '$' in path) return
-        val folder = File(path).absoluteFile.parentFile ?: return
+        val archive = File(path).absoluteFile
+        val folder = archive.parentFile ?: return
         if (!folder.isDirectory && !folder.mkdirs()) {
             Log.w(TAG) { "Could not create $folder: this start's classes will not be archived" }
+            return
+        }
+        removeOtherVersions(archive)
+        removeIfStale(archive)
+    }
+
+    /** The archives of the versions this one replaced, ~140 MB each. */
+    private fun removeOtherVersions(archive: File) {
+        archive.parentFile
+            .listFiles { f -> f != archive && f.name.startsWith(ARCHIVE_PREFIX) && f.name.endsWith(ARCHIVE_SUFFIX) }
+            .orEmpty()
+            .forEach { if (!it.delete() && it.exists()) Log.w(TAG) { "Could not delete $it" } }
+    }
+
+    /**
+     * The JVM only writes an archive it finds missing, and maps one only while every jar has the
+     * modification time it had when the archive was written. A same-version reinstall (an .msi
+     * repair, a rebuilt test package) changes those times and leaves an archive this start can't
+     * use and no start would replace: deleted, the next start writes a new one.
+     */
+    private fun removeIfStale(archive: File) {
+        if (!archive.isFile) return
+        val jars =
+            StartupArchive::class.java.protectionDomain
+                ?.codeSource
+                ?.location
+                ?.let { runCatching { File(it.toURI()).parentFile }.getOrNull() }
+                ?.listFiles { f -> f.name.endsWith(".jar") }
+                .orEmpty()
+        val newestJar = jars.maxOfOrNull { it.lastModified() } ?: return
+        if (newestJar > archive.lastModified()) {
+            Log.i(TAG) { "The app's jars changed after $archive was written: the next start writes a new one" }
+            if (!archive.delete() && archive.exists()) Log.w(TAG) { "Could not delete $archive" }
         }
     }
 
