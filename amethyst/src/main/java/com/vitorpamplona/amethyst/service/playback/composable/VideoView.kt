@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.videoGalleryModifier
 import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.ui.components.unknownMediaAspectRatio
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -186,10 +187,12 @@ fun VideoView(
 
         Box(modifier) {
             if (!automaticallyStartPlayback.value) {
-                // With a known shape the card fills the box the player will take, instead of a URL line
-                // floating in an empty area of that size.
-                if (ratio != null) {
-                    MediaDownloadCard(videoUri, kind, size, ratio, borderModifier) { automaticallyStartPlayback.value = true }
+                // The card fills the box the player will take, instead of a line floating in an empty
+                // area of that size. A video that declares no shape gets the same 16:9 the enclosing
+                // box falls back to; only audio, which has no frame, keeps the compact row.
+                val cardRatio = ratio ?: unknownMediaAspectRatio(mimeType, videoUri)
+                if (cardRatio != null) {
+                    MediaDownloadCard(videoUri, kind, size, cardRatio, borderModifier) { automaticallyStartPlayback.value = true }
                 } else {
                     MediaDownloadRow(videoUri, kind, size, Modifier) { automaticallyStartPlayback.value = true }
                 }

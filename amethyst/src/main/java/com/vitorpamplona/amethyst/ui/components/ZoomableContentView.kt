@@ -710,8 +710,11 @@ fun UrlImageView(
                         DownloadForOfflineIcon(Size75dp, Color.White)
                     }
                 }
-            } else if (ratio != null) {
-                MediaDownloadCard(content.url, MediaKind.IMAGE, size, ratio, loadedImageModifier) { showImage.value = true }
+            } else if (contentScale == ContentScale.Crop || ratio != null) {
+                // In a grid (Crop) the cell sizes the tile, so the card fills it; elsewhere it takes the
+                // image's own shape.
+                val cardRatio = if (contentScale == ContentScale.Crop) null else ratio
+                MediaDownloadCard(content.url, MediaKind.IMAGE, size, cardRatio, loadedImageModifier) { showImage.value = true }
             } else {
                 MediaDownloadRow(content.url, MediaKind.IMAGE, size, Modifier) { showImage.value = true }
             }
