@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.audio
 
+import com.vitorpamplona.amethyst.commons.service.MediaSizeCache
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.parseContentRangeTotal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,10 +43,21 @@ internal actual suspend fun IRoleBasedHttpClientBuilder.readMp4AudioOnly(url: St
                     when {
                         // Past the end of the file: an empty read, which ends the walk.
                         response.code == 416 -> ByteArray(0)
-                        response.code == 206 -> response.body.source().use { it.readAtMost(length) }
+                        response.code == 206 -> {
+                            // The first answer says how big the whole file is: a held-back placeholder shows it.
+                            if (offset == 0L) parseContentRangeTotal(response.header("Content-Range"))?.let { MediaSizeCache.put(url, it) }
+                            response.body.source().use { it.readAtMost(length) }
+                        }
                         // A server that ignores Range sends the whole file from the start. That still
                         // answers the first block; any later block would mean downloading the file.
-                        response.code == 200 && offset == 0L -> response.body.source().use { it.readAtMost(length) }
+                        response.code == 200 && offset == 0L -> {
+                            response
+                                .header("Content-Length")
+                                ?.toLongOrNull()
+                                ?.takeIf { it > 0 }
+                                ?.let { MediaSizeCache.put(url, it) }
+                            response.body.source().use { it.readAtMost(length) }
+                        }
                         else -> null
                     }
                 }

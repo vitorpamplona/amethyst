@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.audio
 
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
 /** What reading a media file's track list found. */
@@ -69,6 +70,9 @@ internal expect suspend fun IRoleBasedHttpClientBuilder.readMp4AudioOnly(url: St
 object MediaTrackProbeCache {
     private const val MAX_ENTRIES = 500
     private val entries = MutableStateFlow<Map<String, MediaTracks>>(emptyMap())
+
+    /** Every answer by URL, for code that waits on a probe it didn't start (the media size lookup). */
+    val answers: StateFlow<Map<String, MediaTracks>> = entries
 
     fun get(url: String): MediaTracks? = entries.value[url]
 
