@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.note.platform
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -35,6 +36,8 @@ import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.ui.cartridges.CartPlayOverlay
+import com.vitorpamplona.amethyst.commons.ui.cartridges.LocalMediaIsCart
+import com.vitorpamplona.amethyst.commons.ui.cartridges.rememberConfirmedCartUrl
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -68,9 +71,13 @@ fun ZoomableContentView(
 ) {
     val platform = LocalNotePlatform.current
     if (content is MediaUrlImage && CartDetector.mightBeCart(content.url, content.mimeType, content.dim)) {
-        Box {
-            platform.ZoomableContentView(content, images, roundedCorner, contentScale, accountViewModel)
-            CartPlayOverlay(content, accountViewModel, Modifier.matchParentSize())
+        val cartUrl = rememberConfirmedCartUrl(content, accountViewModel)
+        // Tells a held-back placeholder to leave the middle to the Play button.
+        CompositionLocalProvider(LocalMediaIsCart provides (cartUrl != null)) {
+            Box {
+                platform.ZoomableContentView(content, images, roundedCorner, contentScale, accountViewModel)
+                if (cartUrl != null) CartPlayOverlay(content, cartUrl, accountViewModel, Modifier.matchParentSize())
+            }
         }
     } else {
         platform.ZoomableContentView(content, images, roundedCorner, contentScale, accountViewModel)

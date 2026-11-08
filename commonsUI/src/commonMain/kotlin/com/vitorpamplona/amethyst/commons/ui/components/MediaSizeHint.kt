@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.MediaSizeCache
 import com.vitorpamplona.amethyst.commons.service.MediaSizeRole
 import com.vitorpamplona.amethyst.commons.service.resolveMediaSize
+import com.vitorpamplona.amethyst.commons.ui.cartridges.CartSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
@@ -203,7 +204,8 @@ fun IconWithSizeLabel(
 /**
  * A held-back file with no blurhash but a known shape: a plain card at that shape with the download
  * icon, "Video · 12.4 MB" and the host. Tapping anywhere loads it. With no [ratio] it fills the space
- * its parent gives it, as a grid cell does.
+ * its parent gives it, as a grid cell does. [underCartPlay] leaves the middle to a game cartridge's
+ * Play button and shows only the size under it.
  */
 @Composable
 fun MediaDownloadCard(
@@ -212,6 +214,7 @@ fun MediaDownloadCard(
     sizeBytes: Long?,
     ratio: Float?,
     modifier: Modifier,
+    underCartPlay: Boolean = false,
     onLoad: () -> Unit,
 ) {
     Box(
@@ -222,15 +225,19 @@ fun MediaDownloadCard(
                 .clickable(onClick = onLoad),
         contentAlignment = Alignment.Center,
     ) {
-        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(16.dp),
-            ) {
-                DownloadForOfflineIcon(Size50dp, MaterialTheme.colorScheme.onSurfaceVariant)
-                MediaSizeLabel(kind, sizeBytes)
-                HostText(url)
+        if (underCartPlay) {
+            CartSizeLabel(sizeBytes)
+        } else {
+            CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(16.dp),
+                ) {
+                    DownloadForOfflineIcon(Size50dp, MaterialTheme.colorScheme.onSurfaceVariant)
+                    MediaSizeLabel(kind, sizeBytes)
+                    HostText(url)
+                }
             }
         }
     }
