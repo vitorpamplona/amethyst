@@ -81,8 +81,8 @@ import com.vitorpamplona.amethyst.commons.resources.picture_in_picture
 import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.resources.playable_media_untitled
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.formatFileSize
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
 /*
  * The cards a playable file inside a post renders as, instead of a video player with no picture.
@@ -667,9 +667,4 @@ fun formatClock(millis: Long): String {
     val minutes = (seconds % 3600) / 60
     val secs = (seconds % 60).toString().padStart(2, '0')
     return if (hours > 0) "$hours:${minutes.toString().padStart(2, '0')}:$secs" else "$minutes:$secs"
-}
-
-fun formatFileSize(bytes: Long): String {
-    val tenthsOfMb = (bytes * 10 / 1_048_576.0).roundToInt()
-    return if (tenthsOfMb >= 10) "${tenthsOfMb / 10}.${tenthsOfMb % 10} MB" else "${(bytes / 1024.0).roundToInt()} KB"
 }

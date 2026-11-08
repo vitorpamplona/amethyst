@@ -21,11 +21,9 @@
 package com.vitorpamplona.amethyst.service.playback.composable
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,15 +39,20 @@ import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
-import com.vitorpamplona.amethyst.commons.ui.components.ImageUrlWithDownloadButton
+import com.vitorpamplona.amethyst.commons.ui.components.IconWithSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
+import com.vitorpamplona.amethyst.commons.ui.components.MediaDownloadCard
+import com.vitorpamplona.amethyst.commons.ui.components.MediaDownloadRow
 import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
+import com.vitorpamplona.amethyst.commons.ui.components.mediaKindOf
+import com.vitorpamplona.amethyst.commons.ui.components.rememberMediaSize
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.videoGalleryModifier
 import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.ui.components.unknownMediaAspectRatio
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -76,6 +79,8 @@ fun VideoView(
     isLiveStream: Boolean = false,
     hash: String? = null,
     captions: ImmutableList<CaptionTrack> = persistentListOf(),
+    // The size the event declares: a held-back placeholder shows it (else it asks the host).
+    sizeBytes: Long? = null,
 ) {
     val borderModifier =
         if (roundedCorner) {
@@ -86,7 +91,7 @@ fun VideoView(
             Modifier
         }
 
-    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel, thumbhash = thumbhash, isLiveStream = isLiveStream, hash = hash, captions = captions)
+    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel, thumbhash = thumbhash, isLiveStream = isLiveStream, hash = hash, captions = captions, sizeBytes = sizeBytes)
 }
 
 @Composable
@@ -111,6 +116,8 @@ fun VideoView(
     thumbhash: String? = null,
     hash: String? = null,
     captions: ImmutableList<CaptionTrack> = persistentListOf(),
+    // The size the event declares: a held-back placeholder shows it (else it asks the host).
+    sizeBytes: Long? = null,
 ) {
     val initialAutoStart = if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback()
     // Reset the manual-show toggle when the video URI changes so a recycled feed slot
@@ -166,6 +173,10 @@ fun VideoView(
         return
     }
 
+    // Only a held-back file asks the host for its size.
+    val kind = mediaKindOf(mimeType, videoUri)
+    val size = rememberMediaSize(videoUri, kind, accountViewModel, mimeType, sizeBytes, held = !automaticallyStartPlayback.value)
+
     if (blurhash == null && thumbhash == null) {
         val modifier =
             if (ratio != null && automaticallyStartPlayback.value) {
@@ -176,8 +187,14 @@ fun VideoView(
 
         Box(modifier) {
             if (!automaticallyStartPlayback.value) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
+                // The card fills the box the player will take, instead of a line floating in an empty
+                // area of that size. A video that declares no shape gets the same 16:9 the enclosing
+                // box falls back to; only audio, which has no frame, keeps the compact row.
+                val cardRatio = ratio ?: unknownMediaAspectRatio(mimeType, videoUri)
+                if (cardRatio != null) {
+                    MediaDownloadCard(videoUri, kind, size, cardRatio, borderModifier) { automaticallyStartPlayback.value = true }
+                } else {
+                    MediaDownloadRow(videoUri, kind, size, Modifier) { automaticallyStartPlayback.value = true }
                 }
             } else {
                 // Sized backdrop while the MediaController IPC is in flight and ContentFrame
@@ -237,11 +254,13 @@ fun VideoView(
             )
 
             if (!automaticallyStartPlayback.value) {
-                IconButton(
-                    modifier = Modifier.size(Size75dp),
-                    onClick = { automaticallyStartPlayback.value = true },
-                ) {
-                    DownloadForOfflineIcon(Size75dp, Color.White)
+                IconWithSizeLabel(kind, size) {
+                    IconButton(
+                        modifier = Modifier.size(Size75dp),
+                        onClick = { automaticallyStartPlayback.value = true },
+                    ) {
+                        DownloadForOfflineIcon(Size75dp, Color.White)
+                    }
                 }
             } else {
                 VideoViewInner(
