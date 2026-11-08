@@ -79,9 +79,8 @@ defaulted parameter breaks none of them.
   one currently drops it). Their ten call sites:
   - `RenderEncryptedFile.kt` (two calls) passes the kind-15 event's `size()`;
   - `NewGroupDMScreen.kt` (two) passes the upload result's `size` (`MediaUploadResult.size`);
-  - `RenderMarmotEncryptedMedia.kt` (four) and `CordnGroupChatScreen.kt` (two) pass a size if
-    their source type has one (the Marmot media `reference`, the Cordn `attachment`); if it
-    has none, they pass nothing.
+  - `RenderMarmotEncryptedMedia.kt` (four) and `CordnGroupChatScreen.kt` (two) pass nothing:
+    `EncryptedMediaReferenceV2`, `Mip04MediaMeta` and `CordnMediaAttachment` carry no size.
   Without one they fall back to `HEAD`, which answers with the ciphertext length, within a
   few bytes of the real size. A `HEAD` passes through `EncryptedBlobInterceptor` unharmed:
   the empty body fails to decrypt and the original response, headers intact, is returned.
@@ -93,7 +92,7 @@ In `commons/commonMain/.../service/MediaSizeProbe.kt`, after the `MediaTrackProb
 ```kotlin
 enum class MediaSizeRole { IMAGE, VIDEO, PREVIEW }   // picks okHttpClientForImage / ForVideo / ForPreview
 
-suspend fun IRoleBasedHttpClientBuilder.probeMediaSize(url: String, role: MediaSizeRole): Long?
+suspend fun IRoleBasedHttpClientBuilder.probeMediaSize(url: String, mimeType: String?, role: MediaSizeRole): Long?
 internal expect suspend fun IRoleBasedHttpClientBuilder.headContentLength(url: String, role: MediaSizeRole): Long?
 
 object MediaSizeCache   // 500 entries, readable from composition; stores misses too
@@ -141,9 +140,9 @@ kind. `MediaKind` (Image, Video, Audio, PDF) names the label's type word and map
 - Otherwise it reads `MediaSizeCache` and observes it, so a size recorded later by the track
   probe or by another placeholder appears without a request.
 - When the URL is one the track probe will read (`mayHoldVideo(mimeType, url)`) and the probe
-  has not answered yet (`MediaTrackProbeCache.get(url) == null`), it only waits on the cache.
-  Once the probe has answered without a size being recorded (a 200 instead of a 206, or the
-  size entry evicted), it falls through to `HEAD`.
+  has not answered yet (`MediaTrackProbeCache.get(url) == null`), it first waits for the probe's
+  answer, observed through a public `MediaTrackProbeCache.answers` flow. It sends a `HEAD`
+  only if the probe ended without recording a size (a failed read, or the size entry evicted).
 - Otherwise it starts `probeMediaSize` in a `LaunchedEffect(url)`, which is cancelled when the
   placeholder leaves composition.
 
@@ -153,7 +152,8 @@ scrolls past. A note that auto-downloads never reaches the hook and never sends 
 
 ### 4. UI (mockup option A, with the type)
 
-One shared label in `commonsUI` `MediaPlaceholders.kt`: `MediaSizeLabel(kind, sizeBytes)`.
+One shared label in a new `commonsUI` file, `ui/components/MediaSizeHint.kt`, next to
+`MediaPlaceholders.kt`: `MediaSizeLabel(kind, sizeBytes)`.
 It renders "Video · 12.4 MB", or "Video" while the size is unknown, and fades the size in when
 it arrives, with no spinner.
 
@@ -186,7 +186,7 @@ Move `formatFileSize` from `PlayableMediaCards.kt` to `commons/.../util/NumberFo
 and make it decimal (1 MB = 1,000,000 bytes, the unit Android's own file-size formatter uses)
 with a GB step. Bytes under 1 KB print as "1 KB"; KB is always whole; MB and GB get one decimal
 place below 100 and none from 100 up: "850 KB", "12.4 MB", "140 MB", "1.2 GB". It puts a
-no-break space (` `) between number and unit so the label never wraps there. The audio
+no-break space (`\u00A0`) between number and unit so the label never wraps there. The audio
 card and the new labels both use it. Switching the audio card from binary to decimal makes its
 numbers about 5 % larger and correct for the unit it prints. `formatBytes` and
 `countToHumanReadableBytes` are left as they are; merging them is out of scope.
@@ -208,10 +208,9 @@ numbers about 5 % larger and correct for the unit it prints. `formatBytes` and
 
 - `commons` `commonTest`: `RichTextParser` fills `sizeBytes` for an image, a video and a PDF
   from imeta and from a URL fragment.
-- `commons` `jvmTest`, driving `headContentLength` through a
-  `SingleRoleBasedHttpClientBuilder` whose OkHttp client has an interceptor that returns canned
-  responses and records requests (as `EncryptedCartDownloadTest` does; `commons` has no
-  MockWebServer):
+- `commons` `jvmTest`, driving `probeMediaSize` through a `SingleRoleBasedHttpClientBuilder`
+  against a JDK `HttpServer` that records each request (as `EncryptedCartDownloadTest` does;
+  `commons` has no MockWebServer):
   - a 200 with a length returns it, and the request method is `HEAD`;
   - a 403 with a body returns null;
   - a 200 without a length returns null;

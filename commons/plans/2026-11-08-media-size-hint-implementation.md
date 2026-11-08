@@ -14,11 +14,12 @@
 
 - No new dependencies. Tests use the JDK `HttpServer`, as `EncryptedCartDownloadTest` does; `commons` has no MockWebServer.
 - New strings go only in `commonsUI/src/commonMain/composeResources/values/strings.xml`, with positional arguments (`%1$s`), and are read with `stringRes(Res.string.x)`.
-- Log through Quartz's `Log` with the lambda form; never `android.util.Log`.
+- Log through Quartz's `Log`, never `android.util.Log`: the lambda form for interpolated messages, a plain string plus the throwable in a catch.
+- Never put a raw no-break space in source: write ` `.
 - No fully-qualified class names inline; import them.
 - Only a 2xx answer with a positive length counts as a size; anything else is a miss, never a guess.
 - Requests go through `okHttpClientForImage` / `okHttpClientForVideo` / `okHttpClientForPreview`, never a new client, so Tor routing applies.
-- Number format: decimal units, no-break space (` `) before the unit; under 1 KB → "1 KB"; KB whole; MB/GB one decimal below 100, none from 100 up.
+- Number format: decimal units, no-break space (`\u00A0`) before the unit; under 1 KB → "1 KB"; KB whole; MB/GB one decimal below 100, none from 100 up.
 - Run `./gradlew spotlessApply` before each commit that touches Kotlin.
 
 ## Review Focus
@@ -40,7 +41,7 @@
 - Test: `commons/src/commonTest/kotlin/com/vitorpamplona/amethyst/commons/richtext/RichTextParserSizeImetaTest.kt`
 
 **Interfaces:**
-- Produces: `MediaUrlContent.sizeBytes: Long?` (constructor parameter `sizeBytes: Long? = null`, last). `MediaUrlVideo` no longer declares its own `sizeBytes`; it passes its parameter to the base. `EncryptedMediaUrlImage` and `EncryptedMediaUrlVideo` take `sizeBytes: Long? = null` and pass it on.
+- Produces: `MediaUrlContent.sizeBytes: Long?` (constructor parameter `sizeBytes: Long? = null`, last). `MediaUrlImage`, `MediaUrlPdf` and `MediaUrlVideo` each take a plain `sizeBytes: Long? = null` constructor parameter (not a `val`; `MediaUrlVideo` drops its `val`) and forward it to the base by name. `EncryptedMediaUrlImage` and `EncryptedMediaUrlVideo` take `sizeBytes: Long? = null` and forward it by name; `MediaUrlImage`'s last positional parameter is `cartImetas`, so positional forwarding would land in the wrong slot.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -50,7 +51,8 @@ Same `parse(...)` helper shape as `RichTextParserAudioImetaTest`, with a `.jpg`,
 @Test fun imageSizeFromImeta()      // "m image/jpeg", "size 245000" → assertIs<MediaUrlImage>; sizeBytes == 245_000L
 @Test fun pdfSizeFromImeta()        // "m application/pdf", "size 2100000" → assertIs<MediaUrlPdf>; sizeBytes == 2_100_000L
 @Test fun videoSizeStillParsed()    // "m video/mp4", "size 12400000" → assertIs<MediaUrlVideo>; sizeBytes == 12_400_000L
-@Test fun sizeFromUrlFragment()     // url "…/a.jpg#size=300000", no imeta → sizeBytes == 300_000L (NIP-54 fragment wins)
+@Test fun sizeFromUrlFragment()     // RichTextParser().createMediaContent("https://h/a.jpg#size=300000", emptyMap(), null) → sizeBytes == 300_000L
+                                    // (calls createMediaContent directly: no existing test shows parseText keeps a #fragment)
 @Test fun garbageSizeIsNull()       // "size abc" → sizeBytes == null
 ```
 
@@ -61,13 +63,13 @@ Expected: compile failure (`sizeBytes` unresolved on `MediaUrlImage`/`MediaUrlPd
 
 - [ ] **Step 3: Move `sizeBytes` to `MediaUrlContent`; read `size` on the image and PDF branches**
 
-Use the same expression as the video branch (`(frags[SizeTag.TAG_NAME] ?: tags[SizeTag.TAG_NAME]?.firstOrNull())?.toLongOrNull()`), hoisted to one `val declaredSize` above the branches. Every existing `MediaUrl*` constructor call uses named arguments, so the new trailing parameter breaks none of them; `EncryptedMediaUrlVideo` passes `sizeBytes = sizeBytes` by name.
+Use the same expression as the video branch (`(frags[SizeTag.TAG_NAME] ?: tags[SizeTag.TAG_NAME]?.firstOrNull())?.toLongOrNull()`), hoisted to one `val declaredSize` above the branches. Every existing `MediaUrl*` constructor call uses named arguments, so the new trailing parameter breaks none of them. Reads of `MediaUrlVideo.sizeBytes` elsewhere (`PlayableAudioView`) keep working through the inherited property.
 
 - [ ] **Step 4: Feed the encrypted call sites**
 
-- `RenderEncryptedFile.kt`: `sizeBytes = noteEvent.size()?.toLongOrNull()`. Check what `size()` returns in the quartz version in `gradle/libs.versions.toml`; drop the `toLongOrNull` if it is already a number.
-- `NewGroupDMScreen.kt`: `sizeBytes = data.result.size` (`MediaUploadResult.size: Long?`).
-- `RenderMarmotEncryptedMedia.kt`, `CordnGroupChatScreen.kt`: pass a size if `reference` / `attachment` has a size field; otherwise leave the default.
+- `RenderEncryptedFile.kt` (both calls): `sizeBytes = noteEvent.size()?.toLong()`. `size()` returns `Int?` (`SizeTag.parse`).
+- `NewGroupDMScreen.kt` (both calls): `sizeBytes = data.result.size` (`MediaUploadResult.size: Long?`).
+- `RenderMarmotEncryptedMedia.kt`, `CordnGroupChatScreen.kt`: no change. `EncryptedMediaReferenceV2`, `Mip04MediaMeta` and `CordnMediaAttachment` carry no size, so these fall back to `HEAD`.
 
 - [ ] **Step 5: Run the new test, the audio-imeta test and compile commonsUI**
 
@@ -89,12 +91,13 @@ git commit -m "feat: carry the declared file size on every media model"
 **Files:**
 - Modify: `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/util/NumberFormatters.kt`
 - Modify: `commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/audio/player/PlayableMediaCards.kt:672-675` (delete the old function, import the new one)
+- Modify: `commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/note/creators/uploads/MediaQualitySlider.kt:66` (repoint the import)
 - Test: `commons/src/commonTest/kotlin/com/vitorpamplona/amethyst/commons/util/FormatFileSizeTest.kt`
 
 **Interfaces:**
 - Produces: `fun formatFileSize(bytes: Long): String` in package `com.vitorpamplona.amethyst.commons.util`.
 
-- [ ] **Step 1: Write the failing test** (`NBSP = " "`)
+- [ ] **Step 1: Write the failing test** (`NBSP = "\u00A0"`)
 
 ```kotlin
 @Test fun underOneKb()   { assertEquals("1${NBSP}KB", formatFileSize(0)); assertEquals("1${NBSP}KB", formatFileSize(999)) }
@@ -115,7 +118,7 @@ Common code has no `String.format`: build the one decimal from integer tenths, a
 
 - [ ] **Step 4: Point the audio card at it**
 
-Delete `formatFileSize` from `PlayableMediaCards.kt`. Import the `commons.util` one in `PlayableMediaCards.kt` and in `commonsUI/.../audio/player/PlayableMediaCardPreviews.kt` if it calls the function.
+Delete `formatFileSize` from `PlayableMediaCards.kt`. Import the `commons.util` one there (`fileFacts`, line 121) and in `MediaQualitySlider.kt` (import at 66, call at 529), the only two callers.
 
 - [ ] **Step 5: Run the test and compile**
 
@@ -138,7 +141,8 @@ git commit -m "refactor: one decimal file-size formatter, shared from commons"
 - Create: `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/service/MediaSizeProbe.kt`
 - Create: `commons/src/jvmAndroid/kotlin/com/vitorpamplona/amethyst/commons/service/MediaSizeProbe.jvmAndroid.kt`
 - Create: `commons/src/iosMain/kotlin/com/vitorpamplona/amethyst/commons/service/MediaSizeProbe.ios.kt`
-- Modify: `commons/src/jvmAndroid/kotlin/com/vitorpamplona/amethyst/commons/audio/MediaTrackProbe.jvmAndroid.kt` (206 branch)
+- Modify: `commons/src/jvmAndroid/kotlin/com/vitorpamplona/amethyst/commons/audio/MediaTrackProbe.jvmAndroid.kt` (206 and 200 arms)
+- Modify: `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/audio/MediaTrackProbe.kt` (`MediaTrackProbeCache.answers`)
 - Test: `commons/src/commonTest/kotlin/com/vitorpamplona/amethyst/commons/service/ContentRangeTest.kt`
 - Test: `commons/src/jvmTest/kotlin/com/vitorpamplona/amethyst/commons/service/MediaSizeProbeTest.kt`
 
@@ -163,7 +167,7 @@ git commit -m "refactor: one decimal file-size formatter, shared from commons"
 
 A JDK `HttpServer` on `127.0.0.1:0` with one context per scenario; each records the request method. Clients come from `SingleRoleBasedHttpClientBuilder(OkHttpClient())`. Call `MediaSizeCache.clear()` in `@BeforeTest`.
 
-For `HEAD`, the JDK server may rewrite or warn about `Content-Length`. Set the header yourself in `responseHeaders` and call `sendResponseHeaders(code, -1)`. If the header is still dropped, answer with raw HTTP over a `ServerSocket`, as `LocalBlossomCacheTorRoutingTest` does.
+For `HEAD`, the JDK server sends no `Content-Length` of its own and keeps the one the handler puts in `responseHeaders`. So set the header yourself and call `sendResponseHeaders(code, -1)`. The default executor runs every handler on one thread, so the sleeping handler in `cancelledProbeCachesNothing` would block the other contexts: give that test its own server, or set `server.executor = Executors.newCachedThreadPool()`. Use `runBlocking`, not `runTest`: this is real IO and needs no virtual time.
 
 ```kotlin
 @Test fun lengthFromHead()             // 200 + Content-Length 245000 → 245_000L; recorded method == "HEAD"
@@ -197,7 +201,7 @@ Cancellation propagates out of step 3 before `put` runs, so nothing is cached. `
 
 `jvmAndroid`, in `withContext(Dispatchers.IO)`:
 - pick the client by role (`IMAGE` → `okHttpClientForImage`, `VIDEO` → `okHttpClientForVideo`, `PREVIEW` → `okHttpClientForPreview`);
-- send `Request.Builder().url(url).head().header("Accept-Encoding", "identity")` with `executeAsync()`;
+- send `Request.Builder().url(url).head().header("Accept-Encoding", "identity")` with `executeAsync()` (`import okhttp3.coroutines.executeAsync`, as `MediaServerHealth.kt` does);
 - return the length only when `response.isSuccessful`, `Content-Encoding` is absent and `Content-Length` parses to > 0;
 - rethrow `CancellationException`; any other exception → `Log.d(TAG, "size probe failed", e)` (a plain string: the throwable overload has no lambda form) and null.
 
@@ -205,9 +209,13 @@ iOS: `= null`.
 
 - [ ] **Step 6: Feed the cache from the track probe**
 
-In `MediaTrackProbe.jvmAndroid.kt`, on the `response.code == 206` branch, before reading the body:
-`parseContentRangeTotal(response.header("Content-Range"))?.let { MediaSizeCache.put(url, it) }`.
-Never put a miss here: the `HEAD` fallback in Task 4 handles a probe that found no size.
+In `MediaTrackProbe.jvmAndroid.kt`, inside the per-block lambda and only for `offset == 0L`, record a size before reading the body:
+- a 206: `parseContentRangeTotal(response.header("Content-Range"))`;
+- a 200 (the server ignored Range): `Content-Length` when > 0.
+
+Turn the `when` arms into blocks for this. Never put a miss here: the `HEAD` fallback in Task 4 handles a probe that found no size.
+
+Also expose the track cache's answers for Task 4: in `commons/src/commonMain/.../audio/MediaTrackProbe.kt`, add `val answers: StateFlow<Map<String, MediaTracks>> = entries` to `MediaTrackProbeCache`. Its `entries` is a private `MutableStateFlow`, which `snapshotFlow` cannot observe.
 
 - [ ] **Step 7: Run the tests**
 
@@ -234,7 +242,7 @@ git commit -m "feat: probe media size with HEAD and record the track probe's Con
 - Consumes: Task 1 `MediaUrlContent.sizeBytes`, Task 2 `formatFileSize`, Task 3 `MediaSizeRole`, `MediaSizeCache`, `probeMediaSize`; `mayHoldVideo(mimeType, url)` and `MediaTrackProbeCache` from `commons.audio`; `OmniboxInput.hostOf(url)` from `commons.browser`.
 - Produces:
   - `enum class MediaKind(val role: MediaSizeRole) { IMAGE(MediaSizeRole.IMAGE), VIDEO(MediaSizeRole.VIDEO), AUDIO(MediaSizeRole.VIDEO), PDF(MediaSizeRole.PREVIEW) }`
-  - `fun MediaUrlContent.mediaKind(): MediaKind`: Image, PDF, or `MediaUrlVideo` → AUDIO when `RichTextParser.isAudioContent(mimeType, url)`, else VIDEO.
+  - `fun MediaUrlContent.mediaKind(): MediaKind`: `MediaUrlImage` → IMAGE, `MediaUrlPdf` → PDF, `MediaUrlVideo` → AUDIO when `RichTextParser.isAudioContent(mimeType, url)` else VIDEO, `else` → IMAGE (the base class is abstract, so the `when` needs an `else`).
   - `@Composable fun rememberMediaSize(url: String, mimeType: String?, declaredSize: Long?, kind: MediaKind, accountViewModel: AccountViewModel): Long?`
   - `@Composable fun rememberMediaSize(content: MediaUrlContent, accountViewModel: AccountViewModel): Long?`
   - `@Composable fun MediaSizeLabel(kind: MediaKind, sizeBytes: Long?, modifier: Modifier = Modifier, showKind: Boolean = true, pill: Boolean = false)`
@@ -269,8 +277,11 @@ Expected: compile failure.
 
 `rememberMediaSize(url, mimeType, declaredSize, kind, accountViewModel)`:
 - If `declaredSize != null`, return it.
-- Otherwise collect `MediaSizeCache.entries` (`collectAsState`) and read this URL's entry through `MediaSizeCache.get(url)`, so a size recorded later appears.
-- In `LaunchedEffect(url)`: if the URL is unanswered, and either `!mayHoldVideo(mimeType, url)` or `MediaTrackProbeCache.get(url) != null`, call `accountViewModel.httpClientBuilder.probeMediaSize(url, mimeType, kind.role)`. If `mayHoldVideo` is true and the track probe hasn't answered, wait on `snapshotFlow { MediaTrackProbeCache.get(url) }.first { it != null }`, then probe if still unanswered.
+- Otherwise observe only this URL's entry, so one answer doesn't recompose every placeholder in the feed (the pattern `desktopApp/.../media/AudioPlayer.kt:72-76` uses):
+  `remember(url) { MediaSizeCache.entries.map { it[url]?.takeIf { v -> v > 0 } }.distinctUntilChanged() }.collectAsState(MediaSizeCache.get(url))`.
+- In `LaunchedEffect(url)`:
+  - if `mayHoldVideo(mimeType, url)` and `MediaTrackProbeCache.get(url) == null`, first wait on `MediaTrackProbeCache.answers.map { it[url] }.first { it != null }`;
+  - then, if `!MediaSizeCache.isAnswered(url)`, call `accountViewModel.httpClientBuilder.probeMediaSize(url, mimeType, kind.role)`.
 
 `MediaSizeLabel`:
 - shows `stringRes(Res.string.media_type_and_size, kindWord, formatFileSize(size))` when the size is known and `showKind`;
@@ -278,7 +289,7 @@ Expected: compile failure.
 - puts the size part inside `AnimatedVisibility(fadeIn())`;
 - with `pill = true`, draws it on a translucent black rounded background with white text (mockup A).
 
-`MediaDownloadCard` / `MediaDownloadRow` follow mockups C and D: `MaterialTheme.colorScheme.surfaceVariant` surface, `DownloadForOfflineIcon`, the label, and the host (`OmniboxInput.hostOf(url)`) in `onSurfaceVariant`. The whole surface is clickable → `onLoad`.
+`MediaDownloadCard` / `MediaDownloadRow` follow mockups C and D: `MaterialTheme.colorScheme.surfaceVariant` surface, `DownloadForOfflineIcon`, the label, and the host (`OmniboxInput.hostOf(url) ?: url`; it returns `String?`) in `onSurfaceVariant`. The whole surface is clickable → `onLoad`. `MediaDownloadCard` applies `aspectRatio(ratio)` itself, so it fills its slot even where the parent sets no ratio.
 
 - [ ] **Step 5: Run the test and compile**
 
@@ -363,11 +374,11 @@ In both not-shown boxes, add `rememberMediaSize(imageUrl, null, null, MediaKind.
 
 - [ ] **Step 2: `PlaceholderPdfCard`**
 
-Pass `accountViewModel` in from `PdfPreviewCard`. The subtitle becomes `"${stringRes(Res.string.pdf_tap_to_load)} · ${formatFileSize(size)}"` once `rememberMediaSize(content, accountViewModel)` returns a size (kind PDF → role `PREVIEW`).
+Pass `accountViewModel` in from `PdfPreviewCard`. Once `rememberMediaSize(content, accountViewModel)` returns a size (kind PDF → role `PREVIEW`), the subtitle becomes `stringRes(Res.string.media_type_and_size, stringRes(Res.string.pdf_tap_to_load), formatFileSize(size))`.
 
 - [ ] **Step 3: Gallery tile**
 
-In the not-shown branches of `UrlImageView`, add `MediaSizeLabel(content.mediaKind(), size, showKind = false, pill = true)` under the icon.
+In the not-shown branches of `UrlImageView`, add `val size = rememberMediaSize(content, accountViewModel)` and `MediaSizeLabel(content.mediaKind(), size, showKind = false, pill = true)` under the icon.
 
 - [ ] **Step 4: Compile**
 
@@ -399,7 +410,7 @@ git commit -m "feat: size hint on cover images, PDF cards and gallery tiles"
 
 - `DesktopNotePlatform.kt:241`: `sizeBytes = if (!accountViewModel.settings.startVideoPlayback()) video?.let { rememberMediaSize(it, accountViewModel) } else null`. `video` is null for a `MediaLocalVideo`, which needs no hint.
 - `DesktopNotePlatform.kt:225`: `sizeBytes = video?.let { rememberMediaSize(it, accountViewModel) }`.
-- Both download buttons in `DesktopVideoPlayer` get `MediaSizeLabel(MediaKind.VIDEO, sizeBytes, pill = true)` beneath them.
+- Both download buttons in `DesktopVideoPlayer` get `MediaSizeLabel(MediaKind.VIDEO, sizeBytes, pill = true)` beneath them. In `ChromiumRoutedVideo` the same button turns into Play once `loaded`, so show the label only while `!loaded`. `ChromiumRoutedVideo` is private and called positionally at `DesktopVideoPlayer.kt:153`: add the argument there too.
 - `AudioPlayer` uses `sizeBytes` in `AudioCardInfo`, and in its `remember` keys.
 
 - [ ] **Step 2: Compile**
@@ -433,7 +444,7 @@ Expected: all tests pass; lint clean.
 
 - [ ] **Step 2: Mark the spec implemented**
 
-Set Status to "implemented 2026-11-xx; Android checked on device, Desktop headless", or say what was not checked, and update the README row to match.
+Set Status to "implemented 2026-11-xx; Android checked on device, Desktop headless", or say what was not checked, and update the README row to match. If the build departed from the spec anywhere, record it in the spec.
 
 - [ ] **Step 3: Commit**
 
