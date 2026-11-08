@@ -15,7 +15,7 @@
 - No new dependencies. Tests use the JDK `HttpServer`, as `EncryptedCartDownloadTest` does; `commons` has no MockWebServer.
 - New strings go only in `commonsUI/src/commonMain/composeResources/values/strings.xml`, with positional arguments (`%1$s`), and are read with `stringRes(Res.string.x)`.
 - Log through Quartz's `Log`, never `android.util.Log`: the lambda form for interpolated messages, a plain string plus the throwable in a catch.
-- Never put a raw no-break space in source: write ` `.
+- Never put a raw no-break space in source: write `\u00A0`.
 - No fully-qualified class names inline; import them.
 - Only a 2xx answer with a positive length counts as a size; anything else is a miss, never a guess.
 - Requests go through `okHttpClientForImage` / `okHttpClientForVideo` / `okHttpClientForPreview`, never a new client, so Tor routing applies.
@@ -24,11 +24,11 @@
 
 ## Review Focus
 
-1. **A `HEAD` that redirects to a CDN on another host** should report the final file's length. Pinned in Task 3 (`redirectIsFollowed`).
-2. **`Content-Length: 0`**, which some servers send for `HEAD`, should be a miss, not "0 KB". Pinned in Task 3 (`zeroLengthIsAMiss`).
-3. **Files over 2 GB** (long videos) must not overflow: parsing and formatting use `Long`. Pinned in Task 2 (`gigabytes`) and Task 3 (`lengthAboveIntRange`).
-4. **Scrolling away mid-request** must not cache a miss, or the size never appears when the user scrolls back. Pinned in Task 3 (`cancelledProbeCachesNothing`).
-5. **`Content-Range: bytes 0-1/*`** (unknown total) must record nothing rather than crash or cache a bogus size. Pinned in Task 3 (`contentRangeWithUnknownTotal`).
+1. **An `.mp4` that no track probe ever reads** (gallery tiles, cover images, a probe cancelled by scrolling) must still get its size, from a `HEAD` after a bounded wait, instead of waiting forever. Pinned in Task 3 (`resolveWaitsThenFallsBackToHead`).
+2. **A `HEAD` that redirects to a CDN on another host** should report the final file's length. Pinned in Task 3 (`redirectIsFollowed`).
+3. **`Content-Length: 0`**, which some servers send for `HEAD`, should be a miss, not "0 KB". Pinned in Task 3 (`zeroLengthIsAMiss`).
+4. **Files over 2 GB** (long videos) must not overflow: parsing and formatting use `Long`. Pinned in Task 2 (`gigabytes`) and Task 3 (`lengthAboveIntRange`).
+5. **Scrolling away mid-request** must not cache a miss, or the size never appears when the user scrolls back. Pinned in Task 3 (`cancelledProbeCachesNothing`).
 
 ---
 
@@ -63,12 +63,12 @@ Expected: compile failure (`sizeBytes` unresolved on `MediaUrlImage`/`MediaUrlPd
 
 - [ ] **Step 3: Move `sizeBytes` to `MediaUrlContent`; read `size` on the image and PDF branches**
 
-Use the same expression as the video branch (`(frags[SizeTag.TAG_NAME] ?: tags[SizeTag.TAG_NAME]?.firstOrNull())?.toLongOrNull()`), hoisted to one `val declaredSize` above the branches. Every existing `MediaUrl*` constructor call uses named arguments, so the new trailing parameter breaks none of them. Reads of `MediaUrlVideo.sizeBytes` elsewhere (`PlayableAudioView`) keep working through the inherited property.
+Use the same expression as the video branch (`(frags[SizeTag.TAG_NAME] ?: tags[SizeTag.TAG_NAME]?.firstOrNull())?.toLongOrNull()`), hoisted to one `val declaredSize` above the branches. Every existing `MediaUrl*` constructor call uses named arguments, so the new trailing parameter breaks none of them. Reads of `MediaUrlVideo.sizeBytes` elsewhere (`PlayableAudioView`) keep working through the inherited property. Move the comment at `MediaContentModels.kt:125` ("The imeta `size`…") to the base property and reword it for every media type.
 
 - [ ] **Step 4: Feed the encrypted call sites**
 
 - `RenderEncryptedFile.kt` (both calls): `sizeBytes = noteEvent.size()?.toLong()`. `size()` returns `Int?` (`SizeTag.parse`).
-- `NewGroupDMScreen.kt` (both calls): `sizeBytes = data.result.size` (`MediaUploadResult.size: Long?`).
+- `NewGroupDMScreen.kt` (both calls): `sizeBytes = data.result.fileHeader.size.toLong()`. `data.result` is `UploadOrchestrator.OrchestratorResult.ServerResult`, and `FileHeader.size` is an `Int`.
 - `RenderMarmotEncryptedMedia.kt`, `CordnGroupChatScreen.kt`: no change. `EncryptedMediaReferenceV2`, `Mip04MediaMeta` and `CordnMediaAttachment` carry no size, so these fall back to `HEAD`.
 
 - [ ] **Step 5: Run the new test, the audio-imeta test and compile commonsUI**
@@ -151,6 +151,7 @@ git commit -m "refactor: one decimal file-size formatter, shared from commons"
   - `enum class MediaSizeRole { IMAGE, VIDEO, PREVIEW }`
   - `object MediaSizeCache { val entries: StateFlow<Map<String, Long>>; fun get(url: String): Long?; fun isAnswered(url: String): Boolean; fun put(url: String, size: Long?); fun clear() }`. A miss is stored internally as `-1L`; `get` returns null for a miss or an unknown URL, and `isAnswered` tells the two apart. 500 entries, copy-on-write like `MediaTrackProbeCache`; `clear()` exists for tests.
   - `suspend fun IRoleBasedHttpClientBuilder.probeMediaSize(url: String, mimeType: String?, role: MediaSizeRole): Long?`
+  - `suspend fun IRoleBasedHttpClientBuilder.resolveMediaSize(url: String, mimeType: String?, role: MediaSizeRole, trackProbeWaitMs: Long = 2_000): Long?`. This is what the UI calls: it waits for the track probe when one may be coming, then falls back to `probeMediaSize`.
   - `internal expect suspend fun IRoleBasedHttpClientBuilder.headContentLength(url: String, role: MediaSizeRole): Long?`
   - `fun parseContentRangeTotal(header: String?): Long?`
 
@@ -165,14 +166,14 @@ git commit -m "refactor: one decimal file-size formatter, shared from commons"
 
 - [ ] **Step 2: Write the failing JVM test (`MediaSizeProbeTest`)**
 
-A JDK `HttpServer` on `127.0.0.1:0` with one context per scenario; each records the request method. Clients come from `SingleRoleBasedHttpClientBuilder(OkHttpClient())`. Call `MediaSizeCache.clear()` in `@BeforeTest`.
+A JDK `HttpServer` on `127.0.0.1:0` with one context per scenario; each records the request method. Clients come from `SingleRoleBasedHttpClientBuilder(OkHttpClient())`. Call `MediaSizeCache.clear()` in `@BeforeTest`. `MediaTrackProbeCache` has no `clear()`, so give every test its own URL path; that keeps track answers from leaking between tests.
 
 For `HEAD`, the JDK server sends no `Content-Length` of its own and keeps the one the handler puts in `responseHeaders`. So set the header yourself and call `sendResponseHeaders(code, -1)`. The default executor runs every handler on one thread, so the sleeping handler in `cancelledProbeCachesNothing` would block the other contexts: give that test its own server, or set `server.executor = Executors.newCachedThreadPool()`. Use `runBlocking`, not `runTest`: this is real IO and needs no virtual time.
 
 ```kotlin
 @Test fun lengthFromHead()             // 200 + Content-Length 245000 → 245_000L; recorded method == "HEAD"
-@Test fun errorPageIsAMiss()           // 403 with a 5615-byte body → null; MediaSizeCache.isAnswered(url) == true
-@Test fun noLengthIsAMiss()            // 200, chunked (sendResponseHeaders(200, 0)) → null
+@Test fun errorPageIsAMiss()           // 403 + Content-Length 5615, write nothing (a HEAD body throws) → null; MediaSizeCache.isAnswered(url) == true
+@Test fun noLengthIsAMiss()            // 200 with no Content-Length header (sendResponseHeaders(200, 0)) → null
 @Test fun zeroLengthIsAMiss()          // 200 + Content-Length 0 → null
 @Test fun encodedIsAMiss()             // 200 + Content-Length 900 + Content-Encoding gzip → null
 @Test fun lengthAboveIntRange()        // 200 + Content-Length 5000000000 (set via header; HEAD has no body) → 5_000_000_000L
@@ -181,6 +182,12 @@ For `HEAD`, the JDK server sends no `Content-Length` of its own and keeps the on
 @Test fun nonHttpMakesNoRequest()      // probeMediaSize("blossom:abc…", …) → null, 0 requests, not cached
 @Test fun hlsMakesNoRequest()          // "…/live.m3u8" → null, 0 requests
 @Test fun cancelledProbeCachesNothing()// server sleeps 2 s; launch probe, cancel after 100 ms → isAnswered(url) == false
+@Test fun trackProbeRecordsContentRange()   // GET handler answers Range with 206 + Content-Range "bytes 0-N/12400000" + N+1 bytes;
+                                            // clients.probeMediaTracks(url, "video/mp4") → MediaSizeCache.get(url) == 12_400_000L
+@Test fun resolveWaitsThenFallsBackToHead() // "…/a.mp4", nobody track-probes; resolveMediaSize(url, "video/mp4", VIDEO, trackProbeWaitMs = 100)
+                                            // → HEAD sent, length returned (the gallery-tile case: no track probe ever starts)
+@Test fun resolveUsesTrackProbeSize()       // MediaTrackProbeCache.put(url, HAS_VIDEO); MediaSizeCache.put(url, 999) → resolveMediaSize returns 999, 0 requests
+@Test fun resolveSkipsWaitForNonMp4()       // "…/a.jpg", IMAGE, trackProbeWaitMs = 10_000 → returns well under 10 s with the HEAD length
 ```
 
 - [ ] **Step 3: Run both and watch them fail**
@@ -195,7 +202,13 @@ Expected: compile failure (symbols missing).
 2. If the URL doesn't start with `http://` or `https://`, or `isHlsMedia(url, mimeType)`, return null without caching.
 3. Otherwise call `headContentLength`, `put` the result (a null result is a miss) and return it.
 
-Cancellation propagates out of step 3 before `put` runs, so nothing is cached. `parseContentRangeTotal` takes the text after the last `/` and returns it as a positive `Long`; `*`, garbage and 0 give null.
+Cancellation propagates out of step 3 before `put` runs, so nothing is cached.
+
+`resolveMediaSize`:
+1. If `mayHoldVideo(mimeType, url)` and `MediaTrackProbeCache.get(url) == null`, wait up to `trackProbeWaitMs` with `withTimeoutOrNull(trackProbeWaitMs) { MediaTrackProbeCache.answers.map { it[url] }.first { it != null } }`. The timeout matters: gallery tiles, `MyAsyncImage` and a probe cancelled by scrolling never record an answer.
+2. If `MediaSizeCache.isAnswered(url)`, return `get(url)`; otherwise return `probeMediaSize(url, mimeType, role)`.
+
+`parseContentRangeTotal` takes the text after the last `/` and returns it as a positive `Long`; `*`, garbage and 0 give null.
 
 - [ ] **Step 5: Implement the `jvmAndroid` actual and the iOS stub**
 
@@ -215,7 +228,7 @@ In `MediaTrackProbe.jvmAndroid.kt`, inside the per-block lambda and only for `of
 
 Turn the `when` arms into blocks for this. Never put a miss here: the `HEAD` fallback in Task 4 handles a probe that found no size.
 
-Also expose the track cache's answers for Task 4: in `commons/src/commonMain/.../audio/MediaTrackProbe.kt`, add `val answers: StateFlow<Map<String, MediaTracks>> = entries` to `MediaTrackProbeCache`. Its `entries` is a private `MutableStateFlow`, which `snapshotFlow` cannot observe.
+Also expose the track cache's answers for `resolveMediaSize` (Step 4): in `commons/src/commonMain/.../audio/MediaTrackProbe.kt`, add `val answers: StateFlow<Map<String, MediaTracks>> = entries` to `MediaTrackProbeCache`. Its `entries` is a private `MutableStateFlow`, which `snapshotFlow` cannot observe.
 
 - [ ] **Step 7: Run the tests**
 
@@ -239,7 +252,7 @@ git commit -m "feat: probe media size with HEAD and record the track probe's Con
 - Test: `commonsUI/src/jvmTest/kotlin/com/vitorpamplona/amethyst/commons/ui/components/MediaSizeKindTest.kt`
 
 **Interfaces:**
-- Consumes: Task 1 `MediaUrlContent.sizeBytes`, Task 2 `formatFileSize`, Task 3 `MediaSizeRole`, `MediaSizeCache`, `probeMediaSize`; `mayHoldVideo(mimeType, url)` and `MediaTrackProbeCache` from `commons.audio`; `OmniboxInput.hostOf(url)` from `commons.browser`.
+- Consumes: Task 1 `MediaUrlContent.sizeBytes`, Task 2 `formatFileSize`, Task 3 `MediaSizeRole`, `MediaSizeCache`, `resolveMediaSize`; `OmniboxInput.hostOf(url)` from `commons.browser`.
 - Produces:
   - `enum class MediaKind(val role: MediaSizeRole) { IMAGE(MediaSizeRole.IMAGE), VIDEO(MediaSizeRole.VIDEO), AUDIO(MediaSizeRole.VIDEO), PDF(MediaSizeRole.PREVIEW) }`
   - `fun MediaUrlContent.mediaKind(): MediaKind`: `MediaUrlImage` → IMAGE, `MediaUrlPdf` → PDF, `MediaUrlVideo` → AUDIO when `RichTextParser.isAudioContent(mimeType, url)` else VIDEO, `else` → IMAGE (the base class is abstract, so the `when` needs an `else`).
@@ -277,16 +290,14 @@ Expected: compile failure.
 
 `rememberMediaSize(url, mimeType, declaredSize, kind, accountViewModel)`:
 - If `declaredSize != null`, return it.
-- Otherwise observe only this URL's entry, so one answer doesn't recompose every placeholder in the feed (the pattern `desktopApp/.../media/AudioPlayer.kt:72-76` uses):
+- Otherwise, inside `key(url) { … }` so a recycled feed slot never flashes the previous URL's size, observe only this URL's entry, so one answer doesn't recompose every placeholder in the feed (the pattern `desktopApp/.../media/AudioPlayer.kt:72-76` uses):
   `remember(url) { MediaSizeCache.entries.map { it[url]?.takeIf { v -> v > 0 } }.distinctUntilChanged() }.collectAsState(MediaSizeCache.get(url))`.
-- In `LaunchedEffect(url)`:
-  - if `mayHoldVideo(mimeType, url)` and `MediaTrackProbeCache.get(url) == null`, first wait on `MediaTrackProbeCache.answers.map { it[url] }.first { it != null }`;
-  - then, if `!MediaSizeCache.isAnswered(url)`, call `accountViewModel.httpClientBuilder.probeMediaSize(url, mimeType, kind.role)`.
+- And in `LaunchedEffect(url)`, call `accountViewModel.httpClientBuilder.resolveMediaSize(url, mimeType, kind.role)`. The cache flow delivers the answer.
 
 `MediaSizeLabel`:
 - shows `stringRes(Res.string.media_type_and_size, kindWord, formatFileSize(size))` when the size is known and `showKind`;
 - shows the size alone when `!showKind`, and the kind word alone while the size is null;
-- puts the size part inside `AnimatedVisibility(fadeIn())`;
+- wraps the one `Text` in `AnimatedContent(targetState = sizeBytes)` with `fadeIn() togetherWith fadeOut()`, so the change from "Video" to "Video · 12.4 MB" fades. Half of a formatted string cannot fade on its own.
 - with `pill = true`, draws it on a translucent black rounded background with white text (mockup A).
 
 `MediaDownloadCard` / `MediaDownloadRow` follow mockups C and D: `MaterialTheme.colorScheme.surfaceVariant` surface, `DownloadForOfflineIcon`, the label, and the host (`OmniboxInput.hostOf(url) ?: url`; it returns `String?`) in `onSurfaceVariant`. The whole surface is clickable → `onLoad`. `MediaDownloadCard` applies `aspectRatio(ratio)` itself, so it fills its slot even where the parent sets no ratio.
@@ -332,7 +343,9 @@ Add `sizeBytes: Long? = null` to both overloads, and pass `sizeBytes = content.s
 
 - [ ] **Step 3: Audio card**
 
-In `PlayableAudioView`, `val size = rememberMediaSize(content, accountViewModel)`, use `sizeBytes = size` in `AudioCardInfo`, and add `size` to the `remember` keys.
+The audio card is composed whatever the setting is, so probe only when the setting holds media back:
+`val size = if (accountViewModel.settings.startVideoPlayback()) content.sizeBytes else rememberMediaSize(content, accountViewModel)`.
+Use `sizeBytes = size` in `AudioCardInfo`, and add `size` to the `remember` keys.
 
 - [ ] **Step 4: Compile and lint**
 
@@ -400,7 +413,7 @@ git commit -m "feat: size hint on cover images, PDF cards and gallery tiles"
 **Files:**
 - Modify: `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/ui/media/DesktopVideoPlayer.kt` (signature 126-149; native button 397-414; Chromium button 616-634)
 - Modify: `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/ui/media/AudioPlayer.kt:57-95`
-- Modify: `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/app/DesktopNotePlatform.kt:225,241`
+- Modify: `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/app/DesktopNotePlatform.kt:225,241,450,618`
 
 **Interfaces:**
 - Consumes: Task 4 hook, label and `MediaKind`.
@@ -410,6 +423,8 @@ git commit -m "feat: size hint on cover images, PDF cards and gallery tiles"
 
 - `DesktopNotePlatform.kt:241`: `sizeBytes = if (!accountViewModel.settings.startVideoPlayback()) video?.let { rememberMediaSize(it, accountViewModel) } else null`. `video` is null for a `MediaLocalVideo`, which needs no hint.
 - `DesktopNotePlatform.kt:225`: `sizeBytes = video?.let { rememberMediaSize(it, accountViewModel) }`.
+- `DesktopNotePlatform.kt:450` (the `VideoView` port's `DesktopVideoPlayer`): `sizeBytes = if (!accountViewModel.settings.startVideoPlayback()) rememberMediaSize(videoUri, mimeType, null, MediaKind.VIDEO, accountViewModel) else null`.
+- `DesktopNotePlatform.kt:618` (`AudioPlayer` in `NoteMediaView`): `sizeBytes = rememberMediaSize(mediaUri, null, null, MediaKind.AUDIO, accountViewModel)`.
 - Both download buttons in `DesktopVideoPlayer` get `MediaSizeLabel(MediaKind.VIDEO, sizeBytes, pill = true)` beneath them. In `ChromiumRoutedVideo` the same button turns into Play once `loaded`, so show the label only while `!loaded`. `ChromiumRoutedVideo` is private and called positionally at `DesktopVideoPlayer.kt:153`: add the argument there too.
 - `AudioPlayer` uses `sizeBytes` in `AudioCardInfo`, and in its `remember` keys.
 

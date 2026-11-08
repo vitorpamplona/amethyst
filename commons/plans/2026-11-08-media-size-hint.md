@@ -78,7 +78,7 @@ defaulted parameter breaks none of them.
 - `EncryptedMediaUrlImage` and `EncryptedMediaUrlVideo` gain a `sizeBytes` parameter (the video
   one currently drops it). Their ten call sites:
   - `RenderEncryptedFile.kt` (two calls) passes the kind-15 event's `size()`;
-  - `NewGroupDMScreen.kt` (two) passes the upload result's `size` (`MediaUploadResult.size`);
+  - `NewGroupDMScreen.kt` (two) passes the uploaded file's size (`data.result.fileHeader.size`);
   - `RenderMarmotEncryptedMedia.kt` (four) and `CordnGroupChatScreen.kt` (two) pass nothing:
     `EncryptedMediaReferenceV2`, `Mip04MediaMeta` and `CordnMediaAttachment` carry no size.
   Without one they fall back to `HEAD`, which answers with the ciphertext length, within a
@@ -92,11 +92,19 @@ In `commons/commonMain/.../service/MediaSizeProbe.kt`, after the `MediaTrackProb
 ```kotlin
 enum class MediaSizeRole { IMAGE, VIDEO, PREVIEW }   // picks okHttpClientForImage / ForVideo / ForPreview
 
+suspend fun IRoleBasedHttpClientBuilder.resolveMediaSize(url: String, mimeType: String?, role: MediaSizeRole, trackProbeWaitMs: Long = 2_000): Long?
 suspend fun IRoleBasedHttpClientBuilder.probeMediaSize(url: String, mimeType: String?, role: MediaSizeRole): Long?
 internal expect suspend fun IRoleBasedHttpClientBuilder.headContentLength(url: String, role: MediaSizeRole): Long?
 
 object MediaSizeCache   // 500 entries, readable from composition; stores misses too
 ```
+
+`resolveMediaSize` is what the UI calls. When the URL is one the MP4 track probe may read
+(`mayHoldVideo(mimeType, url)`) and that probe has not answered yet, it first waits for the
+answer, observed through a public `MediaTrackProbeCache.answers` flow, for at most
+`trackProbeWaitMs`. The limit matters: gallery tiles, cover images and a probe cancelled by
+scrolling never record an answer, and an unbounded wait would leave the size blank forever.
+Then it returns the cached size if there is one, and otherwise calls `probeMediaSize`.
 
 `probeMediaSize`:
 - returns a cached answer (hit or miss) without a request;
@@ -119,8 +127,9 @@ cancellation can break.
 The iOS actual returns null.
 
 **The track probe feeds the same cache.** `readMp4AudioOnly` (`MediaTrackProbe.jvmAndroid.kt`)
-records the total from the first 206 answer's `Content-Range` into `MediaSizeCache`. Its
-existing requests are unchanged.
+records the total from its first answer into `MediaSizeCache`: the `Content-Range` total of
+a 206, or the `Content-Length` of a 200 when the server ignored the range. Its existing
+requests are unchanged.
 
 Known limits, accepted:
 - `BlossomReadAuthInterceptor` retries only `GET`, so a host that requires read auth answers
@@ -137,18 +146,17 @@ kind. `MediaKind` (Image, Video, Audio, PDF) names the label's type word and map
 `MediaSizeRole` (Audio uses the video client, PDF the preview client).
 
 - With `declaredSize` set, it returns that at once and sends nothing.
-- Otherwise it reads `MediaSizeCache` and observes it, so a size recorded later by the track
-  probe or by another placeholder appears without a request.
-- When the URL is one the track probe will read (`mayHoldVideo(mimeType, url)`) and the probe
-  has not answered yet (`MediaTrackProbeCache.get(url) == null`), it first waits for the probe's
-  answer, observed through a public `MediaTrackProbeCache.answers` flow. It sends a `HEAD`
-  only if the probe ended without recording a size (a failed read, or the size entry evicted).
-- Otherwise it starts `probeMediaSize` in a `LaunchedEffect(url)`, which is cancelled when the
+- Otherwise it observes only this URL's entry in `MediaSizeCache`, so a size recorded later by
+  the track probe or by another placeholder appears, and one answer doesn't recompose every
+  placeholder in the feed.
+- It calls `resolveMediaSize` in a `LaunchedEffect(url)`, which is cancelled when the
   placeholder leaves composition.
 
 Placeholders exist only while auto-download holds media back. A lazy feed composes them for
 the items on screen plus the few it prefetches, so the request count follows what the user
-scrolls past. A note that auto-downloads never reaches the hook and never sends a `HEAD`.
+scrolls past. A note that auto-downloads never reaches the hook and never sends a `HEAD`. The
+audio card is the exception: it is drawn whatever the setting is, so it calls the hook only
+while the setting holds media back, and otherwise shows the declared size alone.
 
 ### 4. UI (mockup option A, with the type)
 
@@ -167,7 +175,8 @@ it arrives, with no spinner.
 | Profile gallery tile | Blur + icon, or icon | Same, plus the size alone ("12.4 MB"): a grid tile has no room for the type |
 | Desktop video `loadOnDemand` | Download button | Download button + label beneath it |
 | Audio card, Android | "MP3 · 4.8 MB" from imeta only | Same, falling back to the hook |
-| Audio card, Desktop | No size (`sizeBytes = null`) | `AudioPlayer` gains a `sizeBytes` parameter, fed by the hook from its `DesktopNotePlatform` callers |
+| Audio card, Desktop | No size (`sizeBytes = null`) | `AudioPlayer` gains a `sizeBytes` parameter, fed by the hook from the two `DesktopNotePlatform` callers that draw note media (`ZoomableContentView` and `NoteMediaView`) |
+| Desktop `VideoView` port | Download button | Same label, fed by the hook while video loading is off |
 
 The label's type word comes from the content's class and MIME type: Image, Video, Audio, PDF.
 `MyAsyncImage` always says Image. New keys in `commonsUI` `composeResources/values/strings.xml`:
@@ -196,7 +205,7 @@ numbers about 5 % larger and correct for the unit it prints. `formatBytes` and
 | Situation | Result |
 |---|---|
 | Size declared in the event | Shown on the first frame, no request |
-| MP4 video the track probe reads | Size appears when the probe's first range answer lands; `HEAD` only if the probe ends without one |
+| MP4 video the track probe reads | Size appears when the probe's first answer lands; `HEAD` if the probe ends without one or hasn't answered within 2 s |
 | `HEAD` in flight | Type only; size fades in |
 | Non-2xx (403 error page, 404, 401 read auth, 405 `HEAD` not allowed) | Type only, cached as a miss |
 | 2xx without `Content-Length`, or with `Content-Encoding` | Type only, cached as a miss |
@@ -216,7 +225,12 @@ numbers about 5 % larger and correct for the unit it prints. `formatBytes` and
   - a 200 without a length returns null;
   - a 200 with `Content-Encoding: gzip` returns null;
   - `probeMediaSize` makes no request for a cached URL, a `blossom:` URI or an `.m3u8`.
-- The track probe records the `Content-Range` total from a 206 (same interceptor approach).
+- The track probe records the `Content-Range` total from a 206 (same `HttpServer` approach).
+- `resolveMediaSize`:
+  - it uses a size the track probe recorded;
+  - it falls back to `HEAD` after the wait when no track probe ever answers (the gallery-tile
+    case);
+  - it doesn't wait for a URL the track probe never reads.
 - `formatFileSize`: under 1 KB, the KB/MB/GB boundaries and the 100 cut-off, decimal units.
 - Manual, Android device with auto-download off:
   - a Primal video note (no blur, `dim` known);
