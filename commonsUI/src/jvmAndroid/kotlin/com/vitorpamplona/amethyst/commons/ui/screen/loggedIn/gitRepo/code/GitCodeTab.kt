@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitFileEditor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
@@ -637,7 +638,7 @@ private fun LazyListScope.contentSearchResults(
         matches == null ->
             item(key = "text-search-progress") {
                 GitLoadingBox(
-                    if (search.total > 0) stringRes(Res.string.git_search_progress, search.read, search.total) else stringRes(Res.string.git_repo_code_loading),
+                    if (search.total > 0) pluralStringRes(Res.plurals.git_search_progress, search.total, search.read, search.total) else stringRes(Res.string.git_repo_code_loading),
                     Modifier.fillParentMaxWidth(),
                 )
             }

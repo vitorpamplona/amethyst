@@ -656,6 +656,9 @@ fun ShowImageUploadGallery(
                         thumbhash =
                             data.result.fileHeader.thumbHash
                                 ?.thumbhash,
+                        sizeBytes =
+                            data.result.fileHeader.size
+                                .toLong(),
                     )
                 } else {
                     EncryptedMediaUrlVideo(
@@ -674,6 +677,9 @@ fun ShowImageUploadGallery(
                         thumbhash =
                             data.result.fileHeader.thumbHash
                                 ?.thumbhash,
+                        sizeBytes =
+                            data.result.fileHeader.size
+                                .toLong(),
                     )
                 }
             } else {

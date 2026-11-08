@@ -52,8 +52,11 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isHl
 import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
+import com.vitorpamplona.amethyst.commons.ui.components.IconWithSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.commons.ui.components.mediaKind
+import com.vitorpamplona.amethyst.commons.ui.components.rememberMediaSize
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.commons.ui.note.elements.BannerImage
@@ -289,13 +292,10 @@ fun UrlImageView(
                     defaultModifier.clickable { showImage.value = true },
                     thumbhash = content.thumbhash,
                 )
-                Icon(
-                    symbol = MaterialSymbols.PlayCircleOutline,
-                    contentDescription = stringRes(id = Res.string.play),
-                    modifier = Size50Modifier,
-                    tint = Color.White,
-                )
-            } else {
+            }
+            // A grid tile has no room for the type word: the size alone, under the icon.
+            val size = rememberMediaSize(content, accountViewModel)
+            IconWithSizeLabel(content.mediaKind(), size, showKind = false) {
                 Icon(
                     symbol = MaterialSymbols.PlayCircleOutline,
                     contentDescription = stringRes(id = Res.string.play),

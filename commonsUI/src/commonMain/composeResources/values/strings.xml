@@ -2878,7 +2878,10 @@
     </plurals>
     <string name="git_search_names">File names</string>
     <string name="git_search_text">Text in files</string>
-    <string name="git_search_progress">Searching %1$d of %2$d files…</string>
+    <plurals name="git_search_progress">
+        <item quantity="one">Searching %1$d of %2$d file…</item>
+        <item quantity="other">Searching %1$d of %2$d files…</item>
+    </plurals>
     <string name="git_diff_unified">Unified</string>
     <string name="git_diff_split">Split</string>
     <string name="git_review_resolve">Resolve</string>
@@ -9443,4 +9446,9 @@
     <string name="highlight_source_doi">DOI %1$s</string>
     <string name="highlight_source_isan">ISAN %1$s</string>
     <string name="highlight_source_more_from">Notes and highlights about %1$s</string>
+    <string name="media_kind_image">Image</string>
+    <string name="media_kind_video">Video</string>
+    <string name="media_kind_audio">Audio</string>
+    <string name="media_kind_pdf">PDF</string>
+    <string name="media_type_and_size">%1$s · %2$s</string>
 </resources>

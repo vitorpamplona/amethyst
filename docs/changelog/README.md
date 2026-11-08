@@ -2,6 +2,7 @@
 
 Release notes for Amethyst, one file per version. Files are named with zero-padded version numbers so they sort correctly in any file browser. Use [`TEMPLATE.md`](TEMPLATE.md) as the starting point for the next release.
 
+- [v1.22.0 — A Code Forge, Navigation Layouts, Chat Layouts, and Wallet Backups](v1.22.00.md)
 - [v1.21.0 — Apps in Notes, drss.io Listening, Post Layouts, and Pico 8](v1.21.00.md)
 - [v1.20.0 — Desktop Self-Update, an Emoji Picker, Hand-Drawn Posts, and Developer Tools](v1.20.00.md)
 - [v1.19.0 — A New Login, Remote Signers on Android, Wayland, and Marketplace Cards](v1.19.00.md)
