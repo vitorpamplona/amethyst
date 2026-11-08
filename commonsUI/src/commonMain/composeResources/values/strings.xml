@@ -2878,7 +2878,10 @@
     </plurals>
     <string name="git_search_names">File names</string>
     <string name="git_search_text">Text in files</string>
-    <string name="git_search_progress">Searching %1$d of %2$d files…</string>
+    <plurals name="git_search_progress">
+        <item quantity="one">Searching %1$d of %2$d file…</item>
+        <item quantity="other">Searching %1$d of %2$d files…</item>
+    </plurals>
     <string name="git_diff_unified">Unified</string>
     <string name="git_diff_split">Split</string>
     <string name="git_review_resolve">Resolve</string>
