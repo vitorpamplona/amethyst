@@ -68,6 +68,14 @@ class RichTextParserSizeImetaTest {
     }
 
     @Test
+    fun zeroOrNegativeSizeIsNull() {
+        // Some uploaders write `size 0` for "unknown": it must not read "1 KB" or stop the HEAD fallback.
+        assertNull(assertIs<MediaUrlImage>(parse("https://example.com/photo.jpg", "m image/jpeg", "size 0")).sizeBytes)
+        assertNull(MediaUrlVideo("https://example.com/clip.mp4", sizeBytes = -5).sizeBytes)
+        assertNull(EncryptedMediaUrlImage("https://example.com/e", encryptionAlgo = "aes-gcm", encryptionKey = ByteArray(32), encryptionNonce = ByteArray(12), sizeBytes = 0).sizeBytes)
+    }
+
+    @Test
     fun garbageSizeIsNull() {
         val media = parse("https://example.com/photo.jpg", "m image/jpeg", "size abc")
         assertIs<MediaUrlImage>(media)

@@ -50,12 +50,16 @@ abstract class MediaUrlContent(
     mimeType: String? = null,
     thumbhash: String? = null,
     val authorPubKey: String? = null,
+    sizeBytes: Long? = null,
+) : BaseMediaContent(description, dim, blurhash, thumbhash) {
     /**
      * The file's size in bytes as the event declares it (imeta or URL fragment `size`, or a file
      * message's `size` tag): a held-back placeholder and the audio card show it before anything loads.
+     * Zero or less means the uploader didn't know; kept as null so the placeholder asks the host
+     * instead of showing "1 KB".
      */
-    val sizeBytes: Long? = null,
-) : BaseMediaContent(description, dim, blurhash, thumbhash) {
+    val sizeBytes: Long? = sizeBytes?.takeIf { it > 0 }
+
     /**
      * Repaired at construction rather than at each of the eight call sites that build a model from
      * an author-supplied `m` tag — a bare subtype reaching this field is what puts `Intent.type =
