@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.IconButton
@@ -141,23 +142,17 @@ fun MyAsyncImage(
                     }
                 }
             } else {
-                if (ratio != null) {
-                    Box(loadedImageModifier.aspectRatio(ratio), contentAlignment = Alignment.Center) {
+                // A cover or banner carries no declared size: only a held-back one asks the host.
+                val size = rememberMediaSize(imageUrl, null, null, MediaKind.IMAGE, accountViewModel)
+                Box(loadedImageModifier.aspectRatio(ratio ?: (16 / 9.0f)), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         IconButton(
                             modifier = Modifier.size(Size75dp),
                             onClick = { showImage.value = true },
                         ) {
                             DownloadForOfflineIcon(Size75dp, MaterialTheme.colorScheme.onBackground)
                         }
-                    }
-                } else {
-                    Box(loadedImageModifier.aspectRatio(16 / 9.0f), contentAlignment = Alignment.Center) {
-                        IconButton(
-                            modifier = Modifier.size(Size75dp),
-                            onClick = { showImage.value = true },
-                        ) {
-                            DownloadForOfflineIcon(Size75dp, MaterialTheme.colorScheme.onBackground)
-                        }
+                        MediaSizeLabel(MediaKind.IMAGE, size, color = MaterialTheme.colorScheme.onBackground)
                     }
                 }
             }

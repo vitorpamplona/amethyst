@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.gallery
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -53,7 +54,10 @@ import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.components.MediaSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.commons.ui.components.mediaKind
+import com.vitorpamplona.amethyst.commons.ui.components.rememberMediaSize
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.commons.ui.note.elements.BannerImage
@@ -289,19 +293,17 @@ fun UrlImageView(
                     defaultModifier.clickable { showImage.value = true },
                     thumbhash = content.thumbhash,
                 )
+            }
+            // A grid tile has no room for the type word: the size alone, under the icon.
+            val size = rememberMediaSize(content, accountViewModel)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
                     symbol = MaterialSymbols.PlayCircleOutline,
                     contentDescription = stringRes(id = Res.string.play),
                     modifier = Size50Modifier,
                     tint = Color.White,
                 )
-            } else {
-                Icon(
-                    symbol = MaterialSymbols.PlayCircleOutline,
-                    contentDescription = stringRes(id = Res.string.play),
-                    modifier = Size50Modifier,
-                    tint = Color.White,
-                )
+                MediaSizeLabel(content.mediaKind(), size, showKind = false, pill = true)
             }
         }
     }
