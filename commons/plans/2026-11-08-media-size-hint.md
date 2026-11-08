@@ -1,13 +1,18 @@
 # Media size hint when auto-download is off
 
 Status: implemented 2026-11-08 on `feat/media-size-hint` (plan:
-`2026-11-08-media-size-hint-implementation.md`). Unit tests and the pre-push checks pass. Not yet
-checked by eye: no Android device was attached, and the headless Desktop run needs Xvfb, which the
-macOS host lacks.
+`2026-11-08-media-size-hint-implementation.md`). Unit tests and the pre-push checks pass. Checked on
+an Android emulator and a Pixel 9a: images, videos, audio, PDFs, gallery tiles, long-form covers,
+game carts, encrypted and plain DM images, offline recovery and Tor. Not run on Desktop: the
+headless run needs Xvfb, which the macOS host lacks.
 
 Where the build departs from the text below:
 - `MediaSizeLabel` takes an optional `color`, so the label reads on the neutral cards.
 - The Desktop audio card asks for a size only while media is held back, like the Android one.
+- A video with no declared shape gets the 16:9 card its box falls back to, and a grid cell gets a
+  card that fills it; both were found on the emulator.
+- A held-back game cartridge shows the cart's Play button with the size under it, not the
+  download icon under Play.
 
 ## Goal
 
