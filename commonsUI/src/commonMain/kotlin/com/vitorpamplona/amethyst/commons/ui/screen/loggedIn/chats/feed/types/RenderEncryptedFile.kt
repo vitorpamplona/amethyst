@@ -102,6 +102,7 @@ fun RenderEncryptedFile(
                         encryptionKey = key,
                         encryptionNonce = nonce,
                         thumbhash = noteEvent.thumbhash(),
+                        sizeBytes = noteEvent.size()?.toLong(),
                     )
                 } else {
                     EncryptedMediaUrlVideo(
@@ -117,6 +118,7 @@ fun RenderEncryptedFile(
                         encryptionKey = key,
                         encryptionNonce = nonce,
                         thumbhash = noteEvent.thumbhash(),
+                        sizeBytes = noteEvent.size()?.toLong(),
                     )
                 },
             )

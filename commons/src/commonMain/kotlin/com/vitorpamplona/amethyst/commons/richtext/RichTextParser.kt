@@ -71,6 +71,7 @@ class RichTextParser {
         // and forcing a URL-preview round-trip to rediscover a type the imeta already declared —
         // which is why classifyMedia falls back to the extension before giving up.
         val kind = classifyMedia(fullUrl, contentType)
+        val declaredSize = (frags[SizeTag.TAG_NAME] ?: tags[SizeTag.TAG_NAME]?.firstOrNull())?.toLongOrNull()
 
         return if (kind == MediaContentKind.IMAGE) {
             MediaUrlImage(
@@ -85,6 +86,7 @@ class RichTextParser {
                 thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
                 authorPubKey = authorPubKey,
                 cartImetas = cartImetas,
+                sizeBytes = declaredSize,
             )
         } else if (kind == MediaContentKind.VIDEO) {
             MediaUrlVideo(
@@ -102,7 +104,7 @@ class RichTextParser {
                 mimeType = contentType,
                 thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
                 authorPubKey = authorPubKey,
-                sizeBytes = (frags[SizeTag.TAG_NAME] ?: tags[SizeTag.TAG_NAME]?.firstOrNull())?.toLongOrNull(),
+                sizeBytes = declaredSize,
                 waveform = (frags[WaveformTag.TAG_NAME] ?: tags[WaveformTag.TAG_NAME]?.firstOrNull())?.let { WaveformTag.parseWave(it) },
                 durationSeconds = (frags[DurationTag.TAG_NAME] ?: tags[DurationTag.TAG_NAME]?.firstOrNull())?.toDoubleOrNull()?.takeIf { it > 0 },
             )
@@ -117,6 +119,7 @@ class RichTextParser {
                 mimeType = contentType,
                 thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
                 authorPubKey = authorPubKey,
+                sizeBytes = declaredSize,
             )
         } else {
             null
