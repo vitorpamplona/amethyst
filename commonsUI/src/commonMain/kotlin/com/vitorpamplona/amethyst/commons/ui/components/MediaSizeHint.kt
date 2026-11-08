@@ -34,9 +34,11 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -81,11 +83,17 @@ enum class MediaKind(
     PDF(MediaSizeRole.PREVIEW),
 }
 
+/** Audio or video, for a file the player handles: the one rule every player placeholder uses. */
+fun mediaKindOf(
+    mimeType: String?,
+    url: String,
+): MediaKind = if (RichTextParser.isAudioContent(mimeType, url)) MediaKind.AUDIO else MediaKind.VIDEO
+
 fun MediaUrlContent.mediaKind(): MediaKind =
     when (this) {
         is MediaUrlImage -> MediaKind.IMAGE
         is MediaUrlPdf -> MediaKind.PDF
-        is MediaUrlVideo -> if (RichTextParser.isAudioContent(mimeType, url)) MediaKind.AUDIO else MediaKind.VIDEO
+        is MediaUrlVideo -> mediaKindOf(mimeType, url)
         else -> MediaKind.IMAGE
     }
 
@@ -103,17 +111,19 @@ private fun MediaKind.word(): String =
 /**
  * The size of a file the user hasn't loaded: the one the event declares, else one learned without
  * downloading it (see [resolveMediaSize]). Null until known, and for good when the host won't say.
- * Call it only where the file is held back, so a file that loads anyway is never asked about.
+ * Only a [held] file is asked about: pass false where the file loads anyway, and the declared size,
+ * if any, is all it gets.
  */
 @Composable
 fun rememberMediaSize(
     url: String,
-    mimeType: String?,
-    declaredSize: Long?,
     kind: MediaKind,
     accountViewModel: AccountViewModel,
+    mimeType: String? = null,
+    declaredSize: Long? = null,
+    held: Boolean = true,
 ): Long? {
-    if (declaredSize != null) return declaredSize
+    if (declaredSize != null || !held) return declaredSize
     // Keyed by the URL so a recycled feed slot never shows the previous file's size for a frame.
     return key(url) {
         // Only this URL's entry: an answer for another file doesn't recompose this placeholder.
@@ -129,11 +139,13 @@ fun rememberMediaSize(
 fun rememberMediaSize(
     content: MediaUrlContent,
     accountViewModel: AccountViewModel,
-): Long? = rememberMediaSize(content.url, content.mimeType, content.sizeBytes, content.mediaKind(), accountViewModel)
+    held: Boolean = true,
+): Long? = rememberMediaSize(content.url, content.mediaKind(), accountViewModel, content.mimeType, content.sizeBytes, held)
 
 /**
  * "Video · 12.4 MB", or "Video" until the size is known; with [showKind] off, the size alone. The size
- * fades in when it arrives. [pill] draws it on a dark translucent pill, for use over a blurhash.
+ * fades in when it arrives. [pill] draws it on a dark translucent pill, for use over a blurhash; without
+ * it the text takes the surrounding content color.
  */
 @Composable
 fun MediaSizeLabel(
@@ -142,7 +154,6 @@ fun MediaSizeLabel(
     modifier: Modifier = Modifier,
     showKind: Boolean = true,
     pill: Boolean = false,
-    color: Color = Color.Unspecified,
 ) {
     val word = kind.word()
     AnimatedContent(
@@ -157,20 +168,34 @@ fun MediaSizeLabel(
                 else -> formatFileSize(size)
             }
         if (text != null) {
-            if (pill) {
-                Text(
-                    text = text,
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier =
+            Text(
+                text = text,
+                color = if (pill) Color.White else Color.Unspecified,
+                style = MaterialTheme.typography.labelLarge,
+                modifier =
+                    if (pill) {
                         Modifier
                             .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(50))
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                )
-            } else {
-                Text(text = text, color = color, style = MaterialTheme.typography.labelLarge)
-            }
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    } else {
+                        Modifier
+                    },
+            )
         }
+    }
+}
+
+/** A placeholder's load [icon] with the file's size in a pill under it (mockup A). */
+@Composable
+fun IconWithSizeLabel(
+    kind: MediaKind,
+    sizeBytes: Long?,
+    showKind: Boolean = true,
+    icon: @Composable () -> Unit,
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        icon()
+        MediaSizeLabel(kind, sizeBytes, showKind = showKind, pill = true)
     }
 }
 
@@ -195,14 +220,16 @@ fun MediaDownloadCard(
                 .clickable(onClick = onLoad),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(16.dp),
-        ) {
-            DownloadForOfflineIcon(Size50dp, MaterialTheme.colorScheme.onSurfaceVariant)
-            MediaSizeLabel(kind, sizeBytes, color = MaterialTheme.colorScheme.onSurface)
-            HostText(url)
+        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(16.dp),
+            ) {
+                DownloadForOfflineIcon(Size50dp, MaterialTheme.colorScheme.onSurfaceVariant)
+                MediaSizeLabel(kind, sizeBytes)
+                HostText(url)
+            }
         }
     }
 }
@@ -230,9 +257,11 @@ fun MediaDownloadRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         DownloadForOfflineIcon(Size35dp)
-        Column {
-            MediaSizeLabel(kind, sizeBytes, color = MaterialTheme.colorScheme.onSurface)
-            HostText(url)
+        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
+            Column {
+                MediaSizeLabel(kind, sizeBytes)
+                HostText(url)
+            }
         }
     }
 }

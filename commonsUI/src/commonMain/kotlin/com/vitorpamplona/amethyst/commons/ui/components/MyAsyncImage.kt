@@ -143,7 +143,7 @@ fun MyAsyncImage(
                 }
             } else {
                 // A cover or banner carries no declared size: only a held-back one asks the host.
-                val size = rememberMediaSize(imageUrl, null, null, MediaKind.IMAGE, accountViewModel)
+                val size = rememberMediaSize(imageUrl, MediaKind.IMAGE, accountViewModel)
                 Box(loadedImageModifier.aspectRatio(ratio ?: (16 / 9.0f)), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         IconButton(
@@ -152,7 +152,7 @@ fun MyAsyncImage(
                         ) {
                             DownloadForOfflineIcon(Size75dp, MaterialTheme.colorScheme.onBackground)
                         }
-                        MediaSizeLabel(MediaKind.IMAGE, size, color = MaterialTheme.colorScheme.onBackground)
+                        MediaSizeLabel(MediaKind.IMAGE, size)
                     }
                 }
             }

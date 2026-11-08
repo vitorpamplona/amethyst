@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service.playback.composable
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,12 +39,12 @@ import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
+import com.vitorpamplona.amethyst.commons.ui.components.IconWithSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.MediaDownloadCard
 import com.vitorpamplona.amethyst.commons.ui.components.MediaDownloadRow
-import com.vitorpamplona.amethyst.commons.ui.components.MediaKind
-import com.vitorpamplona.amethyst.commons.ui.components.MediaSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
+import com.vitorpamplona.amethyst.commons.ui.components.mediaKindOf
 import com.vitorpamplona.amethyst.commons.ui.components.rememberMediaSize
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp
@@ -173,6 +172,10 @@ fun VideoView(
         return
     }
 
+    // Only a held-back file asks the host for its size.
+    val kind = mediaKindOf(mimeType, videoUri)
+    val size = rememberMediaSize(videoUri, kind, accountViewModel, mimeType, sizeBytes, held = !automaticallyStartPlayback.value)
+
     if (blurhash == null && thumbhash == null) {
         val modifier =
             if (ratio != null && automaticallyStartPlayback.value) {
@@ -183,8 +186,6 @@ fun VideoView(
 
         Box(modifier) {
             if (!automaticallyStartPlayback.value) {
-                val kind = if (RichTextParser.isAudioContent(mimeType, videoUri)) MediaKind.AUDIO else MediaKind.VIDEO
-                val size = rememberMediaSize(videoUri, mimeType, sizeBytes, kind, accountViewModel)
                 // With a known shape the card fills the box the player will take, instead of a URL line
                 // floating in an empty area of that size.
                 if (ratio != null) {
@@ -250,16 +251,13 @@ fun VideoView(
             )
 
             if (!automaticallyStartPlayback.value) {
-                val kind = if (RichTextParser.isAudioContent(mimeType, videoUri)) MediaKind.AUDIO else MediaKind.VIDEO
-                val size = rememberMediaSize(videoUri, mimeType, sizeBytes, kind, accountViewModel)
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                IconWithSizeLabel(kind, size) {
                     IconButton(
                         modifier = Modifier.size(Size75dp),
                         onClick = { automaticallyStartPlayback.value = true },
                     ) {
                         DownloadForOfflineIcon(Size75dp, Color.White)
                     }
-                    MediaSizeLabel(kind, size, pill = true)
                 }
             } else {
                 VideoViewInner(

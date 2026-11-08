@@ -63,16 +63,19 @@ object MediaSizeCache {
         url: String,
         size: Long?,
     ) {
+        val stored = size?.takeIf { it > 0 } ?: MISS
+        // The track probe re-reports a size it already gave: don't copy the map for nothing.
+        if (state.value[url] == stored) return
         state.update { current ->
             val next = LinkedHashMap(current)
             next.remove(url)
-            next[url] = size?.takeIf { it > 0 } ?: MISS
+            next[url] = stored
             while (next.size > MAX_ENTRIES) next.remove(next.keys.first())
             next
         }
     }
 
-    fun clear() {
+    internal fun clear() {
         state.value = emptyMap()
     }
 }
@@ -89,10 +92,11 @@ suspend fun IRoleBasedHttpClientBuilder.resolveMediaSize(
     role: MediaSizeRole,
     trackProbeWaitMs: Long = 2_000,
 ): Long? {
+    if (MediaSizeCache.isAnswered(url)) return MediaSizeCache.get(url)
     if (mayHoldVideo(mimeType, url) && MediaTrackProbeCache.get(url) == null) {
         withTimeoutOrNull(trackProbeWaitMs) { MediaTrackProbeCache.answers.map { it[url] }.first { it != null } }
     }
-    if (MediaSizeCache.isAnswered(url)) return MediaSizeCache.get(url)
+    // Answers from the cache when the track probe recorded a size meanwhile.
     return probeMediaSize(url, mimeType, role)
 }
 

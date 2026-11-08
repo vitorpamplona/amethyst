@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.components.mediaKindOf
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfViewerContent
 import com.vitorpamplona.amethyst.commons.ui.components.rememberCaptureLoadingTracker
@@ -233,7 +234,7 @@ object DesktopNotePlatform : NotePlatform {
                         waveform = video.waveform?.let { WaveformData(it) },
                         artworkUrl = video.artworkUri,
                         // Ask the host only while media is held back, as on Android.
-                        sizeBytes = if (accountViewModel.settings.startVideoPlayback()) video.sizeBytes else rememberMediaSize(video, accountViewModel),
+                        sizeBytes = rememberMediaSize(video, accountViewModel, held = !accountViewModel.settings.startVideoPlayback()),
                     )
                     return
                 }
@@ -256,7 +257,7 @@ object DesktopNotePlatform : NotePlatform {
                     autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
                     pauseWhenHidden = true,
                     loadOnDemand = !accountViewModel.settings.startVideoPlayback(),
-                    sizeBytes = if (!accountViewModel.settings.startVideoPlayback()) video?.let { rememberMediaSize(it, accountViewModel) } else null,
+                    sizeBytes = video?.let { rememberMediaSize(it, accountViewModel, held = !accountViewModel.settings.startVideoPlayback()) },
                 )
             }
 
@@ -463,7 +464,7 @@ object DesktopNotePlatform : NotePlatform {
             autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
             pauseWhenHidden = true,
             loadOnDemand = !accountViewModel.settings.startVideoPlayback(),
-            sizeBytes = if (!accountViewModel.settings.startVideoPlayback()) rememberMediaSize(videoUri, mimeType, null, MediaKind.VIDEO, accountViewModel) else null,
+            sizeBytes = rememberMediaSize(videoUri, mediaKindOf(mimeType, videoUri), accountViewModel, mimeType, held = !accountViewModel.settings.startVideoPlayback()),
         )
     }
 
@@ -628,7 +629,7 @@ object DesktopNotePlatform : NotePlatform {
                 artist = note.author?.toBestDisplayName(),
                 waveform = waveform,
                 artworkUrl = coverUri,
-                sizeBytes = if (!accountViewModel.settings.startVideoPlayback()) rememberMediaSize(mediaUri, null, null, MediaKind.AUDIO, accountViewModel) else null,
+                sizeBytes = rememberMediaSize(mediaUri, MediaKind.AUDIO, accountViewModel, held = !accountViewModel.settings.startVideoPlayback()),
             )
         } else {
             VideoView(

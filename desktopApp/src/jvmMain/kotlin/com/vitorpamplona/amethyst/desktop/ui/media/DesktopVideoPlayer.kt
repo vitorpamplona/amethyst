@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed
 import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.resources.video_error_open_in_default_player
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
+import com.vitorpamplona.amethyst.commons.ui.components.IconWithSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.LocalShortVideo
 import com.vitorpamplona.amethyst.commons.ui.components.MediaKind
 import com.vitorpamplona.amethyst.commons.ui.components.MediaSizeLabel
@@ -399,7 +400,7 @@ fun DesktopVideoPlayer(
             contentAlignment = Alignment.Center,
         ) {
             if (!loaded) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                IconWithSizeLabel(MediaKind.VIDEO, sizeBytes) {
                     IconButton(
                         onClick = {
                             loaded = true
@@ -415,7 +416,6 @@ fun DesktopVideoPlayer(
                             modifier = Modifier.size(75.dp),
                         )
                     }
-                    MediaSizeLabel(MediaKind.VIDEO, sizeBytes, pill = true)
                 }
                 return@Box
             }

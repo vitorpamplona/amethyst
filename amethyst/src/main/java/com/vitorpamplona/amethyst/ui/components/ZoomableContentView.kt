@@ -28,7 +28,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -104,6 +103,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayUrlWithLoadingSymbol
+import com.vitorpamplona.amethyst.commons.ui.components.IconWithSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.commons.ui.components.InformationDialog
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
@@ -114,7 +114,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.components.MediaDownloadCard
 import com.vitorpamplona.amethyst.commons.ui.components.MediaDownloadRow
 import com.vitorpamplona.amethyst.commons.ui.components.MediaKind
-import com.vitorpamplona.amethyst.commons.ui.components.MediaSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
@@ -703,14 +702,13 @@ fun UrlImageView(
                     modifier,
                     thumbhash = content.thumbhash,
                 )
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                IconWithSizeLabel(MediaKind.IMAGE, size) {
                     IconButton(
                         modifier = Modifier.size(Size75dp),
                         onClick = { showImage.value = true },
                     ) {
                         DownloadForOfflineIcon(Size75dp, Color.White)
                     }
-                    MediaSizeLabel(MediaKind.IMAGE, size, pill = true)
                 }
             } else if (ratio != null) {
                 MediaDownloadCard(content.url, MediaKind.IMAGE, size, ratio, loadedImageModifier) { showImage.value = true }

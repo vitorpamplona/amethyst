@@ -116,7 +116,7 @@ fun PlayableAudioView(
         }
 
     // The card is drawn whatever the setting says; ask the host for a size only while files are held back.
-    val size = if (accountViewModel.settings.startVideoPlayback()) content.sizeBytes else rememberMediaSize(content, accountViewModel)
+    val size = rememberMediaSize(content, accountViewModel, held = !accountViewModel.settings.startVideoPlayback())
 
     val info =
         remember(content, authorName, size) {

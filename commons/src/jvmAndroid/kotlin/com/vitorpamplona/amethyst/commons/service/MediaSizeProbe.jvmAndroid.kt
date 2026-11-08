@@ -26,9 +26,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.coroutines.executeAsync
 
 private const val TAG = "MediaSizeProbe"
+
+/** The file's length from [Response]'s headers: positive, and not the length of a compressed body. */
+internal fun Response.fileLength(): Long? = header("Content-Length")?.toLongOrNull()?.takeIf { it > 0 && header("Content-Encoding") == null }
 
 internal actual suspend fun IRoleBasedHttpClientBuilder.headContentLength(
     url: String,
@@ -51,8 +55,7 @@ internal actual suspend fun IRoleBasedHttpClientBuilder.headContentLength(
                     .header("Accept-Encoding", "identity")
                     .build()
             client.newCall(request).executeAsync().use { response ->
-                if (!response.isSuccessful || response.header("Content-Encoding") != null) return@use null
-                response.header("Content-Length")?.toLongOrNull()?.takeIf { it > 0 }
+                if (response.isSuccessful) response.fileLength() else null
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

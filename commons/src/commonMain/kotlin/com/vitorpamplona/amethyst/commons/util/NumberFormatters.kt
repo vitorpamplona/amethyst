@@ -112,18 +112,8 @@ private fun roundedDiv(
 fun formatFileSize(bytes: Long): String {
     val kb = roundedDiv(bytes, 1_000)
     if (kb < 1_000) return "${kb.coerceAtLeast(1)}${NO_BREAK_SPACE}KB"
-    return formatLargeUnit(bytes, 1_000_000, "MB") ?: formatLargeUnit(bytes, 1_000_000_000, "GB", last = true)!!
-}
-
-/** [bytes] in the unit worth [unitBytes], or null when it reaches 1000 of them and a bigger unit fits. */
-private fun formatLargeUnit(
-    bytes: Long,
-    unitBytes: Long,
-    unit: String,
-    last: Boolean = false,
-): String? {
+    // Rounding can carry into the next unit (999,950 KB is "1.0 MB"), so pick the unit after rounding.
+    val (unitBytes, unit) = if (roundedDiv(bytes, 1_000_000) < 1_000) 1_000_000L to "MB" else 1_000_000_000L to "GB"
     val tenths = roundedDiv(bytes, unitBytes / 10)
-    if (tenths < 1_000) return "${tenths / 10}.${tenths % 10}$NO_BREAK_SPACE$unit"
-    val whole = roundedDiv(bytes, unitBytes)
-    return if (whole < 1_000 || last) "$whole$NO_BREAK_SPACE$unit" else null
+    return if (tenths < 1_000) "${tenths / 10}.${tenths % 10}$NO_BREAK_SPACE$unit" else "${roundedDiv(bytes, unitBytes)}$NO_BREAK_SPACE$unit"
 }
