@@ -28,6 +28,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -110,10 +111,15 @@ import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.MediaDownloadCard
+import com.vitorpamplona.amethyst.commons.ui.components.MediaDownloadRow
+import com.vitorpamplona.amethyst.commons.ui.components.MediaKind
+import com.vitorpamplona.amethyst.commons.ui.components.MediaSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
+import com.vitorpamplona.amethyst.commons.ui.components.rememberMediaSize
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
@@ -324,6 +330,7 @@ fun ZoomableContentView(
                             isLiveStream = content.isLiveStream,
                             hash = content.hash,
                             captions = content.captions,
+                            sizeBytes = content.sizeBytes,
                         )
                     }
                 }
@@ -679,6 +686,8 @@ fun UrlImageView(
                 }
             }
         } else {
+            // Only a held-back image asks for its size: one that loads never sends the request.
+            val size = rememberMediaSize(content, accountViewModel)
             if ((content.blurhash != null || content.thumbhash != null) && ratio != null) {
                 val modifier =
                     if (contentScale == ContentScale.Crop) {
@@ -694,14 +703,19 @@ fun UrlImageView(
                     modifier,
                     thumbhash = content.thumbhash,
                 )
-                IconButton(
-                    modifier = Modifier.size(Size75dp),
-                    onClick = { showImage.value = true },
-                ) {
-                    DownloadForOfflineIcon(Size75dp, Color.White)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(
+                        modifier = Modifier.size(Size75dp),
+                        onClick = { showImage.value = true },
+                    ) {
+                        DownloadForOfflineIcon(Size75dp, Color.White)
+                    }
+                    MediaSizeLabel(MediaKind.IMAGE, size, pill = true)
                 }
+            } else if (ratio != null) {
+                MediaDownloadCard(content.url, MediaKind.IMAGE, size, ratio, loadedImageModifier) { showImage.value = true }
             } else {
-                ImageUrlWithDownloadButton(content.url, showImage)
+                MediaDownloadRow(content.url, MediaKind.IMAGE, size, Modifier) { showImage.value = true }
             }
         }
     }

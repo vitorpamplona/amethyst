@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.resources.audio_card_untitled
 import com.vitorpamplona.amethyst.commons.resources.audio_card_untitled_no_format
 import com.vitorpamplona.amethyst.commons.resources.playable_media_untitled
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.ui.components.rememberMediaSize
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
@@ -114,13 +115,16 @@ fun PlayableAudioView(
             content.authorName ?: content.authorPubKey?.let { accountViewModel.getUserIfExists(it)?.toBestDisplayName() }
         }
 
+    // The card is drawn whatever the setting says; ask the host for a size only while files are held back.
+    val size = if (accountViewModel.settings.startVideoPlayback()) content.sizeBytes else rememberMediaSize(content, accountViewModel)
+
     val info =
-        remember(content, authorName) {
+        remember(content, authorName, size) {
             AudioCardInfo(
                 title = null,
                 artist = authorName,
                 format = mediaFormatLabel(content.mimeType, content.url),
-                sizeBytes = content.sizeBytes,
+                sizeBytes = size,
                 seed = content.hash ?: content.url,
                 waveform = content.waveform,
                 artworkUrl = content.artworkUri,
