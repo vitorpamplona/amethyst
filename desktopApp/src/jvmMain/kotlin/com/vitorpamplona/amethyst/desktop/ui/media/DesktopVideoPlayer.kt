@@ -69,6 +69,8 @@ import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.resources.video_error_open_in_default_player
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.LocalShortVideo
+import com.vitorpamplona.amethyst.commons.ui.components.MediaKind
+import com.vitorpamplona.amethyst.commons.ui.components.MediaSizeLabel
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -146,11 +148,13 @@ fun DesktopVideoPlayer(
     // The note's blurhash/thumbhash: drawn at once, under the poster or frame, while those load.
     blurhash: String? = null,
     thumbhash: String? = null,
+    // The file's size, shown under the load button while it is held back ([loadOnDemand]).
+    sizeBytes: Long? = null,
 ) {
     // Decided once per card: a video learned meanwhile keeps the player it started with.
     val chromium = LocalChromiumVideoEngine.current
     if (chromium != null && remember(url) { ChromiumVideoRoute.prefersChromium(url) }) {
-        ChromiumRoutedVideo(chromium, url, modifier, autoPlay, autoPlayWhenVisible, pauseWhenHidden, loadOnDemand, shape, pictureSource, declaredRatio, posterUrl, blurhash, thumbhash)
+        ChromiumRoutedVideo(chromium, url, modifier, autoPlay, autoPlayWhenVisible, pauseWhenHidden, loadOnDemand, shape, pictureSource, declaredRatio, posterUrl, blurhash, thumbhash, sizeBytes)
         return
     }
 
@@ -395,20 +399,23 @@ fun DesktopVideoPlayer(
             contentAlignment = Alignment.Center,
         ) {
             if (!loaded) {
-                IconButton(
-                    onClick = {
-                        loaded = true
-                        // A click on the download button is a request to watch it.
-                        GlobalMediaPlayer.playVideo(url, owner = surfaceOwner, chosen = true)
-                    },
-                    modifier = Modifier.size(75.dp),
-                ) {
-                    Icon(
-                        MaterialSymbols.DownloadForOffline,
-                        contentDescription = stringRes(Res.string.accessibility_download_for_offline),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(
+                        onClick = {
+                            loaded = true
+                            // A click on the download button is a request to watch it.
+                            GlobalMediaPlayer.playVideo(url, owner = surfaceOwner, chosen = true)
+                        },
                         modifier = Modifier.size(75.dp),
-                    )
+                    ) {
+                        Icon(
+                            MaterialSymbols.DownloadForOffline,
+                            contentDescription = stringRes(Res.string.accessibility_download_for_offline),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(75.dp),
+                        )
+                    }
+                    MediaSizeLabel(MediaKind.VIDEO, sizeBytes, pill = true)
                 }
                 return@Box
             }
@@ -539,6 +546,7 @@ private fun ChromiumRoutedVideo(
     posterUrl: String?,
     blurhash: String?,
     thumbhash: String?,
+    sizeBytes: Long?,
 ) {
     var loaded by remember(url) { mutableStateOf(!loadOnDemand || autoPlay) }
     // The user asked for this one (the lightbox, a click on play): it plays wherever it sits.
@@ -615,19 +623,23 @@ private fun ChromiumRoutedVideo(
                         DisplayBlurHash(blurhash, null, ContentScale.Crop, Modifier.fillMaxSize(), thumbhash = thumbhash)
                     }
                     if (loaded) VideoPoster(poster, thumbnail, Modifier.fillMaxSize()) { posterFailed = true }
-                    IconButton(
-                        onClick = {
-                            loaded = true
-                            chosen = true
-                        },
-                        modifier = Modifier.size(64.dp),
-                    ) {
-                        Icon(
-                            if (loaded) MaterialSymbols.PlayArrow else MaterialSymbols.DownloadForOffline,
-                            contentDescription = stringRes(if (loaded) Res.string.play else Res.string.accessibility_download_for_offline),
-                            tint = Color.White,
-                            modifier = Modifier.size(56.dp),
-                        )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconButton(
+                            onClick = {
+                                loaded = true
+                                chosen = true
+                            },
+                            modifier = Modifier.size(64.dp),
+                        ) {
+                            Icon(
+                                if (loaded) MaterialSymbols.PlayArrow else MaterialSymbols.DownloadForOffline,
+                                contentDescription = stringRes(if (loaded) Res.string.play else Res.string.accessibility_download_for_offline),
+                                tint = Color.White,
+                                modifier = Modifier.size(56.dp),
+                            )
+                        }
+                        // Once loaded the button plays: the size only matters before the download.
+                        if (!loaded) MediaSizeLabel(MediaKind.VIDEO, sizeBytes, pill = true)
                     }
                 }
             }
