@@ -67,7 +67,7 @@ dbus-java's ServiceLoader transport, and drop the signatures of jars it rewrites
 ## Run and package
 
 ```bash
-./gradlew :desktopApp:run                                   # JDK 21 toolchain (jvmToolchain(21))
+./gradlew :desktopApp:run                                   # on the JDK Gradle runs on (21+; packages: 25)
 ./gradlew :desktopApp:run -Damethyst.dataDir=/tmp/amy-test  # separate profile; -Damethyst.debug=true for DEBUG logs
 ./gradlew :desktopApp:packageDmg    # macOS; packageMsi (Windows), packageDeb / packageRpm (Linux)
 ```
