@@ -196,13 +196,14 @@ object VideoCompressionHelper {
                                         }
 
                                         // The encode asks for fast-start; say so when the library could not deliver it.
-                                        if (!Mp4Sanitizer.isFastStart(File(path))) {
+                                        val output = File(path)
+                                        if (!Mp4Sanitizer.isFastStart(output)) {
                                             Log.w(LOG_TAG) { "Compressed output is not fast-start: $path" }
                                         }
 
                                         // A continuation cancelled before or during this resume drops the value and
                                         // runs the handler instead, so the finished file goes with it.
-                                        continuation.resume(MediaCompressorResult(File(path).toUri(), contentType, size)) { _, _, _ -> deleteOutput(path) }
+                                        continuation.resume(MediaCompressorResult(output.toUri(), contentType, size)) { _, _, _ -> deleteOutput(path) }
                                     }
 
                                     override fun onFailure(

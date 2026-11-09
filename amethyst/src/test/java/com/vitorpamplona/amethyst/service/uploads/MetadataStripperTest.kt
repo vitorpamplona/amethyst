@@ -73,17 +73,13 @@ class MetadataStripperTest {
         mockkStatic(Mp4Sanitizer::class)
     }
 
-    private fun fileUri(file: File): Uri {
-        val fileUri = mockk<Uri>()
-        every { fileUri.path } returns file.absolutePath
-        return fileUri
-    }
+    private fun fileUri(file: File): Uri = mockk { every { path } returns file.absolutePath }
 
-    /** Stubs [Mp4Sanitizer.sanitize] to "write" its output and report [fastStart]; returns the output slot. */
+    /** Stubs [Mp4Sanitizer.sanitize] to succeed and report [fastStart]; returns the slot holding its output file. */
     private fun sanitizeSucceeds(fastStart: Boolean = true) =
         slot<File>().also { output ->
             every { Mp4Sanitizer.sanitize(context, uri, capture(output)) } answers {
-                SanitizeResult(output.captured.apply { writeBytes(ByteArray(8)) }, fastStart)
+                SanitizeResult(output.captured, fastStart)
             }
         }
 

@@ -190,9 +190,7 @@ object MetadataStripper {
             val inputStream =
                 context.contentResolver.openInputStream(uri)
                     ?: run {
-                        if (!tempFile.delete()) {
-                            Log.w("MetadataStripper") { "Failed to delete temp file: ${tempFile.absolutePath}" }
-                        }
+                        tempFile.deleteOrWarn(TAG, "temp file")
                         return StrippingResult(uri, false)
                     }
             inputStream.use { input ->
@@ -207,14 +205,12 @@ object MetadataStripper {
             }
             exif.saveAttributes()
 
-            Log.d("MetadataStripper", "Stripped EXIF metadata from image")
+            Log.d(TAG, "Stripped EXIF metadata from image")
             StrippingResult(tempFile.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            if (tempFile?.delete() == false) {
-                Log.w("MetadataStripper") { "Failed to delete temp file: ${tempFile.absolutePath}" }
-            }
-            Log.d("MetadataStripper") { "Failed to strip image metadata: ${e.message}" }
+            tempFile?.deleteOrWarn(TAG, "temp file")
+            Log.d(TAG) { "Failed to strip image metadata: ${e.message}" }
             StrippingResult(uri, false)
         }
     }
@@ -243,19 +239,19 @@ object MetadataStripper {
             )
         }
 
-        Log.d("MetadataStripper", "AVIF EXIF inspection: no sensitive tags found, passing through")
+        Log.d(TAG, "AVIF EXIF inspection: no sensitive tags found, passing through")
         return StrippingResult(uri, true)
     }
 
     fun stripVideoMetadata(
         uri: Uri,
         context: Context,
-    ): StrippingResult = sanitizeMp4(uri, context, kind = "video", prefix = "stripped_video_", suffix = ".mp4")
+    ): StrippingResult = sanitizeMp4(uri, context, kind = "video", suffix = ".mp4")
 
     fun stripAudioMetadata(
         uri: Uri,
         context: Context,
-    ): StrippingResult = sanitizeMp4(uri, context, kind = "audio", prefix = "stripped_audio_", suffix = ".m4a")
+    ): StrippingResult = sanitizeMp4(uri, context, kind = "audio", suffix = ".m4a")
 
     /**
      * Rewrites the MP4 at [uri] into a cache file through [Mp4Sanitizer]. A remux whose fast-start
@@ -266,12 +262,11 @@ object MetadataStripper {
         uri: Uri,
         context: Context,
         kind: String,
-        prefix: String,
         suffix: String,
     ): StrippingResult {
         var tempFile: File? = null
         return try {
-            val output = File.createTempFile(prefix, suffix, context.cacheDir)
+            val output = File.createTempFile("stripped_${kind}_", suffix, context.cacheDir)
             tempFile = output
             val result = Mp4Sanitizer.sanitize(context, uri, output)
             if (!result.fastStart) Log.w(TAG) { "Sanitized $kind is not fast-start: ${output.name}" }
@@ -297,9 +292,7 @@ object MetadataStripper {
                     input.copyTo(output)
                 }
             } ?: run {
-                if (!tempInputFile.delete()) {
-                    Log.w("MetadataStripper") { "Failed to delete temp file: ${tempInputFile.absolutePath}" }
-                }
+                tempInputFile.deleteOrWarn(TAG, "temp file")
                 return StrippingResult(uri, false)
             }
 
@@ -340,9 +333,7 @@ object MetadataStripper {
             }
 
             if (startOffset == 0L && endOffset == fileSize) {
-                if (!tempInputFile.delete()) {
-                    Log.w("MetadataStripper") { "Failed to delete temp file: ${tempInputFile.absolutePath}" }
-                }
+                tempInputFile.deleteOrWarn(TAG, "temp file")
                 tempInputFile = null
                 return StrippingResult(uri, true) // no tags found, already clean
             }
@@ -362,19 +353,15 @@ object MetadataStripper {
                     }
                 }
             }
-            if (!tempInputFile.delete()) {
-                Log.w("MetadataStripper") { "Failed to delete temp file: ${tempInputFile.absolutePath}" }
-            }
+            tempInputFile.deleteOrWarn(TAG, "temp file")
             tempInputFile = null
 
-            Log.d("MetadataStripper", "Stripped ID3 tags from MP3")
+            Log.d(TAG, "Stripped ID3 tags from MP3")
             StrippingResult(tempOutputFile.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            if (tempInputFile?.delete() == false) {
-                Log.w("MetadataStripper") { "Failed to delete temp file: ${tempInputFile.absolutePath}" }
-            }
-            Log.d("MetadataStripper") { "Failed to strip MP3 metadata: ${e.message}" }
+            tempInputFile?.deleteOrWarn(TAG, "temp file")
+            Log.d(TAG) { "Failed to strip MP3 metadata: ${e.message}" }
             StrippingResult(uri, false)
         }
     }
