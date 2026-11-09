@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.desktop.napplet
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.BrowserOriginPolicy
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
@@ -38,20 +39,24 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.cef.CefClient
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
+import org.cef.browser.CefMessageRouter
+import org.cef.browser.OffscreenCefBrowser
 import org.cef.callback.CefCallback
 import org.cef.callback.CefQueryCallback
 import org.cef.handler.CefDisplayHandlerAdapter
-import org.cef.handler.CefFocusHandlerAdapter
 import org.cef.handler.CefLifeSpanHandlerAdapter
 import org.cef.handler.CefLoadHandler
 import org.cef.handler.CefLoadHandlerAdapter
@@ -60,8 +65,6 @@ import org.cef.handler.CefResourceRequestHandler
 import org.cef.handler.CefResourceRequestHandlerAdapter
 import org.cef.misc.BoolRef
 import org.cef.network.CefRequest
-import java.awt.Component
-import java.awt.KeyboardFocusManager
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import javax.swing.SwingUtilities
@@ -70,9 +73,11 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * One in-app browser window: an ordinary web page in Chromium, with `window.nostr` (NIP-07) for the
- * pages that may have it, signed by the account that opened the window through the same consent the
- * napplets and nSites get.
+ * One in-app browser page: an ordinary web page in Chromium, with `window.nostr` (NIP-07) for the
+ * pages that may have it, signed by the account that opened it through the same consent the
+ * napplets and nSites get. It is the content of a [Route.WebPage] screen, which the navigation
+ * layout places (stack, deck column, tab or window), so Chromium paints it off-screen ([view]) and
+ * the screen draws it; the screen's ViewModel owns it, so it lives as long as the screen does.
  *
  * Desktop's counterpart of Android's `NappletBrowserActivity`:
  * - NIP-07 goes through [DesktopBrowserBridge] to the broker. Only the main frame may ask, only on an
@@ -83,13 +88,15 @@ import kotlin.math.roundToInt
  *   the user chose for this host, and nothing while Tor is on and not running.
  * - Links in other schemes (`nostr:`, `lightning:`, `mailto:`) go to the system, on a click only.
  *   A page can't load napplet.local (the napplet hosts' origin), `file:` or Chromium's own pages.
- * - A new window the page opens (`target=_blank`, `window.open`) becomes another browser window, at
- *   most one a second.
+ * - A new window the page opens (`target=_blank`, `window.open`) becomes another page screen, within
+ *   the one popup budget every page shares ([BrowserPopupGate]).
  *
  * There is no renderer sandbox: see `commons/plans/2026-10-31-embed-security-review.md`.
  */
 class CefBrowserSession(
     val startUrl: String,
+    /** The [Route.WebPage] this page is the screen of. */
+    val routeId: String,
     /** The account that opened it: the window keeps signing as this account, whoever is active later. */
     val accountPubKey: HexKey,
     /** Whether this window's traffic goes through Tor, from the user's choice for its host. */
@@ -97,12 +104,11 @@ class CefBrowserSession(
     private val account: Account?,
     private val broker: NappletBroker,
     private val runtime: DesktopNappletRuntime,
-    private val bridge: DesktopBrowserBridge,
     /**
      * A page asked for a new window ([url] is always a web page). The host decides whether one opens:
      * it holds the one budget every browser window shares, so a page can't multiply windows.
      */
-    private val onPopup: (url: String) -> Unit = {},
+    private val onPopup: (opener: CefBrowserSession, url: String) -> Unit = { _, _ -> },
     /** A page finished loading, for the browser's history. Called off Chromium's threads. */
     private val onVisit: (url: String, title: String) -> Unit = { _, _ -> },
     /** The page asked the broker as `browser:<origin>` [app]: this window shows that app's questions. */
@@ -116,9 +122,8 @@ class CefBrowserSession(
         /** Its host goes through Tor, and it waits for Tor before anything is fetched. */
         data object WaitingForTor : State
 
-        data class Showing(
-            val component: Component,
-        ) : State
+        /** The page is up, painting into [view]. */
+        data object Showing : State
 
         data class Failed(
             val reason: Failure,
@@ -153,10 +158,15 @@ class CefBrowserSession(
 
     private val mutableApps = MutableStateFlow<Set<String>>(emptySet())
 
-    private val mutablePageFocus = MutableStateFlow(0)
+    /** The page's frames and input: the screen draws it, so it layers with the rest of the app. */
+    val view = OffscreenNappletView()
 
-    /** Counts the times the page took the keyboard (a click on it), so the toolbar can let go of it. */
-    val pageFocus: StateFlow<Int> = mutablePageFocus.asStateFlow()
+    // Buffered, not a SharedFlow: a popup asked for while the screen is out of sight (nobody collecting)
+    // waits for it instead of being dropped.
+    private val popupQueue = Channel<Route.WebPage>(POPUP_QUEUE)
+
+    /** Windows this page opened that the host let through: the screen opens each as a screen of its own. */
+    val popups: Flow<Route.WebPage> = popupQueue.receiveAsFlow()
 
     /** Every `browser:<origin>` this window has asked the broker for, so its window shows their questions. */
     val apps: StateFlow<Set<String>> = mutableApps.asStateFlow()
@@ -166,6 +176,7 @@ class CefBrowserSession(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var client: CefClient? = null
+    private var router: CefMessageRouter? = null
     private var browser: CefBrowser? = null
 
     @Volatile
@@ -220,9 +231,14 @@ class CefBrowserSession(
                         val client = app.createClient()
                         this@CefBrowserSession.client = client
                         installHandlers(client)
-                        client.createBrowser(startUrl, false, false).also { this@CefBrowserSession.browser = it }
+                        OffscreenCefBrowser(client, startUrl, null, FRAME_RATE, view).also {
+                            this@CefBrowserSession.browser = it
+                            view.browser = it
+                            it.createImmediately()
+                        }
                     }
-                mutableState.value = State.Showing(browser.uiComponent)
+                if (!visible) browser.setWindowlessFrameRate(HIDDEN_FRAME_RATE)
+                mutableState.value = State.Showing
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
                 Log.w(TAG, "The browser window did not open", e)
@@ -233,7 +249,9 @@ class CefBrowserSession(
     }
 
     private fun installHandlers(client: CefClient) {
-        client.addMessageRouter(bridge.router())
+        val router = DesktopBrowserBridge.newRouter(queries)
+        this.router = router
+        client.addMessageRouter(router)
         client.addRequestHandler(
             object : CefRequestHandlerAdapter() {
                 override fun onBeforeBrowse(
@@ -263,6 +281,17 @@ class CefBrowserSession(
                     disableDefaultHandling: BoolRef,
                 ): CefResourceRequestHandler? = if (mayFetch(request.url)) null else cancelHandler
 
+                // A link opened in a new tab (Ctrl-click): a screen of its own, as a popup.
+                override fun onOpenURLFromTab(
+                    browser: CefBrowser?,
+                    frame: CefFrame?,
+                    targetUrl: String?,
+                    userGesture: Boolean,
+                ): Boolean {
+                    if (userGesture && targetUrl != null) requestWindow(targetUrl)
+                    return true
+                }
+
                 // Chromium shows its own warning; this only keeps the address bar from claiming a lock.
                 override fun onCertificateError(
                     browser: CefBrowser,
@@ -281,7 +310,6 @@ class CefBrowserSession(
         client.addLifeSpanHandler(
             object : CefLifeSpanHandlerAdapter() {
                 override fun onAfterCreated(browser: CefBrowser) {
-                    bridge.register(browser, this@CefBrowserSession)
                     val teardown =
                         synchronized(lifecycle) {
                             created = true
@@ -299,9 +327,7 @@ class CefBrowserSession(
                     // Only a web page becomes a window. A blank or blob: popup is one the opener means to
                     // write into, which a separate window can't take (it has no window.opener), and a
                     // window.open of another app's link has no click to go with it here.
-                    if (navigationOf(targetUrl, isMainFrame = true) == Navigation.LOAD && BrowserChrome.originOf(targetUrl) != null) {
-                        onPopup(targetUrl)
-                    }
+                    requestWindow(targetUrl)
                     return true
                 }
             },
@@ -341,13 +367,6 @@ class CefBrowserSession(
                         }
                     }
                     Log.d(TAG) { "$errorCode loading ${BrowserChrome.originOf(failedUrl) ?: "a page"} ($errorText)" }
-                }
-            },
-        )
-        client.addFocusHandler(
-            object : CefFocusHandlerAdapter() {
-                override fun onGotFocus(browser: CefBrowser) {
-                    mutablePageFocus.update { it + 1 }
                 }
             },
         )
@@ -413,8 +432,21 @@ class CefBrowserSession(
         mutablePage.update { it.copy(zoomPercent = percent.coerceIn(CefNappletSession.MIN_ZOOM, CefNappletSession.MAX_ZOOM)) }
     }
 
+    private val queries =
+        object : DesktopBrowserBridge.Handler {
+            override fun onQuery(
+                frame: CefFrame,
+                queryId: Long,
+                request: String,
+                persistent: Boolean,
+                callback: CefQueryCallback,
+            ) = this@CefBrowserSession.onQuery(frame, queryId, request, persistent, callback)
+
+            override fun onQueryCanceled(queryId: Long) = this@CefBrowserSession.onQueryCanceled(queryId)
+        }
+
     /** A query from [frame], through [DesktopBrowserBridge]. Always answers or keeps [callback]. */
-    internal fun onQuery(
+    private fun onQuery(
         frame: CefFrame,
         queryId: Long,
         request: String,
@@ -443,11 +475,16 @@ class CefBrowserSession(
         val doc = document
         if (doc == null || doc.closed || token != doc.token) return callback.failure(403, "Unknown document")
         if (origin != doc.origin) return callback.failure(403, "The page moved")
+        val payload = request.substringAfter('\n')
+        if (payload.startsWith(OPEN_WINDOW)) {
+            requestWindow(payload.removePrefix(OPEN_WINDOW))
+            return callback.success("")
+        }
         inFlight[queryId] = Unit
-        handle(doc, queryId, request.substringAfter('\n'), callback)
+        handle(doc, queryId, payload, callback)
     }
 
-    internal fun onQueryCanceled(queryId: Long) {
+    private fun onQueryCanceled(queryId: Long) {
         inFlight.remove(queryId)
         val current = document
         if (current != null && current.channelId == queryId) closeDocument(current)
@@ -546,12 +583,30 @@ class CefBrowserSession(
     }
 
     /**
-     * Takes the keyboard from the page, for the toolbar's own fields. Chromium's native view keeps it
-     * otherwise: a click on the toolbar moves Compose's focus, but the keys still reach the page.
+     * The page asked for a new window at [url]: only a web page becomes one, and only as the host's
+     * budget allows. Chromium refuses an off-screen page's own new windows before asking, so the
+     * content script asks over the bridge ([OPEN_WINDOW]) for `window.open` and `target=_blank` links.
      */
-    fun releaseKeyboard() {
-        browser?.setFocus(false)
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().clearGlobalFocusOwner()
+    private fun requestWindow(url: String) {
+        if (closed) return
+        if (navigationOf(url, isMainFrame = true) == Navigation.LOAD && BrowserChrome.originOf(url) != null) onPopup(this, url)
+    }
+
+    /** The host let a window this page asked for open: the screen opens [route]. */
+    fun requestPopup(route: Route.WebPage) {
+        popupQueue.trySend(route)
+    }
+
+    @Volatile
+    private var visible = true
+
+    /**
+     * Whether the screen is on show. Out of sight (a tab behind another, a screen under the one on
+     * top) the page paints a frame a second instead of [FRAME_RATE]: it keeps running, unseen.
+     */
+    fun setVisible(visible: Boolean) {
+        this.visible = visible
+        browser?.setWindowlessFrameRate(if (visible) FRAME_RATE else HIDDEN_FRAME_RATE)
     }
 
     fun stopFinding() {
@@ -569,29 +624,41 @@ class CefBrowserSession(
     fun close() {
         val client: CefClient?
         val browser: CefBrowser?
+        val router: CefMessageRouter?
         val made: Boolean
         synchronized(lifecycle) {
             if (closed) return
             closed = true
             client = this.client
             browser = this.browser
+            router = this.router
             this.client = null
             this.browser = null
+            this.router = null
             made = created
         }
+        view.browser = null
         document?.let(::closeDocument)
         inFlight.clear()
         runtime.routes.release(this)
         scope.cancel()
+        popupQueue.close()
+        // Each step on its own: one that throws must not leave the shared router on a client, or the
+        // client alive.
         val teardown = {
-            runCatching {
-                browser?.let(bridge::unregister)
+            fun step(
+                name: String,
+                block: () -> Unit,
+            ) = runCatching(block).onFailure { Log.w(TAG, "Browser did not $name cleanly", it) }
+            step("close") {
                 browser?.setCloseAllowed()
                 browser?.close(true)
-                // The router is shared: it leaves this client before the client goes.
-                client?.removeMessageRouter(bridge.router())
-                client?.dispose()
-            }.onFailure { Log.w(TAG, "Browser did not close cleanly", it) }
+            }
+            step("release the router") {
+                if (client != null && router != null) client.removeMessageRouter(router)
+                router?.dispose()
+            }
+            step("dispose") { client?.dispose() }
             Unit
         }
         if (browser != null && !made) {
@@ -642,11 +709,21 @@ class CefBrowserSession(
     companion object {
         private const val TAG = "CefBrowserSession"
 
+        /** A request the content script sends for a new window, followed by its address. */
+        const val OPEN_WINDOW = "__amethyst.open:"
+
         /** The broker's author for a web origin, as Android's broker names it. */
         const val BROWSER_AUTHOR = "browser"
 
         /** What a browser page may ask the broker for: NIP-07's set, as an nSite's. */
         val DECLARED: Set<NappletCapability> = NappletCapability.WEBSITE_CAPABILITIES
+
+        // A screen's page paints like any app screen; one out of sight barely at all.
+        private const val FRAME_RATE = 60
+        private const val HIDDEN_FRAME_RATE = 1
+
+        // Popups waiting for the screen; the host's budget keeps it at a handful anyway.
+        private const val POPUP_QUEUE = 8
 
         // How long a finished page may take to name itself before its visit is filed without a title.
         private const val TITLE_WAIT_MS = 1_500L

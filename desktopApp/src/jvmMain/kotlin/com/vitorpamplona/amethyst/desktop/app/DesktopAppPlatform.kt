@@ -24,6 +24,8 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -200,13 +202,23 @@ class DesktopAppPlatform(
     ) = DesktopGeocacheMapTab(feedContentState, accountViewModel, nav)
 
     @Composable
+    override fun webPageTitle(route: Route.WebPage): String? {
+        val host = nappletHost ?: return null
+        val pages by host.browsers.collectAsState()
+        val session = pages.lastOrNull { it.routeId == route.id } ?: return null
+        val page by session.page.collectAsState()
+        return page.title.ifBlank { null }
+    }
+
+    @Composable
     override fun NotificationDeliverySettings(accountViewModel: AccountViewModel) = DesktopNotificationDeliverySettings(notifications)
 }
 
 /**
  * Web apps and links opened from the Browser tab, favorites and the screens that launch a site open
- * in [DesktopNappletHost]'s browser windows, with NIP-07; napplets and nSites in its sandboxed
- * windows. Without Chromium, or with nobody logged in, a web link goes to the system browser.
+ * as [Route.WebPage] screens, with NIP-07, which the navigation layout places (stack, deck, tab or
+ * window); napplets and nSites open in [DesktopNappletHost]'s sandboxed windows. Without Chromium,
+ * without a screen to open from, or with nobody logged in, a web link goes to the system browser.
  */
 private class DesktopAppLauncher(
     private val napplets: DesktopNappletHost?,
@@ -218,9 +230,10 @@ private class DesktopAppLauncher(
     override fun launch(
         app: FavoriteApp,
         stillLoading: String,
+        nav: INav?,
     ) {
         when (app) {
-            is FavoriteApp.WebApp -> launchUrl(app.url, preferTor = false)
+            is FavoriteApp.WebApp -> launchUrl(app.url, preferTor = false, nav = nav)
             is FavoriteApp.NostrApp -> {
                 when (val event = LocalCache.getAddressableNoteIfExists(app.coordinate)?.event) {
                     null -> toaster.show(stillLoading, false)
@@ -235,16 +248,15 @@ private class DesktopAppLauncher(
     override fun launchUrl(
         url: String,
         preferTor: Boolean,
+        nav: INav?,
     ) {
         val host = napplets
-        if (host == null) {
+        if (host == null || nav == null || !host.canBrowse(url)) {
+            Log.d(TAG) { "Opening a link in the system browser" }
             DesktopBrowser.open(url)
             return
         }
-        host.openBrowser(url, preferTor).onFailure {
-            Log.d(TAG, "Opening a link in the system browser", it)
-            DesktopBrowser.open(url)
-        }
+        nav.nav(Route.WebPage(url, preferTor, DesktopNappletHost.newPageId()))
     }
 
     // Without Chromium (it couldn't be set up here) the cards offer no Open.

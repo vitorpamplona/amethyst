@@ -332,14 +332,17 @@ object AndroidAppPlatform : AppPlatform {
 private class AndroidAppLauncher(
     private val context: Context,
 ) : AppLauncher {
+    // Android's browser is an activity of its own, in its own task: no screen of the app's to open on.
     override fun launch(
         app: FavoriteApp,
         stillLoading: String,
+        nav: INav?,
     ) = FavoriteAppLauncher.launch(context, app, stillLoading)
 
     override fun launchUrl(
         url: String,
         preferTor: Boolean,
+        nav: INav?,
     ) = FavoriteAppLauncher.launchUrl(context, url, preferTor)
 
     // Napplets and nSites hand off to the sandboxed :napplet process.

@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrConnectProm
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConsentPrompt
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
@@ -44,19 +45,22 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Test
-import java.awt.BorderLayout
+import java.awt.Canvas
+import java.awt.event.InputEvent
+import java.awt.event.MouseEvent
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.URLDecoder
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
-import javax.swing.JFrame
 import javax.swing.SwingUtilities
 import kotlin.io.path.createTempDirectory
 import kotlin.test.assertEquals
@@ -102,12 +106,10 @@ class CefBrowserSessionTest {
         }
     private val port = server.address.port
     private val sessions = mutableListOf<CefBrowserSession>()
-    private val frames = mutableListOf<JFrame>()
 
     @After
     fun tearDown() {
         sessions.forEach { it.close() }
-        SwingUtilities.invokeAndWait { frames.forEach { it.dispose() } }
         server.stop(0)
         scope.cancel()
         tmp.deleteRecursively()
@@ -162,7 +164,7 @@ class CefBrowserSessionTest {
     fun theContentScriptRunsTheShimOnlyInATopFrameWithTheBridge() {
         val script = DesktopBrowserBridge.contentScript("/*SHIM*/")
         val gate = script.indexOf("window.top !== window")
-        val bridge = script.indexOf("typeof q !== 'function'")
+        val bridge = script.indexOf("if (!found.length) return;")
         val shim = script.indexOf("/*SHIM*/")
         assertTrue(gate in 0 until bridge && bridge < shim, "the top-frame and bridge checks come before the shim")
         assertTrue("window.__nappletNip07 = true" in script)
@@ -191,7 +193,7 @@ class CefBrowserSessionTest {
     fun aTorWindowDoesNotOpenWhileTorIsDown() =
         runBlocking {
             val runtime = runtime()
-            val session = CefBrowserSession("http://127.0.0.1:$port/", "tester", useTor = true, account = null, broker = broker(NostrSignerInternal(KeyPair())), runtime = runtime, bridge = runtime.browserBridge)
+            val session = CefBrowserSession("http://127.0.0.1:$port/", "page", "tester", useTor = true, account = null, broker = broker(NostrSignerInternal(KeyPair())), runtime = runtime)
             sessions += session
             session.start()
             val state = withTimeout(30_000) { session.state.first { it is CefBrowserSession.State.Showing || it is CefBrowserSession.State.Failed } }
@@ -244,7 +246,7 @@ class CefBrowserSessionTest {
                 <!doctype html><script>$report
                 (async function () {
                   await report('frameNostr', typeof window.nostr);
-                  var q = window.${DesktopBrowserBridge.QUERY_FUNCTION};
+                  var q = Object.getOwnPropertyNames(window).filter(function (n) { return n.indexOf('${DesktopBrowserBridge.QUERY_FUNCTION_PREFIX}') === 0 && n.slice(-6) !== 'Cancel'; }).map(function (n) { return window[n]; })[0];
                   if (typeof q !== 'function') { await report('frameCall', 'absent'); return; }
                   // A frame that calls the router itself is refused: only the page may ask.
                   q({ request: JSON.stringify({ type: 'identity.getPublicKey', id: 'f1' }), persistent: false,
@@ -261,7 +263,7 @@ class CefBrowserSessionTest {
                 (async function () {
                   try {
                     // The page's own script calling the router without the document's token gets nothing.
-                    var direct = window.${DesktopBrowserBridge.QUERY_FUNCTION};
+                    var direct = Object.getOwnPropertyNames(window).filter(function (n) { return n.indexOf('${DesktopBrowserBridge.QUERY_FUNCTION_PREFIX}') === 0 && n.slice(-6) !== 'Cancel'; }).map(function (n) { return window[n]; })[0];
                     await new Promise(function (resolve) {
                       direct({ request: JSON.stringify({ type: 'identity.getPublicKey', id: 'd1' }), persistent: false,
                         onSuccess: function (r) { report('directCall', 'answered:' + r).then(resolve); },
@@ -286,7 +288,7 @@ class CefBrowserSessionTest {
                 """.trimIndent()
 
             val visits = ConcurrentHashMap.newKeySet<String>()
-            val session = show(runtime, user, prompts, "http://127.0.0.1:$port/") { url -> visits += url }
+            val session = show(runtime, user, prompts, "http://127.0.0.1:$port/", onVisit = { url -> visits += url })
 
             withTimeout(60_000) { while (reports["done"] == null || reports["shell"] == null || reports["frameCall"] == null) delay(100) }
             assertEquals(null, reports["error"], "the page ran without an error")
@@ -311,31 +313,99 @@ class CefBrowserSessionTest {
         prompts: Prompts,
         url: String,
         onVisit: (String) -> Unit = {},
+        onPopup: (CefBrowserSession, String) -> Unit = { _, _ -> },
     ): CefBrowserSession {
         val session =
             CefBrowserSession(
                 url,
+                "page-${sessions.size}",
                 user.pubKey,
                 useTor = false,
                 account = null,
                 broker = broker(user, prompts),
                 runtime = runtime,
-                bridge = runtime.browserBridge,
+                onPopup = onPopup,
                 onVisit = { visited, _ -> onVisit(visited) },
             )
         sessions += session
+        // The screen gives the page its size; nothing else is needed for Chromium to paint off-screen.
+        session.view.resize(960, 640, 1.0)
         session.start()
         val state = withTimeout(600_000) { session.state.first { it is CefBrowserSession.State.Showing || it is CefBrowserSession.State.Failed } }
         assertIs<CefBrowserSession.State.Showing>(state, "the page did not open: $state")
-        SwingUtilities.invokeAndWait {
-            frames +=
-                JFrame("browser").apply {
-                    contentPane.add(state.component, BorderLayout.CENTER)
-                    setBounds(0, 0, 960, 640)
-                    isVisible = true
-                }
-        }
         return session
+    }
+
+    @Test
+    fun aPagesNewWindowsBecomeScreenRequestsAndABlankOneDoesNot() =
+        runBlocking {
+            assumeTrue("Set AMETHYST_CEF_TEST=1 (and run under a display) to run pages in Chromium", System.getenv("AMETHYST_CEF_TEST") == "1")
+            val runtime = runtime(SharedCefTestEngine.engine)
+            // A target=_blank link to a blank page, one to a web page, and window.open of a web page.
+            pages["/opener.html"] =
+                """
+                <!doctype html><body style="margin:0">
+                <a id="blank" href="about:blank" target="_blank" style="display:block;height:300px">blank</a>
+                <a id="page" href="http://127.0.0.1:$port/popped.html" target="_blank" style="display:block;height:300px">page</a>
+                <script>window.clicks = 0; document.addEventListener('click', function () { fetch('http://127.0.0.1:$port/report?clicks=' + (++window.clicks)); }, true);
+                window.open('');
+                fetch('http://127.0.0.1:$port/report?handle=' + (window.open('/scripted.html') === null ? 'none' : 'window'));</script>
+                </body>
+                """.trimIndent()
+            val asked = ConcurrentHashMap.newKeySet<String>()
+            // The host's budget is left out: every request is let through and recorded.
+            val opener =
+                show(runtime, NostrSignerInternal(KeyPair()), Prompts(), "http://127.0.0.1:$port/opener.html", onPopup = { page, url ->
+                    asked += url
+                    page.requestPopup(Route.WebPage(url, id = "popup"))
+                })
+            // Painted: the page is there to click.
+            withTimeout(60_000) { opener.view.frame.first { it != null } }
+            withTimeout(30_000) { while (opener.page.value.isLoading) delay(100) }
+
+            // A click right after the first paint can come before the page takes input: each one is
+            // sent again until the page counts it.
+            clickUntil(opener, 100, 100) { reports["clicks"] == "1" }
+            clickUntil(opener, 100, 450) { reports["clicks"] == "2" }
+            val routes = withTimeout(30_000) { opener.popups.take(2).toList() }
+            assertEquals(
+                setOf("http://127.0.0.1:$port/scripted.html", "http://127.0.0.1:$port/popped.html"),
+                routes.mapTo(HashSet()) { it.url },
+                "window.open (resolved against the page) and the clicked link each ask for a screen",
+            )
+            assertEquals<Set<String>>(routes.mapTo(HashSet()) { it.url }, asked, "a blank one never does")
+            assertEquals("none", reports["handle"], "window.open hands the page no window back")
+        }
+
+    private suspend fun clickUntil(
+        session: CefBrowserSession,
+        x: Int,
+        y: Int,
+        landed: () -> Boolean,
+    ) {
+        withTimeout(30_000) {
+            while (!landed()) {
+                click(session, x, y)
+                repeat(10) { if (!landed()) delay(100) }
+            }
+        }
+    }
+
+    private fun click(
+        session: CefBrowserSession,
+        x: Int,
+        y: Int,
+    ) {
+        // As the screen does, on the AWT thread: the pointer arrives, the page takes focus, then the
+        // press and release.
+        SwingUtilities.invokeAndWait {
+            val source = Canvas()
+            val now = System.currentTimeMillis()
+            session.view.mouse(MouseEvent(source, MouseEvent.MOUSE_MOVED, now - 50, 0, x, y, 0, false, MouseEvent.NOBUTTON), MouseEvent.MOUSE_MOVED, x, y)
+            session.view.focus(true)
+            session.view.mouse(MouseEvent(source, MouseEvent.MOUSE_PRESSED, now, InputEvent.BUTTON1_DOWN_MASK, x, y, 1, false, MouseEvent.BUTTON1), MouseEvent.MOUSE_PRESSED, x, y)
+            session.view.mouse(MouseEvent(source, MouseEvent.MOUSE_RELEASED, now + 50, 0, x, y, 1, false, MouseEvent.BUTTON1), MouseEvent.MOUSE_RELEASED, x, y)
+        }
     }
 
     @Test

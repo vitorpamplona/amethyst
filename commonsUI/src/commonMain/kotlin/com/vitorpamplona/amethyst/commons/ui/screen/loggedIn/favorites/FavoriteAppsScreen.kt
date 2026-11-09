@@ -125,7 +125,7 @@ fun FavoriteAppsScreen(
         } else {
             FavoriteAppsGrid(
                 apps = apps,
-                onOpen = { appLauncher.launch(it, appStillLoadingStr) },
+                onOpen = { appLauncher.launch(it, appStillLoadingStr, nav) },
                 onRemove = { appServices.favoriteApps.remove(it.id) },
                 modifier =
                     Modifier

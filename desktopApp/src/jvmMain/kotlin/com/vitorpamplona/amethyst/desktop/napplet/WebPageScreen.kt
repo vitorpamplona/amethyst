@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.napplet
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.HorizontalDivider
@@ -37,16 +39,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.awt.SwingPanel
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
@@ -62,18 +66,16 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.WindowPlacement
-import androidx.compose.ui.window.WindowPosition
-import androidx.compose.ui.window.rememberWindowState
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.browser.SearchEngines
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.OnionIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_address_hint
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_back
@@ -96,74 +98,128 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_failed_engin
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_failed_route
 import com.vitorpamplona.amethyst.commons.resources.tor_waiting
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
-import com.vitorpamplona.amethyst.desktop.platform.AppWindow
-import com.vitorpamplona.amethyst.desktop.platform.IconResources
-import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
-import com.vitorpamplona.amethyst.desktop.platform.trafficLightsInsetStart
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import androidx.compose.material3.Icon as VectorIcon
 
 /**
- * One in-app browser window: Amethyst's toolbar (back, forward, reload, the address, find, zoom, the
- * onion switch and Open in browser) above Chromium's page, and the window's consent questions in
- * windows of their own above it.
+ * Owns the page of one [Route.WebPage] screen. Scoped to the screen's back-stack entry, so Chromium
+ * runs as long as the screen exists, in sight or not (a tab behind another, a screen under the one on
+ * top), and closes when the screen does.
+ */
+internal class WebPageViewModel(
+    private val host: DesktopNappletHost,
+    route: Route.WebPage,
+) : ViewModel() {
+    private val opened = host.openBrowser(route)
+
+    private val mutableSession = MutableStateFlow(opened.getOrNull())
+
+    /** The page; replaced when it is started again (a retry, a move to or from Tor). Null when none could start. */
+    val session: StateFlow<CefBrowserSession?> = mutableSession.asStateFlow()
+
+    fun retry() {
+        val current = mutableSession.value ?: return
+        host.reopenBrowser(current)?.let { mutableSession.value = it }
+    }
+
+    fun setNetworkMode(useTor: Boolean) {
+        val current = mutableSession.value ?: return
+        host.setBrowserNetworkMode(current, useTor)?.let { mutableSession.value = it }
+    }
+
+    override fun onCleared() {
+        mutableSession.value?.let(host::closeBrowser)
+    }
+}
+
+/**
+ * A web page as a screen: Amethyst's toolbar (back, forward, reload, the address, find, zoom, the
+ * onion switch and Open in browser) above the page, which Chromium paints off-screen and this draws,
+ * so it sits wherever the navigation layout puts the screen. Its consent questions open in windows of
+ * their own above the app.
  */
 @Composable
-internal fun BrowserWindow(
-    session: CefBrowserSession,
+fun WebPageScreen(
+    route: Route.WebPage,
+    nav: INav,
     host: DesktopNappletHost,
 ) {
-    val windowState = rememberWindowState(size = DpSize(1180.dp, 820.dp), position = WindowPosition.Aligned(Alignment.Center))
-    val page by session.page.collectAsState()
-    val title = page.title.ifBlank { BrowserChrome.displayHost(page.url) }
-    AppWindow(
-        onCloseRequest = { host.closeBrowser(session) },
-        state = windowState,
-        title = title,
-        icon = IconResources.adaptedBitmapPainter,
-    ) {
-        frameScope?.applyNativeWindowChrome()
+    val viewModel = viewModel(key = route.id) { WebPageViewModel(host, route) }
+    val session by viewModel.session.collectAsState()
+    val current = session
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        if (current == null) {
+            // Nobody to sign as, or not a web page: there is nothing to show here.
+            MessagePane(stringRes(Res.string.napplet_desktop_failed_engine), onRetry = { nav.popBack() })
+            return@Surface
+        }
+        WebPage(current, viewModel, nav, host)
+    }
+}
 
-        val state by session.state.collectAsState()
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            val trafficLights = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else trafficLightsInsetStart
-            Column(Modifier.fillMaxSize()) {
-                BrowserToolbar(session, host, leadingInset = trafficLights)
-                HorizontalDivider()
-                Box(Modifier.fillMaxWidth().weight(1f)) {
-                    when (val current = state) {
-                        is CefBrowserSession.State.Showing -> SwingPanel(factory = { current.component }, modifier = Modifier.fillMaxSize())
-                        is CefBrowserSession.State.Loading -> LoadingPane(host, null, BrowserChrome.displayHost(session.startUrl))
-                        is CefBrowserSession.State.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
-                        is CefBrowserSession.State.Failed ->
-                            MessagePane(
-                                when (current.reason) {
-                                    CefBrowserSession.Failure.ENGINE -> stringRes(Res.string.napplet_desktop_failed_engine)
-                                    CefBrowserSession.Failure.ROUTE_BLOCKED -> stringRes(Res.string.napplet_desktop_failed_route, BrowserChrome.displayHost(session.startUrl))
-                                },
-                                onRetry = { host.reopenBrowser(session) },
-                            )
-                    }
-                }
+@Composable
+private fun WebPage(
+    session: CefBrowserSession,
+    viewModel: WebPageViewModel,
+    nav: INav,
+    host: DesktopNappletHost,
+) {
+    // Out of sight, the page barely paints.
+    DisposableEffect(session) {
+        session.setVisible(true)
+        onDispose { session.setVisible(false) }
+    }
+    // A window the page opened is a screen of its own, placed by the layout like any other.
+    LaunchedEffect(session, nav) { session.popups.collect { nav.nav(it) } }
+
+    val state by session.state.collectAsState()
+    var pageFocus by remember { mutableIntStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        BrowserToolbar(session, host, nav, pageFocus, onNetworkMode = viewModel::setNetworkMode)
+        HorizontalDivider()
+        Box(Modifier.fillMaxWidth().weight(1f)) {
+            when (val current = state) {
+                is CefBrowserSession.State.Showing ->
+                    OffscreenPage(session.view, Modifier.fillMaxSize(), wheelNeedsFocus = false, onFocusChanged = { if (it) pageFocus++ })
+                is CefBrowserSession.State.Loading -> LoadingPane(host, null, BrowserChrome.displayHost(session.startUrl))
+                is CefBrowserSession.State.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
+                is CefBrowserSession.State.Failed ->
+                    MessagePane(
+                        when (current.reason) {
+                            CefBrowserSession.Failure.ENGINE -> stringRes(Res.string.napplet_desktop_failed_engine)
+                            CefBrowserSession.Failure.ROUTE_BLOCKED -> stringRes(Res.string.napplet_desktop_failed_route, BrowserChrome.displayHost(session.startUrl))
+                        },
+                        onRetry = viewModel::retry,
+                    )
             }
         }
-
-        // The questions this window owns (the last to ask as that site, so a site open in two windows
-        // asks once), each naming the site that asks, which may not be the page on screen any more.
-        val owners by host.consentWindows.collectAsState()
-        val apps = remember(owners, session) { owners.filterValues { it === session }.keys }
-        ConsentWindows(apps, titleOf = { app -> app?.removePrefix(BROWSER_APP_PREFIX)?.let(BrowserChrome::displayHost) ?: title }, host)
     }
+
+    // The questions this page owns (the last to ask as that site, so a site open twice asks once),
+    // each naming the site that asks, which may not be the page on screen any more.
+    val owners by host.consentWindows.collectAsState()
+    val apps = remember(owners, session) { owners.filterValues { it === session }.keys }
+    val page by session.page.collectAsState()
+    ConsentWindows(
+        apps,
+        titleOf = { app -> app?.removePrefix(BROWSER_APP_PREFIX)?.let(BrowserChrome::displayHost) ?: BrowserChrome.displayHost(page.url) },
+        host,
+    )
 }
 
 @Composable
 private fun BrowserToolbar(
     session: CefBrowserSession,
     host: DesktopNappletHost,
-    leadingInset: Dp,
+    nav: INav,
+    pageFocus: Int,
+    onNetworkMode: (Boolean) -> Unit,
 ) {
     val page by session.page.collectAsState()
     val state by session.state.collectAsState()
@@ -172,98 +228,119 @@ private fun BrowserToolbar(
     var finding by remember { mutableStateOf(false) }
     val showing = state is CefBrowserSession.State.Showing
 
-    Column(Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.fillMaxWidth().height(TOOLBAR_HEIGHT).padding(start = 4.dp + leadingInset, end = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            ToolbarButton(MaterialSymbols.AutoMirrored.ArrowBack, stringRes(Res.string.browser_pill_back), enabled = page.canGoBack) { session.goBack() }
-            ToolbarButton(MaterialSymbols.AutoMirrored.ArrowForward, stringRes(Res.string.browser_pill_forward), enabled = page.canGoForward) { session.goForward() }
-            if (page.isLoading) {
-                ToolbarButton(MaterialSymbols.Close, stringRes(Res.string.browser_pill_stop), enabled = showing) { session.stop() }
-            } else {
-                ToolbarButton(MaterialSymbols.Refresh, stringRes(Res.string.browser_pill_reload), enabled = showing) { session.reload() }
-            }
+    // The page is a screen, so it may get a narrow deck column or a phone-sized window: the address
+    // keeps its room, and what can go goes first (the Tor caption, then the zoom and Open in browser).
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val roomy = maxWidth >= ROOMY_TOOLBAR
+        val narrow = maxWidth < NARROW_TOOLBAR
+        Column(Modifier.fillMaxWidth()) {
+            Row(
+                // Below the window's own controls where they draw over the app (macOS's traffic lights).
+                Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(TopAppBarDefaults.windowInsets)
+                    .height(TOOLBAR_HEIGHT)
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                // The page's history first; past its first page, back leaves the screen where the layout
+                // has a screen to go back to (a tab or a window closes instead).
+                val canLeave = nav.canPop()
+                ToolbarButton(MaterialSymbols.AutoMirrored.ArrowBack, stringRes(Res.string.browser_pill_back), enabled = page.canGoBack || canLeave) {
+                    if (page.canGoBack) session.goBack() else nav.popBack()
+                }
+                ToolbarButton(MaterialSymbols.AutoMirrored.ArrowForward, stringRes(Res.string.browser_pill_forward), enabled = page.canGoForward) { session.goForward() }
+                if (page.isLoading) {
+                    ToolbarButton(MaterialSymbols.Close, stringRes(Res.string.browser_pill_stop), enabled = showing) { session.stop() }
+                } else {
+                    ToolbarButton(MaterialSymbols.Refresh, stringRes(Res.string.browser_pill_reload), enabled = showing) { session.reload() }
+                }
 
-            AddressField(
-                url = page.url,
-                certificateError = page.certificateError,
-                pageFocus = session.pageFocus,
-                onPress = session::releaseKeyboard,
-                overTor = session.useTor || routedOverTor,
-                enabled = showing,
-                onGo = { text ->
-                    val engine =
-                        SearchEngines.byId(
-                            CallSessionBridge.accountViewModel
-                                ?.settings
-                                ?.uiSettingsFlow
-                                ?.searchEngine
-                                ?.value,
-                        )
-                    OmniboxInput.resolve(text, engine.queryPrefix)?.url?.also(session::load)
-                },
-                modifier = Modifier.weight(1f).padding(horizontal = 6.dp),
-            )
+                AddressField(
+                    url = page.url,
+                    certificateError = page.certificateError,
+                    pageFocus = pageFocus,
+                    overTor = session.useTor || routedOverTor,
+                    enabled = showing,
+                    onGo = { text ->
+                        val engine =
+                            SearchEngines.byId(
+                                CallSessionBridge.accountViewModel
+                                    ?.settings
+                                    ?.uiSettingsFlow
+                                    ?.searchEngine
+                                    ?.value,
+                            )
+                        OmniboxInput.resolve(text, engine.queryPrefix)?.url?.also(session::load)
+                    },
+                    modifier = Modifier.weight(1f).padding(horizontal = 6.dp),
+                )
 
-            ToolbarButton(MaterialSymbols.Search, stringRes(Res.string.browser_pill_find), enabled = showing) {
-                finding = !finding
-                if (!finding) session.stopFinding()
-            }
-            ToolbarButton(MaterialSymbols.Remove, stringRes(Res.string.browser_pill_text_smaller), enabled = showing && page.zoomPercent > CefNappletSession.MIN_ZOOM) {
-                session.setZoom(page.zoomPercent - ZOOM_STEP)
-            }
-            Text(
-                stringRes(Res.string.browser_pill_text_value, page.zoomPercent),
-                style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.widthIn(min = 40.dp),
-                textAlign = TextAlign.Center,
-            )
-            ToolbarButton(MaterialSymbols.Add, stringRes(Res.string.browser_pill_text_larger), enabled = showing && page.zoomPercent < CefNappletSession.MAX_ZOOM) {
-                session.setZoom(page.zoomPercent + ZOOM_STEP)
-            }
-
-            // The host's route, only while Tor is on: an .onion can't leave Tor.
-            if (torEnabled && !OmniboxInput.isOnion(page.url)) {
-                Row(
-                    Modifier.padding(horizontal = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    VectorIcon(
-                        OnionIcon,
-                        contentDescription = stringRes(Res.string.browser_pill_tor_title),
-                        modifier = Modifier.size(18.dp),
-                        tint = if (session.useTor || routedOverTor) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                ToolbarButton(MaterialSymbols.Search, stringRes(Res.string.browser_pill_find), enabled = showing) {
+                    finding = !finding
+                    if (!finding) session.stopFinding()
+                }
+                if (!narrow) {
+                    ToolbarButton(MaterialSymbols.Remove, stringRes(Res.string.browser_pill_text_smaller), enabled = showing && page.zoomPercent > CefNappletSession.MIN_ZOOM) {
+                        session.setZoom(page.zoomPercent - ZOOM_STEP)
+                    }
                     Text(
-                        stringRes(
-                            when {
-                                session.useTor -> Res.string.browser_pill_tor_on
-                                routedOverTor -> Res.string.browser_pill_tor_forced
-                                else -> Res.string.browser_pill_tor_off
-                            },
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 160.dp),
+                        stringRes(Res.string.browser_pill_text_value, page.zoomPercent),
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.widthIn(min = 40.dp),
+                        textAlign = TextAlign.Center,
                     )
-                    Switch(checked = session.useTor, onCheckedChange = { host.setBrowserNetworkMode(session, it) })
+                    ToolbarButton(MaterialSymbols.Add, stringRes(Res.string.browser_pill_text_larger), enabled = showing && page.zoomPercent < CefNappletSession.MAX_ZOOM) {
+                        session.setZoom(page.zoomPercent + ZOOM_STEP)
+                    }
+                }
+
+                // The host's route, only while Tor is on: an .onion can't leave Tor.
+                if (torEnabled && !OmniboxInput.isOnion(page.url)) {
+                    Row(
+                        Modifier.padding(horizontal = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        VectorIcon(
+                            OnionIcon,
+                            contentDescription = stringRes(Res.string.browser_pill_tor_title),
+                            modifier = Modifier.size(18.dp),
+                            tint = if (session.useTor || routedOverTor) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (roomy) {
+                            Text(
+                                stringRes(
+                                    when {
+                                        session.useTor -> Res.string.browser_pill_tor_on
+                                        routedOverTor -> Res.string.browser_pill_tor_forced
+                                        else -> Res.string.browser_pill_tor_off
+                                    },
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.widthIn(max = 160.dp),
+                            )
+                        }
+                        Switch(checked = session.useTor, onCheckedChange = onNetworkMode)
+                    }
+                }
+
+                if (!narrow) {
+                    ToolbarButton(MaterialSymbols.AutoMirrored.OpenInNew, stringRes(Res.string.browser_pill_other_browser), enabled = BrowserChrome.originOf(page.url) != null) {
+                        DesktopBrowser.open(page.url)
+                    }
                 }
             }
-
-            ToolbarButton(MaterialSymbols.AutoMirrored.OpenInNew, stringRes(Res.string.browser_pill_other_browser), enabled = BrowserChrome.originOf(page.url) != null) {
-                DesktopBrowser.open(page.url)
+            if (finding) {
+                FindBar(onFind = session::find, onClose = {
+                    finding = false
+                    session.stopFinding()
+                })
             }
-        }
-        if (finding) {
-            FindBar(onFind = session::find, onClose = {
-                finding = false
-                session.stopFinding()
-            })
         }
     }
 }
@@ -277,9 +354,7 @@ private fun AddressField(
     url: String,
     certificateError: Boolean,
     /** Ticks when the page takes the keyboard: the field gives up and shows the address again. */
-    pageFocus: StateFlow<Int>,
-    /** A press on the field, before Compose handles it: the page lets go of the keyboard. */
-    onPress: () -> Unit,
+    pageFocus: Int,
     overTor: Boolean,
     enabled: Boolean,
     /** Goes to what was typed; returns the address it went to, or null when it went nowhere. */
@@ -295,9 +370,8 @@ private fun AddressField(
     // A new page shows its address, unless the user is typing over it.
     LaunchedEffect(url) { if (!editing) field = TextFieldValue(url) }
 
-    val pageFocusTicks by pageFocus.collectAsState()
-    LaunchedEffect(pageFocusTicks) {
-        if (pageFocusTicks > 0 && editing) {
+    LaunchedEffect(pageFocus) {
+        if (pageFocus > 0 && editing) {
             editing = false
             field = TextFieldValue(url)
             focusManager.clearFocus()
@@ -356,7 +430,6 @@ private fun AddressField(
                                     while (true) {
                                         val event = awaitPointerEvent(PointerEventPass.Initial)
                                         if (event.type == PointerEventType.Press) {
-                                            onPress()
                                             if (!editing) {
                                                 editing = true
                                                 selectAllPending = true
@@ -402,3 +475,9 @@ private const val BROWSER_APP_PREFIX = CefBrowserSession.BROWSER_AUTHOR + ":"
 
 // How long after a click starts editing its own caret placement is undone.
 private const val SELECT_ALL_HOLD_MS = 500L
+
+// Wide enough for the Tor caption beside the switch; narrower than this, the address keeps its room.
+private val ROOMY_TOOLBAR = 960.dp
+
+// Below this the toolbar keeps navigation, the address, find and the onion switch.
+private val NARROW_TOOLBAR = 620.dp

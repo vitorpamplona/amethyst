@@ -152,11 +152,6 @@ fun DesktopNappletWindows(host: DesktopNappletHost) {
     for (session in sessions) {
         key(session) { NappletWindow(session, host) }
     }
-
-    val browsers by host.browsers.collectAsState()
-    for (browser in browsers) {
-        key(browser) { BrowserWindow(browser, host) }
-    }
 }
 
 @Composable

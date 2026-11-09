@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -36,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
@@ -80,6 +82,12 @@ fun routeTitle(
             }
         }
         is Route.Hashtag -> return "#${route.hashtag}"
+        // The page's own title as it loads, else its host.
+        is Route.WebPage ->
+            return LocalAppPlatform.current
+                .webPageTitle(route)
+                ?.takeIf { it.isNotBlank() }
+                ?.take(MAX_TITLE) ?: BrowserChrome.displayHost(route.url)
         // Its name alone ("Settings") is the same as All Settings'; the screen calls itself this.
         is Route.Settings -> return stringRes(Res.string.application_preferences)
         else -> {}
@@ -100,16 +108,18 @@ fun routeIcon(
         is Route.Profile -> MaterialSymbols.Person
         is Route.Room -> MaterialSymbols.Mail
         is Route.Note -> MaterialSymbols.AutoMirrored.Article
+        is Route.WebPage -> MaterialSymbols.Language
         else ->
             NavBarCatalog.values.firstOrNull { it.resolveRoute(accountViewModel)::class == route::class }?.icon
                 ?: if (route::class.simpleName.orEmpty().contains("Settings")) MaterialSymbols.Settings else MaterialSymbols.Description
     }
 
-/** A `nostr:` link to what [route] shows, for a tab's Copy link; null when it shows nothing linkable. */
+/** A link to what [route] shows (`nostr:`, or a web page's address), for a tab's Copy link; null when it shows nothing linkable. */
 fun routeLink(route: Route): String? =
     when (route) {
         is Route.Note -> LocalCache.getNoteIfExists(route.id)?.toNostrUri()
         is Route.Profile -> LocalCache.getUserIfExists(route.id)?.toNostrUri() ?: "nostr:${NPub.create(route.id)}"
+        is Route.WebPage -> route.url
         else -> null
     }
 

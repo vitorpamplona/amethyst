@@ -72,9 +72,6 @@ class DesktopNappletRuntime(
 
     val browserSubscriptions = NappletLiveSubscriptions(scope, browserAttendance)
 
-    /** How every browser window's page reaches the broker. */
-    val browserBridge = DesktopBrowserBridge()
-
     // Windows close in bursts (logging out closes them all), and one trim covers them all.
     private val trims = Channel<Unit>(Channel.CONFLATED)
 

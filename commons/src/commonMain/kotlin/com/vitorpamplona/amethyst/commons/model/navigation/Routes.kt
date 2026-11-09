@@ -130,6 +130,19 @@ sealed class Route {
 
     @Serializable object Browser : Route()
 
+    /**
+     * A web page in the in-app browser, where the front end draws one (the desktop; Android opens its
+     * own browser activity instead). A screen like any other, so the navigation layout places it: on
+     * the stack, in a deck column, in a tab or in a window. [preferTor] keeps it on Tor whatever the
+     * host's network choice; [id] tells two pages of the same address apart (each tab or window has
+     * its own title).
+     */
+    @Serializable data class WebPage(
+        val url: String,
+        val preferTor: Boolean = false,
+        val id: String,
+    ) : Route()
+
     @Serializable object FavoriteApps : Route()
 
     @Serializable data class WebApp(
