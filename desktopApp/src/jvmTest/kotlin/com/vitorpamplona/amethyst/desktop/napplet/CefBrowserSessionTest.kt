@@ -245,6 +245,11 @@ class CefBrowserSessionTest {
                   } catch (e) {
                     await report('error', (e && e.message) || e);
                   }
+                  await new Promise(function (resolve) {
+                    var ws = new WebSocket('ws://127.0.0.1:$port/ws-probe');
+                    ws.onopen = ws.onerror = ws.onclose = function () { resolve(); };
+                    setTimeout(resolve, 3000);
+                  });
                   await report('done', 1);
                   // The napplet hosts' origin is not the web's to load.
                   try { await fetch('https://napplet.local/__shell__'); await report('shell', 'loaded'); } catch (e) { await report('shell', 'refused'); }
@@ -265,6 +270,7 @@ class CefBrowserSessionTest {
             assertTrue(reports["frameCall"] in setOf("absent", "refused"), "and can't ask the broker itself: ${reports["frameCall"]}")
             assertEquals(setOf("browser:http://127.0.0.1:$port"), prompts.apps, "the connect prompt named the page's origin")
             assertEquals("refused", reports["shell"], "napplet.local is never served to a web page")
+            assertTrue("/ws-probe" in requested, "a page's WebSocket reached the server: $requested")
             assertEquals(setOf("browser:http://127.0.0.1:$port"), session.apps.value, "consent is keyed on the page's origin")
             assertEquals("NIP-07 page", session.page.value.title)
             assertTrue(visits.any { it.startsWith("http://127.0.0.1:$port/") }, "the visit was recorded: $visits")
