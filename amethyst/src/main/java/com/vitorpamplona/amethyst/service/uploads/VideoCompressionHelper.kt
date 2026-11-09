@@ -196,8 +196,10 @@ object VideoCompressionHelper {
                                         }
 
                                         // The encode asks for fast-start; say so when the library could not deliver it.
+                                        // Diagnostic only, so nothing it throws may keep the continuation from resuming.
                                         val output = File(path)
-                                        if (!Mp4Sanitizer.isFastStart(output)) {
+                                        val fastStart = runCatching { Mp4Sanitizer.isFastStart(output) }.getOrDefault(true)
+                                        if (!fastStart) {
                                             Log.w(LOG_TAG) { "Compressed output is not fast-start: $path" }
                                         }
 
