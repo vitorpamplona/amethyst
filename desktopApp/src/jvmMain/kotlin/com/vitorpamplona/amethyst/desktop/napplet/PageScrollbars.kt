@@ -32,7 +32,8 @@ import org.cef.browser.CefFrame
  * colored from two CSS variables, gray on a clear track until they arrive. The engine's extension
  * gives it to napplets and nSites; the in-app browser's pages, in contexts no extension reaches, run
  * [DOCUMENT_SCRIPT] instead (see [DesktopCefEngine.webPageScripts]).
- * Then each session sets the variables in every frame ([apply]): when a frame starts loading, again
+ * Then each session sets the variables in every frame ([apply], which carries the rules too, for the
+ * cross-site frames of a web page that the document-start script can't reach): when a frame starts loading, again
  * when it has loaded (a page that replaced the document's adopted sheets gets them back), and in
  * every frame of every page when the app's theme changes ([update]). The track takes the app's
  * background and the thumb its text color, faded.
@@ -57,42 +58,44 @@ object PageScrollbars {
         ::-webkit-scrollbar-button { display: none; }
         """.trimIndent()
 
+    private val LAYERED = "@layer amethyst-scrollbars {\n$CSS\n}"
+
     /**
      * [CSS] for a document no extension reaches, adopted as a constructed stylesheet in a cascade layer
      * of its own. Runs as the document is created, before its own scripts and styles.
      */
     val DOCUMENT_SCRIPT =
-        "(function(){try{var s=new CSSStyleSheet();s.replaceSync(" + JsonPrimitive("@layer amethyst-scrollbars {\n$CSS\n}") + ");" +
+        "(function(){try{var s=new CSSStyleSheet();s.replaceSync(" + JsonPrimitive(LAYERED) + ");" +
             "document.adoptedStyleSheets=document.adoptedStyleSheets.concat([s]);}catch(e){}})();"
 
     private val HEX = Regex("#[0-9A-Fa-f]{6}")
 
     @Volatile
-    private var script: String? = null
+    private var script: String = scriptFor(null)
 
     /** The app's colors from now on, in pages that load next; the host then re-applies open pages. */
     fun update(colors: NappletThemeColors) {
         // Only a plain hex color goes into the script; anything else leaves the gray fallback.
-        script =
-            if (HEX.matches(colors.background) && HEX.matches(colors.text)) {
-                "(function(){var d=document,k=Symbol.for('amethyst.scrollbars'),s=d[k];" +
-                    "if(!s){try{s=new CSSStyleSheet();}catch(e){return;}Object.defineProperty(d,k,{value:s});}" +
-                    "s.replaceSync(':root{$TRACK:${colors.background};$THUMB:${colors.text}}');" +
-                    "if(d.adoptedStyleSheets.indexOf(s)<0)d.adoptedStyleSheets=d.adoptedStyleSheets.concat([s]);})();"
-            } else {
-                null
-            }
+        script = scriptFor(colors.takeIf { HEX.matches(it.background) && HEX.matches(it.text) })
+    }
+
+    // The rules again, layered, with the colors: [DOCUMENT_SCRIPT] and the extension don't reach a
+    // cross-site frame of a web page (it runs in its own process), but executeJavaScript does.
+    private fun scriptFor(colors: NappletThemeColors?): String {
+        val sheet = LAYERED + (colors?.let { "\n:root{$TRACK:${it.background};$THUMB:${it.text}}" } ?: "")
+        return "(function(){var d=document,k=Symbol.for('amethyst.scrollbars'),s=d[k];" +
+            "if(!s){try{s=new CSSStyleSheet();}catch(e){return;}Object.defineProperty(d,k,{value:s});}" +
+            "s.replaceSync(" + JsonPrimitive(sheet) + ");" +
+            "if(d.adoptedStyleSheets.indexOf(s)<0)d.adoptedStyleSheets=d.adoptedStyleSheets.concat([s]);})();"
     }
 
     /** The current colors in [frame]'s document. Any thread. */
     fun apply(frame: CefFrame) {
-        val script = script ?: return
         frame.executeJavaScript(script, "", 0)
     }
 
     /** The current colors in every frame of [browser]. Any thread. */
     fun apply(browser: CefBrowser) {
-        if (script == null) return
         browser.frameIdentifiers?.forEach { id -> browser.getFrameByIdentifier(id)?.let(::apply) }
     }
 }

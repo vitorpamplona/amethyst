@@ -441,7 +441,7 @@ class CefBrowserSessionTest {
             pages["/themed.html"] =
                 """
                 <!doctype html><body style="margin:0;background:#fff">
-                <iframe src="/inner.html" style="width:300px;height:200px;border:0"></iframe>
+                <iframe src="http://localhost:$port/inner.html" style="width:300px;height:200px;border:0;display:block"></iframe>
                 <div style="height:6000px"></div>${reporter("top")}</body>
                 """.trimIndent()
             PageScrollbars.update(NappletThemeColors("#102030", "#F0E0D0", "#000000"))
@@ -470,6 +470,16 @@ class CefBrowserSessionTest {
                     .toPixelMap()
             val thumb = pixels[pixels.width - 4, 20].toArgb()
             assertTrue(thumb != 0xFF102030.toInt() && thumb != 0xFFFFFFFF.toInt(), "the thumb is drawn over it: ${Integer.toHexString(thumb)}")
+            // The embedded frame is another site (localhost, not 127.0.0.1), in a process of its own,
+            // which the document-start script doesn't reach: its scrollbar is themed all the same.
+            withTimeout(30_000) {
+                while (page.view.frame.value!!
+                        .toPixelMap()[296, 190]
+                        .toArgb() != 0xFF102030.toInt()
+                ) {
+                    delay(100)
+                }
+            }
 
             // The app's theme changes: the open page's frames follow, the top and the embedded one.
             PageScrollbars.update(NappletThemeColors("#E0E8F0", "#203040", "#000000"))

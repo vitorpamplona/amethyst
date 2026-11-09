@@ -266,7 +266,8 @@ class CefBrowserSession(
                         }
                     }
                 if (!visible) browser.setWindowlessFrameRate(HIDDEN_FRAME_RATE)
-                mutableState.value = State.Showing
+                // Unless prepare(), on Chromium's thread, already failed it.
+                mutableState.compareAndSet(State.Loading, State.Showing)
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
                 Log.w(TAG, "The browser window did not open", e)
@@ -294,9 +295,14 @@ class CefBrowserSession(
             return
         }
         val devTools = browser.devToolsClient
-        synchronized(lifecycle) {
-            if (closed) return
-            this.devTools = devTools
+        val kept =
+            synchronized(lifecycle) {
+                if (!closed) this.devTools = devTools
+                !closed
+            }
+        if (!kept) {
+            devTools.close()
+            return
         }
         // All sent from here, in order: a DevTools call made from inside another's result trips
         // Chromium's observer re-entrancy check and takes the browser process down.
@@ -476,6 +482,8 @@ class CefBrowserSession(
                     // refused without asking.
                     if (downloadAnswers.size >= MAX_DOWNLOAD_QUESTIONS) {
                         declinedDownloads += id
+                        // Chromium reports on a download before it asks, so its handle is here already.
+                        downloadControls.remove(id)?.cancel()
                         return true
                     }
                     downloadAnswers[id] = callback
@@ -487,7 +495,7 @@ class CefBrowserSession(
                             totalBytes = item.totalBytes.takeIf { it > 0 } ?: -1,
                             state = BrowserDownload.State.ASKING,
                         )
-                    mutableDownloads.update { list -> (list.filter { it.id != id } + download).takeLast(MAX_DOWNLOADS_SHOWN) }
+                    mutableDownloads.update { list -> withinShown(list.filter { it.id != id } + download) }
                     return true
                 }
 
@@ -503,6 +511,11 @@ class CefBrowserSession(
                         return
                     }
                     if (ended) downloadControls.remove(id) else downloadControls[id] = callback
+                    // Dropped while the user was deciding: there is nothing left to save.
+                    if (ended && downloadAnswers.remove(id) != null) {
+                        mutableDownloads.update { list -> list.map { if (it.id == id) it.copy(state = BrowserDownload.State.STOPPED) else it } }
+                        return
+                    }
                     val percent = item.percentComplete.coerceIn(0, 100)
                     val total = item.totalBytes.takeIf { it > 0 } ?: -1
                     mutableDownloads.update { list ->
@@ -724,9 +737,13 @@ class CefBrowserSession(
     fun saveDownload(id: Int) {
         val callback = downloadAnswers.remove(id) ?: return
         val download = mutableDownloads.value.find { it.id == id } ?: return
-        val target = BrowserDownloads.reserve(BrowserDownloads.folder(), download.name)
-        mutableDownloads.update { list -> list.map { if (it.id == id) it.copy(state = BrowserDownload.State.DOWNLOADING, file = target) else it } }
-        callback.Continue(target.absolutePath, false)
+        mutableDownloads.update { list -> list.map { if (it.id == id) it.copy(state = BrowserDownload.State.DOWNLOADING) else it } }
+        // The folder and a free name in it are file system work: off the thread that clicked.
+        scope.launch(Dispatchers.IO) {
+            val target = BrowserDownloads.reserve(BrowserDownloads.folder(), download.name)
+            mutableDownloads.update { list -> list.map { if (it.id == id) it.copy(file = target) else it } }
+            callback.Continue(target.absolutePath, false)
+        }
     }
 
     /** The user said no to download [id], or stopped it: nothing of it stays. */
@@ -739,10 +756,20 @@ class CefBrowserSession(
         downloadControls.remove(id)?.cancel()
     }
 
+    // At most MAX_DOWNLOADS_SHOWN, dropping the oldest finished ones: one still asking or running
+    // stays, or its question and its Cancel would be lost.
+    private fun withinShown(list: List<BrowserDownload>): List<BrowserDownload> {
+        var shown = list
+        while (shown.size > MAX_DOWNLOADS_SHOWN) {
+            val oldest = shown.firstOrNull { it.state.finished } ?: break
+            shown = shown - oldest
+        }
+        return shown
+    }
+
     /** Takes a finished download off the list. */
     fun dismissDownload(id: Int) {
-        val finished = setOf(BrowserDownload.State.DONE, BrowserDownload.State.STOPPED)
-        mutableDownloads.update { list -> list.filter { it.id != id || it.state !in finished } }
+        mutableDownloads.update { list -> list.filter { it.id != id || !it.state.finished } }
     }
 
     fun reload() {

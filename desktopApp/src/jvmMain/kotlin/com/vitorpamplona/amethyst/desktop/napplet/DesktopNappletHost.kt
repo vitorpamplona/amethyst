@@ -321,21 +321,28 @@ class DesktopNappletHost(
             session.page.value.url
                 .ifBlank { session.startUrl }
         networkChoices.set(webKey(url), useTor)
-        closeBrowser(session)
+        closeBrowser(session, replaced = true)
         return openBrowser(url, session.routeId, account, (useTor || OmniboxInput.isOnion(url)) && torEnabled())
     }
 
     /** Starts [session]'s page again, after a failure the user wants to retry. */
     fun reopenBrowser(session: CefBrowserSession): CefBrowserSession? {
         val account = modules.sessionManager.loggedInAccount() ?: return null
-        closeBrowser(session)
+        closeBrowser(session, replaced = true)
         return openBrowser(session.startUrl, session.routeId, account, session.useTor)
     }
 
-    fun closeBrowser(session: CefBrowserSession) {
+    /**
+     * Closes [session]'s page. [replaced] when its screen stays, with a new page in its place (a retry,
+     * a move to or from Tor): a popup's screen then keeps its place in the popup budget.
+     */
+    fun closeBrowser(
+        session: CefBrowserSession,
+        replaced: Boolean = false,
+    ) {
         mutableBrowsers.update { it - session }
         session.close()
-        popupGate.closed(session.routeId)
+        if (!replaced) popupGate.closed(session.routeId)
         // Popups it was let open that never became screens give their place back.
         val unopened =
             synchronized(pendingPopups) {

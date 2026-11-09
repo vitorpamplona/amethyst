@@ -39,14 +39,17 @@ data class BrowserDownload(
     /** Where it is saved, once the user said yes. */
     val file: File? = null,
 ) {
-    enum class State {
-        /** The page asked; nothing is written until the user says yes. */
-        ASKING,
-        DOWNLOADING,
-        DONE,
+    enum class State(
+        /** Over: only dismissing it is left. */
+        val finished: Boolean,
+    ) {
+        /** The page asked; nothing is saved until the user says yes. */
+        ASKING(false),
+        DOWNLOADING(false),
+        DONE(true),
 
         /** Canceled, or the network dropped it. */
-        STOPPED,
+        STOPPED(true),
     }
 }
 
