@@ -111,6 +111,16 @@ class DesktopNappletHost(
     /** The in-app browser's windows. */
     val browsers: StateFlow<List<CefBrowserSession>> = mutableBrowsers.asStateFlow()
 
+    private val popupGate = BrowserPopupGate()
+
+    private val mutableConsentWindows = MutableStateFlow<Map<String, CefBrowserSession>>(emptyMap())
+
+    /**
+     * Which browser window shows each `browser:<origin>` app's questions: the last one whose page
+     * asked as that app. Two windows on the same site would otherwise both show the same question.
+     */
+    val consentWindows: StateFlow<Map<String, CefBrowserSession>> = mutableConsentWindows.asStateFlow()
+
     // Napplets running inside notes: no window, so they are kept apart from [sessions].
     private val inlineSessions = MutableStateFlow<Set<CefNappletSession>>(emptySet())
 
@@ -239,9 +249,15 @@ class DesktopNappletHost(
             // A window the page opens signs as this one's account, and only while it is still logged in.
             onPopup = { popup ->
                 val current = modules.sessionManager.loggedInAccount()
-                if (current?.pubKey == account.pubKey) openBrowser(popup, current, useTor)
+                if (current?.pubKey == account.pubKey) popupGate.tryOpen { openBrowser(popup, current, useTor) }
             },
             onVisit = { visited, title -> modules.browserHistory.record(visited, title) },
+            onAsk = { asker, app ->
+                if (mutableConsentWindows.value[app] !== asker) mutableConsentWindows.update { it + (app to asker) }
+            },
+            onZoom = { host, percent ->
+                browsers.value.forEach { other -> if (other.isOnHost(host)) other.refreshZoom(percent) }
+            },
         ).also { session ->
             mutableBrowsers.update { it + session }
             session.start()
@@ -274,10 +290,18 @@ class DesktopNappletHost(
     fun closeBrowser(session: CefBrowserSession) {
         mutableBrowsers.update { it - session }
         session.close()
-        // The questions its pages left behind, unless another window still shows one of them.
-        val stillOpen = browsers.value.flatMapTo(HashSet()) { it.apps.value }
+        popupGate.closed(session)
+        // Its questions move to another window on the same site, or are dismissed with it.
+        val others = browsers.value
+        mutableConsentWindows.update { owners ->
+            owners
+                .mapNotNull { (app, owner) ->
+                    if (owner !== session) app to owner else others.lastOrNull { app in it.apps.value }?.let { app to it }
+                }.toMap()
+        }
+        val asked = others.flatMapTo(HashSet()) { it.apps.value }
         session.apps.value
-            .filter { it !in stillOpen }
+            .filter { it !in asked }
             .forEach(consent::dismissApp)
         if (sessions.value.isEmpty() && browsers.value.isEmpty()) modules.nappletPermissionLedger.endSession()
     }

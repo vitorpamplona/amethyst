@@ -242,7 +242,7 @@ private class DesktopAppLauncher(
             return
         }
         host.openBrowser(url, preferTor).onFailure {
-            Log.d(TAG) { "Opening a link in the system browser: ${it.message}" }
+            Log.d(TAG, "Opening a link in the system browser", it)
             DesktopBrowser.open(url)
         }
     }

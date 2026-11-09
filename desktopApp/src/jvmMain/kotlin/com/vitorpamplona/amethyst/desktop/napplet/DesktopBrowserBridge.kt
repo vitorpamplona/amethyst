@@ -38,7 +38,9 @@ import java.util.concurrent.ConcurrentHashMap
  * that sends over it. A request's answer comes back on its own query, which
  * Chromium cancels when the document goes, so an answer never lands in the page that replaced it.
  * Pushes (a live subscription's events) come back on one persistent query the script opens first:
- * the document's channel.
+ * the document's channel, whose first message is a token the host mints for that document. Every
+ * request carries it, so the host judges a request by the document that sent it, not by wherever
+ * the frame has navigated by the time the request is read.
  *
  * Nothing the page says is trusted: the window checks the frame Chromium reports (the main frame,
  * an origin that may have NIP-07) and keys consent on that origin. The page's own scripts can call
@@ -122,8 +124,14 @@ class DesktopBrowserBridge {
                 "var bridge = { onmessage: null };\n" +
                 "function deliver(r) { if (r && typeof bridge.onmessage === 'function') { try { bridge.onmessage({ data: r }); } catch (_) {} } }\n" +
                 "function ignore() {}\n" +
-                "bridge.postMessage = function(s) { q({ request: String(s), persistent: false, onSuccess: deliver, onFailure: ignore }); };\n" +
-                "q({ request: '$CHANNEL_REQUEST', persistent: true, onSuccess: deliver, onFailure: ignore });\n" +
+                // The channel's first message is this document's token; requests made before it wait.
+                "var token = null, waiting = [];\n" +
+                "function send(s) { q({ request: token + '\\n' + s, persistent: false, onSuccess: deliver, onFailure: ignore }); }\n" +
+                "bridge.postMessage = function(s) { s = String(s); if (token === null) waiting.push(s); else send(s); };\n" +
+                "q({ request: '$CHANNEL_REQUEST', persistent: true, onFailure: ignore, onSuccess: function(r) {\n" +
+                "  if (token !== null) { deliver(r); return; }\n" +
+                "  token = String(r); var held = waiting; waiting = []; held.forEach(send);\n" +
+                "} });\n" +
                 "Object.defineProperty(window, '${NappletWebContract.BRIDGE_NAME}', { value: bridge, configurable: false, enumerable: false, writable: false });\n" +
                 "window.__nappletDirectBridge = true;\n" +
                 "window.__nappletNip07 = true;\n" +

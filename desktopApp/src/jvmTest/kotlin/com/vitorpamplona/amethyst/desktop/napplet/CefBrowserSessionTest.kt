@@ -62,6 +62,8 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -164,6 +166,25 @@ class CefBrowserSessionTest {
         val shim = script.indexOf("/*SHIM*/")
         assertTrue(gate in 0 until bridge && bridge < shim, "the top-frame and bridge checks come before the shim")
         assertTrue("window.__nappletNip07 = true" in script)
+        assertTrue("token + '\\n' + s" in script, "every request carries the document's token")
+    }
+
+    @Test
+    fun pagesShareOnePopupBudget() {
+        var now = 0L
+        val gate = BrowserPopupGate(maxOpen = 2, minIntervalMs = 1_000, clock = { now })
+        val first = assertNotNull(gate.tryOpen { "a" })
+        assertNull(gate.tryOpen { "b" }, "a second popup within the interval, from any window, waits")
+        now += 1_000
+        assertNotNull(gate.tryOpen { "b" })
+        now += 1_000
+        assertNull(gate.tryOpen { "c" }, "no more than two page-opened windows at once")
+        gate.closed(first)
+        assertNotNull(gate.tryOpen { "c" }, "closing one frees its place")
+        now += 1_000
+        gate.closed("b")
+        assertNull(gate.tryOpen<String> { null }, "a window that did not open")
+        assertNotNull(gate.tryOpen { "d" }, "and used none of the budget")
     }
 
     @Test
@@ -239,6 +260,13 @@ class CefBrowserSessionTest {
                 <script>$report
                 (async function () {
                   try {
+                    // The page's own script calling the router without the document's token gets nothing.
+                    var direct = window.${DesktopBrowserBridge.QUERY_FUNCTION};
+                    await new Promise(function (resolve) {
+                      direct({ request: JSON.stringify({ type: 'identity.getPublicKey', id: 'd1' }), persistent: false,
+                        onSuccess: function (r) { report('directCall', 'answered:' + r).then(resolve); },
+                        onFailure: function () { report('directCall', 'refused').then(resolve); } });
+                    });
                     await report('pubkey', await window.nostr.getPublicKey());
                     var signed = await window.nostr.signEvent({ kind: 1, created_at: 1700000000, tags: [], content: 'hello from the web' });
                     await report('signed', signed.pubkey + ':' + (signed.sig ? signed.sig.length : 0));
@@ -262,6 +290,7 @@ class CefBrowserSessionTest {
 
             withTimeout(60_000) { while (reports["done"] == null || reports["shell"] == null || reports["frameCall"] == null) delay(100) }
             assertEquals(null, reports["error"], "the page ran without an error")
+            assertEquals("refused", reports["directCall"], "a request without the document's token is refused")
             assertEquals(user.pubKey, reports["pubkey"], "window.nostr reached the signer")
             assertEquals("${user.pubKey}:128", reports["signed"], "and signed as the user")
             assertEquals(1, prompts.connects.get(), "the first NIP-07 call asked to connect")

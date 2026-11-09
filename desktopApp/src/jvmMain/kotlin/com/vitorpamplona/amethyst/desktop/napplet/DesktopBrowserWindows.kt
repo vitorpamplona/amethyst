@@ -54,6 +54,9 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -99,6 +102,8 @@ import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.platform.trafficLightsInsetStart
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.material3.Icon as VectorIcon
 
 /**
@@ -146,8 +151,10 @@ internal fun BrowserWindow(
             }
         }
 
-        // Each question names the site that asks, which may not be the page on screen any more.
-        val apps by session.apps.collectAsState()
+        // The questions this window owns (the last to ask as that site, so a site open in two windows
+        // asks once), each naming the site that asks, which may not be the page on screen any more.
+        val owners by host.consentWindows.collectAsState()
+        val apps = remember(owners, session) { owners.filterValues { it === session }.keys }
         ConsentWindows(apps, titleOf = { app -> app?.removePrefix(BROWSER_APP_PREFIX)?.let(BrowserChrome::displayHost) ?: title }, host)
     }
 }
@@ -182,6 +189,8 @@ private fun BrowserToolbar(
             AddressField(
                 url = page.url,
                 certificateError = page.certificateError,
+                pageFocus = session.pageFocus,
+                onPress = session::releaseKeyboard,
                 overTor = session.useTor || routedOverTor,
                 enabled = showing,
                 onGo = { text ->
@@ -267,6 +276,10 @@ private fun BrowserToolbar(
 private fun AddressField(
     url: String,
     certificateError: Boolean,
+    /** Ticks when the page takes the keyboard: the field gives up and shows the address again. */
+    pageFocus: StateFlow<Int>,
+    /** A press on the field, before Compose handles it: the page lets go of the keyboard. */
+    onPress: () -> Unit,
     overTor: Boolean,
     enabled: Boolean,
     /** Goes to what was typed; returns the address it went to, or null when it went nowhere. */
@@ -275,9 +288,33 @@ private fun AddressField(
 ) {
     val focusManager = LocalFocusManager.current
     var editing by remember { mutableStateOf(false) }
+    // Set as a click starts editing: the click's own caret placement (on press, again on release)
+    // keeps the whole address selected instead, until the first edit or a moment later.
+    var selectAllPending by remember { mutableStateOf(false) }
     var field by remember { mutableStateOf(TextFieldValue(url)) }
     // A new page shows its address, unless the user is typing over it.
     LaunchedEffect(url) { if (!editing) field = TextFieldValue(url) }
+
+    val pageFocusTicks by pageFocus.collectAsState()
+    LaunchedEffect(pageFocusTicks) {
+        if (pageFocusTicks > 0 && editing) {
+            editing = false
+            field = TextFieldValue(url)
+            focusManager.clearFocus()
+        }
+    }
+
+    // Selected whole, so typing replaces it, as in any browser.
+    fun startEditing() {
+        editing = true
+        field = field.copy(selection = TextRange(0, field.text.length))
+    }
+    LaunchedEffect(selectAllPending) {
+        if (selectAllPending) {
+            delay(SELECT_ALL_HOLD_MS)
+            selectAllPending = false
+        }
+    }
 
     val secure = !certificateError && (url.startsWith("https://", ignoreCase = true) || OmniboxInput.isOnion(url))
     val (symbol, label) =
@@ -294,7 +331,11 @@ private fun AddressField(
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                 BasicTextField(
                     value = field,
-                    onValueChange = { field = it },
+                    onValueChange = { next ->
+                        val placingCaret = selectAllPending && next.text == field.text
+                        field = if (placingCaret) next.copy(selection = TextRange(0, next.text.length)) else next
+                        if (!placingCaret) selectAllPending = false
+                    },
                     enabled = enabled,
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyMedium.copy(color = colors.onSurface),
@@ -302,11 +343,30 @@ private fun AddressField(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .onFocusChanged {
+                            // A click on the address while it shows the page's (Enter went, or the field
+                            // never had focus) selects it whole, so typing replaces it, as in any
+                            // browser. Watched on the press itself: after Enter the field keeps focus,
+                            // since Chromium's view never takes it, so a focus change can't tell.
+                            // A click on the address while it shows the page's selects it whole. Watched
+                            // on the press itself: after Enter the field keeps Compose's focus, so a focus
+                            // change can't tell. Only marked here; changing the selection mid-press would
+                            // turn the field's tap into a drag.
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                                        if (event.type == PointerEventType.Press) {
+                                            onPress()
+                                            if (!editing) {
+                                                editing = true
+                                                selectAllPending = true
+                                            }
+                                        }
+                                    }
+                                }
+                            }.onFocusChanged {
                                 if (it.isFocused && !editing) {
-                                    editing = true
-                                    // Selected whole, so typing replaces it, as in any browser.
-                                    field = field.copy(selection = TextRange(0, field.text.length))
+                                    startEditing()
                                 } else if (!it.isFocused && editing) {
                                     editing = false
                                     field = TextFieldValue(url)
@@ -339,3 +399,6 @@ private fun AddressField(
 }
 
 private const val BROWSER_APP_PREFIX = CefBrowserSession.BROWSER_AUTHOR + ":"
+
+// How long after a click starts editing its own caret placement is undone.
+private const val SELECT_ALL_HOLD_MS = 500L

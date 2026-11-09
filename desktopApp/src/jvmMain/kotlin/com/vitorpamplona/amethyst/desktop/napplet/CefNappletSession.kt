@@ -581,8 +581,8 @@ class CefNappletSession(
         NappletRequestRouter.routeInc(launch.declared, payload)?.let { outcome ->
             val id = runCatching { NappletProtocolJson.readId(payload) }.getOrNull()
             when (outcome) {
-                is NappletRequestRouter.Outcome.Inc -> runtime.incBus.handle(this, accountPubKey, ::send, outcome.request)?.let { send(withId(it, id)) }
-                is NappletRequestRouter.Outcome.Reply -> send(withId(outcome.payload, id))
+                is NappletRequestRouter.Outcome.Inc -> runtime.incBus.handle(this, accountPubKey, ::send, outcome.request)?.let { send(withReplyId(it, id)) }
+                is NappletRequestRouter.Outcome.Reply -> send(withReplyId(outcome.payload, id))
                 else -> {}
             }
             // Closed meanwhile: close() may have left the bus before this put the window back on it.
@@ -596,12 +596,12 @@ class CefNappletSession(
                 is NappletRequestRouter.Outcome.Intent -> {
                     val intents = runtime.intents
                     if (intents == null) {
-                        if (id != null) send(withId(NappletProtocolJson.encodeIntentFailure(NappletProtocolJson.readType(payload) ?: "intent.invoke", "intent unavailable"), id))
+                        if (id != null) send(withReplyId(NappletProtocolJson.encodeIntentFailure(NappletProtocolJson.readType(payload) ?: "intent.invoke", "intent unavailable"), id))
                     } else {
-                        scope.launch { intents.handle(this@CefNappletSession, launch.identity, ::send, outcome.request)?.let { send(withId(it, id)) } }
+                        scope.launch { intents.handle(this@CefNappletSession, launch.identity, ::send, outcome.request)?.let { send(withReplyId(it, id)) } }
                     }
                 }
-                is NappletRequestRouter.Outcome.Reply -> send(withId(outcome.payload, id))
+                is NappletRequestRouter.Outcome.Reply -> send(withReplyId(outcome.payload, id))
                 else -> {}
             }
             return
@@ -610,7 +610,7 @@ class CefNappletSession(
         scope.launch {
             val id = runCatching { NappletProtocolJson.readId(payload) }.getOrNull()
             when (val outcome = NappletRequestRouter.route(broker, launch.identity, launch.declared, payload, fsSession)) {
-                is NappletRequestRouter.Outcome.Reply -> send(withId(outcome.payload, id))
+                is NappletRequestRouter.Outcome.Reply -> send(withReplyId(outcome.payload, id))
                 is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach(::send)
                 is NappletRequestRouter.Outcome.OpenSubscription ->
                     runtime.liveSubscriptions.open(this@CefNappletSession, outcome.subId, outcome.filters, account, arrivedAt, outcome.relays, outcome.outbox, outcome.mayDecrypt, ::send)
@@ -674,15 +674,6 @@ class CefNappletSession(
         // Read back at once: a window behind another isn't laid out on its own, so the page wouldn't see
         // its new size until the window came forward.
         browser?.executeJavaScript("var f=document.getElementById('app');f.style.zoom='$factor';f.getBoundingClientRect();", NappletWebContract.SHELL_URL, 0)
-    }
-
-    private fun withId(
-        payload: String,
-        id: String?,
-    ): String {
-        if (id == null) return payload
-        val result = parseJsonObjectOrNull(payload) ?: return payload
-        return result.withString("id", id).toString()
     }
 
     private fun send(payload: String) {
@@ -909,4 +900,14 @@ class CefNappletSession(
         /** A napplet's srcdoc document and the data/blob URLs a page makes itself: none leave the machine. */
         private fun isLocal(url: String): Boolean = url == "about:srcdoc" || url == "about:blank" || url.startsWith("data:") || url.startsWith("blob:")
     }
+}
+
+/** [payload], a broker reply, answering the request [id] (as the shim matches replies), or as it is without one. */
+internal fun withReplyId(
+    payload: String,
+    id: String?,
+): String {
+    if (id == null) return payload
+    val result = parseJsonObjectOrNull(payload) ?: return payload
+    return result.withString("id", id).toString()
 }

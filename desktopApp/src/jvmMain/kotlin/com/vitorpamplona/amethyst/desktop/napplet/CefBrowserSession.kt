@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.BrowserOriginPolicy
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
@@ -29,8 +30,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
-import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
-import com.vitorpamplona.amethyst.commons.util.withString
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
@@ -42,14 +41,17 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.cef.CefClient
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.callback.CefCallback
 import org.cef.callback.CefQueryCallback
 import org.cef.handler.CefDisplayHandlerAdapter
+import org.cef.handler.CefFocusHandlerAdapter
 import org.cef.handler.CefLifeSpanHandlerAdapter
 import org.cef.handler.CefLoadHandler
 import org.cef.handler.CefLoadHandlerAdapter
@@ -59,9 +61,13 @@ import org.cef.handler.CefResourceRequestHandlerAdapter
 import org.cef.misc.BoolRef
 import org.cef.network.CefRequest
 import java.awt.Component
+import java.awt.KeyboardFocusManager
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import javax.swing.SwingUtilities
 import kotlin.math.ln
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 /**
  * One in-app browser window: an ordinary web page in Chromium, with `window.nostr` (NIP-07) for the
@@ -92,10 +98,17 @@ class CefBrowserSession(
     private val broker: NappletBroker,
     private val runtime: DesktopNappletRuntime,
     private val bridge: DesktopBrowserBridge,
-    /** Opens a page this one asked for in a window of its own. */
+    /**
+     * A page asked for a new window ([url] is always a web page). The host decides whether one opens:
+     * it holds the one budget every browser window shares, so a page can't multiply windows.
+     */
     private val onPopup: (url: String) -> Unit = {},
-    /** A page finished loading, for the browser's history. */
+    /** A page finished loading, for the browser's history. Called off Chromium's threads. */
     private val onVisit: (url: String, title: String) -> Unit = { _, _ -> },
+    /** The page asked the broker as `browser:<origin>` [app]: this window shows that app's questions. */
+    private val onAsk: (asker: CefBrowserSession, app: String) -> Unit = { _, _ -> },
+    /** The user changed the zoom of [host]: Chromium applied it to every window on that host. */
+    private val onZoom: (host: String, percent: Int) -> Unit = { _, _ -> },
 ) {
     sealed interface State {
         data object Loading : State
@@ -140,6 +153,11 @@ class CefBrowserSession(
 
     private val mutableApps = MutableStateFlow<Set<String>>(emptySet())
 
+    private val mutablePageFocus = MutableStateFlow(0)
+
+    /** Counts the times the page took the keyboard (a click on it), so the toolbar can let go of it. */
+    val pageFocus: StateFlow<Int> = mutablePageFocus.asStateFlow()
+
     /** Every `browser:<origin>` this window has asked the broker for, so its window shows their questions. */
     val apps: StateFlow<Set<String>> = mutableApps.asStateFlow()
 
@@ -171,7 +189,9 @@ class CefBrowserSession(
     @Volatile
     private var mainFrameFailed = false
 
-    private var lastPopupAt = 0L
+    // Whether the page on screen has reported its own title yet, so a visit isn't filed under the
+    // previous page's.
+    private val titleFresh = MutableStateFlow(false)
 
     // Origins whose certificate Chromium refused in this window: the lock stays off for them, even
     // after the user goes past the warning.
@@ -276,10 +296,11 @@ class CefBrowserSession(
                     targetUrl: String,
                     targetFrameName: String?,
                 ): Boolean {
-                    when (navigationOf(targetUrl, isMainFrame = true)) {
-                        Navigation.LOAD -> if (mayOpenPopup()) onPopup(targetUrl)
-                        // A window.open of another app's link has no click to go with it here: refused.
-                        Navigation.SYSTEM, Navigation.REFUSE -> Unit
+                    // Only a web page becomes a window. A blank or blob: popup is one the opener means to
+                    // write into, which a separate window can't take (it has no window.opener), and a
+                    // window.open of another app's link has no click to go with it here.
+                    if (navigationOf(targetUrl, isMainFrame = true) == Navigation.LOAD && BrowserChrome.originOf(targetUrl) != null) {
+                        onPopup(targetUrl)
                     }
                     return true
                 }
@@ -297,8 +318,9 @@ class CefBrowserSession(
                     if (isLoading) {
                         mainFrameFailed = false
                     } else {
+                        syncZoom(browser)
                         val url = browser.url.orEmpty()
-                        if (!mainFrameFailed && BrowserChrome.originOf(url) != null) onVisit(url, mutablePage.value.title)
+                        if (!mainFrameFailed && BrowserChrome.originOf(url) != null) recordVisit(url)
                     }
                 }
 
@@ -310,8 +332,22 @@ class CefBrowserSession(
                     failedUrl: String,
                 ) {
                     if (errorCode == CefLoadHandler.ErrorCode.ERR_ABORTED) return
-                    if (frame.isMain) mainFrameFailed = true
+                    if (frame.isMain) {
+                        mainFrameFailed = true
+                        // Chromium's error and certificate pages report no address of their own: the
+                        // bar shows the address that failed, and whether its certificate did.
+                        if (BrowserChrome.originOf(failedUrl) != null) {
+                            mutablePage.update { it.copy(url = failedUrl, certificateError = BrowserChrome.originOf(failedUrl) in badCertificates) }
+                        }
+                    }
                     Log.d(TAG) { "$errorCode loading ${BrowserChrome.originOf(failedUrl) ?: "a page"} ($errorText)" }
+                }
+            },
+        )
+        client.addFocusHandler(
+            object : CefFocusHandlerAdapter() {
+                override fun onGotFocus(browser: CefBrowser) {
+                    mutablePageFocus.update { it + 1 }
                 }
             },
         )
@@ -322,7 +358,12 @@ class CefBrowserSession(
                     frame: CefFrame,
                     url: String,
                 ) {
-                    if (frame.isMain) mutablePage.update { it.copy(url = url, certificateError = BrowserChrome.originOf(url) in badCertificates) }
+                    if (!frame.isMain) return
+                    val previous = mutablePage.value.url
+                    mutablePage.update { it.copy(url = url, certificateError = BrowserChrome.originOf(url) in badCertificates) }
+                    if (url != previous) titleFresh.value = false
+                    // Another host may have its own zoom.
+                    if (OmniboxInput.hostOf(url) != OmniboxInput.hostOf(previous)) syncZoom(browser)
                 }
 
                 override fun onTitleChange(
@@ -330,6 +371,7 @@ class CefBrowserSession(
                     title: String?,
                 ) {
                     mutablePage.update { it.copy(title = title.orEmpty()) }
+                    titleFresh.value = true
                 }
             },
         )
@@ -345,13 +387,31 @@ class CefBrowserSession(
             ): Boolean = true
         }
 
-    private fun mayOpenPopup(): Boolean =
-        synchronized(lifecycle) {
-            val now = System.currentTimeMillis()
-            if (now - lastPopupAt < POPUP_INTERVAL_MS) return false
-            lastPopupAt = now
-            true
+    /**
+     * Files the visit once the page has said what it is called (or soon after, if it never does), off
+     * Chromium's thread: the history rewrites its whole list on each one.
+     */
+    private fun recordVisit(url: String) {
+        scope.launch {
+            withTimeoutOrNull(TITLE_WAIT_MS) { titleFresh.first { it } }
+            val page = mutablePage.value
+            onVisit(url, if (titleFresh.value && page.url == url) page.title else "")
         }
+    }
+
+    /** Reads the zoom Chromium applies to this page's host: it is per host, not per window. */
+    private fun syncZoom(browser: CefBrowser) {
+        val level = runCatching { browser.zoomLevel }.getOrNull() ?: return
+        refreshZoom((ZOOM_FACTOR_PER_LEVEL.pow(level) * 100).roundToInt())
+    }
+
+    /** Whether this window's page is on [host]. */
+    fun isOnHost(host: String): Boolean = OmniboxInput.hostOf(mutablePage.value.url).equals(host, ignoreCase = true)
+
+    /** The zoom of this page's host changed in another window. */
+    fun refreshZoom(percent: Int) {
+        mutablePage.update { it.copy(zoomPercent = percent.coerceIn(CefNappletSession.MIN_ZOOM, CefNappletSession.MAX_ZOOM)) }
+    }
 
     /** A query from [frame], through [DesktopBrowserBridge]. Always answers or keeps [callback]. */
     internal fun onQuery(
@@ -369,11 +429,22 @@ class CefBrowserSession(
         if (origin == null || !BrowserOriginPolicy.offersNostr(origin)) return callback.failure(403, "No Nostr on this page")
         if (persistent) {
             if (request != DesktopBrowserBridge.CHANNEL_REQUEST) return callback.failure(400, "Unknown channel")
-            openDocument(BrowserDocument(origin, queryId, callback))
+            // The document is named once, as it opens its channel, when the frame can only be showing
+            // it. Its first message is its token, which each of its requests carries.
+            val doc = BrowserDocument(origin, queryId, UUID.randomUUID().toString(), callback)
+            openDocument(doc)
+            runCatching { callback.success(doc.token) }
             return
         }
+        // A request belongs to the document whose token it carries, judged by that document's origin:
+        // never by where the frame is by the time it is read. One from a page already navigating away
+        // (whose token is gone, or whose frame now shows another site) is refused.
+        val token = request.substringBefore('\n', "")
+        val doc = document
+        if (doc == null || doc.closed || token != doc.token) return callback.failure(403, "Unknown document")
+        if (origin != doc.origin) return callback.failure(403, "The page moved")
         inFlight[queryId] = Unit
-        handle(origin, queryId, request, callback)
+        handle(doc, queryId, request.substringAfter('\n'), callback)
     }
 
     internal fun onQueryCanceled(queryId: Long) {
@@ -396,42 +467,42 @@ class CefBrowserSession(
     }
 
     private fun handle(
-        origin: String,
+        doc: BrowserDocument,
         queryId: Long,
         payload: String,
         callback: CefQueryCallback,
     ) {
+        val origin = doc.origin
         val identity = identityOf(origin)
-        mutableApps.update { it + identity.coordinate }
+        if (identity.coordinate !in mutableApps.value) mutableApps.update { it + identity.coordinate }
+        onAsk(this, identity.coordinate)
         val id = runCatching { NappletProtocolJson.readId(payload) }.getOrNull()
         val type = runCatching { NappletProtocolJson.readType(payload) }.getOrNull()
         val answer = { reply: String -> if (inFlight.remove(queryId) != null) runCatching { callback.success(reply) } }
         // A browser page declares neither: these only answer that they are unavailable.
         val edge = NappletRequestRouter.routeInc(DECLARED, payload, type) ?: NappletRequestRouter.routeIntent(DECLARED, payload, type)
         if (edge != null) {
-            answer(if (edge is NappletRequestRouter.Outcome.Reply) withId(edge.payload, id) else "")
+            answer(if (edge is NappletRequestRouter.Outcome.Reply) withReplyId(edge.payload, id) else "")
             return
         }
-        // The document the request came from, if it is still the one on screen.
-        val doc = document?.takeIf { it.origin == origin }
         val arrivedAt = subscriptions.arrival()
         scope.launch {
             try {
                 when (val outcome = NappletRequestRouter.route(broker, identity, DECLARED, payload, null)) {
-                    is NappletRequestRouter.Outcome.Reply -> answer(withId(outcome.payload, id))
+                    is NappletRequestRouter.Outcome.Reply -> answer(withReplyId(outcome.payload, id))
                     is NappletRequestRouter.Outcome.Push -> {
                         answer("")
-                        outcome.payloads.forEach { doc?.push(it) }
+                        outcome.payloads.forEach(doc::push)
                     }
                     is NappletRequestRouter.Outcome.OpenSubscription -> {
                         answer("")
-                        if (doc != null && !doc.closed) {
+                        if (!doc.closed) {
                             subscriptions.open(doc, outcome.subId, outcome.filters, account, arrivedAt, outcome.relays, outcome.outbox, outcome.mayDecrypt, doc::push)
                         }
                     }
                     is NappletRequestRouter.Outcome.CloseSubscription -> {
                         answer("")
-                        doc?.let { subscriptions.close(it, outcome.subId, arrivedAt) }
+                        subscriptions.close(doc, outcome.subId, arrivedAt)
                     }
                     else -> answer("")
                 }
@@ -441,15 +512,6 @@ class CefBrowserSession(
                 if (inFlight.remove(queryId) != null) runCatching { callback.failure(500, "Failed") }
             }
         }
-    }
-
-    private fun withId(
-        payload: String,
-        id: String?,
-    ): String {
-        if (id == null) return payload
-        val result = parseJsonObjectOrNull(payload) ?: return payload
-        return result.withString("id", id).toString()
     }
 
     /** Loads [url] in this window, when it is one a page may load. */
@@ -483,6 +545,15 @@ class CefBrowserSession(
         if (text.isEmpty()) browser.stopFinding(true) else browser.find(text, forward, false, findNext)
     }
 
+    /**
+     * Takes the keyboard from the page, for the toolbar's own fields. Chromium's native view keeps it
+     * otherwise: a click on the toolbar moves Compose's focus, but the keys still reach the page.
+     */
+    fun releaseKeyboard() {
+        browser?.setFocus(false)
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().clearGlobalFocusOwner()
+    }
+
     fun stopFinding() {
         browser?.stopFinding(true)
     }
@@ -492,6 +563,7 @@ class CefBrowserSession(
         val clamped = percent.coerceIn(CefNappletSession.MIN_ZOOM, CefNappletSession.MAX_ZOOM)
         mutablePage.update { it.copy(zoomPercent = clamped) }
         browser?.zoomLevel = ln(clamped / 100.0) / ln(ZOOM_FACTOR_PER_LEVEL)
+        OmniboxInput.hostOf(mutablePage.value.url)?.let { onZoom(it.lowercase(), clamped) }
     }
 
     fun close() {
@@ -541,6 +613,8 @@ class CefBrowserSession(
     class BrowserDocument(
         val origin: String,
         val channelId: Long,
+        /** Minted by the host as the channel opens; the document's requests carry it. */
+        val token: String,
         private val channel: CefQueryCallback,
     ) {
         @Volatile
@@ -574,7 +648,8 @@ class CefBrowserSession(
         /** What a browser page may ask the broker for: NIP-07's set, as an nSite's. */
         val DECLARED: Set<NappletCapability> = NappletCapability.WEBSITE_CAPABILITIES
 
-        private const val POPUP_INTERVAL_MS = 1_000L
+        // How long a finished page may take to name itself before its visit is filed without a title.
+        private const val TITLE_WAIT_MS = 1_500L
 
         // Chromium's zoom level n is a scale of 1.2^n.
         private const val ZOOM_FACTOR_PER_LEVEL = 1.2
@@ -616,16 +691,6 @@ class CefBrowserSession(
 
         // napplet.local, by either scheme and whatever user info precedes it: no browser window serves
         // it, and none may reach it.
-        private fun isInternalHost(url: String): Boolean {
-            val authority =
-                url
-                    .substringAfter("://")
-                    .substringBefore('/')
-                    .substringBefore('?')
-                    .substringBefore('#')
-                    .substringAfterLast('@')
-            val host = if (authority.startsWith('[')) authority.substringBefore(']') + "]" else authority.substringBefore(':')
-            return NappletWebContract.isInternalHost(host.lowercase().trimEnd('.'))
-        }
+        private fun isInternalHost(url: String): Boolean = NappletWebContract.isInternalHost(OmniboxInput.hostOf(url)?.lowercase()?.trimEnd('.'))
     }
 }
