@@ -28,9 +28,11 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.cashu.ops.SendTokenCompleted
 import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
+import com.vitorpamplona.amethyst.commons.cashu.ops.normalizeMintUrl
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.localPrivKeyOrNull
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuProofBackfillFilters
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -41,7 +43,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.DeterministicSecretFactory
@@ -64,9 +65,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -202,6 +201,9 @@ class CashuWalletState(
      */
     private val sessionUnredeemableNutzaps = ConcurrentSet<HexKey>()
 
+    /** Below-fee nutzaps, per-mint backoff and the NIP-61 mint filter for the sweep. Under [redeemMutex]. */
+    private val redeemScheduler = NutzapRedeemScheduler()
+
     // ============================================================
     // Public flows
     // ============================================================
@@ -335,7 +337,7 @@ class CashuWalletState(
      * recipient's npub, and only a local key can produce that raw signature.
      * A remote (NIP-46) / external (NIP-55) signer yields null there.
      */
-    suspend fun redeemSigningKeys(): Pair<String?, String?> = walletPrivkeyHex() to (signer as? NostrSignerInternal)?.keyPair?.privKey?.toHexKey()
+    suspend fun redeemSigningKeys(): Pair<String?, String?> = walletPrivkeyHex() to signer.localPrivKeyOrNull()?.toHexKey()
 
     private suspend fun walletPrivkeyHex(): String? =
         _walletEvent.value?.let { evt ->
@@ -948,44 +950,64 @@ class CashuWalletState(
             skipIds.addAll(sessionRedeemedNutzaps.snapshot())
             skipIds.addAll(sessionUnredeemableNutzaps.snapshot())
 
-            val candidates = nutzapEvents.asMap().values.filter { it.id !in skipIds }
+            val pending = nutzapEvents.asMap().values.filter { it.id !in skipIds }
+
+            // NIP-61: only redeem at mints this wallet lists (its own and its kind:10019). See
+            // [NutzapRedeemScheduler.select] for what else holds a mint back.
+            val acceptedMints =
+                (_mints.value + (nutzapInfoEventInternal?.mints()?.map { it.mintUrl } ?: emptyList()))
+                    .mapTo(HashSet()) { normalizeMintUrl(it) }
+            val candidates = redeemScheduler.select(pending, acceptedMints)
             if (candidates.isEmpty()) return
 
-            val privkey = walletPrivkeyHex() ?: return
-            // Derived from the same key the line above just decrypted — pass it
-            // in rather than letting p2pkPubkeyHex() decrypt kind:17375 a
-            // second time for the identical bytes.
-            val pubkey =
-                runCatching {
-                    Secp256k1
-                        .pubKeyCompress(Secp256k1.pubkeyCreate(privkey.hexToByteArray()))
-                        .toHexKey()
-                }.getOrNull() ?: return
+            // The wallet key, plus the identity key on a local nsec login: some senders
+            // lock nutzaps to the npub instead of the kind:10019 pubkey.
+            val (privkey, identityKey) = redeemSigningKeys()
+            if (privkey == null) return
 
-            for (ev in candidates) {
-                try {
-                    ops.redeemNutzap(ev, privkey, pubkey)
-                    // Pin redemption in-memory immediately. The kind:7376
-                    // history event is bundled via newEventBundles (~1s)
-                    // before it lands in historyEvents — until then a
-                    // concurrent trigger would re-pick this nutzap and
-                    // get HTTP 400 "proofs already spent" from the mint.
-                    sessionRedeemedNutzaps.add(ev.id)
-                } catch (e: IllegalArgumentException) {
-                    // Deterministic local failure (wrong P2PK lock, no
-                    // mint tag, no proofs, not P2PK-locked). Won't get
-                    // better by retrying — pin so the next cache update
-                    // doesn't re-trigger the mint round-trips.
-                    sessionUnredeemableNutzaps.add(ev.id)
-                    Log.w("CashuWallet") {
-                        "Auto-redeem of nutzap ${ev.id.take(8)} skipped: ${e.message}"
-                    }
-                } catch (e: Exception) {
-                    currentCoroutineContext().ensureActive()
-                    Log.w("CashuWallet") {
-                        "Auto-redeem of nutzap ${ev.id.take(8)} failed: ${describeMintError(e)}"
-                    }
+            val result = ops.redeemNutzaps(candidates, privkey, acceptedMints, identityKey)
+
+            val outcome = redeemScheduler.record(result)
+
+            // Pin redemption in-memory immediately. The kind:7376 history
+            // event is bundled via newEventBundles (~1s) before it lands in
+            // historyEvents — until then a concurrent trigger would re-pick
+            // these nutzaps and get HTTP 400 "proofs already spent" from the mint.
+            result.redeemed.forEach { swap ->
+                swap.nutzaps.forEach { sessionRedeemedNutzaps.add(it.id) }
+            }
+            // Spent at the mint but the new proofs weren't published: retrying can only get
+            // "already spent", so pin them like redeemed ones. The proofs come back with a
+            // NUT-13 restore from the wallet seed.
+            result.notSaved.forEach { lost ->
+                lost.nutzaps.forEach { sessionRedeemedNutzaps.add(it.id) }
+                Log.e("CashuWallet") {
+                    "Redeemed ${lost.nutzaps.size} nutzap(s) worth ${lost.amount} sats at ${lost.mintUrl} but could not save the proofs " +
+                        "(${describeMintError(lost.error)}); restore the wallet from its seed to recover them"
                 }
+            }
+            // Deterministic failure (wrong P2PK lock, no mint tag, no proofs,
+            // failed NUT-12 check, already spent at the mint). Won't get better
+            // by retrying — pin so the next cache update doesn't re-trigger the
+            // mint round-trips.
+            result.unredeemable.forEach { (ev, reason) ->
+                sessionUnredeemableNutzaps.add(ev.id)
+                Log.w("CashuWallet") { "Auto-redeem of nutzap ${ev.id.take(8)} skipped: $reason" }
+            }
+            val newlyBelowFee = outcome.newlyBelowFee
+            if (newlyBelowFee.isNotEmpty()) {
+                Log.i("CashuWallet") {
+                    "Auto-redeem left ${newlyBelowFee.size} nutzap(s) worth no more than the mint fee; " +
+                        "waiting for more nutzaps at the same mint: ${newlyBelowFee.joinToString { it.id.take(8) }}"
+                }
+            }
+            result.failed.forEach { (ev, e) ->
+                Log.w("CashuWallet") {
+                    "Auto-redeem of nutzap ${ev.id.take(8)} failed: ${describeMintError(e)}"
+                }
+            }
+            outcome.backingOff.forEach { (mint, delayMs) ->
+                Log.i("CashuWallet") { "Auto-redeem backing off $mint for ${delayMs / 1000}s" }
             }
         } finally {
             redeemMutex.unlock()
