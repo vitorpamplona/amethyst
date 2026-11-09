@@ -122,6 +122,9 @@ import kotlin.system.exitProcess
  */
 @OptIn(ExperimentalComposeUiApi::class, FlowPreview::class)
 fun main(args: Array<String>) {
+    // The folder the JVM writes this start's class archive to at exit, in every mode below.
+    StartupArchive.prepare()
+
     // The OS timer relaunches the app this way to publish scheduled posts while it is closed: no
     // window, no keyring, just the pre-signed posts that are due.
     if (args.contains("--publish-scheduled")) exitProcess(runHeadlessPublish())

@@ -830,6 +830,59 @@ window (needs `sway`).
 
 ---
 
+## Startup archives
+
+A cold JVM spends most of the desktop app's start loading, verifying and linking
+classes, ~10k of them before the logged-in window shows. The packages map them
+from class archives instead. Measured on a packaged build (4 cores, software
+rendering), launch to the logged-in window, median of 6:
+
+| The package carries | Logged-in window |
+|---|---|
+| no archive (packages up to 1.21) | ~8.2 s |
+| the runtime's archive | ~7.8 s |
+| + the per-user archive | ~2.4 s |
+| a trained AOT cache instead | ~1.8 s |
+
+Every package has the first, and each has one of the other two:
+
+- **The runtime's archive** (`lib/server/classes.jsa` in the bundled runtime, JDK
+  classes only). jlink makes it only with `bin/java`, which the packages strip,
+  so a step after jlink dumps it (`desktopApp/build.gradle.kts`, "The runtime's
+  own class archive"), with the app's `--add-opens`/`--add-exports`: a mismatch
+  costs the archived module graph and an error line at every start.
+- **The per-user archive**, in the `.deb`, `.rpm`, `.dmg`, `.msi` and the Windows
+  `.zip`. The launcher passes `-XX:+AutoCreateSharedArchive` with a file in the
+  user's cache folder (`~/.cache/amethyst-desktop/startup-<version>.jsa`,
+  `~/Library/Caches/Amethyst/…`, `%LOCALAPPDATA%\Amethyst\…`): the JVM writes it
+  as the first start exits (~140 MB; that exit takes a few seconds) and maps it
+  from the next start on. The launcher expands the variable since JDK 25. The JVM
+  rewrites a missing archive but not one whose jars changed, so the name carries
+  the version, and the app (`StartupArchive`) creates the folder, deletes other
+  versions' archives, and deletes one older than any jar (a same-version
+  reinstall), which the next start then replaces. The OS timer's
+  `--publish-scheduled` runs read it but don't write it (`_JAVA_OPTIONS` in
+  `OsScheduler`), so a short headless run can't leave an archive of its few
+  classes behind.
+- **The trained AOT cache**, in the tarball, the AppImage and the Flatpak bundle
+  (`lib/app/amethyst.aot`). `trainReleaseAotCache` starts the release image logged
+  in read-only, lets it load the home feed, and builds the cache from that run.
+  It is valid wherever the image is copied as long as every jar keeps its size and
+  modification time, so its jars are stamped to time 0 (as OSTree stores them), and
+  the AppImage step stamps its copy again. jpackage's installers rewrite those
+  times, which is why they carry the per-user archive instead.
+
+A stale or missing archive never stops a start: the JVM says so on stderr and
+loads the classes from the jars. To train locally (Linux, JDK 25):
+
+```bash
+xvfb-run ./gradlew :desktopApp:trainReleaseAotCache -Pamethyst.aotTrainingLogin=npub1...
+```
+
+`-Pamethyst.aotTrainingSeconds` (default 45) sets the training run's length.
+
+---
+
 ## Video and audio on Linux
 
 The desktop player decodes through the system's GStreamer. The released `.deb`

@@ -7,6 +7,7 @@ import java.io.DataInputStream
 import java.net.URI
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipFile
 
 plugins {
@@ -165,6 +166,26 @@ dependencies {
     testImplementation(libs.jetbrains.compose.ui.test.junit4)
 }
 
+// The per-user class archive of a package without a trained AOT cache (BUILDING.md, "Startup
+// archives"): the JVM writes it at the exit of a start that found none (the first, and the first
+// after an update) and maps it on the next ones. Packages are built on the OS they
+// ship for, and their launcher expands the variable (JDK 25 and later; an older one would pass it on
+// as it is). The app creates the folder (StartupArchive), which the JVM can't. The name carries the
+// version because the JVM only rewrites a missing archive, not one whose jars changed (checked on
+// JDK 21 and 25): an update then starts on a new file, and the app deletes the old one.
+val perUserArchive =
+    when {
+        System.getProperty("os.name").startsWith("Mac") -> "\$HOME/Library/Caches/Amethyst/startup-$appVersion.jsa"
+        System.getProperty("os.name").startsWith("Windows") -> "\$LOCALAPPDATA/Amethyst/startup-$appVersion.jsa"
+        else -> "\$HOME/.cache/amethyst-desktop/startup-$appVersion.jsa"
+    }
+val perUserArchiveArgs =
+    if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_25)) {
+        listOf("-XX:+AutoCreateSharedArchive", "-XX:SharedArchiveFile=$perUserArchive", "-Damethyst.startupArchive=$perUserArchive")
+    } else {
+        emptyList()
+    }
+
 // Previews another OS's look on this machine: `./gradlew :desktopApp:run -Damethyst.platform=MACOS
 // -Damethyst.appearance=light`; `-Damethyst.login=npub1...` opens logged in with that key and
 // `-Damethyst.signup=Name` signs up a new account, `-Damethyst.videoTimeline=true` logs each video's
@@ -189,6 +210,8 @@ tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
     val cdsArchive = layout.buildDirectory.file("appcds/run.jsa")
     dependsOn("buildMacVideoPlayer")
     doFirst {
+        // Nothing expands $HOME outside a package's launcher; the dev run keeps its own archive.
+        setJvmArgs(jvmArgs.orEmpty().filterNot { it in perUserArchiveArgs })
         overrides.forEach { key -> System.getProperty(key)?.let { jvmArgs("-D$key=$it") } }
         // AutoCreateSharedArchive came with Java 19: an older JVM would refuse to start on it.
         if (javaVersion.isCompatibleWith(JavaVersion.VERSION_19)) {
@@ -319,6 +342,10 @@ compose.desktop {
             jvmArgs += "--enable-native-access=ALL-UNNAMED"
             jvmArgs += "--sun-misc-unsafe-memory-access=allow"
         }
+
+        // The per-user class archive (see perUserArchive). trainReleaseAotCache swaps it for the
+        // trained AOT cache in the images it trains.
+        jvmArgs += perUserArchiveArgs
 
         // The shared app reads its version from here (there is no BuildConfig on desktop).
         jvmArgs += "-Damethyst.version=$appVersion"
@@ -485,6 +512,46 @@ tasks.withType<AbstractJLinkTask>().configureEach {
         if (System.getProperty("os.name").startsWith("Linux") && !File(jdk.get(), "lib/libawt_wlawt.so").isFile) {
             logger.warn("w: ${jdk.get()} has no Wayland toolkit: this runtime draws through X11/XWayland only. Build Linux packages on the JetBrains Runtime.")
         }
+    }
+}
+
+// --- The runtime's own class archive (BUILDING.md, "Startup archives") ---
+//
+// A JDK maps the classes of its own start from lib/server/classes.jsa instead of parsing them, and
+// the JVM writes an app's class archive only on top of it. jlink makes it only with bin/java in the
+// image, which Compose strips, so the runtime images shipped without one. Dumped here instead, with
+// the JDK's launcher dropped into the image for the moment: the JVM and the modules it archives are
+// the image's own. It is dumped with the app's module options: an app archive on top of one made
+// without them makes the JVM drop its archived module graph and say so on stderr at every start.
+tasks.withType<AbstractJLinkTask>().configureEach {
+    val jdk = javaHome
+    val image = destinationDir
+    doLast {
+        val moduleOptions =
+            compose.desktop.application.jvmArgs.filter { arg ->
+                listOf("--add-opens=", "--add-exports=", "--enable-native-access=").any(arg::startsWith)
+            }
+        val imageDir = image.get().asFile
+        val exe = if (System.getProperty("os.name").startsWith("Windows")) "java.exe" else "java"
+        val bin = File(imageDir, "bin")
+        val madeBin = !bin.exists()
+        check(bin.isDirectory || bin.mkdirs()) { "Could not create $bin" }
+        val java = File(bin, exe)
+        File(jdk.get(), "bin/$exe").copyTo(java, overwrite = true)
+        check(java.setExecutable(true)) { "Could not make $java executable" }
+        val output =
+            try {
+                val process = ProcessBuilder(listOf(java.absolutePath, "-Xshare:dump") + moduleOptions).redirectErrorStream(true).start()
+                val text = process.inputStream.bufferedReader().readText()
+                check(process.waitFor() == 0) { "$java -Xshare:dump failed:\n$text" }
+                text
+            } finally {
+                check(java.delete()) { "Could not delete $java" }
+                if (madeBin) check(bin.delete()) { "Could not delete $bin" }
+            }
+        val archive = imageDir.walkTopDown().firstOrNull { it.name == "classes.jsa" }
+        check(archive != null) { "-Xshare:dump wrote no classes.jsa into $imageDir:\n$output" }
+        logger.lifecycle("Runtime class archive: $archive (${archive.length() / 1024 / 1024} MB)")
     }
 }
 
@@ -672,6 +739,109 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
     }
 }
 
+// --- The trained AOT cache of the Linux portable builds (BUILDING.md, "Startup archives") ---
+//
+// An AOT cache made from a training run holds the classes a start loads, already linked, and the
+// JIT's profiles of it: measured on a packaged build, the logged-in window showed in ~1.8 s against
+// ~2.4 s with the per-user archive and ~8.2 s with neither. It is valid where it was made and
+// wherever the app is copied, as long as each jar keeps its size and modification time; jpackage's
+// installers (.deb, .rpm, .dmg, .msi) rewrite those, so they keep the per-user archive. The
+// tarball, the AppImage and the Flatpak bundle carry the release distributable's own files, so this
+// trains that image in place. Its jars are stamped to time 0 first: OSTree (the Flatpak) stores every
+// file that way, and the AppImage step stamps its copy to match.
+//
+// Release CI runs it under xvfb-run, logged in read-only with -Pamethyst.aotTrainingLogin (an npub;
+// a default key otherwise) so the start goes through the home feed. -Pamethyst.aotTrainingSeconds
+// sets how long the run lasts.
+val trainReleaseAotCache = tasks.register("trainReleaseAotCache") {
+    group = "compose desktop"
+    description = "Train an AOT cache into createReleaseDistributable's image (Linux, needs a display)."
+    dependsOn("createReleaseDistributable")
+
+    val distDir = layout.buildDirectory.dir("compose/binaries/main-release/app/Amethyst")
+    val workDir = layout.buildDirectory.dir("aot-training")
+    val login =
+        providers.gradleProperty("amethyst.aotTrainingLogin")
+            .orElse("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z")
+    val seconds = providers.gradleProperty("amethyst.aotTrainingSeconds").map(String::toLong).orElse(45L)
+    val dropped = perUserArchiveArgs
+
+    doLast {
+        check(System.getProperty("os.name").startsWith("Linux")) { "trainReleaseAotCache trains the Linux portable builds only" }
+        check(!System.getenv("DISPLAY").isNullOrBlank()) { "trainReleaseAotCache starts the app: run it under xvfb-run" }
+        val app = distDir.get().asFile
+        val appDir = File(app, "lib/app")
+        val launcher = File(app, "bin/Amethyst")
+        val cfg = File(appDir, "Amethyst.cfg")
+        val cache = File(appDir, "amethyst.aot")
+        val config = File(appDir, "amethyst.aotconf")
+        val work = workDir.get().asFile
+        check((!work.exists() || work.deleteRecursively()) && work.mkdirs()) { "Could not make an empty $work" }
+
+        appDir.listFiles { f -> f.name.endsWith(".jar") }.orEmpty().forEach {
+            check(it.setLastModified(0)) { "Could not stamp $it" }
+        }
+        listOf(cache, config).forEach { check(!it.exists() || it.delete()) { "Could not delete $it" } }
+
+        // The launcher's options, without the per-user archive this image trades for the cache.
+        val original = cfg.readText()
+        val base = original.lines().filter(String::isNotEmpty).filterNot { line -> dropped.any { line == "java-options=$it" } }
+        fun writeCfg(vararg options: String) = cfg.writeText((base + options.map { "java-options=$it" }).joinToString("\n", postfix = "\n"))
+
+        fun launch(
+            step: String,
+            env: Map<String, String>,
+            timeoutSeconds: Long,
+        ) {
+            val log = File(work, "$step.log")
+            val process =
+                ProcessBuilder(launcher.absolutePath)
+                    .redirectErrorStream(true)
+                    .redirectOutput(log)
+                    .also { it.environment().putAll(env) }
+                    .start()
+            if (!process.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
+                process.destroyForcibly()
+                error("AOT $step did not exit in $timeoutSeconds s; see $log")
+            }
+            check(process.exitValue() == 0) { "AOT $step exited ${process.exitValue()}:\n${log.readText().takeLast(4000)}" }
+        }
+
+        try {
+            // 1. Record: a start logged in, through the home feed, then a normal exit.
+            writeCfg(
+                "-XX:AOTMode=record",
+                "-XX:AOTConfiguration=\$APPDIR/amethyst.aotconf",
+                "-Damethyst.dataDir=${File(work, "profile").absolutePath}",
+                "-Damethyst.exitAfterSeconds=${seconds.get()}",
+            )
+            launch("record", mapOf("AMETHYST_LOGIN" to login.get(), "SKIKO_RENDER_API" to "SOFTWARE"), seconds.get() + 120)
+            check(config.isFile) { "The training run recorded nothing: no $config" }
+
+            // 2. Create: the launcher's JVM assembles the cache and exits without starting the app.
+            writeCfg("-XX:AOTMode=create", "-XX:AOTConfiguration=\$APPDIR/amethyst.aotconf", "-XX:AOTCache=\$APPDIR/amethyst.aot")
+            launch("create", emptyMap(), 600)
+            check(cache.isFile) { "No AOT cache at $cache" }
+        } finally {
+            // The cache, or on a failed run the launcher as it was.
+            if (cache.isFile) writeCfg("-XX:AOTCache=\$APPDIR/amethyst.aot") else cfg.writeText(original)
+            check(!config.exists() || config.delete()) { "Could not delete $config" }
+        }
+
+        // 3. Check: a start that must map the cache (AOTMode=on fails the JVM otherwise).
+        launch(
+            "check",
+            mapOf(
+                "_JAVA_OPTIONS" to "-XX:AOTMode=on -Damethyst.exitAfterSeconds=5 -Damethyst.dataDir=${File(work, "check").absolutePath}",
+                "SKIKO_RENDER_API" to "SOFTWARE",
+            ),
+            120,
+        )
+        logger.lifecycle("AOT cache: $cache (${cache.length() / 1024 / 1024} MB)")
+        if (!work.deleteRecursively()) logger.warn("w: could not delete $work")
+    }
+}
+
 // --- AppImage packaging (Linux) ---
 //
 // Compose Multiplatform's TargetFormat.AppImage is known-broken in 1.10.x (CMP-7101).
@@ -701,6 +871,8 @@ val createReleaseAppImage = tasks.register<Exec>("createReleaseAppImage") {
     group = "compose desktop"
     description = "Package createReleaseDistributable output into a Linux AppImage via appimagetool."
     dependsOn("createReleaseDistributable")
+    // Release CI trains the image's AOT cache first, when it asks for both.
+    mustRunAfter(trainReleaseAotCache)
 
     // AppImage's ARCH env accepts the Linux kernel arch names: x86_64 / aarch64
     // / armhf / i686. jpackage produces host-native binaries, so mirror the
@@ -741,6 +913,13 @@ val createReleaseAppImage = tasks.register<Exec>("createReleaseAppImage") {
             from(toolRoot.file("amethyst.desktop"))
             from(toolRoot.file("amethyst.png"))
             into(dir)
+        }
+        // A trained AOT cache matches its jars by modification time, which the copy reset.
+        val appJars = File(dir, "usr/lib/app")
+        if (File(appJars, "amethyst.aot").isFile) {
+            appJars.listFiles { f -> f.name.endsWith(".jar") }.orEmpty().forEach {
+                check(it.setLastModified(0)) { "Could not stamp $it" }
+            }
         }
         // DirIcon is used by desktop integrations (file managers, AppImageLauncher)
         val dirIcon = File(dir, ".DirIcon")
