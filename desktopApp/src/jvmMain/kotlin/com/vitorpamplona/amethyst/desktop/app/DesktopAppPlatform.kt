@@ -204,8 +204,9 @@ class DesktopAppPlatform(
 }
 
 /**
- * Web apps and links open in the system browser; napplets and nSites open in [DesktopNappletHost]'s
- * sandboxed windows.
+ * Web apps and links opened from the Browser tab, favorites and the screens that launch a site open
+ * in [DesktopNappletHost]'s browser windows, with NIP-07; napplets and nSites in its sandboxed
+ * windows. Without Chromium, or with nobody logged in, a web link goes to the system browser.
  */
 private class DesktopAppLauncher(
     private val napplets: DesktopNappletHost?,
@@ -219,7 +220,7 @@ private class DesktopAppLauncher(
         stillLoading: String,
     ) {
         when (app) {
-            is FavoriteApp.WebApp -> DesktopBrowser.open(app.url)
+            is FavoriteApp.WebApp -> launchUrl(app.url, preferTor = false)
             is FavoriteApp.NostrApp -> {
                 when (val event = LocalCache.getAddressableNoteIfExists(app.coordinate)?.event) {
                     null -> toaster.show(stillLoading, false)
@@ -235,7 +236,15 @@ private class DesktopAppLauncher(
         url: String,
         preferTor: Boolean,
     ) {
-        DesktopBrowser.open(url)
+        val host = napplets
+        if (host == null) {
+            DesktopBrowser.open(url)
+            return
+        }
+        host.openBrowser(url, preferTor).onFailure {
+            Log.d(TAG) { "Opening a link in the system browser: ${it.message}" }
+            DesktopBrowser.open(url)
+        }
     }
 
     // Without Chromium (it couldn't be set up here) the cards offer no Open.

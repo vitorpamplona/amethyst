@@ -165,11 +165,7 @@ class CefNappletSessionTest {
         private const val BURST = 100
 
         /** Chromium starts once per process, as in the app; every test shares it. */
-        private val sharedEngine by lazy {
-            val installDir = System.getenv("AMETHYST_CEF_DIR")?.let(::File) ?: File(System.getProperty("java.io.tmpdir"), "amethyst-jcef-test")
-            // Loopback allowed: the test's local server stands in for the web a site talks to.
-            DesktopCefEngine(installDir, createTempDirectory("napplet-cef-cache").toFile(), DesktopSocksRouter(allowLocal = true))
-        }
+        private val sharedEngine get() = SharedCefTestEngine.engine
     }
 
     @After

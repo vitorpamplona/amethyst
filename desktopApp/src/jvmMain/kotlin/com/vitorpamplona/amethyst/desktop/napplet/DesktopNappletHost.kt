@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.account.AccountState
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.DataStoreNappletStorage
@@ -104,6 +106,11 @@ class DesktopNappletHost(
     private val mutableSessions = MutableStateFlow<List<CefNappletSession>>(emptyList())
     val sessions: StateFlow<List<CefNappletSession>> = mutableSessions.asStateFlow()
 
+    private val mutableBrowsers = MutableStateFlow<List<CefBrowserSession>>(emptyList())
+
+    /** The in-app browser's windows. */
+    val browsers: StateFlow<List<CefBrowserSession>> = mutableBrowsers.asStateFlow()
+
     // Napplets running inside notes: no window, so they are kept apart from [sessions].
     private val inlineSessions = MutableStateFlow<Set<CefNappletSession>>(emptySet())
 
@@ -125,6 +132,7 @@ class DesktopNappletHost(
                 .distinctUntilChanged()
                 .collect { pubKey ->
                     sessions.value.filter { it.accountPubKey != pubKey }.forEach(::close)
+                    browsers.value.filter { it.accountPubKey != pubKey }.forEach(::closeBrowser)
                     inlineSessions.value.filter { it.accountPubKey != pubKey }.forEach(::closeInline)
                     // The last frames shown were the old account's screens.
                     InlineNappletPosters.clear()
@@ -197,6 +205,86 @@ class DesktopNappletHost(
         open(session.launch, account, session.useTor)
     }
 
+    /**
+     * Opens the web page at [url] in a browser window of its own, with NIP-07 for the logged-in
+     * account. It goes through Tor when Tor is on, unless the user moved its host to the open web;
+     * [preferTor] keeps it on Tor whatever that choice (an `.onion`). Fails for anything but a web
+     * page, or with nobody logged in, so the caller can hand the link to the system instead.
+     */
+    fun openBrowser(
+        url: String,
+        preferTor: Boolean = false,
+    ): Result<CefBrowserSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to browse with Nostr"))
+        if (BrowserChrome.originOf(url) == null || CefBrowserSession.navigationOf(url, isMainFrame = true) != CefBrowserSession.Navigation.LOAD) {
+            return Result.failure(IllegalArgumentException("Not a web page"))
+        }
+        val useTor = torEnabled() && (preferTor || OmniboxInput.isOnion(url) || networkChoices.useTor(webKey(url)))
+        return Result.success(openBrowser(url, account, useTor))
+    }
+
+    private fun openBrowser(
+        url: String,
+        account: Account,
+        useTor: Boolean,
+    ): CefBrowserSession =
+        CefBrowserSession(
+            startUrl = url,
+            accountPubKey = account.pubKey,
+            useTor = useTor,
+            account = account,
+            broker = brokerFor(account),
+            runtime = runtime,
+            bridge = runtime.browserBridge,
+            // A window the page opens signs as this one's account, and only while it is still logged in.
+            onPopup = { popup ->
+                val current = modules.sessionManager.loggedInAccount()
+                if (current?.pubKey == account.pubKey) openBrowser(popup, current, useTor)
+            },
+            onVisit = { visited, title -> modules.browserHistory.record(visited, title) },
+        ).also { session ->
+            mutableBrowsers.update { it + session }
+            session.start()
+        }
+
+    /**
+     * Moves [session]'s host to Tor or the open web: remembers the choice, then reopens the window on
+     * the page it was showing, on the new route.
+     */
+    fun setBrowserNetworkMode(
+        session: CefBrowserSession,
+        useTor: Boolean,
+    ) {
+        val account = modules.sessionManager.loggedInAccount() ?: return
+        val url =
+            session.page.value.url
+                .ifBlank { session.startUrl }
+        networkChoices.set(webKey(url), useTor)
+        closeBrowser(session)
+        openBrowser(url, account, (useTor || OmniboxInput.isOnion(url)) && torEnabled())
+    }
+
+    /** Opens [session]'s page again in a fresh window, after a failure the user wants to retry. */
+    fun reopenBrowser(session: CefBrowserSession) {
+        val account = modules.sessionManager.loggedInAccount() ?: return
+        closeBrowser(session)
+        openBrowser(session.startUrl, account, session.useTor)
+    }
+
+    fun closeBrowser(session: CefBrowserSession) {
+        mutableBrowsers.update { it - session }
+        session.close()
+        // The questions its pages left behind, unless another window still shows one of them.
+        val stillOpen = browsers.value.flatMapTo(HashSet()) { it.apps.value }
+        session.apps.value
+            .filter { it !in stillOpen }
+            .forEach(consent::dismissApp)
+        if (sessions.value.isEmpty() && browsers.value.isEmpty()) modules.nappletPermissionLedger.endSession()
+    }
+
+    // A web host's network choice, kept beside the nSites' in the same store.
+    private fun webKey(url: String): String = "web:" + (OmniboxInput.hostOf(url)?.lowercase() ?: url)
+
     private fun open(
         launch: NappletLaunch,
         account: Account,
@@ -262,7 +350,7 @@ class DesktopNappletHost(
         if (sessions.value.none { it.launch.identity.coordinate == session.launch.identity.coordinate }) {
             consent.dismissApp(session.launch.identity.coordinate)
         }
-        if (sessions.value.isEmpty()) modules.nappletPermissionLedger.endSession()
+        if (sessions.value.isEmpty() && browsers.value.isEmpty()) modules.nappletPermissionLedger.endSession()
     }
 
     /**
@@ -296,6 +384,7 @@ class DesktopNappletHost(
 
     fun shutdown() {
         sessions.value.forEach(::close)
+        browsers.value.forEach(::closeBrowser)
         inlineSessions.value.forEach(::closeInline)
         // Videos and audio that play in Chromium (they aren't napplets, but share its engine).
         ChromiumMediaSession.closeAll()

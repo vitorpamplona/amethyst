@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -97,10 +98,14 @@ class DesktopCefEngine(
     /** Starts Chromium if it isn't running (downloading it the first time) and returns it. */
     suspend fun app(): CefApp =
         mutex.withLock {
-            (mutableState.value as? State.Ready)?.app ?: withContext(Dispatchers.IO) { start() }
+            (mutableState.value as? State.Ready)?.app ?: run {
+                // Read here, where it may suspend: the browser's content script carries the shim.
+                val shim = NappletWebResources.shimJs().decodeToString()
+                withContext(Dispatchers.IO) { start(shim) }
+            }
         }
 
-    private fun start(): CefApp {
+    private fun start(shimJs: String): CefApp {
         mutableState.value = State.Starting
         return try {
             if (!cacheRoot.isDirectory && !cacheRoot.mkdirs()) throw IllegalStateException("Cannot create $cacheRoot")
@@ -124,7 +129,7 @@ class DesktopCefEngine(
                 *CHROMIUM_ARGS,
                 "--proxy-server=socks5://127.0.0.1:${router.port}",
                 "--proxy-bypass-list=<-loopback>",
-                "--load-extension=${installGuard().absolutePath}",
+                "--load-extension=${installGuard(shimJs).absolutePath}",
             )
             val context = ContextSetup()
             builder.setAppHandler(
@@ -182,13 +187,16 @@ class DesktopCefEngine(
      *   nSites, on their own origins, keep WebRTC: their traffic is theirs to route.
      * - [NappletWebContract.COOKIE_GUARD_JS] everywhere under napplet.local, which is one site for every
      *   app, account and route here.
+     * - [DesktopBrowserBridge.contentScript] in the top frame of every web page: in an in-app browser
+     *   window it gives the page `window.nostr`; anywhere else it finds no bridge and does nothing.
      */
-    private fun installGuard(): File {
+    private fun installGuard(shimJs: String): File {
         val dir = File(cacheRoot, GUARD_DIR)
         if (!dir.isDirectory && !dir.mkdirs()) throw IllegalStateException("Cannot create $dir")
         File(dir, "manifest.json").writeText(GUARD_MANIFEST)
         File(dir, "guard.js").writeText(NappletWebContract.WEBRTC_GUARD_JS)
         File(dir, "cookies.js").writeText(NappletWebContract.COOKIE_GUARD_JS)
+        File(dir, "browser.js").writeText(DesktopBrowserBridge.contentScript(shimJs))
         return dir
     }
 
@@ -260,6 +268,7 @@ class DesktopCefEngine(
         private const val NOTIFICATION_HELPER = "jcef Helper (Alerts).app"
 
         // match_origin_as_fallback reaches the opaque srcdoc and about:blank frames under the shell.
+        // The browser's script runs in top frames only (no all_frames) and never under napplet.local.
         private val GUARD_MANIFEST =
             """
             {
@@ -280,6 +289,12 @@ class DesktopCefEngine(
                 "all_frames": true,
                 "match_about_blank": true,
                 "match_origin_as_fallback": true,
+                "run_at": "document_start",
+                "world": "MAIN"
+              }, {
+                "matches": ["http://*/*", "https://*/*"],
+                "exclude_matches": ["${NappletWebContract.ORIGIN}/*", "https://*.${NappletWebContract.HOST}/*"],
+                "js": ["browser.js"],
                 "run_at": "document_start",
                 "world": "MAIN"
               }]
