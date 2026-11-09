@@ -158,18 +158,12 @@ class DesktopNappletHost(
                     screens.value.filter { it.accountPubKey != pubKey }.forEach(::closeScreen)
                     browsers.value.filter { it.accountPubKey != pubKey }.forEach(::closeBrowser)
                     inlineSessions.value.filter { it.accountPubKey != pubKey }.forEach(::closeInline)
+                    // Their sites' cookies and storage go with them.
+                    runtime.engine.retainWebContexts(pubKey)
                     // The last frames shown were the old account's screens.
                     InlineNappletPosters.clear()
                     synchronized(this@DesktopNappletHost) { brokers.keys.retainAll(setOfNotNull(pubKey)) }
                 }
-        }
-        // A deleted account's pages are closed (it isn't the one logged in); its sites' cookies and
-        // storage go with it.
-        modules.applicationIOScope.launch {
-            modules.accountRemovals.collect { pubKey ->
-                browsers.value.filter { it.accountPubKey == pubKey }.forEach(::closeBrowser)
-                runtime.engine.forgetWebContexts(pubKey)
-            }
         }
     }
 

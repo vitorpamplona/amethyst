@@ -147,9 +147,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -613,11 +611,6 @@ class DesktopAppModules(
     /** The updater's "quit so the new version can take over": the window collects it and exits as Quit does. */
     val quitRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    private val removedAccounts = MutableSharedFlow<HexKey>(extraBufferCapacity = 16)
-
-    /** Accounts logged off and deleted, so what holds their data outside the account (the in-app browser's jar) drops it. */
-    val accountRemovals: SharedFlow<HexKey> = removedAccounts.asSharedFlow()
-
     /** Key Backup, the key prompts and the keyring alert, for the shared UI. */
     val keyStorageController by lazy {
         DesktopKeyStorage(
@@ -742,7 +735,6 @@ class DesktopAppModules(
             scheduledPostStore.removeForAccount(pubkey)
             powPublishQueue.cancelForOwner(pubkey)
             powJobStore.removeForAccount(pubkey)
-            removedAccounts.emit(pubkey)
             // A login imported from the legacy app may still own a bunker transport key in the keyring.
             try {
                 keyStorage.deletePrivateKey(LegacyDesktopAccountImport.bunkerTransportKeyAlias(pubkey.hexToByteArray().toNpub()))

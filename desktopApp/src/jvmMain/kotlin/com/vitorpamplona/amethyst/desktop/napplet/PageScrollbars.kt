@@ -48,6 +48,8 @@ import org.cef.browser.CefFrame
 object PageScrollbars {
     private const val TRACK = "--amethyst-scrollbar-track"
     private const val THUMB = "--amethyst-scrollbar-thumb"
+    private const val RULES_SHEET = "amethyst.scrollbars"
+    private const val COLORS_SHEET = "amethyst.scrollbars.colors"
 
     val CSS =
         """
@@ -60,13 +62,25 @@ object PageScrollbars {
 
     private val LAYERED = "@layer amethyst-scrollbars {\n$CSS\n}"
 
+    // Adopts sheet [name] (a document symbol, so a page's own names can't clash) with [text] once per
+    // document, and adopts it again if the page replaced its adopted sheets. [replace] sets its text
+    // even when it was there already.
+    private fun adopt(
+        name: String,
+        text: String,
+        replace: Boolean,
+    ) = "var k=Symbol.for('$name'),s=d[k];" +
+        "if(!s){try{s=new CSSStyleSheet();}catch(e){return;}s.replaceSync(" + JsonPrimitive(text) + ");Object.defineProperty(d,k,{value:s});}" +
+        (if (replace) "else s.replaceSync(" + JsonPrimitive(text) + ");" else "") +
+        "if(d.adoptedStyleSheets.indexOf(s)<0)d.adoptedStyleSheets=d.adoptedStyleSheets.concat([s]);"
+
+    private val ADOPT_RULES = adopt(RULES_SHEET, LAYERED, replace = false)
+
     /**
      * [CSS] for a document no extension reaches, adopted as a constructed stylesheet in a cascade layer
      * of its own. Runs as the document is created, before its own scripts and styles.
      */
-    val DOCUMENT_SCRIPT =
-        "(function(){try{var s=new CSSStyleSheet();s.replaceSync(" + JsonPrimitive(LAYERED) + ");" +
-            "document.adoptedStyleSheets=document.adoptedStyleSheets.concat([s]);}catch(e){}})();"
+    val DOCUMENT_SCRIPT = "(function(){var d=document;$ADOPT_RULES})();"
 
     private val HEX = Regex("#[0-9A-Fa-f]{6}")
 
@@ -79,14 +93,13 @@ object PageScrollbars {
         script = scriptFor(colors.takeIf { HEX.matches(it.background) && HEX.matches(it.text) })
     }
 
-    // The rules again, layered, with the colors: [DOCUMENT_SCRIPT] and the extension don't reach a
-    // cross-site frame of a web page (it runs in its own process), but executeJavaScript does.
+    // The rules, once per document: [DOCUMENT_SCRIPT] put them there already in a web page, and a
+    // napplet has the extension's, but neither reaches a web page's cross-site frame (its own process),
+    // which executeJavaScript does. Then the colors, a two-line sheet of their own.
     private fun scriptFor(colors: NappletThemeColors?): String {
-        val sheet = LAYERED + (colors?.let { "\n:root{$TRACK:${it.background};$THUMB:${it.text}}" } ?: "")
-        return "(function(){var d=document,k=Symbol.for('amethyst.scrollbars'),s=d[k];" +
-            "if(!s){try{s=new CSSStyleSheet();}catch(e){return;}Object.defineProperty(d,k,{value:s});}" +
-            "s.replaceSync(" + JsonPrimitive(sheet) + ");" +
-            "if(d.adoptedStyleSheets.indexOf(s)<0)d.adoptedStyleSheets=d.adoptedStyleSheets.concat([s]);})();"
+        val variables = colors?.let { ":root{$TRACK:${it.background};$THUMB:${it.text}}" } ?: ""
+        return "(function(){var d=document;$ADOPT_RULES})();" +
+            "(function(){var d=document;" + adopt(COLORS_SHEET, variables, replace = true) + "})();"
     }
 
     /** The current colors in [frame]'s document. Any thread. */

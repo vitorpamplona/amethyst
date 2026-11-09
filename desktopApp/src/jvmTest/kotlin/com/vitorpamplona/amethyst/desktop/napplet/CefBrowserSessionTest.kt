@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.napplet
 
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
+import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
@@ -61,10 +62,14 @@ import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import java.io.File
+import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.URLDecoder
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import javax.swing.SwingUtilities
 import kotlin.io.path.createTempDirectory
 import kotlin.test.assertEquals
@@ -86,10 +91,17 @@ class CefBrowserSessionTest {
     private val pages = ConcurrentHashMap<String, String>()
     private val requested = ConcurrentHashMap.newKeySet<String>()
     private val reports = ConcurrentHashMap<String, String>()
+    private val serverThreads = Executors.newCachedThreadPool()
     private val server =
         HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
+            // Its own threads: a slow download must not hold up the page's other requests.
+            executor = serverThreads
             createContext("/") { exchange ->
                 requested += exchange.requestURI.path
+                when (exchange.requestURI.path) {
+                    "/big.bin" -> return@createContext streamBig(exchange)
+                    "/drop.bin" -> return@createContext dropHalfway(exchange)
+                }
                 exchange.requestURI.rawQuery?.let { query ->
                     query.split('&').forEach { pair ->
                         reports[pair.substringBefore('=')] = URLDecoder.decode(pair.substringAfter('=', ""), Charsets.UTF_8)
@@ -115,12 +127,52 @@ class CefBrowserSessionTest {
             start()
         }
     private val port = server.address.port
+
+    // A large file sent slowly, counting what left, and whether the browser hung up on it.
+    private val bigSent = AtomicLong()
+
+    @Volatile
+    private var bigAborted = false
+
+    private fun streamBig(exchange: HttpExchange) {
+        exchange.responseHeaders.add("Content-Type", "application/octet-stream")
+        exchange.responseHeaders.add("Content-Disposition", "attachment; filename=\"big.bin\"")
+        try {
+            exchange.sendResponseHeaders(200, BIG_SIZE)
+            val chunk = ByteArray(BIG_CHUNK)
+            exchange.responseBody.use { out ->
+                while (bigSent.get() < BIG_SIZE) {
+                    out.write(chunk)
+                    bigSent.addAndGet(chunk.size.toLong())
+                    Thread.sleep(10)
+                }
+            }
+        } catch (e: IOException) {
+            bigAborted = true
+        } finally {
+            exchange.close()
+        }
+    }
+
+    // Promises a file and hangs up a little way in.
+    private fun dropHalfway(exchange: HttpExchange) {
+        exchange.responseHeaders.add("Content-Type", "application/octet-stream")
+        exchange.responseHeaders.add("Content-Disposition", "attachment; filename=\"drop.bin\"")
+        runCatching {
+            exchange.sendResponseHeaders(200, BIG_SIZE)
+            exchange.responseBody.write(ByteArray(BIG_CHUNK))
+            exchange.responseBody.flush()
+        }
+        exchange.close()
+    }
+
     private val sessions = mutableListOf<CefBrowserSession>()
 
     @After
     fun tearDown() {
         sessions.forEach { it.close() }
         server.stop(0)
+        serverThreads.shutdownNow()
         scope.cancel()
         tmp.deleteRecursively()
     }
@@ -492,7 +544,8 @@ class CefBrowserSessionTest {
     fun aDownloadWaitsForTheUserAndSavesToDownloads() =
         runBlocking {
             assumeTrue("Set AMETHYST_CEF_TEST=1 (and run under a display) to run pages in Chromium", System.getenv("AMETHYST_CEF_TEST") == "1")
-            val home = File(tmp, "home").apply { mkdirs() }
+            val home = File(tmp, "home")
+            check(home.isDirectory || home.mkdirs()) { "Cannot create $home" }
             val realHome = System.getProperty("user.home")
             System.setProperty("user.home", home.absolutePath)
             try {
@@ -535,6 +588,92 @@ class CefBrowserSessionTest {
                 assertEquals("the report", File(downloads, "report (1).bin").readText())
             } finally {
                 System.setProperty("user.home", realHome)
+            }
+        }
+
+    // Runs [block] with the user's home (where Downloads is) in a folder of the test's.
+    private inline fun <T> withHome(block: (downloads: File) -> T): T {
+        val home = File(tmp, "home-" + UUID.randomUUID())
+        check(home.isDirectory || home.mkdirs()) { "Cannot create $home" }
+        val realHome = System.getProperty("user.home")
+        System.setProperty("user.home", home.absolutePath)
+        return try {
+            block(File(home, "Downloads"))
+        } finally {
+            System.setProperty("user.home", realHome)
+        }
+    }
+
+    private suspend fun questionOf(page: CefBrowserSession): BrowserDownload =
+        withTimeout(30_000) { page.downloads.first { list -> list.any { it.state == BrowserDownload.State.ASKING } } }
+            .first { it.state == BrowserDownload.State.ASKING }
+
+    @Test
+    fun aDownloadIsHeldWhileAskedAndStopsWithItsPage() =
+        runBlocking {
+            assumeTrue("Set AMETHYST_CEF_TEST=1 (and run under a display) to run pages in Chromium", System.getenv("AMETHYST_CEF_TEST") == "1")
+            withHome { downloads ->
+                val runtime = runtime(SharedCefTestEngine.engine)
+                pages["/getbig.html"] = "<!doctype html><body><script>location.href = '/big.bin';</script></body>"
+                val page = show(runtime, NostrSignerInternal(KeyPair()), Prompts(), "http://127.0.0.1:$port/getbig.html")
+                val question = questionOf(page)
+                // Held: what left the server stops growing well short of the file.
+                delay(3_000)
+                val held = bigSent.get()
+                delay(1_500)
+                assertEquals(held, bigSent.get(), "nothing more is fetched while the user decides")
+                assertTrue(held < BIG_SIZE / 2, "it was held early: $held of $BIG_SIZE bytes sent")
+
+                // Saved: it moves again.
+                page.saveDownload(question.id)
+                withTimeout(30_000) { while (bigSent.get() <= held) delay(100) }
+
+                // The page closes mid-download: the download stops, and leaves nothing.
+                page.close()
+                withTimeout(30_000) { while (!bigAborted) delay(100) }
+                delay(1_000)
+                assertTrue(downloads.listFiles().orEmpty().none { it.name.startsWith("big") }, "nothing of it stays: ${downloads.list()?.toList()}")
+            }
+        }
+
+    @Test
+    fun aDroppedDownloadStopsAndFreesItsName() =
+        runBlocking {
+            assumeTrue("Set AMETHYST_CEF_TEST=1 (and run under a display) to run pages in Chromium", System.getenv("AMETHYST_CEF_TEST") == "1")
+            withHome { downloads ->
+                val runtime = runtime(SharedCefTestEngine.engine)
+                pages["/getdrop.html"] = "<!doctype html><body><script>location.href = '/drop.bin';</script></body>"
+                val page = show(runtime, NostrSignerInternal(KeyPair()), Prompts(), "http://127.0.0.1:$port/getdrop.html")
+                val question = questionOf(page)
+                page.saveDownload(question.id)
+                val ended = withTimeout(30_000) { page.downloads.first { list -> list.any { it.id == question.id && it.state.finished } } }.first { it.id == question.id }
+                assertEquals(BrowserDownload.State.STOPPED, ended.state, "a download the server dropped is not done")
+                val again = BrowserDownloads.reserve(downloads, "drop.bin")
+                assertEquals("drop.bin", again.name, "its name is free again")
+                BrowserDownloads.release(again)
+            }
+        }
+
+    @Test
+    fun aPageCannotStackMoreThanThreeQuestions() =
+        runBlocking {
+            assumeTrue("Set AMETHYST_CEF_TEST=1 (and run under a display) to run pages in Chromium", System.getenv("AMETHYST_CEF_TEST") == "1")
+            withHome {
+                val runtime = runtime(SharedCefTestEngine.engine)
+                pages["/report.bin"] = "the report"
+                pages["/many.html"] =
+                    """
+                    <!doctype html><body><script>
+                    for (var i = 0; i < 6; i++) { var a = document.createElement('a'); a.href = '/report.bin?i=' + i; a.download = 'r' + i + '.bin'; document.body.appendChild(a); a.click(); }
+                    </script></body>
+                    """.trimIndent()
+                val page = show(runtime, NostrSignerInternal(KeyPair()), Prompts(), "http://127.0.0.1:$port/many.html")
+                questionOf(page)
+                delay(3_000)
+                val asking = page.downloads.value.count { it.state == BrowserDownload.State.ASKING }
+                // Chromium's own limit on automatic downloads lets the first through and blocks the
+                // rest before they reach the page's handler; PageDownloadsTest covers the handler's cap.
+                assertTrue(asking in 1..PageDownloads.MAX_QUESTIONS, "at most three questions wait at once: $asking")
             }
         }
 
@@ -595,10 +734,11 @@ class CefBrowserSessionTest {
 
             val engine = SharedCefTestEngine.engine
             assertTrue(engine.webContext(alice.pubKey, overTor = true) !== engine.webContext(alice.pubKey, overTor = false), "Tor pages keep a jar apart from the open web's")
-            // The account is deleted: its pages close, and its jar goes with them.
+            // The app switches to another account: the first's pages close, and its jars go with them.
             sessions.filter { it.accountPubKey == alice.pubKey }.forEach { it.close() }
-            engine.forgetWebContexts(alice.pubKey)
-            assertEquals("no-cookie,no-storage", visit(alice, "alice4"), "a deleted account's sites start over")
+            engine.retainWebContexts(bob.pubKey)
+            assertEquals("no-cookie,no-storage", visit(alice, "alice4"), "an account switched away from starts over")
+            assertEquals("cookie,1", visit(bob, "bob2"), "and the one switched to keeps its own")
         }
 
     private suspend fun clickUntil(
@@ -661,3 +801,7 @@ class CefBrowserSessionTest {
             assertEquals(user.pubKey, reports["after"], "the other window still reaches the broker")
         }
 }
+
+// The large download: 24 MB in 64 KB pieces, ten milliseconds apart (a few seconds in all).
+private const val BIG_SIZE = 24L * 1024 * 1024
+private const val BIG_CHUNK = 64 * 1024

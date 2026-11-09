@@ -58,13 +58,9 @@ import org.cef.browser.CefDevToolsClient
 import org.cef.browser.CefFrame
 import org.cef.browser.CefMessageRouter
 import org.cef.browser.OffscreenCefBrowser
-import org.cef.callback.CefBeforeDownloadCallback
 import org.cef.callback.CefCallback
-import org.cef.callback.CefDownloadItem
-import org.cef.callback.CefDownloadItemCallback
 import org.cef.callback.CefQueryCallback
 import org.cef.handler.CefDisplayHandlerAdapter
-import org.cef.handler.CefDownloadHandler
 import org.cef.handler.CefLifeSpanHandlerAdapter
 import org.cef.handler.CefLoadHandler
 import org.cef.handler.CefLoadHandlerAdapter
@@ -185,18 +181,10 @@ class CefBrowserSession(
     /** Whether this window's traffic goes through Tor right now (one on the open web can be forced). */
     val routedOverTor: StateFlow<Boolean> get() = runtime.routes.routedOverTor
 
-    private val mutableDownloads = MutableStateFlow<List<BrowserDownload>>(emptyList())
+    private val pageDownloads = PageDownloads(runtime.engine.downloadsInProgress)
 
-    /**
-     * Files the page started to download, oldest first: each waits for the user to save it
-     * ([saveDownload]) or not ([cancelDownload]), then shows its progress until dismissed.
-     */
-    val downloads: StateFlow<List<BrowserDownload>> = mutableDownloads.asStateFlow()
-
-    // Chromium's answers, held for the user: where to save each one, and how to stop it.
-    private val downloadAnswers = ConcurrentHashMap<Int, CefBeforeDownloadCallback>()
-    private val downloadControls = ConcurrentHashMap<Int, CefDownloadItemCallback>()
-    private val declinedDownloads = ConcurrentHashMap.newKeySet<Int>()
+    /** Files the page started to download (see [PageDownloads]). */
+    val downloads: StateFlow<List<BrowserDownload>> get() = pageDownloads.list
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var client: CefClient? = null
@@ -468,77 +456,7 @@ class CefBrowserSession(
                 }
             },
         )
-        client.addDownloadHandler(
-            object : CefDownloadHandler {
-                // Nothing is written yet: the user says where it goes, or that it doesn't.
-                override fun onBeforeDownload(
-                    browser: CefBrowser,
-                    item: CefDownloadItem,
-                    suggestedName: String,
-                    callback: CefBeforeDownloadCallback,
-                ): Boolean {
-                    val id = item.id
-                    // A page can start downloads without end; past a few unanswered, the rest are
-                    // refused without asking.
-                    if (downloadAnswers.size >= MAX_DOWNLOAD_QUESTIONS) {
-                        declinedDownloads += id
-                        // Chromium reports on a download before it asks, so its handle is here already.
-                        downloadControls.remove(id)?.cancel()
-                        return true
-                    }
-                    downloadAnswers[id] = callback
-                    val download =
-                        BrowserDownload(
-                            id = id,
-                            name = BrowserDownloads.safeName(suggestedName),
-                            host = BrowserChrome.displayHost(item.url.orEmpty()),
-                            totalBytes = item.totalBytes.takeIf { it > 0 } ?: -1,
-                            state = BrowserDownload.State.ASKING,
-                        )
-                    mutableDownloads.update { list -> withinShown(list.filter { it.id != id } + download) }
-                    return true
-                }
-
-                override fun onDownloadUpdated(
-                    browser: CefBrowser,
-                    item: CefDownloadItem,
-                    callback: CefDownloadItemCallback,
-                ) {
-                    val id = item.id
-                    val ended = item.isComplete || !item.isInProgress
-                    if (id in declinedDownloads) {
-                        if (ended) declinedDownloads -= id else callback.cancel()
-                        return
-                    }
-                    if (ended) downloadControls.remove(id) else downloadControls[id] = callback
-                    // Dropped while the user was deciding: there is nothing left to save.
-                    if (ended && downloadAnswers.remove(id) != null) {
-                        mutableDownloads.update { list -> list.map { if (it.id == id) it.copy(state = BrowserDownload.State.STOPPED) else it } }
-                        return
-                    }
-                    val percent = item.percentComplete.coerceIn(0, 100)
-                    val total = item.totalBytes.takeIf { it > 0 } ?: -1
-                    mutableDownloads.update { list ->
-                        list.map { download ->
-                            when {
-                                download.id != id -> download
-                                // Chromium reports on it while it waits for the user: only the size.
-                                download.state == BrowserDownload.State.ASKING -> download.copy(totalBytes = total)
-                                item.isComplete -> download.copy(state = BrowserDownload.State.DONE, percent = 100, totalBytes = total)
-                                ended -> download.copy(state = BrowserDownload.State.STOPPED)
-                                else -> download.copy(percent = percent, totalBytes = total)
-                            }
-                        }
-                    }
-                    if (ended) {
-                        mutableDownloads.value
-                            .find { it.id == id }
-                            ?.file
-                            ?.let(BrowserDownloads::release)
-                    }
-                }
-            },
-        )
+        client.addDownloadHandler(pageDownloads)
         client.addDisplayHandler(
             object : CefDisplayHandlerAdapter() {
                 override fun onAddressChange(
@@ -733,44 +651,14 @@ class CefBrowserSession(
         browser?.let(PageScrollbars::apply)
     }
 
-    /** The user said yes to download [id]: it goes to the Downloads folder, under a name of its own. */
-    fun saveDownload(id: Int) {
-        val callback = downloadAnswers.remove(id) ?: return
-        val download = mutableDownloads.value.find { it.id == id } ?: return
-        mutableDownloads.update { list -> list.map { if (it.id == id) it.copy(state = BrowserDownload.State.DOWNLOADING) else it } }
-        // The folder and a free name in it are file system work: off the thread that clicked.
-        scope.launch(Dispatchers.IO) {
-            val target = BrowserDownloads.reserve(BrowserDownloads.folder(), download.name)
-            mutableDownloads.update { list -> list.map { if (it.id == id) it.copy(file = target) else it } }
-            callback.Continue(target.absolutePath, false)
-        }
-    }
+    /** The user said yes to download [id]. */
+    fun saveDownload(id: Int) = pageDownloads.save(id)
 
-    /** The user said no to download [id], or stopped it: nothing of it stays. */
-    fun cancelDownload(id: Int) {
-        if (downloadAnswers.remove(id) != null) {
-            // Chromium cancels it on its next report.
-            declinedDownloads += id
-            mutableDownloads.update { list -> list.filter { it.id != id } }
-        }
-        downloadControls.remove(id)?.cancel()
-    }
-
-    // At most MAX_DOWNLOADS_SHOWN, dropping the oldest finished ones: one still asking or running
-    // stays, or its question and its Cancel would be lost.
-    private fun withinShown(list: List<BrowserDownload>): List<BrowserDownload> {
-        var shown = list
-        while (shown.size > MAX_DOWNLOADS_SHOWN) {
-            val oldest = shown.firstOrNull { it.state.finished } ?: break
-            shown = shown - oldest
-        }
-        return shown
-    }
+    /** The user said no to download [id], or stopped it. */
+    fun cancelDownload(id: Int) = pageDownloads.cancel(id)
 
     /** Takes a finished download off the list. */
-    fun dismissDownload(id: Int) {
-        mutableDownloads.update { list -> list.filter { it.id != id || !it.state.finished } }
-    }
+    fun dismissDownload(id: Int) = pageDownloads.dismiss(id)
 
     fun reload() {
         browser?.reload()
@@ -858,10 +746,8 @@ class CefBrowserSession(
         view.browser = null
         document?.let(::closeDocument)
         inFlight.clear()
-        // Unanswered downloads are answered no; Chromium stops the rest with the page.
-        declinedDownloads += downloadAnswers.keys
-        downloadAnswers.clear()
-        mutableDownloads.value.forEach { download -> download.file?.takeIf { download.state == BrowserDownload.State.DOWNLOADING }?.let(BrowserDownloads::release) }
+        // CEF doesn't stop a page's downloads when its browser closes; they stop here.
+        pageDownloads.close()
         runtime.routes.release(this)
         scope.cancel()
         popupQueue.close()
@@ -943,12 +829,6 @@ class CefBrowserSession(
 
         // A screen's page paints like any app screen; one out of sight barely at all.
         private const val FRAME_RATE = 60
-
-        /** Downloads a page may have waiting for an answer at once; more are refused unasked. */
-        private const val MAX_DOWNLOAD_QUESTIONS = 3
-
-        /** Downloads the screen lists at once, newest kept. */
-        private const val MAX_DOWNLOADS_SHOWN = 5
 
         /** What a page starts on, so DevTools has a renderer to set it up in before its address loads. */
         private const val PLACEHOLDER_URL = "about:blank"

@@ -96,6 +96,13 @@ class DesktopCefEngine(
     private val mutex = Mutex()
     private val stopped = AtomicBoolean(false)
     private val webContexts = ConcurrentHashMap<String, CefRequestContext>()
+
+    /**
+     * Where the in-app browser's downloads run until they are complete and the user's (see
+     * [PageDownloads]): in the app's own cache, so nothing partial reaches the user's folders.
+     * Emptied as Chromium starts: none runs across a restart.
+     */
+    val downloadsInProgress: File = File(cacheRoot, DOWNLOADS_DIR)
     private val policedContexts = HashMap<CefRequestContext, List<String>>()
 
     @Volatile
@@ -126,6 +133,7 @@ class DesktopCefEngine(
         mutableState.value = State.Starting
         return try {
             if (!cacheRoot.isDirectory && !cacheRoot.mkdirs()) throw IllegalStateException("Cannot create $cacheRoot")
+            if (downloadsInProgress.exists() && !downloadsInProgress.deleteRecursively()) Log.w(TAG) { "Could not empty $downloadsInProgress" }
             val builder = CefAppBuilder()
             builder.setInstallDir(installDir)
             builder.setProgressHandler { progress, percent ->
@@ -247,10 +255,14 @@ class DesktopCefEngine(
     /**
      * Where the in-app browser's pages for [account] keep their cookies, storage and cache: one jar per
      * account and route, so a site's login or localStorage from one account is never there when another
-     * opens it, and a cookie a site set on the open web is never sent over Tor (or back).
+     * opens it, and a Tor page never sends a cookie a site set on the open web. The reverse isn't kept:
+     * while any Tor site is open, [DesktopNappletRoutes] sends every page through Tor (Tor always wins),
+     * an open-web page included, with its jar's cookies; when the Tor site closes they go out directly
+     * again, so that site can link the two visits.
      *
-     * In memory, for as long as the app runs: JCEF can make no other kind of context than Chromium's
-     * off-the-record one (it passes no cache path), so nothing a page stores reaches disk. NIP-07
+     * In memory, while the account is the one in use ([retainWebContexts]): JCEF can make no other kind
+     * of context than Chromium's off-the-record one (it passes no cache path), so nothing a page stores
+     * reaches disk. NIP-07
      * grants are the account's own and persist, so a Nostr site logs in again with a click. Chromium
      * runs no extension there: each page's session sets [CHROMIUM_PREFERENCES] on it ([applyPolicies])
      * and installs [webPageScripts] itself.
@@ -282,10 +294,13 @@ class DesktopCefEngine(
             }
         }
 
-    /** Drops [account]'s pages' jars (its pages must be closed): the next page starts with empty ones. */
-    fun forgetWebContexts(account: String) {
-        forget(jarOf(account, overTor = false))
-        forget(jarOf(account, overTor = true))
+    /**
+     * Drops every account's jars but [account]'s (their pages must be closed): an account switched
+     * away from, logged off or deleted starts with empty ones next time. Only the account in use keeps
+     * memory for its sites; the others' pages closed with the switch anyway.
+     */
+    fun retainWebContexts(account: String?) {
+        webContexts.keys.filter { account == null || !it.startsWith("$account/") }.forEach(::forget)
     }
 
     private fun forget(jar: String) {
@@ -339,6 +354,7 @@ class DesktopCefEngine(
             )
 
         private const val GUARD_DIR = "napplet-guard"
+        private const val DOWNLOADS_DIR = "downloads-in-progress"
 
         private const val NOTIFICATION_HELPER = "jcef Helper (Alerts).app"
 
