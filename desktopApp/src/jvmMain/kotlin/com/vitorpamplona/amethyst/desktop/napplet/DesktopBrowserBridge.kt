@@ -32,8 +32,8 @@ import java.util.UUID
  * How a page in an in-app browser reaches the broker: a message router of its own, under a name of
  * its own ([newRouter]), whose queries go to that page's [CefBrowserSession].
  *
- * The engine's extension runs [contentScript] at document start in the top frame of every web page.
- * It looks for a browser router's query function on the page's window and gives the shared shim
+ * Each page's session installs [contentScript] to run as every document is created, before the
+ * page's own scripts (see [DesktopCefEngine.webPageScripts]); it acts in the top frame only. It looks for a browser router's query function on the page's window and gives the shared shim
  * ([NappletWebContract.BRIDGE_NAME], the direct-bridge path Android's browser uses) a `postMessage`
  * that sends over it. The page's channel is one persistent query, opened first: its first message is
  * a token the host mints for that document, which every request carries, so the host judges a
@@ -119,7 +119,8 @@ object DesktopBrowserBridge {
      */
     fun contentScript(shimJs: String): String =
         "(function(){\n" +
-            "if (window.top !== window) return;\n" +
+            // Once per document: the bridge can't be defined twice.
+            "if (window.top !== window || Object.prototype.hasOwnProperty.call(window, '${NappletWebContract.BRIDGE_NAME}')) return;\n" +
             "var found = Object.getOwnPropertyNames(window).filter(function(n) {\n" +
             "  return n.indexOf('$QUERY_FUNCTION_PREFIX') === 0 && n.slice(-$CANCEL_SUFFIX_LENGTH) !== '$CANCEL_SUFFIX' && typeof window[n] === 'function';\n" +
             "});\n" +

@@ -21,20 +21,24 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
+import kotlinx.serialization.json.JsonPrimitive
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 
 /**
  * The scrollbars of every page Chromium shows (web pages, napplets, nSites), in the app's colors.
  *
- * Two halves. The engine's extension gives every frame [CSS] at document start: a thin rounded
- * thumb, no arrow buttons, colored from two CSS variables, gray on a clear track until they arrive.
+ * Two halves. Every frame gets [CSS] at document start: a thin rounded thumb, no arrow buttons,
+ * colored from two CSS variables, gray on a clear track until they arrive. The engine's extension
+ * gives it to napplets and nSites; the in-app browser's pages, in contexts no extension reaches, run
+ * [DOCUMENT_SCRIPT] instead (see [DesktopCefEngine.webPageScripts]).
  * Then each session sets the variables in every frame ([apply]): when a frame starts loading, again
  * when it has loaded (a page that replaced the document's adopted sheets gets them back), and in
  * every frame of every page when the app's theme changes ([update]). The track takes the app's
  * background and the thumb its text color, faded.
  *
- * The extension's stylesheet comes before the page's, so a page's own `::-webkit-scrollbar` rules
+ * The extension's stylesheet comes before the page's, and [DOCUMENT_SCRIPT] puts the same rules in a
+ * cascade layer, which unlayered rules beat, so either way a page's own `::-webkit-scrollbar` rules
  * win, and Chromium drops these for `scrollbar-color` / `scrollbar-width` where a page sets those.
  * The variables live in a constructed stylesheet adopted by the document, not in its DOM, so a page
  * never finds an element or attribute of ours; it can read the two colors, as it can read
@@ -52,6 +56,14 @@ object PageScrollbars {
         ::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var($THUMB, rgb(128, 128, 128)) 70%, transparent); }
         ::-webkit-scrollbar-button { display: none; }
         """.trimIndent()
+
+    /**
+     * [CSS] for a document no extension reaches, adopted as a constructed stylesheet in a cascade layer
+     * of its own. Runs as the document is created, before its own scripts and styles.
+     */
+    val DOCUMENT_SCRIPT =
+        "(function(){try{var s=new CSSStyleSheet();s.replaceSync(" + JsonPrimitive("@layer amethyst-scrollbars {\n$CSS\n}") + ");" +
+            "document.adoptedStyleSheets=document.adoptedStyleSheets.concat([s]);}catch(e){}})();"
 
     private val HEX = Regex("#[0-9A-Fa-f]{6}")
 

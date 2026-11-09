@@ -34,20 +34,26 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,6 +84,12 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_address_hint
+import com.vitorpamplona.amethyst.commons.resources.browser_download_ask
+import com.vitorpamplona.amethyst.commons.resources.browser_download_ask_size
+import com.vitorpamplona.amethyst.commons.resources.browser_download_done
+import com.vitorpamplona.amethyst.commons.resources.browser_download_show_folder
+import com.vitorpamplona.amethyst.commons.resources.browser_download_stopped
+import com.vitorpamplona.amethyst.commons.resources.browser_downloading
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_back
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_find
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_forward
@@ -94,17 +106,24 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_forced
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_off
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_on
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_title
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_failed_engine
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_failed_route
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.resources.tor_waiting
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.formatFileSize
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.io.File
 import androidx.compose.material3.Icon as VectorIcon
 
 /**
@@ -199,6 +218,7 @@ private fun WebPage(
                     )
             }
         }
+        DownloadsBar(session)
     }
 
     // The questions this page owns (the last to ask as that site, so a site open twice asks once),
@@ -481,3 +501,90 @@ private val ROOMY_TOOLBAR = 960.dp
 
 // Below this the toolbar keeps navigation, the address, find and the onion switch.
 private val NARROW_TOOLBAR = 620.dp
+
+/**
+ * The page's downloads under it, newest last: a question first (nothing is written until Save), then
+ * its progress, then where it went. A finished one stays until dismissed.
+ */
+@Composable
+private fun DownloadsBar(session: CefBrowserSession) {
+    val downloads by session.downloads.collectAsState()
+    if (downloads.isEmpty()) return
+    val scope = rememberCoroutineScope()
+    Column(Modifier.fillMaxWidth()) {
+        downloads.forEach { download ->
+            key(download.id) {
+                HorizontalDivider()
+                DownloadRow(
+                    download,
+                    onSave = { session.saveDownload(download.id) },
+                    onCancel = { session.cancelDownload(download.id) },
+                    onDismiss = { session.dismissDownload(download.id) },
+                    onShowFolder = { folder -> scope.launch(Dispatchers.IO) { BrowserDownloads.showFolder(folder) } },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DownloadRow(
+    download: BrowserDownload,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+    onDismiss: () -> Unit,
+    onShowFolder: (File) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(
+                if (download.state == BrowserDownload.State.DOWNLOADING) MaterialSymbols.Downloading else MaterialSymbols.Download,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            val text =
+                when (download.state) {
+                    BrowserDownload.State.ASKING ->
+                        if (download.totalBytes > 0) {
+                            stringRes(Res.string.browser_download_ask_size, download.name, formatFileSize(download.totalBytes), download.host)
+                        } else {
+                            stringRes(Res.string.browser_download_ask, download.name, download.host)
+                        }
+                    BrowserDownload.State.DOWNLOADING -> stringRes(Res.string.browser_downloading, download.name)
+                    BrowserDownload.State.DONE -> stringRes(Res.string.browser_download_done, download.name)
+                    BrowserDownload.State.STOPPED -> stringRes(Res.string.browser_download_stopped, download.name)
+                }
+            Text(text, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            when (download.state) {
+                BrowserDownload.State.ASKING -> {
+                    TextButton(onClick = onCancel) { Text(stringRes(Res.string.cancel)) }
+                    Button(onClick = onSave) { Text(stringRes(Res.string.save)) }
+                }
+                BrowserDownload.State.DOWNLOADING -> TextButton(onClick = onCancel) { Text(stringRes(Res.string.cancel)) }
+                BrowserDownload.State.DONE -> {
+                    download.file?.parentFile?.let { folder ->
+                        TextButton(onClick = { onShowFolder(folder) }) { Text(stringRes(Res.string.browser_download_show_folder)) }
+                    }
+                    DismissButton(onDismiss)
+                }
+                BrowserDownload.State.STOPPED -> DismissButton(onDismiss)
+            }
+        }
+        if (download.state == BrowserDownload.State.DOWNLOADING) {
+            // A size the server didn't give has no percentage to show.
+            if (download.totalBytes > 0) {
+                LinearProgressIndicator(progress = { download.percent / 100f }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+            } else {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun DismissButton(onDismiss: () -> Unit) {
+    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+        Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.dismiss), modifier = Modifier.size(18.dp))
+    }
+}

@@ -6604,6 +6604,12 @@
     <string name="browser_pill_text_value">%1$d%</string>
     <string name="browser_pill_privacy">Privacy</string>
     <string name="browser_pill_tor_title">Onion routing</string>
+    <string name="browser_download_ask">Save %1$s from %2$s?</string>
+    <string name="browser_download_ask_size">Save %1$s (%2$s) from %3$s?</string>
+    <string name="browser_downloading">Downloading %1$s</string>
+    <string name="browser_download_done">%1$s saved</string>
+    <string name="browser_download_stopped">%1$s was not downloaded</string>
+    <string name="browser_download_show_folder">Show in folder</string>
     <string name="browser_pill_tor_on">The site can't see your IP address</string>
     <string name="browser_pill_tor_off">The site can see your IP address</string>
     <string name="browser_pill_tor_forced">Off for this site, but another open page uses Tor, so this one goes through Tor too</string>

@@ -97,7 +97,13 @@ class CefBrowserSessionTest {
                 }
                 val body = pages[exchange.requestURI.path]?.encodeToByteArray()
                 exchange.responseHeaders.add("Access-Control-Allow-Origin", "*")
-                if (body == null) {
+                if (body != null && exchange.requestURI.path.endsWith(".bin")) {
+                    // A file to save, not to show.
+                    exchange.responseHeaders.add("Content-Type", "application/octet-stream")
+                    exchange.responseHeaders.add("Content-Disposition", "attachment; filename=\"report.bin\"")
+                    exchange.sendResponseHeaders(200, body.size.toLong())
+                    exchange.responseBody.use { it.write(body) }
+                } else if (body == null) {
                     exchange.sendResponseHeaders(404, -1)
                 } else {
                     exchange.responseHeaders.add("Content-Type", "text/html; charset=utf-8")
@@ -470,6 +476,119 @@ class CefBrowserSessionTest {
             page.restyleScrollbars()
             withTimeout(30_000) { while (reports["top"] != "#E0E8F0" || reports["frame"] != "#E0E8F0") delay(100) }
             assertEquals(0xFFE0E8F0.toInt(), trackPixel(0xFFE0E8F0.toInt()), "and so does what it paints")
+        }
+
+    @Test
+    fun aDownloadWaitsForTheUserAndSavesToDownloads() =
+        runBlocking {
+            assumeTrue("Set AMETHYST_CEF_TEST=1 (and run under a display) to run pages in Chromium", System.getenv("AMETHYST_CEF_TEST") == "1")
+            val home = File(tmp, "home").apply { mkdirs() }
+            val realHome = System.getProperty("user.home")
+            System.setProperty("user.home", home.absolutePath)
+            try {
+                val runtime = runtime(SharedCefTestEngine.engine)
+                pages["/report.bin"] = "the report"
+                pages["/get.html"] = "<!doctype html><body><script>location.href = '/report.bin';</script></body>"
+                val downloads = File(home, "Downloads")
+
+                suspend fun asked(page: CefBrowserSession): BrowserDownload =
+                    withTimeout(30_000) { page.downloads.first { list -> list.any { it.state == BrowserDownload.State.ASKING } } }
+                        .first { it.state == BrowserDownload.State.ASKING }
+
+                // Asked, and nothing written while it waits.
+                val first = show(runtime, NostrSignerInternal(KeyPair()), Prompts(), "http://127.0.0.1:$port/get.html")
+                val question = asked(first)
+                assertEquals("report.bin", question.name)
+                assertEquals("127.0.0.1", question.host)
+                delay(500)
+                assertTrue(downloads.listFiles().isNullOrEmpty(), "nothing is saved before the user says so: ${downloads.listFiles()?.toList()}")
+
+                // Saved.
+                first.saveDownload(question.id)
+                val done = withTimeout(30_000) { first.downloads.first { list -> list.any { it.id == question.id && it.state == BrowserDownload.State.DONE } } }.first { it.id == question.id }
+                assertEquals(File(downloads, "report.bin"), done.file)
+                assertEquals("the report", File(downloads, "report.bin").readText())
+
+                // Declined: nothing written, and it leaves the list.
+                val second = show(runtime, NostrSignerInternal(KeyPair()), Prompts(), "http://127.0.0.1:$port/get.html")
+                val declined = asked(second)
+                second.cancelDownload(declined.id)
+                assertTrue(second.downloads.value.none { it.id == declined.id })
+                delay(1_000)
+                assertEquals(listOf("report.bin"), downloads.list()?.toList(), "a declined download leaves nothing behind")
+
+                // The same name again: a name of its own.
+                val third = show(runtime, NostrSignerInternal(KeyPair()), Prompts(), "http://127.0.0.1:$port/get.html")
+                val again = asked(third)
+                third.saveDownload(again.id)
+                withTimeout(30_000) { third.downloads.first { list -> list.any { it.id == again.id && it.state == BrowserDownload.State.DONE } } }
+                assertEquals("the report", File(downloads, "report (1).bin").readText())
+            } finally {
+                System.setProperty("user.home", realHome)
+            }
+        }
+
+    @Test
+    fun eachAccountHasItsOwnCookieJar() =
+        runBlocking {
+            assumeTrue("Set AMETHYST_CEF_TEST=1 (and run under a display) to run pages in Chromium", System.getenv("AMETHYST_CEF_TEST") == "1")
+            val runtime = runtime(SharedCefTestEngine.engine)
+            // Reports the cookie and localStorage it finds, then sets both.
+            pages["/jar.html"] =
+                """
+                <!doctype html><body><script>
+                var name = new URLSearchParams(location.search).get('n');
+                var cookie = document.cookie.indexOf('jar=1') >= 0 ? 'cookie' : 'no-cookie';
+                var stored = localStorage.getItem('jar') || 'no-storage';
+                document.cookie = 'jar=1; max-age=3600'; localStorage.setItem('jar', '1');
+                fetch('http://127.0.0.1:$port/report?' + name + '=' + cookie + ',' + stored);
+                </script></body>
+                """.trimIndent()
+            val alice = NostrSignerInternal(KeyPair())
+            val bob = NostrSignerInternal(KeyPair())
+
+            suspend fun visit(
+                user: NostrSignerInternal,
+                name: String,
+            ): String {
+                show(runtime, user, Prompts(), "http://127.0.0.1:$port/jar.html?n=$name")
+                return withTimeout(30_000) {
+                    while (reports[name] == null) delay(100)
+                    reports[name]!!
+                }
+            }
+            assertEquals("no-cookie,no-storage", visit(alice, "alice1"), "a fresh jar")
+            // It starts on a blank page while its scripts go in, which leaves nothing to go back to.
+            withTimeout(30_000) {
+                while (sessions
+                        .last()
+                        .page.value.isLoading
+                ) {
+                    delay(100)
+                }
+            }
+            assertFalse(
+                sessions
+                    .last()
+                    .page.value.canGoBack,
+                "a new page has no history behind it",
+            )
+            assertEquals(
+                "http://127.0.0.1:$port/jar.html?n=alice1",
+                sessions
+                    .last()
+                    .page.value.url,
+            )
+            assertEquals("cookie,1", visit(alice, "alice2"), "the same account's next page shares it")
+            assertEquals("no-cookie,no-storage", visit(bob, "bob1"), "another account's page finds nothing of it")
+            assertEquals("cookie,1", visit(alice, "alice3"), "and the first account's is still there after")
+
+            val engine = SharedCefTestEngine.engine
+            assertTrue(engine.webContext(alice.pubKey, overTor = true) !== engine.webContext(alice.pubKey, overTor = false), "Tor pages keep a jar apart from the open web's")
+            // The account is deleted: its pages close, and its jar goes with them.
+            sessions.filter { it.accountPubKey == alice.pubKey }.forEach { it.close() }
+            engine.forgetWebContexts(alice.pubKey)
+            assertEquals("no-cookie,no-storage", visit(alice, "alice4"), "a deleted account's sites start over")
         }
 
     private suspend fun clickUntil(

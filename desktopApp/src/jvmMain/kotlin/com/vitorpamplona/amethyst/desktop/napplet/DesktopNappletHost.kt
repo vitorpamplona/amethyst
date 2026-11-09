@@ -163,6 +163,14 @@ class DesktopNappletHost(
                     synchronized(this@DesktopNappletHost) { brokers.keys.retainAll(setOfNotNull(pubKey)) }
                 }
         }
+        // A deleted account's pages are closed (it isn't the one logged in); its sites' cookies and
+        // storage go with it.
+        modules.applicationIOScope.launch {
+            modules.accountRemovals.collect { pubKey ->
+                browsers.value.filter { it.accountPubKey == pubKey }.forEach(::closeBrowser)
+                runtime.engine.forgetWebContexts(pubKey)
+            }
+        }
     }
 
     /** Whether Tor is on for the app; a site that chose Tor then goes through it. */

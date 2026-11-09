@@ -49,14 +49,22 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.cef.CefClient
 import org.cef.browser.CefBrowser
+import org.cef.browser.CefDevToolsClient
 import org.cef.browser.CefFrame
 import org.cef.browser.CefMessageRouter
 import org.cef.browser.OffscreenCefBrowser
+import org.cef.callback.CefBeforeDownloadCallback
 import org.cef.callback.CefCallback
+import org.cef.callback.CefDownloadItem
+import org.cef.callback.CefDownloadItemCallback
 import org.cef.callback.CefQueryCallback
 import org.cef.handler.CefDisplayHandlerAdapter
+import org.cef.handler.CefDownloadHandler
 import org.cef.handler.CefLifeSpanHandlerAdapter
 import org.cef.handler.CefLoadHandler
 import org.cef.handler.CefLoadHandlerAdapter
@@ -66,7 +74,10 @@ import org.cef.handler.CefResourceRequestHandlerAdapter
 import org.cef.misc.BoolRef
 import org.cef.network.CefRequest
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.SwingUtilities
 import kotlin.math.ln
 import kotlin.math.pow
@@ -174,10 +185,24 @@ class CefBrowserSession(
     /** Whether this window's traffic goes through Tor right now (one on the open web can be forced). */
     val routedOverTor: StateFlow<Boolean> get() = runtime.routes.routedOverTor
 
+    private val mutableDownloads = MutableStateFlow<List<BrowserDownload>>(emptyList())
+
+    /**
+     * Files the page started to download, oldest first: each waits for the user to save it
+     * ([saveDownload]) or not ([cancelDownload]), then shows its progress until dismissed.
+     */
+    val downloads: StateFlow<List<BrowserDownload>> = mutableDownloads.asStateFlow()
+
+    // Chromium's answers, held for the user: where to save each one, and how to stop it.
+    private val downloadAnswers = ConcurrentHashMap<Int, CefBeforeDownloadCallback>()
+    private val downloadControls = ConcurrentHashMap<Int, CefDownloadItemCallback>()
+    private val declinedDownloads = ConcurrentHashMap.newKeySet<Int>()
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var client: CefClient? = null
     private var router: CefMessageRouter? = null
     private var browser: CefBrowser? = null
+    private var devTools: CefDevToolsClient? = null
 
     @Volatile
     private var closed = false
@@ -208,6 +233,8 @@ class CefBrowserSession(
     // after the user goes past the warning.
     private val badCertificates = ConcurrentHashMap.newKeySet<String>()
 
+    private fun hadBadCertificate(url: String) = BrowserChrome.originOf(url)?.let { it in badCertificates } == true
+
     fun start() {
         scope.launch {
             try {
@@ -231,7 +258,8 @@ class CefBrowserSession(
                         val client = app.createClient()
                         this@CefBrowserSession.client = client
                         installHandlers(client)
-                        OffscreenCefBrowser(client, startUrl, null, FRAME_RATE, view).also {
+                        // Blank, so nothing loads before the page's policies and scripts are in (prepare).
+                        OffscreenCefBrowser(client, PLACEHOLDER_URL, runtime.engine.webContext(accountPubKey, useTor), FRAME_RATE, view).also {
                             this@CefBrowserSession.browser = it
                             view.browser = it
                             it.createImmediately()
@@ -246,6 +274,54 @@ class CefBrowserSession(
                 mutableState.value = State.Failed(Failure.ENGINE)
             }
         }
+    }
+
+    /**
+     * Before the page loads, on Chromium's UI thread: the account context's policies, then the
+     * scripts every document runs first ([DesktopCefEngine.webPageScripts]), registered on a DevTools
+     * session the page keeps (they last as long as it). A policy Chromium refuses, or scripts that
+     * didn't register, fail the page.
+     *
+     * The page starts on a blank document ([PLACEHOLDER_URL]): DevTools needs a renderer to talk to,
+     * and the address must not load before the scripts are in. Once they are and the blank page is
+     * up, the blank page replaces itself with the address ([leavePlaceholder]), so it leaves no entry
+     * in the page's history to go back to.
+     */
+    private fun prepare(browser: CefBrowser) {
+        val refused = runtime.engine.applyPolicies(browser.requestContext)
+        if (refused.isNotEmpty()) {
+            mutableState.value = State.Failed(Failure.ENGINE)
+            return
+        }
+        val devTools = browser.devToolsClient
+        synchronized(lifecycle) {
+            if (closed) return
+            this.devTools = devTools
+        }
+        // All sent from here, in order: a DevTools call made from inside another's result trips
+        // Chromium's observer re-entrancy check and takes the browser process down.
+        val sent =
+            listOf(devTools.executeDevToolsMethod("Page.enable")) +
+                runtime.engine.webPageScripts.map { script ->
+                    devTools.executeDevToolsMethod("Page.addScriptToEvaluateOnNewDocument", buildJsonObject { put("source", script) }.toString())
+                }
+        CompletableFuture.allOf(*sent.toTypedArray()).whenComplete { _, error ->
+            if (error != null) {
+                Log.w(TAG, "The page's scripts did not register", error)
+                if (!closed) mutableState.value = State.Failed(Failure.ENGINE)
+            } else {
+                leavePlaceholder(browser)
+            }
+        }
+    }
+
+    // Two things the blank page waits for: its scripts registered, and itself loaded.
+    private val placeholderWaits = AtomicInteger(2)
+    private val placeholderLoaded = AtomicBoolean(false)
+
+    private fun leavePlaceholder(browser: CefBrowser) {
+        if (placeholderWaits.decrementAndGet() != 0 || closed) return
+        browser.mainFrame.executeJavaScript("location.replace(${JsonPrimitive(startUrl)});", PLACEHOLDER_URL, 0)
     }
 
     private fun installHandlers(client: CefClient) {
@@ -315,7 +391,7 @@ class CefBrowserSession(
                             created = true
                             pendingTeardown.also { pendingTeardown = null }
                         }
-                    teardown?.let { SwingUtilities.invokeLater(it) }
+                    if (teardown != null) SwingUtilities.invokeLater(teardown) else prepare(browser)
                 }
 
                 override fun onBeforePopup(
@@ -361,7 +437,10 @@ class CefBrowserSession(
                     browser: CefBrowser,
                     frame: CefFrame,
                     httpStatusCode: Int,
-                ) = PageScrollbars.apply(frame)
+                ) {
+                    if (frame.isMain && frame.url == PLACEHOLDER_URL && !placeholderLoaded.getAndSet(true)) leavePlaceholder(browser)
+                    PageScrollbars.apply(frame)
+                }
 
                 override fun onLoadError(
                     browser: CefBrowser,
@@ -376,10 +455,74 @@ class CefBrowserSession(
                         // Chromium's error and certificate pages report no address of their own: the
                         // bar shows the address that failed, and whether its certificate did.
                         if (BrowserChrome.originOf(failedUrl) != null) {
-                            mutablePage.update { it.copy(url = failedUrl, certificateError = BrowserChrome.originOf(failedUrl) in badCertificates) }
+                            mutablePage.update { it.copy(url = failedUrl, certificateError = hadBadCertificate(failedUrl)) }
                         }
                     }
                     Log.d(TAG) { "$errorCode loading ${BrowserChrome.originOf(failedUrl) ?: "a page"} ($errorText)" }
+                }
+            },
+        )
+        client.addDownloadHandler(
+            object : CefDownloadHandler {
+                // Nothing is written yet: the user says where it goes, or that it doesn't.
+                override fun onBeforeDownload(
+                    browser: CefBrowser,
+                    item: CefDownloadItem,
+                    suggestedName: String,
+                    callback: CefBeforeDownloadCallback,
+                ): Boolean {
+                    val id = item.id
+                    // A page can start downloads without end; past a few unanswered, the rest are
+                    // refused without asking.
+                    if (downloadAnswers.size >= MAX_DOWNLOAD_QUESTIONS) {
+                        declinedDownloads += id
+                        return true
+                    }
+                    downloadAnswers[id] = callback
+                    val download =
+                        BrowserDownload(
+                            id = id,
+                            name = BrowserDownloads.safeName(suggestedName),
+                            host = BrowserChrome.displayHost(item.url.orEmpty()),
+                            totalBytes = item.totalBytes.takeIf { it > 0 } ?: -1,
+                            state = BrowserDownload.State.ASKING,
+                        )
+                    mutableDownloads.update { list -> (list.filter { it.id != id } + download).takeLast(MAX_DOWNLOADS_SHOWN) }
+                    return true
+                }
+
+                override fun onDownloadUpdated(
+                    browser: CefBrowser,
+                    item: CefDownloadItem,
+                    callback: CefDownloadItemCallback,
+                ) {
+                    val id = item.id
+                    val ended = item.isComplete || !item.isInProgress
+                    if (id in declinedDownloads) {
+                        if (ended) declinedDownloads -= id else callback.cancel()
+                        return
+                    }
+                    if (ended) downloadControls.remove(id) else downloadControls[id] = callback
+                    val percent = item.percentComplete.coerceIn(0, 100)
+                    val total = item.totalBytes.takeIf { it > 0 } ?: -1
+                    mutableDownloads.update { list ->
+                        list.map { download ->
+                            when {
+                                download.id != id -> download
+                                // Chromium reports on it while it waits for the user: only the size.
+                                download.state == BrowserDownload.State.ASKING -> download.copy(totalBytes = total)
+                                item.isComplete -> download.copy(state = BrowserDownload.State.DONE, percent = 100, totalBytes = total)
+                                ended -> download.copy(state = BrowserDownload.State.STOPPED)
+                                else -> download.copy(percent = percent, totalBytes = total)
+                            }
+                        }
+                    }
+                    if (ended) {
+                        mutableDownloads.value
+                            .find { it.id == id }
+                            ?.file
+                            ?.let(BrowserDownloads::release)
+                    }
                 }
             },
         )
@@ -390,9 +533,10 @@ class CefBrowserSession(
                     frame: CefFrame,
                     url: String,
                 ) {
-                    if (!frame.isMain) return
+                    // The blank page it starts on, while prepare() sets it up, isn't the page.
+                    if (!frame.isMain || url == PLACEHOLDER_URL) return
                     val previous = mutablePage.value.url
-                    mutablePage.update { it.copy(url = url, certificateError = BrowserChrome.originOf(url) in badCertificates) }
+                    mutablePage.update { it.copy(url = url, certificateError = hadBadCertificate(url)) }
                     if (url != previous) titleFresh.value = false
                     // Another host may have its own zoom.
                     if (OmniboxInput.hostOf(url) != OmniboxInput.hostOf(previous)) syncZoom(browser)
@@ -402,6 +546,7 @@ class CefBrowserSession(
                     browser: CefBrowser,
                     title: String?,
                 ) {
+                    if (browser.url == PLACEHOLDER_URL) return
                     mutablePage.update { it.copy(title = title.orEmpty()) }
                     titleFresh.value = true
                 }
@@ -575,6 +720,31 @@ class CefBrowserSession(
         browser?.let(PageScrollbars::apply)
     }
 
+    /** The user said yes to download [id]: it goes to the Downloads folder, under a name of its own. */
+    fun saveDownload(id: Int) {
+        val callback = downloadAnswers.remove(id) ?: return
+        val download = mutableDownloads.value.find { it.id == id } ?: return
+        val target = BrowserDownloads.reserve(BrowserDownloads.folder(), download.name)
+        mutableDownloads.update { list -> list.map { if (it.id == id) it.copy(state = BrowserDownload.State.DOWNLOADING, file = target) else it } }
+        callback.Continue(target.absolutePath, false)
+    }
+
+    /** The user said no to download [id], or stopped it: nothing of it stays. */
+    fun cancelDownload(id: Int) {
+        if (downloadAnswers.remove(id) != null) {
+            // Chromium cancels it on its next report.
+            declinedDownloads += id
+            mutableDownloads.update { list -> list.filter { it.id != id } }
+        }
+        downloadControls.remove(id)?.cancel()
+    }
+
+    /** Takes a finished download off the list. */
+    fun dismissDownload(id: Int) {
+        val finished = setOf(BrowserDownload.State.DONE, BrowserDownload.State.STOPPED)
+        mutableDownloads.update { list -> list.filter { it.id != id || it.state !in finished } }
+    }
+
     fun reload() {
         browser?.reload()
     }
@@ -643,6 +813,7 @@ class CefBrowserSession(
         val client: CefClient?
         val browser: CefBrowser?
         val router: CefMessageRouter?
+        val devTools: CefDevToolsClient?
         val made: Boolean
         synchronized(lifecycle) {
             if (closed) return
@@ -650,6 +821,8 @@ class CefBrowserSession(
             client = this.client
             browser = this.browser
             router = this.router
+            devTools = this.devTools
+            this.devTools = null
             this.client = null
             this.browser = null
             this.router = null
@@ -658,6 +831,10 @@ class CefBrowserSession(
         view.browser = null
         document?.let(::closeDocument)
         inFlight.clear()
+        // Unanswered downloads are answered no; Chromium stops the rest with the page.
+        declinedDownloads += downloadAnswers.keys
+        downloadAnswers.clear()
+        mutableDownloads.value.forEach { download -> download.file?.takeIf { download.state == BrowserDownload.State.DOWNLOADING }?.let(BrowserDownloads::release) }
         runtime.routes.release(this)
         scope.cancel()
         popupQueue.close()
@@ -668,6 +845,7 @@ class CefBrowserSession(
                 name: String,
                 block: () -> Unit,
             ) = runCatching(block).onFailure { Log.w(TAG, "Browser did not $name cleanly", it) }
+            step("close DevTools") { devTools?.close() }
             step("close") {
                 browser?.setCloseAllowed()
                 browser?.close(true)
@@ -738,6 +916,15 @@ class CefBrowserSession(
 
         // A screen's page paints like any app screen; one out of sight barely at all.
         private const val FRAME_RATE = 60
+
+        /** Downloads a page may have waiting for an answer at once; more are refused unasked. */
+        private const val MAX_DOWNLOAD_QUESTIONS = 3
+
+        /** Downloads the screen lists at once, newest kept. */
+        private const val MAX_DOWNLOADS_SHOWN = 5
+
+        /** What a page starts on, so DevTools has a renderer to set it up in before its address loads. */
+        private const val PLACEHOLDER_URL = "about:blank"
         private const val HIDDEN_FRAME_RATE = 1
 
         // Popups waiting for the screen; the host's budget keeps it at a handful anyway.
