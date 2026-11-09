@@ -67,7 +67,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
@@ -177,7 +176,13 @@ private fun NappletWindow(
             val trafficLights = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else trafficLightsInsetStart
             Column(Modifier.fillMaxSize()) {
                 // The trusted chrome, drawn by Amethyst above the page, which can't draw over it.
-                SandboxToolbar(session, host, leadingInset = trafficLights, onAccessInfo = { showAccess = true })
+                SandboxToolbar(
+                    session,
+                    host,
+                    Modifier.padding(start = trafficLights),
+                    onAccessInfo = { showAccess = true },
+                    onNetworkMode = { host.setNetworkMode(session, it) },
+                )
                 HorizontalDivider()
                 Box(Modifier.fillMaxWidth().weight(1f)) {
                     when (val current = state) {
@@ -215,11 +220,15 @@ private fun NappletWindow(
  * Android's pill has. Unlike the pill, no Close: the window's own close button does that.
  */
 @Composable
-private fun SandboxToolbar(
+internal fun SandboxToolbar(
     session: CefNappletSession,
     host: DesktopNappletHost,
-    leadingInset: Dp,
+    /** Where the toolbar's row starts and how high it sits: a window steps past its own controls. */
+    rowModifier: Modifier,
     onAccessInfo: () -> Unit,
+    onNetworkMode: (Boolean) -> Unit,
+    /** Back once the app has no history left: leaves its screen, where there is one to go back to. */
+    onLeave: (() -> Unit)? = null,
 ) {
     val page by session.page.collectAsState()
     val routedOverTor by session.routedOverTor.collectAsState()
@@ -228,11 +237,17 @@ private fun SandboxToolbar(
 
     Column(Modifier.fillMaxWidth()) {
         Row(
-            Modifier.fillMaxWidth().height(TOOLBAR_HEIGHT).padding(start = 4.dp + leadingInset, end = 4.dp),
+            Modifier
+                .fillMaxWidth()
+                .then(rowModifier)
+                .height(TOOLBAR_HEIGHT)
+                .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            ToolbarButton(MaterialSymbols.AutoMirrored.ArrowBack, stringRes(Res.string.browser_pill_back), enabled = page.canGoBack) { session.goBack() }
+            ToolbarButton(MaterialSymbols.AutoMirrored.ArrowBack, stringRes(Res.string.browser_pill_back), enabled = page.canGoBack || onLeave != null) {
+                if (page.canGoBack) session.goBack() else onLeave?.invoke()
+            }
             ToolbarButton(MaterialSymbols.AutoMirrored.ArrowForward, stringRes(Res.string.browser_pill_forward), enabled = page.canGoForward) { session.goForward() }
             val state by session.state.collectAsState()
             val showing = state is CefNappletSession.State.Showing
@@ -318,7 +333,7 @@ private fun SandboxToolbar(
                             modifier = Modifier.widthIn(max = 220.dp),
                         )
                     }
-                    Switch(checked = useTor, onCheckedChange = { host.setNetworkMode(session, it) })
+                    Switch(checked = useTor, onCheckedChange = onNetworkMode)
                 }
             }
         }
@@ -397,10 +412,11 @@ internal fun ToolbarButton(
  * draws over anything Compose puts in the app's window. Done, Esc or a click elsewhere closes it.
  */
 @Composable
-private fun AccessWindow(
+internal fun AccessWindow(
     session: CefNappletSession,
     host: DesktopNappletHost,
-    parent: AwtWindow,
+    /** The window it sits over; centred on the screen without one. */
+    parent: AwtWindow?,
     onDone: () -> Unit,
 ) {
     val isWebsite = session.launch.profile == HostProfile.WEBSITE
@@ -413,9 +429,13 @@ private fun AccessWindow(
     // Centred over the app's window, below its toolbar when the window is tall enough.
     val position =
         remember(parent) {
-            val x = parent.x + (parent.width - size.width.value) / 2
-            val y = parent.y + minOf(TOOLBAR_HEIGHT.value, maxOf(0f, (parent.height - size.height.value) / 2))
-            WindowPosition(x.dp, y.dp)
+            if (parent == null) {
+                WindowPosition.Aligned(Alignment.Center)
+            } else {
+                val x = parent.x + (parent.width - size.width.value) / 2
+                val y = parent.y + minOf(TOOLBAR_HEIGHT.value, maxOf(0f, (parent.height - size.height.value) / 2))
+                WindowPosition(x.dp, y.dp)
+            }
         }
     DialogWindow(
         onCloseRequest = onDone,

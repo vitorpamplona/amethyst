@@ -230,9 +230,12 @@ interface AppPlatform {
     @Composable
     fun rememberAppLauncher(): AppLauncher = AppLauncher.None
 
-    /** The live title of the page [route] shows, for its tab or window; null where pages aren't screens. */
+    /**
+     * The live title of what a platform-run screen shows ([Route.WebPage], [Route.NostrApp]), for its
+     * tab or window: the page's or the app's own name. Null where the platform runs none as screens.
+     */
     @Composable
-    fun webPageTitle(route: Route.WebPage): String? = null
+    fun platformScreenTitle(route: Route): String? = null
 
     /**
      * Starts a [callType] call with [peers], asking for the call permissions first where the
@@ -484,11 +487,23 @@ interface AppLauncher {
     /** Whether [openNapplet] and [openSite] run anything here; cards offer Open only where they do. */
     val opensNapplets: Boolean get() = false
 
-    /** Runs a NIP-5D napplet in the platform's sandbox, or tells the user why it can't. */
-    fun openNapplet(manifest: NappletManifest) {}
+    /**
+     * Runs a NIP-5D napplet in the platform's sandbox, or tells the user why it can't. [nav] is the
+     * calling screen's: a platform that runs apps as screens opens it there ([Route.NostrApp]).
+     */
+    fun openNapplet(
+        manifest: NappletManifest,
+        nav: INav? = null,
+    ) {}
 
-    /** Opens a NIP-5A nSite ([RootSiteEvent] or [NamedSiteEvent]), or tells the user why it can't. */
-    fun openSite(site: Event) {}
+    /**
+     * Opens a NIP-5A nSite ([RootSiteEvent] or [NamedSiteEvent]), or tells the user why it can't.
+     * [nav] is the calling screen's, as for [openNapplet].
+     */
+    fun openSite(
+        site: Event,
+        nav: INav? = null,
+    ) {}
 
     /**
      * Runs the webxdc [app] attached to post [postId] by [poster] in the platform's sandbox (when

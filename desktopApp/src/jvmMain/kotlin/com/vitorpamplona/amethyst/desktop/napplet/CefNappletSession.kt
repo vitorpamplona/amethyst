@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
@@ -128,10 +129,15 @@ class CefNappletSession(
     private val broker: NappletBroker,
     private val runtime: DesktopNappletRuntime,
     /**
-     * Set for a napplet running inside a note: its browser has no window and paints into this view,
-     * which the note draws and forwards input to. Null for a window of its own.
+     * Set for an app drawn by Compose (a napplet inside a note, or an app as a screen the navigation
+     * layout places): its browser has no window and paints into this view, which the note or the
+     * screen draws and forwards input to. Null for a window of its own.
      */
     val offscreen: OffscreenNappletView? = null,
+    /** Frames a second an [offscreen] page paints: a note's small picture needs fewer than a screen. */
+    private val frameRate: Int = OFFSCREEN_FRAME_RATE,
+    /** The [Route.NostrApp] coordinate this app is the screen of; null for a window or a note. */
+    val routeId: String? = null,
     /** Where NAP-FS picks and file bytes go: the system's file dialog, unless a test scripts them. */
     private val filePort: NappletFilePort = DesktopNappletFilePort(),
 ) {
@@ -339,7 +345,7 @@ class CefNappletSession(
                         installHandlers(client)
                         val created =
                             if (offscreen != null) {
-                                OffscreenCefBrowser(client, NappletWebContract.SHELL_URL, null, OFFSCREEN_FRAME_RATE, offscreen).also {
+                                OffscreenCefBrowser(client, NappletWebContract.SHELL_URL, null, frameRate, offscreen).also {
                                     offscreen.browser = it
                                     it.createImmediately()
                                 }
@@ -349,6 +355,7 @@ class CefNappletSession(
                         created.also {
                             this@CefNappletSession.browser = it
                             runtime.attendance.set(this@CefNappletSession, true)
+                            if (offscreen != null && !visible) it.setWindowlessFrameRate(HIDDEN_FRAME_RATE)
                         }
                     }
                 // An off-screen browser's component is a placeholder that is never shown.
@@ -630,6 +637,18 @@ class CefNappletSession(
         browser?.reload()
     }
 
+    @Volatile
+    private var visible = true
+
+    /**
+     * Whether an [offscreen] page's screen is on show. Out of sight (a tab behind another, a screen
+     * under the one on top) it paints a frame a second instead of its [frameRate]: it keeps running.
+     */
+    fun setVisible(visible: Boolean) {
+        this.visible = visible
+        if (offscreen != null) browser?.setWindowlessFrameRate(if (visible) frameRate else HIDDEN_FRAME_RATE)
+    }
+
     fun stop() {
         browser?.stopLoad()
     }
@@ -867,6 +886,10 @@ class CefNappletSession(
 
         // A note is a small picture: no need for more, and every frame is copied.
         private const val OFFSCREEN_FRAME_RATE = 30
+
+        /** What an [offscreen] app paints as a screen of its own, like any app screen. */
+        const val SCREEN_FRAME_RATE = 60
+        private const val HIDDEN_FRAME_RATE = 1
         private const val QUERY_FUNCTION_PREFIX = "__amethystNappletQuery_"
         const val MIN_ZOOM = 50
         const val MAX_ZOOM = 300

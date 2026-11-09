@@ -41,6 +41,8 @@ import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 
 private const val MAX_TITLE = 40
 
@@ -85,9 +87,23 @@ fun routeTitle(
         // The page's own title as it loads, else its host.
         is Route.WebPage ->
             return LocalAppPlatform.current
-                .webPageTitle(route)
+                .platformScreenTitle(route)
                 ?.takeIf { it.isNotBlank() }
                 ?.take(MAX_TITLE) ?: BrowserChrome.displayHost(route.url)
+        is Route.WebApp ->
+            return LocalAppPlatform.current
+                .platformScreenTitle(route)
+                ?.takeIf { it.isNotBlank() }
+                ?.take(MAX_TITLE) ?: BrowserChrome.displayHost(route.url)
+        // The app's own name, else its identifier.
+        is Route.NostrApp ->
+            return LocalAppPlatform.current
+                .platformScreenTitle(route)
+                ?.takeIf { it.isNotBlank() }
+                ?.take(MAX_TITLE) ?: route.coordinate
+                .substringAfter(':')
+                .substringAfter(':')
+                .ifBlank { spellOut("NostrApp") }
         // Its name alone ("Settings") is the same as All Settings'; the screen calls itself this.
         is Route.Settings -> return stringRes(Res.string.application_preferences)
         else -> {}
@@ -108,7 +124,12 @@ fun routeIcon(
         is Route.Profile -> MaterialSymbols.Person
         is Route.Room -> MaterialSymbols.Mail
         is Route.Note -> MaterialSymbols.AutoMirrored.Article
-        is Route.WebPage -> MaterialSymbols.Language
+        is Route.WebPage, is Route.WebApp -> MaterialSymbols.Language
+        // A site's globe, a napplet's grid, read off the coordinate's kind.
+        is Route.NostrApp -> {
+            val kind = route.coordinate.substringBefore(':').toIntOrNull()
+            if (kind == RootSiteEvent.KIND || kind == NamedSiteEvent.KIND) MaterialSymbols.Language else MaterialSymbols.Apps
+        }
         else ->
             NavBarCatalog.values.firstOrNull { it.resolveRoute(accountViewModel)::class == route::class }?.icon
                 ?: if (route::class.simpleName.orEmpty().contains("Settings")) MaterialSymbols.Settings else MaterialSymbols.Description
@@ -120,6 +141,7 @@ fun routeLink(route: Route): String? =
         is Route.Note -> LocalCache.getNoteIfExists(route.id)?.toNostrUri()
         is Route.Profile -> LocalCache.getUserIfExists(route.id)?.toNostrUri() ?: "nostr:${NPub.create(route.id)}"
         is Route.WebPage -> route.url
+        is Route.WebApp -> route.url
         else -> null
     }
 

@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.buildSetti
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletHost
+import com.vitorpamplona.amethyst.desktop.napplet.NostrAppScreen
 import com.vitorpamplona.amethyst.desktop.napplet.WebPageScreen
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
@@ -195,10 +196,15 @@ class DesktopAppRoot(
         accountViewModel: AccountViewModel,
     ) {
         destinations.jvmDestinations(accountViewModel)
-        // A web page is a screen like any other: the layout puts it on the stack, in a deck column,
-        // a tab or a window.
+        // A web page, a napplet and an nSite are screens like any other: the layout puts each on the
+        // stack, in a deck column, a tab or a window.
         nappletHost?.let { host ->
             destinations.composableFromEndArgs<Route.WebPage>(capWidth = false) { route -> WebPageScreen(route, nav, host) }
+            destinations.composableFromEndArgs<Route.NostrApp>(capWidth = false) { route -> NostrAppScreen(route, nav, host) }
+            // A web app pinned to the bar: its page, one per app.
+            destinations.composableFromEndArgs<Route.WebApp>(capWidth = false) { route ->
+                WebPageScreen(Route.WebPage(route.url, id = PINNED_WEB_APP + route.url), nav, host)
+            }
         }
         // Screens only Android has (Health Connect, the QR camera, share-as-image...) still have
         // ways in here: synced bar items, links, shared menus. Show a notice, not a crash.
@@ -289,3 +295,6 @@ private fun KeyNotKeptDialog(modules: DesktopAppModules) {
         },
     )
 }
+
+// The id of a pinned web app's page: one per app, so its tab finds its title.
+internal const val PINNED_WEB_APP = "pinned:"

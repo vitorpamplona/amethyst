@@ -15,15 +15,15 @@ The desktop already runs Chromium (JCEF) for napplets and nSites, with NIP-07 fo
 
 ## Phases
 
-1. **Built:** a web page is a screen, `Route.WebPage`, with NIP-07. The navigation layout setting
-   places it like any other screen: on the stack, in a deck column, in a tab or in a window.
-   `AppLauncher.launchUrl` and `FavoriteApp.WebApp` open it; links in notes still go to the system
-   browser. Napplets and nSites still open in windows of their own.
+1. **Built:** a web page is a screen, `Route.WebPage`, with NIP-07, and so are napplets and nSites
+   (`Route.NostrApp`, below). The navigation layout setting places each like any other screen: on
+   the stack, in a deck column, in a tab or in a window. `AppLauncher.launchUrl`, favorites and the
+   note cards' Open open them; links in notes still go to the system browser.
 2. **Open:** Chromium out of the process that holds the keys. JCEF runs with `no_sandbox`
    (`commons/plans/2026-10-31-embed-security-review.md`, Critical), and a browser shows pages from
    anywhere, so this matters more now than it did for napplets alone.
 3. **Open, after 2:** an "Open in Amethyst browser" action on links, or a setting to make the in-app
-   browser the default for every link; napplets and nSites as screens too.
+   browser the default for every link.
 
 ## Phase 1: how it works
 
@@ -43,7 +43,8 @@ The desktop already runs Chromium (JCEF) for napplets and nSites, with NIP-07 fo
 | New windows | content script, `BrowserPopupGate` | Chromium refuses an off-screen page's own new windows before asking the app (`onBeforePopup` and `onOpenURLFromTab` never fire; `window.open` returns null). So the content script turns `window.open(url)` and `target=_blank`, Ctrl- and middle-clicked links into an open request over the bridge; the page's screen opens a `Route.WebPage` for it, on Tor if the opener was, which the layout places as a tab, a window or a push. All pages share one budget: one new window a second, at most four page-opened ones at once; one asked for while the opener is out of sight waits for it. Blank and `blob:` targets are refused. `window.open` hands the page no window back. |
 | History | `BrowserHistoryRegistry` | A main-frame load that did not fail is recorded off Chromium's thread, once the page has named itself (or after 1.5 s), so the Browser tab's Recent and omnibox see desktop visits. |
 | Toolbar | `WebPageScreen.kt` | Back (the page's history, then out of the screen where the layout has one to go back to), forward, reload/stop, an editable address (a click selects it; Enter resolves through `OmniboxInput` with the user's search engine), the transport (Tor / https / not secure; a certificate Chromium refused shows a warning for that origin, even past Chromium's page), find, zoom (Chromium's per-host level, read back on each navigation and passed to every page on the host), the onion switch while Tor is on, and Open in browser. It narrows with the screen: the Tor caption goes first, then zoom and Open in browser. |
-| Launch | `DesktopAppLauncher` | `launchUrl(url, preferTor, nav)` and favorite web apps push a `Route.WebPage` on the calling screen's `nav`; without Chromium, without a `nav`, without a login, or for a non-web link they hand the link to `DesktopBrowser`. |
+| Napplets, nSites | `Route.NostrApp(coordinate)`, `NostrAppScreen` + `NostrAppViewModel` | The route a favorite app pinned to the bar already used (Android's embedded tab; the desktop showed "unavailable" for it), now also what a card's or a favorite's Open pushes. The screen reads the app's event from the cache by its `kind:pubkey:d` coordinate, fetching it from relays when a restored screen comes before it, and runs a `CefNappletSession` off-screen at 60 frames a second (`SCREEN_FRAME_RATE`; one a second out of sight) under the window's sandbox toolbar (`SandboxToolbar`, shared). An nSite keeps its own Tor choice. Tab and window titles come from the app's name; sites get a globe icon, napplets a grid. A web app pinned to the bar (`Route.WebApp`) opens as a `WebPageScreen` too. Webxdc apps and intent handlers (`NappletIntentDispatcher` needs the session at once, with no screen to open on) still open windows. |
+| Launch | `DesktopAppLauncher` | `launchUrl(url, preferTor, nav)` and favorite web apps push a `Route.WebPage` on the calling screen's `nav`; without Chromium, without a `nav`, without a login, or for a non-web link they hand the link to `DesktopBrowser`. `openNapplet` / `openSite` (and favorite Nostr apps) push a `Route.NostrApp` when they have a `nav` and the app can run; otherwise they open its window, which says why it can't. |
 
 ## Open (phase 1)
 
@@ -78,6 +79,12 @@ The desktop already runs Chromium (JCEF) for napplets and nSites, with NIP-07 fo
   popup budget and a Tor page failing closed with Tor down run without Chromium.
   `CefNappletSessionTest` still passes beside it (both share one engine, `SharedCefTestEngine`: CEF
   starts once per process).
+- `CefNappletSessionTest.aSiteRunsAsAScreenOffScreenWithNip07`: an nSite run as a screen runs it
+  (off-screen, screen frame rate) paints, survives being hidden and shown, and reaches the signer
+  through `window.nostr`.
+- The app, headless: a napplet opens from its card as a window of its own (Windows) and as a tab
+  named after it (Tabs), running, with its connect question over it; an nSite (LN Watchdog) runs
+  in a tab with its live title; Ctrl+W closes a screen window and its app with it.
 - The app, headless: from the Browser tab, a site opens inside the main column (Stack, with back
   leaving the screen), as a tab named after the page (Tabs), and as a window of its own (Windows);
   the toolbar narrows with the screen; the address bar selects on click and takes a typed host;

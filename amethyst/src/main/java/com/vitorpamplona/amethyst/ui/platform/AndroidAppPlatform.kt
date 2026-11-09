@@ -348,14 +348,20 @@ private class AndroidAppLauncher(
     // Napplets and nSites hand off to the sandboxed :napplet process.
     override val opensNapplets: Boolean get() = true
 
-    override fun openNapplet(manifest: NappletManifest) {
+    override fun openNapplet(
+        manifest: NappletManifest,
+        nav: INav?,
+    ) {
         when (manifest) {
             is RootNappletEvent -> NappletLauncher.launch(context, manifest, manifest.pubKey, "")
             is NamedNappletEvent -> NappletLauncher.launch(context, manifest, manifest.pubKey, manifest.identifier())
         }
     }
 
-    override fun openSite(site: Event) = NappletLauncher.launchSite(context, site)
+    override fun openSite(
+        site: Event,
+        nav: INav?,
+    ) = NappletLauncher.launchSite(context, site)
 
     override fun openWebxdc(
         app: WebxdcApp,

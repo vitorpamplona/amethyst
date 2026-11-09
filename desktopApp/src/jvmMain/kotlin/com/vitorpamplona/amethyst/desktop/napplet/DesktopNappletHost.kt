@@ -47,6 +47,8 @@ import com.vitorpamplona.amethyst.desktop.app.DesktopAppModules
 import com.vitorpamplona.amethyst.desktop.service.media.ChromiumMediaSession
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import kotlinx.coroutines.Dispatchers
@@ -123,6 +125,14 @@ class DesktopNappletHost(
      */
     val consentWindows: StateFlow<Map<String, CefBrowserSession>> = mutableConsentWindows.asStateFlow()
 
+    private val mutableScreens = MutableStateFlow<List<CefNappletSession>>(emptyList())
+
+    /**
+     * Napplets and nSites run as screens ([Route.NostrApp]): the navigation layout places them, so no
+     * window of the host's draws them.
+     */
+    val screens: StateFlow<List<CefNappletSession>> = mutableScreens.asStateFlow()
+
     // Napplets running inside notes: no window, so they are kept apart from [sessions].
     private val inlineSessions = MutableStateFlow<Set<CefNappletSession>>(emptySet())
 
@@ -144,6 +154,7 @@ class DesktopNappletHost(
                 .distinctUntilChanged()
                 .collect { pubKey ->
                     sessions.value.filter { it.accountPubKey != pubKey }.forEach(::close)
+                    screens.value.filter { it.accountPubKey != pubKey }.forEach(::closeScreen)
                     browsers.value.filter { it.accountPubKey != pubKey }.forEach(::closeBrowser)
                     inlineSessions.value.filter { it.accountPubKey != pubKey }.forEach(::closeInline)
                     // The last frames shown were the old account's screens.
@@ -405,11 +416,87 @@ class DesktopNappletHost(
 
     fun close(session: CefNappletSession) {
         mutableSessions.update { it - session }
-        session.close()
-        if (sessions.value.none { it.launch.identity.coordinate == session.launch.identity.coordinate }) {
-            consent.dismissApp(session.launch.identity.coordinate)
+        afterClose(session)
+    }
+
+    /**
+     * Whether [event] can run as an app screen: a napplet or nSite whose launch is valid, with someone
+     * logged in to act for it.
+     */
+    fun canRunAsScreen(event: Event): Boolean = modules.sessionManager.loggedInAccount() != null && launchOf(event).isSuccess
+
+    private fun launchOf(event: Event): Result<NappletLaunch> =
+        when (event) {
+            is NappletManifest -> NappletLaunch.fromManifest(event)
+            is RootSiteEvent, is NamedSiteEvent -> NappletLaunch.fromSite(event)
+            else -> Result.failure(IllegalArgumentException("Not a napplet or an nSite"))
         }
-        if (sessions.value.isEmpty() && browsers.value.isEmpty()) modules.nappletPermissionLedger.endSession()
+
+    /**
+     * Starts the app of a [Route.NostrApp] screen ([routeId], its coordinate) from its [event]: painted off-screen for
+     * the screen to draw, at a screen's frame rate. An nSite goes through Tor when Tor is on, unless the
+     * user moved it to the open web, as its window would.
+     */
+    fun openScreen(
+        event: Event,
+        routeId: String,
+    ): Result<CefNappletSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to open apps"))
+        return launchOf(event).map { launch ->
+            val useTor = launch.profile.exposesNetwork && torEnabled() && networkChoices.useTor(launch.identity.coordinate)
+            startScreen(launch, account, useTor, routeId)
+        }
+    }
+
+    private fun startScreen(
+        launch: NappletLaunch,
+        account: Account,
+        useTor: Boolean,
+        routeId: String,
+    ): CefNappletSession =
+        CefNappletSession(
+            launch,
+            account.pubKey,
+            useTor,
+            account,
+            brokerFor(account),
+            runtime,
+            offscreen = OffscreenNappletView(),
+            frameRate = CefNappletSession.SCREEN_FRAME_RATE,
+            routeId = routeId,
+        ).also { session ->
+            mutableScreens.update { it + session }
+            session.start()
+        }
+
+    /** Moves an app screen's site to Tor or the open web: remembers the choice and starts it again there. */
+    fun setScreenNetworkMode(
+        session: CefNappletSession,
+        useTor: Boolean,
+    ): CefNappletSession? {
+        val account = modules.sessionManager.loggedInAccount() ?: return null
+        networkChoices.set(session.launch.identity.coordinate, useTor)
+        closeScreen(session)
+        return startScreen(session.launch, account, useTor && torEnabled(), session.routeId.orEmpty())
+    }
+
+    /** Starts an app screen's app again, after a failure the user wants to retry. */
+    fun reopenScreen(session: CefNappletSession): CefNappletSession? {
+        val account = modules.sessionManager.loggedInAccount() ?: return null
+        closeScreen(session)
+        return startScreen(session.launch, account, session.useTor, session.routeId.orEmpty())
+    }
+
+    fun closeScreen(session: CefNappletSession) {
+        mutableScreens.update { it - session }
+        afterClose(session)
+    }
+
+    private fun afterClose(session: CefNappletSession) {
+        session.close()
+        val coordinate = session.launch.identity.coordinate
+        if ((sessions.value + screens.value).none { it.launch.identity.coordinate == coordinate }) consent.dismissApp(coordinate)
+        if (sessions.value.isEmpty() && screens.value.isEmpty() && browsers.value.isEmpty()) modules.nappletPermissionLedger.endSession()
     }
 
     /**
@@ -438,6 +525,7 @@ class DesktopNappletHost(
         if (colors == themeColors) return
         themeColors = colors
         sessions.value.forEach { it.pushTheme(colors) }
+        screens.value.forEach { it.pushTheme(colors) }
         inlineSessions.value.forEach { it.pushTheme(colors) }
     }
 
@@ -445,6 +533,7 @@ class DesktopNappletHost(
         sessions.value.forEach(::close)
         browsers.value.forEach(::closeBrowser)
         inlineSessions.value.forEach(::closeInline)
+        screens.value.forEach(::closeScreen)
         // Videos and audio that play in Chromium (they aren't napplets, but share its engine).
         ChromiumMediaSession.closeAll()
         runtime.engine.shutdown()
