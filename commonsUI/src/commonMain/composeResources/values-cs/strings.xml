@@ -9959,4 +9959,9 @@
         <item quantity="many">a %1$d dalšího</item>
         <item quantity="other">a %1$d dalších</item>
     </plurals>
+    <string name="media_kind_image">Obrázek</string>
+    <string name="media_kind_video">Video</string>
+    <string name="media_kind_audio">Zvuk</string>
+    <string name="media_kind_pdf">PDF</string>
+    <string name="media_type_and_size">%1$s · %2$s</string>
 </resources>

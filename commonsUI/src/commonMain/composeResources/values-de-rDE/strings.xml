@@ -9355,4 +9355,9 @@
         <item quantity="one">und %1$d weiterer</item>
         <item quantity="other">und %1$d weitere</item>
     </plurals>
+    <string name="media_kind_image">Bild</string>
+    <string name="media_kind_video">Video</string>
+    <string name="media_kind_audio">Audio</string>
+    <string name="media_kind_pdf">PDF</string>
+    <string name="media_type_and_size">%1$s · %2$s</string>
 </resources>

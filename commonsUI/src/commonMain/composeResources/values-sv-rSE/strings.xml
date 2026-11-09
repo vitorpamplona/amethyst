@@ -9353,4 +9353,9 @@
         <item quantity="one">och %1$d till</item>
         <item quantity="other">och %1$d till</item>
     </plurals>
+    <string name="media_kind_image">Bild</string>
+    <string name="media_kind_video">Video</string>
+    <string name="media_kind_audio">Ljud</string>
+    <string name="media_kind_pdf">PDF</string>
+    <string name="media_type_and_size">%1$s · %2$s</string>
 </resources>

@@ -9353,4 +9353,9 @@
         <item quantity="one">e mais %1$d</item>
         <item quantity="other">e mais %1$d</item>
     </plurals>
+    <string name="media_kind_image">Imagem</string>
+    <string name="media_kind_video">Vídeo</string>
+    <string name="media_kind_audio">Áudio</string>
+    <string name="media_kind_pdf">PDF</string>
+    <string name="media_type_and_size">%1$s · %2$s</string>
 </resources>
