@@ -224,15 +224,16 @@ fun main(args: Array<String>) {
     // Audio the audio engine can't decode (WebM, Ogg) plays in the same Chromium.
     GlobalMediaPlayer.chromiumEngine = nappletHost.engine
 
-    // A crash or a kill comes through here; a quit has shut Chromium down already (below).
+    // A crash or a kill comes through here; a quit has shut Chromium down already (below). The
+    // settings go first and Chromium last: its teardown can wait out its 3 s bound.
     Runtime.getRuntime().addShutdownHook(
         Thread {
-            runCatching { nappletHost.shutdown() }
-            // Releases the native video and audio engines before the JVM goes.
-            GlobalMediaPlayer.shutdown()
             runCatching { modules.flushUiPrefs() }
             runCatching { modules.flushAccountSettings() }
+            // Releases the native video and audio engines before the JVM goes.
+            GlobalMediaPlayer.shutdown()
             modules.torManager.stopSync()
+            runCatching { nappletHost.shutdown() }
         },
     )
 

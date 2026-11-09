@@ -151,6 +151,8 @@ class DesktopCefEngine(
             app.createClient().dispose()
             check(context.ready.await(CONTEXT_WAIT_SECONDS, TimeUnit.SECONDS)) { "Chromium's context did not start" }
             check(context.problems.isEmpty()) { "Chromium refused ${context.problems}" }
+            // Chromium took SIGTERM, SIGINT and SIGHUP as it started: the JVM's shutdown hooks need them.
+            ShutdownSignals.reclaim()
             app.also { mutableState.value = State.Ready(it) }
         } catch (e: Throwable) {
             Log.w(TAG, "Chromium did not start", e)
