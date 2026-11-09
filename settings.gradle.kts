@@ -35,6 +35,7 @@ dependencyResolutionManagement {
             "com.github.rikkahub.jlatexmath-android",
             "com.github.vitorpamplona.compose-richtext",
             "com.github.vitorpamplona.quartz", // a quartz commit, while quartzJitpack is set
+            "com.github.vitorpamplona.libschnorr256k1-kotlin", // quartz's pure-Kotlin secp256k1, from JitPack for now
         )
     repositories {
         mavenLocal()
