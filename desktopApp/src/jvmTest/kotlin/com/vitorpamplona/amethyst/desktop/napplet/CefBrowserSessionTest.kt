@@ -56,6 +56,7 @@ import org.junit.Test
 import java.awt.Canvas
 import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
+import java.awt.event.MouseWheelEvent
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.URLDecoder
@@ -375,6 +376,46 @@ class CefBrowserSessionTest {
             )
             assertEquals<Set<String>>(routes.mapTo(HashSet()) { it.url }, asked, "a blank one never does")
             assertEquals("none", reports["handle"], "window.open hands the page no window back")
+        }
+
+    @Test
+    fun theWheelScrollsAPage() =
+        runBlocking {
+            assumeTrue("Set AMETHYST_CEF_TEST=1 (and run under a display) to run pages in Chromium", System.getenv("AMETHYST_CEF_TEST") == "1")
+            val runtime = runtime(SharedCefTestEngine.engine)
+            pages["/long.html"] =
+                """
+                <!doctype html><body style="margin:0"><div style="height:6000px;background:linear-gradient(#fff,#000)"></div>
+                <script>window.addEventListener('scroll', function () { fetch('http://127.0.0.1:$port/report?y=' + Math.round(window.scrollY)); });</script></body>
+                """.trimIndent()
+            val page = show(runtime, NostrSignerInternal(KeyPair()), Prompts(), "http://127.0.0.1:$port/long.html")
+            withTimeout(60_000) { page.view.frame.first { it != null } }
+            withTimeout(30_000) { while (page.page.value.isLoading) delay(100) }
+            // As the screen sends it: a wheel turn where the pointer is, repeated until the page moves.
+            withTimeout(30_000) {
+                while ((reports["y"]?.toIntOrNull() ?: 0) <= 0) {
+                    SwingUtilities.invokeAndWait {
+                        val source = Canvas()
+                        val now = System.currentTimeMillis()
+                        page.view.mouse(MouseEvent(source, MouseEvent.MOUSE_MOVED, now, 0, 200, 200, 0, false, MouseEvent.NOBUTTON), MouseEvent.MOUSE_MOVED, 200, 200)
+                        page.view.wheel(MouseWheelEvent(source, MouseEvent.MOUSE_WHEEL, now, 0, 200, 200, 200, 200, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 3, 1, 1.0), 200, 200)
+                    }
+                    delay(500)
+                }
+            }
+            assertTrue((reports["y"]?.toIntOrNull() ?: 0) >= 40, "a notch down scrolled the page down a line or more: ${reports["y"]}")
+
+            // And a notch up brings it back up.
+            val down = reports["y"]!!.toInt()
+            withTimeout(30_000) {
+                while ((reports["y"]?.toIntOrNull() ?: down) >= down) {
+                    SwingUtilities.invokeAndWait {
+                        val now = System.currentTimeMillis()
+                        page.view.wheel(MouseWheelEvent(Canvas(), MouseEvent.MOUSE_WHEEL, now, 0, 200, 200, 200, 200, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 3, -1, -1.0), 200, 200)
+                    }
+                    delay(500)
+                }
+            }
         }
 
     private suspend fun clickUntil(

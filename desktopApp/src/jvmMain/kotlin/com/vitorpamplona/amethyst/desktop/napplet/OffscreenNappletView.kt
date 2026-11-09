@@ -128,13 +128,21 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         browser.forwardMouse(MouseEvent(EVENT_SOURCE, id, source.`when`, source.modifiersEx, x, y, source.clickCount, false, source.button))
     }
 
-    /** A wheel turn like [source], at [x], [y] on the page. */
+    /**
+     * A wheel turn like [source], at [x], [y] on the page. JCEF hands Chromium the event's rotation as
+     * a pixel delta, unconverted: AWT counts a notch towards the user (down) as +1, three units for a
+     * unit scroll, where Chromium reads positive as up and a notch as [WHEEL_DELTA]. So the delta goes
+     * over as a block scroll (which JCEF passes as it is) already in Chromium's terms: a page that got
+     * AWT's own numbers scrolled a few pixels the wrong way, so nothing moved at its top.
+     */
     fun wheel(
         source: MouseWheelEvent,
         x: Int,
         y: Int,
     ) {
         val browser = browser ?: return
+        val delta = -(source.preciseWheelRotation * WHEEL_DELTA).roundToInt()
+        if (delta == 0) return
         browser.forwardWheel(
             MouseWheelEvent(
                 EVENT_SOURCE,
@@ -147,10 +155,10 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
                 y,
                 0,
                 false,
-                source.scrollType,
-                source.scrollAmount,
-                source.wheelRotation,
-                source.preciseWheelRotation,
+                MouseWheelEvent.WHEEL_BLOCK_SCROLL,
+                1,
+                delta,
+                delta.toDouble(),
             ),
         )
     }
@@ -285,6 +293,9 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
 
         // The frames kept open: the one shown, and the few before it a draw may still hold.
         const val LIVE_FRAMES = 3
+
+        // Chromium's wheel delta for one notch, as Windows reports it and CEF's own sample sends.
+        const val WHEEL_DELTA = 120
 
         // Every forwarded event needs a source; Chromium reads only its fields.
         val EVENT_SOURCE = Canvas()

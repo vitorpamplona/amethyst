@@ -310,6 +310,10 @@ class DesktopCefEngine(
                 // One list: Chromium keeps only the last of a repeated switch. The guard extension is
                 // loaded from the command line, which newer Chromium turns off by default.
                 "--disable-features=Translate,OptimizationHints,MediaRouter,DialMediaRouteProvider,NetworkTimeServiceQuerying,DisableLoadExtensionCommandLineSwitch",
+                // Thin scrollbars that show while the page scrolls and fade, as on ChromeOS and Android,
+                // instead of the classic desktop track, which looked out of place beside the app. A page
+                // that styles its own scrollbars keeps them.
+                "--enable-features=OverlayScrollbar",
                 // No camera, microphone, location or notification prompts: a page asking is told no,
                 // as Android's host answers.
                 "--deny-permission-prompts",
