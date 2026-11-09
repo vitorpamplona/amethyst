@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.commands.route
+import com.vitorpamplona.amethyst.commons.cashu.ops.normalizeMintUrl
 import com.vitorpamplona.amethyst.commons.cashu.ops.requireP2pkRedeemable
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -48,7 +49,7 @@ object CashuReceiveCommands {
         |  cashu receive resume QUOTE_ID              deprecated alias of `complete`
         |  cashu receive token TOKEN                  redeem a cashuB… token into the wallet
         |  cashu receive nutzap-sweep [--mint URL]    redeem inbound NIP-61 nutzaps locked to
-        |                                              your wallet key
+        |                                              your wallet key, one swap per mint
         """.trimMargin()
 
     suspend fun dispatch(
@@ -213,33 +214,55 @@ object CashuReceiveCommands {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val mintFilter = args.flag("mint")?.trimEnd('/')
+        val mintFilter = args.flag("mint")?.let { normalizeMintUrl(it) }
         args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val snap = ctx.cashuSnapshot()
             val wallet = snap.walletEvent ?: return Output.error("no_wallet", "no wallet to redeem into")
             val privkey = runCatching { wallet.privkey(ctx.signer) }.getOrNull() ?: return Output.error("signer_error", "could not decrypt wallet key")
-            val p2pkPubkey = snap.nutzapInfoEvent?.p2pkPubkey() ?: return Output.error("no_wallet", "no kind:10019 nutzap pubkey")
+            // On a local nsec account, nutzaps a sender locked to the npub can be claimed too.
+            val identityKey = (ctx.signer as? NostrSignerInternal)?.keyPair?.privKey?.toHexKey()
 
-            val redeemed = mutableListOf<Map<String, Any?>>()
-            val skipped = mutableListOf<Map<String, Any?>>()
-            for (nutzap in snap.nutzapEvents) {
-                if (mintFilter != null && nutzap.mintUrl()?.trimEnd('/') != mintFilter) continue
-                try {
-                    val r = ctx.cashuOps().redeemNutzap(nutzap, privkey, p2pkPubkey)
-                    redeemed.add(
-                        mapOf(
-                            "nutzap_id" to nutzap.id,
-                            "amount_sats" to r.amount,
-                            "token_event_id" to r.tokenEvent.id,
-                            "history_event_id" to r.historyEvent.id,
-                        ),
-                    )
-                } catch (e: Exception) {
-                    skipped.add(mapOf("nutzap_id" to nutzap.id, "reason" to describe(e)))
+            // Already-redeemed nutzaps would fail their whole batch at the mint ("already
+            // spent"), so drop them first, the same way the app's auto-redeem does.
+            val alreadyRedeemed = snap.history.flatMapTo(HashSet()) { h -> h.redeemedReferences().map { it.eventId } }
+            val pending =
+                snap.nutzapEvents.filter { nutzap ->
+                    nutzap.id !in alreadyRedeemed &&
+                        (mintFilter == null || nutzap.mintUrl()?.let { normalizeMintUrl(it) } == mintFilter)
                 }
-            }
+
+            // NIP-61: only the mints this wallet lists; a nutzap at any other mint is skipped
+            // without contacting it.
+            val walletMints = snap.mints + (snap.nutzapInfoEvent?.mints()?.map { it.mintUrl } ?: emptyList())
+
+            // Each mint's nutzaps are swapped together, so one entry can cover several nutzaps.
+            val result = ctx.cashuOps().redeemNutzaps(pending, privkey, walletMints, identityKey)
+            val redeemed =
+                result.redeemed.map { swap ->
+                    mapOf(
+                        "nutzap_ids" to swap.nutzaps.map { it.id },
+                        "amount_sats" to swap.completed.amount,
+                        "token_event_id" to swap.completed.tokenEvent.id,
+                        "history_event_id" to swap.completed.historyEvent.id,
+                    )
+                }
+            val skipped =
+                result.unredeemable.map { (nutzap, reason) -> mapOf("nutzap_id" to nutzap.id, "reason" to reason) } +
+                    result.belowFee.map { nutzap ->
+                        mapOf("nutzap_id" to nutzap.id, "reason" to "worth no more than the mint's input fee, even with the other nutzaps at this mint")
+                    } +
+                    result.notSaved.flatMap { lost ->
+                        lost.nutzaps.map { nutzap ->
+                            mapOf(
+                                "nutzap_id" to nutzap.id,
+                                "reason" to "redeemed at the mint but the new proofs were not saved (${describe(lost.error)}); " +
+                                    "recover them with `amy cashu maintenance restore ${lost.mintUrl}`",
+                            )
+                        }
+                    } +
+                    result.failed.map { (nutzap, e) -> mapOf("nutzap_id" to nutzap.id, "reason" to describe(e)) }
             Output.emit(mapOf("redeemed" to redeemed, "skipped" to skipped))
         }
         return 0

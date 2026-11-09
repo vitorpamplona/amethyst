@@ -43,6 +43,8 @@ import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintQuoteBolt11ResponseDto
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.ProofState
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.RandomSecretFactory
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.SecretFactory
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.SwapFeeExceedsInputsException
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.SwapResult
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.splitAmountIntoDenominations
 import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PK
 import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PKUnredeemableException
@@ -71,6 +73,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Wallet-level operations that combine the [CashuMintOperations] HTTP layer
@@ -819,34 +822,95 @@ class CashuWalletOps(
         )
 
     /**
-     * Redeem an inbound NIP-61 nutzap.
+     * Redeem inbound NIP-61 nutzaps, swapping all of one mint's nutzaps together.
      *
      * Steps:
-     *   1. Pull `proof` tags (JSON-encoded NUT-11 P2PK-locked proofs) and the
-     *      mint URL from the nutzap event.
-     *   2. Reject the redemption if the mint isn't one we have configured in
-     *      our wallet (the sender should have respected our kind:10019).
-     *   3. Sign the unlock witness for each proof with our wallet's P2PK
-     *      private key, then submit a swap to the mint to get fresh,
-     *      unlocked proofs.
-     *   4. Publish a new kind:7375 holding the swapped proofs and a kind:7376
-     *      with the `e=<nutzap-id>,marker=redeemed` tag left unencrypted per
-     *      the spec.
+     *   1. Check each nutzap locally ([prepareNutzap]): a mint tag, proofs, and every proof
+     *      P2PK-locked to a key we hold. A nutzap that fails lands in
+     *      [NutzapRedemption.unredeemable] without any mint round trip.
+     *   2. Group the rest by mint and swap each group's proofs in one `/v1/swap`, signing each
+     *      proof's unlock witness with the key its lock names. The NUT-02 input fee is rounded up
+     *      once per swap, so batching is what makes small nutzaps redeemable at all: one 1-sat
+     *      proof at 100 ppk costs its whole sat, ten together cost 1 sat and keep 9.
+     *   3. Per swap, publish one kind:7375 holding the new proofs and one kind:7376 that marks
+     *      every covered nutzap `redeemed` (left unencrypted, per the spec) and tags each sender.
      *
-     * Returns [RedeemCompleted] on success; throws on any failure.
+     * A swap the mint refuses is narrowed down (spent proofs dropped, then one nutzap at a time),
+     * so one spent or bad nutzap can't hold back the rest of its mint. A group whose fee still
+     * takes everything goes to [NutzapRedemption.belowFee]: it can only succeed once more nutzaps
+     * arrive at that mint.
+     *
+     * Only nutzaps at one of [walletMints] are redeemed (NIP-61: the mints the recipient lists).
+     * A nutzap names its own mint, and anyone can send one, so without this check a stranger
+     * could make the wallet contact any URL, a LAN or localhost address included: the client
+     * for a wallet mint skips the private-host checks a pasted token gets.
      */
-    suspend fun redeemNutzap(
-        nutzap: NutzapEvent,
+    suspend fun redeemNutzaps(
+        nutzaps: List<NutzapEvent>,
+        /** The wallet's NIP-60 P2PK private key (kind:17375 `privkey`): the key NIP-61 nutzaps lock to. */
         walletPrivkeyHex: String,
-        walletP2pkPubkeyHex: String,
-    ): RedeemCompleted {
+        walletMints: Collection<String>,
+        /**
+         * The account's Nostr identity private key, available only for a local nsec login. Some
+         * senders lock a nutzap to the recipient's npub instead of the kind:10019 `pubkey`; with
+         * this key those can be claimed too. Null for a remote (NIP-46) or external (NIP-55)
+         * signer, which can't produce the raw witness signature.
+         */
+        identityPrivkeyHex: String? = null,
+    ): NutzapRedemption {
+        val accepted = walletMints.mapTo(HashSet()) { normalizeMintUrl(it) }
+        val signingKeys = p2pkKeyIndex(walletPrivkeyHex, identityPrivkeyHex)
+        val result = NutzapRedemptionBuilder()
+        val prepared = ArrayList<PreparedNutzap>(nutzaps.size)
+        val proofOwner = HashMap<String, NutzapEvent>()
+        for (nutzap in nutzaps) {
+            try {
+                val p = prepareNutzap(nutzap, signingKeys.keys, accepted)
+                // Two nutzaps carrying the same proof would fail any swap they share, and only
+                // one of them can ever be redeemed: keep the first.
+                val firstOwner = p.proofs.firstNotNullOfOrNull { proofOwner[it.secret] }
+                if (firstOwner != null) {
+                    result.unredeemable[nutzap] = "Carries the same proofs as nutzap ${firstOwner.id.take(8)}"
+                    continue
+                }
+                p.proofs.forEach { proofOwner[it.secret] = nutzap }
+                prepared += p
+            } catch (e: IllegalArgumentException) {
+                result.unredeemable[nutzap] = e.message ?: "Unredeemable nutzap"
+            }
+        }
+        if (prepared.isEmpty()) return result.build()
+
         seedWarmer()
-        val mintUrl =
+        prepared.groupBy { it.mintUrl }.forEach { (mintUrl, group) ->
+            chunkByProofCount(group).forEach { batch -> redeemBatch(mintUrl, batch, signingKeys, result) }
+        }
+        return result.build()
+    }
+
+    /**
+     * Local checks on one nutzap, before any mint round trip. Throws [IllegalArgumentException]
+     * for a nutzap this wallet can't redeem: no mint tag, a mint outside [acceptedMints]
+     * (normalized with [normalizeMintUrl]), no proofs, malformed proofs, or a proof not
+     * P2PK-locked to one of [signableLocks] (lowercase x-only pubkeys of the keys we hold).
+     */
+    fun prepareNutzap(
+        nutzap: NutzapEvent,
+        signableLocks: Set<String>,
+        acceptedMints: Set<String>,
+    ): PreparedNutzap {
+        val rawMintUrl =
             nutzap.mintUrl()
                 ?: throw IllegalArgumentException("Nutzap has no mint tag")
+        val mintUrl = normalizeMintUrl(rawMintUrl)
+        if (mintUrl !in acceptedMints) {
+            throw IllegalArgumentException("Nutzap is at ${rawMintUrl.take(80)}, which is not one of this wallet's mints")
+        }
         val proofJsons = nutzap.proofs()
         if (proofJsons.isEmpty()) throw IllegalArgumentException("Nutzap has no proofs")
 
+        // SerializationException is an IllegalArgumentException: a malformed proof is as final
+        // as a missing one.
         val parsedProofs =
             proofJsons.map { js ->
                 val dto = nutzapProofJson.decodeFromString<NutzapProofJson>(js)
@@ -862,26 +926,166 @@ class CashuWalletOps(
                 )
             }
 
-        // Verify the lock points at us BEFORE any mint round-trip. The
-        // pubkey in the P2PK secret can be 64-char x-only or 66-char
-        // compressed; normalize to x-only for the comparison since BIP-340
-        // verification (which the mint uses) is parity-agnostic. Doing
-        // this first means a nutzap locked to a stale wallet key (sender
-        // saw an old kind:10019 and locked to that pubkey, we've since
-        // rotated) is rejected without burning a /v1/keys fetch — and
-        // without the auto-redeem loop hammering the mint on every
+        // Verify every lock points at a key we hold BEFORE any mint round-trip:
+        // the wallet key, and with a local nsec login the identity key too. The
+        // pubkey in the P2PK secret can be 64-char x-only or 66-char compressed;
+        // compare x-only, since BIP-340 verification (which the mint uses) is
+        // parity-agnostic. Doing this first means a nutzap locked to a stale
+        // wallet key (sender saw an old kind:10019 and locked to that pubkey,
+        // we've since rotated) is rejected without burning a /v1/keys fetch —
+        // and without the auto-redeem loop hammering the mint on every
         // triggerAutoRedeem.
-        val ourXOnly = walletP2pkPubkeyHex.lastHex64()
         parsedProofs.forEach { proof ->
             val parsed =
                 P2PK.parseSecret(proof.secret)
                     ?: throw IllegalArgumentException("Nutzap proof is not P2PK-locked")
-            if (parsed.pubKeyHex.lastHex64() != ourXOnly) {
+            val lock = parsed.pubKeyHex.lastHex64().lowercase()
+            if (lock !in signableLocks) {
+                if (lock == signer.pubKey.lowercase()) {
+                    throw IllegalArgumentException(
+                        "Nutzap is locked to your Nostr identity key, which only a local key (nsec) login can sign for",
+                    )
+                }
                 throw IllegalArgumentException(
                     "Nutzap proof is locked to a different pubkey (${parsed.pubKeyHex.take(16)}…)",
                 )
             }
         }
+        return PreparedNutzap(nutzap, mintUrl, parsedProofs)
+    }
+
+    /**
+     * Splits one mint's nutzaps into swaps of at most [MAX_PROOFS_PER_SWAP] inputs, never splitting
+     * a nutzap, and evens the chunks out: 101 one-sat proofs go 51 + 50, not 100 + 1, since a lone
+     * small proof would be left below the fee.
+     */
+    private fun chunkByProofCount(group: List<PreparedNutzap>): List<List<PreparedNutzap>> {
+        val totalProofs = group.sumOf { it.proofs.size }
+        if (totalProofs <= MAX_PROOFS_PER_SWAP) return listOf(group)
+        val chunkCount = (totalProofs + MAX_PROOFS_PER_SWAP - 1) / MAX_PROOFS_PER_SWAP
+        val target = (totalProofs + chunkCount - 1) / chunkCount
+
+        val chunks = ArrayList<List<PreparedNutzap>>(chunkCount)
+        var current = ArrayList<PreparedNutzap>()
+        var count = 0
+        for (p in group) {
+            if (current.isNotEmpty() && count + p.proofs.size > target) {
+                chunks += current
+                current = ArrayList()
+                count = 0
+            }
+            current += p
+            count += p.proofs.size
+        }
+        if (current.isNotEmpty()) chunks += current
+        return chunks
+    }
+
+    /**
+     * Swaps [batch] at [mintUrl] and publishes the result, sorting every nutzap into [result].
+     *
+     * Only a mint error refusing the inputs ([refusesTheInputs]) says something about the nutzaps
+     * themselves, so only that triggers [handleRefusedBatch]. Anything else (network, 5xx, auth,
+     * rate limits, a fee disagreement) fails the batch as a whole, to be retried later, rather
+     * than costing one more swap per nutzap. Once the swap has gone through the inputs are spent,
+     * so nothing after it may retry them.
+     */
+    private suspend fun redeemBatch(
+        mintUrl: String,
+        batch: List<PreparedNutzap>,
+        signingKeys: Map<String, String>,
+        result: NutzapRedemptionBuilder,
+        checkSpentOnRefusal: Boolean = true,
+    ) {
+        val swap =
+            try {
+                swapNutzaps(mintUrl, batch, signingKeys, result) ?: return
+            } catch (e: SwapFeeExceedsInputsException) {
+                // The fee takes everything even with the whole batch together. Nothing was spent;
+                // these only become redeemable alongside nutzaps that haven't arrived yet.
+                batch.forEach { result.belowFee += it.nutzap }
+                return
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: MintHttpException) {
+                if (e.refusesTheInputs()) {
+                    handleRefusedBatch(mintUrl, batch, signingKeys, result, e, checkSpentOnRefusal)
+                } else {
+                    batch.forEach { result.failed[it.nutzap] = e }
+                }
+                return
+            } catch (e: Exception) {
+                batch.forEach { result.failed[it.nutzap] = e }
+                return
+            }
+
+        // The mint has spent the inputs. If saving the new proofs fails, retrying the swap could
+        // only get "already spent": report it, and leave the proofs to NUT-13 restore.
+        try {
+            result.redeemed += publishRedeemed(mintUrl, batch, swap)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            result.notSaved += SwappedNotSaved(batch.map { it.nutzap }, mintUrl, swap.keep.sumOf { it.amount }, e)
+        }
+    }
+
+    /**
+     * The mint refused the inputs of [batch] ([refusesTheInputs]). One spent or forged nutzap is enough to refuse the
+     * whole swap, so find it without giving up on the rest: ask the mint which proofs are spent
+     * (one NUT-07 request), drop those nutzaps as final, and retry the others together, since
+     * splitting them up could leave small ones below the fee. If nothing is spent, the culprit is
+     * something else (a forged proof without DLEQ, say), so try each nutzap alone.
+     */
+    private suspend fun handleRefusedBatch(
+        mintUrl: String,
+        batch: List<PreparedNutzap>,
+        signingKeys: Map<String, String>,
+        result: NutzapRedemptionBuilder,
+        refusal: MintHttpException,
+        checkSpent: Boolean,
+    ) {
+        if (checkSpent) {
+            val states =
+                try {
+                    ops(mintUrl).checkStates(batch.flatMap { it.proofs })
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    batch.forEach { result.failed[it.nutzap] = refusal }
+                    return
+                }
+            val (spent, rest) = batch.partition { p -> p.proofs.any { states[it.secret] == ProofState.SPENT } }
+            spent.forEach { result.unredeemable[it.nutzap] = "Already spent at the mint" }
+            if (spent.isNotEmpty()) {
+                if (rest.isNotEmpty()) redeemBatch(mintUrl, rest, signingKeys, result)
+                return
+            }
+        }
+
+        if (batch.size == 1) {
+            // Refused alone with its proofs unspent: the mint rejects these proofs themselves (a
+            // bad signature, an unknown keyset). Anyone can send such a nutzap, so leaving it to
+            // be retried would re-run this whole fallback on every sweep.
+            result.unredeemable[batch[0].nutzap] = "Refused by the mint: ${refusal.detail ?: refusal.message}"
+            return
+        }
+        Log.w("CashuWalletOps") { "Mint $mintUrl refused a batch of ${batch.size} nutzaps with none spent, retrying one by one: ${refusal.message}" }
+        batch.forEach { redeemBatch(mintUrl, listOf(it), signingKeys, result, checkSpentOnRefusal = false) }
+    }
+
+    /**
+     * The mint step: NUT-12 checks, then one swap of every proof in [batch]. Returns null when the
+     * DLEQ check already sorted the batch into [result] (the forged nutzaps as unredeemable, the
+     * rest swapped through a recursive [redeemBatch]).
+     */
+    private suspend fun swapNutzaps(
+        mintUrl: String,
+        batch: List<PreparedNutzap>,
+        signingKeys: Map<String, String>,
+        result: NutzapRedemptionBuilder,
+    ): SwapResult? {
+        val proofs = batch.flatMap { it.proofs }
 
         // NUT-12 §3 Carol verification on the incoming proofs. When the
         // sender includes the dleq tuple we can check the proofs against
@@ -890,14 +1094,26 @@ class CashuWalletOps(
         // spend time. Verification is best-effort: legacy nutzaps
         // without dleq skip the check (returns true) and we fall back
         // to spend-time validation.
-        val dleqOk = ops(mintUrl).verifyTokenDleq(parsedProofs)
-        if (!dleqOk) {
-            throw MintProtocolException(
-                "NUT-12 Carol verification failed on inbound nutzap — proofs don't match mint's published keys",
-            )
+        val dleqFailures = ops(mintUrl).dleqFailures(proofs)
+        if (dleqFailures.isNotEmpty()) {
+            // A DLEQ failure is the sender's, and final. Drop the nutzaps carrying the bad
+            // proofs and swap the rest together.
+            val badSecrets = dleqFailures.mapTo(HashSet()) { it.secret }
+            val (bad, good) = batch.partition { p -> p.proofs.any { it.secret in badSecrets } }
+            bad.forEach { result.unredeemable[it.nutzap] = "NUT-12 verification failed: proofs don't match the mint's published keys" }
+            if (good.isNotEmpty()) redeemBatch(mintUrl, good, signingKeys, result)
+            return null
         }
 
-        val swap = ops(mintUrl).redeemNutzap(parsedProofs, walletPrivkeyHex)
+        // Each proof is signed with the key its lock names: the wallet key, or the identity key.
+        return ops(mintUrl).redeemToken(proofs) { lockXOnly -> signingKeys[lockXOnly] }
+    }
+
+    private suspend fun publishRedeemed(
+        mintUrl: String,
+        batch: List<PreparedNutzap>,
+        swap: SwapResult,
+    ): RedeemedNutzaps {
         val total = swap.keep.sumOf { it.amount }
 
         val tokenContent = TokenContent(mint = mintUrl, proofs = swap.keep)
@@ -910,23 +1126,25 @@ class CashuWalletOps(
                 direction = SpendingDirection.IN,
                 amount = total,
                 tokenReferences =
-                    listOf(
-                        TokenReference(tokenEvent.id, null, TokenReference.MARKER_CREATED),
-                        TokenReference(nutzap.id, null, TokenReference.MARKER_REDEEMED),
-                    ),
+                    listOf(TokenReference(tokenEvent.id, null, TokenReference.MARKER_CREATED)) +
+                        batch.map { TokenReference(it.nutzap.id, null, TokenReference.MARKER_REDEEMED) },
                 signer = signer,
             ) {
-                // NIP-61: tag the nutzap sender so their client learns it was redeemed.
-                notifySender(EventHintBundle(nutzap))
+                // NIP-61: tag each nutzap sender so their client learns it was redeemed.
+                batch.distinctBy { it.nutzap.pubKey }.forEach { notifySender(EventHintBundle(it.nutzap)) }
             }
         val historyEvent = signer.sign(historyTemplate)
         publish(historyEvent)
 
-        return RedeemCompleted(
-            amount = total,
-            tokenEvent = tokenEvent,
-            historyEvent = historyEvent,
-            rawToken = "nutzap:${nutzap.id}",
+        return RedeemedNutzaps(
+            nutzaps = batch.map { it.nutzap },
+            completed =
+                RedeemCompleted(
+                    amount = total,
+                    tokenEvent = tokenEvent,
+                    historyEvent = historyEvent,
+                    rawToken = "nutzap:" + batch.joinToString(",") { it.nutzap.id },
+                ),
         )
     }
 
@@ -1326,6 +1544,13 @@ class CashuWalletOps(
          * tripping a mint's rate limiter over.
          */
         private const val RESTORE_KEYSET_CONCURRENCY: Int = 3
+
+        /**
+         * Most inputs one nutzap redeem swap carries. Mints cap inputs per request (nutshell's
+         * default is 1000); staying well under keeps a large backlog from being refused whole,
+         * and costs at most one extra rounded-up fee per chunk.
+         */
+        const val MAX_PROOFS_PER_SWAP: Int = 100
     }
 }
 
@@ -1504,6 +1729,87 @@ data class SendTokenCompleted(
     val keepEvent: CashuTokenEvent?,
     val historyEvent: CashuSpendingHistoryEvent,
 )
+
+/**
+ * A mint URL in the one spelling nutzap grouping and the wallet's mint list compare by: trimmed,
+ * no trailing slash, scheme and host lowercased. The path keeps its case, since some mints serve
+ * several units under case-sensitive paths (`https://mint.minibits.cash/Bitcoin`).
+ */
+fun normalizeMintUrl(url: String): String {
+    val trimmed = url.trim().trimEnd('/')
+    val schemeEnd = trimmed.indexOf("://")
+    if (schemeEnd <= 0) return trimmed
+    val hostEnd = trimmed.indexOf('/', schemeEnd + 3).let { if (it < 0) trimmed.length else it }
+    return trimmed.substring(0, hostEnd).lowercase() + trimmed.substring(hostEnd)
+}
+
+/**
+ * Whether this mint error refuses the swap's inputs, so narrowing the batch down can help.
+ *
+ * NUT-00 has mints report every protocol error as HTTP 400 with a numeric `code` (nutshell also
+ * answers request validation with 422). Any other status (401/403 auth, 404, 408, 429, 5xx) is
+ * about the request or the mint, not one nutzap. So are two 400 codes: 3xxxx, NUT-21/22
+ * authentication, and 11002, "transaction not balanced", our fee disagreeing with the mint's,
+ * which no split of the batch fixes. Answering those with more requests only adds load.
+ */
+private fun MintHttpException.refusesTheInputs(): Boolean {
+    if (httpStatus != 400 && httpStatus != 422) return false
+    val c = code ?: return true
+    return c !in 30000..39999 && c != 11002
+}
+
+/** A nutzap that passed [CashuWalletOps.prepareNutzap]: its mint and its parsed, P2PK-locked proofs. */
+class PreparedNutzap(
+    val nutzap: NutzapEvent,
+    /** Normalized with [normalizeMintUrl]. */
+    val mintUrl: String,
+    val proofs: List<CashuProof>,
+)
+
+/** One swap of [CashuWalletOps.redeemNutzaps]: the nutzaps it covered and the events it published. */
+class RedeemedNutzaps(
+    val nutzaps: List<NutzapEvent>,
+    val completed: RedeemCompleted,
+)
+
+/**
+ * Nutzaps whose swap went through, so their proofs are spent at the mint, but whose new proofs
+ * could not be published (a signer or relay failure). Retrying would only get "already spent";
+ * the proofs come back with a NUT-13 restore from the wallet seed.
+ */
+class SwappedNotSaved(
+    val nutzaps: List<NutzapEvent>,
+    val mintUrl: String,
+    val amount: Long,
+    val error: Exception,
+)
+
+/** What [CashuWalletOps.redeemNutzaps] did with each nutzap it was given. */
+class NutzapRedemption(
+    /** One entry per successful swap. */
+    val redeemed: List<RedeemedNutzaps>,
+    /**
+     * Final, never retryable as they are: wrong lock, no mint tag, malformed proofs, a failed
+     * NUT-12 check, or already spent at the mint. Value is the reason.
+     */
+    val unredeemable: Map<NutzapEvent, String>,
+    /** Worth no more than the mint's input fee, even swapped together with the rest of their mint. Nothing was spent. */
+    val belowFee: List<NutzapEvent>,
+    /** Spent at the mint but not saved; see [SwappedNotSaved]. Must not be retried. */
+    val notSaved: List<SwappedNotSaved>,
+    /** The mint or the network failed; may succeed later. */
+    val failed: Map<NutzapEvent, Exception>,
+)
+
+private class NutzapRedemptionBuilder {
+    val redeemed = ArrayList<RedeemedNutzaps>()
+    val unredeemable = LinkedHashMap<NutzapEvent, String>()
+    val belowFee = ArrayList<NutzapEvent>()
+    val notSaved = ArrayList<SwappedNotSaved>()
+    val failed = LinkedHashMap<NutzapEvent, Exception>()
+
+    fun build() = NutzapRedemption(redeemed, unredeemable, belowFee, notSaved, failed)
+}
 
 data class RedeemCompleted(
     val amount: Long,
