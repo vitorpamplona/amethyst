@@ -81,8 +81,10 @@ fun interface AvifExifReader {
  *   an iPhone's `mebx`) are dropped, the rotation hint is reapplied and the result is fast-start
  *   (`moov` before `mdat`). Nothing is decoded or re-encoded. Residuals: `MediaMuxer` writes its
  *   own creation time and a `com.android.version` meta key, and metadata inside the bitstream
- *   (H.264 SEI user data) stays. An audio or video track MP4 cannot hold (Opus, MP3) makes the
- *   strip fail, not pass the file through.
+ *   (H.264 SEI user data) stays. The strip fails, rather than passing the file through, when an
+ *   audio or video track cannot go into MP4 (Opus, MP3, Dolby Vision), when a kept track has no
+ *   samples, and for a stream-copy trim whose edit list starts mid-GOP (a gallery-editor cut):
+ *   remuxing that would bring back the frames the trim removed.
  * - MP3: ID3v2 and ID3v1 tags are cut off the byte stream.
  *
  * Only uploads with stripping on reach this object: an UNCOMPRESSED upload without it goes up
