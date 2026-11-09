@@ -189,6 +189,7 @@ class DesktopCefEngine(
      *   app, account and route here.
      * - [DesktopBrowserBridge.contentScript] in the top frame of every web page: in an in-app browser
      *   window it gives the page `window.nostr`; anywhere else it finds no bridge and does nothing.
+     * - [SCROLLBAR_CSS] in every frame of every page.
      */
     private fun installGuard(shimJs: String): File {
         val dir = File(cacheRoot, GUARD_DIR)
@@ -197,6 +198,7 @@ class DesktopCefEngine(
         File(dir, "guard.js").writeText(NappletWebContract.WEBRTC_GUARD_JS)
         File(dir, "cookies.js").writeText(NappletWebContract.COOKIE_GUARD_JS)
         File(dir, "browser.js").writeText(DesktopBrowserBridge.contentScript(shimJs))
+        File(dir, "scrollbars.css").writeText(SCROLLBAR_CSS)
         return dir
     }
 
@@ -265,6 +267,22 @@ class DesktopCefEngine(
             )
 
         private const val GUARD_DIR = "napplet-guard"
+
+        /**
+         * The scrollbar every page gets unless it styles its own: a thin rounded thumb over a clear
+         * track, with no arrow buttons. Chromium's own scrollbars (classic, or the overlay ones, which
+         * grow an arrow on hover) looked out of place beside the app's chrome. An extension's
+         * stylesheet comes before the page's, so a page's own `::-webkit-scrollbar` rules win, and
+         * Chromium drops these for `scrollbar-color` / `scrollbar-width` where a page sets those.
+         */
+        private val SCROLLBAR_CSS =
+            """
+            ::-webkit-scrollbar { width: 8px; height: 8px; background: transparent; }
+            ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+            ::-webkit-scrollbar-thumb { background-color: rgba(128, 128, 128, 0.45); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
+            ::-webkit-scrollbar-thumb:hover { background-color: rgba(128, 128, 128, 0.75); }
+            ::-webkit-scrollbar-button { display: none; }
+            """.trimIndent()
         private const val NOTIFICATION_HELPER = "jcef Helper (Alerts).app"
 
         // match_origin_as_fallback reaches the opaque srcdoc and about:blank frames under the shell.
@@ -297,6 +315,13 @@ class DesktopCefEngine(
                 "js": ["browser.js"],
                 "run_at": "document_start",
                 "world": "MAIN"
+              }, {
+                "matches": ["<all_urls>"],
+                "css": ["scrollbars.css"],
+                "all_frames": true,
+                "match_about_blank": true,
+                "match_origin_as_fallback": true,
+                "run_at": "document_start"
               }]
             }
             """.trimIndent()
@@ -311,8 +336,7 @@ class DesktopCefEngine(
                 // loaded from the command line, which newer Chromium turns off by default.
                 "--disable-features=Translate,OptimizationHints,MediaRouter,DialMediaRouteProvider,NetworkTimeServiceQuerying,DisableLoadExtensionCommandLineSwitch",
                 // Thin scrollbars that show while the page scrolls and fade, as on ChromeOS and Android,
-                // instead of the classic desktop track, which looked out of place beside the app. A page
-                // that styles its own scrollbars keeps them.
+                // for whatever SCROLLBAR_CSS doesn't reach, instead of the classic desktop track.
                 "--enable-features=OverlayScrollbar",
                 // No camera, microphone, location or notification prompts: a page asking is told no,
                 // as Android's host answers.
