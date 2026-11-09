@@ -33,9 +33,13 @@ import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -46,6 +50,7 @@ import org.junit.rules.TemporaryFolder
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.IOException
+import java.io.InterruptedIOException
 
 class MetadataStripperTest {
     @get:Rule
@@ -135,60 +140,83 @@ class MetadataStripperTest {
     }
 
     @Test
-    fun `video is sanitized into a cache file and marked stripped`() {
-        val output = sanitizeSucceeds()
+    fun `video is sanitized into a cache file and marked stripped`() =
+        runTest {
+            val output = sanitizeSucceeds()
 
-        val result = MetadataStripper.strip(uri, "video/mp4", context)
+            val result = MetadataStripper.strip(uri, "video/mp4", context)
 
-        verify(exactly = 1) { Mp4Sanitizer.sanitize(context, uri, any()) }
-        assertEquals(tempFolder.root, output.captured.parentFile)
-        assertTrue(output.captured.name.startsWith("stripped_video_"))
-        assertEquals(output.captured.absolutePath, result.uri.path)
-        assertTrue(result.stripped)
-    }
-
-    @Test
-    fun `MP4 audio and AAC are sanitized`() {
-        val output = sanitizeSucceeds()
-
-        for (mime in listOf("audio/mp4", "audio/aac")) {
-            val result = MetadataStripper.strip(uri, mime, context)
-
-            assertTrue(output.captured.name.startsWith("stripped_audio_"))
+            verify(exactly = 1) { Mp4Sanitizer.sanitize(context, uri, any()) }
+            assertEquals(tempFolder.root, output.captured.parentFile)
+            assertTrue(output.captured.name.startsWith("stripped_video_"))
             assertEquals(output.captured.absolutePath, result.uri.path)
             assertTrue(result.stripped)
         }
-        verify(exactly = 2) { Mp4Sanitizer.sanitize(context, uri, any()) }
-    }
 
     @Test
-    fun `MP3 takes the ID3 path, not the sanitizer`() {
-        every { resolver.openInputStream(uri) } returns ByteArrayInputStream(ByteArray(0))
+    fun `MP4 audio and AAC are sanitized`() =
+        runTest {
+            val output = sanitizeSucceeds()
 
-        MetadataStripper.strip(uri, "audio/mpeg", context)
+            for (mime in listOf("audio/mp4", "audio/aac")) {
+                val result = MetadataStripper.strip(uri, mime, context)
 
-        verify(exactly = 0) { Mp4Sanitizer.sanitize(any(), any(), any()) }
-    }
-
-    @Test
-    fun `a track MP4 cannot hold returns the original unstripped and leaves no temp file`() {
-        every { Mp4Sanitizer.sanitize(context, uri, any()) } throws IOException("track 1 (audio/opus) cannot be written to MP4")
-
-        val result = MetadataStripper.strip(uri, "video/mp4", context)
-
-        assertSame(uri, result.uri)
-        assertFalse(result.stripped)
-        assertEquals(emptyList<String>(), tempFolder.root.list()!!.toList())
-    }
+                assertTrue(output.captured.name.startsWith("stripped_audio_"))
+                assertEquals(output.captured.absolutePath, result.uri.path)
+                assertTrue(result.stripped)
+            }
+            verify(exactly = 2) { Mp4Sanitizer.sanitize(context, uri, any()) }
+        }
 
     @Test
-    fun `a remux that is not fast-start is still stripped`() {
-        val output = sanitizeSucceeds(fastStart = false)
+    fun `MP3 takes the ID3 path, not the sanitizer`() =
+        runTest {
+            every { resolver.openInputStream(uri) } returns ByteArrayInputStream(ByteArray(0))
 
-        val result = MetadataStripper.strip(uri, "video/mp4", context)
+            MetadataStripper.strip(uri, "audio/mpeg", context)
 
-        assertTrue(result.stripped)
-        assertEquals(output.captured.absolutePath, result.uri.path)
-        assertTrue(output.captured.exists())
-    }
+            verify(exactly = 0) { Mp4Sanitizer.sanitize(any(), any(), any()) }
+        }
+
+    @Test
+    fun `a track MP4 cannot hold returns the original unstripped and leaves no temp file`() =
+        runTest {
+            every { Mp4Sanitizer.sanitize(context, uri, any()) } throws IOException("track 1 (audio/opus) cannot be written to MP4")
+
+            val result = MetadataStripper.strip(uri, "video/mp4", context)
+
+            assertSame(uri, result.uri)
+            assertFalse(result.stripped)
+            assertEquals(emptyList<String>(), tempFolder.root.list()!!.toList())
+        }
+
+    @Test
+    fun `a remux that is not fast-start is still stripped`() =
+        runTest {
+            val output = sanitizeSucceeds(fastStart = false)
+
+            val result = MetadataStripper.strip(uri, "video/mp4", context)
+
+            assertTrue(result.stripped)
+            assertEquals(output.captured.absolutePath, result.uri.path)
+            assertTrue(output.captured.exists())
+        }
+
+    @Test
+    fun `a cancelled upload interrupts the remux and does not report a failed strip`() =
+        runTest {
+            lateinit var upload: Job
+            every { Mp4Sanitizer.sanitize(context, uri, any()) } answers {
+                upload.cancel()
+                throw InterruptedIOException("sample copy interrupted")
+            }
+            var result: StrippingResult? = null
+
+            upload = launch { result = MetadataStripper.strip(uri, "video/mp4", context) }
+            upload.join()
+
+            assertTrue(upload.isCancelled)
+            assertNull(result)
+            assertEquals(emptyList<String>(), tempFolder.root.list()!!.toList())
+        }
 }

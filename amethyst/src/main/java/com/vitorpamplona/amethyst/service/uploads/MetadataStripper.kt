@@ -29,6 +29,10 @@ import com.vitorpamplona.amethyst.commons.service.uploads.isAvif
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.runInterruptible
 import java.io.File
 import java.io.InputStream
 import java.io.RandomAccessFile
@@ -243,12 +247,12 @@ object MetadataStripper {
         return StrippingResult(uri, true)
     }
 
-    fun stripVideoMetadata(
+    suspend fun stripVideoMetadata(
         uri: Uri,
         context: Context,
     ): StrippingResult = sanitizeMp4(uri, context, kind = "video", suffix = ".mp4")
 
-    fun stripAudioMetadata(
+    suspend fun stripAudioMetadata(
         uri: Uri,
         context: Context,
     ): StrippingResult = sanitizeMp4(uri, context, kind = "audio", suffix = ".m4a")
@@ -256,9 +260,9 @@ object MetadataStripper {
     /**
      * Rewrites the MP4 at [uri] into a cache file through [Mp4Sanitizer]. A remux whose fast-start
      * pass failed is still stripped, so it is returned with a warning; any failure returns [uri]
-     * unstripped.
+     * unstripped. Cancelling the caller interrupts the remux, which the library then abandons.
      */
-    private fun sanitizeMp4(
+    private suspend fun sanitizeMp4(
         uri: Uri,
         context: Context,
         kind: String,
@@ -268,14 +272,17 @@ object MetadataStripper {
         return try {
             val output = File.createTempFile("stripped_${kind}_", suffix, context.cacheDir)
             tempFile = output
-            val result = Mp4Sanitizer.sanitize(context, uri, output)
+            val result = runInterruptible(Dispatchers.IO) { Mp4Sanitizer.sanitize(context, uri, output) }
             if (!result.fastStart) Log.w(TAG) { "Sanitized $kind is not fast-start: ${output.name}" }
             Log.d(TAG) { "Stripped metadata from $kind" }
             StrippingResult(output.toUri(), true)
         } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w(TAG, "Failed to strip $kind metadata", e)
             tempFile?.deleteOrWarn(TAG, "temp file")
+            if (e is CancellationException) throw e
+            // An interrupted remux surfaces as InterruptedIOException, which runInterruptible does
+            // not turn into a cancellation: a cancelled upload stops here instead of asking the user.
+            currentCoroutineContext().ensureActive()
+            Log.w(TAG, "Failed to strip $kind metadata", e)
             StrippingResult(uri, false)
         }
     }
@@ -366,7 +373,7 @@ object MetadataStripper {
         }
     }
 
-    fun strip(
+    suspend fun strip(
         uri: Uri,
         mimeType: String?,
         context: Context,
