@@ -350,6 +350,19 @@ class CefBrowserSession(
                     }
                 }
 
+                // The app's colors on this frame's scrollbars, as it starts and once it has loaded.
+                override fun onLoadStart(
+                    browser: CefBrowser,
+                    frame: CefFrame,
+                    transitionType: CefRequest.TransitionType,
+                ) = PageScrollbars.apply(frame)
+
+                override fun onLoadEnd(
+                    browser: CefBrowser,
+                    frame: CefFrame,
+                    httpStatusCode: Int,
+                ) = PageScrollbars.apply(frame)
+
                 override fun onLoadError(
                     browser: CefBrowser,
                     frame: CefFrame,
@@ -555,6 +568,11 @@ class CefBrowserSession(
     fun load(url: String) {
         if (navigationOf(url, isMainFrame = true) != Navigation.LOAD) return
         browser?.loadURL(url)
+    }
+
+    /** The app's current colors on every frame's scrollbars ([PageScrollbars.update] set them). */
+    fun restyleScrollbars() {
+        browser?.let(PageScrollbars::apply)
     }
 
     fun reload() {

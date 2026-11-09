@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.napplet
 
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.toPixelMap
 import com.sun.net.httpserver.HttpServer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
@@ -31,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
+import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
@@ -416,6 +419,57 @@ class CefBrowserSessionTest {
                     delay(500)
                 }
             }
+        }
+
+    @Test
+    fun scrollbarsTakeTheAppsColorsInEveryFrameAndFollowItsTheme() =
+        runBlocking {
+            assumeTrue("Set AMETHYST_CEF_TEST=1 (and run under a display) to run pages in Chromium", System.getenv("AMETHYST_CEF_TEST") == "1")
+            val runtime = runtime(SharedCefTestEngine.engine)
+            // Each document reports the track color it sees whenever it changes.
+            val reporter = { name: String ->
+                "<script>var last = ''; setInterval(function () { var c = getComputedStyle(document.documentElement).getPropertyValue('--amethyst-scrollbar-track').trim();" +
+                    " if (c !== last) { last = c; fetch('http://127.0.0.1:$port/report?$name=' + encodeURIComponent(c)); } }, 100);</script>"
+            }
+            pages["/inner.html"] = "<!doctype html><body style=\"margin:0\"><div style=\"height:3000px\"></div>${reporter("frame")}</body>"
+            pages["/themed.html"] =
+                """
+                <!doctype html><body style="margin:0;background:#fff">
+                <iframe src="/inner.html" style="width:300px;height:200px;border:0"></iframe>
+                <div style="height:6000px"></div>${reporter("top")}</body>
+                """.trimIndent()
+            PageScrollbars.update(NappletThemeColors("#102030", "#F0E0D0", "#000000"))
+            val page = show(runtime, NostrSignerInternal(KeyPair()), Prompts(), "http://127.0.0.1:$port/themed.html")
+            withTimeout(30_000) { while (reports["top"] != "#102030" || reports["frame"] != "#102030") delay(100) }
+
+            // The page's own scrollbar, at the right edge of what Chromium paints: the track below the
+            // thumb in the app's background, the thumb in its text color, faded.
+            suspend fun trackPixel(expected: Int): Int {
+                var argb = 0
+                withTimeout(30_000) {
+                    while (true) {
+                        val frame = page.view.frame.value
+                        if (frame != null) {
+                            argb = frame.toPixelMap()[frame.width - 4, frame.height - 20].toArgb()
+                            if (argb == expected) break
+                        }
+                        delay(100)
+                    }
+                }
+                return argb
+            }
+            assertEquals(0xFF102030.toInt(), trackPixel(0xFF102030.toInt()), "the track is the app's background")
+            val pixels =
+                page.view.frame.value!!
+                    .toPixelMap()
+            val thumb = pixels[pixels.width - 4, 20].toArgb()
+            assertTrue(thumb != 0xFF102030.toInt() && thumb != 0xFFFFFFFF.toInt(), "the thumb is drawn over it: ${Integer.toHexString(thumb)}")
+
+            // The app's theme changes: the open page's frames follow, the top and the embedded one.
+            PageScrollbars.update(NappletThemeColors("#E0E8F0", "#203040", "#000000"))
+            page.restyleScrollbars()
+            withTimeout(30_000) { while (reports["top"] != "#E0E8F0" || reports["frame"] != "#E0E8F0") delay(100) }
+            assertEquals(0xFFE0E8F0.toInt(), trackPixel(0xFFE0E8F0.toInt()), "and so does what it paints")
         }
 
     private suspend fun clickUntil(

@@ -140,6 +140,7 @@ class DesktopNappletHost(
     private var themeColors = NappletThemeColors("#0E0E10", "#E6E6E6", "#9A82DB")
 
     init {
+        PageScrollbars.update(themeColors)
         // NAP-INTENT: a handler is one of the napplets the user pinned, opened in a window of its own.
         runtime.intents =
             NappletIntentDispatcher(
@@ -524,6 +525,8 @@ class DesktopNappletHost(
     fun updateTheme(colors: NappletThemeColors) {
         if (colors == themeColors) return
         themeColors = colors
+        PageScrollbars.update(colors)
+        browsers.value.forEach { it.restyleScrollbars() }
         sessions.value.forEach { it.pushTheme(colors) }
         screens.value.forEach { it.pushTheme(colors) }
         inlineSessions.value.forEach { it.pushTheme(colors) }

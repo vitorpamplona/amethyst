@@ -467,6 +467,19 @@ class CefNappletSession(
                     if (!isLoading && mutablePage.value.zoomPercent != 100) applyZoom()
                 }
 
+                // The app's colors on this frame's scrollbars, as it starts and once it has loaded.
+                override fun onLoadStart(
+                    browser: CefBrowser,
+                    frame: CefFrame,
+                    transitionType: CefRequest.TransitionType,
+                ) = PageScrollbars.apply(frame)
+
+                override fun onLoadEnd(
+                    browser: CefBrowser,
+                    frame: CefFrame,
+                    httpStatusCode: Int,
+                ) = PageScrollbars.apply(frame)
+
                 // A missing blob, a verify miss or a request the posture refused, so a site's author can
                 // see what broke (Android's host logs these to its console panel).
                 override fun onLoadError(
@@ -628,8 +641,9 @@ class CefNappletSession(
         }
     }
 
-    /** Tells a napplet that declared THEME about the app's current colors. */
+    /** The app's current colors: on every frame's scrollbars, and to a napplet that declared THEME. */
     fun pushTheme(colors: NappletThemeColors) {
+        browser?.let(PageScrollbars::apply)
         if (NappletCapability.THEME in launch.declared) send(NappletProtocolJson.encodeThemeChanged(colors.background, colors.text, colors.primary))
     }
 
