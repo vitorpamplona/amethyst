@@ -1990,18 +1990,18 @@ internal fun RenderNoteRow(
             }
 
             is RootSiteEvent -> {
-                StaticWebsiteManifestCard(noteEvent)
+                StaticWebsiteManifestCard(noteEvent, nav)
             }
 
             is NamedSiteEvent -> {
-                StaticWebsiteManifestCard(noteEvent)
+                StaticWebsiteManifestCard(noteEvent, nav)
             }
 
             // Other apps publish their own formats under these kinds: only a valid NIP-5D manifest
             // gets the napplet card, the rest get the fallback card that shows what they carry.
             is RootNappletEvent -> {
                 if (noteEvent.isValid()) {
-                    StaticWebsiteManifestCard(noteEvent)
+                    StaticWebsiteManifestCard(noteEvent, nav)
                 } else {
                     RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
@@ -2009,7 +2009,7 @@ internal fun RenderNoteRow(
 
             is NamedNappletEvent -> {
                 if (noteEvent.isValid()) {
-                    StaticWebsiteManifestCard(noteEvent)
+                    StaticWebsiteManifestCard(noteEvent, nav)
                 } else {
                     RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
                 }

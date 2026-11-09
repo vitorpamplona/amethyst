@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +39,7 @@ import org.cef.CefSettings
 import org.cef.OS
 import org.cef.browser.CefRequestContext
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -54,7 +57,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * Its profile lives in [cacheRoot] (`Default/`): a napplet's document is an opaque-origin srcdoc that
  * cannot keep anything there, but an nSite's localStorage, IndexedDB and cookies persist under its
- * own origin, as on Android.
+ * own origin, as on Android. Each account's nSite origin is its own ([NappletBlobCache.partitionOf]).
+ * Web pages in the in-app browser keep theirs apart by account instead ([webContext]).
  */
 class DesktopCefEngine(
     private val installDir: File,
@@ -91,19 +95,45 @@ class DesktopCefEngine(
 
     private val mutex = Mutex()
     private val stopped = AtomicBoolean(false)
+    private val webContexts = ConcurrentHashMap<String, CefRequestContext>()
+
+    /**
+     * Where the in-app browser's downloads run until they are complete and the user's (see
+     * [PageDownloads]): in the app's own cache, so nothing partial reaches the user's folders.
+     * Emptied as Chromium starts: none runs across a restart.
+     */
+    val downloadsInProgress: File = File(cacheRoot, DOWNLOADS_DIR)
+    private val policedContexts = HashMap<CefRequestContext, List<String>>()
+
+    @Volatile
+    private var pageScripts: List<String> = emptyList()
+
+    /**
+     * What every in-app browser page runs at document start, ahead of the page's own scripts: the
+     * NIP-07 bridge ([DesktopBrowserBridge.contentScript]) and the scrollbars ([PageScrollbars]). A
+     * page lives in an off-the-record context ([webContext]), where Chromium runs no extension, so the
+     * page's session installs these itself (`Page.addScriptToEvaluateOnNewDocument`).
+     */
+    val webPageScripts: List<String> get() = pageScripts
     private val mutableState = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = mutableState.asStateFlow()
 
     /** Starts Chromium if it isn't running (downloading it the first time) and returns it. */
     suspend fun app(): CefApp =
         mutex.withLock {
-            (mutableState.value as? State.Ready)?.app ?: withContext(Dispatchers.IO) { start() }
+            (mutableState.value as? State.Ready)?.app ?: run {
+                // Read here, where it may suspend: the browser's content script carries the shim.
+                val shim = NappletWebResources.shimJs().decodeToString()
+                pageScripts = listOf(DesktopBrowserBridge.contentScript(shim), PageScrollbars.DOCUMENT_SCRIPT)
+                withContext(Dispatchers.IO) { start() }
+            }
         }
 
     private fun start(): CefApp {
         mutableState.value = State.Starting
         return try {
             if (!cacheRoot.isDirectory && !cacheRoot.mkdirs()) throw IllegalStateException("Cannot create $cacheRoot")
+            if (downloadsInProgress.exists() && !downloadsInProgress.deleteRecursively()) Log.w(TAG) { "Could not empty $downloadsInProgress" }
             val builder = CefAppBuilder()
             builder.setInstallDir(installDir)
             builder.setProgressHandler { progress, percent ->
@@ -182,6 +212,10 @@ class DesktopCefEngine(
      *   nSites, on their own origins, keep WebRTC: their traffic is theirs to route.
      * - [NappletWebContract.COOKIE_GUARD_JS] everywhere under napplet.local, which is one site for every
      *   app, account and route here.
+     * - [PageScrollbars.CSS] in every frame: its scrollbars, in the app's colors.
+     *
+     * The in-app browser's pages live in contexts this extension doesn't reach ([webContext]); they get
+     * their scripts from [webPageScripts].
      */
     private fun installGuard(): File {
         val dir = File(cacheRoot, GUARD_DIR)
@@ -189,6 +223,9 @@ class DesktopCefEngine(
         File(dir, "manifest.json").writeText(GUARD_MANIFEST)
         File(dir, "guard.js").writeText(NappletWebContract.WEBRTC_GUARD_JS)
         File(dir, "cookies.js").writeText(NappletWebContract.COOKIE_GUARD_JS)
+        // An older start's: the browser's pages install their own scripts now.
+        File(dir, "browser.js").let { if (it.exists() && !it.delete()) Log.w(TAG) { "Could not delete $it" } }
+        File(dir, "scrollbars.css").writeText(PageScrollbars.CSS)
         return dir
     }
 
@@ -216,6 +253,64 @@ class DesktopCefEngine(
     }
 
     /**
+     * Where the in-app browser's pages for [account] keep their cookies, storage and cache: one jar per
+     * account and route, so a site's login or localStorage from one account is never there when another
+     * opens it, and a Tor page never sends a cookie a site set on the open web. The reverse isn't kept:
+     * while any Tor site is open, [DesktopNappletRoutes] sends every page through Tor (Tor always wins),
+     * an open-web page included, with its jar's cookies; when the Tor site closes they go out directly
+     * again, so that site can link the two visits.
+     *
+     * In memory, while the account is the one in use ([retainWebContexts]): JCEF can make no other kind
+     * of context than Chromium's off-the-record one (it passes no cache path), so nothing a page stores
+     * reaches disk. NIP-07
+     * grants are the account's own and persist, so a Nostr site logs in again with a click. Chromium
+     * runs no extension there: each page's session sets [CHROMIUM_PREFERENCES] on it ([applyPolicies])
+     * and installs [webPageScripts] itself.
+     */
+    fun webContext(
+        account: String,
+        overTor: Boolean,
+    ): CefRequestContext {
+        check(state.value is State.Ready) { "Chromium is not running" }
+        return webContexts.computeIfAbsent(jarOf(account, overTor)) { CefRequestContext.createContext(null) }
+    }
+
+    private fun jarOf(
+        account: String,
+        overTor: Boolean,
+    ) = if (overTor) "$account/tor" else "$account/web"
+
+    /**
+     * Sets [CHROMIUM_PREFERENCES] on [context] the first time a page of it is created, and returns
+     * what Chromium refused (a page must not load then). On Chromium's UI thread, the only one that may
+     * set a preference: a page's `onAfterCreated`.
+     */
+    fun applyPolicies(context: CefRequestContext): List<String> =
+        synchronized(policedContexts) {
+            policedContexts.getOrPut(context) {
+                CHROMIUM_PREFERENCES.mapNotNull { (name, value) -> context.setPreference(name, value)?.let { "$name: $it" } }.also { refused ->
+                    refused.forEach { Log.w(TAG) { "Chromium refused a preference for a web context: $it" } }
+                }
+            }
+        }
+
+    /**
+     * Drops every account's jars but [account]'s (their pages must be closed): an account switched
+     * away from, logged off or deleted starts with empty ones next time. Only the account in use keeps
+     * memory for its sites; the others' pages closed with the switch anyway.
+     */
+    fun retainWebContexts(account: String?) {
+        webContexts.keys.filter { account == null || !it.startsWith("$account/") }.forEach(::forget)
+    }
+
+    private fun forget(jar: String) {
+        webContexts.remove(jar)?.let { context ->
+            synchronized(policedContexts) { policedContexts.remove(context) }
+            runCatching { context.dispose() }.onFailure { Log.w(TAG, "Could not drop a web context", it) }
+        }
+    }
+
+    /**
      * Closes Chromium's processes; called as the app exits, before the JVM does, so that jcefmaven's
      * own exit hook finds nothing left to do. Bounded: CEF's teardown waits on the AWT event thread,
      * which may already be gone, and must not keep the JVM from exiting.
@@ -223,6 +318,7 @@ class DesktopCefEngine(
     fun shutdown() {
         if (!stopped.compareAndSet(false, true)) return
         val app = (mutableState.value as? State.Ready)?.app
+        webContexts.keys.toList().forEach(::forget)
         if (app != null) {
             val dispose = { if (OS.isMacintosh()) MacCefShutdown.shutdown(app) else app.dispose() }
             val teardown =
@@ -244,8 +340,9 @@ class DesktopCefEngine(
          * - WebRTC sends UDP only through the proxy, which a SOCKS proxy can't carry, so a page's peer
          *   connections can't go around [router] (CSP `connect-src` doesn't cover them).
          * - Third-party cookies are blocked, as Android's WebView does by default: one profile serves
-         *   every account and both routes here, so a cookie an embed or API sets must not follow the
-         *   user from one account, or from the open web, to another.
+         *   every napplet and nSite, on both routes, so a cookie an embed or API sets must not follow the
+         *   user from one site, or from the open web, to another. The in-app browser's jars
+         *   ([webContext]) get the same.
          * - Network prediction is off (2 = never): `<link rel=dns-prefetch|preconnect>` is outside CSP,
          *   and a page with no network could spell what it read into a hostname and have it resolved.
          */
@@ -257,6 +354,8 @@ class DesktopCefEngine(
             )
 
         private const val GUARD_DIR = "napplet-guard"
+        private const val DOWNLOADS_DIR = "downloads-in-progress"
+
         private const val NOTIFICATION_HELPER = "jcef Helper (Alerts).app"
 
         // match_origin_as_fallback reaches the opaque srcdoc and about:blank frames under the shell.
@@ -282,6 +381,13 @@ class DesktopCefEngine(
                 "match_origin_as_fallback": true,
                 "run_at": "document_start",
                 "world": "MAIN"
+              }, {
+                "matches": ["<all_urls>"],
+                "css": ["scrollbars.css"],
+                "all_frames": true,
+                "match_about_blank": true,
+                "match_origin_as_fallback": true,
+                "run_at": "document_start"
               }]
             }
             """.trimIndent()
@@ -295,6 +401,9 @@ class DesktopCefEngine(
                 // One list: Chromium keeps only the last of a repeated switch. The guard extension is
                 // loaded from the command line, which newer Chromium turns off by default.
                 "--disable-features=Translate,OptimizationHints,MediaRouter,DialMediaRouteProvider,NetworkTimeServiceQuerying,DisableLoadExtensionCommandLineSwitch",
+                // Thin scrollbars that show while the page scrolls and fade, as on ChromeOS and Android,
+                // for whatever PageScrollbars.CSS doesn't reach, instead of the classic desktop track.
+                "--enable-features=OverlayScrollbar",
                 // No camera, microphone, location or notification prompts: a page asking is told no,
                 // as Android's host answers.
                 "--deny-permission-prompts",

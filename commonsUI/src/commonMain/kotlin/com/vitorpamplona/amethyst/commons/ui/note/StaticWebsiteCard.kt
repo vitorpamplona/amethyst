@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.nsite_root_site
 import com.vitorpamplona.amethyst.commons.resources.nsite_servers
 import com.vitorpamplona.amethyst.commons.resources.nsite_source
 import com.vitorpamplona.amethyst.commons.resources.nsite_website_kind
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.PrefetchNappletFiles
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberAppLauncher
@@ -142,11 +143,15 @@ class SiteCardInfo private constructor(
  * card.
  */
 @Composable
-fun StaticWebsiteManifestCard(event: Event?) {
+fun StaticWebsiteManifestCard(
+    event: Event?,
+    /** The screen the card is on: where the platform runs apps as screens, Open opens one there. */
+    nav: INav? = null,
+) {
     when (event) {
-        is RootNappletEvent -> NappletManifestCard(event, identifier = null)
-        is NamedNappletEvent -> NappletManifestCard(event, identifier = event.identifier())
-        is RootSiteEvent, is NamedSiteEvent -> SiteCard(event)
+        is RootNappletEvent -> NappletManifestCard(event, identifier = null, nav)
+        is NamedNappletEvent -> NappletManifestCard(event, identifier = event.identifier(), nav)
+        is RootSiteEvent, is NamedSiteEvent -> SiteCard(event, nav)
         else -> {}
     }
 }
@@ -155,6 +160,7 @@ fun StaticWebsiteManifestCard(event: Event?) {
 private fun NappletManifestCard(
     event: NappletManifest,
     identifier: String?,
+    nav: INav?,
 ) {
     val info = remember(event) { NappletCardInfo(event) }
     val coordinate = remember(event) { favoriteCoordinateOf(event as Event) }
@@ -186,7 +192,7 @@ private fun NappletManifestCard(
             if (canOpen) {
                 {
                     InlineNappletRuns.stopApp(coordinate)
-                    launcher.openNapplet(event)
+                    launcher.openNapplet(event, nav)
                 }
             } else {
                 null
@@ -205,7 +211,10 @@ private fun NappletManifestCard(
 }
 
 @Composable
-private fun SiteCard(event: Event) {
+private fun SiteCard(
+    event: Event,
+    nav: INav?,
+) {
     val info = remember(event) { SiteCardInfo.of(event) } ?: return
     val coordinate = remember(event) { favoriteCoordinateOf(event) }
     val launcher = rememberAppLauncher()
@@ -219,7 +228,7 @@ private fun SiteCard(event: Event) {
         identifier = info.identifier,
         isNapplet = false,
         icon = info.icon,
-        onOpen = if (info.paths.isNotEmpty() && launcher.opensNapplets) ({ launcher.openSite(event) }) else null,
+        onOpen = if (info.paths.isNotEmpty() && launcher.opensNapplets) ({ launcher.openSite(event, nav) }) else null,
         headerActions = { FavoriteToggleButton(coordinate, info.title ?: info.identifier ?: NSITE_LABEL, info.icon) },
     )
 }

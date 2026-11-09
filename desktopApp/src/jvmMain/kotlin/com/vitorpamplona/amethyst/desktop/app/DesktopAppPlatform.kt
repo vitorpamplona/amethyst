@@ -24,10 +24,13 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -200,12 +203,33 @@ class DesktopAppPlatform(
     ) = DesktopGeocacheMapTab(feedContentState, accountViewModel, nav)
 
     @Composable
+    override fun platformScreenTitle(route: Route): String? {
+        val host = nappletHost ?: return null
+        return when (route) {
+            is Route.WebPage -> {
+                val pages by host.browsers.collectAsState()
+                val session = pages.lastOrNull { it.routeId == route.id } ?: return null
+                val page by session.page.collectAsState()
+                page.title.ifBlank { null }
+            }
+            is Route.WebApp -> platformScreenTitle(Route.WebPage(route.url, id = PINNED_WEB_APP + route.url))
+            is Route.NostrApp -> {
+                val screens by host.screens.collectAsState()
+                screens.lastOrNull { it.routeId == route.coordinate }?.launch?.title
+            }
+            else -> null
+        }
+    }
+
+    @Composable
     override fun NotificationDeliverySettings(accountViewModel: AccountViewModel) = DesktopNotificationDeliverySettings(notifications)
 }
 
 /**
- * Web apps and links open in the system browser; napplets and nSites open in [DesktopNappletHost]'s
- * sandboxed windows.
+ * Web apps and links opened from the Browser tab, favorites and the screens that launch a site open
+ * as [Route.WebPage] screens, with NIP-07, which the navigation layout places (stack, deck, tab or
+ * window); napplets and nSites open in [DesktopNappletHost]'s sandboxed windows. Without Chromium,
+ * without a screen to open from, or with nobody logged in, a web link goes to the system browser.
  */
 private class DesktopAppLauncher(
     private val napplets: DesktopNappletHost?,
@@ -217,14 +241,15 @@ private class DesktopAppLauncher(
     override fun launch(
         app: FavoriteApp,
         stillLoading: String,
+        nav: INav?,
     ) {
         when (app) {
-            is FavoriteApp.WebApp -> DesktopBrowser.open(app.url)
+            is FavoriteApp.WebApp -> launchUrl(app.url, preferTor = false, nav = nav)
             is FavoriteApp.NostrApp -> {
                 when (val event = LocalCache.getAddressableNoteIfExists(app.coordinate)?.event) {
                     null -> toaster.show(stillLoading, false)
-                    is NappletManifest -> openNapplet(event)
-                    is RootSiteEvent, is NamedSiteEvent -> openSite(event)
+                    is NappletManifest -> openNapplet(event, nav)
+                    is RootSiteEvent, is NamedSiteEvent -> openSite(event, nav)
                     else -> Unit
                 }
             }
@@ -234,27 +259,57 @@ private class DesktopAppLauncher(
     override fun launchUrl(
         url: String,
         preferTor: Boolean,
+        nav: INav?,
     ) {
-        DesktopBrowser.open(url)
+        val host = napplets
+        if (host == null || nav == null || !host.canBrowse(url)) {
+            Log.d(TAG) { "Opening a link in the system browser" }
+            DesktopBrowser.open(url)
+            return
+        }
+        nav.nav(Route.WebPage(url, preferTor, DesktopNappletHost.newPageId()))
     }
 
     // Without Chromium (it couldn't be set up here) the cards offer no Open.
     override val opensNapplets: Boolean get() = napplets != null
 
-    override fun openNapplet(manifest: NappletManifest) {
+    override fun openNapplet(
+        manifest: NappletManifest,
+        nav: INav?,
+    ) {
         val host = napplets ?: return
+        if (openAsScreen(host, manifest as Event, nav)) return
         host.open(manifest).onFailure {
             Log.w(TAG, "Refusing to open napplet ${(manifest as? Event)?.id}", it)
             toaster.show(nappletFailed, false)
         }
     }
 
-    override fun openSite(site: Event) {
+    override fun openSite(
+        site: Event,
+        nav: INav?,
+    ) {
         val host = napplets ?: return
+        if (openAsScreen(host, site, nav)) return
         host.openSite(site).onFailure {
             Log.w(TAG, "Refusing to open nSite ${site.id}", it)
             toaster.show(siteFailed, false)
         }
+    }
+
+    /**
+     * Opens [event]'s app as a [Route.NostrApp] screen on [nav], which the navigation layout places.
+     * False, for the caller to open a window or say why, when there's no screen to open from or the
+     * app can't run as one (an invalid manifest, nobody logged in): its window says why.
+     */
+    private fun openAsScreen(
+        host: DesktopNappletHost,
+        event: Event,
+        nav: INav?,
+    ): Boolean {
+        if (nav == null || !host.canRunAsScreen(event)) return false
+        nav.nav(Route.NostrApp(favoriteCoordinateOf(event)))
+        return true
     }
 
     override fun openWebxdc(

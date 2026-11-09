@@ -67,7 +67,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
@@ -86,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentInfo
+import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletConsentCard
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletDownloadIndicator
@@ -176,13 +176,22 @@ private fun NappletWindow(
             val trafficLights = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else trafficLightsInsetStart
             Column(Modifier.fillMaxSize()) {
                 // The trusted chrome, drawn by Amethyst above the page, which can't draw over it.
-                SandboxToolbar(session, host, leadingInset = trafficLights, onAccessInfo = { showAccess = true })
+                SandboxToolbar(
+                    session,
+                    host,
+                    Modifier.padding(start = trafficLights),
+                    onAccessInfo = { showAccess = true },
+                    onNetworkMode = { host.setNetworkMode(session, it) },
+                )
                 HorizontalDivider()
                 Box(Modifier.fillMaxWidth().weight(1f)) {
                     when (val current = state) {
                         // Chromium's own window, embedded: it draws over Compose, so nothing else goes here.
                         is CefNappletSession.State.Showing -> current.component?.let { SwingPanel(factory = { it }, modifier = Modifier.fillMaxSize()) }
-                        is CefNappletSession.State.Loading -> LoadingPane(host, session, session.launch.title)
+                        is CefNappletSession.State.Loading -> {
+                            val download by session.download.collectAsState()
+                            LoadingPane(host, download, session.launch.title)
+                        }
                         is CefNappletSession.State.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
                         is CefNappletSession.State.Failed ->
                             MessagePane(
@@ -199,7 +208,7 @@ private fun NappletWindow(
         }
 
         // Its own window, above Chromium's: one question at a time, the oldest first.
-        ConsentWindows(session, host)
+        ConsentWindows(setOf(session.launch.identity.coordinate), titleOf = { session.launch.title }, host)
 
         if (showAccess) AccessWindow(session, host, parent = window, onDone = { showAccess = false })
     }
@@ -211,11 +220,15 @@ private fun NappletWindow(
  * Android's pill has. Unlike the pill, no Close: the window's own close button does that.
  */
 @Composable
-private fun SandboxToolbar(
+internal fun SandboxToolbar(
     session: CefNappletSession,
     host: DesktopNappletHost,
-    leadingInset: Dp,
+    /** Where the toolbar's row starts and how high it sits: a window steps past its own controls. */
+    rowModifier: Modifier,
     onAccessInfo: () -> Unit,
+    onNetworkMode: (Boolean) -> Unit,
+    /** Back once the app has no history left: leaves its screen, where there is one to go back to. */
+    onLeave: (() -> Unit)? = null,
 ) {
     val page by session.page.collectAsState()
     val routedOverTor by session.routedOverTor.collectAsState()
@@ -224,11 +237,17 @@ private fun SandboxToolbar(
 
     Column(Modifier.fillMaxWidth()) {
         Row(
-            Modifier.fillMaxWidth().height(TOOLBAR_HEIGHT).padding(start = 4.dp + leadingInset, end = 4.dp),
+            Modifier
+                .fillMaxWidth()
+                .then(rowModifier)
+                .height(TOOLBAR_HEIGHT)
+                .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            ToolbarButton(MaterialSymbols.AutoMirrored.ArrowBack, stringRes(Res.string.browser_pill_back), enabled = page.canGoBack) { session.goBack() }
+            ToolbarButton(MaterialSymbols.AutoMirrored.ArrowBack, stringRes(Res.string.browser_pill_back), enabled = page.canGoBack || onLeave != null) {
+                if (page.canGoBack) session.goBack() else onLeave?.invoke()
+            }
             ToolbarButton(MaterialSymbols.AutoMirrored.ArrowForward, stringRes(Res.string.browser_pill_forward), enabled = page.canGoForward) { session.goForward() }
             val state by session.state.collectAsState()
             val showing = state is CefNappletSession.State.Showing
@@ -314,12 +333,12 @@ private fun SandboxToolbar(
                             modifier = Modifier.widthIn(max = 220.dp),
                         )
                     }
-                    Switch(checked = useTor, onCheckedChange = { host.setNetworkMode(session, it) })
+                    Switch(checked = useTor, onCheckedChange = onNetworkMode)
                 }
             }
         }
         if (finding) {
-            FindBar(session, onClose = {
+            FindBar(onFind = session::find, onClose = {
                 finding = false
                 session.stopFinding()
             })
@@ -328,8 +347,8 @@ private fun SandboxToolbar(
 }
 
 @Composable
-private fun FindBar(
-    session: CefNappletSession,
+internal fun FindBar(
+    onFind: (text: String, forward: Boolean, findNext: Boolean) -> Unit,
     onClose: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
@@ -345,7 +364,7 @@ private fun FindBar(
             value = query,
             onValueChange = {
                 query = it
-                session.find(it)
+                onFind(it, true, false)
             },
             placeholder = { Text(stringRes(Res.string.browser_pill_find_hint)) },
             singleLine = true,
@@ -354,7 +373,7 @@ private fun FindBar(
                     when {
                         event.type != KeyEventType.KeyDown -> false
                         event.key == Key.Enter -> {
-                            session.find(query, forward = !event.isShiftPressed, findNext = true)
+                            onFind(query, !event.isShiftPressed, true)
                             true
                         }
                         event.key == Key.Escape -> {
@@ -366,17 +385,17 @@ private fun FindBar(
                 },
         )
         ToolbarButton(MaterialSymbols.KeyboardArrowUp, stringRes(Res.string.browser_pill_find_previous), enabled = query.isNotEmpty()) {
-            session.find(query, forward = false, findNext = true)
+            onFind(query, false, true)
         }
         ToolbarButton(MaterialSymbols.KeyboardArrowDown, stringRes(Res.string.browser_pill_find_next), enabled = query.isNotEmpty()) {
-            session.find(query, forward = true, findNext = true)
+            onFind(query, true, true)
         }
         ToolbarButton(MaterialSymbols.Close, stringRes(Res.string.browser_pill_find_close), onClick = onClose)
     }
 }
 
 @Composable
-private fun ToolbarButton(
+internal fun ToolbarButton(
     symbol: MaterialSymbol,
     description: String,
     enabled: Boolean = true,
@@ -393,10 +412,11 @@ private fun ToolbarButton(
  * draws over anything Compose puts in the app's window. Done, Esc or a click elsewhere closes it.
  */
 @Composable
-private fun AccessWindow(
+internal fun AccessWindow(
     session: CefNappletSession,
     host: DesktopNappletHost,
-    parent: AwtWindow,
+    /** The window it sits over; centred on the screen without one. */
+    parent: AwtWindow?,
     onDone: () -> Unit,
 ) {
     val isWebsite = session.launch.profile == HostProfile.WEBSITE
@@ -409,9 +429,13 @@ private fun AccessWindow(
     // Centred over the app's window, below its toolbar when the window is tall enough.
     val position =
         remember(parent) {
-            val x = parent.x + (parent.width - size.width.value) / 2
-            val y = parent.y + minOf(TOOLBAR_HEIGHT.value, maxOf(0f, (parent.height - size.height.value) / 2))
-            WindowPosition(x.dp, y.dp)
+            if (parent == null) {
+                WindowPosition.Aligned(Alignment.Center)
+            } else {
+                val x = parent.x + (parent.width - size.width.value) / 2
+                val y = parent.y + minOf(TOOLBAR_HEIGHT.value, maxOf(0f, (parent.height - size.height.value) / 2))
+                WindowPosition(x.dp, y.dp)
+            }
         }
     DialogWindow(
         onCloseRequest = onDone,
@@ -455,29 +479,30 @@ private fun AccessWindow(
 }
 
 /**
- * The oldest question this window's app is waiting on, of any kind, in a window of its own above
+ * The oldest question this window's [apps] are waiting on, of any kind, in a window of its own above
  * Chromium's. Several signatures waiting at once for the same account are shown together, as on
- * Android.
+ * Android. A napplet's window has one app; a browser window one per origin it has shown.
  */
 @Composable
-private fun ConsentWindows(
-    session: CefNappletSession,
+internal fun ConsentWindows(
+    apps: Set<String>,
+    /** The name the question's window gives the app that asks. */
+    titleOf: (app: String?) -> String,
     host: DesktopNappletHost,
 ) {
-    val coordinate = session.launch.identity.coordinate
     val capabilities by host.consent.capabilities.pending
         .collectAsState()
     val connects by host.consent.connects.pending
         .collectAsState()
     val signerOps by host.consent.signerOps.pending
         .collectAsState()
-    val mySignerOps = signerOps.filter { it.app == coordinate }
-    val question = (capabilities + connects + signerOps).filter { it.app == coordinate }.minByOrNull { it.order } ?: return
+    val question = (capabilities + connects + signerOps).filter { it.app in apps }.minByOrNull { it.order } ?: return
+    val mySignerOps = signerOps.filter { it.app == question.app }
     // Best-effort note preview of what would be signed; without it the card shows the JSON.
     val accountViewModel = CallSessionBridge.accountViewModel
 
     key(question) {
-        ConsentWindow(session.launch.title, onClose = { question.dismiss() }) {
+        ConsentWindow(titleOf(question.app), onClose = { question.dismiss() }) {
             when (val info = question.info) {
                 is NappletConsentInfo -> NappletConsentCard(info, onDecision = { host.consent.capabilities.answer(question.token, it) })
                 is SignerConnectInfo ->
@@ -523,13 +548,12 @@ private fun ConsentWindow(
 }
 
 @Composable
-private fun LoadingPane(
+internal fun LoadingPane(
     host: DesktopNappletHost,
-    session: CefNappletSession,
+    download: NappletDownloadProgress?,
     title: String,
 ) {
     val engine by host.engine.state.collectAsState()
-    val download by session.download.collectAsState()
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             Modifier.widthIn(max = 420.dp).padding(24.dp),
@@ -555,7 +579,7 @@ private fun LoadingPane(
 }
 
 @Composable
-private fun WaitingPane(message: String) {
+internal fun WaitingPane(message: String) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
             CircularProgressIndicator()
@@ -565,7 +589,7 @@ private fun WaitingPane(message: String) {
 }
 
 @Composable
-private fun MessagePane(
+internal fun MessagePane(
     message: String,
     onRetry: () -> Unit,
 ) {
@@ -577,8 +601,8 @@ private fun MessagePane(
     }
 }
 
-private const val ZOOM_STEP = 10
+internal const val ZOOM_STEP = 10
 
 private fun Color.hex(): String = "#%06X".format(toArgb() and 0xFFFFFF)
 
-private val TOOLBAR_HEIGHT = 48.dp
+internal val TOOLBAR_HEIGHT = 48.dp

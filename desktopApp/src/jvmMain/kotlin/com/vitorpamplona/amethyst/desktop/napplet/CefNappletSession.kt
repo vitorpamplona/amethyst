@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
@@ -128,10 +129,15 @@ class CefNappletSession(
     private val broker: NappletBroker,
     private val runtime: DesktopNappletRuntime,
     /**
-     * Set for a napplet running inside a note: its browser has no window and paints into this view,
-     * which the note draws and forwards input to. Null for a window of its own.
+     * Set for an app drawn by Compose (a napplet inside a note, or an app as a screen the navigation
+     * layout places): its browser has no window and paints into this view, which the note or the
+     * screen draws and forwards input to. Null for a window of its own.
      */
     val offscreen: OffscreenNappletView? = null,
+    /** Frames a second an [offscreen] page paints: a note's small picture needs fewer than a screen. */
+    private val frameRate: Int = OFFSCREEN_FRAME_RATE,
+    /** The [Route.NostrApp] coordinate this app is the screen of; null for a window or a note. */
+    val routeId: String? = null,
     /** Where NAP-FS picks and file bytes go: the system's file dialog, unless a test scripts them. */
     private val filePort: NappletFilePort = DesktopNappletFilePort(),
 ) {
@@ -339,7 +345,7 @@ class CefNappletSession(
                         installHandlers(client)
                         val created =
                             if (offscreen != null) {
-                                OffscreenCefBrowser(client, NappletWebContract.SHELL_URL, null, OFFSCREEN_FRAME_RATE, offscreen).also {
+                                OffscreenCefBrowser(client, NappletWebContract.SHELL_URL, null, frameRate, offscreen).also {
                                     offscreen.browser = it
                                     it.createImmediately()
                                 }
@@ -349,6 +355,7 @@ class CefNappletSession(
                         created.also {
                             this@CefNappletSession.browser = it
                             runtime.attendance.set(this@CefNappletSession, true)
+                            if (offscreen != null && !visible) it.setWindowlessFrameRate(HIDDEN_FRAME_RATE)
                         }
                     }
                 // An off-screen browser's component is a placeholder that is never shown.
@@ -459,6 +466,19 @@ class CefNappletSession(
                     mutablePage.update { it.copy(isLoading = isLoading, canGoBack = canGoBack, canGoForward = canGoForward) }
                     if (!isLoading && mutablePage.value.zoomPercent != 100) applyZoom()
                 }
+
+                // The app's colors on this frame's scrollbars, as it starts and once it has loaded.
+                override fun onLoadStart(
+                    browser: CefBrowser,
+                    frame: CefFrame,
+                    transitionType: CefRequest.TransitionType,
+                ) = PageScrollbars.apply(frame)
+
+                override fun onLoadEnd(
+                    browser: CefBrowser,
+                    frame: CefFrame,
+                    httpStatusCode: Int,
+                ) = PageScrollbars.apply(frame)
 
                 // A missing blob, a verify miss or a request the posture refused, so a site's author can
                 // see what broke (Android's host logs these to its console panel).
@@ -581,8 +601,8 @@ class CefNappletSession(
         NappletRequestRouter.routeInc(launch.declared, payload)?.let { outcome ->
             val id = runCatching { NappletProtocolJson.readId(payload) }.getOrNull()
             when (outcome) {
-                is NappletRequestRouter.Outcome.Inc -> runtime.incBus.handle(this, accountPubKey, ::send, outcome.request)?.let { send(withId(it, id)) }
-                is NappletRequestRouter.Outcome.Reply -> send(withId(outcome.payload, id))
+                is NappletRequestRouter.Outcome.Inc -> runtime.incBus.handle(this, accountPubKey, ::send, outcome.request)?.let { send(withReplyId(it, id)) }
+                is NappletRequestRouter.Outcome.Reply -> send(withReplyId(outcome.payload, id))
                 else -> {}
             }
             // Closed meanwhile: close() may have left the bus before this put the window back on it.
@@ -596,12 +616,12 @@ class CefNappletSession(
                 is NappletRequestRouter.Outcome.Intent -> {
                     val intents = runtime.intents
                     if (intents == null) {
-                        if (id != null) send(withId(NappletProtocolJson.encodeIntentFailure(NappletProtocolJson.readType(payload) ?: "intent.invoke", "intent unavailable"), id))
+                        if (id != null) send(withReplyId(NappletProtocolJson.encodeIntentFailure(NappletProtocolJson.readType(payload) ?: "intent.invoke", "intent unavailable"), id))
                     } else {
-                        scope.launch { intents.handle(this@CefNappletSession, launch.identity, ::send, outcome.request)?.let { send(withId(it, id)) } }
+                        scope.launch { intents.handle(this@CefNappletSession, launch.identity, ::send, outcome.request)?.let { send(withReplyId(it, id)) } }
                     }
                 }
-                is NappletRequestRouter.Outcome.Reply -> send(withId(outcome.payload, id))
+                is NappletRequestRouter.Outcome.Reply -> send(withReplyId(outcome.payload, id))
                 else -> {}
             }
             return
@@ -610,7 +630,7 @@ class CefNappletSession(
         scope.launch {
             val id = runCatching { NappletProtocolJson.readId(payload) }.getOrNull()
             when (val outcome = NappletRequestRouter.route(broker, launch.identity, launch.declared, payload, fsSession)) {
-                is NappletRequestRouter.Outcome.Reply -> send(withId(outcome.payload, id))
+                is NappletRequestRouter.Outcome.Reply -> send(withReplyId(outcome.payload, id))
                 is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach(::send)
                 is NappletRequestRouter.Outcome.OpenSubscription ->
                     runtime.liveSubscriptions.open(this@CefNappletSession, outcome.subId, outcome.filters, account, arrivedAt, outcome.relays, outcome.outbox, outcome.mayDecrypt, ::send)
@@ -621,13 +641,26 @@ class CefNappletSession(
         }
     }
 
-    /** Tells a napplet that declared THEME about the app's current colors. */
+    /** The app's current colors: on every frame's scrollbars, and to a napplet that declared THEME. */
     fun pushTheme(colors: NappletThemeColors) {
+        browser?.let(PageScrollbars::apply)
         if (NappletCapability.THEME in launch.declared) send(NappletProtocolJson.encodeThemeChanged(colors.background, colors.text, colors.primary))
     }
 
     fun reload() {
         browser?.reload()
+    }
+
+    @Volatile
+    private var visible = true
+
+    /**
+     * Whether an [offscreen] page's screen is on show. Out of sight (a tab behind another, a screen
+     * under the one on top) it paints a frame a second instead of its [frameRate]: it keeps running.
+     */
+    fun setVisible(visible: Boolean) {
+        this.visible = visible
+        if (offscreen != null) browser?.setWindowlessFrameRate(if (visible) frameRate else HIDDEN_FRAME_RATE)
     }
 
     fun stop() {
@@ -674,15 +707,6 @@ class CefNappletSession(
         // Read back at once: a window behind another isn't laid out on its own, so the page wouldn't see
         // its new size until the window came forward.
         browser?.executeJavaScript("var f=document.getElementById('app');f.style.zoom='$factor';f.getBoundingClientRect();", NappletWebContract.SHELL_URL, 0)
-    }
-
-    private fun withId(
-        payload: String,
-        id: String?,
-    ): String {
-        if (id == null) return payload
-        val result = parseJsonObjectOrNull(payload) ?: return payload
-        return result.withString("id", id).toString()
     }
 
     private fun send(payload: String) {
@@ -876,6 +900,10 @@ class CefNappletSession(
 
         // A note is a small picture: no need for more, and every frame is copied.
         private const val OFFSCREEN_FRAME_RATE = 30
+
+        /** What an [offscreen] app paints as a screen of its own, like any app screen. */
+        const val SCREEN_FRAME_RATE = 60
+        private const val HIDDEN_FRAME_RATE = 1
         private const val QUERY_FUNCTION_PREFIX = "__amethystNappletQuery_"
         const val MIN_ZOOM = 50
         const val MAX_ZOOM = 300
@@ -909,4 +937,14 @@ class CefNappletSession(
         /** A napplet's srcdoc document and the data/blob URLs a page makes itself: none leave the machine. */
         private fun isLocal(url: String): Boolean = url == "about:srcdoc" || url == "about:blank" || url.startsWith("data:") || url.startsWith("blob:")
     }
+}
+
+/** [payload], a broker reply, answering the request [id] (as the shim matches replies), or as it is without one. */
+internal fun withReplyId(
+    payload: String,
+    id: String?,
+): String {
+    if (id == null) return payload
+    val result = parseJsonObjectOrNull(payload) ?: return payload
+    return result.withString("id", id).toString()
 }

@@ -238,6 +238,13 @@ interface AppPlatform {
     fun rememberAppLauncher(): AppLauncher = AppLauncher.None
 
     /**
+     * The live title of what a platform-run screen shows ([Route.WebPage], [Route.NostrApp]), for its
+     * tab or window: the page's or the app's own name. Null where the platform runs none as screens.
+     */
+    @Composable
+    fun platformScreenTitle(route: Route): String? = null
+
+    /**
      * Starts a [callType] call with [peers], asking for the call permissions first where the
      * platform needs them. Null where calls are not supported, so callers hide their buttons.
      */
@@ -460,29 +467,50 @@ fun rememberWebAppIconModel(url: String): String? = LocalAppPlatform.current.rem
 
 /**
  * Opens a favorite app, a web link, a napplet or an nSite in the platform's app surface (on Android,
- * the sandboxed full-screen WebView in its own task; on the desktop, a Chromium window).
+ * the sandboxed full-screen WebView in its own task; on the desktop, a web page is a screen that
+ * [nav] places as the navigation layout says, and a napplet or nSite a Chromium window).
  */
 interface AppLauncher {
-    /** [stillLoading] is shown when a Nostr app's defining event has not arrived yet. */
+    /**
+     * [stillLoading] is shown when a Nostr app's defining event has not arrived yet. [nav] is the
+     * calling screen's: a platform that draws the app as a screen opens it there.
+     */
     fun launch(
         app: FavoriteApp,
         stillLoading: String,
+        nav: INav? = null,
     )
 
-    /** [preferTor] forces Tor when available, e.g. for `.onion` hosts. */
+    /**
+     * [preferTor] forces Tor when available, e.g. for `.onion` hosts. [nav] is the calling screen's:
+     * a platform that draws web pages as screens opens one there ([Route.WebPage]).
+     */
     fun launchUrl(
         url: String,
         preferTor: Boolean = false,
+        nav: INav? = null,
     )
 
     /** Whether [openNapplet] and [openSite] run anything here; cards offer Open only where they do. */
     val opensNapplets: Boolean get() = false
 
-    /** Runs a NIP-5D napplet in the platform's sandbox, or tells the user why it can't. */
-    fun openNapplet(manifest: NappletManifest) {}
+    /**
+     * Runs a NIP-5D napplet in the platform's sandbox, or tells the user why it can't. [nav] is the
+     * calling screen's: a platform that runs apps as screens opens it there ([Route.NostrApp]).
+     */
+    fun openNapplet(
+        manifest: NappletManifest,
+        nav: INav? = null,
+    ) {}
 
-    /** Opens a NIP-5A nSite ([RootSiteEvent] or [NamedSiteEvent]), or tells the user why it can't. */
-    fun openSite(site: Event) {}
+    /**
+     * Opens a NIP-5A nSite ([RootSiteEvent] or [NamedSiteEvent]), or tells the user why it can't.
+     * [nav] is the calling screen's, as for [openNapplet].
+     */
+    fun openSite(
+        site: Event,
+        nav: INav? = null,
+    ) {}
 
     /**
      * Runs the webxdc [app] attached to post [postId] by [poster] in the platform's sandbox (when
@@ -499,11 +527,13 @@ interface AppLauncher {
         override fun launch(
             app: FavoriteApp,
             stillLoading: String,
+            nav: INav?,
         ) {}
 
         override fun launchUrl(
             url: String,
             preferTor: Boolean,
+            nav: INav?,
         ) {}
     }
 }

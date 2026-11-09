@@ -291,7 +291,7 @@ private fun BrowserLauncher(
 
     fun open(text: String) {
         val target = OmniboxInput.resolve(text, searchEngine.queryPrefix) ?: return
-        appLauncher.launchUrl(target.url, target.forceTor)
+        appLauncher.launchUrl(target.url, target.forceTor, nav)
         // The site opens in its own window: coming back should land on a fresh launcher, not on the
         // half-typed address and its suggestions.
         field = TextFieldValue("")
@@ -400,7 +400,7 @@ private fun BrowserLauncher(
                     suggested = suggested,
                     nsites = followedNsites,
                     napplets = followedNapplets,
-                    onOpenApp = { appLauncher.launch(it, appStillLoadingStr) },
+                    onOpenApp = { appLauncher.launch(it, appStillLoadingStr, nav) },
                     onRemoveApp = { appServices.favoriteApps.remove(it.id) },
                     onAddApp = { appServices.favoriteApps.add(it) },
                     onOpenUrl = { open(it) },

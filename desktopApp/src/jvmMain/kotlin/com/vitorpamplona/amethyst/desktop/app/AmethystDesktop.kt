@@ -252,7 +252,7 @@ fun main(args: Array<String>) {
             concordImageDir = File(filesDir, "concord-images").apply { mkdirs() }.also { it.restrictToOwner("AmethystDesktop") },
             nappletHost = nappletHost,
         )
-    val root = DesktopAppRoot(modules)
+    val root = DesktopAppRoot(modules, nappletHost)
 
     // Chromium has to shut down before the JVM starts exiting, while the app's threads still run: on
     // macOS it must go on the main thread, and jcefmaven's own exit hook would otherwise do it on the

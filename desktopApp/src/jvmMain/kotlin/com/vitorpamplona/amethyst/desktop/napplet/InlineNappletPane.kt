@@ -33,29 +33,12 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.awt.awtEventOrNull
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusTarget
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntSize
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.napplet.NappletInlineDownloads
 import com.vitorpamplona.amethyst.commons.ui.note.InlineNappletPosters
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import java.awt.event.MouseEvent
-import java.awt.event.MouseWheelEvent
-import kotlin.math.roundToInt
 
 /**
  * A napplet running inside a note on the desktop: an off-screen Chromium browser
@@ -122,7 +105,6 @@ fun InlineNappletPane(
     // Read only where it is drawn, so a new frame redraws the box instead of recomposing the pane.
     val frame = view.frame.collectAsState()
     val painted by remember(frame) { derivedStateOf { frame.value != null } }
-    val cursor by view.cursor.collectAsState()
 
     LaunchedEffect(state, painted) {
         status(
@@ -134,60 +116,5 @@ fun InlineNappletPane(
         )
     }
 
-    val density = LocalDensity.current.density
-    val focus = remember { FocusRequester() }
-    var focused by remember { mutableStateOf(false) }
-
-    Box(
-        modifier
-            .onSizeChanged { view.resize((it.width / density).roundToInt(), (it.height / density).roundToInt(), density.toDouble()) }
-            // Before focusTarget(): key events reach the focused node and what wraps it, not what it wraps.
-            .onKeyEvent { event ->
-                // Not nativeKeyEvent: that is Compose's own event now, and a cast of it to AWT's failed
-                // for every key, so none reached the page and Enter went on to open the note.
-                val native = event.awtEventOrNull ?: return@onKeyEvent false
-                view.key(native)
-                true
-            }.focusRequester(focus)
-            .onFocusChanged {
-                focused = it.isFocused
-                view.focus(it.isFocused)
-            }
-            // Not focusable(): that pins the note in the feed while focused, so a clicked game would
-            // play on, unseen, after its note scrolled away.
-            .focusTarget()
-            .pointerHoverIcon(PointerIcon(cursor))
-            .pointerInput(view, density) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val native = event.nativeEvent as? MouseEvent ?: continue
-                        val position = event.changes.firstOrNull()?.position ?: continue
-                        val x = (position.x / density).roundToInt()
-                        val y = (position.y / density).roundToInt()
-                        when (event.type) {
-                            PointerEventType.Press -> {
-                                focus.requestFocus()
-                                view.mouse(native, MouseEvent.MOUSE_PRESSED, x, y)
-                                event.changes.forEach { it.consume() }
-                            }
-                            PointerEventType.Release -> {
-                                view.mouse(native, MouseEvent.MOUSE_RELEASED, x, y)
-                                event.changes.forEach { it.consume() }
-                            }
-                            PointerEventType.Move, PointerEventType.Enter ->
-                                view.mouse(native, if (native.id == MouseEvent.MOUSE_DRAGGED) MouseEvent.MOUSE_DRAGGED else MouseEvent.MOUSE_MOVED, x, y)
-                            PointerEventType.Exit -> view.mouse(native, MouseEvent.MOUSE_EXITED, x, y)
-                            PointerEventType.Scroll ->
-                                if (focused && native is MouseWheelEvent) {
-                                    view.wheel(native, x, y)
-                                    event.changes.forEach { it.consume() }
-                                }
-                        }
-                    }
-                }
-            }.drawBehind {
-                frame.value?.let { drawImage(it, dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt())) }
-            },
-    )
+    OffscreenPage(view, modifier, wheelNeedsFocus = true)
 }
