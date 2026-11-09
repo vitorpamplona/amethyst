@@ -35,6 +35,7 @@ import com.davotoula.lightcompressor.config.AppSpecificStorageConfiguration
 import com.davotoula.lightcompressor.config.Configuration
 import com.davotoula.lightcompressor.config.VideoResizer
 import com.davotoula.lightcompressor.hdr.HdrInput
+import com.davotoula.lightcompressor.sanitizer.Mp4Sanitizer
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoCompressionRules
@@ -192,6 +193,11 @@ object VideoCompressionHelper {
                                         Log.d(LOG_TAG) {
                                             "Compression success: Original [$originalSize] -> " +
                                                 "Compressed [$size] ($reductionPercent% reduction)"
+                                        }
+
+                                        // The encode asks for fast-start; say so when the library could not deliver it.
+                                        if (!Mp4Sanitizer.isFastStart(File(path))) {
+                                            Log.w(LOG_TAG) { "Compressed output is not fast-start: $path" }
                                         }
 
                                         // A continuation cancelled before or during this resume drops the value and

@@ -21,21 +21,17 @@
 package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
-import android.media.MediaCodec
-import android.media.MediaExtractor
-import android.media.MediaFormat
-import android.media.MediaMetadataRetriever
-import android.media.MediaMuxer
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.exifinterface.media.ExifInterface
+import com.davotoula.lightcompressor.sanitizer.Mp4Sanitizer
 import com.vitorpamplona.amethyst.commons.service.uploads.isAvif
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.io.InputStream
 import java.io.RandomAccessFile
-import java.nio.ByteBuffer
 
 data class StrippingResult(
     val uri: Uri,
@@ -69,8 +65,28 @@ fun interface AvifExifReader {
     fun open(stream: InputStream): (String) -> String?
 }
 
+/**
+ * Removes location and device metadata from media before upload.
+ *
+ * - Images: EXIF tags in [SENSITIVE_EXIF_TAGS] are cleared on a copy. AVIF is inspected only, and
+ *   refused ([AvifMetadataNotVerifiableException]) when it carries one of them.
+ * - Video and MP4 audio (`.m4a`, AAC): a container rewrite by LightCompressor-enhanced's
+ *   [Mp4Sanitizer]. Only the audio and video tracks are copied, sample by sample, into a fresh
+ *   MPEG-4 file: `udta`, `meta`/`ilst` (location, `com.android.*` / `com.apple.*` tags) and `uuid`
+ *   (XMP) boxes do not carry over, timed-metadata and text tracks (a Pixel's `application/meta`,
+ *   an iPhone's `mebx`) are dropped, the rotation hint is reapplied and the result is fast-start
+ *   (`moov` before `mdat`). Nothing is decoded or re-encoded. Residuals: `MediaMuxer` writes its
+ *   own creation time and a `com.android.version` meta key, and metadata inside the bitstream
+ *   (H.264 SEI user data) stays. An audio or video track MP4 cannot hold (Opus, MP3) makes the
+ *   strip fail, not pass the file through.
+ * - MP3: ID3v2 and ID3v1 tags are cut off the byte stream.
+ *
+ * Only uploads with stripping on reach this object: an UNCOMPRESSED upload without it goes up
+ * byte for byte. A `false` [StrippingResult.stripped] means the caller must ask the user before
+ * uploading the original.
+ */
 object MetadataStripper {
-    private const val DEFAULT_REMUX_BUFFER_SIZE = 8 * 1024 * 1024
+    private const val TAG = "MetadataStripper"
 
     private val SENSITIVE_EXIF_TAGS =
         arrayOf(
@@ -123,90 +139,6 @@ object MetadataStripper {
             ExifInterface.TAG_IMAGE_UNIQUE_ID,
             ExifInterface.TAG_USER_COMMENT,
         )
-
-    private fun extractorToCodecFlags(sampleFlags: Int): Int {
-        var flags = 0
-        if (sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC != 0) {
-            flags = flags or MediaCodec.BUFFER_FLAG_KEY_FRAME
-        }
-        if (sampleFlags and MediaExtractor.SAMPLE_FLAG_PARTIAL_FRAME != 0) {
-            flags = flags or MediaCodec.BUFFER_FLAG_PARTIAL_FRAME
-        }
-        return flags
-    }
-
-    private fun remuxTracks(
-        uri: Uri,
-        context: Context,
-        outputFile: File,
-        preStart: (MediaMuxer, MediaExtractor, Context, Uri) -> Unit = { _, _, _, _ -> },
-    ): Boolean {
-        val extractor = MediaExtractor()
-        var muxer: MediaMuxer? = null
-        var muxerStarted = false
-        var succeeded = false
-        try {
-            extractor.setDataSource(context, uri, null)
-
-            if (extractor.trackCount == 0) return false
-
-            // Note: MediaMuxer may still write a creation timestamp and encoder info into
-            // the new container. This is not controllable via the Android API and is a
-            // known residual privacy limitation of the remux approach.
-            muxer = MediaMuxer(outputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-
-            val trackIndexMap = mutableMapOf<Int, Int>()
-            for (i in 0 until extractor.trackCount) {
-                val format = extractor.getTrackFormat(i)
-                trackIndexMap[i] = muxer.addTrack(format)
-                extractor.selectTrack(i)
-            }
-
-            preStart(muxer, extractor, context, uri)
-
-            muxer.start()
-            muxerStarted = true
-
-            // Size buffer to the largest track's KEY_MAX_INPUT_SIZE (covers 4K keyframes),
-            // falling back to 8MB if the format doesn't report it.
-            var maxInputSize = DEFAULT_REMUX_BUFFER_SIZE
-            for (i in 0 until extractor.trackCount) {
-                val fmt = extractor.getTrackFormat(i)
-                if (fmt.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) {
-                    maxInputSize = maxOf(maxInputSize, fmt.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE))
-                }
-            }
-            val buffer = ByteBuffer.allocateDirect(maxInputSize)
-            val bufferInfo = MediaCodec.BufferInfo()
-
-            while (true) {
-                val sampleSize = extractor.readSampleData(buffer, 0)
-                if (sampleSize < 0) break
-
-                val outputTrack = trackIndexMap[extractor.sampleTrackIndex] ?: break
-
-                bufferInfo.offset = 0
-                bufferInfo.size = sampleSize
-                bufferInfo.presentationTimeUs = extractor.sampleTime
-                bufferInfo.flags = extractorToCodecFlags(extractor.sampleFlags)
-
-                muxer.writeSampleData(outputTrack, buffer, bufferInfo)
-                extractor.advance()
-            }
-
-            muxer.stop()
-            muxerStarted = false
-            succeeded = true
-        } finally {
-            if (muxerStarted) runCatching { muxer?.stop() }
-            muxer?.release()
-            extractor.release()
-            if (!succeeded && !outputFile.delete()) {
-                Log.w("MetadataStripper") { "Failed to delete temp file: ${outputFile.absolutePath}" }
-            }
-        }
-        return succeeded
-    }
 
     fun stripImageMetadata(
         uri: Uri,
@@ -318,67 +250,37 @@ object MetadataStripper {
     fun stripVideoMetadata(
         uri: Uri,
         context: Context,
-    ): StrippingResult {
-        return try {
-            val tempOutputFile = File.createTempFile("stripped_video_", ".mp4", context.cacheDir)
-
-            val succeeded =
-                remuxTracks(uri, context, tempOutputFile) { muxer, _, ctx, sourceUri ->
-                    // Rotation is a container-level property not included in track formats;
-                    // read it explicitly and reapply so the output plays back with the correct orientation.
-                    val retriever = MediaMetadataRetriever()
-                    try {
-                        retriever.setDataSource(ctx, sourceUri)
-                        val rotation =
-                            retriever
-                                .extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
-                                ?.toIntOrNull() ?: 0
-                        if (rotation != 0) muxer.setOrientationHint(rotation)
-                    } finally {
-                        retriever.release()
-                    }
-                }
-
-            if (!succeeded) return StrippingResult(uri, false)
-
-            Log.d("MetadataStripper", "Stripped metadata from video")
-            StrippingResult(tempOutputFile.toUri(), true)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.d("MetadataStripper") { "Failed to strip video metadata: ${e.message}" }
-            StrippingResult(uri, false)
-        }
-    }
+    ): StrippingResult = sanitizeMp4(uri, context, kind = "video", prefix = "stripped_video_", suffix = ".mp4")
 
     fun stripAudioMetadata(
         uri: Uri,
         context: Context,
+    ): StrippingResult = sanitizeMp4(uri, context, kind = "audio", prefix = "stripped_audio_", suffix = ".m4a")
+
+    /**
+     * Rewrites the MP4 at [uri] into a cache file through [Mp4Sanitizer]. A remux whose fast-start
+     * pass failed is still stripped, so it is returned with a warning; any failure returns [uri]
+     * unstripped.
+     */
+    private fun sanitizeMp4(
+        uri: Uri,
+        context: Context,
+        kind: String,
+        prefix: String,
+        suffix: String,
     ): StrippingResult {
+        var tempFile: File? = null
         return try {
-            // Verify the primary track is AAC/MP4A before remuxing
-            val extractor = MediaExtractor()
-            try {
-                extractor.setDataSource(context, uri, null)
-                if (extractor.trackCount == 0) return StrippingResult(uri, false)
-                val primaryMime = extractor.getTrackFormat(0).getString(MediaFormat.KEY_MIME) ?: ""
-                if (!primaryMime.contains("mp4a") && !primaryMime.contains("aac")) {
-                    return StrippingResult(uri, false)
-                }
-            } finally {
-                extractor.release()
-            }
-
-            val tempOutputFile = File.createTempFile("stripped_audio_", ".m4a", context.cacheDir)
-
-            val succeeded = remuxTracks(uri, context, tempOutputFile)
-
-            if (!succeeded) return StrippingResult(uri, false)
-
-            Log.d("MetadataStripper", "Stripped metadata from audio")
-            StrippingResult(tempOutputFile.toUri(), true)
+            val output = File.createTempFile(prefix, suffix, context.cacheDir)
+            tempFile = output
+            val result = Mp4Sanitizer.sanitize(context, uri, output)
+            if (!result.fastStart) Log.w(TAG) { "Sanitized $kind is not fast-start: ${output.name}" }
+            Log.d(TAG) { "Stripped metadata from $kind" }
+            StrippingResult(output.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.d("MetadataStripper") { "Failed to strip audio metadata: ${e.message}" }
+            Log.w(TAG, "Failed to strip $kind metadata", e)
+            tempFile?.deleteOrWarn(TAG, "temp file")
             StrippingResult(uri, false)
         }
     }
