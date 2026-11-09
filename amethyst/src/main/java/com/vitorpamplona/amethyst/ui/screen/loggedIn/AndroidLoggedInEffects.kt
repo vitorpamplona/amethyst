@@ -36,12 +36,12 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.model.innermostSigner
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer
 import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer_description
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
-import com.vitorpamplona.amethyst.service.resourceusage.innermostSigner
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.IActivityLauncher
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
