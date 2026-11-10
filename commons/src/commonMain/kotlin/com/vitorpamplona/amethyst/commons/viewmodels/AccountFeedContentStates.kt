@@ -135,18 +135,20 @@ class AccountFeedContentStates(
     // (Account.isAcceptable), and reports, which arrive as their own events: see updateFeedsWith.
     val videoFeed = FeedContentState(VideoFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
 
-    private val videoKeptCurrent =
-        FeedsKeptCurrent(
-            scope,
-            listOf(videoFeed),
-            listOf(
-                account.liveStoriesFollowLists,
-                account.kind3FollowList.flow,
-                account.settings.syncedSettings.security.warnAboutPostsWithReports,
-                account.settings.syncedSettings.security.reportWarningThreshold,
-            ),
-            account.hiddenUsers.flow,
+    // What Account.isAcceptable reads besides the note and the mutes.
+    private val acceptableInputs =
+        arrayOf(
+            account.kind3FollowList.flow,
+            account.settings.syncedSettings.security.warnAboutPostsWithReports,
+            account.settings.syncedSettings.security.reportWarningThreshold,
         )
+
+    private fun keptCurrent(
+        feed: FeedContentState,
+        vararg inputs: Flow<*>,
+    ) = FeedsKeptCurrent(scope, listOf(feed), inputs.toList(), account.hiddenUsers.flow)
+
+    private val videoKeptCurrent = keptCurrent(videoFeed, account.liveStoriesFollowLists, *acceptableInputs)
 
     // Sorted by date, so kept current like Home. Chat, Communities, DVMs and Live sort by activity
     // that never reaches them as feed items (a channel's last message, boosts, interactions,
@@ -163,42 +165,80 @@ class AccountFeedContentStates(
     private val discoverKeptCurrent =
         FeedsKeptCurrent(scope, listOf(discoverFollowSets, discoverReads, discoverMarketplace), listOf(account.liveDiscoveryFollowLists), account.hiddenUsers.flow)
 
-    private val keptCurrent = listOf(homeKeptCurrent, videoKeptCurrent, discoverKeptCurrent)
-
-    val pollsFeed = FeedContentState(PollsFeedFilter(account), scope, LocalCache, lazy = true)
+    val pollsFeed = FeedContentState(PollsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val openPollsFeed = FeedContentState(OpenPollsFeedFilter(account), scope, LocalCache, lazy = true)
     val closedPollsFeed = FeedContentState(ClosedPollsFeedFilter(account), scope, LocalCache, lazy = true)
 
-    val badgesFeed = FeedContentState(BadgesFeedFilter(account), scope, LocalCache, lazy = true)
+    val badgesFeed = FeedContentState(BadgesFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
 
-    val browseEmojiSetsFeed = FeedContentState(BrowseEmojiSetsFeedFilter(account), scope, LocalCache, lazy = true)
+    val browseEmojiSetsFeed = FeedContentState(BrowseEmojiSetsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val communitiesList = FeedContentState(CommunitiesFeedFilter(account), scope, LocalCache, lazy = true)
 
-    val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache, lazy = true)
-    val workoutsFeed = FeedContentState(WorkoutFeedFilter(account), scope, LocalCache, lazy = true)
+    val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val workoutsFeed = FeedContentState(WorkoutFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val chessLobbyFeed = FeedContentState(ChessLobbyFeedFilter(account), scope, LocalCache, lazy = true)
-    val gitRepositoriesFeed = FeedContentState(GitRepositoriesFeedFilter(account), scope, LocalCache, lazy = true)
-    val highlightsFeed = FeedContentState(HighlightsFeedFilter(account), scope, LocalCache, lazy = true)
+    val gitRepositoriesFeed = FeedContentState(GitRepositoriesFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val highlightsFeed = FeedContentState(HighlightsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val relayGroupsDiscoveryFeed = FeedContentState(RelayGroupDiscoveryFeedFilter(account), scope, LocalCache, lazy = true)
     val calendarAppointmentsFeed = FeedContentState(CalendarAppointmentsFeedFilter(account), scope, LocalCache, lazy = true)
-    val calendarCollectionsFeed = FeedContentState(CalendarCollectionsFeedFilter(account), scope, LocalCache, lazy = true)
-    val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache, lazy = true)
-    val geocachesFeed = FeedContentState(GeocachesFeedFilter(account), scope, LocalCache, lazy = true)
-    val geocacheFindsFeed = FeedContentState(GeocacheFindsFeedFilter(account), scope, LocalCache, lazy = true)
-    val geocacheMineFeed = FeedContentState(GeocacheMineFeedFilter(account), scope, LocalCache, lazy = true)
-    val geocacheHuntsFeed = FeedContentState(GeocacheHuntsFeedFilter(account), scope, LocalCache, lazy = true)
-    val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache, lazy = true)
+    val calendarCollectionsFeed = FeedContentState(CalendarCollectionsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val geocachesFeed = FeedContentState(GeocachesFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val geocacheFindsFeed = FeedContentState(GeocacheFindsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val geocacheMineFeed = FeedContentState(GeocacheMineFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val geocacheHuntsFeed = FeedContentState(GeocacheHuntsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val publicChatsFeed = FeedContentState(PublicChatsFeedFilter(account), scope, LocalCache, lazy = true)
-    val followPacksFeed = FeedContentState(FollowPacksFeedFilter(account), scope, LocalCache, lazy = true)
+    val followPacksFeed = FeedContentState(FollowPacksFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val liveStreamsFeed = FeedContentState(LiveStreamsFeedFilter(account), scope, LocalCache, lazy = true)
     val nestsFeed = FeedContentState(NestsFeedFilter(account), scope, LocalCache, lazy = true)
-    val longsFeed = FeedContentState(LongsFeedFilter(account), scope, LocalCache, lazy = true)
-    val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache, lazy = true)
-    val musicTracksFeed = FeedContentState(MusicTracksFeedFilter(account), scope, LocalCache, lazy = true)
-    val musicPlaylistsFeed = FeedContentState(MusicPlaylistsFeedFilter(account), scope, LocalCache, lazy = true)
-    val podcastEpisodesFeed = FeedContentState(PodcastEpisodesFeedFilter(account), scope, LocalCache, lazy = true)
-    val podcastsFeed = FeedContentState(PodcastsFeedFilter(account), scope, LocalCache, lazy = true)
-    val softwareAppsFeed = FeedContentState(SoftwareAppsFeedFilter(account), scope, LocalCache, lazy = true)
+    val longsFeed = FeedContentState(LongsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val musicTracksFeed = FeedContentState(MusicTracksFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val musicPlaylistsFeed = FeedContentState(MusicPlaylistsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val podcastEpisodesFeed = FeedContentState(PodcastEpisodesFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val podcastsFeed = FeedContentState(PodcastsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val softwareAppsFeed = FeedContentState(SoftwareAppsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+
+    // Sorted by date and reading nothing but their events, their list and the mutes, like Home: kept
+    // current by FeedsKeptCurrent instead of rebuilt each time their screen comes back. Polls'
+    // open/closed tabs, calendar appointments, Nests and Relay groups compare against the clock,
+    // and Chess, Chat, Live and Messages sort by activity that never reaches them as feed items, so
+    // those still rebuild on resume. Drafts and web bookmarks are read off the account, not the
+    // cache, so theirs is cheap.
+    private val keptCurrent =
+        listOf(
+            homeKeptCurrent,
+            videoKeptCurrent,
+            discoverKeptCurrent,
+            keptCurrent(pollsFeed, account.livePollsFollowLists),
+            keptCurrent(picturesFeed, account.livePicturesFollowLists),
+            keptCurrent(workoutsFeed, account.liveWorkoutsFollowLists),
+            keptCurrent(highlightsFeed, account.liveHighlightsFollowLists),
+            keptCurrent(badgesFeed, account.liveBadgesFollowLists),
+            keptCurrent(browseEmojiSetsFeed, account.liveBrowseEmojiSetsFollowLists),
+            keptCurrent(gitRepositoriesFeed, account.liveGitRepositoriesFollowLists),
+            keptCurrent(calendarCollectionsFeed, account.liveCalendarsFollowLists),
+            keptCurrent(productsFeed, account.liveProductsFollowLists),
+            keptCurrent(geocachesFeed, account.liveGeocachesFollowLists),
+            keptCurrent(geocacheHuntsFeed, account.liveGeocachesFollowLists),
+            keptCurrent(geocacheFindsFeed),
+            keptCurrent(geocacheMineFeed),
+            keptCurrent(articlesFeed, account.liveArticlesFollowLists),
+            keptCurrent(followPacksFeed, account.liveFollowPacksFollowLists),
+            keptCurrent(shortsFeed, account.liveShortsFollowLists, *acceptableInputs),
+            keptCurrent(longsFeed, account.liveLongsFollowLists, *acceptableInputs),
+            keptCurrent(podcastEpisodesFeed, account.livePodcastEpisodesFollowLists, *acceptableInputs),
+            keptCurrent(musicTracksFeed, account.liveMusicTracksFollowLists, *acceptableInputs),
+            keptCurrent(musicPlaylistsFeed, account.liveMusicPlaylistsFollowLists, *acceptableInputs),
+            keptCurrent(podcastsFeed, account.livePodcastsFollowLists, *acceptableInputs),
+            keptCurrent(softwareAppsFeed, account.liveSoftwareAppsFollowLists, *acceptableInputs),
+        )
+
+    // Account.isAcceptable hides reported authors, and a report is not an item of these feeds:
+    // see updateFeedsWith.
+    private val hideReported =
+        listOf(videoFeed, shortsFeed, longsFeed, podcastEpisodesFeed, musicTracksFeed, musicPlaylistsFeed, podcastsFeed, softwareAppsFeed)
 
     // Eager: the always-on notification subscription fills it whether or not a screen shows it, and
     // its EOSE cursor is only true while something holds those notes.
@@ -513,9 +553,10 @@ class AccountFeedContentStates(
         // See FeedsKeptCurrent: a future-dated note shows when its time comes, without a new event.
         FeedsKeptCurrent.earliestHiddenFuture(newNotes)?.let { at -> keptCurrent.forEach { it.rebuildWhenVisible(at) } }
 
-        // Video hides reported authors (Account.isAcceptable), and a report is not a video, so
-        // the additive path never sees it: check what is shown again, without walking the cache.
-        if (newNotes.any { it.event is ReportEvent }) videoFeed.refilterShown()
+        // Video and the media feeds hide reported authors (Account.isAcceptable), and a report is
+        // not one of their items, so the additive path never sees it: check what is shown again,
+        // without walking the cache.
+        if (newNotes.any { it.event is ReportEvent }) hideReported.forEach { it.refilterShown() }
 
         homeLive.updateFeedWith(newNotes)
         homeNewThreads.updateFeedWith(newNotes)
