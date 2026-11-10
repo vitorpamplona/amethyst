@@ -376,6 +376,7 @@ private fun AddAgentKey(
         onValueChange = {
             key = it
             result = null
+            connectProblem = null
         },
         label = { Text(stringRes(if (keyRequired) Res.string.agent_keys_key else Res.string.agent_keys_key_optional)) },
         singleLine = true,
@@ -414,6 +415,7 @@ private fun AddAgentKey(
             onClick = {
                 onSave(draft())
                 key = ""
+                connectProblem = null
                 showKey = false
                 result = null
             },
