@@ -56,6 +56,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -66,6 +67,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.agents.AgentKeyProbeResult
 import com.vitorpamplona.amethyst.commons.agents.AgentProviderPreset
 import com.vitorpamplona.amethyst.commons.agents.AgentProviderPresets
+import com.vitorpamplona.amethyst.commons.agents.OpenRouterConnectResult
+import com.vitorpamplona.amethyst.commons.agents.connectOpenRouter
 import com.vitorpamplona.amethyst.commons.agents.probeAgentKey
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -79,6 +82,14 @@ import com.vitorpamplona.amethyst.commons.resources.agent_keys_key_optional
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_local_hint
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_make_preferred
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_no_key
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_openrouter_connect
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_openrouter_denied
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_openrouter_done_page
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_openrouter_failed
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_openrouter_or_paste
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_openrouter_timed_out
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_openrouter_unsupported
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_openrouter_waiting
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_preferred
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_provider
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_remove_body
@@ -91,6 +102,7 @@ import com.vitorpamplona.amethyst.commons.resources.agent_keys_test_ok_models
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_test_rejected
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_test_unreachable
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_test_unsupported
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_test_unverified
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_testing
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_title
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_url
@@ -106,6 +118,7 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nipXXAgentKeys.tags.AgentKeyTag
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -149,6 +162,7 @@ fun AgentKeysSettingsScreen(
 
             AddAgentKey(
                 onTest = { key -> accountViewModel.httpClientBuilder.probeAgentKey(key) },
+                onConnectOpenRouter = { donePage, openBrowser -> accountViewModel.httpClientBuilder.connectOpenRouter(donePage, openBrowser = openBrowser) },
                 onSave = { key -> accountViewModel.launchSigner { accountViewModel.account.addAgentKey(key) } },
             )
         }
@@ -236,9 +250,14 @@ private fun SavedAgentKeys(
 @Composable
 private fun AddAgentKey(
     onTest: suspend (AgentKeyTag) -> AgentKeyProbeResult,
+    onConnectOpenRouter: suspend (donePageText: String, openBrowser: (String) -> Unit) -> OpenRouterConnectResult,
     onSave: (AgentKeyTag) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val uriHandler = LocalUriHandler.current
+    val donePageText = stringRes(Res.string.agent_keys_openrouter_done_page)
+    var connecting by remember { mutableStateOf<Job?>(null) }
+    var connectProblem by remember { mutableStateOf<OpenRouterConnectResult?>(null) }
     var preset by remember { mutableStateOf(AgentProviderPresets.OPENROUTER) }
     var url by remember { mutableStateOf(preset.url) }
     var key by remember { mutableStateOf("") }
@@ -251,6 +270,39 @@ private fun AddAgentKey(
     val canSave = urlValid && (!keyRequired || key.isNotBlank())
 
     fun draft() = AgentKeyTag(key.trim(), url.trim())
+
+    fun test(candidate: AgentKeyTag) {
+        testing = true
+        result = null
+        scope.launch {
+            try {
+                result = onTest(candidate)
+            } finally {
+                testing = false
+            }
+        }
+    }
+
+    fun connectOpenRouter() {
+        connectProblem = null
+        connecting =
+            scope.launch {
+                try {
+                    when (val outcome = onConnectOpenRouter(donePageText) { uriHandler.openUri(it) }) {
+                        is OpenRouterConnectResult.Connected -> {
+                            // The key arrives in the form, tested; saving stays the user's call.
+                            preset = AgentProviderPresets.OPENROUTER
+                            url = AgentProviderPresets.OPENROUTER.url
+                            key = outcome.key
+                            test(draft())
+                        }
+                        else -> connectProblem = outcome
+                    }
+                } finally {
+                    connecting = null
+                }
+            }
+    }
 
     val urlError: (@Composable () -> Unit)? =
         if (url.isNotBlank() && !urlValid) {
@@ -265,6 +317,44 @@ private fun AddAgentKey(
         preset = it
         url = it.url
         result = null
+        connectProblem = null
+    }
+
+    if (preset == AgentProviderPresets.OPENROUTER) {
+        val job = connecting
+        if (job != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringRes(Res.string.agent_keys_openrouter_waiting),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { job.cancel() }) { Text(stringRes(Res.string.cancel)) }
+            }
+        } else {
+            Button(onClick = { connectOpenRouter() }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringRes(Res.string.agent_keys_openrouter_connect))
+            }
+            Text(
+                stringRes(Res.string.agent_keys_openrouter_or_paste),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        connectProblem?.let { problem ->
+            Text(
+                stringRes(
+                    when (problem) {
+                        OpenRouterConnectResult.Denied -> Res.string.agent_keys_openrouter_denied
+                        OpenRouterConnectResult.TimedOut -> Res.string.agent_keys_openrouter_timed_out
+                        OpenRouterConnectResult.Unsupported -> Res.string.agent_keys_openrouter_unsupported
+                        else -> Res.string.agent_keys_openrouter_failed
+                    },
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
     }
 
     OutlinedTextField(
@@ -315,18 +405,7 @@ private fun AddAgentKey(
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         OutlinedButton(
             enabled = canSave && !testing,
-            onClick = {
-                val candidate = draft()
-                testing = true
-                result = null
-                scope.launch {
-                    try {
-                        result = onTest(candidate)
-                    } finally {
-                        testing = false
-                    }
-                }
-            },
+            onClick = { test(draft()) },
         ) {
             Text(stringRes(if (testing) Res.string.agent_keys_testing else Res.string.agent_keys_test))
         }
@@ -382,9 +461,14 @@ private fun ProbeResultText(result: AgentKeyProbeResult) {
     val ok = result is AgentKeyProbeResult.Ok
     val text =
         when (result) {
-            is AgentKeyProbeResult.Ok ->
-                result.modelCount?.let { pluralStringRes(Res.plurals.agent_keys_test_ok_models, it, it) }
-                    ?: stringRes(Res.string.agent_keys_test_ok)
+            is AgentKeyProbeResult.Ok -> {
+                val count = result.modelCount
+                when {
+                    !result.keyChecked -> stringRes(Res.string.agent_keys_test_unverified)
+                    count != null -> pluralStringRes(Res.plurals.agent_keys_test_ok_models, count, count)
+                    else -> stringRes(Res.string.agent_keys_test_ok)
+                }
+            }
             is AgentKeyProbeResult.Rejected -> stringRes(Res.string.agent_keys_test_rejected, result.code)
             is AgentKeyProbeResult.Failed -> stringRes(Res.string.agent_keys_test_failed, result.code)
             AgentKeyProbeResult.Unreachable -> stringRes(Res.string.agent_keys_test_unreachable)

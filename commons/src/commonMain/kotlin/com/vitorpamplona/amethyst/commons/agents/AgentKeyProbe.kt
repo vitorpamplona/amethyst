@@ -25,12 +25,17 @@ import com.vitorpamplona.quartz.nipXXAgentKeys.tags.AgentKeyTag
 
 /** What `GET {url}/models` said about a key. */
 sealed interface AgentKeyProbeResult {
-    /** The provider accepted the key; [modelCount] is null when the list couldn't be read. */
+    /**
+     * The provider answered. [modelCount] is null when the answer wasn't a models list.
+     * [keyChecked] is false for providers whose free calls don't look at the key: the URL
+     * works, but a bad key only shows up on first use.
+     */
     data class Ok(
         val modelCount: Int?,
+        val keyChecked: Boolean = true,
     ) : AgentKeyProbeResult
 
-    /** 401/403: the key is wrong, revoked or out of credit. */
+    /** 401/403, or a 400 that blames the key (xAI, Gemini): wrong, revoked or out of credit. */
     data class Rejected(
         val code: Int,
     ) : AgentKeyProbeResult
@@ -48,7 +53,8 @@ sealed interface AgentKeyProbeResult {
 }
 
 /**
- * Checks [key] against its provider with one `GET {url}/models`, the cheapest call every
- * OpenAI-compatible API serves. Spends nothing.
+ * Checks [key] against its provider with one free GET: the preset's
+ * [AgentProviderPreset.keyCheckPath], else `{url}/models`, which every OpenAI-compatible API
+ * serves. Spends nothing.
  */
 expect suspend fun IRoleBasedHttpClientBuilder.probeAgentKey(key: AgentKeyTag): AgentKeyProbeResult

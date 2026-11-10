@@ -34,10 +34,16 @@ data class AgentProviderPreset(
     val keyPage: String? = null,
     /** Runs on the user's own machine: only reachable from that device. */
     val isLocal: Boolean = false,
+    /**
+     * The cheapest call, under [url], that fails on a bad key. `/models` for most providers;
+     * null where every free call answers without checking the key (checked 2026-11-10).
+     */
+    val keyCheckPath: String? = "/models",
 )
 
 object AgentProviderPresets {
-    val OPENROUTER = AgentProviderPreset("openrouter", "OpenRouter", "https://openrouter.ai/api/v1", keyPage = "openrouter.ai/keys")
+    // OpenRouter lists models without a key; `/key` describes the key and 401s on a bad one.
+    val OPENROUTER = AgentProviderPreset("openrouter", "OpenRouter", "https://openrouter.ai/api/v1", keyPage = "openrouter.ai/keys", keyCheckPath = "/key")
     val CUSTOM = AgentProviderPreset("custom", "Custom", "", needsKey = false)
 
     /** OpenRouter first: one key reaches every major model and can be capped. Custom last. */
@@ -48,9 +54,9 @@ object AgentProviderPresets {
             AgentProviderPreset("openai", "OpenAI", "https://api.openai.com/v1", keyPage = "platform.openai.com/api-keys"),
             AgentProviderPreset("google", "Google Gemini", "https://generativelanguage.googleapis.com/v1beta/openai", keyPage = "aistudio.google.com/apikey"),
             AgentProviderPreset("routstr", "Routstr", "https://api.routstr.com/v1", keyPage = "routstr.com"),
-            AgentProviderPreset("ppq", "PPQ.ai", "https://api.ppq.ai/v1", keyPage = "ppq.ai"),
-            AgentProviderPreset("venice", "Venice", "https://api.venice.ai/api/v1", keyPage = "venice.ai"),
-            AgentProviderPreset("nearai", "NEAR AI", "https://cloud-api.near.ai/v1", keyPage = "cloud.near.ai"),
+            AgentProviderPreset("ppq", "PPQ.ai", "https://api.ppq.ai/v1", keyPage = "ppq.ai", keyCheckPath = null),
+            AgentProviderPreset("venice", "Venice", "https://api.venice.ai/api/v1", keyPage = "venice.ai", keyCheckPath = "/api_keys/rate_limits"),
+            AgentProviderPreset("nearai", "NEAR AI", "https://cloud-api.near.ai/v1", keyPage = "cloud.near.ai", keyCheckPath = "/users/me"),
             AgentProviderPreset("mistral", "Mistral", "https://api.mistral.ai/v1", keyPage = "console.mistral.ai"),
             AgentProviderPreset("groq", "Groq", "https://api.groq.com/openai/v1", keyPage = "console.groq.com/keys"),
             AgentProviderPreset("xai", "xAI", "https://api.x.ai/v1", keyPage = "console.x.ai"),

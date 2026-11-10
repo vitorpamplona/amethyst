@@ -38,7 +38,9 @@ import java.io.IOException
 // included when the user asked for it there).
 actual suspend fun IRoleBasedHttpClientBuilder.probeAgentKey(key: AgentKeyTag): AgentKeyProbeResult =
     withContext(Dispatchers.IO) {
-        val url = key.url.trimEnd('/') + "/models"
+        val preset = AgentProviderPresets.forUrl(key.url)
+        val keyChecked = preset == null || preset.keyCheckPath != null
+        val url = key.url.trimEnd('/') + (preset?.keyCheckPath ?: "/models")
         val request =
             try {
                 Request
@@ -60,9 +62,10 @@ actual suspend fun IRoleBasedHttpClientBuilder.probeAgentKey(key: AgentKeyTag): 
 
         try {
             okHttpClientForMoney(url).newCall(request).executeAsync().use { response ->
+                val body = response.body.string()
                 when {
-                    response.isSuccessful -> AgentKeyProbeResult.Ok(countModels(response.body.string()))
-                    response.code == 401 || response.code == 403 -> AgentKeyProbeResult.Rejected(response.code)
+                    response.isSuccessful -> AgentKeyProbeResult.Ok(countModels(body), keyChecked)
+                    isKeyRejection(response.code, body) -> AgentKeyProbeResult.Rejected(response.code)
                     else -> AgentKeyProbeResult.Failed(response.code)
                 }
             }
@@ -73,6 +76,12 @@ actual suspend fun IRoleBasedHttpClientBuilder.probeAgentKey(key: AgentKeyTag): 
             AgentKeyProbeResult.Unreachable
         }
     }
+
+/** 401/403, or a 400 whose message is about the key: xAI and Gemini answer a bad key with 400. */
+internal fun isKeyRejection(
+    code: Int,
+    body: String,
+): Boolean = code == 401 || code == 403 || (code == 400 && body.contains("api key", ignoreCase = true))
 
 /** The length of `data` in `{"data":[…]}`, the OpenAI models list; null for any other shape. */
 internal fun countModels(body: String): Int? =
