@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.discover.nip23LongForm
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -47,15 +48,18 @@ open class DiscoverLongFormFeedFilter(
 
     override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
-    override fun feed(): List<Note> {
-        val params = buildFilterParams(account)
-        val notes =
-            LocalCache.addressables.filterIntoSet(LongFormContentEvent.KIND) { _, it ->
-                val noteEvent = it.event
-                noteEvent is LongFormContentEvent && params.match(noteEvent, it.relays)
-            }
-        return sort(notes)
-    }
+    override fun feed(): List<Note> =
+        sort(
+            rebuildFeed("discover/reads", candidates = null, keep = { false }) {
+                val params = buildFilterParams(account)
+                val notes =
+                    LocalCache.addressables.filterIntoSet(LongFormContentEvent.KIND) { _, it ->
+                        val noteEvent = it.event
+                        noteEvent is LongFormContentEvent && params.match(noteEvent, it.relays)
+                    }
+                notes.toSet()
+            },
+        )
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 

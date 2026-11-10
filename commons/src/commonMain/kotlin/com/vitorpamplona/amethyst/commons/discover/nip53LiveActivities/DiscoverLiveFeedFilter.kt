@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.discover.nip53LiveActivities
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.ParticipantListBuilder
@@ -57,14 +58,16 @@ open class DiscoverLiveFeedFilter(
 
     override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
-    override fun feed(): List<Note> {
-        val allChannelNotes = LocalCache.liveChatChannels.mapNotNull { _, channel -> LocalCache.getAddressableNoteIfExists(channel.address) }
-        val allMessageNotes = LocalCache.liveChatChannels.map { _, channel -> channel.notes.filter { _, it -> it.event is LiveActivitiesEvent } }.flatten()
+    override fun feed(): List<Note> =
+        sort(
+            rebuildFeed("discover/live", candidates = null, keep = { false }) {
+                val allChannelNotes = LocalCache.liveChatChannels.mapNotNull { _, channel -> LocalCache.getAddressableNoteIfExists(channel.address) }
+                val allMessageNotes = LocalCache.liveChatChannels.map { _, channel -> channel.notes.filter { _, it -> it.event is LiveActivitiesEvent } }.flatten()
 
-        val notes = innerApplyFilter(allChannelNotes + allMessageNotes)
-
-        return sort(notes)
-    }
+                val notes = innerApplyFilter(allChannelNotes + allMessageNotes)
+                notes.toSet()
+            },
+        )
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 

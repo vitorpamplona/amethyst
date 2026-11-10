@@ -58,6 +58,9 @@ class LazyFeedContentStateTest {
     ) : AdditiveFeedFilter<Note>() {
         val scans = AtomicInteger(0)
 
+        /** Notes the filter now rejects, as a report or a mute would make it. */
+        var rejected = emptySet<Note>()
+
         override fun feedKey(): Any = "feed"
 
         override fun feed(): List<Note> {
@@ -65,7 +68,7 @@ class LazyFeedContentStateTest {
             return all
         }
 
-        override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems
+        override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems - rejected
 
         override fun sort(items: Set<Note>): List<Note> = items.sortedBy { it.idHex }
     }
@@ -202,5 +205,21 @@ class LazyFeedContentStateTest {
         Thread.sleep(800)
         other.onResume()
         waitUntil("the default rebuild") { everyTime.scans.get() == 2 }
+    }
+
+    /** A report or a mute only removes: the shown list is checked again, the cache is not walked. */
+    @Test
+    fun refilteringDropsWhatNoLongerPassesWithoutRescanning() {
+        val filter = CountingFilter(listOf(a, b))
+        val state = FeedContentState(filter, scope, StubCache())
+        state.invalidateData()
+        waitUntil("the build") { state.visibleNotes() == listOf(a, b) }
+        val scans = filter.scans.get()
+
+        filter.rejected = setOf(b)
+        state.refilterShown()
+
+        assertEquals(listOf(a), state.visibleNotes())
+        assertEquals(scans, filter.scans.get(), "refiltering walked the cache")
     }
 }

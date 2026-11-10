@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.discover.nip90DVMs
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.ParticipantListBuilder
@@ -60,14 +61,16 @@ open class DiscoverNIP89FeedFilter(
 
     override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
-    override fun feed(): List<Note> {
-        val notes =
-            LocalCache.addressables.filterIntoSet(AppDefinitionEvent.KIND) { _, it ->
-                acceptApp(it)
-            }
-
-        return sort(notes)
-    }
+    override fun feed(): List<Note> =
+        sort(
+            rebuildFeed("discover/dvms", candidates = null, keep = { false }) {
+                val notes =
+                    LocalCache.addressables.filterIntoSet(AppDefinitionEvent.KIND) { _, it ->
+                        acceptApp(it)
+                    }
+                notes.toSet()
+            },
+        )
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 

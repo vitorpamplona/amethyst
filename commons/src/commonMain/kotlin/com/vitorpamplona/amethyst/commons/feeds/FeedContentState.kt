@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -216,6 +217,22 @@ class FeedContentState(
                 updateFeed((feed.feed.value.list - deletedNotes).toImmutableList())
             }
         }
+
+    /**
+     * Drops the shown notes that no longer pass the filter (an author just reported or muted),
+     * without walking the cache: only the shown list is checked again. Only removes; whatever the
+     * change may add needs a rebuild.
+     */
+    fun refilterShown() {
+        if (!isActive()) return
+        val filter = localFilter as? AdditiveFeedFilter ?: return invalidateData()
+        write {
+            val shown = (_feedContent.value as? FeedState.Loaded)?.feed?.value?.list ?: return@write null
+            val keep = filter.applyFilter(shown.toSet())
+            Log.d("FeedRebuild") { "${localFilter::class.simpleName} rechecked ${shown.size} shown: ${keep.size} kept" }
+            if (keep.size == shown.size) null else shown.filter { it in keep }.toImmutableList()
+        }
+    }
 
     fun trimToSize(maxItems: Int) =
         commitLock.withLock {

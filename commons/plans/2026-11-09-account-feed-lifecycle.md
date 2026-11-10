@@ -235,8 +235,22 @@ Done on the branch, each step its own commit:
    of a note and its repost is kept, which was already arbitrary). Not checked in the app: the
    mute, follow and future-dated triggers (a read-only account cannot mute or follow).
 
-Other screens still rebuild on resume; Discover, Video and the other top-nav feeds can follow
-Home once their own triggers are listed the same way.
+4. **Video and Discover.** `FeedsKeptCurrent` is the reusable form of Home's triggers: a group of
+   feeds that skip the resume rebuild, rebuilt (settled 2 s) when their inputs change and once
+   when a future-dated note becomes visible. Mutes and spam flags are their own input: a change
+   that only hides more re-checks the shown notes (`FeedContentState.refilterShown`, no walk), and
+   anything else rebuilds. Groups:
+   - Home: its list; mutes.
+   - Video (a full cache walk, like Home): its list, follows and the report settings (it uses
+     `Account.isAcceptable`); mutes; and a batch carrying reports re-checks the shown videos.
+   - Discover Long-form, Follow packs, Marketplace (sorted by date): the Discover list; mutes.
+   - Discover Chat, Communities, DVMs, Live keep the resume rebuild: they sort by activity that
+     never reaches them as feed items (a channel's last message, boosts, interactions, stream
+     status), and their rebuild scans one kind or the channel maps (0-6 ms on desktop).
+   Over 12 returns on desktop: no rebuild of a kept-current feed on return; one burst of one
+   rebuild per group, between returns, from an input change.
+
+Other screens (lists, profiles, threads…) still rebuild on resume.
 
 ## Open questions
 

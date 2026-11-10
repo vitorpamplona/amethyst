@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.discover.nip28Chats
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -46,23 +47,25 @@ open class DiscoverChatFeedFilter(
 
     override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
-    override fun feed(): List<Note> {
-        val params = buildFilterParams(account)
+    override fun feed(): List<Note> =
+        sort(
+            rebuildFeed("discover/chats", candidates = null, keep = { false }) {
+                val params = buildFilterParams(account)
 
-        val allChannelNotes =
-            LocalCache.publicChatChannels.mapNotNullIntoSet { _, channel ->
-                val note = LocalCache.getNoteIfExists(channel.idHex)
-                val noteEvent = note?.event
+                val allChannelNotes =
+                    LocalCache.publicChatChannels.mapNotNullIntoSet { _, channel ->
+                        val note = LocalCache.getNoteIfExists(channel.idHex)
+                        val noteEvent = note?.event
 
-                if (noteEvent == null || params.match(noteEvent, note.relays)) {
-                    note
-                } else {
-                    null
-                }
-            }
-
-        return sort(allChannelNotes)
-    }
+                        if (noteEvent == null || params.match(noteEvent, note.relays)) {
+                            note
+                        } else {
+                            null
+                        }
+                    }
+                allChannelNotes.toSet()
+            },
+        )
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 

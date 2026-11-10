@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.discover.nip72Communities
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -49,29 +50,31 @@ open class DiscoverCommunityFeedFilter(
 
     override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
-    override fun feed(): List<Note> {
-        val filterParams =
-            FilterByListParams.create(
-                followLists = account.liveDiscoveryFollowLists.value,
-                hiddenUsers = account.hiddenUsers.flow.value,
-            )
+    override fun feed(): List<Note> =
+        sort(
+            rebuildFeed("discover/communities", candidates = null, keep = { false }) {
+                val filterParams =
+                    FilterByListParams.create(
+                        followLists = account.liveDiscoveryFollowLists.value,
+                        hiddenUsers = account.hiddenUsers.flow.value,
+                    )
 
-        // Here we only need to look for CommunityDefinition Events
-        val notes =
-            LocalCache.addressables.mapNotNullIntoSet(CommunityDefinitionEvent.KIND) { key, note ->
-                val noteEvent = note.event
-                if (noteEvent == null && shouldInclude(key, filterParams, note.relays)) {
-                    // send unloaded communities to the screen
-                    note
-                } else if (noteEvent is CommunityDefinitionEvent && filterParams.match(noteEvent, note.relays)) {
-                    note
-                } else {
-                    null
-                }
-            }
-
-        return sort(notes)
-    }
+                // Here we only need to look for CommunityDefinition Events
+                val notes =
+                    LocalCache.addressables.mapNotNullIntoSet(CommunityDefinitionEvent.KIND) { key, note ->
+                        val noteEvent = note.event
+                        if (noteEvent == null && shouldInclude(key, filterParams, note.relays)) {
+                            // send unloaded communities to the screen
+                            note
+                        } else if (noteEvent is CommunityDefinitionEvent && filterParams.match(noteEvent, note.relays)) {
+                            note
+                        } else {
+                            null
+                        }
+                    }
+                notes.toSet()
+            },
+        )
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 

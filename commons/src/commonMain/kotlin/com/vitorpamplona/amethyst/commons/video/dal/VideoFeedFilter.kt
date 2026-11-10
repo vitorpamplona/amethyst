@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.video.dal
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
 import com.vitorpamplona.amethyst.commons.feeds.SupportedContent
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -66,22 +67,24 @@ class VideoFeedFilter(
 
     override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
-    override fun feed(): List<Note> {
-        val params = buildFilterParams(account)
+    override fun feed(): List<Note> =
+        sort(
+            rebuildFeed("video", candidates = null, keep = { false }) {
+                val params = buildFilterParams(account)
 
-        val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it, params)
-            } +
-                LocalCache.addressables.filterIntoSet(AddressableNormalVideoEvent.KIND) { _, it ->
-                    acceptableEvent(it, params)
-                } +
-                LocalCache.addressables.filterIntoSet(AddressableShortVideoEvent.KIND) { _, it ->
-                    acceptableEvent(it, params)
-                }
-
-        return sort(notes)
-    }
+                val notes =
+                    LocalCache.notes.filterIntoSet { _, it ->
+                        acceptableEvent(it, params)
+                    } +
+                        LocalCache.addressables.filterIntoSet(AddressableNormalVideoEvent.KIND) { _, it ->
+                            acceptableEvent(it, params)
+                        } +
+                        LocalCache.addressables.filterIntoSet(AddressableShortVideoEvent.KIND) { _, it ->
+                            acceptableEvent(it, params)
+                        }
+                notes.toSet()
+            },
+        )
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 

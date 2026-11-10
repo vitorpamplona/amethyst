@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.discover.nip99Classifieds
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -47,17 +48,19 @@ open class DiscoverMarketplaceFeedFilter(
 
     override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
-    override fun feed(): List<Note> {
-        val params = buildFilterParams(account)
+    override fun feed(): List<Note> =
+        sort(
+            rebuildFeed("discover/marketplace", candidates = null, keep = { false }) {
+                val params = buildFilterParams(account)
 
-        val notes =
-            LocalCache.addressables.filterIntoSet(ClassifiedsEvent.KIND) { _, it ->
-                val noteEvent = it.event
-                noteEvent is ClassifiedsEvent && noteEvent.isWellFormed() && noteEvent.isInCatalog() && params.match(noteEvent, it.relays)
-            }
-
-        return sort(notes)
-    }
+                val notes =
+                    LocalCache.addressables.filterIntoSet(ClassifiedsEvent.KIND) { _, it ->
+                        val noteEvent = it.event
+                        noteEvent is ClassifiedsEvent && noteEvent.isWellFormed() && noteEvent.isInCatalog() && params.match(noteEvent, it.relays)
+                    }
+                notes.toSet()
+            },
+        )
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
