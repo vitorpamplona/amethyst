@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.napplet
 
+import com.vitorpamplona.amethyst.commons.frontpage.PaperLinks
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
@@ -44,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcRuntime
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.withString
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
+import com.vitorpamplona.amethyst.desktop.app.DesktopDeepLinks
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -417,7 +419,7 @@ class CefNappletSession(
                     if (isWebsite && !frame.isMain && frame.parent?.isMain == false && isWebLink(request.url)) return false
                     // The shell and the page's own frame never leave; a link the user clicked opens in
                     // the system browser, and only then.
-                    if (launch.profile.opensLinks && userGesture && isWebLink(request.url)) DesktopBrowser.open(request.url)
+                    if (launch.profile.opensLinks && userGesture && isWebLink(request.url)) openLink(request.url)
                     return true
                 }
 
@@ -459,7 +461,7 @@ class CefNappletSession(
                     targetUrl: String,
                     targetFrameName: String?,
                 ): Boolean {
-                    if (launch.profile.opensLinks && isWebLink(targetUrl)) DesktopBrowser.open(targetUrl)
+                    if (launch.profile.opensLinks && isWebLink(targetUrl)) openLink(targetUrl)
                     return true
                 }
             },
@@ -896,6 +898,16 @@ class CefNappletSession(
             runCatching { body?.close() }
             body = null
         }
+    }
+
+    /**
+     * A link the user clicked. A front page's own links (a citation, a byline, a stream, a
+     * listing, a calendar event) open in Amethyst, through the same queue as an OS-opened
+     * nostr: link; everything else goes to the system browser.
+     */
+    private fun openLink(url: String) {
+        val nostr = if (launch.profile == HostProfile.PAPER) PaperLinks.toNostrUri(url) else null
+        if (nostr != null) DesktopDeepLinks.offer(nostr) else DesktopBrowser.open(url)
     }
 
     companion object {

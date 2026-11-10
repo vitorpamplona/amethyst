@@ -212,6 +212,26 @@ object JsoupPaperBoundary : PaperBoundary {
         return id.takeIf { index.getValue(key).byId.containsKey(it) }
     }
 
+    /**
+     * The author a byline link names, if they wrote a post this edition read: the writer's form
+     * names them by one of their event ids (or, leniently, by their pubkey hex), the canonical
+     * form by npub. Anyone else is not the paper's to link, however they were named.
+     */
+    private fun profileTarget(
+        href: String,
+        byId: Map<String, Event>,
+        authors: Set<String>,
+    ): HexKey? {
+        PROFILE_LINK.find(href)?.let { found -> return fromNpub(found.groupValues[1])?.takeIf { it in authors } }
+        val hex =
+            PROFILE_WRITER
+                .find(href)
+                ?.groupValues
+                ?.get(1)
+                ?.lowercase() ?: return null
+        return byId[hex]?.pubKey?.lowercase() ?: hex.takeIf { it in authors }
+    }
+
     /** Jumble is a source citation, not a page the paper should be replaced by. */
     private fun openInNewTab(anchor: Element) {
         anchor.attr("target", "_blank")
@@ -255,6 +275,8 @@ object JsoupPaperBoundary : PaperBoundary {
         // The paper prints addresses; it does not make them clickable — except citations
         // and the verified zap.stream / Shopstr / njump-calendar links.
         val index = index(corpus)
+        val eventsById = corpus.events.associateBy { it.id.lowercase() }
+        val authors = corpus.events.mapTo(HashSet()) { it.pubKey.lowercase() }
         for (anchor in doc.select("a[href]")) {
             val url = anchor.attr("href")
             if (!HTTP.containsMatchIn(url)) continue
@@ -278,6 +300,11 @@ object JsoupPaperBoundary : PaperBoundary {
                 } ?: id?.let { index.getValue("calendar").byId[it] }?.let { DESK_LINKS.getValue("calendar") to it }
             if (desk != null) {
                 keep(desk.first.canonicalUrl(desk.second), desk.first.change)
+                continue
+            }
+            val author = profileTarget(url, eventsById, authors)
+            if (author != null) {
+                keep(toProfileLink(author), ResolveChange.Kind.PROFILE)
                 continue
             }
             if (id != null && id in eventIds) {
@@ -385,6 +412,7 @@ object JsoupPaperBoundary : PaperBoundary {
         val allowedImages = corpus.art.mapTo(HashSet()) { it.url }
         val index = index(corpus)
         val calendarIds = index.getValue("calendar").byId
+        val authors = events.mapTo(HashSet()) { it.pubKey.lowercase() }
 
         val violations = markupViolations(doc, allowedImages).toMutableList()
 
@@ -407,12 +435,14 @@ object JsoupPaperBoundary : PaperBoundary {
             // an event whose nature is to be replaced. Resolve rewrites these to njump naddrs.
             if (id != null && id in eventIds && !calendarIds.containsKey(id)) continue
             if (DESK_LINKS.keys.any { deskLinkTarget(it, href, index) != null }) continue
+            // Bylines: only the canonical npub form, only for someone this edition read.
+            if (PROFILE_LINK.find(href)?.let { fromNpub(it.groupValues[1]) }?.let { it in authors } == true) continue
             // Presence in the corpus is evidence of NOTHING: the corpus is written by the
             // attacker too, so allowlisting its URLs once allowlisted a phishing link.
             violations.add(
                 Violation(
                     Violation.Kind.LINK,
-                    "only source citations, verified zap.stream watch links, Shopstr listing links, and njump calendar links may be links",
+                    "only source citations, author bylines, verified zap.stream watch links, Shopstr listing links, and njump calendar links may be links",
                     href.take(120),
                 ),
             )

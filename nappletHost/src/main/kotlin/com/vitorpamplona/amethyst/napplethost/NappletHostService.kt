@@ -745,7 +745,7 @@ class NappletHostService : Service() {
             val uri = request.url
             if (NappletWebContract.isInternalHost(uri.host)) return false
             if (tab.profile.opensLinks && request.hasGesture() && (uri.scheme == "https" || uri.scheme == "http")) {
-                runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                runCatching { startActivity(linkIntent(tab.profile, uri)) }
             }
             return true
         }

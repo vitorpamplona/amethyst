@@ -25,7 +25,7 @@ class ResolveChange(
     val kind: Kind,
     val detail: String,
 ) {
-    enum class Kind { RESOLVED, DROPPED, UNWRAPPED, PERMALINK, STREAM, LISTING, CALENDAR }
+    enum class Kind { RESOLVED, DROPPED, UNWRAPPED, PERMALINK, STREAM, LISTING, CALENDAR, PROFILE }
 
     /** The page trying to do something the paper does not: the visible edge of an injection. */
     val noteworthy get() = kind == Kind.DROPPED || kind == Kind.UNWRAPPED

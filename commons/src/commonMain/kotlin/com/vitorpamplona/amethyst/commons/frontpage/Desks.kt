@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.Hex
 
@@ -174,6 +175,24 @@ fun fromNaddr(value: String): NaddrTarget? {
 }
 
 fun npubOf(hex: HexKey): String = Hex.decode(hex).toNpub()
+
+/** `npub1…` to pubkey hex, or null if it does not decode to an npub. */
+fun fromNpub(value: String): HexKey? {
+    val entity = Nip19Parser.uriToRoute(value.trim())?.entity as? NPub ?: return null
+    return entity.hex.lowercase().takeIf { isEventIdHex(it) }
+}
+
+/*
+ * A byline's link to its author. Beyond the Observer, which prints names and links no one:
+ * the digest gives the writer event ids and never pubkeys, so the writer names an author by
+ * one of their posts ([PROFILE_WRITER]) and resolve turns it into the author's own npub page
+ * ([PROFILE_LINK]). Only someone who wrote a post this edition read may be linked.
+ */
+const val PROFILE_HOST_PATH = "https://jumble.social/users/"
+val PROFILE_WRITER = Regex("^https://jumble\\.social/users/([0-9a-fA-F]{64})(?:[/?#].*)?$")
+val PROFILE_LINK = Regex("^https://jumble\\.social/users/(npub1[0-9a-zA-Z]+)(?:[/?#].*)?$", RegexOption.IGNORE_CASE)
+
+fun toProfileLink(pubkey: HexKey) = PROFILE_HOST_PATH + npubOf(pubkey)
 
 /** What a person is called when they have published no name. Never hex. */
 fun shortNpub(hex: HexKey): String {

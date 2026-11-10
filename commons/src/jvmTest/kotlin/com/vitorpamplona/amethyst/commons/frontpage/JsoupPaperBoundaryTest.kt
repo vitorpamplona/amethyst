@@ -107,6 +107,28 @@ class JsoupPaperBoundaryTest {
     }
 
     @Test
+    fun aBylineLinksItsAuthorByOneOfTheirPosts() {
+        // The digest gives event ids, never keys: the writer names Bob by his post, resolve finds Bob.
+        val checked = run("<a href=\"https://jumble.social/users/${id(2)}\">Bob</a>")
+        assertTrue(checked.violations.isEmpty())
+        assertTrue(checked.html.contains("https://jumble.social/users/${npubOf(BOB)}"))
+        assertTrue(checked.changes.any { it.kind == ResolveChange.Kind.PROFILE })
+    }
+
+    @Test
+    fun onlyAuthorsThisEditionReadMayBeLinked() {
+        val stranger = "3333333333333333333333333333333333333333333333333333333333333333"
+        // A stranger named by key, or by npub, is unwrapped: being named in a post is evidence of nothing.
+        val checked = run("<a href=\"https://jumble.social/users/$stranger\">x</a> <a href=\"https://jumble.social/users/${npubOf(stranger)}\">y</a>")
+        assertTrue(checked.violations.isEmpty())
+        assertFalse(checked.html.contains("jumble.social/users/"))
+        assertEquals(2, checked.changes.count { it.kind == ResolveChange.Kind.UNWRAPPED })
+        // And the check alone refuses one, should resolve ever let it through.
+        val doc = JsoupPaperBoundary.parsePage(page("<a href=\"https://jumble.social/users/${npubOf(stranger)}\">x</a>"))
+        assertEquals(listOf(Violation.Kind.LINK), JsoupPaperBoundary.check(doc, corpus).violations.map { it.kind })
+    }
+
+    @Test
     fun theCheckAloneRefusesALinkResolveWouldHaveUnwrapped() {
         // If resolve ever regressed, the boundary still fails closed.
         val doc = JsoupPaperBoundary.parsePage(page("<a href=\"https://evil.example/x\">x</a>"))

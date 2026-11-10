@@ -67,7 +67,7 @@ fun repairMessage(violations: List<Violation>): String =
         add("")
         add("QUOTE: copy the words exactly from one event, or paraphrase without <q>/<blockquote>.")
         add("IMAGE: use <img src=\"art-N\"> ids from the shortlist only.")
-        add("LINK: only the citation, watch, listing and calendar URL forms the brief allows.")
+        add("LINK: only the citation, byline, watch, listing and calendar URL forms the brief allows.")
         add("MARKUP: no scripts, forms, frames or handlers.")
         add("")
         add("Return the corrected complete HTML document and nothing else.")
