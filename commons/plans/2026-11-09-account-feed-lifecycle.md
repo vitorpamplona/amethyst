@@ -148,6 +148,33 @@ DMs; this extends that rule to feeds.
 - **Read-only accounts:** Android skips accounts that cannot sign. "All accounts" would include
   them for public notifications (mentions, replies, zaps); they cannot decrypt DMs.
 
+### 6. Feeds rebuild from candidates, not from the cache (prototype: notifications)
+
+A full rebuild walked every note in `LocalCache` (50-500 ms reported on long sessions), and every
+mute, Web of Trust answer, spam flag, invite or list switch triggers one. The walk is not needed:
+
+- `IFilter` (`model/observables`) is a note-level rule: `matches(note)`, with the whole `Note`, so
+  it can say what a Nostr `Filter` cannot.
+- `NoteSetMatchingFilter` keeps every cached note that passes one current as notes arrive and are
+  deleted (an unindexed observer: one `matches` per new note), after one walk when it starts
+  (`EventCache.registerNoteSet`). `dependents` re-checks notes whose answer changes when another
+  note arrives.
+- Keep the rule stable and apply viewer policy over the set: a rule that read mutes would go
+  stale on each change and need the walk again.
+
+`NotificationCandidates` is the first: "could this reach me" (`mightBeANotification`) as the
+rule, and the children of my own notes as dependents (a Buzz like or a chat reply that arrived
+before the note it answers). The three notification feeds share it and run
+`acceptableEvent` (mutes, WoT, the list, the toggles) over it. Measured on desktop over 9 rebuilds:
+identical results every time, the candidate scan 2-3x faster than the walk with ~6,000 notes in
+the cache and 2,318 candidates (jack has unusually many notifications). The walk grows with the
+cache, the scan with the notifications, so the gap widens with a long session; not measured here,
+because this environment's relays could not grow the cache past ~6,000 notes.
+
+Not yet: the per-bundle path still runs `applyFilter` on each new note (cheap since the gate), the
+set lives with the `AccountViewModel` (one walk again after a switch back, until notification feeds
+live as long as the account), and the other feeds still walk the cache.
+
 ## Steps
 
 Each step ships on its own and is checked with the desktop switch test (A → B → wait for GC

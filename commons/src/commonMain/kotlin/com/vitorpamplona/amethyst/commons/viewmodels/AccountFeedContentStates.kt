@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.dal.ChessLobbyFeedFilter
 import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.commons.notifications.NotificationSummaryState
 import com.vitorpamplona.amethyst.commons.notifications.OpenPollsState
+import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationCandidates
 import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.commons.pictures.dal.PictureFeedFilter
 import com.vitorpamplona.amethyst.commons.podcasts.dal.PodcastEpisodesFeedFilter
@@ -165,9 +166,13 @@ class AccountFeedContentStates(
 
     // Eager: the always-on notification subscription fills it whether or not a screen shows it, and
     // its EOSE cursor is only true while something holds those notes.
-    val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
-    val notificationsFollowing = CardFeedContentState(NotificationFeedFilter(account, TopFilter.AllFollows), scope, lazy = true)
-    val notificationsEveryone = CardFeedContentState(NotificationFeedFilter(account, TopFilter.Global), scope, lazy = true)
+    // Every cached note that could be a notification, kept current: the three notification feeds
+    // rebuild from it instead of walking the whole cache.
+    val notificationCandidates = NotificationCandidates(account, LocalCache).also { it.start(scope) }
+
+    val notifications = CardFeedContentState(NotificationFeedFilter(account, candidates = notificationCandidates), scope)
+    val notificationsFollowing = CardFeedContentState(NotificationFeedFilter(account, TopFilter.AllFollows, notificationCandidates), scope, lazy = true)
+    val notificationsEveryone = CardFeedContentState(NotificationFeedFilter(account, TopFilter.Global, notificationCandidates), scope, lazy = true)
 
     val notificationsOpenPolls = OpenPollsState(account, scope)
 

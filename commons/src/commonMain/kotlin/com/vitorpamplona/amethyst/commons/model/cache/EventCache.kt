@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtIdHexCompar
 import com.vitorpamplona.amethyst.commons.model.observables.EventListMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.NewEventMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.NoteListMatchingFilter
+import com.vitorpamplona.amethyst.commons.model.observables.NoteSetMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.Observable
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.model.redirectStrayRelayGroupContent
@@ -822,6 +823,22 @@ open class EventCache :
                 observables.unregister(cachedFilter)
             }
         }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
+
+    /**
+     * Starts keeping [observer] current: registers it first, so a note inserted during the walk is
+     * not missed (the set dedupes), then walks the cache once and marks it ready. Runs the walk on
+     * the caller's thread; call it off the main thread. Stop with [unregisterNoteSet].
+     */
+    fun registerNoteSet(observer: NoteSetMatchingFilter) {
+        observables.registerUnindexed(observer)
+        notes.forEach { _, note -> observer.consider(note) }
+        addressables.forEach { _, note -> observer.consider(note) }
+        observer.markReady()
+    }
+
+    fun unregisterNoteSet(observer: NoteSetMatchingFilter) {
+        observables.unregister(observer)
+    }
 
     /**
      * Emits each new event for which [predicate] returns true, one at a time,
