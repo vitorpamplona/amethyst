@@ -114,6 +114,9 @@ import java.io.File
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
+/** The app's own files: `~/.amethyst/app`, or `-Damethyst.dataDir=...`. */
+internal fun desktopDataDir(): File = File(System.getProperty("amethyst.dataDir") ?: File(System.getProperty("user.home"), ".amethyst/app").path)
+
 /**
  * The desktop window of the shared app: the same [AmethystApp] Android renders, on the desktop graph.
  * Run it with `./gradlew :desktopApp:run`. Its files live apart from the retired legacy app's
@@ -144,9 +147,7 @@ fun main(args: Array<String>) {
         }
     }
 
-    val filesDir =
-        File(System.getProperty("amethyst.dataDir") ?: File(System.getProperty("user.home"), ".amethyst/app").path)
-            .apply { mkdirs() }
+    val filesDir = desktopDataDir().apply { mkdirs() }
 
     // Linux: native Wayland when the session has it, unless settings pick XWayland. Like the macOS
     // properties below, it must be decided before AWT starts.
@@ -181,7 +182,9 @@ fun main(args: Array<String>) {
         DesktopDeepLinks.offer(uri)
     }
     DesktopDeepLinks.installOsHandlers()
-    DesktopDeepLinks.startInstanceBus(filesDir)
+    // One listener per data folder: a later copy taking over the port file sent the links meant for
+    // the primary to itself, and removed the file as it quit, leaving the primary with none.
+    if (DesktopInstance.isPrimary) DesktopDeepLinks.startInstanceBus(filesDir)
 
     val version =
         System.getProperty("amethyst.version")

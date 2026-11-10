@@ -39,6 +39,11 @@ import org.cef.CefSettings
 import org.cef.OS
 import org.cef.browser.CefRequestContext
 import java.io.File
+import java.io.IOException
+import java.net.StandardProtocolFamily
+import java.net.UnixDomainSocketAddress
+import java.nio.channels.SocketChannel
+import java.nio.file.Files
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -90,8 +95,26 @@ class DesktopCefEngine(
 
         data class Failed(
             val message: String,
+            val kind: FailureKind = FailureKind.RETRY,
         ) : State
     }
+
+    /** What the user can do about a [State.Failed]. */
+    enum class FailureKind {
+        /** Nothing of Chromium is loaded yet: asking again starts it from scratch. */
+        RETRY,
+
+        /** Another process's Chromium holds this profile; asking again works once it has quit. */
+        PROFILE_IN_USE,
+
+        /** Chromium got far enough to start up in this process, which it does once: only a restart helps. */
+        RESTART,
+    }
+
+    /** Thrown when [profileInUse] finds another running Chromium on [cacheRoot]. */
+    class ProfileInUseException(
+        profile: File,
+    ) : IllegalStateException("Another process's Chromium is using $profile")
 
     private val mutex = Mutex()
     private val stopped = AtomicBoolean(false)
@@ -122,6 +145,8 @@ class DesktopCefEngine(
     suspend fun app(): CefApp =
         mutex.withLock {
             (mutableState.value as? State.Ready)?.app ?: run {
+                // A second start in this process only throws "Must be called before CefApp is initialized".
+                (mutableState.value as? State.Failed)?.takeIf { it.kind == FailureKind.RESTART }?.let { throw IllegalStateException(it.message) }
                 // Read here, where it may suspend: the browser's content script carries the shim.
                 val shim = NappletWebResources.shimJs().decodeToString()
                 pageScripts = listOf(DesktopBrowserBridge.contentScript(shim), PageScrollbars.DOCUMENT_SCRIPT)
@@ -131,8 +156,12 @@ class DesktopCefEngine(
 
     private fun start(): CefApp {
         mutableState.value = State.Starting
+        var loaded = false
         return try {
             if (!cacheRoot.isDirectory && !cacheRoot.mkdirs()) throw IllegalStateException("Cannot create $cacheRoot")
+            // Chromium started on a profile another Chromium holds hands its pages to that one (which
+            // opens them in a window of its own) and never brings its own context up.
+            if (profileInUse(cacheRoot)) throw ProfileInUseException(cacheRoot)
             if (downloadsInProgress.exists() && !downloadsInProgress.deleteRecursively()) Log.w(TAG) { "Could not empty $downloadsInProgress" }
             val builder = CefAppBuilder()
             builder.setInstallDir(installDir)
@@ -174,6 +203,7 @@ class DesktopCefEngine(
             removeNotificationHelper()
             // Before build(), which loads it from this thread while the user may be clicking.
             if (OS.isMacintosh()) MacMainThread.loadJcef(installDir)
+            loaded = true
             val app = builder.build()
             // JCEF initializes Chromium with the first client, and the context comes up after that. No
             // window may load before the policies are in, so a throwaway client starts it and the
@@ -186,7 +216,13 @@ class DesktopCefEngine(
             app.also { mutableState.value = State.Ready(it) }
         } catch (e: Throwable) {
             Log.w(TAG, "Chromium did not start", e)
-            mutableState.value = State.Failed(e.message ?: e::class.simpleName.orEmpty())
+            val kind =
+                when {
+                    e is ProfileInUseException -> FailureKind.PROFILE_IN_USE
+                    loaded -> FailureKind.RESTART
+                    else -> FailureKind.RETRY
+                }
+            mutableState.value = State.Failed(e.message ?: e::class.simpleName.orEmpty(), kind)
             throw e
         }
     }
@@ -334,6 +370,29 @@ class DesktopCefEngine(
         private const val TAG = "DesktopCefEngine"
         private const val SHUTDOWN_WAIT_MS = 3_000L
         private const val CONTEXT_WAIT_SECONDS = 60L
+
+        /**
+         * Whether a running Chromium holds [profile]. On macOS and Linux Chromium keeps a
+         * `SingletonSocket` link there to the socket it listens on for other starts; one that accepts
+         * a connection is alive, while a crashed one leaves a link nobody answers. Windows keeps no
+         * such link, so there it is always false.
+         */
+        internal fun profileInUse(profile: File): Boolean {
+            val socket =
+                try {
+                    Files.readSymbolicLink(File(profile, "SingletonSocket").toPath())
+                } catch (_: IOException) {
+                    return false
+                } catch (_: UnsupportedOperationException) {
+                    return false
+                }
+            return try {
+                SocketChannel.open(StandardProtocolFamily.UNIX).use { it.connect(UnixDomainSocketAddress.of(socket)) }
+                true
+            } catch (_: IOException) {
+                false
+            }
+        }
 
         /**
          * Profile preferences every page runs under, applied before any window loads:
