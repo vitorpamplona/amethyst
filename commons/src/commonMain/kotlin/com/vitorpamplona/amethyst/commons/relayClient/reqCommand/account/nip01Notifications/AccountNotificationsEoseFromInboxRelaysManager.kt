@@ -95,6 +95,16 @@ class AccountNotificationsEoseFromInboxRelaysManager(
                 if (feedOwners.ownerChanged(user, feeds)) user.pubkeyHex else null
             }
 
+        // The split tabs read the same REQ. They are lazy, so while the split is on they are woken
+        // here: otherwise what this loads for them would have no holder until a tab was opened.
+        keys.forEach { key ->
+            val feeds = key.feedContentStates ?: return@forEach
+            if (key.account.settings.splitNotificationsEnabled.value) {
+                feeds.notificationsFollowing.activate()
+                feeds.notificationsEveryone.activate()
+            }
+        }
+
         val accountsPerRelay = mutableMapOf<NormalizedRelayUrl, MutableList<AccountQueryState>>()
         keys.forEach { key ->
             key.account.notificationRelays.flow.value.forEach { relay ->

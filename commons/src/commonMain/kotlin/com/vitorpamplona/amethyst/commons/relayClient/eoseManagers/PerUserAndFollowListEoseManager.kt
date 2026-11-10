@@ -145,7 +145,17 @@ abstract class PerUserAndFollowListEoseManager<T, U : Any>(
         }
     }
 
+    /**
+     * Wakes the lazy feeds this key's subscription fills (see
+     * [com.vitorpamplona.amethyst.commons.feeds.FeedContentState.activate]). A subscription that
+     * loads notes into the cache while no feed holds them would let the GC take them while the
+     * cursor says they are here. Called for every key, not just one per user. Idempotent.
+     */
+    protected open fun activateFeeds(key: T) {}
+
     override fun updateSubscriptions(keys: Set<T>) {
+        keys.forEach(::activateFeeds)
+
         val uniqueSubscribedAccounts = keys.distinctBy { user(it) }
 
         val updated = mutableSetOf<User>()

@@ -68,7 +68,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -76,9 +78,24 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 class CardFeedContentState(
     val localFilter: FeedFilter<Note>,
     val viewModelScope: CoroutineScope,
+    /** Builds nothing until [activate] or a collector of [feedContent]; see [FeedContentState]. */
+    lazy: Boolean = false,
 ) : InvalidatableContent {
     private val _feedContent = MutableStateFlow<CardFeedState>(CardFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
+
+    @OptIn(ExperimentalAtomicApi::class)
+    private val active = AtomicBoolean(!lazy)
+
+    /** Whether this feed is being built and kept up to date; false while a lazy feed is dormant. */
+    @OptIn(ExperimentalAtomicApi::class)
+    fun isActive() = active.load()
+
+    /** Wakes a lazy feed: builds it from the cache and keeps it updated from now on. Idempotent. */
+    @OptIn(ExperimentalAtomicApi::class)
+    fun activate() {
+        if (active.compareAndSet(expectedValue = false, newValue = true)) invalidateData()
+    }
 
     // Simple counter that changes when it needs to invalidate everything
     private val _scrollToTop = MutableStateFlow(0)
@@ -125,6 +142,7 @@ class CardFeedContentState(
     fun lastNoteCreatedAtIfFilled() = lastNoteCreatedAtWhenFullyLoaded.value
 
     fun refresh() {
+        if (!isActive()) return
         viewModelScope.launch(Dispatchers.IO) { refreshSuspended() }
     }
 
@@ -525,6 +543,7 @@ class CardFeedContentState(
     private val bundlerInsert = BundledInsert<Set<Note>>(1000, Dispatchers.IO)
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
+        if (!isActive()) return
         bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
@@ -533,6 +552,7 @@ class CardFeedContentState(
     }
 
     fun invalidateDataAndSendToTop(ignoreIfDoing: Boolean) {
+        if (!isActive()) return
         clear()
         bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
@@ -545,6 +565,7 @@ class CardFeedContentState(
     }
 
     fun checkKeysInvalidateDataAndSendToTop() {
+        if (!isActive()) return
         if (lastFeedKey != localFilter.feedKey()) {
             clear()
             bundler.invalidate(false) {
@@ -559,6 +580,7 @@ class CardFeedContentState(
     }
 
     fun invalidateInsertData(newItems: Set<Note>) {
+        if (!isActive()) return
         bundlerInsert.invalidateList(newItems) {
             val newObjects = it.flattenToSet()
             logTime("${this::class.simpleName} Card additive receiving ${newObjects.size} items into ${it.size} items") {
@@ -570,6 +592,7 @@ class CardFeedContentState(
     }
 
     fun updateFeedWith(newNotes: Set<Note>) {
+        if (!isActive()) return
         if (localFilter is AdditiveFeedFilter && _feedContent.value is CardFeedState.Loaded) {
             invalidateInsertData(newNotes)
         } else {
@@ -590,6 +613,18 @@ class CardFeedContentState(
         clear()
         bundlerInsert.cancel()
         bundler.cancel()
+    }
+
+    // Last in the class: the coroutine may build the feed before the constructor returns, and the
+    // bundlers above must exist by then.
+    init {
+        if (lazy) {
+            // Whatever shows the feed collects it: that is the moment to build it.
+            viewModelScope.launch(Dispatchers.IO) {
+                _feedContent.subscriptionCount.first { it > 0 }
+                activate()
+            }
+        }
     }
 }
 

@@ -67,6 +67,8 @@ abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
      */
     override fun feedOwner(key: K): Any = key.feeds.firstOrNull() ?: key.scope
 
+    override fun activateFeeds(key: K) = key.feeds.forEach { it.activate() }
+
     /** Runs when the key's top-nav selection changes, right before the filters are re-issued. */
     protected open fun onListChanged(key: K) {}
 

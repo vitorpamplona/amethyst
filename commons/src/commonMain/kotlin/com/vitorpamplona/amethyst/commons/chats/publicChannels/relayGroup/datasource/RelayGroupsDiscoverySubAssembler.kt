@@ -109,6 +109,8 @@ class RelayGroupsDiscoverySubAssembler(
 
     override fun list(key: RelayGroupsDiscoveryQueryState) = key.listName()
 
+    override fun activateFeeds(key: RelayGroupsDiscoveryQueryState) = key.feedStates.relayGroupsDiscoveryFeed.activate()
+
     fun RelayGroupsDiscoveryQueryState.listNameFlow() = account.settings.defaultRelayGroupsDiscoveryFollowList
 
     fun RelayGroupsDiscoveryQueryState.listName() = listNameFlow().value

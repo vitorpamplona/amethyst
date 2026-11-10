@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssemblerSubscription
@@ -54,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.shorts.datasource.S
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.softwareapps.datasource.SoftwareAppsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.datasource.WorkoutsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountFeedContentStates
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
@@ -76,6 +79,7 @@ fun BottomBarFeedPreloaders(accountViewModel: AccountViewModel) {
         val item = (entry as? BottomBarEntry.BuiltIn)?.item ?: return@forEach
         key(item) {
             PreloadFor(item, accountViewModel)
+            WakeFeedsOf(item, accountViewModel)
         }
     }
 }
@@ -211,3 +215,51 @@ private fun PreloadFor(
         -> Unit
     }
 }
+
+/**
+ * The account feeds are lazy (see [AccountFeedContentStates]); a pinned tab's feeds are built as
+ * soon as it is pinned, so the notes its preload brings in have a holder and the tab opens full.
+ * Listed here rather than read from the subscription keys because several tabs ride one REQ whose
+ * key names only the first feed (calendar collections, music playlists, geocache hunts, polls).
+ */
+@Composable
+private fun WakeFeedsOf(
+    item: NavBarItem,
+    accountViewModel: AccountViewModel,
+) {
+    LaunchedEffect(item, accountViewModel) {
+        accountViewModel.feedStates.feedsShownBy(item).forEach { it.activate() }
+    }
+}
+
+private fun AccountFeedContentStates.feedsShownBy(item: NavBarItem): List<FeedContentState> =
+    when (item) {
+        NavBarItem.HOME -> listOf(homeNewThreads, homeReplies, homeEverything)
+        NavBarItem.MESSAGES -> listOf(dmKnown, dmNew)
+        NavBarItem.VIDEO -> listOf(videoFeed)
+        NavBarItem.DISCOVER -> listOf(discoverReads, discoverMarketplace, discoverDVMs, discoverFollowSets, discoverLive, discoverPublicChats, discoverCommunities)
+        NavBarItem.COMMUNITIES -> listOf(communitiesList)
+        NavBarItem.ARTICLES -> listOf(articlesFeed)
+        NavBarItem.PICTURES -> listOf(picturesFeed)
+        NavBarItem.WORKOUTS -> listOf(workoutsFeed)
+        NavBarItem.GEOCACHES, NavBarItem.GEOCACHE_HUNTS -> listOf(geocachesFeed, geocacheFindsFeed, geocacheMineFeed, geocacheHuntsFeed)
+        NavBarItem.GIT_REPOSITORIES -> listOf(gitRepositoriesFeed)
+        NavBarItem.HIGHLIGHTS -> listOf(highlightsFeed)
+        NavBarItem.CHESS -> listOf(chessLobbyFeed)
+        NavBarItem.SOFTWARE_APPS -> listOf(softwareAppsFeed)
+        NavBarItem.CALENDARS, NavBarItem.CALENDAR_COLLECTIONS -> listOf(calendarAppointmentsFeed, calendarCollectionsFeed)
+        NavBarItem.SHORTS -> listOf(shortsFeed)
+        NavBarItem.MUSIC_TRACKS, NavBarItem.MUSIC_PLAYLISTS -> listOf(musicTracksFeed, musicPlaylistsFeed)
+        NavBarItem.PODCAST_EPISODES -> listOf(podcastEpisodesFeed)
+        NavBarItem.PODCASTS -> listOf(podcastsFeed)
+        NavBarItem.PUBLIC_CHATS -> listOf(publicChatsFeed)
+        NavBarItem.FOLLOW_PACKS -> listOf(followPacksFeed)
+        NavBarItem.LIVE_STREAMS -> listOf(liveStreamsFeed)
+        NavBarItem.NESTS -> listOf(nestsFeed)
+        NavBarItem.LONGS -> listOf(longsFeed)
+        NavBarItem.POLLS -> listOf(pollsFeed, openPollsFeed, closedPollsFeed)
+        NavBarItem.BADGES -> listOf(badgesFeed)
+        NavBarItem.PRODUCTS -> listOf(productsFeed)
+        NavBarItem.EMOJI_SETS -> listOf(browseEmojiSetsFeed)
+        else -> emptyList()
+    }

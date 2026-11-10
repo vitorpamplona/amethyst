@@ -1,7 +1,7 @@
 # Account feed lifecycle: switch accounts at will
 
-Status: proposed 2026-11-09. Step 1 is implemented on `claude/determined-meitner-wf8m3i`
-(`FeedOwnerTracker`); the rest is design.
+Status: proposed 2026-11-09. Steps 1 (`FeedOwnerTracker`) and 2 (lazy feeds) are implemented on
+`claude/determined-meitner-wf8m3i`; the rest is design.
 
 ## Problem
 
@@ -26,7 +26,7 @@ measured with `jcmd GC.run` and a log of the `since` each request carried.
 
 **The invariant that breaks.** An EOSE cursor means "this store already has everything up to T".
 It is only true while the notes are held, and the only strong holders of feed notes are the
-ViewModel and screen layers. The cursors live in the process layer. Three things drop the notes
+ViewModel and screen layers. The cursors live in the process layer. Four things drop the notes
 and keep the cursor:
 
 1. An account switch, or the Android activity finishing, clears the `AccountViewModel`.
@@ -35,6 +35,11 @@ and keep the cursor:
    `pruneRepliesAndReactions` and `pruneOldMessages` remove notes a feed still holds; the next
    full rebuild scans the cache and loses them. Its doc says this "may cause feeds to re-fetch",
    but no cursor is reset, so nothing does. (Read from the code, not reproduced.)
+4. The reply, reaction and zap counters under each note (`EventWatcherSubAssembler`) keep their
+   cursors by note id, on purpose, so a note `LocalCache` rebuilt for the same id reuses them. A
+   rebuilt note has lost its children, so it then only learns of new ones. Seen on desktop: after
+   a switch away and back, jack's top notification showed 29 replies / 110 likes instead of
+   119 / 416, and stayed there.
 
 `trimFeedsToSize(200)` under memory pressure is safe: it drops the oldest notes, and those come
 back through the floor paging, which the cursor does not govern.
@@ -150,10 +155,20 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
 
 1. **Done:** reset cursors when a different feed object shows up (`FeedOwnerTracker`), for the
    top-nav feeds and the notification managers. Fixes the reported bug.
-2. Lazy feeds. No behaviour change; less work on every switch.
+2. **Done:** lazy feeds. `FeedContentState` / `CardFeedContentState` take `lazy = true`; all
+   account feeds but the main notifications feed use it. A dormant feed ignores events,
+   deletions and invalidations, and builds once from the cache when something collects
+   `feedContent` or calls `activate()`. Whatever fills a feed wakes it: the top-nav managers wake
+   their keys' feeds (`activateFeeds`), the notification manager wakes the split tabs while the
+   split is on, and `BottomBarFeedPreloaders` wakes every feed a pinned tab shows (several tabs
+   ride a REQ whose key names only one feed). Measured on desktop, jack read-only, Home open,
+   60 s after start: 3 feeds built instead of 14, and only the pinned tabs' feeds (5 by default)
+   plus notifications take event bundles instead of all 46. Notes in memory barely change
+   (4,476 vs 4,372): the gain is work, not memory.
 3. `RelayCursors` in the feeds, keys name their holders, managers read the minimum and fan
    EOSEs out. Remove `FeedOwnerTracker`, `MergedAuthorTracker` and the per-list cursor maps.
-   Covers the screen feeds (section 3) too.
+   Covers the screen feeds (section 3) too, and the note counters: their holder is the `Note`
+   object, not its id.
 4. `AccountFeeds` with Active / Warm (15 min) / Cold, notification feeds account-lifetime;
    with tabs-and-windows Phase 2b.
 5. Every account notified on desktop, labelled on both platforms.

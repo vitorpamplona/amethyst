@@ -39,16 +39,43 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 @Stable
 class FeedContentState(
     val localFilter: IFeedFilter<Note>,
     val viewModelScope: CoroutineScope,
     val cacheProvider: ICacheProvider,
+    /**
+     * Builds nothing until [activate] is called or something collects [feedContent]. Until then,
+     * new events, deletions and invalidations are ignored: the first build reads everything from
+     * the cache anyway. For the account-wide feeds, most of which belong to screens the user never
+     * opens; a screen's own feed is wanted from the start and stays eager.
+     */
+    lazy: Boolean = false,
 ) : InvalidatableContent {
     private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
+
+    @OptIn(ExperimentalAtomicApi::class)
+    private val active = AtomicBoolean(!lazy)
+
+    /** Whether this feed is being built and kept up to date; false while a lazy feed is dormant. */
+    @OptIn(ExperimentalAtomicApi::class)
+    fun isActive() = active.load()
+
+    /**
+     * Wakes a lazy feed: builds it from the cache and keeps it updated from now on. Call it from
+     * whatever fills the feed while nothing shows it (a relay subscription that preloads a tab),
+     * so the notes that subscription loads have a holder. Idempotent.
+     */
+    @OptIn(ExperimentalAtomicApi::class)
+    fun activate() {
+        if (active.compareAndSet(expectedValue = false, newValue = true)) invalidateData()
+    }
 
     // Simple counter that changes when it needs to invalidate everything
     private val _scrollToTop = MutableStateFlow<Int>(0)
@@ -252,6 +279,7 @@ class FeedContentState(
     private val bundlerInsert = BasicBundledInsert<Set<Note>>(250, Dispatchers.IO, viewModelScope)
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
+        if (!isActive()) return
         viewModelScope.launch(Dispatchers.IO) {
             bundler.invalidate(ignoreIfDoing) {
                 // adds the time to perform the refresh into this delay
@@ -262,6 +290,7 @@ class FeedContentState(
     }
 
     fun checkKeysInvalidateDataAndSendToTop() {
+        if (!isActive()) return
         if (lastFeedKey != localFilter.feedKey()) {
             bundler.invalidate(false) {
                 // adds the time to perform the refresh into this delay
@@ -273,12 +302,14 @@ class FeedContentState(
     }
 
     fun invalidateInsertData(newItems: Set<Note>) {
+        if (!isActive()) return
         bundlerInsert.invalidateList(newItems) {
             refreshFromOldState(it.flattenToSet())
         }
     }
 
     fun updateFeedWith(newNotes: Set<Note>) {
+        if (!isActive()) return
         if (
             localFilter is AdditiveFeedFilter &&
             (_feedContent.value is FeedState.Loaded || _feedContent.value is FeedState.Empty)
@@ -287,6 +318,18 @@ class FeedContentState(
         } else {
             // Refresh Everything
             invalidateData()
+        }
+    }
+
+    // Last in the class: the coroutine may build the feed before the constructor returns, and the
+    // bundlers above must exist by then.
+    init {
+        if (lazy) {
+            // Whatever shows the feed collects it: that is the moment to build it.
+            viewModelScope.launch(Dispatchers.IO) {
+                _feedContent.subscriptionCount.first { it > 0 }
+                activate()
+            }
         }
     }
 }

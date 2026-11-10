@@ -98,67 +98,76 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+/**
+ * Every feed the account's screens show. All but the main notifications feed are lazy: a feed is
+ * built the first time a screen shows it or a relay subscription preloads it
+ * ([FeedContentState.activate]), and until then new events skip it. Building all of them on the
+ * first event bundle, as before, scanned the cache for ~60 feeds most users never open, and kept
+ * updating them on every bundle.
+ */
 class AccountFeedContentStates(
     val account: Account,
     val scope: CoroutineScope,
     memoryPressure: Flow<Unit>,
 ) {
     val homeLive = ChannelFeedContentState(HomeLiveFilter(account), scope)
-    val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(account), scope, LocalCache)
-    val homeReplies = FeedContentState(HomeConversationsFeedFilter(account), scope, LocalCache)
-    val homeEverything = FeedContentState(HomeEverythingFeedFilter(account), scope, LocalCache)
+    val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(account), scope, LocalCache, lazy = true)
+    val homeReplies = FeedContentState(HomeConversationsFeedFilter(account), scope, LocalCache, lazy = true)
+    val homeEverything = FeedContentState(HomeEverythingFeedFilter(account), scope, LocalCache, lazy = true)
 
-    val dmKnown = FeedContentState(ChatroomListKnownFeedFilter(account), scope, LocalCache)
-    val dmNew = FeedContentState(ChatroomListNewFeedFilter(account), scope, LocalCache)
+    val dmKnown = FeedContentState(ChatroomListKnownFeedFilter(account), scope, LocalCache, lazy = true)
+    val dmNew = FeedContentState(ChatroomListNewFeedFilter(account), scope, LocalCache, lazy = true)
 
-    val videoFeed = FeedContentState(VideoFeedFilter(account), scope, LocalCache)
+    val videoFeed = FeedContentState(VideoFeedFilter(account), scope, LocalCache, lazy = true)
 
-    val discoverFollowSets = FeedContentState(DiscoverFollowSetsFeedFilter(account), scope, LocalCache)
-    val discoverReads = FeedContentState(DiscoverLongFormFeedFilter(account), scope, LocalCache)
-    val discoverMarketplace = FeedContentState(DiscoverMarketplaceFeedFilter(account), scope, LocalCache)
-    val discoverDVMs = FeedContentState(DiscoverNIP89FeedFilter(account), scope, LocalCache)
-    val discoverLive = FeedContentState(DiscoverLiveFeedFilter(account), scope, LocalCache)
-    val discoverCommunities = FeedContentState(DiscoverCommunityFeedFilter(account), scope, LocalCache)
-    val discoverPublicChats = FeedContentState(DiscoverChatFeedFilter(account), scope, LocalCache)
+    val discoverFollowSets = FeedContentState(DiscoverFollowSetsFeedFilter(account), scope, LocalCache, lazy = true)
+    val discoverReads = FeedContentState(DiscoverLongFormFeedFilter(account), scope, LocalCache, lazy = true)
+    val discoverMarketplace = FeedContentState(DiscoverMarketplaceFeedFilter(account), scope, LocalCache, lazy = true)
+    val discoverDVMs = FeedContentState(DiscoverNIP89FeedFilter(account), scope, LocalCache, lazy = true)
+    val discoverLive = FeedContentState(DiscoverLiveFeedFilter(account), scope, LocalCache, lazy = true)
+    val discoverCommunities = FeedContentState(DiscoverCommunityFeedFilter(account), scope, LocalCache, lazy = true)
+    val discoverPublicChats = FeedContentState(DiscoverChatFeedFilter(account), scope, LocalCache, lazy = true)
 
-    val pollsFeed = FeedContentState(PollsFeedFilter(account), scope, LocalCache)
-    val openPollsFeed = FeedContentState(OpenPollsFeedFilter(account), scope, LocalCache)
-    val closedPollsFeed = FeedContentState(ClosedPollsFeedFilter(account), scope, LocalCache)
+    val pollsFeed = FeedContentState(PollsFeedFilter(account), scope, LocalCache, lazy = true)
+    val openPollsFeed = FeedContentState(OpenPollsFeedFilter(account), scope, LocalCache, lazy = true)
+    val closedPollsFeed = FeedContentState(ClosedPollsFeedFilter(account), scope, LocalCache, lazy = true)
 
-    val badgesFeed = FeedContentState(BadgesFeedFilter(account), scope, LocalCache)
+    val badgesFeed = FeedContentState(BadgesFeedFilter(account), scope, LocalCache, lazy = true)
 
-    val browseEmojiSetsFeed = FeedContentState(BrowseEmojiSetsFeedFilter(account), scope, LocalCache)
-    val communitiesList = FeedContentState(CommunitiesFeedFilter(account), scope, LocalCache)
+    val browseEmojiSetsFeed = FeedContentState(BrowseEmojiSetsFeedFilter(account), scope, LocalCache, lazy = true)
+    val communitiesList = FeedContentState(CommunitiesFeedFilter(account), scope, LocalCache, lazy = true)
 
-    val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
-    val workoutsFeed = FeedContentState(WorkoutFeedFilter(account), scope, LocalCache)
-    val chessLobbyFeed = FeedContentState(ChessLobbyFeedFilter(account), scope, LocalCache)
-    val gitRepositoriesFeed = FeedContentState(GitRepositoriesFeedFilter(account), scope, LocalCache)
-    val highlightsFeed = FeedContentState(HighlightsFeedFilter(account), scope, LocalCache)
-    val relayGroupsDiscoveryFeed = FeedContentState(RelayGroupDiscoveryFeedFilter(account), scope, LocalCache)
-    val calendarAppointmentsFeed = FeedContentState(CalendarAppointmentsFeedFilter(account), scope, LocalCache)
-    val calendarCollectionsFeed = FeedContentState(CalendarCollectionsFeedFilter(account), scope, LocalCache)
-    val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache)
-    val geocachesFeed = FeedContentState(GeocachesFeedFilter(account), scope, LocalCache)
-    val geocacheFindsFeed = FeedContentState(GeocacheFindsFeedFilter(account), scope, LocalCache)
-    val geocacheMineFeed = FeedContentState(GeocacheMineFeedFilter(account), scope, LocalCache)
-    val geocacheHuntsFeed = FeedContentState(GeocacheHuntsFeedFilter(account), scope, LocalCache)
-    val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache)
-    val publicChatsFeed = FeedContentState(PublicChatsFeedFilter(account), scope, LocalCache)
-    val followPacksFeed = FeedContentState(FollowPacksFeedFilter(account), scope, LocalCache)
-    val liveStreamsFeed = FeedContentState(LiveStreamsFeedFilter(account), scope, LocalCache)
-    val nestsFeed = FeedContentState(NestsFeedFilter(account), scope, LocalCache)
-    val longsFeed = FeedContentState(LongsFeedFilter(account), scope, LocalCache)
-    val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache)
-    val musicTracksFeed = FeedContentState(MusicTracksFeedFilter(account), scope, LocalCache)
-    val musicPlaylistsFeed = FeedContentState(MusicPlaylistsFeedFilter(account), scope, LocalCache)
-    val podcastEpisodesFeed = FeedContentState(PodcastEpisodesFeedFilter(account), scope, LocalCache)
-    val podcastsFeed = FeedContentState(PodcastsFeedFilter(account), scope, LocalCache)
-    val softwareAppsFeed = FeedContentState(SoftwareAppsFeedFilter(account), scope, LocalCache)
+    val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache, lazy = true)
+    val workoutsFeed = FeedContentState(WorkoutFeedFilter(account), scope, LocalCache, lazy = true)
+    val chessLobbyFeed = FeedContentState(ChessLobbyFeedFilter(account), scope, LocalCache, lazy = true)
+    val gitRepositoriesFeed = FeedContentState(GitRepositoriesFeedFilter(account), scope, LocalCache, lazy = true)
+    val highlightsFeed = FeedContentState(HighlightsFeedFilter(account), scope, LocalCache, lazy = true)
+    val relayGroupsDiscoveryFeed = FeedContentState(RelayGroupDiscoveryFeedFilter(account), scope, LocalCache, lazy = true)
+    val calendarAppointmentsFeed = FeedContentState(CalendarAppointmentsFeedFilter(account), scope, LocalCache, lazy = true)
+    val calendarCollectionsFeed = FeedContentState(CalendarCollectionsFeedFilter(account), scope, LocalCache, lazy = true)
+    val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache, lazy = true)
+    val geocachesFeed = FeedContentState(GeocachesFeedFilter(account), scope, LocalCache, lazy = true)
+    val geocacheFindsFeed = FeedContentState(GeocacheFindsFeedFilter(account), scope, LocalCache, lazy = true)
+    val geocacheMineFeed = FeedContentState(GeocacheMineFeedFilter(account), scope, LocalCache, lazy = true)
+    val geocacheHuntsFeed = FeedContentState(GeocacheHuntsFeedFilter(account), scope, LocalCache, lazy = true)
+    val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache, lazy = true)
+    val publicChatsFeed = FeedContentState(PublicChatsFeedFilter(account), scope, LocalCache, lazy = true)
+    val followPacksFeed = FeedContentState(FollowPacksFeedFilter(account), scope, LocalCache, lazy = true)
+    val liveStreamsFeed = FeedContentState(LiveStreamsFeedFilter(account), scope, LocalCache, lazy = true)
+    val nestsFeed = FeedContentState(NestsFeedFilter(account), scope, LocalCache, lazy = true)
+    val longsFeed = FeedContentState(LongsFeedFilter(account), scope, LocalCache, lazy = true)
+    val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache, lazy = true)
+    val musicTracksFeed = FeedContentState(MusicTracksFeedFilter(account), scope, LocalCache, lazy = true)
+    val musicPlaylistsFeed = FeedContentState(MusicPlaylistsFeedFilter(account), scope, LocalCache, lazy = true)
+    val podcastEpisodesFeed = FeedContentState(PodcastEpisodesFeedFilter(account), scope, LocalCache, lazy = true)
+    val podcastsFeed = FeedContentState(PodcastsFeedFilter(account), scope, LocalCache, lazy = true)
+    val softwareAppsFeed = FeedContentState(SoftwareAppsFeedFilter(account), scope, LocalCache, lazy = true)
 
+    // Eager: the always-on notification subscription fills it whether or not a screen shows it, and
+    // its EOSE cursor is only true while something holds those notes.
     val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
-    val notificationsFollowing = CardFeedContentState(NotificationFeedFilter(account, TopFilter.AllFollows), scope)
-    val notificationsEveryone = CardFeedContentState(NotificationFeedFilter(account, TopFilter.Global), scope)
+    val notificationsFollowing = CardFeedContentState(NotificationFeedFilter(account, TopFilter.AllFollows), scope, lazy = true)
+    val notificationsEveryone = CardFeedContentState(NotificationFeedFilter(account, TopFilter.Global), scope, lazy = true)
 
     val notificationsOpenPolls = OpenPollsState(account, scope)
 
@@ -166,9 +175,9 @@ class AccountFeedContentStates(
 
     val feedListOptions = TopNavFilterState(account, scope)
 
-    val drafts = FeedContentState(DraftEventsFeedFilter(account), scope, LocalCache)
+    val drafts = FeedContentState(DraftEventsFeedFilter(account), scope, LocalCache, lazy = true)
 
-    val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, LocalCache)
+    val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, LocalCache, lazy = true)
 
     init {
         // Under real memory pressure, trim every feed down to release the strong Note
