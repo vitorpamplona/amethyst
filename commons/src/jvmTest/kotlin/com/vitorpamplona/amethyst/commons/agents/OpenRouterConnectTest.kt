@@ -115,6 +115,12 @@ class OpenRouterConnectTest {
         }
 
     @Test
+    fun noBrowserIsAFailureNotACrash() =
+        runBlocking {
+            assertEquals(OpenRouterConnectResult.Failed, clients.connectOpenRouter("done", 10_000) { throw UnsupportedOperationException("no browser") })
+        }
+
+    @Test
     fun noAnswerTimesOut() =
         runBlocking {
             assertEquals(OpenRouterConnectResult.TimedOut, clients.connectOpenRouter("done", 1_500) { })

@@ -51,8 +51,16 @@ actual suspend fun IRoleBasedHttpClientBuilder.connectOpenRouter(
         }
     return server.use {
         val request = OpenRouterOAuth.newRequest("http://localhost:${server.localPort}/callback")
-        // On the caller's dispatcher: the UI opens the browser.
-        openBrowser(request.authUrl)
+        // On the caller's dispatcher: the UI opens the browser. A device with no browser throws
+        // (ActivityNotFoundException on Android, UnsupportedOperationException on a bare JVM).
+        try {
+            openBrowser(request.authUrl)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Couldn't open the browser", e)
+            return@use OpenRouterConnectResult.Failed
+        }
 
         val query = withContext(Dispatchers.IO) { awaitCallback(server, donePageText, timeoutMs) }
         if (query == null) return@use OpenRouterConnectResult.TimedOut
