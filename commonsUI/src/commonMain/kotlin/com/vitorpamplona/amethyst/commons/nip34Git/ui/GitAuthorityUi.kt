@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
 import com.vitorpamplona.amethyst.commons.nip34Git.coverNote.GitCoverNotes
+import com.vitorpamplona.amethyst.commons.nip34Git.gitAnnouncements
 import com.vitorpamplona.amethyst.commons.nip34Git.observeGitAnnouncements
 import com.vitorpamplona.amethyst.commons.nip34Git.observeGitRepositoryActivity
 import com.vitorpamplona.amethyst.commons.nip34Git.pr.GitPullRequestRevisions
@@ -55,7 +56,10 @@ fun observeGitRepositoryAnnouncements(item: Event?): List<GitRepositoryEvent>? {
 /** [observeGitRepositoryAnnouncements] for the repositories published under [identifier]. */
 @Composable
 fun observeGitRepositoryAnnouncements(identifier: String): List<GitRepositoryEvent> {
-    val announcements by remember(identifier) { LocalCache.observeGitAnnouncements(identifier) }.collectAsStateWithLifecycle(emptyList())
+    // Seeded with what the cache holds now, so the first frame already has it: the flow only
+    // brings what changes after.
+    val initial = remember(identifier) { LocalCache.gitAnnouncements(identifier) }
+    val announcements by remember(identifier) { LocalCache.observeGitAnnouncements(identifier) }.collectAsStateWithLifecycle(initial)
     return announcements
 }
 

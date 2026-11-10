@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.model.nip34Git
 
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.amethyst.commons.nip34Git.gitAnnouncements
+import com.vitorpamplona.amethyst.commons.nip34Git.observeGitAnnouncements
 import com.vitorpamplona.amethyst.commons.nip34Git.observeGitRepositoryActivity
 import com.vitorpamplona.amethyst.commons.nip34Git.status.GitStatuses
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -31,6 +33,7 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -84,7 +87,8 @@ class GitRepositoryCacheTest {
     @Test
     fun theCachesObserversSeeARepositorysActivity() =
         runTest {
-            val cache = EventCache()
+            // The observers scan on this test's clock, not on a real thread advanceUntilIdle can't wait for.
+            val cache = EventCache().apply { observerScanContext = UnconfinedTestDispatcher(testScheduler) }
             val ownerAnnouncement = announcement(owner, coMaintainer)
             cache.justConsume(ownerAnnouncement, null, true)
             val issue = reporter.sign(GitIssueEvent.build("Broken", "it broke", EventHintBundle(ownerAnnouncement), emptyList(), emptyList(), createdAt = 20))
@@ -104,5 +108,23 @@ class GitRepositoryCacheTest {
             cache.justConsume(announcement(coMaintainer, owner), null, true)
             advanceUntilIdle()
             assertTrue(emissions.size > afterStatus, "an announcement emits")
+        }
+
+    @Test
+    fun theSeedIsTheFlowsFirstList() =
+        runTest {
+            val cache = EventCache().apply { observerScanContext = UnconfinedTestDispatcher(testScheduler) }
+            val ownerAnnouncement = announcement(owner, coMaintainer)
+            val coMaintainerAnnouncement = announcement(coMaintainer, owner)
+            cache.justConsume(ownerAnnouncement, null, true)
+            cache.justConsume(coMaintainerAnnouncement, null, true)
+            // A regular event in the same cache, which the announcement read must not walk into.
+            cache.justConsume(reporter.sign(GitIssueEvent.build("Broken", "it broke", EventHintBundle(ownerAnnouncement), emptyList(), emptyList(), createdAt = 20)), null, true)
+
+            val seed = cache.gitAnnouncements("din")
+            assertEquals(setOf(ownerAnnouncement.id, coMaintainerAnnouncement.id), seed.map { it.id }.toSet())
+            // Equal, order included: a card seeded with it doesn't recompute when the flow catches up.
+            assertEquals(cache.observeGitAnnouncements("din").first(), seed)
+            assertEquals(emptyList(), cache.gitAnnouncements("unknown"))
         }
 }
