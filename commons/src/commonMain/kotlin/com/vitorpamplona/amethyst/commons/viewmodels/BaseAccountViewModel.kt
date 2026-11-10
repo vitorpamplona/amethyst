@@ -190,11 +190,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.emitAll
@@ -2356,7 +2358,10 @@ open class BaseAccountViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             feedStates.init()
             // awaits for init to finish before starting to capture new events.
-            LocalCache.live.newEventBundles.collect { newNotes ->
+            // Unbounded: the shared flow drops a slow collector's oldest bundles, and the feeds
+            // would never learn of those notes (Home no longer rebuilds on every resume to cover
+            // for it). Taken off the shared buffer at once; the work queues here instead.
+            LocalCache.live.newEventBundles.buffer(Channel.UNLIMITED).collect { newNotes ->
                 logTime("AccountViewModel newEventBundle Update with ${newNotes.size} new notes") {
                     feedStates.updateFeedsWith(newNotes)
                 }
@@ -2364,7 +2369,7 @@ open class BaseAccountViewModel(
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.deletedEventBundles.collect { newNotes ->
+            LocalCache.live.deletedEventBundles.buffer(Channel.UNLIMITED).collect { newNotes ->
                 logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
                     feedStates.deleteNotes(newNotes)
                 }

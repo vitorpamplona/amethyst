@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.drafts.dal.DraftEventsFeedFilter
 import com.vitorpamplona.amethyst.commons.emojipacks.browse.dal.BrowseEmojiSetsFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
 import com.vitorpamplona.amethyst.commons.feeds.TopNavFilterState
 import com.vitorpamplona.amethyst.commons.followPacks.list.dal.FollowPacksFeedFilter
 import com.vitorpamplona.amethyst.commons.geocaches.dal.GeocacheFindsFeedFilter
@@ -77,6 +78,8 @@ import com.vitorpamplona.amethyst.commons.products.dal.ProductsFeedFilter
 import com.vitorpamplona.amethyst.commons.publicChats.dal.PublicChatsFeedFilter
 import com.vitorpamplona.amethyst.commons.shorts.dal.ShortsFeedFilter
 import com.vitorpamplona.amethyst.commons.softwareapps.dal.SoftwareAppsFeedFilter
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.amethyst.commons.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.commons.webBookmarks.dal.WebBookmarkFeedFilter
 import com.vitorpamplona.amethyst.commons.workouts.dal.WorkoutFeedFilter
@@ -84,12 +87,15 @@ import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -115,9 +121,53 @@ class AccountFeedContentStates(
 
     // Home walks the cache on rebuild: its universe (every type Home shows) is most of the cache,
     // so a candidate set would only copy it. It rebuilds rarely instead.
-    val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(account), scope, LocalCache, lazy = true)
-    val homeReplies = FeedContentState(HomeConversationsFeedFilter(account), scope, LocalCache, lazy = true)
-    val homeEverything = FeedContentState(HomeEverythingFeedFilter(account), scope, LocalCache, lazy = true)
+    // Kept current here (every event bundle, plus rebuilds on mutes, list changes and time-based
+    // visibility below), so returning to Home does not rebuild them: at ~50,000 cached notes that
+    // was four cache walks per return.
+    val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val homeReplies = FeedContentState(HomeConversationsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val homeEverything = FeedContentState(HomeEverythingFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+
+    private fun invalidateHome() {
+        homeNewThreads.invalidateData()
+        homeReplies.invalidateData()
+        homeEverything.invalidateData()
+    }
+
+    // Times (seconds) at which a future-dated note seen by Home becomes visible; see
+    // scheduleHomeTimeBasedRefresh.
+    private val homeVisibleAt = KmpLock()
+    private var homeNextVisibleAt: Long = Long.MAX_VALUE
+    private var homeVisibleJob: Job? = null
+
+    /**
+     * Home hides a note dated more than a minute ahead ([FilterByListParams.isNotInTheFuture]), and
+     * nothing new arrives when its time comes, so Home rebuilds once at the earliest such moment.
+     * Within a day: further ahead is not clock skew.
+     */
+    private fun scheduleHomeTimeBasedRefresh(newNotes: Set<Note>) {
+        val hiddenUntil = TimeUtils.oneMinuteFromNow()
+        val horizon = TimeUtils.now() + TimeUtils.ONE_DAY
+        var earliest = Long.MAX_VALUE
+        newNotes.forEach { note ->
+            val createdAt = note.createdAt() ?: return@forEach
+            if (createdAt in (hiddenUntil + 1)..horizon && createdAt < earliest) earliest = createdAt
+        }
+        if (earliest == Long.MAX_VALUE) return
+
+        homeVisibleAt.withLock {
+            if (earliest >= homeNextVisibleAt) return
+            homeNextVisibleAt = earliest
+            homeVisibleJob?.cancel()
+            homeVisibleJob =
+                scope.launch(Dispatchers.IO) {
+                    // isNotInTheFuture allows a minute of skew; one more second to be past it.
+                    delay((earliest - TimeUtils.oneMinuteFromNow() + 1) * 1000)
+                    homeVisibleAt.withLock { homeNextVisibleAt = Long.MAX_VALUE }
+                    invalidateHome()
+                }
+        }
+    }
 
     val dmKnown = FeedContentState(ChatroomListKnownFeedFilter(account), scope, LocalCache, lazy = true)
     val dmNew = FeedContentState(ChatroomListNewFeedFilter(account), scope, LocalCache, lazy = true)
@@ -404,6 +454,18 @@ class AccountFeedContentStates(
                 }
         }
 
+        // What Home reads besides the events themselves: mutes and spam flags, and the people or
+        // topics the selected list resolves to (following someone adds posts already in the
+        // cache). The feed key only covers the list's name. Settled for 2 s: spam flags come in
+        // bursts.
+        scope.launch(Dispatchers.IO) {
+            @OptIn(FlowPreview::class)
+            combine(account.hiddenUsers.flow, account.liveHomeFollowLists) { hidden, lists -> hidden to lists }
+                .drop(1)
+                .debounce(2_000)
+                .collect { invalidateHome() }
+        }
+
         // Pinning/unpinning a room changes its sort order, moves it between Known and
         // New, and adds/removes the placeholder row of a pinned room with no loaded
         // message — none of which flows through LocalCache. Force a rebuild of both.
@@ -477,6 +539,8 @@ class AccountFeedContentStates(
     }
 
     fun updateFeedsWith(newNotes: Set<Note>) {
+        scheduleHomeTimeBasedRefresh(newNotes)
+
         homeLive.updateFeedWith(newNotes)
         homeNewThreads.updateFeedWith(newNotes)
         homeReplies.updateFeedWith(newNotes)

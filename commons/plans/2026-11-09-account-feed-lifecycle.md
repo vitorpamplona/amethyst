@@ -211,6 +211,33 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
 5. Every account notified on desktop, labelled on both platforms.
 6. Pruner coordination.
 
+## Feed conversion (2026-11-10)
+
+Done on the branch, each step its own commit:
+
+1. **Contract.** `UniverseFeedFilter` (`universe`, `candidates`) and `rebuildFeed`, which logs
+   every rebuild at debug level under `FeedRebuild` (feed, source, notes kept, ms): run a long
+   session with `-Damethyst.debug=true` and read the costs. Notifications use candidates; Home
+   walks the cache (its universe is most of it) and lost its candidate set.
+2. **Screen feeds.** Profile threads/replies/gallery, hashtag and geohash are
+   `ScreenUniverseFeedFilter`s: their `FeedViewModel` keeps the universe as a weak candidate set
+   for the screen's life, and their keys carry the screen as `owner`, so a screen opened again
+   asks the relays from scratch (`feedOwner` on the per-id and per-user managers). `#foto` reopened
+   after a forced GC: 115 survivors, refilled by the relays to 338. Hashtag/geohash now count an
+   addressable event once, at its latest version, instead of once per cached version.
+3. **Home rebuilds.** Home no longer rebuilds on every return (`refreshOnResume = false`, via
+   `InvalidatableContent.onResume`): 0 rebuilds across returns instead of 4 cache walks each, and
+   posts that arrived while away were on top when it came back. What the resume rebuild used to
+   cover is explicit now: the account feeds' event collector buffers without limit (the shared
+   flow drops a slow collector's oldest bundles), mutes/spam flags and the resolved Home list
+   rebuild Home (debounced 2 s), and a future-dated note schedules one rebuild for when it becomes
+   visible. Everything walks the cache once instead of twice (same notes as before, except which
+   of a note and its repost is kept, which was already arbitrary). Not checked in the app: the
+   mute, follow and future-dated triggers (a read-only account cannot mute or follow).
+
+Other screens still rebuild on resume; Discover, Video and the other top-nav feeds can follow
+Home once their own triggers are listed the same way.
+
 ## Open questions
 
 - How many accounts may be warm at once on Android? Measure what one account's feed set retains

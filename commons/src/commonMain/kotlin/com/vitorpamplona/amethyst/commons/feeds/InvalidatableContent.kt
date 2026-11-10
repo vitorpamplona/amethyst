@@ -25,5 +25,11 @@ import androidx.compose.runtime.State
 interface InvalidatableContent {
     fun invalidateData(ignoreIfDoing: Boolean = false)
 
+    /**
+     * The screen showing this came back (opened again, or the app resumed). Rebuilds by default;
+     * content kept current by other means can skip it (see `FeedContentState.refreshOnResume`).
+     */
+    fun onResume() = invalidateData(true)
+
     val isRefreshing: State<Boolean>
 }

@@ -174,4 +174,33 @@ class LazyFeedContentStateTest {
 
         assertEquals(1, filter.scans.get(), "an event for an empty feed rescanned the cache")
     }
+
+    /**
+     * Home kept rebuilding on every return to the screen (four cache walks). A feed that stays
+     * current on its own skips the rebuild once it is built, and is still built if it never was.
+     */
+    @Test
+    fun aFeedKeptCurrentElsewhereDoesNotRebuildOnResume() {
+        val filter = CountingFilter(listOf(a))
+        val state = FeedContentState(filter, scope, StubCache(), refreshOnResume = false)
+
+        state.onResume()
+        waitUntil("the first build") { state.visibleNotes() == listOf(a) }
+        assertEquals(1, filter.scans.get())
+
+        state.onResume()
+        state.onResume()
+        Thread.sleep(800)
+        assertEquals(1, filter.scans.get(), "a built feed rescanned the cache on resume")
+
+        // The default still rebuilds, as every other screen expects.
+        val everyTime = CountingFilter(listOf(a))
+        val other = FeedContentState(everyTime, scope, StubCache())
+        other.onResume()
+        waitUntil("the default build") { other.visibleNotes() == listOf(a) }
+        // ignoreIfDoing: a resume within the bundler's window of the last build is dropped.
+        Thread.sleep(800)
+        other.onResume()
+        waitUntil("the default rebuild") { everyTime.scans.get() == 2 }
+    }
 }

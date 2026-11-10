@@ -228,6 +228,14 @@ class HomeNewThreadFeedFilter(
         return if (note is AddressableNote) kind in addressableKinds else kind < 10000
     }
 
+    /** This feed's check with its parameters built once, for a walk shared with another feed. */
+    fun acceptor(): (Note) -> Boolean {
+        val filterParams = buildFilterParams(account)
+        val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
+        val latestRsvps = lazy(LazyThreadSafetyMode.NONE) { cachedRsvpAnswers() }
+        return { note -> acceptableEvent(note, filterParams, disabledKinds, latestRsvps) }
+    }
+
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     /**

@@ -74,6 +74,13 @@ class HomeConversationsFeedFilter(
         )
     }
 
+    /** This feed's check with its parameters built once, for a walk shared with another feed. */
+    fun acceptor(): (Note) -> Boolean {
+        val filterParams = buildFilterParams(account)
+        val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
+        return { note -> acceptableEvent(note, filterParams, disabledKinds) }
+    }
+
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     fun buildFilterParams(account: Account): FilterByListParams =

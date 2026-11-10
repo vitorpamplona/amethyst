@@ -56,6 +56,13 @@ class FeedContentState(
      * opens; a screen's own feed is wanted from the start and stays eager.
      */
     lazy: Boolean = false,
+    /**
+     * Whether coming back to the screen rebuilds the feed. False for feeds that stay current on
+     * their own: every new event reaches them, and their owner rebuilds them when something they
+     * read changes (mutes, the selected list, time-based visibility). Such a feed is only built
+     * on resume if it has never been built.
+     */
+    private val refreshOnResume: Boolean = true,
 ) : InvalidatableContent {
     private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
@@ -287,6 +294,12 @@ class FeedContentState(
                 refreshSuspended()
             }
         }
+    }
+
+    override fun onResume() {
+        if (refreshOnResume) return invalidateData(true)
+        val current = _feedContent.value
+        if (current !is FeedState.Loaded && current !is FeedState.Empty) invalidateData(true)
     }
 
     fun checkKeysInvalidateDataAndSendToTop() {
