@@ -157,6 +157,10 @@ kotlin {
                     implementation(libs.okhttp)
                     implementation(libs.okhttpCoroutines)
 
+                    // HTML parser behind the front page's resolve + boundary check (frontpage/):
+                    // the same parser the Nostr Observer validates with. MIT.
+                    implementation(libs.jsoup)
+
                     // Chess engine behind ChessEngine's JVM/Android actual: move validation and
                     // legal move generation for live NIP-64 games. Moved here from quartz, whose
                     // protocol code only carries PGN/SAN.

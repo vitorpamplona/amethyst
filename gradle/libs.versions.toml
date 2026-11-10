@@ -112,6 +112,7 @@ navigation3 = "1.2.0"
 jetbrainsNavigationevent = "1.1.0"
 lifecycleNavigation3 = "2.11.0"
 okhttp = "5.5.1"
+jsoup = "1.21.1"
 osmdroid = "6.1.20"
 runner = "1.7.0"
 # The JNI bindings must match the secp256k1-kmp version quartz is built against (its secp256k1Kmp).
@@ -293,6 +294,7 @@ quic = { module = "com.vitorpamplona.quic:quic", version.ref = "quicKmp" }
 kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }
+jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktor" }
 ktor-server-cio = { group = "io.ktor", name = "ktor-server-cio", version.ref = "ktor" }
