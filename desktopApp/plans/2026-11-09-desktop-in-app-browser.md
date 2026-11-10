@@ -19,9 +19,12 @@ The desktop already runs Chromium (JCEF) for napplets and nSites, with NIP-07 fo
    (`Route.NostrApp`, below). The navigation layout setting places each like any other screen: on
    the stack, in a deck column, in a tab or in a window. `AppLauncher.launchUrl`, favorites and the
    note cards' Open open them; links in notes still go to the system browser.
-2. **Open:** Chromium out of the process that holds the keys. JCEF runs with `no_sandbox`
+2. **Open:** Chromium's renderer sandbox. JCEF runs with `no_sandbox`
    (`commons/plans/2026-10-31-embed-security-review.md`, Critical), and a browser shows pages from
-   anywhere, so this matters more now than it did for napplets alone.
+   anywhere, so this matters more now than it did for napplets alone. The spike
+   (`2026-11-10-chromium-sandbox.md`) found that the sandbox, not another process, is the boundary:
+   one hard-coded line in JCEF keeps it off; flipped, it works on Linux (measured) and very likely
+   macOS, while Windows needs Chromium out of `java.exe`.
 3. **Open, after 2:** an "Open in Amethyst browser" action on links, or a setting to make the in-app
    browser the default for every link.
 
