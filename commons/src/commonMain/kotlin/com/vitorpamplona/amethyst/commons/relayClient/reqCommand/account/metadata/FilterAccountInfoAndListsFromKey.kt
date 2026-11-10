@@ -57,6 +57,7 @@ import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.nipXXAgentKeys.AgentKeyEvent
 
 val AccountInfoAndListsFromKeyKinds =
     listOf(
@@ -107,6 +108,9 @@ val AccountInfoAndListsFromKeyKinds2 =
         // sign-in resolves the wallet before the wallet screen is opened.
         CashuWalletEvent.KIND,
         NutzapInfoEvent.KIND,
+        // The user's AI agent keys (kind 12000), so a fresh sign-in can run AI tasks with the
+        // key set up in another app.
+        AgentKeyEvent.KIND,
     )
 
 val AmethystMetadataKinds = listOf(AppSpecificDataEvent.KIND)

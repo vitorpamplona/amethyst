@@ -233,6 +233,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.vanish.Vanis
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.scheduledposts.ScheduledPostsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AccentColorSettingsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AgentKeysSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AllSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AudioVisualizerSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.BlockedUsersScreen
@@ -479,6 +480,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.HomeTabsSettings> { HomeTabsSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileUiSettings> { ProfileUiSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SearchEngineSettings> { SearchEngineSettingsScreen(accountViewModel, nav) }
+    composableFromEnd<Route.AgentKeysSettings> { AgentKeysSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.VideoPlayerSettings> { VideoPlayerSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.CallSettings> { CallSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.NotificationSettings> { NotificationSettingsScreen(accountViewModel, nav) }

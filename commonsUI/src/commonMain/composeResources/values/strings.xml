@@ -9467,4 +9467,33 @@
     <string name="media_kind_audio">Audio</string>
     <string name="media_kind_pdf">PDF</string>
     <string name="media_type_and_size">%1$s · %2$s</string>
+    <string name="agent_keys_title">AI agent</string>
+    <string name="agent_keys_search_keywords" translatable="false">ai, agent, llm, model, api key, openrouter, anthropic, claude, openai, chatgpt, gemini, ollama</string>
+    <string name="agent_keys_explanation">Apps you sign into with this account can use this key to run AI tasks for you. It is encrypted so only you can read it, and you pay the provider for what the apps use.</string>
+    <string name="agent_keys_spending_cap_tip">Use a key with a spending limit: every app you sign into can spend from it.</string>
+    <string name="agent_keys_empty">No AI provider set up yet.</string>
+    <string name="agent_keys_preferred">Preferred</string>
+    <string name="agent_keys_make_preferred">Use this one</string>
+    <string name="agent_keys_remove_title">Remove this key?</string>
+    <string name="agent_keys_remove_body">Apps will stop using %1$s. The key keeps working at the provider until you revoke it there.</string>
+    <string name="agent_keys_no_key">No key</string>
+    <string name="agent_keys_add_title">Add a provider</string>
+    <string name="agent_keys_provider">Provider</string>
+    <string name="agent_keys_url">API URL</string>
+    <string name="agent_keys_url_invalid">Enter an http or https URL</string>
+    <string name="agent_keys_key">API key</string>
+    <string name="agent_keys_key_optional">API key (optional)</string>
+    <string name="agent_keys_get_key_at">Get a key at %1$s</string>
+    <string name="agent_keys_local_hint">Runs on your own computer, so it only works on devices that can reach it.</string>
+    <string name="agent_keys_test">Test</string>
+    <string name="agent_keys_testing">Testing…</string>
+    <string name="agent_keys_test_ok">The key works.</string>
+    <string name="agent_keys_test_rejected">The provider rejected this key (%1$d).</string>
+    <string name="agent_keys_test_failed">The provider answered with an error (%1$d).</string>
+    <string name="agent_keys_test_unreachable">Couldn't reach the provider. Check the URL and your connection.</string>
+    <string name="agent_keys_test_unsupported">Testing a key isn't available on this device yet.</string>
+    <plurals name="agent_keys_test_ok_models">
+        <item quantity="one">The key works: %1$d model available.</item>
+        <item quantity="other">The key works: %1$d models available.</item>
+    </plurals>
 </resources>

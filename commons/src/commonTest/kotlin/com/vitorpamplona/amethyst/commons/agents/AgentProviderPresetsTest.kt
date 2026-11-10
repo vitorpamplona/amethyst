@@ -1,0 +1,69 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.agents
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class AgentProviderPresetsTest {
+    @Test
+    fun everyPresetButCustomHasAValidUrl() {
+        AgentProviderPresets.ALL.filter { it != AgentProviderPresets.CUSTOM }.forEach {
+            assertTrue(AgentProviderPresets.isValidUrl(it.url), it.id)
+        }
+        assertEquals(
+            AgentProviderPresets.ALL.size,
+            AgentProviderPresets.ALL
+                .map { it.id }
+                .toSet()
+                .size,
+        )
+    }
+
+    @Test
+    fun aSavedUrlFindsItsPreset() {
+        assertEquals("OpenRouter", AgentProviderPresets.displayName("https://openrouter.ai/api/v1/"))
+        assertEquals("Anthropic", AgentProviderPresets.displayName("HTTPS://api.anthropic.com/v1"))
+        assertEquals("my.box:8080", AgentProviderPresets.displayName("http://my.box:8080/v1"))
+        assertNull(AgentProviderPresets.forUrl("https://example.com/v1"))
+    }
+
+    @Test
+    fun urlValidation() {
+        assertTrue(AgentProviderPresets.isValidUrl("http://localhost:11434/v1"))
+        assertFalse(AgentProviderPresets.isValidUrl("openrouter.ai/api/v1"))
+        assertFalse(AgentProviderPresets.isValidUrl("ftp://x.com"))
+        assertFalse(AgentProviderPresets.isValidUrl("https://"))
+        assertFalse(AgentProviderPresets.isValidUrl("https://a b.com"))
+    }
+
+    @Test
+    fun maskingNeverShowsTheKey() {
+        assertEquals("sk-or-v1-…a1b2", AgentProviderPresets.maskKey("sk-or-v1-0123456789abcdefa1b2"))
+        assertEquals("sk-…cdef", AgentProviderPresets.maskKey("sk-0123456789abcdef"))
+        assertEquals("AIz…wxyz", AgentProviderPresets.maskKey("AIzaSyD0123456789abcdefwxyz"))
+        assertEquals("…ab", AgentProviderPresets.maskKey("short-ab"))
+        assertEquals("", AgentProviderPresets.maskKey(""))
+    }
+}

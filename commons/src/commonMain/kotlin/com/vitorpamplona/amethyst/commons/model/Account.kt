@@ -154,6 +154,7 @@ import com.vitorpamplona.amethyst.commons.model.nip89AppHandlers.AppRecommendati
 import com.vitorpamplona.amethyst.commons.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
+import com.vitorpamplona.amethyst.commons.model.nipXXAgentKeys.AgentKeyState
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
@@ -374,6 +375,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTarget
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipXXAgentKeys.tags.AgentKeyTag
 import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
@@ -1042,6 +1044,9 @@ class Account(
             scope = scope,
             backend = { cache.onchainBackend },
         )
+
+    /** The user's AI agent keys (kind 12000), first one preferred. */
+    val agentKeys = AgentKeyState(signer, cache, scope)
 
     val cashuWalletState =
         CashuWalletState(
@@ -3766,6 +3771,19 @@ class Account(
         relay: NormalizedRelayUrl,
         challenge: String,
     ): RelayAuthEvent = RelayAuthEvent.create(relay, challenge, signer)
+
+    /** Saves [key] as the preferred AI agent key (adding it if new) and publishes the event. */
+    suspend fun addAgentKey(key: AgentKeyTag) {
+        sendMyPublicAndPrivateOutbox(agentKeys.add(key))
+    }
+
+    suspend fun setPreferredAgentKey(key: AgentKeyTag) {
+        agentKeys.setPreferred(key)?.let { sendMyPublicAndPrivateOutbox(it) }
+    }
+
+    suspend fun removeAgentKey(key: AgentKeyTag) {
+        agentKeys.remove(key)?.let { sendMyPublicAndPrivateOutbox(it) }
+    }
 
     suspend fun hideWord(word: String) {
         sendMyPublicAndPrivateOutbox(muteList.hideWord(word))

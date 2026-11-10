@@ -958,6 +958,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXAgentKeys.AgentKeyEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
@@ -2960,6 +2961,8 @@ internal fun RenderNoteRow(
             is ManageEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Settings)
             // NIP-60 Cashu wallet
             is CashuWalletEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.AccountBalanceWallet)
+            // AI agent keys (kind 12000): encrypted to the author, never drawn
+            is AgentKeyEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Key)
             is CashuTokenEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Paid)
             is CashuSpendingHistoryEvent -> RenderCashuSpendingHistory(baseNote, accountViewModel, nav)
             is CashuMintQuoteEvent -> RenderCashuMintQuote(baseNote)

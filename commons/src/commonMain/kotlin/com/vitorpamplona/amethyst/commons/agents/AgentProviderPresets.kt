@@ -1,0 +1,99 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.agents
+
+/**
+ * A provider the setup screen offers. Only [url] reaches the event; the rest is UI.
+ * Every one serves the OpenAI Chat Completions format at `{url}/chat/completions`.
+ */
+data class AgentProviderPreset(
+    val id: String,
+    val name: String,
+    val url: String,
+    /** Local runners take no key. */
+    val needsKey: Boolean = true,
+    /** Where the user gets a key, shown as a hint. */
+    val keyPage: String? = null,
+    /** Runs on the user's own machine: only reachable from that device. */
+    val isLocal: Boolean = false,
+)
+
+object AgentProviderPresets {
+    val OPENROUTER = AgentProviderPreset("openrouter", "OpenRouter", "https://openrouter.ai/api/v1", keyPage = "openrouter.ai/keys")
+    val CUSTOM = AgentProviderPreset("custom", "Custom", "", needsKey = false)
+
+    /** OpenRouter first: one key reaches every major model and can be capped. Custom last. */
+    val ALL =
+        listOf(
+            OPENROUTER,
+            AgentProviderPreset("anthropic", "Anthropic", "https://api.anthropic.com/v1", keyPage = "console.anthropic.com"),
+            AgentProviderPreset("openai", "OpenAI", "https://api.openai.com/v1", keyPage = "platform.openai.com/api-keys"),
+            AgentProviderPreset("google", "Google Gemini", "https://generativelanguage.googleapis.com/v1beta/openai", keyPage = "aistudio.google.com/apikey"),
+            AgentProviderPreset("routstr", "Routstr", "https://api.routstr.com/v1", keyPage = "routstr.com"),
+            AgentProviderPreset("ppq", "PPQ.ai", "https://api.ppq.ai/v1", keyPage = "ppq.ai"),
+            AgentProviderPreset("venice", "Venice", "https://api.venice.ai/api/v1", keyPage = "venice.ai"),
+            AgentProviderPreset("nearai", "NEAR AI", "https://cloud-api.near.ai/v1", keyPage = "cloud.near.ai"),
+            AgentProviderPreset("mistral", "Mistral", "https://api.mistral.ai/v1", keyPage = "console.mistral.ai"),
+            AgentProviderPreset("groq", "Groq", "https://api.groq.com/openai/v1", keyPage = "console.groq.com/keys"),
+            AgentProviderPreset("xai", "xAI", "https://api.x.ai/v1", keyPage = "console.x.ai"),
+            AgentProviderPreset("deepseek", "DeepSeek", "https://api.deepseek.com/v1", keyPage = "platform.deepseek.com"),
+            AgentProviderPreset("together", "Together", "https://api.together.xyz/v1", keyPage = "api.together.ai"),
+            AgentProviderPreset("fireworks", "Fireworks", "https://api.fireworks.ai/inference/v1", keyPage = "fireworks.ai"),
+            AgentProviderPreset("cerebras", "Cerebras", "https://api.cerebras.ai/v1", keyPage = "cloud.cerebras.ai"),
+            AgentProviderPreset("ollama", "Ollama", "http://localhost:11434/v1", needsKey = false, isLocal = true),
+            AgentProviderPreset("lmstudio", "LM Studio", "http://localhost:1234/v1", needsKey = false, isLocal = true),
+            CUSTOM,
+        )
+
+    /** The preset whose URL this is, ignoring a trailing slash and case; null for a custom endpoint. */
+    fun forUrl(url: String): AgentProviderPreset? {
+        val normalized = normalizeUrl(url)
+        return ALL.firstOrNull { it.url.isNotEmpty() && normalizeUrl(it.url) == normalized }
+    }
+
+    /** A name for a saved key: the preset's, or the URL's host. */
+    fun displayName(url: String): String = forUrl(url)?.name ?: hostOf(url) ?: url
+
+    fun normalizeUrl(url: String) = url.trim().trimEnd('/').lowercase()
+
+    fun hostOf(url: String): String? =
+        url
+            .trim()
+            .substringAfter("://", "")
+            .substringBefore('/')
+            .substringBefore('?')
+            .ifBlank { null }
+
+    /** An http(s) URL with a host; the only shape the event accepts from this screen. */
+    fun isValidUrl(url: String): Boolean {
+        val trimmed = url.trim()
+        val scheme = trimmed.substringBefore("://", "").lowercase()
+        return (scheme == "https" || scheme == "http") && hostOf(trimmed) != null && trimmed.none { it.isWhitespace() }
+    }
+
+    /** `sk-or-…a1b2`: enough to tell keys apart, never enough to use one. */
+    fun maskKey(key: String): String {
+        if (key.isEmpty()) return ""
+        if (key.length <= 10) return "…" + key.takeLast(2)
+        val prefix = key.substringBeforeLast('-', "").let { if (it.isNotEmpty() && it.length <= 8) "$it-" else key.take(3) }
+        return prefix + "…" + key.takeLast(4)
+    }
+}
