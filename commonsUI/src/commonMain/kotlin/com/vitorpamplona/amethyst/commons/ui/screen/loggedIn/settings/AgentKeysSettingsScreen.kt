@@ -22,24 +22,31 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -47,22 +54,26 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,6 +85,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -91,8 +104,10 @@ import com.vitorpamplona.amethyst.commons.agents.OpenRouterConnectResult
 import com.vitorpamplona.amethyst.commons.agents.connectOpenRouter
 import com.vitorpamplona.amethyst.commons.agents.probeAgentKey
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.action_paste
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_add
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_budget_hint
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_cap_tip
@@ -103,8 +118,8 @@ import com.vitorpamplona.amethyst.commons.resources.agent_keys_connect_openroute
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_custom
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_failed
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_get_key
-import com.vitorpamplona.amethyst.commons.resources.agent_keys_key
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_key_optional
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_key_placeholder
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_local
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_make_preferred
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_openrouter_denied
@@ -138,6 +153,7 @@ import com.vitorpamplona.amethyst.commons.resources.hide_password
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.resources.show_password
+import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -367,6 +383,7 @@ private fun AddAgentKey(
 ) {
     val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
+    val clipboard = LocalClipboard.current
     val donePageText = stringRes(Res.string.agent_keys_openrouter_done_page)
 
     var preset by remember { mutableStateOf<AgentProviderPreset?>(null) }
@@ -474,43 +491,66 @@ private fun AddAgentKey(
                         }
 
                         if (selected == AgentProviderPresets.CUSTOM) {
-                            OutlinedTextField(
+                            PillField(
                                 value = url,
                                 onValueChange = { url = it },
-                                label = { Text(stringRes(Res.string.agent_keys_url)) },
-                                singleLine = true,
-                                isError = url.isNotBlank() && !urlValid,
-                                supportingText = if (url.isNotBlank() && !urlValid) urlInvalidText else null,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = stringRes(Res.string.agent_keys_url),
+                                leading = MaterialSymbols.Link,
+                                tone = if (url.isNotBlank() && !urlValid) FieldTone.Bad else FieldTone.Neutral,
+                                keyboardType = KeyboardType.Uri,
                             )
+                            if (url.isNotBlank() && !urlValid) FieldCaption(FieldTone.Bad) { urlInvalidText() }
                         }
 
-                        OutlinedTextField(
-                            value = key,
-                            onValueChange = {
-                                key = it
-                                connectProblem = null
-                            },
-                            label = { Text(stringRes(if (selected.needsKey) Res.string.agent_keys_key else Res.string.agent_keys_key_optional)) },
-                            singleLine = true,
-                            visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
-                            trailingIcon = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                        val tone =
+                            when {
+                                testing -> FieldTone.Neutral
+                                result is AgentKeyProbeResult.Ok && (result as AgentKeyProbeResult.Ok).keyChecked -> FieldTone.Good
+                                result is AgentKeyProbeResult.Rejected ||
+                                    result is AgentKeyProbeResult.Failed ||
+                                    result is AgentKeyProbeResult.Unreachable -> FieldTone.Bad
+                                else -> FieldTone.Neutral
+                            }
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            PillField(
+                                value = key,
+                                onValueChange = {
+                                    key = it
+                                    connectProblem = null
+                                },
+                                placeholder = stringRes(if (selected.needsKey) Res.string.agent_keys_key_placeholder else Res.string.agent_keys_key_optional),
+                                leading = MaterialSymbols.Key,
+                                tone = tone,
+                                keyboardType = KeyboardType.Password,
+                                visualTransformation = if (showKey || key.isEmpty()) VisualTransformation.None else PasswordVisualTransformation(),
+                            ) {
+                                if (key.isEmpty()) {
+                                    // Keys are long and pasted, never typed: make that one tap.
+                                    FilledTonalButton(
+                                        onClick = { scope.launch { clipboard.getText()?.trim()?.let { key = it } } },
+                                        contentPadding = PaddingValues(horizontal = 12.dp),
+                                        modifier = Modifier.height(36.dp),
+                                    ) {
+                                        Icon(MaterialSymbols.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(stringRes(Res.string.action_paste), style = MaterialTheme.typography.labelLarge)
+                                    }
+                                } else {
                                     CheckStatusIcon(testing, result)
-                                    IconButton(onClick = { showKey = !showKey }) {
+                                    IconButton(onClick = { showKey = !showKey }, modifier = Modifier.size(40.dp)) {
                                         Icon(
                                             if (showKey) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
                                             contentDescription = stringRes(if (showKey) Res.string.hide_password else Res.string.show_password),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(20.dp),
                                         )
                                     }
                                 }
-                            },
-                            supportingText = checkCaption(testing, result, budgetHint = selected.needsKey),
-                            isError = result is AgentKeyProbeResult.Rejected,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                            }
+                            checkCaption(testing, result, budgetHint = selected.needsKey)?.let { caption ->
+                                FieldCaption(tone) { caption() }
+                            }
+                        }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             when {
@@ -550,6 +590,94 @@ private fun AddAgentKey(
 }
 
 private val urlInvalidText: @Composable () -> Unit = { Text(stringRes(Res.string.agent_keys_url_invalid)) }
+
+private enum class FieldTone { Neutral, Good, Bad }
+
+private val GoodGreen = Color(0xFF22C55E)
+
+/**
+ * A soft filled pill instead of an outlined box: it sits inside a rounded card without a
+ * second frame, and its border is the status: accent on focus, green when the key works,
+ * red when it doesn't.
+ */
+@Composable
+private fun PillField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    leading: MaterialSymbol,
+    tone: FieldTone,
+    keyboardType: KeyboardType,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    trailing: @Composable RowScope.() -> Unit = {},
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val scheme = MaterialTheme.colorScheme
+    val border by animateColorAsState(
+        when {
+            tone == FieldTone.Bad -> scheme.error
+            tone == FieldTone.Good -> GoodGreen
+            focused -> scheme.primary
+            else -> Color.Transparent
+        },
+        label = "pillBorder",
+    )
+    val shape = RoundedCornerShape(16.dp)
+
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace, color = scheme.onSurface),
+        cursorBrush = SolidColor(scheme.primary),
+        visualTransformation = visualTransformation,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, autoCorrectEnabled = false),
+        interactionSource = interaction,
+        modifier = Modifier.fillMaxWidth(),
+        decorationBox = { inner ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 54.dp)
+                    .clip(shape)
+                    .background(scheme.surfaceContainerHighest)
+                    .border(1.5.dp, border, shape)
+                    .padding(start = 16.dp, end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(leading, contentDescription = null, tint = if (focused) scheme.primary else scheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(12.dp))
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    if (value.isEmpty()) {
+                        Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = scheme.onSurfaceVariant.copy(alpha = 0.7f), maxLines = 1)
+                    }
+                    inner()
+                }
+                Spacer(Modifier.width(8.dp))
+                trailing()
+            }
+        },
+    )
+}
+
+@Composable
+private fun FieldCaption(
+    tone: FieldTone,
+    content: @Composable () -> Unit,
+) {
+    val color =
+        when (tone) {
+            FieldTone.Good -> GoodGreen
+            FieldTone.Bad -> MaterialTheme.colorScheme.error
+            FieldTone.Neutral -> MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    Box(Modifier.padding(start = 16.dp)) {
+        CompositionLocalProvider(LocalContentColor provides color) {
+            ProvideTextStyle(MaterialTheme.typography.bodySmall) { content() }
+        }
+    }
+}
 
 @Composable
 private fun ConnectOpenRouterButton(
@@ -686,7 +814,7 @@ private fun CheckStatusIcon(
             when {
                 busy -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 outcome is AgentKeyProbeResult.Ok && outcome.keyChecked ->
-                    Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = Color(0xFF22C55E), filled = true)
+                    Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = GoodGreen, filled = true)
                 outcome is AgentKeyProbeResult.Ok || outcome is AgentKeyProbeResult.Unsupported ->
                     Icon(MaterialSymbols.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 outcome != null -> Icon(MaterialSymbols.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error, filled = true)

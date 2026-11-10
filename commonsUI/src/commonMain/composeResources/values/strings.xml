@@ -9487,7 +9487,7 @@
     <string name="agent_keys_runs_locally">Runs on your computer</string>
     <string name="agent_keys_url">API URL</string>
     <string name="agent_keys_url_invalid">Not a valid URL</string>
-    <string name="agent_keys_key">API key</string>
+    <string name="agent_keys_key_placeholder">Paste your API key</string>
     <string name="agent_keys_key_optional">API key (optional)</string>
     <string name="agent_keys_get_key">Get a key</string>
     <string name="agent_keys_preferred">Preferred</string>
