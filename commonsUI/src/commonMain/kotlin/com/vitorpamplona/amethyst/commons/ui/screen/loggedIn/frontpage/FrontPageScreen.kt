@@ -39,6 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,14 +48,19 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,26 +74,42 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageModelMemory
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageClock
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageGate
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageModels
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageRun
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSchedule
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduler
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageViewModel
 import com.vitorpamplona.amethyst.commons.frontpage.MASTHEAD
 import com.vitorpamplona.amethyst.commons.frontpage.PrintResult
 import com.vitorpamplona.amethyst.commons.frontpage.PrintStep
+import com.vitorpamplona.amethyst.commons.frontpage.SavedEdition
+import com.vitorpamplona.amethyst.commons.frontpage.ShownEdition
 import com.vitorpamplona.amethyst.commons.frontpage.Violation
 import com.vitorpamplona.amethyst.commons.frontpage.WriterFailure
+import com.vitorpamplona.amethyst.commons.frontpage.dayOfWeek
+import com.vitorpamplona.amethyst.commons.frontpage.formatUsd
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.dlist_day_friday
+import com.vitorpamplona.amethyst.commons.resources.dlist_day_monday
+import com.vitorpamplona.amethyst.commons.resources.dlist_day_saturday
+import com.vitorpamplona.amethyst.commons.resources.dlist_day_sunday
+import com.vitorpamplona.amethyst.commons.resources.dlist_day_thursday
+import com.vitorpamplona.amethyst.commons.resources.dlist_day_tuesday
+import com.vitorpamplona.amethyst.commons.resources.dlist_day_wednesday
 import com.vitorpamplona.amethyst.commons.resources.front_page_cannot_show
 import com.vitorpamplona.amethyst.commons.resources.front_page_changes_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_connect
+import com.vitorpamplona.amethyst.commons.resources.front_page_cost
 import com.vitorpamplona.amethyst.commons.resources.front_page_download
 import com.vitorpamplona.amethyst.commons.resources.front_page_edition
+import com.vitorpamplona.amethyst.commons.resources.front_page_every_morning
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_credit
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_empty
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_http
@@ -98,12 +120,15 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_fail_unreachable
 import com.vitorpamplona.amethyst.commons.resources.front_page_fixed_once
 import com.vitorpamplona.amethyst.commons.resources.front_page_model
 import com.vitorpamplona.amethyst.commons.resources.front_page_model_id
+import com.vitorpamplona.amethyst.commons.resources.front_page_needs_device_key
 import com.vitorpamplona.amethyst.commons.resources.front_page_no_key
 import com.vitorpamplona.amethyst.commons.resources.front_page_no_lens
 import com.vitorpamplona.amethyst.commons.resources.front_page_not_ready
+import com.vitorpamplona.amethyst.commons.resources.front_page_pick_time
 import com.vitorpamplona.amethyst.commons.resources.front_page_posts_read
 import com.vitorpamplona.amethyst.commons.resources.front_page_print
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_again
+import com.vitorpamplona.amethyst.commons.resources.front_page_print_estimate
 import com.vitorpamplona.amethyst.commons.resources.front_page_quotes_verified
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_body
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_title
@@ -117,15 +142,19 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_tagline
 import com.vitorpamplona.amethyst.commons.resources.front_page_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_tokens
 import com.vitorpamplona.amethyst.commons.resources.front_page_unsupported
+import com.vitorpamplona.amethyst.commons.resources.today
+import com.vitorpamplona.amethyst.commons.resources.yesterday
 import com.vitorpamplona.amethyst.commons.ui.components.rememberFileBytesAccess
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.note.rememberIs24HourClock
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 
@@ -134,41 +163,76 @@ private val Newsprint = Color(0xFFFAF8F3)
 
 /**
  * Your front page: the Nostr Observer's daily paper, written by the reader's own AI key from the
- * last 24 hours of their web of trust, checked, and shown on the same sandboxed surface as an nSite.
- * Nothing is stored or published.
+ * last 24 hours of their web of trust, checked, kept on the device for a week, and shown on the
+ * same sandboxed surface as an nSite. The print belongs to the account, not to this screen.
  */
 @Composable
 fun FrontPageScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
+    day: String? = null,
 ) {
-    val appStores = LocalAppServices.current.appStores
-    val viewModel =
-        rememberViewModel(key = "front-page:${accountViewModel.account.signer.pubKey}") {
-            FrontPageViewModel(accountViewModel.account, accountViewModel.httpClientBuilder, DataStoreFrontPageModelMemory(appStores))
+    val services = LocalAppServices.current
+    val printers = services.frontPagePrinters
+    Scaffold(topBar = { TopBarWithBackButton(stringRes(Res.string.front_page_title), nav) }) { padding ->
+        if (printers == null) {
+            Box(Modifier.padding(padding).padding(16.dp)) { Notice(stringRes(Res.string.front_page_unsupported)) }
+        } else {
+            FrontPageBody(accountViewModel, nav, day, printers, services.frontPageScheduler, Modifier.padding(padding))
         }
+    }
+}
+
+@Composable
+private fun FrontPageBody(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    day: String?,
+    printers: FrontPagePrinters,
+    scheduler: FrontPageScheduler,
+    modifier: Modifier,
+) {
+    val account = accountViewModel.account
+    val printer = printers.of(account)
+    val viewModel =
+        rememberViewModel(key = "front-page:${account.signer.pubKey}") {
+            FrontPageViewModel(account, accountViewModel.httpClientBuilder, printer, printers.schedules, scheduler, day)
+        }
+    // While this screen shows the paper, a finished print needs no notification.
+    DisposableEffect(printer) {
+        val release = printer.watch()
+        onDispose { release() }
+    }
     val gate by viewModel.gate.collectAsStateWithLifecycle()
     val models by viewModel.models.collectAsStateWithLifecycle()
     val run by viewModel.run.collectAsStateWithLifecycle()
+    val editions by viewModel.editions.collectAsStateWithLifecycle()
+    val shown by viewModel.shown.collectAsStateWithLifecycle()
+    val estimate by viewModel.estimate.collectAsStateWithLifecycle()
+    val schedule by viewModel.schedule.collectAsStateWithLifecycle()
 
-    Scaffold(topBar = { TopBarWithBackButton(stringRes(Res.string.front_page_title), nav) }) { padding ->
-        Column(
-            Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Hero(gate, models, run, onModel = viewModel::selectModel, onPrint = viewModel::print, onCancel = viewModel::cancel)
-            when (gate) {
-                FrontPageGate.NO_KEY -> GateCard(Res.string.front_page_no_key, Res.string.front_page_connect) { nav.nav(Route.AgentKeysSettings) }
-                FrontPageGate.NO_LENS -> GateCard(Res.string.front_page_no_lens, Res.string.front_page_set_up) { nav.nav(Route.WebOfTrust) }
-                FrontPageGate.UNSUPPORTED -> Notice(stringRes(Res.string.front_page_unsupported))
-                FrontPageGate.READY -> RunBody(run)
+    Column(
+        modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Hero(gate, models, run, estimate, hasEditions = editions.isNotEmpty(), onModel = viewModel::selectModel, onPrint = viewModel::print, onCancel = viewModel::cancel)
+        when (gate) {
+            FrontPageGate.NO_KEY -> GateCard(Res.string.front_page_no_key, Res.string.front_page_connect) { nav.nav(Route.AgentKeysSettings) }
+            FrontPageGate.NO_LENS -> GateCard(Res.string.front_page_no_lens, Res.string.front_page_set_up) { nav.nav(Route.WebOfTrust) }
+            FrontPageGate.UNSUPPORTED -> Notice(stringRes(Res.string.front_page_unsupported))
+            FrontPageGate.READY -> {
+                ScheduleCard(schedule, viewModel.printsUnattended, viewModel::setSchedule)
+                RunStatus(run)
             }
-            Spacer(Modifier.height(24.dp))
         }
+        if (editions.isNotEmpty()) {
+            History(editions, shown?.edition?.day, viewModel::selectDay)
+            shown?.let { Edition(it) }
+        }
+        Spacer(Modifier.height(24.dp))
     }
 }
 
@@ -178,6 +242,8 @@ private fun Hero(
     gate: FrontPageGate,
     models: FrontPageModels,
     run: FrontPageRun,
+    estimate: Double?,
+    hasEditions: Boolean,
     onModel: (String) -> Unit,
     onPrint: () -> Unit,
     onCancel: () -> Unit,
@@ -219,7 +285,12 @@ private fun Hero(
                             ) {
                                 Icon(MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(20.dp), filled = true)
                                 Spacer(Modifier.width(8.dp))
-                                Text(stringRes(if (run is FrontPageRun.Done) Res.string.front_page_print_again else Res.string.front_page_print), style = MaterialTheme.typography.titleSmall)
+                                val label = stringRes(if (hasEditions) Res.string.front_page_print_again else Res.string.front_page_print)
+                                // The reader pays for this: say roughly what before they press it (NIP-FA).
+                                Text(
+                                    if (estimate != null) stringRes(Res.string.front_page_print_estimate, label, formatUsd(estimate)) else label,
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
                             }
                         }
                     }
@@ -276,6 +347,56 @@ private fun ModelPicker(
     }
 }
 
+private fun hhmm(
+    hour: Int,
+    minute: Int,
+) = hour.toString().padStart(2, '0') + ":" + minute.toString().padStart(2, '0')
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ScheduleCard(
+    schedule: FrontPageSchedule,
+    unattended: Boolean,
+    onChange: (FrontPageSchedule) -> Unit,
+) {
+    var picking by remember { mutableStateOf(false) }
+    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(MaterialSymbols.Schedule, contentDescription = null, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(12.dp))
+                Text(stringRes(Res.string.front_page_every_morning), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                TextButton(onClick = { picking = true }) { Text(hhmm(schedule.hour, schedule.minute), style = MaterialTheme.typography.titleMedium) }
+                Switch(checked = schedule.enabled, onCheckedChange = { onChange(schedule.copy(enabled = it)) })
+            }
+            // Amber and remote signers need the reader to decrypt the AI key: say so, in few words.
+            if (!unattended) {
+                Text(
+                    stringRes(Res.string.front_page_needs_device_key),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 34.dp, bottom = 4.dp),
+                )
+            }
+        }
+    }
+    if (picking) {
+        val state = rememberTimePickerState(initialHour = schedule.hour, initialMinute = schedule.minute, is24Hour = rememberIs24HourClock())
+        AlertDialog(
+            onDismissRequest = { picking = false },
+            title = { Text(stringRes(Res.string.front_page_pick_time)) },
+            text = { TimePicker(state = state) },
+            confirmButton = {
+                TextButton(onClick = {
+                    picking = false
+                    onChange(schedule.copy(hour = state.hour, minute = state.minute, enabled = true))
+                }) { Text(hhmm(state.hour, state.minute)) }
+            },
+            dismissButton = { TextButton(onClick = { picking = false }) { Text(stringRes(Res.string.cancel)) } },
+        )
+    }
+}
+
 @Composable
 private fun GateCard(
     message: StringResource,
@@ -314,8 +435,9 @@ private fun grouped(n: Long): String =
         .joinToString(",")
         .reversed()
 
+/** The print in progress, or why the last one gave no page. A clean page shows as a kept edition. */
 @Composable
-private fun RunBody(run: FrontPageRun) {
+private fun RunStatus(run: FrontPageRun) {
     when (run) {
         FrontPageRun.Idle -> {}
         is FrontPageRun.Running -> Progress(run.step)
@@ -324,7 +446,7 @@ private fun RunBody(run: FrontPageRun) {
             when (val result = run.result) {
                 is PrintResult.NotReady -> Notice(stringRes(Res.string.front_page_not_ready))
                 is PrintResult.Refused -> Refused(result.violations)
-                is PrintResult.Printed -> Printed(result)
+                is PrintResult.Printed -> {}
             }
     }
 }
@@ -374,40 +496,81 @@ private fun Refused(violations: List<Violation>) {
     }
 }
 
+/** "Today", "Yesterday", then weekday names: the week of kept editions. */
+@Composable
+private fun dayLabel(day: String): String {
+    val today = FrontPageClock.dayKey(TimeUtils.now())
+    val yesterday = FrontPageClock.dayKey(TimeUtils.now() - 86_400)
+    return when (day) {
+        today -> stringRes(Res.string.today)
+        yesterday -> stringRes(Res.string.yesterday)
+        else ->
+            when (dayOfWeek(day)) {
+                1 -> stringRes(Res.string.dlist_day_monday)
+                2 -> stringRes(Res.string.dlist_day_tuesday)
+                3 -> stringRes(Res.string.dlist_day_wednesday)
+                4 -> stringRes(Res.string.dlist_day_thursday)
+                5 -> stringRes(Res.string.dlist_day_friday)
+                6 -> stringRes(Res.string.dlist_day_saturday)
+                7 -> stringRes(Res.string.dlist_day_sunday)
+                else -> day
+            }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Printed(result: PrintResult.Printed) {
+private fun History(
+    editions: List<SavedEdition>,
+    open: String?,
+    onDay: (String) -> Unit,
+) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        editions.forEach { edition ->
+            FilterChip(selected = edition.day == open, onClick = { onDay(edition.day) }, label = { Text(dayLabel(edition.day)) })
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Edition(shown: ShownEdition) {
     val platform = LocalAppPlatform.current
     val files = rememberFileBytesAccess()
     val scope = rememberCoroutineScope()
-    val code = result.corpus.code
+    val edition = shown.edition
 
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), itemVerticalAlignment = Alignment.CenterVertically) {
-        AssistChip(onClick = {}, label = { Text(stringRes(Res.string.front_page_edition, code)) })
+        AssistChip(onClick = {}, label = { Text(stringRes(Res.string.front_page_edition, edition.code)) })
         AssistChip(
             onClick = {},
-            label = { Text(pluralStringRes(Res.plurals.front_page_quotes_verified, result.quotes, result.quotes)) },
+            label = { Text(pluralStringRes(Res.plurals.front_page_quotes_verified, edition.quotes, edition.quotes)) },
             leadingIcon = { Icon(MaterialSymbols.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp)) },
         )
-        val posts = result.corpus.events.size
-        AssistChip(onClick = {}, label = { Text(pluralStringRes(Res.plurals.front_page_posts_read, posts, posts)) })
-        result.usage?.total?.let { tokens ->
+        AssistChip(onClick = {}, label = { Text(pluralStringRes(Res.plurals.front_page_posts_read, edition.posts, edition.posts)) })
+        edition.tokens?.let { tokens ->
             AssistChip(onClick = {}, label = { Text(pluralStringRes(Res.plurals.front_page_tokens, tokens.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), grouped(tokens))) })
         }
-        if (result.rounds == 2) AssistChip(onClick = {}, label = { Text(stringRes(Res.string.front_page_fixed_once)) })
-        TextButton(onClick = { scope.launch { files.save("front-page-$code.html", "text/html") { result.html.encodeToByteArray() } } }) {
+        edition.costUsd?.let { cost ->
+            AssistChip(
+                onClick = {},
+                label = { Text(stringRes(Res.string.front_page_cost, formatUsd(cost))) },
+                leadingIcon = { Icon(MaterialSymbols.Paid, contentDescription = null, modifier = Modifier.size(16.dp)) },
+            )
+        }
+        if (edition.rounds == 2) AssistChip(onClick = {}, label = { Text(stringRes(Res.string.front_page_fixed_once)) })
+        TextButton(onClick = { scope.launch { files.save("front-page-${edition.day}-${edition.code}.html", "text/html") { shown.html.encodeToByteArray() } } }) {
             Icon(MaterialSymbols.Download, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
             Text(stringRes(Res.string.front_page_download))
         }
     }
 
-    val removed = result.changes.filter { it.noteworthy }
-    if (removed.isNotEmpty()) {
+    if (edition.removed.isNotEmpty()) {
         Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(stringRes(Res.string.front_page_changes_title), style = MaterialTheme.typography.titleSmall)
-                removed.take(10).forEach { Text(it.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                edition.removed.take(10).forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
     }
@@ -423,9 +586,9 @@ private fun Printed(result: PrintResult.Printed) {
                 .padding(8.dp),
         ) {
             platform.InlinePaperSurface(
-                html = result.html,
-                title = "$MASTHEAD · $code",
-                instanceId = "front-page-$code",
+                html = shown.html,
+                title = "$MASTHEAD · ${edition.code}",
+                instanceId = "front-page-${edition.day}-${edition.code}",
                 onStatus = {},
                 modifier = Modifier.fillMaxWidth().heightIn(min = 640.dp).height(900.dp),
             )

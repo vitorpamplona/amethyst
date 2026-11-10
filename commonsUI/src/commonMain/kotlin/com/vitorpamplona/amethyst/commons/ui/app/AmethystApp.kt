@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -41,6 +42,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.AccountState
@@ -104,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedChatTailPreload
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStatePreload
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.favorites.FavoriteAppManifestPreloader
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.FrontPagePrintingBanner
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelScope
@@ -369,6 +372,8 @@ private fun AppNavigation(
                         // Each pinned nsite/napplet's manifest, pulled into LocalCache and kept on the device,
                         // so a favorite opens, and serves as an intent handler, on every platform.
                         FavoriteAppManifestPreloader(accountViewModel)
+                        // A front page printing while the reader is elsewhere: it belongs to the account.
+                        FrontPagePrintingBanner(accountViewModel, nav, Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp))
                         root.ShellOverlay(accountViewModel)
                     }
                 }

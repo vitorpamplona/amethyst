@@ -47,7 +47,7 @@ private fun Request.Builder.auth(key: AgentKeyTag): Request.Builder =
 
 private fun root(key: AgentKeyTag) = key.url.trimEnd('/')
 
-actual suspend fun IRoleBasedHttpClientBuilder.listAgentModels(key: AgentKeyTag): List<String> =
+actual suspend fun IRoleBasedHttpClientBuilder.listAgentModels(key: AgentKeyTag): List<AgentModel> =
     withContext(Dispatchers.IO) {
         val url = root(key) + "/models"
         val request =
@@ -60,7 +60,7 @@ actual suspend fun IRoleBasedHttpClientBuilder.listAgentModels(key: AgentKeyTag)
         try {
             okHttpClientForMoney(url).newCall(request).executeAsync().use { response ->
                 if (!response.isSuccessful) throw WriterException(failureFor(response.code), response.code)
-                readModelIds(response.body.string())
+                readModels(response.body.string())
             }
         } catch (e: IOException) {
             throw WriterException(WriterFailure.UNREACHABLE)

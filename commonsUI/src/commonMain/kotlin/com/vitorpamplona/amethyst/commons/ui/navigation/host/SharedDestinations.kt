@@ -482,7 +482,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.ProfileUiSettings> { ProfileUiSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SearchEngineSettings> { SearchEngineSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.AgentKeysSettings> { AgentKeysSettingsScreen(accountViewModel, nav) }
-    composableFromEnd<Route.FrontPage> { FrontPageScreen(accountViewModel, nav) }
+    composableFromEndArgs<Route.FrontPage> { FrontPageScreen(accountViewModel, nav, it.day) }
     composableFromEnd<Route.VideoPlayerSettings> { VideoPlayerSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.CallSettings> { CallSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.NotificationSettings> { NotificationSettingsScreen(accountViewModel, nav) }

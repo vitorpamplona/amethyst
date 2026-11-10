@@ -34,6 +34,9 @@ enum class NotifKind {
 
     /** A calendar reminder. Its switch is in the calendar settings, not among these toggles. */
     CALENDAR,
+
+    /** The reader's front page is ready, or needs them. Its switch is the schedule itself. */
+    FRONT_PAGE,
 }
 
 @Immutable
@@ -57,6 +60,7 @@ data class KindToggles(
             NotifKind.REACTION -> reaction
             NotifKind.FOLLOW -> follow
             NotifKind.CALENDAR -> true
+            NotifKind.FRONT_PAGE -> true
         }
 
     fun with(
@@ -72,6 +76,7 @@ data class KindToggles(
             NotifKind.REACTION -> copy(reaction = v)
             NotifKind.FOLLOW -> copy(follow = v)
             NotifKind.CALENDAR -> this
+            NotifKind.FRONT_PAGE -> this
         }
 }
 

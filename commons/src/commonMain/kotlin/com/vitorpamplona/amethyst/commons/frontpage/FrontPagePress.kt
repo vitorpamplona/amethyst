@@ -82,6 +82,8 @@ sealed interface PrintResult {
         val quotes: Int,
         val usage: Usage?,
         val rounds: Int,
+        val headline: String? = null,
+        val digestChars: Int = 0,
     ) : PrintResult
 
     class Refused(
@@ -186,6 +188,7 @@ class FrontPagePress(
     suspend fun print(
         observer: HexKey,
         readerName: String,
+        language: String? = null,
         onStep: (PrintStep) -> Unit = {},
     ): PrintResult {
         val until = now()
@@ -194,10 +197,11 @@ class FrontPagePress(
         if (verdict != ProbeVerdict.READY) return PrintResult.NotReady(verdict)
 
         val corpus = pull(observer, until, onStep)
+        val digest = digest(corpus)
         val messages =
             mutableListOf(
                 ChatMessage("system", systemPrompt()),
-                ChatMessage("user", userMessage(digest(corpus), readerName)),
+                ChatMessage("user", userMessage(digest, readerName, language)),
             )
 
         var usage: Usage? = null
@@ -211,7 +215,7 @@ class FrontPagePress(
             onStep(PrintStep.Check(round))
             val checked = boundary.resolveAndCheck(page, corpus)
             if (checked.violations.isEmpty()) {
-                return PrintResult.Printed(checked.html, corpus, checked.changes, checked.quotes, usage, round)
+                return PrintResult.Printed(checked.html, corpus, checked.changes, checked.quotes, usage, round, checked.headline, digest.length)
             }
             if (round == 2) return PrintResult.Refused(checked.violations, checked.changes, corpus, usage)
             messages.add(ChatMessage("assistant", page))

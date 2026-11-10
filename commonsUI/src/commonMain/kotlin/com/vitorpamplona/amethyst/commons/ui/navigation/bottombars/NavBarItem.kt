@@ -213,7 +213,7 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 id = NavBarItem.FRONT_PAGE,
                 label = { Res.string.front_page_title },
                 icon = MaterialSymbols.AutoMirrored.Article,
-                resolveRoute = { Route.FrontPage },
+                resolveRoute = { Route.FrontPage() },
             ),
         NavBarItem.DRAFTS to
             NavBarItemDef(

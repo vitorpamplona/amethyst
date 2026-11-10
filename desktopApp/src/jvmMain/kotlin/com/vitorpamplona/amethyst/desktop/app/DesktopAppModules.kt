@@ -34,6 +34,10 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46Clie
 import com.vitorpamplona.amethyst.commons.cordn.SecretEncryptionCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageModelMemory
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageScheduleStore
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageEditionStore
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorageVault
@@ -107,6 +111,8 @@ import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.util.restrictToOwner
 import com.vitorpamplona.amethyst.desktop.network.runSleepResumeMonitor
 import com.vitorpamplona.amethyst.desktop.service.calendar.DesktopCalendarReminders
+import com.vitorpamplona.amethyst.desktop.service.frontpage.DesktopFrontPageNotifier
+import com.vitorpamplona.amethyst.desktop.service.frontpage.DesktopFrontPageScheduler
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostScheduler
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostStore
@@ -504,6 +510,19 @@ class DesktopAppModules(
     /** OS notifications: the native notifier, its settings, and what is worth a notification. */
     val notifications by lazy { DesktopNotifications(applicationIOScope) }
 
+    /** Each account's front page: prints that outlive the screen, a week of editions, the morning schedule. */
+    val frontPagePrinters by lazy {
+        FrontPagePrinters(
+            http = roleBasedHttpClientBuilder,
+            memory = DataStoreFrontPageModelMemory(appStores),
+            store = FrontPageEditionStore(File(filesDir, FrontPageEditionStore.FOLDER).path),
+            schedules = DataStoreFrontPageScheduleStore(appStores),
+            notifier = DesktopFrontPageNotifier(notifications),
+        )
+    }
+
+    val frontPageScheduler by lazy { DesktopFrontPageScheduler(frontPagePrinters, accountsCache.accounts, applicationIOScope) }
+
     /** "Starting soon" notifications for the appointments the user is attending. */
     val calendarReminders by lazy { DesktopCalendarReminders(appStores, notifications, { accountsCache.accounts.value.keys }, applicationIOScope) }
 
@@ -830,6 +849,7 @@ class DesktopAppModules(
         if (startupLocalRelays.isNotEmpty()) addStartupLocalRelays()
 
         calendarReminders.start()
+        frontPageScheduler.start()
 
         // Web of Trust: Android brings the active account's network index up to date each time
         // the app comes to the foreground, and once a day from a worker. A desktop window stays

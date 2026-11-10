@@ -45,6 +45,8 @@ class CheckedPage(
     val changes: List<ResolveChange>,
     val violations: List<Violation>,
     val quotes: Int,
+    /** The page's lead headline (its first h1, else h2), for notifications and history. */
+    val headline: String? = null,
 )
 
 /**

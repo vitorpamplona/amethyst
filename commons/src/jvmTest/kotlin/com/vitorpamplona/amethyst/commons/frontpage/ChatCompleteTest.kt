@@ -128,6 +128,6 @@ class ChatCompleteTest {
     @Test
     fun listsModels() =
         runBlocking {
-            assertEquals(listOf("a/b"), clients(Answer(200, "application/json", """{"data":[{"id":"a/b"}]}""")).listAgentModels(key))
+            assertEquals(listOf("a/b"), clients(Answer(200, "application/json", """{"data":[{"id":"a/b"}]}""")).listAgentModels(key).map { it.id })
         }
 }

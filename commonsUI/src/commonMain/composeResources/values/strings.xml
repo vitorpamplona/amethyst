@@ -9542,6 +9542,20 @@
     <string name="front_page_fail_unreachable">Couldn't reach your AI provider or the search relay.</string>
     <string name="front_page_fail_empty">Your AI answered without a page. Try again.</string>
     <string name="front_page_fail_http">Your AI provider answered with an error (%1$d).</string>
+    <string name="front_page_print_estimate">%1$s · ≈ %2$s</string>
+    <string name="front_page_cost">%1$s</string>
+    <string name="front_page_banner_pull">Printing your paper… %1$d/%2$d</string>
+    <string name="front_page_banner_write">Writing your paper…</string>
+    <string name="front_page_banner_check">Checking your paper…</string>
+    <string name="front_page_banner_probe">Printing your paper…</string>
+    <string name="front_page_every_morning">Every morning</string>
+    <string name="front_page_needs_device_key">Prints on its own only with your key on this device</string>
+    <string name="front_page_pick_time">Print at</string>
+    <string name="front_page_ready_title">Your paper is ready</string>
+    <string name="front_page_needs_you_title">Your paper is waiting</string>
+    <string name="front_page_needs_you_body">Open Amethyst to print today's paper.</string>
+    <string name="front_page_channel">Front page</string>
+    <string name="front_page_channel_id" translatable="false">front_page</string>
     <plurals name="front_page_quotes_verified">
         <item quantity="one">%1$d quote verified</item>
         <item quantity="other">%1$d quotes verified</item>

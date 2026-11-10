@@ -27,6 +27,8 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.cordn.BlossomCordnBlobStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduler
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
@@ -100,6 +102,10 @@ object AndroidAppServices : AppServices {
     override val notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences get() = Amethyst.instance.notificationPanelCollapsePrefs
 
     override val scheduledPostStore: ScheduledPostStore get() = Amethyst.instance.scheduledPostStore
+
+    override val frontPagePrinters: FrontPagePrinters get() = Amethyst.instance.frontPagePrinters
+
+    override val frontPageScheduler: FrontPageScheduler get() = Amethyst.instance.frontPageScheduler
 
     override val appStores: AppPreferenceStores get() = Amethyst.instance.appStores
 

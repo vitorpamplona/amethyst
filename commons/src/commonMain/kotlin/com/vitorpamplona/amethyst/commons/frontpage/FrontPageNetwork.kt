@@ -42,8 +42,8 @@ fun failureFor(status: Int): WriterFailure =
         else -> WriterFailure.HTTP
     }
 
-/** The ids `GET {url}/models` lists for this key; ranking them is [rankModels]'s job. */
-expect suspend fun IRoleBasedHttpClientBuilder.listAgentModels(key: AgentKeyTag): List<String>
+/** The models `GET {url}/models` lists for this key, with prices where it gives them; ranking them is [rankModels]'s job. */
+expect suspend fun IRoleBasedHttpClientBuilder.listAgentModels(key: AgentKeyTag): List<AgentModel>
 
 /**
  * One Chat Completions call, streamed so the reader sees the page arrive ([onText] gets

@@ -177,6 +177,18 @@ fun isScanQrRoute(uri: String) =
 
 private val MARMOT_HEX = Regex("^[0-9a-fA-F]+$")
 
+private val FRONT_PAGE_DAY = Regex("^\\d{4}-\\d{2}-\\d{2}$")
+
+/** The URI a "your paper is ready" notification opens. */
+fun frontPageUri(day: String? = null) = if (day == null) "amethyst:frontpage" else "amethyst:frontpage?day=$day"
+
+/** `amethyst:frontpage`, optionally `?day=yyyy-MM-dd`: the front page, on that kept edition. */
+fun frontPageRoute(uri: String): Route.FrontPage? {
+    if (!uri.startsWith("amethyst:frontpage", ignoreCase = true)) return null
+    val day = uri.findQueryParameterValue("day")?.takeIf { FRONT_PAGE_DAY.matches(it) }
+    return Route.FrontPage(day)
+}
+
 fun uriToRoute(
     uri: String,
     account: Account,
@@ -191,6 +203,7 @@ fun uriToRoute(
     if (isScanQrRoute(uri)) {
         return Route.QRDisplay(account.signer.pubKey, startScanning = true)
     }
+    frontPageRoute(uri)?.let { return it }
     if (isHashtagRoute(uri)) {
         return Route.Hashtag(uri.removePrefix(NOSTR_URI_PREFIX).removePrefix("hashtag?id=").lowercase())
     }

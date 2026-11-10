@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.frontpage
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -29,6 +30,7 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
+import kotlin.math.round
 
 /*
  * The writer call: one fixed system prompt, the digest as data, one HTML document back,
@@ -42,14 +44,20 @@ const val MASTHEAD = "The Nostr Observer"
 
 fun systemPrompt(): String = "$EDITORIAL_BRIEF\n\n## The house stylesheet\n\nInline this in a <style> block, as given:\n\n```css\n$HOUSE_CSS\n```"
 
-/** The digest in a delimited block; the reader's name goes outside it, because it is ours. */
+/**
+ * The digest in a delimited block; the reader's name and language go outside it, because they
+ * are ours. The language goes here, never into the fixed brief: the brief says what to do when
+ * one is named (correction 9), this names it, as a BCP 47 tag ("pt-BR").
+ */
 fun userMessage(
     digest: String,
     readerName: String,
+    language: String? = null,
 ): String =
-    listOf(
+    listOfNotNull(
         "Masthead: $MASTHEAD",
         "Reader: $readerName",
+        language?.trim()?.ifEmpty { null }?.let { "Language: $it" },
         "",
         "<corpus>",
         digest,
@@ -241,6 +249,85 @@ fun rankModels(ids: List<String>): List<String> {
         .distinct()
         .filter { it.isNotEmpty() && !NOT_CHAT.containsMatchIn(it) }
         .sortedWith { a, b -> tier(a).compareTo(tier(b)).takeIf { it != 0 } ?: compareVersionsDesc(a, b) }
+}
+
+/**
+ * A model the endpoint lists, with its prices when the endpoint publishes them (OpenRouter
+ * does, per token, as decimal strings). Null prices mean "not said", never "free".
+ */
+@Immutable
+class AgentModel(
+    val id: String,
+    val promptPerToken: Double? = null,
+    val completionPerToken: Double? = null,
+) {
+    val priced get() = promptPerToken != null && completionPerToken != null
+}
+
+/** `GET {url}/models` to models, with OpenRouter's `pricing` read where it is there. */
+fun readModels(body: String): List<AgentModel> {
+    val json = parse(body) as? JsonObject ?: return emptyList()
+    val list = (json["data"] as? JsonArray) ?: (json["models"] as? JsonArray) ?: return emptyList()
+    return list.mapNotNull { entry ->
+        when (entry) {
+            is JsonPrimitive ->
+                entry
+                    .takeIf { it.isString }
+                    ?.content
+                    ?.removePrefix("models/")
+                    ?.ifEmpty { null }
+                    ?.let { AgentModel(it) }
+            is JsonObject -> {
+                val id = ((entry["id"] as? JsonPrimitive)?.content ?: (entry["name"] as? JsonPrimitive)?.content)?.removePrefix("models/")?.ifEmpty { null }
+                val pricing = entry["pricing"] as? JsonObject
+
+                fun price(name: String) = (pricing?.get(name) as? JsonPrimitive)?.content?.toDoubleOrNull()?.takeIf { it >= 0 && it.isFinite() }
+                id?.let { AgentModel(it, price("prompt"), price("completion")) }
+            }
+            else -> null
+        }
+    }
+}
+
+// --- cost --------------------------------------------------------------------
+
+/** What a page usually takes to write: a full HTML document with inline CSS. A repair round is not counted. */
+const val EXPECTED_OUTPUT_TOKENS = 14_000
+
+/** A rough token count: about four characters a token, for English-heavy text. */
+fun approxTokens(chars: Int): Long = (chars + 3L) / 4
+
+/**
+ * The cost of one print before it runs: the brief and a digest of [digestChars] in, a page out.
+ * Null when the endpoint publishes no prices: an estimate is never invented.
+ */
+fun estimateCost(
+    model: AgentModel?,
+    digestChars: Int,
+    briefChars: Int = systemPrompt().length,
+): Double? {
+    val prompt = model?.promptPerToken ?: return null
+    val completion = model.completionPerToken ?: return null
+    return approxTokens(digestChars + briefChars) * prompt + EXPECTED_OUTPUT_TOKENS * completion
+}
+
+/** What a print cost, from the usage the provider reported and its own prices. */
+fun actualCost(
+    model: AgentModel?,
+    usage: Usage?,
+): Double? {
+    val prompt = model?.promptPerToken ?: return null
+    val completion = model.completionPerToken ?: return null
+    val inTokens = usage?.promptTokens ?: return null
+    val outTokens = usage.completionTokens ?: return null
+    return inTokens * prompt + outTokens * completion
+}
+
+/** `$0.08`, `$1.20`, or `<$0.01`: dollars to the cent, which is what a reader budgets in. */
+fun formatUsd(amount: Double): String {
+    if (amount < 0.01) return "<$0.01"
+    val cents = round(amount * 100).toLong()
+    return "$" + (cents / 100) + "." + (cents % 100).toString().padStart(2, '0')
 }
 
 /** `GET {url}/models` to ids, whichever of the two common shapes it comes in. */

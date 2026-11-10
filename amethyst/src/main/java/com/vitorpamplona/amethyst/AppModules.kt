@@ -39,6 +39,10 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46Clie
 import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageModelMemory
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageScheduleStore
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageEditionStore
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettings
@@ -145,6 +149,8 @@ import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettings
 import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettingsMigrations
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
+import com.vitorpamplona.amethyst.service.frontpage.AndroidFrontPageNotifier
+import com.vitorpamplona.amethyst.service.frontpage.AndroidFrontPageScheduler
 import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
@@ -1218,6 +1224,20 @@ class AppModules(
     // single JSON file under the app's private filesDir; read by ScheduledPostWorker.
     val scheduledPostStore =
         ScheduledPostStore(File(appContext.filesDir, ScheduledPostStore.FILE_NAME).path)
+
+    // Each account's front page: prints that outlive the screen, the last week of editions in
+    // filesDir, and the morning schedule (WorkManager).
+    val frontPageNotifier by lazy { AndroidFrontPageNotifier(appContext) }
+    val frontPageScheduler by lazy { AndroidFrontPageScheduler(appContext) }
+    val frontPagePrinters by lazy {
+        FrontPagePrinters(
+            http = roleBasedHttpClientBuilder,
+            memory = DataStoreFrontPageModelMemory(appStores),
+            store = FrontPageEditionStore(File(appContext.filesDir, FrontPageEditionStore.FOLDER).path),
+            schedules = DataStoreFrontPageScheduleStore(appStores),
+            notifier = frontPageNotifier,
+        )
+    }
 
     // Organizes cache clearing
     val trimmingService by

@@ -23,18 +23,19 @@ package com.vitorpamplona.amethyst.commons.frontpage
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
-import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -79,17 +80,32 @@ class FrontPageModels(
     val selected: String? = null,
     /** Set when the list could not be read: the reader types an id instead. */
     val failure: WriterFailure? = null,
+    /** Each listed model with its prices, when the endpoint gives them. */
+    val byId: Map<String, AgentModel> = emptyMap(),
+) {
+    val selectedModel: AgentModel? get() = selected?.let { byId[it] ?: AgentModel(it) }
+}
+
+/** A kept edition and its page, as the screen shows it. */
+@Immutable
+class ShownEdition(
+    val edition: SavedEdition,
+    val html: String,
 )
 
 /**
- * Print today's paper with the reader's own AI key. Nothing is stored or published: the
- * last page lives in this ViewModel and in whatever the reader downloads.
+ * The front page screen's state: the model picker, which kept edition is open, and the morning
+ * schedule. The print itself belongs to the account's [FrontPagePrinter], so leaving this screen
+ * never cancels it.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class FrontPageViewModel(
     private val account: Account,
     private val http: IRoleBasedHttpClientBuilder,
-    private val memory: FrontPageModelMemory,
-    private val boundary: PaperBoundary? = paperBoundary(),
+    val printer: FrontPagePrinter,
+    private val schedules: FrontPageScheduleStore,
+    private val scheduler: FrontPageScheduler,
+    initialDay: String? = null,
 ) : ViewModel() {
     val key: StateFlow<AgentKeyTag?> =
         account.agentKeys.flow
@@ -97,22 +113,41 @@ class FrontPageViewModel(
             .stateIn(viewModelScope, SharingStarted.Eagerly, account.agentKeys.preferred())
 
     val gate: StateFlow<FrontPageGate> =
-        combine(key, account.trustProviderList.liveUserRankProvider) { key, rank ->
-            when {
-                boundary == null -> FrontPageGate.UNSUPPORTED
-                key == null -> FrontPageGate.NO_KEY
-                rank == null -> FrontPageGate.NO_LENS
-                else -> FrontPageGate.READY
-            }
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, FrontPageGate.NO_KEY)
+        combine(key, account.trustProviderList.liveUserRankProvider) { key, rank -> gateOf(key, rank != null, printer.boundary) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, FrontPageGate.NO_KEY)
 
     private val _models = MutableStateFlow(FrontPageModels())
     val models = _models.asStateFlow()
 
-    private val _run = MutableStateFlow<FrontPageRun>(FrontPageRun.Idle)
-    val run = _run.asStateFlow()
+    val run = printer.run
+    val editions = printer.editions
 
-    private var printing: Job? = null
+    private val _selectedDay = MutableStateFlow(initialDay)
+
+    /** The open edition's day; null opens the newest. */
+    val selectedDay = _selectedDay.asStateFlow()
+
+    val shown: StateFlow<ShownEdition?> =
+        combine(_selectedDay, printer.editions) { day, kept -> kept.firstOrNull { it.day == day } ?: kept.firstOrNull() }
+            .flatMapLatest { edition ->
+                if (edition == null) {
+                    flowOf<ShownEdition?>(null)
+                } else {
+                    flow<ShownEdition?> { emit(printer.html(edition.day)?.let { ShownEdition(edition, it) }) }
+                }
+            }.stateIn<ShownEdition?>(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** One print's estimated cost with the picked model; null when the endpoint lists no prices. */
+    val estimate: StateFlow<Double?> =
+        combine(_models, printer.editions) { models, _ -> printer.estimate(models.selectedModel) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    val schedule: StateFlow<FrontPageSchedule> =
+        schedules.flow(account.signer.pubKey).stateIn(viewModelScope, SharingStarted.Eagerly, FrontPageSchedule())
+
+    /** Whether a scheduled edition can print with nobody there: a key on this device can, Amber cannot. */
+    val printsUnattended: Boolean get() = printer.canPrintUnattended()
+
     private var modelsFor: String? = null
 
     init {
@@ -124,11 +159,12 @@ class FrontPageViewModel(
         modelsFor = key.url
         _models.value = FrontPageModels(loading = true)
         viewModelScope.launch {
-            val remembered = runCatching { memory.get(key.url) }.getOrNull()
+            val remembered = runCatching { printer.memory.get(key.url) }.getOrNull()
             try {
-                val ranked = rankModels(http.listAgentModels(key))
+                val listed = http.listAgentModels(key)
+                val ranked = rankModels(listed.map { it.id })
                 val selected = remembered?.takeIf { it in ranked } ?: ranked.firstOrNull() ?: remembered
-                _models.value = FrontPageModels(ids = ranked, selected = selected)
+                _models.value = FrontPageModels(ids = ranked, selected = selected, byId = listed.associateBy { it.id })
             } catch (e: CancellationException) {
                 throw e
             } catch (e: WriterException) {
@@ -138,52 +174,28 @@ class FrontPageViewModel(
     }
 
     fun selectModel(model: String) {
-        _models.update { FrontPageModels(it.loading, it.ids, model.trim().ifEmpty { null }, it.failure) }
+        _models.update { FrontPageModels(it.loading, it.ids, model.trim().ifEmpty { null }, it.failure, it.byId) }
         val url = key.value?.url ?: return
-        if (model.isNotBlank()) viewModelScope.launch { runCatching { memory.set(url, model.trim()) } }
+        if (model.isNotBlank()) viewModelScope.launch { runCatching { printer.memory.set(url, model.trim()) } }
+    }
+
+    fun selectDay(day: String?) {
+        _selectedDay.value = day
     }
 
     fun print() {
         val key = key.value ?: return
-        val model = _models.value.selected ?: return
-        val boundary = boundary ?: return
-        if (printing?.isActive == true) return
-        val press =
-            FrontPagePress(
-                client = account.client,
-                relay = Constants.brainstorm,
-                boundary = boundary,
-                write = { messages, onText -> http.chatComplete(key, model, messages, onText) },
-            )
-        printing =
-            viewModelScope.launch {
-                try {
-                    val result = press.print(account.signer.pubKey, readerName()) { step -> _run.value = FrontPageRun.Running(step) }
-                    _run.value = FrontPageRun.Done(result)
-                } catch (e: CancellationException) {
-                    _run.value = FrontPageRun.Idle
-                    throw e
-                } catch (e: WriterException) {
-                    _run.value = FrontPageRun.Failed(e.failure, e.status, e.providerSaid)
-                } catch (e: Exception) {
-                    Log.w("FrontPage", "Printing failed", e)
-                    _run.value = FrontPageRun.Failed(WriterFailure.UNREACHABLE)
-                }
-            }
+        val model = _models.value.selectedModel ?: return
+        // The new edition is today's, which is the newest: open it when it lands.
+        if (printer.print(key, model)) _selectedDay.value = null
     }
 
-    fun cancel() {
-        printing?.cancel()
-        printing = null
-        _run.value = FrontPageRun.Idle
-    }
+    fun cancel() = printer.cancel()
 
-    /** The reader's name for the masthead line; never hex. */
-    private fun readerName(): String =
-        account
-            .userProfile()
-            .metadataOrNull()
-            ?.bestName()
-            ?.trim()
-            ?.ifEmpty { null } ?: shortNpub(account.signer.pubKey)
+    fun setSchedule(schedule: FrontPageSchedule) {
+        viewModelScope.launch {
+            schedules.set(account.signer.pubKey, schedule)
+            scheduler.reschedule(account.signer.pubKey, schedule)
+        }
+    }
 }

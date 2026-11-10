@@ -57,8 +57,16 @@ object JsoupPaperBoundary : PaperBoundary {
         val doc = parsePage(html)
         val changes = resolve(doc, corpus)
         val result = check(doc, corpus)
-        return CheckedPage(serialize(doc), changes, result.violations, result.quotes.size)
+        return CheckedPage(serialize(doc), changes, result.violations, result.quotes.size, headline(doc))
     }
+
+    /** The lead story's headline: the first h1, else the first h2; the masthead never counts. */
+    fun headline(doc: Document): String? =
+        doc
+            .select("h1, h2")
+            .map { it.text().replace(WS, " ").trim() }
+            .firstOrNull { it.isNotEmpty() && !it.equals(MASTHEAD, ignoreCase = true) }
+            ?.take(160)
 
     fun parsePage(html: String): Document = Jsoup.parse(html).also { it.outputSettings().prettyPrint(false) }
 

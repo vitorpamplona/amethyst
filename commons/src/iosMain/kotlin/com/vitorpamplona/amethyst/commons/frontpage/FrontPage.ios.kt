@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.frontpage
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 
-actual suspend fun IRoleBasedHttpClientBuilder.listAgentModels(key: AgentKeyTag): List<String> = throw WriterException(WriterFailure.UNSUPPORTED)
+actual suspend fun IRoleBasedHttpClientBuilder.listAgentModels(key: AgentKeyTag): List<AgentModel> = throw WriterException(WriterFailure.UNSUPPORTED)
 
 actual suspend fun IRoleBasedHttpClientBuilder.chatComplete(
     key: AgentKeyTag,
@@ -33,3 +33,41 @@ actual suspend fun IRoleBasedHttpClientBuilder.chatComplete(
 ): Written = throw WriterException(WriterFailure.UNSUPPORTED)
 
 actual fun paperBoundary(): PaperBoundary? = null
+
+/*
+ * iOS prints no front page yet (there is no HTML boundary there), so its clock is UTC days:
+ * enough for the shared code to compile and for a stored edition to have a day.
+ */
+actual object FrontPageClock {
+    private const val DAY = 86_400L
+
+    actual fun dayKey(epochSec: Long): String {
+        val days = (epochSec).floorDiv(DAY)
+        // Civil-from-days (Howard Hinnant), so no date library is needed for one string.
+        val z = days + 719_468
+        val era = (z).floorDiv(146_097)
+        val doe = z - era * 146_097
+        val yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365
+        val doy = doe - (365 * yoe + yoe / 4 - yoe / 100)
+        val mp = (5 * doy + 2) / 153
+        val d = doy - (153 * mp + 2) / 5 + 1
+        val m = if (mp < 10) mp + 3 else mp - 9
+        val y = yoe + era * 400 + if (m <= 2) 1 else 0
+        return "$y-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}"
+    }
+
+    actual fun nextRun(
+        nowEpochSec: Long,
+        hour: Int,
+        minute: Int,
+    ): Long {
+        val today = todayAt(nowEpochSec, hour, minute)
+        return if (today > nowEpochSec) today else today + DAY
+    }
+
+    actual fun todayAt(
+        nowEpochSec: Long,
+        hour: Int,
+        minute: Int,
+    ): Long = (nowEpochSec).floorDiv(DAY) * DAY + hour.coerceIn(0, 23) * 3_600L + minute.coerceIn(0, 59) * 60L
+}
