@@ -26,9 +26,12 @@ away from the keys, what stops JCEF from using Chromium's sandbox, and what it t
 - **macOS: very likely the same line.** The shipped `jcef Helper` already calls
   `CefScopedSandboxContext::Initialize` and links `libcef_sandbox.dylib`; only the browser's
   `--no-sandbox` keeps it off. Not run on a Mac.
-- **Windows: not without moving Chromium out of `java.exe`.** Chromium's Windows sandbox lives in
-  the browser process's own executable; the JCEF bundle ships no sandbox library, and the browser
-  process here is the JVM.
+- **Windows: needs our own launcher.** Chromium's Windows sandbox lives in the executable that
+  hosts the browser process; the JCEF bundle ships no sandbox library, and that executable is the
+  Java launcher. JetBrains solved it with a native launcher that holds the sandbox and starts the JVM
+  in its own process.
+- **JetBrains' JCEF already has all this:** the sandbox is a setting there, IntelliJ ships with it
+  on (and with JCEF out of process), and running on JetBrains Runtime is an option to weigh.
 
 ## Findings
 
@@ -86,9 +89,10 @@ The windows-amd64 bundle has `jcef_helper.exe`, `libcef.dll`, `jcef.dll` and no 
 Chromium's Windows sandbox is a broker in the browser process that launches every child with a
 restricted token, which CEF supports only when its sandbox code is in the main executable; here the
 main executable is `java.exe`. Confining `jcef_helper.exe` from outside (a launcher with a restricted
-token or an AppContainer) without Chromium's broker is a sandbox of our own, not a switch. So on
-Windows phase 2 is the original plan: Chromium in a native host process of its own (frames and
-input over shared memory and IPC, NIP-07 queries proxied to the app), with CEF's sandbox in it.
+token or an AppContainer) without Chromium's broker is a sandbox of our own, not a switch. So the
+sandbox has to come from the executable that hosts the JVM. JetBrains does exactly that (next
+section): a native launcher with CEF's sandbox that starts the JVM in its own process. Chromium in a
+separate native host process (frames and input over IPC) is the other way, and more work.
 
 ### What an unsandboxed renderer reaches today
 
@@ -109,6 +113,35 @@ or in a NIP-49 file whose password lives only in the JVM.
 So moving Chromium out of the JVM, without the sandbox, would still let a renderer exploit read the
 keys on Linux and Windows. The renderer sandbox is what closes it.
 
+### JetBrains' JCEF (checked 2026-11-10, `github.com/JetBrains/jcef` at `fc36a1a`)
+
+JetBrains keeps its own JCEF fork, built into the JetBrains Runtime (JBR) that IntelliJ runs on.
+It does what upstream doesn't:
+
+- **The sandbox is a setting.** `CefSettings.no_sandbox` defaults to
+  `!Boolean.getBoolean("jcef.use_sandbox")`, and `context.cpp` reads it from Java instead of forcing
+  it.
+- **Windows without leaving `java.exe`'s process** (JBR-4783): `jcef_helper` is also built as
+  `jcef_helper.dll`, exporting `execute_subprocess(hInstance, sandbox_info)`. The IDE's native
+  launcher, linked with CEF's sandbox, creates the sandbox, hosts the JVM in its own process, and
+  passes the sandbox to JCEF in the `jcef.sandbox.ptr` property. Re-run as a Chromium subprocess, the
+  same launcher calls into the DLL. So the Windows answer is a native launcher of our own (one that
+  starts the JVM in-process, as jpackage's does), not an out-of-process browser.
+- **IntelliJ ships it on.** `registry.properties` has `ide.browser.jcef.sandbox.enable=true`
+  (`SettingsHelper.loadSettings` sets `no_sandbox = false`). It turns the sandbox back off on Windows
+  without `jcef.sandbox.ptr`, on macOS when not started from the app bundle (JBR-6629: the runtime
+  must sit inside the bundle), on Linux for Debian and CentOS ("unsupported OS", overridable), and as
+  root (`run-under-superuser.allowed=false`). A 2024 workaround that turned it off on all of Linux
+  for a crash (IDEA-350784) was reverted.
+- **Out of process too:** `ide.browser.jcef.out-of-process.enabled=true`. The fork's `remote/` is a
+  native `cef_server` that the JVM drives over Thrift RPC.
+
+That adds an option below: run the desktop app on JBR with JCEF instead of jcefmaven. Its JCEF has
+the switch, and its macOS and Linux helpers are built for the sandbox. The costs: the runtime with
+Chromium ships inside every installer (jcefmaven downloads it on first use), JBR's JCEF API differs
+in places from upstream's (our `OffscreenCefBrowser` extends `CefBrowser_N`), and Windows still needs
+a launcher that supplies `jcef.sandbox.ptr`.
+
 ## Shipping it
 
 ### Getting a JCEF without the hard-coded line
@@ -118,8 +151,11 @@ keys on Linux and Windows. The renderer sandbox is what closes it.
 | **A. Upstream** | A java-cef change: `no_sandbox` becomes a `CefSettings` field, default true; still forced on Windows. jcefbuild and jcefmaven pick it up in a release. | Small change; when it ships isn't ours to decide. |
 | **B. Our natives** | Fork jcefbuild, apply the one-line patch, publish the natives ourselves and point jcefmaven at them (`CefAppBuilder` mirrors). Re-sign and notarize the macOS helpers with our identity. | Unblocks now; a build to run on every CEF bump. |
 | C. Patch the installed binary | What the spike did. | Rejected: it breaks the macOS code signature, and the instruction moves with every build. |
+| D. JBR with JCEF | Run the app on JetBrains Runtime's JCEF (above) and set `jcef.use_sandbox`. | No build of our own; Chromium in every installer; API differences to port; Windows needs our own launcher either way. |
 
-Recommendation: propose A upstream and do B meanwhile; B goes away once A ships.
+Recommendation: weigh D against B first. D gets a maintained JCEF with the switch and a Windows path
+someone already runs in production; B keeps jcefmaven's download-on-first-use. Propose A upstream
+in either case (JetBrains' two changes are the template).
 
 ### App changes once the natives allow it
 
