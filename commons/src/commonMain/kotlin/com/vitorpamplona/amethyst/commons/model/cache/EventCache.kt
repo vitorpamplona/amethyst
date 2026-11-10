@@ -765,14 +765,16 @@ open class EventCache :
                 }
             }
 
+        // Regular events live in [notes], and only they match below. A filter that names no regular
+        // kind (a repository announcement, a list, a profile) can match none of them, so it skips the
+        // walk over every note in memory, which grows with the session: each git card in a feed
+        // opened several such lookups on the main thread as it scrolled into view.
+        val kinds = filter.kinds
         val noteMatches =
-            notes.filter { _, note ->
-                val event = note.event
-                if (event != null && event.kind.isRegular()) {
-                    filter.match(event) && predicate(note)
-                } else {
-                    false
-                }
+            if (kinds != null && kinds.none { it.isRegular() }) {
+                emptyList()
+            } else {
+                filterRegularNotes(filter, predicate)
             }
 
         // toSet() before sorting: a filter that repeats a kind scans that kind twice, and the
@@ -790,6 +792,19 @@ open class EventCache :
         if (all.size <= limit) return all
         return all.take(limit)
     }
+
+    private fun filterRegularNotes(
+        filter: Filter,
+        predicate: (Note) -> Boolean,
+    ): List<Note> =
+        notes.filter { _, note ->
+            val event = note.event
+            if (event != null && event.kind.isRegular()) {
+                filter.match(event) && predicate(note)
+            } else {
+                false
+            }
+        }
 
     fun observeNotes(filter: Filter): Flow<List<Note>> =
         callbackFlow {
