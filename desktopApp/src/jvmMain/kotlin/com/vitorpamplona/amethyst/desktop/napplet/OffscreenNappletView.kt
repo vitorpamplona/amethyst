@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.cef.OS
+import org.cef.browser.CefFrame
 import org.cef.browser.OffscreenCefBrowser
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.ColorAlphaType
@@ -117,6 +119,11 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         browser?.setFocus(focused)
     }
 
+    /** Re-asserts the page's focus after something in Chromium dropped it (see [OffscreenCefBrowser.refocus]). */
+    fun refocus() {
+        browser?.refocus()
+    }
+
     /** A mouse event like [source] (its button, modifiers and clicks), at [x], [y] on the page. */
     fun mouse(
         source: MouseEvent,
@@ -170,6 +177,7 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
      */
     fun key(event: KeyEvent) {
         val browser = browser ?: return
+        if (editCommand(browser, event)) return
         when (event.id) {
             KeyEvent.KEY_TYPED -> {
                 untyped = null
@@ -189,6 +197,32 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
             }
             else -> browser.forwardKey(event)
         }
+    }
+
+    /**
+     * Runs ⌘C, ⌘V, ⌘X, ⌘A, ⌘Z and ⇧⌘Z on the page on macOS, and reports whether [event] was one. A
+     * windowless Chromium on macOS does not act on these keys (a native one gets them from the Edit
+     * menu), so forwarded they did nothing: no copy, paste or select-all in any page. Other systems'
+     * Ctrl shortcuts are left to Chromium: running them here as well could paste twice.
+     */
+    private fun editCommand(
+        browser: OffscreenCefBrowser,
+        event: KeyEvent,
+    ): Boolean {
+        if (!IS_MAC || !event.isMetaDown || event.isControlDown || event.isAltDown) return false
+        val command: ((CefFrame) -> Unit)? =
+            when (event.keyCode) {
+                KeyEvent.VK_C -> CefFrame::copy
+                KeyEvent.VK_V -> CefFrame::paste
+                KeyEvent.VK_X -> CefFrame::cut
+                KeyEvent.VK_A -> CefFrame::selectAll
+                KeyEvent.VK_Z -> if (event.isShiftDown) CefFrame::redo else CefFrame::undo
+                else -> null
+            }
+        if (command == null) return false
+        // The command runs once, on the press; its typed and released events go nowhere.
+        if (event.id == KeyEvent.KEY_PRESSED) (browser.focusedFrame ?: browser.mainFrame)?.let(command)
+        return true
     }
 
     // Chromium calls these from native code: an exception escaping one would only be printed, without
@@ -299,5 +333,7 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
 
         // Every forwarded event needs a source; Chromium reads only its fields.
         val EVENT_SOURCE = Canvas()
+
+        private val IS_MAC = OS.isMacintosh()
     }
 }
