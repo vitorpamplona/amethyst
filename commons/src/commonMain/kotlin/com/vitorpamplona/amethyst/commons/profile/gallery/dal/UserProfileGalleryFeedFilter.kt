@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.profile.gallery.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
-import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -45,7 +45,7 @@ class UserProfileGalleryFeedFilter(
     val user: User,
     val account: Account,
 ) : AdditiveFeedFilter<Note>(),
-    ScreenUniverseFeedFilter {
+    OwnedUniverseFeedFilter {
     // By the user, or a clip of a stream the user hosted.
     override val universe =
         IFilter { note ->

@@ -21,10 +21,14 @@
 package com.vitorpamplona.amethyst.commons.geocaches.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 
 /**
@@ -36,7 +40,13 @@ import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
  */
 class GeocacheFindsFeedFilter(
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    OwnedUniverseFeedFilter {
+    // My find logs: nothing else is checked.
+    override val universe = IFilter { note -> note.event.let { it is GeocacheFoundLogEvent && it.pubKey == mine() } }
+
+    override var candidates: CandidateSet? = null
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-geocache-finds"
 
     override fun limit() = 500
@@ -46,9 +56,11 @@ class GeocacheFindsFeedFilter(
     override fun feed(): List<Note> {
         val me = mine()
         return sort(
-            LocalCache.notes.filterIntoSet { _, it ->
-                val noteEvent = it.event
-                noteEvent is GeocacheFoundLogEvent && noteEvent.pubKey == me
+            rebuildFeed("geocache-finds", candidates, keep = { true }) {
+                LocalCache.notes.filterIntoSet { _, it ->
+                    val noteEvent = it.event
+                    noteEvent is GeocacheFoundLogEvent && noteEvent.pubKey == me
+                }
             },
         )
     }

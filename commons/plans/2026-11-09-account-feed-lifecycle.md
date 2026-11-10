@@ -220,7 +220,7 @@ Done on the branch, each step its own commit:
    session with `-Damethyst.debug=true` and read the costs. Notifications use candidates; Home
    walks the cache (its universe is most of it) and lost its candidate set.
 2. **Screen feeds.** Profile threads/replies/gallery, hashtag and geohash are
-   `ScreenUniverseFeedFilter`s: their `FeedViewModel` keeps the universe as a weak candidate set
+   `OwnedUniverseFeedFilter`s: their `FeedViewModel` keeps the universe as a weak candidate set
    for the screen's life, and their keys carry the screen as `owner`, so a screen opened again
    asks the relays from scratch (`feedOwner` on the per-id and per-user managers). `#foto` reopened
    after a forced GC: 115 survivors, refilled by the relays to 338. Hashtag/geohash now count an
@@ -264,7 +264,7 @@ Done on the branch, each step its own commit:
    - read off the account, not the cache (cheap): Drafts, Web bookmarks.
    On desktop: Highlights, Badges and Follow packs rebuilt twice when first opened and never on
    return; Live streams still rebuilt on each return.
-6. **Community and URL screens** are `ScreenUniverseFeedFilter`s like profile and hashtag. A
+6. **Community and URL screens** are `OwnedUniverseFeedFilter`s like profile and hashtag. A
    community's universe is its posts and approvals, whoever wrote them (`communityUniverse`);
    who may post or approve, the rules and the mod queue's "already approved" are checked at each
    rebuild, which maps an approval to the posts it approves (`rebuildFeedMapping`). URL's is the
@@ -272,6 +272,17 @@ Done on the branch, each step its own commit:
    Gamestr on desktop: the feed and mod queue rebuilt from 215 candidates in 0-2 ms on return
    (92 and 2 rows). Not run: the URL screen. The community subscription shares one cursor per
    relay across communities (`SingleSubEoseManager`), so it has no per-screen owner yet.
+
+7. **Rare-kind account feeds from candidates.** Video, Pictures, Shorts, Longs, Podcast episodes,
+   Workouts, Highlights, Geocache finds and the three Polls tabs (one shared set) declare their
+   universe and rebuild from a weak `CandidateSet` instead of walking the cache
+   (`OwnedUniverseFeedFilter`, renamed from `ScreenUniverseFeedFilter` now that account feeds own
+   sets too). A set costs nothing until its feed's first rebuild, which is its one cache walk.
+   Desktop A/B (each candidate rebuild compared with a walk): identical for all ten (Video 487,
+   Polls 52, open polls 129 of 252, Pictures 30, Highlights 10, …), except Podcast episodes, where
+   the walk also counted two superseded versions of addressable episodes. Warm rebuilds 0-5 ms
+   (open polls, which still rebuild on every return, 1-10 ms) against 7-13 ms walks on that small
+   cache. Home keeps walking: its universe is most of the cache.
 
 Screen feeds still walking the whole cache on resume: single relay (a note's relays change
 without a new event, so it has no fixed universe), mutual follows and a follow pack's feeds (the

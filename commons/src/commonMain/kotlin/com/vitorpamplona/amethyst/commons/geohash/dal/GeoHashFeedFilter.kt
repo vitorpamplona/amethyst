@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.geohash.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -54,7 +54,7 @@ class GeoHashFeedFilter(
     val account: Account,
     val cache: LocalCache,
 ) : AdditiveFeedFilter<Note>(),
-    ScreenUniverseFeedFilter {
+    OwnedUniverseFeedFilter {
     override val universe = IFilter { note -> acceptableViaHashtag(note.event, tag) || acceptableViaScope(note.event, tag) }
 
     override var candidates: CandidateSet? = null

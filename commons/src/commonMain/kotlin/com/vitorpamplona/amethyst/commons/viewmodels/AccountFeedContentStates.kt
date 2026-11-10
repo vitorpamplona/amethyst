@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.drafts.dal.DraftEventsFeedFilter
 import com.vitorpamplona.amethyst.commons.emojipacks.browse.dal.BrowseEmojiSetsFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.TopNavFilterState
 import com.vitorpamplona.amethyst.commons.followPacks.list.dal.FollowPacksFeedFilter
 import com.vitorpamplona.amethyst.commons.geocaches.dal.GeocacheFindsFeedFilter
@@ -56,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.longs.dal.LongsFeedFilter
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
 import com.vitorpamplona.amethyst.commons.model.privateChats.DM_CHAT_FEED_TYPES
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.music.dal.MusicPlaylistsFeedFilter
@@ -73,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.podcasts.dal.PodcastsFeedFilter
 import com.vitorpamplona.amethyst.commons.polls.dal.ClosedPollsFeedFilter
 import com.vitorpamplona.amethyst.commons.polls.dal.OpenPollsFeedFilter
 import com.vitorpamplona.amethyst.commons.polls.dal.PollsFeedFilter
+import com.vitorpamplona.amethyst.commons.polls.dal.pollsUniverse
 import com.vitorpamplona.amethyst.commons.products.dal.ProductsFeedFilter
 import com.vitorpamplona.amethyst.commons.publicChats.dal.PublicChatsFeedFilter
 import com.vitorpamplona.amethyst.commons.shorts.dal.ShortsFeedFilter
@@ -133,7 +136,15 @@ class AccountFeedContentStates(
 
     // A full cache walk per rebuild, like Home. It also reads follows and the report settings
     // (Account.isAcceptable), and reports, which arrive as their own events: see updateFeedsWith.
-    val videoFeed = FeedContentState(VideoFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val videoFeed = FeedContentState(VideoFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
+
+    /**
+     * Feeds of a few rare kinds (videos, pictures, polls, workouts, highlights…) rebuild from their
+     * own candidate set instead of walking the ~50,000 cached notes. A set costs nothing until its
+     * feed's first rebuild, which is also its one walk of the cache; then it follows new notes,
+     * held weakly like the cache, until the account's scope ends.
+     */
+    private fun <F : OwnedUniverseFeedFilter> F.withCandidates(set: CandidateSet = CandidateSet(LocalCache, scope, universe, weak = true)): F = apply { candidates = set }
 
     // What Account.isAcceptable reads besides the note and the mutes.
     private val acceptableInputs =
@@ -165,38 +176,41 @@ class AccountFeedContentStates(
     private val discoverKeptCurrent =
         FeedsKeptCurrent(scope, listOf(discoverFollowSets, discoverReads, discoverMarketplace), listOf(account.liveDiscoveryFollowLists), account.hiddenUsers.flow)
 
-    val pollsFeed = FeedContentState(PollsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
-    val openPollsFeed = FeedContentState(OpenPollsFeedFilter(account), scope, LocalCache, lazy = true)
-    val closedPollsFeed = FeedContentState(ClosedPollsFeedFilter(account), scope, LocalCache, lazy = true)
+    // One set for the three poll tabs: they differ only in what they check over it.
+    private val pollCandidates = CandidateSet(LocalCache, scope, pollsUniverse, weak = true)
+
+    val pollsFeed = FeedContentState(PollsFeedFilter(account).withCandidates(pollCandidates), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val openPollsFeed = FeedContentState(OpenPollsFeedFilter(account).withCandidates(pollCandidates), scope, LocalCache, lazy = true)
+    val closedPollsFeed = FeedContentState(ClosedPollsFeedFilter(account).withCandidates(pollCandidates), scope, LocalCache, lazy = true)
 
     val badgesFeed = FeedContentState(BadgesFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
 
     val browseEmojiSetsFeed = FeedContentState(BrowseEmojiSetsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val communitiesList = FeedContentState(CommunitiesFeedFilter(account), scope, LocalCache, lazy = true)
 
-    val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
-    val workoutsFeed = FeedContentState(WorkoutFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val picturesFeed = FeedContentState(PictureFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val workoutsFeed = FeedContentState(WorkoutFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
     val chessLobbyFeed = FeedContentState(ChessLobbyFeedFilter(account), scope, LocalCache, lazy = true)
     val gitRepositoriesFeed = FeedContentState(GitRepositoriesFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
-    val highlightsFeed = FeedContentState(HighlightsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val highlightsFeed = FeedContentState(HighlightsFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
     val relayGroupsDiscoveryFeed = FeedContentState(RelayGroupDiscoveryFeedFilter(account), scope, LocalCache, lazy = true)
     val calendarAppointmentsFeed = FeedContentState(CalendarAppointmentsFeedFilter(account), scope, LocalCache, lazy = true)
     val calendarCollectionsFeed = FeedContentState(CalendarCollectionsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val geocachesFeed = FeedContentState(GeocachesFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
-    val geocacheFindsFeed = FeedContentState(GeocacheFindsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val geocacheFindsFeed = FeedContentState(GeocacheFindsFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
     val geocacheMineFeed = FeedContentState(GeocacheMineFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val geocacheHuntsFeed = FeedContentState(GeocacheHuntsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
-    val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val shortsFeed = FeedContentState(ShortsFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
     val publicChatsFeed = FeedContentState(PublicChatsFeedFilter(account), scope, LocalCache, lazy = true)
     val followPacksFeed = FeedContentState(FollowPacksFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val liveStreamsFeed = FeedContentState(LiveStreamsFeedFilter(account), scope, LocalCache, lazy = true)
     val nestsFeed = FeedContentState(NestsFeedFilter(account), scope, LocalCache, lazy = true)
-    val longsFeed = FeedContentState(LongsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val longsFeed = FeedContentState(LongsFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
     val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val musicTracksFeed = FeedContentState(MusicTracksFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val musicPlaylistsFeed = FeedContentState(MusicPlaylistsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
-    val podcastEpisodesFeed = FeedContentState(PodcastEpisodesFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
+    val podcastEpisodesFeed = FeedContentState(PodcastEpisodesFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
     val podcastsFeed = FeedContentState(PodcastsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val softwareAppsFeed = FeedContentState(SoftwareAppsFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
 

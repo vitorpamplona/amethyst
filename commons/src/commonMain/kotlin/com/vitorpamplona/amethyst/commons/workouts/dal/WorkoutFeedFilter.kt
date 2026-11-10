@@ -22,16 +22,26 @@ package com.vitorpamplona.amethyst.commons.workouts.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 
 class WorkoutFeedFilter(
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    OwnedUniverseFeedFilter {
+    // Workout records, whoever wrote them: the list and the mutes are checked at each rebuild.
+    override val universe = IFilter { it.event is WorkoutRecordEvent }
+
+    override var candidates: CandidateSet? = null
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
 
     override fun limit() = 200
@@ -49,9 +59,11 @@ class WorkoutFeedFilter(
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
         val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
-                val noteEvent = it.event
-                noteEvent is WorkoutRecordEvent && params.match(noteEvent, it.relays)
+            rebuildFeed("workouts", candidates, keep = { it.event?.let { e -> params.match(e, it.relays) } == true }) {
+                LocalCache.notes.filterIntoSet { _, it ->
+                    val noteEvent = it.event
+                    noteEvent is WorkoutRecordEvent && params.match(noteEvent, it.relays)
+                }
             }
         return sort(notes)
     }

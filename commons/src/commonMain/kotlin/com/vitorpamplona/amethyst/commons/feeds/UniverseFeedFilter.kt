@@ -48,11 +48,12 @@ interface UniverseFeedFilter {
 }
 
 /**
- * A screen's feed (a profile tab, a hashtag): its universe is a small part of the cache, so the
- * screen's `FeedViewModel` keeps it as a [CandidateSet] for as long as the screen lives, held
- * weakly like the cache. The view model sets [candidates]; the filter only declares [universe].
+ * A feed whose universe is a small part of the cache, kept as a [CandidateSet] by whoever owns the
+ * feed, held weakly like the cache: a screen's `FeedViewModel` for as long as the screen lives (a
+ * profile tab, a hashtag), or the account's feeds for a few rare kinds (pictures, polls, videos).
+ * The owner sets [candidates]; the filter only declares [universe].
  */
-interface ScreenUniverseFeedFilter : UniverseFeedFilter {
+interface OwnedUniverseFeedFilter : UniverseFeedFilter {
     override var candidates: CandidateSet?
 }
 

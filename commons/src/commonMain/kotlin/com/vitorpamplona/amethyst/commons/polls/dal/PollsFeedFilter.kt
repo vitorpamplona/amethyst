@@ -22,17 +22,28 @@ package com.vitorpamplona.amethyst.commons.polls.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 
 class PollsFeedFilter(
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    OwnedUniverseFeedFilter {
+    // Every poll: open, closed, the list and the mutes are checked at each rebuild. The three
+    // poll tabs share one set (AccountFeedContentStates).
+    override val universe = pollsUniverse
+
+    override var candidates: CandidateSet? = null
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
 
     override fun limit() = 200
@@ -50,9 +61,11 @@ class PollsFeedFilter(
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
         val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
-                val noteEvent = it.event
-                (noteEvent is PollEvent || noteEvent is ZapPollEvent) && params.match(noteEvent, it.relays)
+            rebuildFeed("polls", candidates, keep = { it.event?.let { e -> params.match(e, it.relays) } == true }) {
+                LocalCache.notes.filterIntoSet { _, it ->
+                    val noteEvent = it.event
+                    (noteEvent is PollEvent || noteEvent is ZapPollEvent) && params.match(noteEvent, it.relays)
+                }
             }
         return sort(notes)
     }
@@ -76,3 +89,6 @@ class PollsFeedFilter(
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
 }
+
+/** Polls of either kind, whoever wrote them. */
+val pollsUniverse = IFilter { it.event is PollEvent || it.event is ZapPollEvent }

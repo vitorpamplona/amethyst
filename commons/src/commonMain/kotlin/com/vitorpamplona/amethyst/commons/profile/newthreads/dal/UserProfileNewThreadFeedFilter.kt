@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.profile.newthreads.dal
 
 import com.vitorpamplona.amethyst.commons.audio.hasPlayableAudio
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.isRenderableRepost
 import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
@@ -71,7 +71,7 @@ class UserProfileNewThreadFeedFilter(
     val user: User,
     val account: Account,
 ) : AdditiveFeedFilter<Note>(),
-    ScreenUniverseFeedFilter {
+    OwnedUniverseFeedFilter {
     override val universe = IFilter { note -> note.event?.pubKey == user.pubkeyHex }
 
     override var candidates: CandidateSet? = null

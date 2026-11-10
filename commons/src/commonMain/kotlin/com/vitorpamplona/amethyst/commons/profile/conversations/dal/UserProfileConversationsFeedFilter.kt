@@ -23,7 +23,7 @@
 package com.vitorpamplona.amethyst.commons.profile.conversations.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -46,7 +46,7 @@ class UserProfileConversationsFeedFilter(
     val user: User,
     val account: Account,
 ) : AdditiveFeedFilter<Note>(),
-    ScreenUniverseFeedFilter {
+    OwnedUniverseFeedFilter {
     override val universe = IFilter { note -> note.event?.pubKey == user.pubkeyHex }
 
     override var candidates: CandidateSet? = null

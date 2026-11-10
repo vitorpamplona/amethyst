@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.communities.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.rebuildFeedMapping
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -46,7 +46,7 @@ class CommunityModerationFeedFilter(
     /** See [CommunityFeedFilter.hideRulesViolations]. */
     val hideRulesViolations: Boolean = false,
 ) : AdditiveFeedFilter<Note>(),
-    ScreenUniverseFeedFilter {
+    OwnedUniverseFeedFilter {
     val approvedFilter = CommunityFeedFilter(communityDefNote, account, hideRulesViolations)
 
     val communityDefEvent = communityDefNote.event as? CommunityDefinitionEvent

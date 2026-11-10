@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.hashtag.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.isRenderableRepost
 import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
@@ -54,7 +54,7 @@ class HashtagFeedFilter(
     val account: Account,
     val cache: LocalCache,
 ) : AdditiveFeedFilter<Note>(),
-    ScreenUniverseFeedFilter {
+    OwnedUniverseFeedFilter {
     // Labels arrive after the note (NIP-32); the cache re-notifies observers for the labelled note.
     // Who labelled it (a follow or not) is the feed's own check below.
     override val universe =

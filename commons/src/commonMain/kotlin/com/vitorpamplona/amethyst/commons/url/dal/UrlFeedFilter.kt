@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.url.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -42,7 +42,7 @@ class UrlFeedFilter(
     val account: Account,
     val cache: LocalCache,
 ) : AdditiveFeedFilter<Note>(),
-    ScreenUniverseFeedFilter {
+    OwnedUniverseFeedFilter {
     val normalizedUrl = UrlId.toScopeOrNull(url).orEmpty()
 
     // Comments scoped to the page and highlights of it: decided by the event alone.

@@ -22,13 +22,17 @@ package com.vitorpamplona.amethyst.commons.longs.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.SupportedContent
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.video.SUPPORTED_VIDEO_FEED_MIME_TYPES_SET
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -39,7 +43,14 @@ import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 
 class LongsFeedFilter(
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    OwnedUniverseFeedFilter {
+    // Long videos in a format the feed plays, whoever posted them: the list, the mutes and
+    // the reports are checked at each rebuild.
+    override val universe = IFilter { isPlayable(it) }
+
+    override var candidates: CandidateSet? = null
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
 
     override fun limit() = 200
@@ -57,12 +68,14 @@ class LongsFeedFilter(
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
         val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it, params)
-            } +
-                LocalCache.addressables.filterIntoSet(AddressableNormalVideoEvent.KIND) { _, it ->
+            rebuildFeed("longs", candidates, keep = { acceptableEvent(it, params) }) {
+                LocalCache.notes.filterIntoSet { _, it ->
                     acceptableEvent(it, params)
-                }
+                } +
+                    LocalCache.addressables.filterIntoSet(AddressableNormalVideoEvent.KIND) { _, it ->
+                        acceptableEvent(it, params)
+                    }
+            }
         return sort(notes)
     }
 
@@ -95,20 +108,23 @@ class LongsFeedFilter(
 
     fun acceptanceEvent(noteEvent: VideoNormalEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
 
-    fun acceptableEvent(
-        note: Note,
-        params: FilterByListParams,
-    ): Boolean {
+    fun isPlayable(note: Note): Boolean {
         val noteEvent = note.event
 
         if (noteEvent is AddressableEvent && note !is AddressableNote) {
             return false
         }
 
-        return (
-            (noteEvent is AddressableNormalVideoEvent && acceptanceEvent(noteEvent)) ||
-                (noteEvent is VideoNormalEvent && acceptanceEvent(noteEvent))
-        ) &&
+        return (noteEvent is AddressableNormalVideoEvent && acceptanceEvent(noteEvent)) ||
+            (noteEvent is VideoNormalEvent && acceptanceEvent(noteEvent))
+    }
+
+    fun acceptableEvent(
+        note: Note,
+        params: FilterByListParams,
+    ): Boolean {
+        val noteEvent = note.event ?: return false
+        return isPlayable(note) &&
             params.match(noteEvent, note.relays) &&
             (params.isHiddenList || account.isAcceptable(note))
     }
