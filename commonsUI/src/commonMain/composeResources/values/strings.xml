@@ -9470,7 +9470,8 @@
     <string name="agent_keys_title">AI agent</string>
     <string name="agent_keys_search_keywords" translatable="false">ai, agent, llm, model, api key, openrouter, anthropic, claude, openai, chatgpt, gemini, ollama</string>
     <string name="agent_keys_tagline">Bring your own AI. Encrypted to you.</string>
-    <string name="agent_keys_cap_tip">Use a key with a spending limit. Every app you sign into can use it.</string>
+    <string name="agent_keys_cap_tip">Create a key just for this, with a budget limit. Every app you sign into can spend from it.</string>
+    <string name="agent_keys_budget_hint">Use a key with a budget limit</string>
     <string name="agent_keys_status_none">Not connected</string>
     <string name="agent_keys_status_connected">Connected · %1$s</string>
     <string name="agent_keys_connect_openrouter">Connect OpenRouter</string>

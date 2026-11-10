@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_add
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_budget_hint
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_cap_tip
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_change
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_checking
@@ -142,7 +143,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nipXXAgentKeys.tags.AgentKeyTag
+import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -506,7 +507,7 @@ private fun AddAgentKey(
                                     }
                                 }
                             },
-                            supportingText = checkCaption(testing, result),
+                            supportingText = checkCaption(testing, result, budgetHint = selected.needsKey),
                             isError = result is AgentKeyProbeResult.Rejected,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -694,15 +695,18 @@ private fun CheckStatusIcon(
     }
 }
 
+/** The check's outcome under the key field; before there is one, the budget advice (NIP-FA). */
 private fun checkCaption(
     testing: Boolean,
     result: AgentKeyProbeResult?,
+    budgetHint: Boolean,
 ): (@Composable () -> Unit)? {
-    if (!testing && result == null) return null
+    if (!testing && result == null && !budgetHint) return null
     return {
         Text(
             when {
                 testing -> stringRes(Res.string.agent_keys_checking)
+                result == null -> stringRes(Res.string.agent_keys_budget_hint)
                 result is AgentKeyProbeResult.Ok && !result.keyChecked -> stringRes(Res.string.agent_keys_unverified)
                 result is AgentKeyProbeResult.Ok -> {
                     val count = result.modelCount

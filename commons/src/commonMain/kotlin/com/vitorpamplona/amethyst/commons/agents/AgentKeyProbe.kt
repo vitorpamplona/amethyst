@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.agents
 
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
-import com.vitorpamplona.quartz.nipXXAgentKeys.tags.AgentKeyTag
+import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 
 /** What `GET {url}/models` said about a key. */
 sealed interface AgentKeyProbeResult {

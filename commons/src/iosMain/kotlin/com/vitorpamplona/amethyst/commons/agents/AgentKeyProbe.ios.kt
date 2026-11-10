@@ -21,6 +21,6 @@
 package com.vitorpamplona.amethyst.commons.agents
 
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
-import com.vitorpamplona.quartz.nipXXAgentKeys.tags.AgentKeyTag
+import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 
 actual suspend fun IRoleBasedHttpClientBuilder.probeAgentKey(key: AgentKeyTag): AgentKeyProbeResult = AgentKeyProbeResult.Unsupported

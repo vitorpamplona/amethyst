@@ -57,7 +57,7 @@ import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
-import com.vitorpamplona.quartz.nipXXAgentKeys.AgentKeyEvent
+import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
 
 val AccountInfoAndListsFromKeyKinds =
     listOf(

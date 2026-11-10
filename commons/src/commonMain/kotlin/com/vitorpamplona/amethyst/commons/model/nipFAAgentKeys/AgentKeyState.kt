@@ -18,14 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.model.nipXXAgentKeys
+package com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys
 
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
-import com.vitorpamplona.quartz.nipXXAgentKeys.AgentKeyEvent
-import com.vitorpamplona.quartz.nipXXAgentKeys.agentKeys
-import com.vitorpamplona.quartz.nipXXAgentKeys.tags.AgentKeyTag
+import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
+import com.vitorpamplona.quartz.nipFAAgentKeys.agentKeys
+import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
