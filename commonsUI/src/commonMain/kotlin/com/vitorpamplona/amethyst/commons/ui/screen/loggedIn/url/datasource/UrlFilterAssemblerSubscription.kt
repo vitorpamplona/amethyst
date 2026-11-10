@@ -31,10 +31,11 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 fun UrlFilterAssemblerSubscription(
     url: String,
     accountViewModel: AccountViewModel,
+    owner: Any? = null,
 ) {
     val state =
-        remember(url) {
-            UrlQueryState(url, accountViewModel.account.followOutboxesOrProxy.flow.value)
+        remember(url, owner) {
+            UrlQueryState(url, accountViewModel.account.followOutboxesOrProxy.flow.value, owner)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().urls)

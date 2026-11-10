@@ -35,4 +35,6 @@ class UrlFeedFilterSubAssembler(
     ): List<RelayBasedFilter> = filterPostsByUrl(key.normalizedUrl, key.relays, since)
 
     override fun id(key: UrlQueryState) = key.normalizedUrl
+
+    override fun feedOwner(key: UrlQueryState) = key.owner
 }

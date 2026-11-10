@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 class UrlQueryState(
     val url: String,
     val relays: Set<NormalizedRelayUrl>,
+    /** The feed that holds what this subscription loads; its cursor is dropped when that changes. */
+    val owner: Any? = null,
 ) {
     val normalizedUrl = UrlId.toScopeOrNull(url).orEmpty()
 }

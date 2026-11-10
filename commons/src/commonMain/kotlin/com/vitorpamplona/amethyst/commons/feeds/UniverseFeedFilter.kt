@@ -76,3 +76,23 @@ inline fun rebuildFeed(
     }
     return result
 }
+
+/**
+ * [rebuildFeed] for a feed whose rows are not the candidates themselves (a community's approvals
+ * stand for the posts they approve): [rows] maps each candidate to the notes it puts on the feed.
+ */
+inline fun rebuildFeedMapping(
+    feedName: String,
+    candidates: CandidateSet?,
+    crossinline rows: (Note) -> Collection<Note>?,
+    walkCache: () -> Set<Note>,
+): Set<Note> {
+    val start = TimeSource.Monotonic.markNow()
+    val universe = candidates?.snapshot()
+    val result = universe?.let { u -> HashSet<Note>().also { set -> u.forEach { rows(it)?.let(set::addAll) } } } ?: walkCache()
+    Log.d("FeedRebuild") {
+        val source = if (universe != null) "${universe.size} candidates" else "cache walk"
+        "$feedName from $source: ${result.size} kept in ${start.elapsedNow().inWholeMilliseconds} ms"
+    }
+    return result
+}

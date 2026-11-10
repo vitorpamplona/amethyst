@@ -21,10 +21,14 @@
 package com.vitorpamplona.amethyst.commons.url.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -37,8 +41,14 @@ class UrlFeedFilter(
     val relays: Set<NormalizedRelayUrl>,
     val account: Account,
     val cache: LocalCache,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    ScreenUniverseFeedFilter {
     val normalizedUrl = UrlId.toScopeOrNull(url).orEmpty()
+
+    // Comments scoped to the page and highlights of it: decided by the event alone.
+    override val universe = IFilter { note -> normalizedUrl.isNotEmpty() && acceptableViaScope(note.event, normalizedUrl) }
+
+    override var candidates: CandidateSet? = null
 
     // The host a highlight's `r` must mention, lowercased once: a substring test that rejects
     // nearly every other highlight before any URL is parsed.
@@ -48,8 +58,10 @@ class UrlFeedFilter(
 
     override fun feed(): List<Note> {
         val notes =
-            cache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it, normalizedUrl)
+            rebuildFeed("url", candidates, keep = { acceptableEvent(it, normalizedUrl) }) {
+                cache.notes.filterIntoSet { _, it ->
+                    acceptableEvent(it, normalizedUrl)
+                }
             }
 
         return sort(notes)

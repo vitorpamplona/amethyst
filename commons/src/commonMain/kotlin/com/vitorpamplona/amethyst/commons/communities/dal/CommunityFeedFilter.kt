@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.communities.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeedMapping
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -28,6 +30,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.latestCommunityRules
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.violatesCommunityRules
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
@@ -45,11 +49,18 @@ class CommunityFeedFilter(
      * pre-9A behaviour for any caller that constructs the filter directly.
      */
     val hideRulesViolations: Boolean = false,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    ScreenUniverseFeedFilter {
     val communityDefEvent = communityDefNote.event as? CommunityDefinitionEvent
     val moderators = communityDefEvent?.moderatorKeys()?.toSet() ?: emptySet()
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + communityDefNote.idHex
+
+    // Posts and approvals that name this community: decided by the event alone. Who posted or
+    // approved, and the rules, are checked at each rebuild.
+    override val universe = communityUniverse(communityDefNote.idHex)
+
+    override var candidates: CandidateSet? = null
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
@@ -71,8 +82,10 @@ class CommunityFeedFilter(
 
         val validator = rulesValidator()
         val result =
-            LocalCache.notes.mapFlattenIntoSet { _, it ->
-                filterMap(it, validator)
+            rebuildFeedMapping("community", candidates, rows = { filterMap(it, validator) }) {
+                LocalCache.notes.mapFlattenIntoSet { _, it ->
+                    filterMap(it, validator)
+                }
             }
 
         return sort(result)
@@ -124,3 +137,10 @@ class CommunityFeedFilter(
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
 }
+
+/** Text notes, comments and approvals for the community at [communityId], whoever wrote them. */
+fun communityUniverse(communityId: String) =
+    IFilter { note ->
+        val event = note.event
+        (event is TextNoteEvent || event is CommentEvent || event is CommunityPostApprovalEvent) && event.isForCommunity(communityId)
+    }

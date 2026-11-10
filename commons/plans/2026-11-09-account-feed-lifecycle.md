@@ -250,7 +250,33 @@ Done on the branch, each step its own commit:
    Over 12 returns on desktop: no rebuild of a kept-current feed on return; one burst of one
    rebuild per group, between returns, from an input change.
 
-Other screens (lists, profiles, threads…) still rebuild on resume.
+5. **The other account feeds.** Every account feed sorted by date that reads nothing but its
+   events, its list and the mutes is kept current the same way, one `FeedsKeptCurrent` each:
+   Polls (all), Pictures, Workouts, Highlights, Badges, Emoji packs, Git repositories (its
+   co-maintainer merge already rebuilds on announcements), Calendar lists, Marketplace, Geocaches,
+   Cache hunts, my geocaches and finds (no list), Articles and Follow packs. Shorts, Longs,
+   Podcast episodes, Podcasts, Music tracks and playlists and App store also read
+   `Account.isAcceptable`, so their inputs add follows and the report settings and a batch with a
+   report re-checks what they show, as on Video. Still rebuilt on resume:
+   - against the clock: Polls open/closed, Calendar appointments, Nests, Relay groups;
+   - by activity that never arrives as one of their items: Chess, Public chats, Live streams,
+     Messages, Communities list;
+   - read off the account, not the cache (cheap): Drafts, Web bookmarks.
+   On desktop: Highlights, Badges and Follow packs rebuilt twice when first opened and never on
+   return; Live streams still rebuilt on each return.
+6. **Community and URL screens** are `ScreenUniverseFeedFilter`s like profile and hashtag. A
+   community's universe is its posts and approvals, whoever wrote them (`communityUniverse`);
+   who may post or approve, the rules and the mod queue's "already approved" are checked at each
+   rebuild, which maps an approval to the posts it approves (`rebuildFeedMapping`). URL's is the
+   comments scoped to the page and its highlights, and its key carries the screen as `owner`.
+   Gamestr on desktop: the feed and mod queue rebuilt from 215 candidates in 0-2 ms on return
+   (92 and 2 rows). Not run: the URL screen. The community subscription shares one cursor per
+   relay across communities (`SingleSubEoseManager`), so it has no per-screen owner yet.
+
+Screen feeds still walking the whole cache on resume: single relay (a note's relays change
+without a new event, so it has no fixed universe), mutual follows and a follow pack's feeds (the
+people change with the list), and a podcast's episodes. Threads, bookmarks, lists and pins read
+their notes directly and do not walk.
 
 ## Open questions
 
