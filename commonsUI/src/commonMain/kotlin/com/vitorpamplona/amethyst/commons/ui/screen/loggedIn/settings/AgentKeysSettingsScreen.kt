@@ -45,7 +45,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -85,11 +84,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.agents.AgentKeyProbeResult
+import com.vitorpamplona.amethyst.commons.agents.AgentProviderGroup
 import com.vitorpamplona.amethyst.commons.agents.AgentProviderPreset
 import com.vitorpamplona.amethyst.commons.agents.AgentProviderPresets
 import com.vitorpamplona.amethyst.commons.agents.OpenRouterConnectResult
@@ -111,8 +110,10 @@ import com.vitorpamplona.amethyst.commons.resources.agent_keys_failed
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_get_key
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_key_optional
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_key_placeholder
-import com.vitorpamplona.amethyst.commons.resources.agent_keys_local
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_local_no_key
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_make_preferred
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_more_providers
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_on_your_computer
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_openrouter_denied
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_openrouter_done_page
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_openrouter_failed
@@ -127,8 +128,8 @@ import com.vitorpamplona.amethyst.commons.resources.agent_keys_rejected
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_remove_body
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_remove_title
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_runs_locally
-import com.vitorpamplona.amethyst.commons.resources.agent_keys_status_connected
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_status_none
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_status_using
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_tagline
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_title
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_unreachable
@@ -140,6 +141,7 @@ import com.vitorpamplona.amethyst.commons.resources.agent_keys_works
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_works_models
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_your_keys
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.resources.hide_password
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.resources.save
@@ -183,11 +185,12 @@ fun AgentKeysSettingsScreen(
                 .animateContentSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            AgentHero(connectedTo = keys.firstOrNull()?.let { AgentProviderPresets.displayName(it.url) })
+            AgentHero(using = keys.firstOrNull()?.let { AgentProviderPresets.displayName(it.url) })
 
             if (keys.isNotEmpty()) {
                 SavedKeys(
                     keys = keys,
+                    adding = adding,
                     onAdd = { adding = !adding },
                     onMakePreferred = { key -> accountViewModel.launchSigner { accountViewModel.account.setPreferredAgentKey(key) } },
                     onRemove = { key -> accountViewModel.launchSigner { accountViewModel.account.removeAgentKey(key) } },
@@ -211,7 +214,7 @@ fun AgentKeysSettingsScreen(
 }
 
 @Composable
-private fun AgentHero(connectedTo: String?) {
+private fun AgentHero(using: String?) {
     var showTip by remember { mutableStateOf(false) }
     val scheme = MaterialTheme.colorScheme
     val onHero = scheme.onPrimary
@@ -235,26 +238,31 @@ private fun AgentHero(connectedTo: String?) {
                     Icon(MaterialSymbols.AutoAwesome, contentDescription = null, tint = onHero, modifier = Modifier.size(30.dp), filled = true)
                 }
                 Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(stringRes(Res.string.agent_keys_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = onHero)
-                    Text(stringRes(Res.string.agent_keys_tagline), style = MaterialTheme.typography.bodyMedium, color = onHero.copy(alpha = 0.85f))
-                }
+                // The top bar names the screen; the hero only says what it is for.
+                Text(
+                    stringRes(Res.string.agent_keys_tagline),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = onHero,
+                    modifier = Modifier.weight(1f),
+                )
                 IconButton(onClick = { showTip = !showTip }) {
                     Icon(MaterialSymbols.Info, contentDescription = stringRes(Res.string.agent_keys_cap_tip), tint = onHero.copy(alpha = 0.85f))
                 }
             }
 
-            Surface(shape = CircleShape, color = onHero.copy(alpha = if (connectedTo != null) 0.24f else 0.14f)) {
+            // "Using", not "Connected": saving a key says nothing about whether it works right now.
+            Surface(shape = CircleShape, color = onHero.copy(alpha = if (using != null) 0.24f else 0.14f)) {
                 Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier
                             .size(8.dp)
                             .clip(CircleShape)
-                            .background(if (connectedTo != null) Color(0xFF4ADE80) else onHero.copy(alpha = 0.5f)),
+                            .background(onHero.copy(alpha = if (using != null) 0.85f else 0.5f)),
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        if (connectedTo != null) stringRes(Res.string.agent_keys_status_connected, connectedTo) else stringRes(Res.string.agent_keys_status_none),
+                        if (using != null) stringRes(Res.string.agent_keys_status_using, using) else stringRes(Res.string.agent_keys_status_none),
                         style = MaterialTheme.typography.labelLarge,
                         color = onHero,
                     )
@@ -271,6 +279,7 @@ private fun AgentHero(connectedTo: String?) {
 @Composable
 private fun SavedKeys(
     keys: List<AgentKeyTag>,
+    adding: Boolean,
     onAdd: () -> Unit,
     onMakePreferred: (AgentKeyTag) -> Unit,
     onRemove: (AgentKeyTag) -> Unit,
@@ -280,10 +289,11 @@ private fun SavedKeys(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringRes(Res.string.agent_keys_your_keys), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            // The same button closes the picker it opened.
             TextButton(onClick = onAdd) {
-                Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(if (adding) MaterialSymbols.Close else MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
-                Text(stringRes(Res.string.agent_keys_add))
+                Text(stringRes(if (adding) Res.string.close else Res.string.agent_keys_add))
             }
         }
 
@@ -296,7 +306,7 @@ private fun SavedKeys(
                 border = if (preferred) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
             ) {
                 Row(Modifier.fillMaxWidth().padding(start = 14.dp, top = 10.dp, bottom = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ProviderAvatar(preset?.id ?: key.url, AgentProviderPresets.displayName(key.url), size = 40)
+                    ProviderAvatar(preset?.id ?: key.url, AgentProviderPresets.monogramFor(key.url), size = 40)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(AgentProviderPresets.displayName(key.url), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -305,6 +315,15 @@ private fun SavedKeys(
                                 AgentProviderPresets.maskKey(key.key),
                                 style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else {
+                            // A key-less entry still says what it is: a runner here, or somewhere else.
+                            Text(
+                                if (AgentProviderPresets.isLocalUrl(key.url)) stringRes(Res.string.agent_keys_local_no_key) else AgentProviderPresets.hostOf(key.url) ?: key.url,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
@@ -342,11 +361,11 @@ private fun SavedKeys(
     }
 }
 
-/** A letter on a colour picked from the provider id, so each provider keeps its colour. */
+/** Two letters on a colour picked from the provider id, so each provider keeps its colour. */
 @Composable
 private fun ProviderAvatar(
     seed: String,
-    name: String,
+    monogram: String,
     size: Int,
 ) {
     val hue = (seed.hashCode().toLong() and 0xFFFFFFFFL) % 360
@@ -358,10 +377,11 @@ private fun ProviderAvatar(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            name.firstOrNull { it.isLetterOrDigit() }?.uppercase() ?: "?",
+            monogram,
             color = Color.White,
             fontWeight = FontWeight.Bold,
-            style = if (size >= 40) MaterialTheme.typography.titleMedium else MaterialTheme.typography.labelLarge,
+            style = if (size >= 40) MaterialTheme.typography.titleSmall else MaterialTheme.typography.labelMedium,
+            maxLines = 1,
         )
     }
 }
@@ -463,7 +483,7 @@ private fun AddAgentKey(
                             if (selected == AgentProviderPresets.CUSTOM) {
                                 Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(32.dp))
                             } else {
-                                ProviderAvatar(selected.id, selected.name, size = 32)
+                                ProviderAvatar(selected.id, selected.monogram, size = 32)
                             }
                             Spacer(Modifier.width(10.dp))
                             Text(
@@ -657,26 +677,48 @@ private fun OrDivider() {
     }
 }
 
+/**
+ * The providers as compact rows: the main six, the rest behind "More providers", local runners
+ * under their own heading, Custom last. Two columns on a phone, three on a wide pane.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ProviderGrid(
     selected: AgentProviderPreset?,
     onSelect: (AgentProviderPreset) -> Unit,
 ) {
+    var showMore by remember { mutableStateOf(false) }
+    val byGroup = AgentProviderPresets.ALL.groupBy { it.group }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val columns =
-            when {
-                maxWidth >= 640.dp -> 4
-                maxWidth >= 400.dp -> 3
-                else -> 2
-            }
-        val gap = 10.dp
+        val columns = if (maxWidth >= 520.dp) 3 else 2
+        val gap = 8.dp
         // A hair under the exact share, so rounding never wraps the last tile of a row.
         val tileWidth = (maxWidth - gap * (columns - 1)) / columns - 1.dp
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(gap), verticalArrangement = Arrangement.spacedBy(gap)) {
-            AgentProviderPresets.ALL.forEach { preset ->
-                ProviderTile(preset, preset == selected, Modifier.width(tileWidth)) { onSelect(preset) }
+
+        @Composable
+        fun tiles(presets: List<AgentProviderPreset>) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(gap), verticalArrangement = Arrangement.spacedBy(gap)) {
+                presets.forEach { preset -> ProviderTile(preset, preset == selected, Modifier.width(tileWidth)) { onSelect(preset) } }
             }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            tiles(byGroup[AgentProviderGroup.MAIN].orEmpty())
+            TextButton(onClick = { showMore = !showMore }, contentPadding = PaddingValues(horizontal = 4.dp)) {
+                Text(stringRes(Res.string.agent_keys_more_providers))
+                Spacer(Modifier.width(4.dp))
+                Icon(if (showMore) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
+            AnimatedVisibility(showMore) { tiles(byGroup[AgentProviderGroup.MORE].orEmpty()) }
+            Text(
+                stringRes(Res.string.agent_keys_on_your_computer),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+            )
+            tiles(byGroup[AgentProviderGroup.LOCAL].orEmpty())
+            // Custom is any URL, here or elsewhere: last, under no heading.
+            tiles(byGroup[AgentProviderGroup.CUSTOM].orEmpty())
         }
     }
 }
@@ -690,40 +732,28 @@ private fun ProviderTile(
 ) {
     val isCustom = preset == AgentProviderPresets.CUSTOM
     val name = if (isCustom) stringRes(Res.string.agent_keys_custom) else preset.name
-    val badge =
-        when {
-            preset == AgentProviderPresets.OPENROUTER -> stringRes(Res.string.agent_keys_recommended)
-            preset.isLocal -> stringRes(Res.string.agent_keys_local)
-            else -> null
-        }
+    val shape = RoundedCornerShape(16.dp)
     Surface(
-        shape = RoundedCornerShape(18.dp),
+        shape = shape,
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
         border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
-        modifier = modifier.clip(RoundedCornerShape(18.dp)).clickable(onClick = onClick),
+        modifier = modifier.height(60.dp).clip(shape).clickable(onClick = onClick),
     ) {
-        Column(
-            Modifier.padding(vertical = 12.dp, horizontal = 8.dp).widthIn(min = 64.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
+        Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             if (isCustom) {
-                Box(
-                    Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center,
-                ) {
+                Box(Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
                     Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(20.dp))
                 }
             } else {
-                ProviderAvatar(preset.id, preset.name, size = 36)
+                ProviderAvatar(preset.id, preset.monogram, size = 36)
             }
-            Text(name, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-            Text(
-                badge ?: "",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-                maxLines = 1,
-            )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(name, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (preset == AgentProviderPresets.OPENROUTER) {
+                    Text(stringRes(Res.string.agent_keys_recommended), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, maxLines = 1)
+                }
+            }
         }
     }
 }

@@ -9473,7 +9473,7 @@
     <string name="agent_keys_cap_tip">Create a key just for this, with a budget limit. Every app you sign into can spend from it.</string>
     <string name="agent_keys_budget_hint">Use a key with a budget limit</string>
     <string name="agent_keys_status_none">Not connected</string>
-    <string name="agent_keys_status_connected">Connected · %1$s</string>
+    <string name="agent_keys_status_using">Using %1$s</string>
     <string name="agent_keys_connect_openrouter">Connect OpenRouter</string>
     <string name="agent_keys_other_providers">Other providers</string>
     <string name="agent_keys_your_keys">Your keys</string>
@@ -9483,7 +9483,9 @@
     <string name="agent_keys_change">Change</string>
     <string name="agent_keys_custom">Custom</string>
     <string name="agent_keys_recommended">Recommended</string>
-    <string name="agent_keys_local">Local</string>
+    <string name="agent_keys_local_no_key">Local · no key</string>
+    <string name="agent_keys_more_providers">More providers</string>
+    <string name="agent_keys_on_your_computer">On your computer</string>
     <string name="agent_keys_runs_locally">Runs on your computer</string>
     <string name="agent_keys_url">API URL</string>
     <string name="agent_keys_url_invalid">Not a valid URL</string>
@@ -9543,7 +9545,6 @@
     <string name="front_page_fail_empty">Your AI answered without a page. Try again.</string>
     <string name="front_page_fail_http">Your AI provider answered with an error (%1$d).</string>
     <string name="front_page_print_estimate">%1$s · ≈ %2$s</string>
-    <string name="front_page_cost">%1$s</string>
     <string name="front_page_banner_pull">Printing your paper… %1$d/%2$d</string>
     <string name="front_page_banner_write">Writing your paper…</string>
     <string name="front_page_banner_check">Checking your paper…</string>
@@ -9568,6 +9569,14 @@
         <item quantity="one">%1$s token</item>
         <item quantity="other">%1$s tokens</item>
     </plurals>
+    <string name="front_page_new_edition">New edition</string>
+    <string name="front_page_model_hint">Name a model to print, e.g. llama3.3</string>
+    <string name="front_page_schedule_line">Every morning at %1$s</string>
+    <string name="front_page_read_full">Read full screen</string>
+    <string name="front_page_details">About this edition</string>
+    <string name="front_page_edition_label">Edition</string>
+    <string name="front_page_tokens_label">Tokens</string>
+    <string name="front_page_cost_label">Cost</string>
     <string name="front_page_tor_pictures">Your paper's pictures load through Tor.</string>
     <string name="front_page_no_tor">Tor isn't connected</string>
     <string name="front_page_show_failed">Couldn't show the paper</string>

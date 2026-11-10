@@ -659,6 +659,11 @@ sealed class Route {
         val day: String? = null,
     ) : Route()
 
+    /** One kept edition alone, edge to edge: the front page's "Read full screen". */
+    @Serializable data class FrontPageReader(
+        val day: String,
+    ) : Route()
+
     @Serializable object VideoPlayerSettings : Route()
 
     @Serializable object CallSettings : Route()

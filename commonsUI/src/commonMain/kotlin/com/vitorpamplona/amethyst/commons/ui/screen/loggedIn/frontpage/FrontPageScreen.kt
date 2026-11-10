@@ -27,14 +27,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -43,19 +43,22 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -65,6 +68,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -81,10 +85,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageClock
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageGate
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageModels
-import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageRun
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSchedule
-import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduler
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageViewModel
 import com.vitorpamplona.amethyst.commons.frontpage.MASTHEAD
 import com.vitorpamplona.amethyst.commons.frontpage.PrintResult
@@ -100,6 +102,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.confirm
 import com.vitorpamplona.amethyst.commons.resources.dlist_day_friday
 import com.vitorpamplona.amethyst.commons.resources.dlist_day_monday
 import com.vitorpamplona.amethyst.commons.resources.dlist_day_saturday
@@ -110,9 +113,10 @@ import com.vitorpamplona.amethyst.commons.resources.dlist_day_wednesday
 import com.vitorpamplona.amethyst.commons.resources.front_page_cannot_show
 import com.vitorpamplona.amethyst.commons.resources.front_page_changes_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_connect
-import com.vitorpamplona.amethyst.commons.resources.front_page_cost
+import com.vitorpamplona.amethyst.commons.resources.front_page_cost_label
+import com.vitorpamplona.amethyst.commons.resources.front_page_details
 import com.vitorpamplona.amethyst.commons.resources.front_page_download
-import com.vitorpamplona.amethyst.commons.resources.front_page_edition
+import com.vitorpamplona.amethyst.commons.resources.front_page_edition_label
 import com.vitorpamplona.amethyst.commons.resources.front_page_every_morning
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_credit
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_empty
@@ -123,8 +127,10 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_fail_rejected
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_unreachable
 import com.vitorpamplona.amethyst.commons.resources.front_page_fixed_once
 import com.vitorpamplona.amethyst.commons.resources.front_page_model
+import com.vitorpamplona.amethyst.commons.resources.front_page_model_hint
 import com.vitorpamplona.amethyst.commons.resources.front_page_model_id
 import com.vitorpamplona.amethyst.commons.resources.front_page_needs_device_key
+import com.vitorpamplona.amethyst.commons.resources.front_page_new_edition
 import com.vitorpamplona.amethyst.commons.resources.front_page_no_key
 import com.vitorpamplona.amethyst.commons.resources.front_page_no_lens
 import com.vitorpamplona.amethyst.commons.resources.front_page_no_tor
@@ -135,8 +141,10 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_print
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_again
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_estimate
 import com.vitorpamplona.amethyst.commons.resources.front_page_quotes_verified
+import com.vitorpamplona.amethyst.commons.resources.front_page_read_full
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_body
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_title
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_line
 import com.vitorpamplona.amethyst.commons.resources.front_page_set_up
 import com.vitorpamplona.amethyst.commons.resources.front_page_show_failed
 import com.vitorpamplona.amethyst.commons.resources.front_page_step_check
@@ -147,19 +155,23 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_step_write
 import com.vitorpamplona.amethyst.commons.resources.front_page_tagline
 import com.vitorpamplona.amethyst.commons.resources.front_page_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_tokens
+import com.vitorpamplona.amethyst.commons.resources.front_page_tokens_label
 import com.vitorpamplona.amethyst.commons.resources.front_page_tor_pictures
 import com.vitorpamplona.amethyst.commons.resources.front_page_unsupported
 import com.vitorpamplona.amethyst.commons.resources.retry
 import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.resources.tor_waiting
 import com.vitorpamplona.amethyst.commons.resources.yesterday
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import com.vitorpamplona.amethyst.commons.ui.components.PillColors
 import com.vitorpamplona.amethyst.commons.ui.components.PillTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberFileBytesAccess
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.note.DateSkeletonFormatter
 import com.vitorpamplona.amethyst.commons.ui.note.rememberIs24HourClock
+import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
@@ -167,17 +179,40 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 
 /** The house stylesheet's `--paper`: the newsprint the paper sits on, whatever the app's theme. */
 private val Newsprint = Color(0xFFFAF8F3)
 
+/** Ink on newsprint: the paper's frame is always light, whatever the app's theme. */
+private val Ink = Color(0xFF1A1A1A)
+
+/** "Tue, Nov 10": the shown edition's day, as the top bar's title. */
+private val editionDateFormatter = DateSkeletonFormatter("MMMEd")
+
+/**
+ * The edition's own day (`yyyy-MM-dd`), as the title: noon UTC of that date, which falls on the
+ * same calendar day in every zone from UTC-11 to UTC+11. Its print time can be later than the
+ * day it belongs to, or absent.
+ */
+private fun editionTitle(day: String): String {
+    val parts = day.split('-').mapNotNull { it.toIntOrNull() }
+    if (parts.size != 3) return day
+    val noonUtc = (SearchDate(parts[0], parts[1], parts[2]).daysFromEpoch() * 86_400L + 43_200L) * 1000
+    return editionDateFormatter.format(noonUtc)
+}
+
 /**
  * Your front page: the Nostr Observer's daily paper, written by the reader's own AI key from the
  * last 24 hours of their web of trust, checked, kept on the device for a week, and shown on the
  * same sandboxed surface as an nSite. The print belongs to the account, not to this screen.
+ *
+ * Reader first: once an edition exists the paper leads, with its date as the title, and printing
+ * moves behind a top-bar action into a sheet. The gradient hero is the first-run and setup view.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FrontPageScreen(
     accountViewModel: AccountViewModel,
@@ -186,29 +221,17 @@ fun FrontPageScreen(
 ) {
     val services = LocalAppServices.current
     val printers = services.frontPagePrinters
-    Scaffold(topBar = { TopBarWithBackButton(stringRes(Res.string.front_page_title), nav) }) { padding ->
-        if (printers == null) {
+    if (printers == null) {
+        Scaffold(topBar = { TopBarWithBackButton(stringRes(Res.string.front_page_title), nav) }) { padding ->
             Box(Modifier.padding(padding).padding(16.dp)) { Notice(stringRes(Res.string.front_page_unsupported)) }
-        } else {
-            FrontPageBody(accountViewModel, nav, day, printers, services.frontPageScheduler, Modifier.padding(padding))
         }
+        return
     }
-}
-
-@Composable
-private fun FrontPageBody(
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    day: String?,
-    printers: FrontPagePrinters,
-    scheduler: FrontPageScheduler,
-    modifier: Modifier,
-) {
     val account = accountViewModel.account
     val printer = printers.of(account)
     val viewModel =
         rememberViewModel(key = "front-page:${account.signer.pubKey}") {
-            FrontPageViewModel(account, accountViewModel.httpClientBuilder, printer, printers.schedules, scheduler, day)
+            FrontPageViewModel(account, accountViewModel.httpClientBuilder, printer, printers.schedules, services.frontPageScheduler, day)
         }
     // While this screen shows the paper, a finished print needs no notification.
     DisposableEffect(printer) {
@@ -223,43 +246,165 @@ private fun FrontPageBody(
     val estimate by viewModel.estimate.collectAsStateWithLifecycle()
     val schedule by viewModel.schedule.collectAsStateWithLifecycle()
 
-    Column(
-        modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Hero(gate, models, run, estimate, hasEditions = editions.isNotEmpty(), onModel = viewModel::selectModel, onPrint = viewModel::print, onCancel = viewModel::cancel)
-        when (gate) {
-            FrontPageGate.NO_KEY -> GateCard(Res.string.front_page_no_key, Res.string.front_page_connect) { nav.nav(Route.AgentKeysSettings) }
-            FrontPageGate.NO_LENS -> GateCard(Res.string.front_page_no_lens, Res.string.front_page_set_up) { nav.nav(Route.WebOfTrust) }
-            FrontPageGate.UNSUPPORTED -> Notice(stringRes(Res.string.front_page_unsupported))
-            FrontPageGate.READY -> {
-                ScheduleCard(schedule, viewModel.printsUnattended, viewModel::setSchedule)
-                RunStatus(run)
+    var printSheet by remember { mutableStateOf(false) }
+    var detailsSheet by remember { mutableStateOf(false) }
+    val platform = LocalAppPlatform.current
+    val download = rememberEditionDownload()
+
+    val current = shown
+    Scaffold(
+        topBar = {
+            if (current == null) {
+                TopBarWithBackButton(stringRes(Res.string.front_page_title), nav)
+            } else {
+                TopBarWithBackButton(editionTitle(current.edition.day), nav) {
+                    if (gate == FrontPageGate.READY) {
+                        IconButton(onClick = { printSheet = true }) {
+                            Icon(MaterialSymbols.AutoAwesome, contentDescription = stringRes(Res.string.front_page_print_again))
+                        }
+                    }
+                    IconButton(onClick = { download(current) }) {
+                        Icon(MaterialSymbols.Download, contentDescription = stringRes(Res.string.front_page_download))
+                    }
+                    if (platform.showsPapersInline) {
+                        IconButton(onClick = { nav.nav(Route.FrontPageReader(current.edition.day)) }) {
+                            Icon(MaterialSymbols.Fullscreen, contentDescription = stringRes(Res.string.front_page_read_full))
+                        }
+                    }
+                }
+            }
+        },
+    ) { padding ->
+        Column(
+            Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            val firstRun = current == null
+            if (firstRun || gate != FrontPageGate.READY) {
+                Hero {
+                    // First run: the print controls stay inline, on the gradient.
+                    if (gate == FrontPageGate.READY) {
+                        PrintControls(
+                            models,
+                            run,
+                            estimate,
+                            hasEditions = false,
+                            schedule,
+                            viewModel.printsUnattended,
+                            onModel = viewModel::selectModel,
+                            onPrint = viewModel::print,
+                            onCancel = viewModel::cancel,
+                            onSchedule = viewModel::setSchedule,
+                            onAccent = true,
+                        )
+                    }
+                }
+            }
+            when (gate) {
+                FrontPageGate.NO_KEY -> GateCard(Res.string.front_page_no_key, Res.string.front_page_connect) { nav.nav(Route.AgentKeysSettings) }
+                FrontPageGate.NO_LENS -> GateCard(Res.string.front_page_no_lens, Res.string.front_page_set_up) { nav.nav(Route.WebOfTrust) }
+                FrontPageGate.UNSUPPORTED -> Notice(stringRes(Res.string.front_page_unsupported))
+                FrontPageGate.READY -> RunStatus(run, onCancel = viewModel::cancel)
+            }
+            if (current != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (editions.size > 1) History(editions, current.edition.day, viewModel::selectDay)
+                    Facts(current.edition, onDetails = { detailsSheet = true })
+                    if (schedule.enabled) ScheduleLine(schedule) { printSheet = true }
+                }
+                Paper(current, "front-page", fill = false, Modifier.fillMaxWidth())
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+
+    if (printSheet) {
+        ModalBottomSheet(onDismissRequest = { printSheet = false }) {
+            Column(
+                Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Text(stringRes(Res.string.front_page_new_edition), style = MaterialTheme.typography.titleLarge)
+                PrintControls(
+                    models,
+                    run,
+                    estimate,
+                    hasEditions = editions.isNotEmpty(),
+                    schedule,
+                    viewModel.printsUnattended,
+                    onModel = viewModel::selectModel,
+                    onPrint = {
+                        viewModel.print()
+                        printSheet = false
+                    },
+                    onCancel = viewModel::cancel,
+                    onSchedule = viewModel::setSchedule,
+                    onAccent = false,
+                )
             }
         }
-        if (editions.isNotEmpty()) {
-            History(editions, shown?.edition?.day, viewModel::selectDay)
-            shown?.let { Edition(it) }
+    }
+    if (detailsSheet && current != null) {
+        ModalBottomSheet(onDismissRequest = { detailsSheet = false }) {
+            Details(current.edition, Modifier.navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 24.dp))
         }
-        Spacer(Modifier.height(24.dp))
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * The paper alone, edge to edge: no controls, a back arrow, the date and Download. The same
+ * surface and status overlay as the inline paper, under its own session id.
+ */
 @Composable
-private fun Hero(
-    gate: FrontPageGate,
-    models: FrontPageModels,
-    run: FrontPageRun,
-    estimate: Double?,
-    hasEditions: Boolean,
-    onModel: (String) -> Unit,
-    onPrint: () -> Unit,
-    onCancel: () -> Unit,
+fun FrontPageReaderScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    day: String,
 ) {
+    val printers = LocalAppServices.current.frontPagePrinters
+    val printer = printers?.of(accountViewModel.account)
+    val editions by (printer?.editions ?: remember { MutableStateFlow(emptyList()) }).collectAsStateWithLifecycle()
+    val edition = editions.firstOrNull { it.day == day }
+    val html by produceState<String?>(null, printer, day, edition?.code) { value = printer?.html(day) }
+    val shown = if (edition != null && html != null) ShownEdition(edition, html!!) else null
+    val download = rememberEditionDownload()
+
+    Scaffold(
+        topBar = {
+            TopBarWithBackButton(edition?.let { editionTitle(it.day) } ?: stringRes(Res.string.front_page_title), nav) {
+                if (shown != null) {
+                    IconButton(onClick = { download(shown) }) {
+                        Icon(MaterialSymbols.Download, contentDescription = stringRes(Res.string.front_page_download))
+                    }
+                }
+            }
+        },
+    ) { padding ->
+        Box(Modifier.padding(padding).fillMaxSize().background(Newsprint)) {
+            if (shown != null) Paper(shown, "front-page-reader", fill = true, Modifier.fillMaxSize())
+        }
+    }
+}
+
+/** Saves an edition's page where the reader picks. */
+@Composable
+private fun rememberEditionDownload(): (ShownEdition) -> Unit {
+    val files = rememberFileBytesAccess()
+    val scope = rememberCoroutineScope()
+    return remember(files, scope) {
+        { shown ->
+            scope.launch { files.save("front-page-${shown.edition.day}-${shown.edition.code}.html", "text/html") { shown.html.encodeToByteArray() } }
+        }
+    }
+}
+
+/** First run and setup: what the page is, on the gradient, with whatever comes next inside it. */
+@Composable
+private fun Hero(content: @Composable ColumnScope.() -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val onHero = scheme.onPrimary
     Box(
@@ -275,53 +420,91 @@ private fun Hero(
                     Icon(MaterialSymbols.AutoMirrored.Article, contentDescription = null, tint = onHero, modifier = Modifier.size(28.dp))
                 }
                 Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(stringRes(Res.string.front_page_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = onHero)
-                    Text(stringRes(Res.string.front_page_tagline), style = MaterialTheme.typography.bodyMedium, color = onHero.copy(alpha = 0.85f))
-                }
+                // The top bar names the screen; the hero only says what it is for.
+                Text(
+                    stringRes(Res.string.front_page_tagline),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = onHero,
+                    modifier = Modifier.weight(1f),
+                )
             }
-            if (gate == FrontPageGate.READY) {
-                // Straight on the gradient, no dark box inside it: a translucent model pill and a
-                // white Print button, the strongest thing on the card.
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ModelPicker(models, onModel, onHero)
-                    if (run is FrontPageRun.Running) {
-                        OutlinedButton(
-                            onClick = onCancel,
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            border = BorderStroke(1.5.dp, onHero.copy(alpha = 0.7f)),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = onHero),
-                        ) {
-                            Text(stringRes(Res.string.cancel), style = MaterialTheme.typography.titleSmall)
-                        }
+            content()
+        }
+    }
+}
+
+/**
+ * Model, Print (with its estimate) or Cancel, and the morning schedule: inline on the first-run
+ * hero ([onAccent]), or on the print sheet's surface.
+ */
+@Composable
+private fun PrintControls(
+    models: FrontPageModels,
+    run: FrontPageRun,
+    estimate: Double?,
+    hasEditions: Boolean,
+    schedule: FrontPageSchedule,
+    unattended: Boolean,
+    onModel: (String) -> Unit,
+    onPrint: () -> Unit,
+    onCancel: () -> Unit,
+    onSchedule: (FrontPageSchedule) -> Unit,
+    onAccent: Boolean,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val onHero = scheme.onPrimary
+    val ink = if (onAccent) onHero else scheme.onSurface
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        ModelPicker(models, onModel, if (onAccent) PillColors.onAccent(onHero) else PillColors.onCard(), ink)
+        // A Print that can't be pressed says why: the provider lists nothing and no model is named.
+        if (!models.loading && models.ids.isEmpty() && models.selected == null) {
+            Text(
+                stringRes(Res.string.front_page_model_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = ink.copy(alpha = 0.8f),
+                modifier = Modifier.padding(start = 16.dp),
+            )
+        }
+        if (run is FrontPageRun.Running) {
+            OutlinedButton(
+                onClick = onCancel,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.5.dp, ink.copy(alpha = 0.6f)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = ink),
+            ) {
+                Text(stringRes(Res.string.cancel), style = MaterialTheme.typography.titleSmall)
+            }
+        } else {
+            Button(
+                onClick = onPrint,
+                enabled = models.selected != null,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors =
+                    if (onAccent) {
+                        ButtonDefaults.buttonColors(
+                            containerColor = onHero,
+                            contentColor = scheme.primary,
+                            disabledContainerColor = onHero.copy(alpha = 0.3f),
+                            disabledContentColor = scheme.primary.copy(alpha = 0.6f),
+                        )
                     } else {
-                        Button(
-                            onClick = onPrint,
-                            enabled = models.selected != null,
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor = onHero,
-                                    contentColor = scheme.primary,
-                                    disabledContainerColor = onHero.copy(alpha = 0.3f),
-                                    disabledContentColor = scheme.primary.copy(alpha = 0.6f),
-                                ),
-                        ) {
-                            Icon(MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(20.dp), filled = true)
-                            Spacer(Modifier.width(8.dp))
-                            val label = stringRes(if (hasEditions) Res.string.front_page_print_again else Res.string.front_page_print)
-                            // The reader pays for this: say roughly what before they press it (NIP-FA).
-                            Text(
-                                if (estimate != null) stringRes(Res.string.front_page_print_estimate, label, formatUsd(estimate)) else label,
-                                style = MaterialTheme.typography.titleSmall,
-                            )
-                        }
-                    }
-                }
+                        ButtonDefaults.buttonColors()
+                    },
+            ) {
+                Icon(MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(20.dp), filled = true)
+                Spacer(Modifier.width(8.dp))
+                val label = stringRes(if (hasEditions) Res.string.front_page_print_again else Res.string.front_page_print)
+                // The reader pays for this: say roughly what before they press it (NIP-FA).
+                Text(
+                    if (estimate != null) stringRes(Res.string.front_page_print_estimate, label, formatUsd(estimate)) else label,
+                    style = MaterialTheme.typography.titleSmall,
+                )
             }
         }
+        ScheduleRow(schedule, unattended, onSchedule, ink)
     }
 }
 
@@ -329,13 +512,14 @@ private fun Hero(
 private fun ModelPicker(
     models: FrontPageModels,
     onModel: (String) -> Unit,
-    onHero: Color,
+    colors: PillColors,
+    ink: Color,
 ) {
     if (models.loading) {
         Row(Modifier.heightIn(min = 54.dp), verticalAlignment = Alignment.CenterVertically) {
-            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = onHero)
+            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = ink)
             Spacer(Modifier.width(12.dp))
-            Text(stringRes(Res.string.front_page_model), style = MaterialTheme.typography.bodyMedium, color = onHero)
+            Text(stringRes(Res.string.front_page_model), style = MaterialTheme.typography.bodyMedium, color = ink)
         }
         return
     }
@@ -346,7 +530,7 @@ private fun ModelPicker(
             onValueChange = onModel,
             placeholder = stringRes(Res.string.front_page_model_id),
             leading = MaterialSymbols.AutoAwesome,
-            colors = PillColors.onAccent(onHero),
+            colors = colors,
         )
         return
     }
@@ -358,24 +542,18 @@ private fun ModelPicker(
                 .fillMaxWidth()
                 .heightIn(min = 54.dp)
                 .clip(shape)
-                .background(onHero.copy(alpha = 0.16f))
+                .background(colors.container)
                 .clickable { expanded = true }
                 .padding(start = 16.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(MaterialSymbols.AutoAwesome, contentDescription = null, tint = onHero.copy(alpha = 0.85f), modifier = Modifier.size(20.dp))
+            Icon(MaterialSymbols.AutoAwesome, contentDescription = null, tint = colors.icon, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(stringRes(Res.string.front_page_model), style = MaterialTheme.typography.labelSmall, color = onHero.copy(alpha = 0.75f))
-                Text(
-                    models.selected.orEmpty(),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = onHero,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Text(stringRes(Res.string.front_page_model), style = MaterialTheme.typography.labelSmall, color = colors.placeholder)
+                Text(models.selected.orEmpty(), style = MaterialTheme.typography.bodyLarge, color = colors.content, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Icon(MaterialSymbols.ExpandMore, contentDescription = null, tint = onHero.copy(alpha = 0.85f))
+            Icon(MaterialSymbols.ExpandMore, contentDescription = null, tint = colors.icon)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             models.ids.forEach { id ->
@@ -388,8 +566,214 @@ private fun ModelPicker(
     }
 }
 
-/** Ink on newsprint: the paper's frame is always light, whatever the app's theme. */
-private val Ink = Color(0xFF1A1A1A)
+/** "Every morning" with its time (the reader's clock: 6:00 AM or 06:00) and a switch. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ScheduleRow(
+    schedule: FrontPageSchedule,
+    unattended: Boolean,
+    onChange: (FrontPageSchedule) -> Unit,
+    ink: Color,
+) {
+    var picking by remember { mutableStateOf(false) }
+    val time = rememberScheduleTime(schedule)
+    Column {
+        Row(Modifier.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(MaterialSymbols.Schedule, contentDescription = null, tint = ink.copy(alpha = 0.85f), modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(12.dp))
+            Text(stringRes(Res.string.front_page_every_morning), style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.weight(1f))
+            TextButton(onClick = { picking = true }, colors = ButtonDefaults.textButtonColors(contentColor = ink)) {
+                Text(time, style = MaterialTheme.typography.titleMedium)
+            }
+            Switch(checked = schedule.enabled, onCheckedChange = { onChange(schedule.copy(enabled = it)) })
+        }
+        // Amber and remote signers need the reader to decrypt the AI key: say so, in few words.
+        if (!unattended) {
+            Text(
+                stringRes(Res.string.front_page_needs_device_key),
+                style = MaterialTheme.typography.bodySmall,
+                color = ink.copy(alpha = 0.75f),
+                modifier = Modifier.padding(start = 34.dp),
+            )
+        }
+    }
+    if (picking) {
+        val state = rememberTimePickerState(initialHour = schedule.hour, initialMinute = schedule.minute, is24Hour = rememberIs24HourClock())
+        AlertDialog(
+            onDismissRequest = { picking = false },
+            title = { Text(stringRes(Res.string.front_page_pick_time)) },
+            text = { TimePicker(state = state) },
+            confirmButton = {
+                TextButton(onClick = {
+                    picking = false
+                    onChange(schedule.copy(hour = state.hour, minute = state.minute, enabled = true))
+                }) { Text(stringRes(Res.string.confirm)) }
+            },
+            dismissButton = { TextButton(onClick = { picking = false }) { Text(stringRes(Res.string.cancel)) } },
+        )
+    }
+}
+
+/** The schedule's time on the reader's clock, from its next run. */
+@Composable
+private fun rememberScheduleTime(schedule: FrontPageSchedule): String {
+    val format = rememberTimeOfDayFormatter()
+    return remember(format, schedule.hour, schedule.minute) {
+        format(FrontPageClock.nextRun(TimeUtils.now(), schedule.hour, schedule.minute) * 1000)
+    }
+}
+
+/** When the schedule is on, one line under the facts: when, and the way to change it. */
+@Composable
+private fun ScheduleLine(
+    schedule: FrontPageSchedule,
+    onOpen: () -> Unit,
+) {
+    val time = rememberScheduleTime(schedule)
+    Row(
+        Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onOpen).padding(vertical = 4.dp, horizontal = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(MaterialSymbols.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(stringRes(Res.string.front_page_schedule_line, time), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+        Icon(MaterialSymbols.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+    }
+}
+
+/** One quiet line: what the edition read, what it verified, what it cost. The rest is a tap away. */
+@Composable
+private fun Facts(
+    edition: SavedEdition,
+    onDetails: () -> Unit,
+) {
+    val facts =
+        listOfNotNull(
+            pluralStringRes(Res.plurals.front_page_posts_read, edition.posts, edition.posts),
+            pluralStringRes(Res.plurals.front_page_quotes_verified, edition.quotes, edition.quotes),
+            edition.costUsd?.let { formatUsd(it) },
+        ).joinToString(" · ")
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(facts, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+        IconButton(onClick = onDetails) {
+            Icon(MaterialSymbols.Info, contentDescription = stringRes(Res.string.front_page_details), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+/** The edition's particulars: code, model, tokens, and anything the check took out. */
+@Composable
+private fun Details(
+    edition: SavedEdition,
+    modifier: Modifier,
+) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(stringRes(Res.string.front_page_details), style = MaterialTheme.typography.titleLarge)
+        DetailRow(stringRes(Res.string.front_page_edition_label), edition.code)
+        DetailRow(stringRes(Res.string.front_page_model), edition.model)
+        edition.tokens?.let { tokens ->
+            DetailRow(
+                stringRes(Res.string.front_page_tokens_label),
+                pluralStringRes(Res.plurals.front_page_tokens, tokens.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), grouped(tokens)),
+            )
+        }
+        edition.costUsd?.let { DetailRow(stringRes(Res.string.front_page_cost_label), formatUsd(it)) }
+        if (edition.rounds == 2) Text(stringRes(Res.string.front_page_fixed_once), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (edition.removed.isNotEmpty()) {
+            HorizontalDivider()
+            Text(stringRes(Res.string.front_page_changes_title), style = MaterialTheme.typography.titleSmall)
+            edition.removed.take(10).forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+    }
+}
+
+@Composable
+private fun DetailRow(
+    label: String,
+    value: String,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp))
+    }
+}
+
+/** The kept week as tabs right above the paper: the open day underlined in the accent colour. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun History(
+    editions: List<SavedEdition>,
+    open: String,
+    onDay: (String) -> Unit,
+) {
+    val selected = editions.indexOfFirst { it.day == open }.coerceAtLeast(0)
+    SecondaryScrollableTabRow(
+        selectedTabIndex = selected,
+        edgePadding = 0.dp,
+        containerColor = Color.Transparent,
+        divider = {},
+    ) {
+        editions.forEachIndexed { index, edition ->
+            Tab(
+                selected = index == selected,
+                onClick = { onDay(edition.day) },
+                selectedContentColor = MaterialTheme.colorScheme.primary,
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = { Text(dayLabel(edition.day), style = MaterialTheme.typography.titleSmall) },
+            )
+        }
+    }
+}
+
+/**
+ * The checked page on the nSite surface. While it isn't showing, the frame shrinks to its
+ * message (a blank 900dp box explains nothing); once it paints it takes its full height, or
+ * the whole screen in the reader ([fill]).
+ */
+@Composable
+private fun Paper(
+    shown: ShownEdition,
+    instancePrefix: String,
+    fill: Boolean,
+    modifier: Modifier,
+) {
+    val platform = LocalAppPlatform.current
+    if (!platform.showsPapersInline) {
+        Notice(stringRes(Res.string.front_page_cannot_show))
+        return
+    }
+    val edition = shown.edition
+    // What the surface says about itself: a blank frame never goes unexplained.
+    var status by remember(edition.code) { mutableStateOf(InlineNappletStatus.LOADING) }
+    var attempt by remember(edition.code) { mutableIntStateOf(0) }
+    val showing = status == InlineNappletStatus.SHOWING
+    // The model writes the layout, some pages run edge to edge: a margin of newsprint keeps the
+    // rounded corners off the folio. The paper itself is always light.
+    Box(
+        modifier
+            .then(if (fill) Modifier else Modifier.clip(RoundedCornerShape(20.dp)))
+            .background(Newsprint)
+            .padding(if (fill) 0.dp else 8.dp),
+    ) {
+        platform.InlinePaperSurface(
+            html = shown.html,
+            title = "$MASTHEAD · ${edition.code}",
+            // A new id on Retry opens a fresh session rather than waking the failed one.
+            instanceId = "$instancePrefix-${edition.day}-${edition.code}-$attempt",
+            onStatus = { status = it },
+            modifier =
+                when {
+                    fill -> Modifier.fillMaxSize()
+                    showing -> Modifier.fillMaxWidth().height(900.dp)
+                    else -> Modifier.fillMaxWidth().height(220.dp)
+                },
+        )
+        PaperStatus(status, onRetry = {
+            attempt++
+            status = InlineNappletStatus.LOADING
+        })
+    }
+}
 
 /**
  * Over the paper while it isn't showing. Tor gets its own words: with Tor on, the surface
@@ -402,9 +786,9 @@ private fun BoxScope.PaperStatus(
 ) {
     if (status == InlineNappletStatus.SHOWING) return
     Column(
-        Modifier.align(Alignment.TopCenter).padding(top = 96.dp, start = 24.dp, end = 24.dp),
+        Modifier.matchParentSize().background(Newsprint).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
     ) {
         when (status) {
             InlineNappletStatus.LOADING -> CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.5.dp, color = Ink.copy(alpha = 0.6f))
@@ -431,56 +815,6 @@ private fun BoxScope.PaperStatus(
             }
             InlineNappletStatus.SHOWING -> {}
         }
-    }
-}
-
-private fun hhmm(
-    hour: Int,
-    minute: Int,
-) = hour.toString().padStart(2, '0') + ":" + minute.toString().padStart(2, '0')
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ScheduleCard(
-    schedule: FrontPageSchedule,
-    unattended: Boolean,
-    onChange: (FrontPageSchedule) -> Unit,
-) {
-    var picking by remember { mutableStateOf(false) }
-    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(MaterialSymbols.Schedule, contentDescription = null, modifier = Modifier.size(22.dp))
-                Spacer(Modifier.width(12.dp))
-                Text(stringRes(Res.string.front_page_every_morning), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                TextButton(onClick = { picking = true }) { Text(hhmm(schedule.hour, schedule.minute), style = MaterialTheme.typography.titleMedium) }
-                Switch(checked = schedule.enabled, onCheckedChange = { onChange(schedule.copy(enabled = it)) })
-            }
-            // Amber and remote signers need the reader to decrypt the AI key: say so, in few words.
-            if (!unattended) {
-                Text(
-                    stringRes(Res.string.front_page_needs_device_key),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 34.dp, bottom = 4.dp),
-                )
-            }
-        }
-    }
-    if (picking) {
-        val state = rememberTimePickerState(initialHour = schedule.hour, initialMinute = schedule.minute, is24Hour = rememberIs24HourClock())
-        AlertDialog(
-            onDismissRequest = { picking = false },
-            title = { Text(stringRes(Res.string.front_page_pick_time)) },
-            text = { TimePicker(state = state) },
-            confirmButton = {
-                TextButton(onClick = {
-                    picking = false
-                    onChange(schedule.copy(hour = state.hour, minute = state.minute, enabled = true))
-                }) { Text(hhmm(state.hour, state.minute)) }
-            },
-            dismissButton = { TextButton(onClick = { picking = false }) { Text(stringRes(Res.string.cancel)) } },
-        )
     }
 }
 
@@ -524,10 +858,13 @@ private fun grouped(n: Long): String =
 
 /** The print in progress, or why the last one gave no page. A clean page shows as a kept edition. */
 @Composable
-private fun RunStatus(run: FrontPageRun) {
+private fun RunStatus(
+    run: FrontPageRun,
+    onCancel: () -> Unit,
+) {
     when (run) {
         FrontPageRun.Idle -> {}
-        is FrontPageRun.Running -> Progress(run.step)
+        is FrontPageRun.Running -> Progress(run.step, onCancel)
         is FrontPageRun.Failed -> Notice(failureText(run), error = true)
         is FrontPageRun.Done ->
             when (val result = run.result) {
@@ -539,7 +876,10 @@ private fun RunStatus(run: FrontPageRun) {
 }
 
 @Composable
-private fun Progress(step: PrintStep) {
+private fun Progress(
+    step: PrintStep,
+    onCancel: () -> Unit,
+) {
     val text =
         when (step) {
             PrintStep.Probe -> stringRes(Res.string.front_page_step_probe)
@@ -552,7 +892,8 @@ private fun Progress(step: PrintStep) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
             Spacer(Modifier.width(14.dp))
-            Text(text, style = MaterialTheme.typography.bodyLarge)
+            Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            TextButton(onClick = onCancel) { Text(stringRes(Res.string.cancel)) }
         }
     }
 }
@@ -602,93 +943,5 @@ private fun dayLabel(day: String): String {
                 7 -> stringRes(Res.string.dlist_day_sunday)
                 else -> day
             }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun History(
-    editions: List<SavedEdition>,
-    open: String?,
-    onDay: (String) -> Unit,
-) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        editions.forEach { edition ->
-            FilterChip(selected = edition.day == open, onClick = { onDay(edition.day) }, label = { Text(dayLabel(edition.day)) })
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun Edition(shown: ShownEdition) {
-    val platform = LocalAppPlatform.current
-    val files = rememberFileBytesAccess()
-    val scope = rememberCoroutineScope()
-    val edition = shown.edition
-
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), itemVerticalAlignment = Alignment.CenterVertically) {
-        AssistChip(onClick = {}, label = { Text(stringRes(Res.string.front_page_edition, edition.code)) })
-        AssistChip(
-            onClick = {},
-            label = { Text(pluralStringRes(Res.plurals.front_page_quotes_verified, edition.quotes, edition.quotes)) },
-            leadingIcon = { Icon(MaterialSymbols.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp)) },
-        )
-        AssistChip(onClick = {}, label = { Text(pluralStringRes(Res.plurals.front_page_posts_read, edition.posts, edition.posts)) })
-        edition.tokens?.let { tokens ->
-            AssistChip(onClick = {}, label = { Text(pluralStringRes(Res.plurals.front_page_tokens, tokens.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), grouped(tokens))) })
-        }
-        edition.costUsd?.let { cost ->
-            AssistChip(
-                onClick = {},
-                label = { Text(stringRes(Res.string.front_page_cost, formatUsd(cost))) },
-                leadingIcon = { Icon(MaterialSymbols.Paid, contentDescription = null, modifier = Modifier.size(16.dp)) },
-            )
-        }
-        if (edition.rounds == 2) AssistChip(onClick = {}, label = { Text(stringRes(Res.string.front_page_fixed_once)) })
-        TextButton(onClick = { scope.launch { files.save("front-page-${edition.day}-${edition.code}.html", "text/html") { shown.html.encodeToByteArray() } } }) {
-            Icon(MaterialSymbols.Download, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(stringRes(Res.string.front_page_download))
-        }
-    }
-
-    if (edition.removed.isNotEmpty()) {
-        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
-            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringRes(Res.string.front_page_changes_title), style = MaterialTheme.typography.titleSmall)
-                edition.removed.take(10).forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            }
-        }
-    }
-
-    if (platform.showsPapersInline) {
-        // What the surface says about itself: a blank frame never goes unexplained.
-        var status by remember(edition.code) { mutableStateOf(InlineNappletStatus.LOADING) }
-        var attempt by remember(edition.code) { mutableIntStateOf(0) }
-        // The model writes the layout, some pages run edge to edge: a margin of newsprint keeps the
-        // rounded corners off the folio. The paper itself is always light.
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(Newsprint)
-                .padding(8.dp),
-        ) {
-            platform.InlinePaperSurface(
-                html = shown.html,
-                title = "$MASTHEAD · ${edition.code}",
-                // A new id on Retry opens a fresh session rather than waking the failed one.
-                instanceId = "front-page-${edition.day}-${edition.code}-$attempt",
-                onStatus = { status = it },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 640.dp).height(900.dp),
-            )
-            PaperStatus(status, onRetry = {
-                attempt++
-                status = InlineNappletStatus.LOADING
-            })
-        }
-    } else {
-        Notice(stringRes(Res.string.front_page_cannot_show))
     }
 }

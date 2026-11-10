@@ -42,6 +42,27 @@ class AgentProviderPresetsTest {
     }
 
     @Test
+    fun monogramsNeverCollideAndMainComesFirst() {
+        val monograms = AgentProviderPresets.ALL.map { it.monogram }
+        assertEquals(monograms.size, monograms.toSet().size)
+        assertTrue(AgentProviderPresets.ALL.all { it.monogram.length in 1..2 })
+        val groups = AgentProviderPresets.ALL.map { it.group }
+        assertEquals(groups.sortedBy { it.ordinal }, groups)
+        assertEquals(AgentProviderGroup.MAIN, AgentProviderPresets.OPENROUTER.group)
+    }
+
+    @Test
+    fun savedKeysGetMonogramsAndLocality() {
+        assertEquals("OR", AgentProviderPresets.monogramFor("https://openrouter.ai/api/v1/"))
+        assertEquals("MY", AgentProviderPresets.monogramFor("http://my.box:8080/v1"))
+        assertTrue(AgentProviderPresets.isLocalUrl("http://localhost:11434/v1"))
+        assertTrue(AgentProviderPresets.isLocalUrl("http://127.0.0.1:8080/v1"))
+        assertTrue(AgentProviderPresets.isLocalUrl("http://[::1]:8080/v1"))
+        assertFalse(AgentProviderPresets.isLocalUrl("https://api.openai.com/v1"))
+        assertFalse(AgentProviderPresets.isLocalUrl("http://my.box:8080/v1"))
+    }
+
+    @Test
     fun aSavedUrlFindsItsPreset() {
         assertEquals("OpenRouter", AgentProviderPresets.displayName("https://openrouter.ai/api/v1/"))
         assertEquals("Anthropic", AgentProviderPresets.displayName("HTTPS://api.anthropic.com/v1"))

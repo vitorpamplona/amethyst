@@ -39,33 +39,40 @@ data class AgentProviderPreset(
      * null where every free call answers without checking the key (checked 2026-11-10).
      */
     val keyCheckPath: String? = "/models",
+    /** Two letters that tell it apart from the other presets (OpenRouter, OpenAI and Ollama all start with O). */
+    val monogram: String = name.take(2).uppercase(),
+    /** Where the picker lists it. */
+    val group: AgentProviderGroup = AgentProviderGroup.MORE,
 )
+
+/** How the provider picker groups presets: the main ones first, the rest one tap away. */
+enum class AgentProviderGroup { MAIN, MORE, LOCAL, CUSTOM }
 
 object AgentProviderPresets {
     // OpenRouter lists models without a key; `/key` describes the key and 401s on a bad one.
-    val OPENROUTER = AgentProviderPreset("openrouter", "OpenRouter", "https://openrouter.ai/api/v1", keyPage = "https://openrouter.ai/keys", keyCheckPath = "/key")
-    val CUSTOM = AgentProviderPreset("custom", "Custom", "", needsKey = false)
+    val OPENROUTER = AgentProviderPreset("openrouter", "OpenRouter", "https://openrouter.ai/api/v1", keyPage = "https://openrouter.ai/keys", keyCheckPath = "/key", monogram = "OR", group = AgentProviderGroup.MAIN)
+    val CUSTOM = AgentProviderPreset("custom", "Custom", "", needsKey = false, monogram = "+", group = AgentProviderGroup.CUSTOM)
 
     /** OpenRouter first: one key reaches every major model and can be capped. Custom last. */
     val ALL =
         listOf(
             OPENROUTER,
-            AgentProviderPreset("anthropic", "Anthropic", "https://api.anthropic.com/v1", keyPage = "https://console.anthropic.com/settings/keys"),
-            AgentProviderPreset("openai", "OpenAI", "https://api.openai.com/v1", keyPage = "https://platform.openai.com/api-keys"),
-            AgentProviderPreset("google", "Google Gemini", "https://generativelanguage.googleapis.com/v1beta/openai", keyPage = "https://aistudio.google.com/apikey"),
-            AgentProviderPreset("routstr", "Routstr", "https://api.routstr.com/v1"),
-            AgentProviderPreset("ppq", "PPQ.ai", "https://api.ppq.ai/v1", keyPage = "https://ppq.ai", keyCheckPath = null),
-            AgentProviderPreset("venice", "Venice", "https://api.venice.ai/api/v1", keyPage = "https://venice.ai/settings/api", keyCheckPath = "/api_keys/rate_limits"),
-            AgentProviderPreset("nearai", "NEAR AI", "https://cloud-api.near.ai/v1", keyPage = "https://cloud.near.ai", keyCheckPath = "/users/me"),
-            AgentProviderPreset("mistral", "Mistral", "https://api.mistral.ai/v1", keyPage = "https://console.mistral.ai/api-keys"),
-            AgentProviderPreset("groq", "Groq", "https://api.groq.com/openai/v1", keyPage = "https://console.groq.com/keys"),
-            AgentProviderPreset("xai", "xAI", "https://api.x.ai/v1", keyPage = "https://console.x.ai"),
-            AgentProviderPreset("deepseek", "DeepSeek", "https://api.deepseek.com/v1", keyPage = "https://platform.deepseek.com/api_keys"),
-            AgentProviderPreset("together", "Together", "https://api.together.xyz/v1", keyPage = "https://api.together.ai/settings/api-keys"),
-            AgentProviderPreset("fireworks", "Fireworks", "https://api.fireworks.ai/inference/v1", keyPage = "https://fireworks.ai/account/api-keys"),
-            AgentProviderPreset("cerebras", "Cerebras", "https://api.cerebras.ai/v1", keyPage = "https://cloud.cerebras.ai"),
-            AgentProviderPreset("ollama", "Ollama", "http://localhost:11434/v1", needsKey = false, isLocal = true),
-            AgentProviderPreset("lmstudio", "LM Studio", "http://localhost:1234/v1", needsKey = false, isLocal = true),
+            AgentProviderPreset("anthropic", "Anthropic", "https://api.anthropic.com/v1", keyPage = "https://console.anthropic.com/settings/keys", monogram = "AN", group = AgentProviderGroup.MAIN),
+            AgentProviderPreset("openai", "OpenAI", "https://api.openai.com/v1", keyPage = "https://platform.openai.com/api-keys", monogram = "OA", group = AgentProviderGroup.MAIN),
+            AgentProviderPreset("google", "Google Gemini", "https://generativelanguage.googleapis.com/v1beta/openai", keyPage = "https://aistudio.google.com/apikey", monogram = "GE", group = AgentProviderGroup.MAIN),
+            AgentProviderPreset("routstr", "Routstr", "https://api.routstr.com/v1", monogram = "RS", group = AgentProviderGroup.MAIN),
+            AgentProviderPreset("ppq", "PPQ.ai", "https://api.ppq.ai/v1", keyPage = "https://ppq.ai", keyCheckPath = null, monogram = "PQ", group = AgentProviderGroup.MAIN),
+            AgentProviderPreset("venice", "Venice", "https://api.venice.ai/api/v1", keyPage = "https://venice.ai/settings/api", keyCheckPath = "/api_keys/rate_limits", monogram = "VE"),
+            AgentProviderPreset("nearai", "NEAR AI", "https://cloud-api.near.ai/v1", keyPage = "https://cloud.near.ai", keyCheckPath = "/users/me", monogram = "NE"),
+            AgentProviderPreset("mistral", "Mistral", "https://api.mistral.ai/v1", keyPage = "https://console.mistral.ai/api-keys", monogram = "MI"),
+            AgentProviderPreset("groq", "Groq", "https://api.groq.com/openai/v1", keyPage = "https://console.groq.com/keys", monogram = "GQ"),
+            AgentProviderPreset("xai", "xAI", "https://api.x.ai/v1", keyPage = "https://console.x.ai", monogram = "XA"),
+            AgentProviderPreset("deepseek", "DeepSeek", "https://api.deepseek.com/v1", keyPage = "https://platform.deepseek.com/api_keys", monogram = "DS"),
+            AgentProviderPreset("together", "Together", "https://api.together.xyz/v1", keyPage = "https://api.together.ai/settings/api-keys", monogram = "TO"),
+            AgentProviderPreset("fireworks", "Fireworks", "https://api.fireworks.ai/inference/v1", keyPage = "https://fireworks.ai/account/api-keys", monogram = "FW"),
+            AgentProviderPreset("cerebras", "Cerebras", "https://api.cerebras.ai/v1", keyPage = "https://cloud.cerebras.ai", monogram = "CB"),
+            AgentProviderPreset("ollama", "Ollama", "http://localhost:11434/v1", needsKey = false, isLocal = true, monogram = "OL", group = AgentProviderGroup.LOCAL),
+            AgentProviderPreset("lmstudio", "LM Studio", "http://localhost:1234/v1", needsKey = false, isLocal = true, monogram = "LM", group = AgentProviderGroup.LOCAL),
             CUSTOM,
         )
 
@@ -73,6 +80,24 @@ object AgentProviderPresets {
     fun forUrl(url: String): AgentProviderPreset? {
         val normalized = normalizeUrl(url)
         return ALL.firstOrNull { it.url.isNotEmpty() && normalizeUrl(it.url) == normalized }
+    }
+
+    /** Two letters for a saved key: its preset's monogram, or the host's first two. */
+    fun monogramFor(url: String): String =
+        forUrl(url)?.monogram
+            ?: hostOf(url)
+                ?.filter { it.isLetterOrDigit() }
+                ?.take(2)
+                ?.uppercase()
+                ?.ifEmpty { null }
+            ?: "?"
+
+    /** On the user's own machine: a local preset, or a loopback host. */
+    fun isLocalUrl(url: String): Boolean {
+        if (forUrl(url)?.isLocal == true) return true
+        val host = hostOf(url)?.lowercase() ?: return false
+        val name = if (host.startsWith("[")) host.substringBefore(']') + "]" else host.substringBefore(':')
+        return name == "localhost" || name.startsWith("127.") || name == "[::1]"
     }
 
     /** A name for a saved key: the preset's, or the URL's host. */
