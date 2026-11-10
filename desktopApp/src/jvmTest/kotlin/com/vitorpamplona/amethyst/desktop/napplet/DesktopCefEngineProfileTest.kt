@@ -46,7 +46,8 @@ class DesktopCefEngineProfileTest {
 
     @After
     fun tearDown() {
-        dir.deleteRecursively()
+        // JUnit runs @After even when setUp's assumption skipped the test (Windows), before dir is set.
+        if (::dir.isInitialized) dir.deleteRecursively()
     }
 
     private fun profileLinkedTo(socket: File): File {
