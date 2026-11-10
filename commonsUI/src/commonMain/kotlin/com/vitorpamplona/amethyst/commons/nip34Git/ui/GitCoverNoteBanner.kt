@@ -31,8 +31,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,11 +50,11 @@ import com.vitorpamplona.amethyst.commons.nip34Git.coverNote.GitCoverNotes
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_cover_note
 import com.vitorpamplona.amethyst.commons.resources.git_summary_edited_by
+import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayEditStatus
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
@@ -67,16 +69,19 @@ private val BannerShape = RoundedCornerShape(8.dp)
  * The summary of a NIP-34 issue, patch or PR, with its cover notes (kind 1624) as versions of it.
  *
  * A cover note by the item's author or a confirmed repository member supersedes the item's own
- * description as its summary; anyone else's never counts ([observeCoverNoteVersions]). The latest
- * one shows, in the pinned cover-note frame, and the edit pencil steps through the older ones and
- * then the item's own description ("Original"), the way kind-1 edits do ([EditState]).
+ * description as its summary; anyone else's never counts ([observeCoverNoteVersions]). They are
+ * presented as kind-1 edits are: [editState] is the card's own ([observeGitSummaryEdits]), whose
+ * pencil sits in the note's header and steps through the older versions to the item's own
+ * description ("Original"), and this draws whichever version it shows.
  *
  * [description] draws the item's own text. When [descriptionIsSummary] is false (a patch, whose
- * body is the diff) it stays under every version; otherwise it shows only as the Original.
+ * body is the diff) it stays under every version, with the cover note as a pinned note above it;
+ * otherwise it shows only as the Original.
  */
 @Composable
 fun GitVersionedSummary(
     item: Note,
+    editState: State<GenericLoadable<EditState>>,
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
@@ -86,27 +91,49 @@ fun GitVersionedSummary(
     descriptionIsSummary: Boolean = true,
     description: @Composable () -> Unit,
 ) {
-    val versions = observeCoverNoteVersions(item)
-    if (versions.isEmpty()) {
-        description()
-        return
-    }
-
-    val editState = remember(versions) { EditState().apply { updateModifications(versions) } }
-    val shown by editState.modificationToShow
+    val shown = (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.modificationToShow?.value
     val cover = shown?.event as? GitCoverNoteEvent
 
     if (cover != null) {
-        CoverNoteBox(cover, descriptionIsSummary, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, coverModifier) {
-            DisplayEditStatus(editState)
-        }
+        CoverNoteBox(cover, item.author?.pubkeyHex, descriptionIsSummary, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, coverModifier)
         if (!descriptionIsSummary) description()
     } else {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            DisplayEditStatus(editState)
-        }
         description()
     }
+}
+
+/**
+ * The card's versions of [item]'s summary, its cover notes, in the shape [observeEdits] gives a
+ * kind-1 note's edits, so the header's pencil ([CheckAndDisplayEditStatus]) steps through them.
+ * Read at once on the first frame, as kind-1 edits are, and one [EditState] kept across new
+ * versions so the header and the summary always share it.
+ */
+@Composable
+fun observeGitSummaryEdits(item: Note): State<GenericLoadable<EditState>> {
+    val versions = observeCoverNoteVersions(item)
+    val editState =
+        remember(item) {
+            mutableStateOf<GenericLoadable<EditState>>(
+                if (versions.isEmpty()) {
+                    GenericLoadable.Empty()
+                } else {
+                    GenericLoadable.Loaded(EditState().apply { updateModifications(versions) })
+                },
+            )
+        }
+
+    LaunchedEffect(versions) {
+        val current = editState.value
+        if (versions.isEmpty()) {
+            if (current !is GenericLoadable.Empty) editState.value = GenericLoadable.Empty()
+        } else if (current is GenericLoadable.Loaded) {
+            current.loaded.updateModifications(versions)
+        } else {
+            editState.value = GenericLoadable.Loaded(EditState().apply { updateModifications(versions) })
+        }
+    }
+
+    return editState
 }
 
 /**
@@ -121,12 +148,13 @@ fun observeCoverNoteVersions(item: Note): List<Note> {
 
 /**
  * The current cover note, drawn as the item's description itself, since that is what it is now,
- * with one muted line saying who wrote this version. On a patch, whose description is its commit
+ * with one muted line naming who wrote it when that is not the item's author. On a patch, whose description is its commit
  * message, it reads as a note above the diff instead ([asDescription] false).
  */
 @Composable
 private fun CoverNoteBox(
     cover: GitCoverNoteEvent,
+    itemAuthor: String?,
     asDescription: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
@@ -134,7 +162,6 @@ private fun CoverNoteBox(
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier,
-    trailing: @Composable () -> Unit,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -154,11 +181,16 @@ private fun CoverNoteBox(
             nav = nav,
         )
 
+        // As a kind-1 edit, the new summary says nothing of itself when its author wrote it: the
+        // header's pencil marks it. A maintainer's rewrite names them, since it is not the author's
+        // text. A patch's cover note sits above the diff rather than in place of it, so it keeps
+        // its pinned label.
+        if (asDescription && cover.pubKey == itemAuthor) return@Column
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            // The version pencil ([trailing]) already marks an edit; a patch's note gets a pin.
             if (!asDescription) {
                 Icon(
                     symbol = MaterialSymbols.PushPin,
@@ -186,7 +218,6 @@ private fun CoverNoteBox(
                 }
             }
             Text(text = timeAgo(cover.createdAt, prefix = "· "), style = gitMetaStyle(), maxLines = 1)
-            trailing()
         }
     }
 }

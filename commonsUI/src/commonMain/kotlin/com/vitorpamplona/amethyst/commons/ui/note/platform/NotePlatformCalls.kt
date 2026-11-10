@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,9 +39,11 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.ui.cartridges.CartPlayOverlay
 import com.vitorpamplona.amethyst.commons.ui.cartridges.LocalMediaIsCart
 import com.vitorpamplona.amethyst.commons.ui.cartridges.rememberConfirmedCartUrl
+import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
@@ -327,6 +330,7 @@ fun RenderGitPatchEvent(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) = LocalNotePlatform.current.RenderGitPatchEvent(
@@ -335,6 +339,7 @@ fun RenderGitPatchEvent(
     canPreview = canPreview,
     quotesLeft = quotesLeft,
     backgroundColor = backgroundColor,
+    editState = editState,
     accountViewModel = accountViewModel,
     nav = nav,
 )
@@ -346,6 +351,7 @@ fun RenderGitIssueEvent(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) = LocalNotePlatform.current.RenderGitIssueEvent(
@@ -354,6 +360,7 @@ fun RenderGitIssueEvent(
     canPreview = canPreview,
     quotesLeft = quotesLeft,
     backgroundColor = backgroundColor,
+    editState = editState,
     accountViewModel = accountViewModel,
     nav = nav,
 )
@@ -365,6 +372,7 @@ fun RenderGitPullRequestEvent(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) = LocalNotePlatform.current.RenderGitPullRequestEvent(
@@ -373,6 +381,7 @@ fun RenderGitPullRequestEvent(
     canPreview = canPreview,
     quotesLeft = quotesLeft,
     backgroundColor = backgroundColor,
+    editState = editState,
     accountViewModel = accountViewModel,
     nav = nav,
 )

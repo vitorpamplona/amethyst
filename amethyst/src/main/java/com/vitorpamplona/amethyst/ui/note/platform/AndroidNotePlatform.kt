@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.note.platform
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -32,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
+import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
@@ -40,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
+import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoPrefetcher
@@ -383,6 +386,7 @@ object AndroidNotePlatform : NotePlatform {
         canPreview: Boolean,
         quotesLeft: Int,
         backgroundColor: MutableState<Color>,
+        editState: State<GenericLoadable<EditState>>,
         accountViewModel: AccountViewModel,
         nav: INav,
     ) = AppRenderGitPatchEvent(
@@ -391,6 +395,7 @@ object AndroidNotePlatform : NotePlatform {
         canPreview = canPreview,
         quotesLeft = quotesLeft,
         backgroundColor = backgroundColor,
+        editState = editState,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -402,6 +407,7 @@ object AndroidNotePlatform : NotePlatform {
         canPreview: Boolean,
         quotesLeft: Int,
         backgroundColor: MutableState<Color>,
+        editState: State<GenericLoadable<EditState>>,
         accountViewModel: AccountViewModel,
         nav: INav,
     ) = AppRenderGitIssueEvent(
@@ -410,6 +416,7 @@ object AndroidNotePlatform : NotePlatform {
         canPreview = canPreview,
         quotesLeft = quotesLeft,
         backgroundColor = backgroundColor,
+        editState = editState,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -421,6 +428,7 @@ object AndroidNotePlatform : NotePlatform {
         canPreview: Boolean,
         quotesLeft: Int,
         backgroundColor: MutableState<Color>,
+        editState: State<GenericLoadable<EditState>>,
         accountViewModel: AccountViewModel,
         nav: INav,
     ) = AppRenderGitPullRequestEvent(
@@ -429,6 +437,7 @@ object AndroidNotePlatform : NotePlatform {
         canPreview = canPreview,
         quotesLeft = quotesLeft,
         backgroundColor = backgroundColor,
+        editState = editState,
         accountViewModel = accountViewModel,
         nav = nav,
     )
