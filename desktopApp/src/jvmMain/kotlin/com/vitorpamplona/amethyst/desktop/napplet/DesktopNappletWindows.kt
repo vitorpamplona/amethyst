@@ -112,6 +112,8 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_off
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_on
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_title
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_engine_downloading
+import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_engine_in_use
+import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_engine_restart
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_engine_starting
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_failed_engine
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_failed_fetch
@@ -194,14 +196,11 @@ private fun NappletWindow(
                         }
                         is CefNappletSession.State.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
                         is CefNappletSession.State.Failed ->
-                            MessagePane(
-                                when (current.reason) {
-                                    CefNappletSession.Failure.UNREACHABLE -> stringRes(Res.string.napplet_desktop_failed_fetch, session.launch.title)
-                                    CefNappletSession.Failure.ENGINE -> stringRes(Res.string.napplet_desktop_failed_engine)
-                                    CefNappletSession.Failure.ROUTE_BLOCKED -> stringRes(Res.string.napplet_desktop_failed_route, session.launch.title)
-                                },
-                                onRetry = { host.reopen(session) },
-                            )
+                            when (current.reason) {
+                                CefNappletSession.Failure.UNREACHABLE -> MessagePane(stringRes(Res.string.napplet_desktop_failed_fetch, session.launch.title), onRetry = { host.reopen(session) })
+                                CefNappletSession.Failure.ENGINE -> EngineFailurePane(host.engine, onRetry = { host.reopen(session) })
+                                CefNappletSession.Failure.ROUTE_BLOCKED -> MessagePane(stringRes(Res.string.napplet_desktop_failed_route, session.launch.title), onRetry = { host.reopen(session) })
+                            }
                     }
                 }
             }
@@ -591,13 +590,30 @@ internal fun WaitingPane(message: String) {
 @Composable
 internal fun MessagePane(
     message: String,
-    onRetry: () -> Unit,
+    onRetry: (() -> Unit)?,
 ) {
     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(message, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.error, modifier = Modifier.widthIn(max = 480.dp))
-            Button(onClick = onRetry) { Text(stringRes(Res.string.napplet_desktop_retry)) }
+            if (onRetry != null) Button(onClick = onRetry) { Text(stringRes(Res.string.napplet_desktop_retry)) }
         }
+    }
+}
+
+/**
+ * A page that could not run in Chromium. When Chromium itself did not start, says why, and offers
+ * no retry where only restarting the app can help.
+ */
+@Composable
+internal fun EngineFailurePane(
+    engine: DesktopCefEngine,
+    onRetry: () -> Unit,
+) {
+    val state by engine.state.collectAsState()
+    when ((state as? DesktopCefEngine.State.Failed)?.kind) {
+        DesktopCefEngine.FailureKind.PROFILE_IN_USE -> MessagePane(stringRes(Res.string.napplet_desktop_engine_in_use), onRetry)
+        DesktopCefEngine.FailureKind.RESTART -> MessagePane(stringRes(Res.string.napplet_desktop_engine_restart), onRetry = null)
+        else -> MessagePane(stringRes(Res.string.napplet_desktop_failed_engine), onRetry)
     }
 }
 
