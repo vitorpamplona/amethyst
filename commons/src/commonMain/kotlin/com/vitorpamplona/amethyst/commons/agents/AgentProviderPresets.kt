@@ -30,7 +30,7 @@ data class AgentProviderPreset(
     val url: String,
     /** Local runners take no key. */
     val needsKey: Boolean = true,
-    /** Where the user gets a key, shown as a hint. */
+    /** The provider's page for creating a key, opened by the screen's "Get a key". */
     val keyPage: String? = null,
     /** Runs on the user's own machine: only reachable from that device. */
     val isLocal: Boolean = false,
@@ -43,27 +43,27 @@ data class AgentProviderPreset(
 
 object AgentProviderPresets {
     // OpenRouter lists models without a key; `/key` describes the key and 401s on a bad one.
-    val OPENROUTER = AgentProviderPreset("openrouter", "OpenRouter", "https://openrouter.ai/api/v1", keyPage = "openrouter.ai/keys", keyCheckPath = "/key")
+    val OPENROUTER = AgentProviderPreset("openrouter", "OpenRouter", "https://openrouter.ai/api/v1", keyPage = "https://openrouter.ai/keys", keyCheckPath = "/key")
     val CUSTOM = AgentProviderPreset("custom", "Custom", "", needsKey = false)
 
     /** OpenRouter first: one key reaches every major model and can be capped. Custom last. */
     val ALL =
         listOf(
             OPENROUTER,
-            AgentProviderPreset("anthropic", "Anthropic", "https://api.anthropic.com/v1", keyPage = "console.anthropic.com"),
-            AgentProviderPreset("openai", "OpenAI", "https://api.openai.com/v1", keyPage = "platform.openai.com/api-keys"),
-            AgentProviderPreset("google", "Google Gemini", "https://generativelanguage.googleapis.com/v1beta/openai", keyPage = "aistudio.google.com/apikey"),
-            AgentProviderPreset("routstr", "Routstr", "https://api.routstr.com/v1", keyPage = "routstr.com"),
-            AgentProviderPreset("ppq", "PPQ.ai", "https://api.ppq.ai/v1", keyPage = "ppq.ai", keyCheckPath = null),
-            AgentProviderPreset("venice", "Venice", "https://api.venice.ai/api/v1", keyPage = "venice.ai", keyCheckPath = "/api_keys/rate_limits"),
-            AgentProviderPreset("nearai", "NEAR AI", "https://cloud-api.near.ai/v1", keyPage = "cloud.near.ai", keyCheckPath = "/users/me"),
-            AgentProviderPreset("mistral", "Mistral", "https://api.mistral.ai/v1", keyPage = "console.mistral.ai"),
-            AgentProviderPreset("groq", "Groq", "https://api.groq.com/openai/v1", keyPage = "console.groq.com/keys"),
-            AgentProviderPreset("xai", "xAI", "https://api.x.ai/v1", keyPage = "console.x.ai"),
-            AgentProviderPreset("deepseek", "DeepSeek", "https://api.deepseek.com/v1", keyPage = "platform.deepseek.com"),
-            AgentProviderPreset("together", "Together", "https://api.together.xyz/v1", keyPage = "api.together.ai"),
-            AgentProviderPreset("fireworks", "Fireworks", "https://api.fireworks.ai/inference/v1", keyPage = "fireworks.ai"),
-            AgentProviderPreset("cerebras", "Cerebras", "https://api.cerebras.ai/v1", keyPage = "cloud.cerebras.ai"),
+            AgentProviderPreset("anthropic", "Anthropic", "https://api.anthropic.com/v1", keyPage = "https://console.anthropic.com/settings/keys"),
+            AgentProviderPreset("openai", "OpenAI", "https://api.openai.com/v1", keyPage = "https://platform.openai.com/api-keys"),
+            AgentProviderPreset("google", "Google Gemini", "https://generativelanguage.googleapis.com/v1beta/openai", keyPage = "https://aistudio.google.com/apikey"),
+            AgentProviderPreset("routstr", "Routstr", "https://api.routstr.com/v1"),
+            AgentProviderPreset("ppq", "PPQ.ai", "https://api.ppq.ai/v1", keyPage = "https://ppq.ai", keyCheckPath = null),
+            AgentProviderPreset("venice", "Venice", "https://api.venice.ai/api/v1", keyPage = "https://venice.ai/settings/api", keyCheckPath = "/api_keys/rate_limits"),
+            AgentProviderPreset("nearai", "NEAR AI", "https://cloud-api.near.ai/v1", keyPage = "https://cloud.near.ai", keyCheckPath = "/users/me"),
+            AgentProviderPreset("mistral", "Mistral", "https://api.mistral.ai/v1", keyPage = "https://console.mistral.ai/api-keys"),
+            AgentProviderPreset("groq", "Groq", "https://api.groq.com/openai/v1", keyPage = "https://console.groq.com/keys"),
+            AgentProviderPreset("xai", "xAI", "https://api.x.ai/v1", keyPage = "https://console.x.ai"),
+            AgentProviderPreset("deepseek", "DeepSeek", "https://api.deepseek.com/v1", keyPage = "https://platform.deepseek.com/api_keys"),
+            AgentProviderPreset("together", "Together", "https://api.together.xyz/v1", keyPage = "https://api.together.ai/settings/api-keys"),
+            AgentProviderPreset("fireworks", "Fireworks", "https://api.fireworks.ai/inference/v1", keyPage = "https://fireworks.ai/account/api-keys"),
+            AgentProviderPreset("cerebras", "Cerebras", "https://api.cerebras.ai/v1", keyPage = "https://cloud.cerebras.ai"),
             AgentProviderPreset("ollama", "Ollama", "http://localhost:11434/v1", needsKey = false, isLocal = true),
             AgentProviderPreset("lmstudio", "LM Studio", "http://localhost:1234/v1", needsKey = false, isLocal = true),
             CUSTOM,
