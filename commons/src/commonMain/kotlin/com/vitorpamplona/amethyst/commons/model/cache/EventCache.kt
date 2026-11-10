@@ -536,12 +536,15 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.coroutines.CoroutineContext
 import kotlin.time.TimeSource
+import kotlinx.coroutines.channels.Channel as CoroutineChannel
 
 /**
  * The in-memory event store: every `Note`, `User` and `Channel` the app has consumed, plus the
@@ -813,14 +816,12 @@ open class EventCache :
                     trySend(it)
                 }
 
-            newFilter.init()
-
-            observables.register(filter, newFilter)
+            startObserving(filter, newFilter, newFilter::start)
 
             awaitClose {
                 observables.unregister(newFilter)
             }
-        }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
+        }.buffer(CoroutineChannel.CONFLATED).flowOn(observerScanContext)
 
     fun <T : Event> observeEvents(filter: Filter): Flow<List<T>> =
         callbackFlow {
@@ -829,14 +830,35 @@ open class EventCache :
                     trySend(it)
                 }
 
-            cachedFilter.init()
-
-            observables.register(filter, cachedFilter)
+            startObserving(filter, cachedFilter, cachedFilter::start)
 
             awaitClose {
                 observables.unregister(cachedFilter)
             }
-        }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
+        }.buffer(CoroutineChannel.CONFLATED).flowOn(observerScanContext)
+
+    /**
+     * Where [observeNotes] and [observeEvents] scan the cache for their first list: off the
+     * collector's thread, which is the main thread for a composable's `collectAsState`. That scan
+     * walks every note the filter can match, so it grows with the session; on the main thread a
+     * feed of cards that each observe something froze as it scrolled. Tests on a virtual clock set
+     * it to their own dispatcher.
+     */
+    var observerScanContext: CoroutineContext = Dispatchers.Default
+
+    /** Registers [observer] and fills it through [start], unregistering it if the scan fails. */
+    private fun startObserving(
+        filter: Filter,
+        observer: Observable,
+        start: (register: () -> Unit) -> Unit,
+    ) {
+        try {
+            start { observables.register(filter, observer) }
+        } catch (e: Throwable) {
+            observables.unregister(observer)
+            throw e
+        }
+    }
 
     /**
      * Emits each new event for which [predicate] returns true, one at a time,

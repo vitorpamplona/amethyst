@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -114,6 +115,13 @@ class EventListMatchingFilter<T : Event>(
 
     private val state = AtomicReference(State(emptyList(), emptySet()))
 
+    // Ids [remove] was given while [start] ran: its scan may have collected them before they went.
+    private val removedWhileStarting = AtomicReference<Set<HexKey>>(emptySet())
+
+    // False until [start] has published its first list.
+    @Volatile
+    private var started = false
+
     private fun entryFor(note: Note): Entry {
         // A null event (unresolved note) sorts last, matching CreatedAtIdHexComparator.
         val event = note.event
@@ -160,7 +168,7 @@ class EventListMatchingFilter<T : Event>(
             // stored — the AddressableNote is. Re-emit if that addressable is already
             // listed, so consumers pick up the refreshed content read live off the note.
             val current = state.load()
-            if (event.address().toValue() in current.ids) update(current.events())
+            if (event.address().toValue() in current.ids) send(current)
             return
         }
 
@@ -174,39 +182,110 @@ class EventListMatchingFilter<T : Event>(
             // coexist and read the same live event twice. Re-emit so consumers see the
             // refreshed content.
             if (note.idHex in current.ids) {
-                update(current.events())
+                send(current)
                 return
             }
 
             val next = current.plus(entryFor(note), limit)
             if (state.compareAndSet(current, next)) {
-                update(next.events())
+                send(next)
                 return
             }
         }
     }
 
     override fun remove(note: Note) {
+        if (!started) {
+            while (true) {
+                val removed = removedWhileStarting.load()
+                if (removedWhileStarting.compareAndSet(removed, removed + note.idHex)) break
+            }
+        }
         while (true) {
             val current = state.load()
             if (note.idHex !in current.ids) return
 
             val next = current.minus(note.idHex)
             if (state.compareAndSet(current, next)) {
-                update(next.events())
+                send(next)
                 return
             }
         }
     }
 
-    fun init() {
-        // The cache query behind [atOnce] has already applied the filter's limit, so this
-        // inserts what it is given, exactly as the previous implementation did.
-        var fresh = State(emptyList(), emptySet())
-        atOnce(filter).forEach { note ->
-            if (note.idHex !in fresh.ids) fresh = fresh.plus(entryFor(note), null)
+    /** [start] for an observer no cache delivers to: a test, or a list built once. */
+    fun init() = start {}
+
+    /**
+     * Fills the list from the cache and publishes it. [register] hands this observer to the
+     * cache first, so an event inserted while the scan runs reaches [new] and is merged in, and a
+     * note deleted meanwhile is left out; scanning first lost both, as the cache had nobody to
+     * tell. Until the merged list is published [new] and [remove] only change the state, so a
+     * collector's first list is the whole one.
+     */
+    fun start(register: () -> Unit) {
+        register()
+        val scanned = stateOf(atOnce(filter))
+        while (true) {
+            val current = state.load()
+            val next = scanned.without(removedWhileStarting.load()).mergedWith(current)
+            if (state.compareAndSet(current, next)) break
         }
-        state.store(fresh)
-        update(fresh.events())
+        // A deletion that landed after the merge read the set, but found nothing to remove yet.
+        dropRemovedWhileStarting()
+        started = true
+        removedWhileStarting.store(emptySet())
+        send(state.load())
+    }
+
+    /**
+     * Sends [published], once [start] has published the first list. Threads publish in one order
+     * and can send in another: one that published an older state may send after a newer one was
+     * sent, and the collector, conflated, keeps the last. So it sends again until the state stops
+     * moving, and the newest list is always the last one sent. Alone, that is one extra load.
+     */
+    private fun send(published: State) {
+        if (!started) return
+        var sent = published
+        update(sent.events())
+        while (true) {
+            val now = state.load()
+            if (now === sent) return
+            sent = now
+            update(now.events())
+        }
+    }
+
+    /**
+     * The cache query's notes as one state: sorted once and de-duplicated by id. Inserting them
+     * one by one copied the whole list and its id set for each, O(n²) in time and garbage.
+     */
+    private fun stateOf(notes: List<Note>): State {
+        val ids = HashSet<HexKey>(((notes.size + 1) / 0.75f).toInt() + 1)
+        val entries = ArrayList<Entry>(notes.size)
+        for (note in notes) {
+            if (ids.add(note.idHex)) entries.add(entryFor(note))
+        }
+        entries.sortWith(order)
+        return State(entries, ids)
+    }
+
+    private fun State.without(removed: Set<HexKey>): State = if (removed.none { it in ids }) this else State(entries.filterNot { it.note.idHex in removed }, ids - removed)
+
+    /** This scanned state plus what [new] listed while the scan ran, the limit kept. */
+    private fun State.mergedWith(live: State): State {
+        var next = this
+        for (entry in live.entries) {
+            if (entry.note.idHex !in next.ids) next = next.plus(entry, filter.limit)
+        }
+        return next
+    }
+
+    private fun dropRemovedWhileStarting() {
+        while (true) {
+            val current = state.load()
+            val next = current.without(removedWhileStarting.load())
+            if (next === current || state.compareAndSet(current, next)) return
+        }
     }
 }

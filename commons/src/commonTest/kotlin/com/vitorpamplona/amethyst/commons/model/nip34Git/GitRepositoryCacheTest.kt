@@ -84,7 +84,8 @@ class GitRepositoryCacheTest {
     @Test
     fun theCachesObserversSeeARepositorysActivity() =
         runTest {
-            val cache = EventCache()
+            // The observers scan on this test's clock, not on a real thread advanceUntilIdle can't wait for.
+            val cache = EventCache().apply { observerScanContext = UnconfinedTestDispatcher(testScheduler) }
             val ownerAnnouncement = announcement(owner, coMaintainer)
             cache.justConsume(ownerAnnouncement, null, true)
             val issue = reporter.sign(GitIssueEvent.build("Broken", "it broke", EventHintBundle(ownerAnnouncement), emptyList(), emptyList(), createdAt = 20))
