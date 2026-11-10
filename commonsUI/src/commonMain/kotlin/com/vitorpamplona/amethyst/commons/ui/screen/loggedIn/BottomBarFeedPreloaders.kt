@@ -196,6 +196,7 @@ private fun PreloadFor(
 
         // No relay feed to preload (loaded by the destination screen on demand).
         NavBarItem.PROFILE,
+        NavBarItem.FRONT_PAGE,
         NavBarItem.MY_LISTS,
         NavBarItem.BOOKMARKS,
         NavBarItem.WEB_BOOKMARKS,

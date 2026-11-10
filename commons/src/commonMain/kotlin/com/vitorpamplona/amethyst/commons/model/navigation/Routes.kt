@@ -654,6 +654,8 @@ sealed class Route {
 
     @Serializable object AgentKeysSettings : Route()
 
+    @Serializable object FrontPage : Route()
+
     @Serializable object VideoPlayerSettings : Route()
 
     @Serializable object CallSettings : Route()

@@ -156,6 +156,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.membersh
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.favorites.FavoriteAppsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.feed.FollowPackFeedScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.list.FollowPacksScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.FrontPageScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.GeocachesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.create.NewGeocacheScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.detail.GeocacheDetailScreen
@@ -481,6 +482,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.ProfileUiSettings> { ProfileUiSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SearchEngineSettings> { SearchEngineSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.AgentKeysSettings> { AgentKeysSettingsScreen(accountViewModel, nav) }
+    composableFromEnd<Route.FrontPage> { FrontPageScreen(accountViewModel, nav) }
     composableFromEnd<Route.VideoPlayerSettings> { VideoPlayerSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.CallSettings> { CallSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.NotificationSettings> { NotificationSettingsScreen(accountViewModel, nav) }

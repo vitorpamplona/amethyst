@@ -334,6 +334,24 @@ interface AppPlatform {
         modifier: Modifier,
     ) {}
 
+    /** Whether [InlinePaperSurface] shows the reader's front page here: wherever napplets run inline. */
+    val showsPapersInline: Boolean get() = runsNappletsInline
+
+    /**
+     * Shows the reader's front page [html] — written, resolved and checked by commons `frontpage` —
+     * as instance [instanceId], filling [modifier]. It runs on the same sandboxed web surface as an
+     * nSite, under [com.vitorpamplona.amethyst.commons.napplet.HostProfile.PAPER]: no script runs,
+     * its art loads from where it was published, and its links open in the system browser.
+     */
+    @Composable
+    fun InlinePaperSurface(
+        html: String,
+        title: String,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {}
+
     /** The icon a napplet manifest by [author] / [identifier] declares, if cached. */
     @Composable
     fun rememberManifestIconModel(

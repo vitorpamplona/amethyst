@@ -274,7 +274,8 @@ internal fun SandboxToolbar(
                             when (session.launch.profile) {
                                 HostProfile.WEBSITE -> Res.string.browser_pill_access_nsite
                                 HostProfile.WEBXDC -> Res.string.browser_pill_access_webxdc
-                                HostProfile.NAPPLET -> Res.string.browser_pill_access_napplet
+                                // A front page never opens in a window of its own; named as the locked app it is.
+                                HostProfile.NAPPLET, HostProfile.PAPER -> Res.string.browser_pill_access_napplet
                             },
                         ),
                         style = MaterialTheme.typography.labelSmall,

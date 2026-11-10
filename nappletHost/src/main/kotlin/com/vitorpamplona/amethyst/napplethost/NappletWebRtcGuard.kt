@@ -47,7 +47,7 @@ object NappletWebRtcGuard {
     fun isNeeded(
         profile: HostProfile,
         useTor: Boolean,
-    ): Boolean = profile != HostProfile.WEBSITE || useTor
+    ): Boolean = profile.runsScripts && (profile != HostProfile.WEBSITE || useTor)
 
     /** Whether this WebView can run a script in every frame, which the guard needs. */
     fun isSupported(): Boolean = WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)

@@ -58,6 +58,8 @@ class NappletLaunch(
     val servers: List<String>,
     /** Set for a webxdc app ([HostProfile.WEBXDC]): its archive, and who is running it. */
     val webxdc: WebxdcLaunch? = null,
+    /** Set for the front page ([HostProfile.PAPER]): the one checked document it serves at `/index.html`. */
+    val paper: ByteArray? = null,
 ) {
     /** Exact NAP domain names the prelude projects onto `window.napplet`; absence is the availability signal. */
     val declaredDomains: List<String> = declared.map { it.name.lowercase() }.distinct()
@@ -66,9 +68,33 @@ class NappletLaunch(
      * This launch, run inside a note as its own instance [instanceId]: it keeps what the user granted
      * the app, and its questions wait for the user to open it ([NappletIdentity.inline]).
      */
-    fun inline(instanceId: String): NappletLaunch = NappletLaunch(identity.copy(inline = true, instanceId = instanceId), profile, declared, requires, title, paths, servers, webxdc)
+    fun inline(instanceId: String): NappletLaunch = NappletLaunch(identity.copy(inline = true, instanceId = instanceId), profile, declared, requires, title, paths, servers, webxdc, paper)
 
     companion object {
+        /** The identifier every front page runs under: one origin per reader, whatever the edition. */
+        const val PAPER_IDENTIFIER = "front-page"
+
+        /**
+         * The reader's front page: [html] is a page the app wrote with the reader's own AI and already
+         * resolved and checked (commons `frontpage`); it is served as it is, with no script able to run.
+         * Signed by nobody, so the trusted side is what vouches for it, and it gets nothing to ask for.
+         */
+        fun forPaper(
+            readerPubKey: HexKey,
+            title: String,
+            html: String,
+        ): NappletLaunch =
+            NappletLaunch(
+                identity = NappletIdentity(authorPubKey = readerPubKey, identifier = PAPER_IDENTIFIER),
+                profile = HostProfile.PAPER,
+                declared = HostProfile.PAPER.declaredCapabilities(emptyList()),
+                requires = emptyList(),
+                title = title,
+                paths = emptyList(),
+                servers = emptyList(),
+                paper = html.encodeToByteArray(),
+            )
+
         /**
          * The later of two versions of one app's manifest, as a relay keeps the later of two replaceable
          * events: the newer `created_at`, and on a tie the lower id (NIP-01). One that isn't an event

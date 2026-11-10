@@ -132,6 +132,15 @@ object NappletHostContract {
         params.putBoolean(EXTRA_WEBXDC_IS_SENDER, webxdc.isAppSender)
     }
 
+    /**
+     * A front page launch ([HostProfile.PAPER]): the one checked document it serves, as bytes. The
+     * trusted main process wrote and checked it; this process only serves it.
+     */
+    const val EXTRA_PAPER_HTML = "napplet_paper_html"
+
+    /** The front page in [params], or null when the launch isn't one. */
+    fun paperOf(params: Bundle?): ByteArray? = params?.getByteArray(EXTRA_PAPER_HTML)?.takeIf { it.isNotEmpty() }
+
     /** The webxdc launch in [params], or null when it isn't one. */
     fun webxdcOf(params: Bundle?): WebxdcLaunch? {
         val url = params?.getString(EXTRA_WEBXDC_URL)?.ifBlank { null } ?: return null

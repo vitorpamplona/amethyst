@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_sets
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps
 import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_title
 import com.vitorpamplona.amethyst.commons.resources.follow_packs
+import com.vitorpamplona.amethyst.commons.resources.front_page_title
 import com.vitorpamplona.amethyst.commons.resources.git_repositories
 import com.vitorpamplona.amethyst.commons.resources.highlights
 import com.vitorpamplona.amethyst.commons.resources.interest_sets_title
@@ -206,6 +207,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 label = { Res.string.web_bookmarks },
                 icon = MaterialSymbols.Language,
                 resolveRoute = { Route.WebBookmarks },
+            ),
+        NavBarItem.FRONT_PAGE to
+            NavBarItemDef(
+                id = NavBarItem.FRONT_PAGE,
+                label = { Res.string.front_page_title },
+                icon = MaterialSymbols.AutoMirrored.Article,
+                resolveRoute = { Route.FrontPage },
             ),
         NavBarItem.DRAFTS to
             NavBarItemDef(
@@ -586,6 +594,7 @@ val BottomBarCategories: List<NavBarCategory> by lazy {
             MaterialSymbols.AccountCircle,
             listOf(
                 NavBarItem.PROFILE,
+                NavBarItem.FRONT_PAGE,
                 NavBarItem.MY_FITNESS,
                 NavBarItem.MY_LISTS,
                 NavBarItem.BOOKMARKS,

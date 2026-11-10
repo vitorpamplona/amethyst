@@ -9511,4 +9511,47 @@
     <string name="agent_keys_openrouter_timed_out">Timed out. Try again.</string>
     <string name="agent_keys_openrouter_failed">Couldn't connect. Try again.</string>
     <string name="agent_keys_openrouter_unsupported">Not available here. Paste a key.</string>
+    <string name="front_page_title">Front page</string>
+    <string name="front_page_tagline">Today on Nostr, through your web of trust.</string>
+    <string name="front_page_print">Print today's paper</string>
+    <string name="front_page_print_again">Print again</string>
+    <string name="front_page_model">Model</string>
+    <string name="front_page_model_id">Model id</string>
+    <string name="front_page_no_key">Connect an AI key to print your paper.</string>
+    <string name="front_page_connect">Connect</string>
+    <string name="front_page_no_lens">Pick whose web of trust ranks your paper.</string>
+    <string name="front_page_set_up">Set up</string>
+    <string name="front_page_unsupported">Front pages aren't available on this device yet.</string>
+    <string name="front_page_not_ready">Your rankings are on their way. Try again in a few minutes.</string>
+    <string name="front_page_step_probe">Checking your ranking</string>
+    <string name="front_page_step_pull">Reading the desks · %1$d of %2$d</string>
+    <string name="front_page_step_write">Writing · %1$s characters</string>
+    <string name="front_page_step_fix">Fixing what the check refused · %1$s characters</string>
+    <string name="front_page_step_check">Checking quotes, pictures and links</string>
+    <string name="front_page_edition">No. %1$s</string>
+    <string name="front_page_fixed_once">Fixed once</string>
+    <string name="front_page_download">Download</string>
+    <string name="front_page_changes_title">Taken out of the page</string>
+    <string name="front_page_refused_title">The page didn't pass the check</string>
+    <string name="front_page_refused_body">Nothing was shown. Try again, or pick another model.</string>
+    <string name="front_page_cannot_show">This device can't show the page here. Download it to read it.</string>
+    <string name="front_page_fail_rejected">Your AI key was rejected.</string>
+    <string name="front_page_fail_credit">Your AI key is out of credit.</string>
+    <string name="front_page_fail_rate">Your AI provider is rate-limiting this key. Try again in a minute.</string>
+    <string name="front_page_fail_model">The provider doesn't know that model. Pick another one.</string>
+    <string name="front_page_fail_unreachable">Couldn't reach your AI provider or the search relay.</string>
+    <string name="front_page_fail_empty">Your AI answered without a page. Try again.</string>
+    <string name="front_page_fail_http">Your AI provider answered with an error (%1$d).</string>
+    <plurals name="front_page_quotes_verified">
+        <item quantity="one">%1$d quote verified</item>
+        <item quantity="other">%1$d quotes verified</item>
+    </plurals>
+    <plurals name="front_page_posts_read">
+        <item quantity="one">%1$d post read</item>
+        <item quantity="other">%1$d posts read</item>
+    </plurals>
+    <plurals name="front_page_tokens">
+        <item quantity="one">%1$s token</item>
+        <item quantity="other">%1$s tokens</item>
+    </plurals>
 </resources>

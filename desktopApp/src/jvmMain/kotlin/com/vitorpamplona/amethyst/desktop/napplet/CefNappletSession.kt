@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
+import com.vitorpamplona.amethyst.commons.napplet.blobs.PaperFiles
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFilePort
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
@@ -192,6 +193,9 @@ class CefNappletSession(
 
     private val isWebsite = launch.profile == HostProfile.WEBSITE
 
+    // Talks to the web through the router's route: a website, and a front page for its hotlinked art.
+    private val usesNetwork = launch.profile.exposesNetwork
+
     // A website's or webxdc app's origin is its own per account: this browser keeps one storage jar
     // for everyone, so the account goes into the origin instead of choosing a separate jar as Android does.
     private val appOrigin =
@@ -205,7 +209,7 @@ class CefNappletSession(
             launch.profile,
         )
 
-    private val blobsUseTor: Boolean get() = if (isWebsite) useTor else runtime.nappletBlobsUseTor()
+    private val blobsUseTor: Boolean get() = if (usesNetwork) useTor else runtime.nappletBlobsUseTor()
 
     // Built once the route is known. Its client is the app's shared one, so it is never closed here.
     private lateinit var server: NappletSiteServer
@@ -261,28 +265,31 @@ class CefNappletSession(
                 val needsTor = blobsUseTor
                 if (needsTor && !runtime.routes.torRunning) mutableState.value = State.WaitingForTor
                 val routed =
-                    if (isWebsite) {
+                    if (usesNetwork) {
                         runtime.routes.claim(this@CefNappletSession, useTor, runtime.torWaitMs)
                     } else {
                         !needsTor || runtime.routes.awaitTor(runtime.torWaitMs)
                     }
                 // Closed while it waited: its claim was filed after close() released it.
                 if (closed) {
-                    if (isWebsite) runtime.routes.release(this@CefNappletSession)
+                    if (usesNetwork) runtime.routes.release(this@CefNappletSession)
                     return@launch
                 }
                 if (!routed) {
                     Log.w(TAG) { "Tor is not running; not opening ${launch.identity.coordinate}" }
                     // A window showing its failure has no traffic: its claim must not keep holding the
                     // route for the others ("Tor not ready" blocks every window).
-                    if (isWebsite) runtime.routes.release(this@CefNappletSession)
+                    if (usesNetwork) runtime.routes.release(this@CefNappletSession)
                     mutableState.value = State.Failed(Failure.ROUTE_BLOCKED)
                     return@launch
                 }
                 mutableState.value = State.Loading
                 val webxdc = launch.webxdc
+                val paper = launch.paper
                 val blobs =
-                    if (webxdc != null) {
+                    if (paper != null) {
+                        PaperFiles(paper)
+                    } else if (webxdc != null) {
                         WebxdcFiles(
                             runtime.webxdcBundles,
                             WebxdcFiles.downloadClient(runtime.httpClient(blobsUseTor)),
@@ -312,7 +319,8 @@ class CefNappletSession(
                         declaredDomains = launch.declaredDomains,
                         // A napplet's shell refuses to start it while WebRTC is still there: without the
                         // engine's guard extension, it would have a way out through the router.
-                        shellHead = if (isWebsite) bridgeScript else WEBRTC_CHECK + bridgeScript,
+                        // A front page's frame runs no script at all, so there is no WebRTC to take.
+                        shellHead = if (isWebsite || !launch.profile.runsScripts) bridgeScript else WEBRTC_CHECK + bridgeScript,
                     )
                 // The entry point must resolve before a window shows: a missing site is a clear
                 // message, not a blank page.
@@ -330,7 +338,7 @@ class CefNappletSession(
                     }
                 if (!available) {
                     Log.w(TAG) { "No Blossom server returned ${launch.identity.coordinate}'s files" }
-                    if (isWebsite) runtime.routes.release(this@CefNappletSession)
+                    if (usesNetwork) runtime.routes.release(this@CefNappletSession)
                     mutableState.value = State.Failed(Failure.UNREACHABLE)
                     return@launch
                 }
@@ -425,8 +433,9 @@ class CefNappletSession(
                     when {
                         isLocal(request.url) -> null
                         isInternal(request.url) -> internalHandler
-                        // A website talks to the web through the router's route; a napplet has no network.
-                        isWebsite -> null
+                        // A website (and a front page's art) talks to the web through the router's route;
+                        // a napplet has no network.
+                        usesNetwork -> null
                         else -> cancelHandler
                     }
             },
@@ -762,7 +771,7 @@ class CefNappletSession(
         runtime.incBus.remove(this)
         runtime.intents?.remove(this)
         runtime.attendance.forget(this)
-        if (isWebsite) runtime.routes.release(this)
+        if (usesNetwork) runtime.routes.release(this)
         scope.cancel()
         // The cache is shared, so it is trimmed as windows close.
         runtime.trimBlobCache()

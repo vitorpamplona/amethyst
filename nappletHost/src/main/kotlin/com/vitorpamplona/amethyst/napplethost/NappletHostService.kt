@@ -117,6 +117,8 @@ class NappletHostService : Service() {
         val declaredDomains: List<String>,
         // Set for a webxdc app: its archive and who runs it.
         val webxdc: WebxdcLaunch? = null,
+        // Set for a front page: the one checked document it serves.
+        val paper: ByteArray? = null,
     ) {
         // Read on the WebView worker thread in shouldInterceptRequest; written on the main thread in
         // createHostWebView — @Volatile gives the happens-before so the worker never sees a stale null.
@@ -311,8 +313,11 @@ class NappletHostService : Service() {
         val pathList = data.getStringArrayList(NappletHostContract.EXTRA_PATHS) ?: return null
         val hashList = data.getStringArrayList(NappletHostContract.EXTRA_HASHES) ?: return null
         val webxdc = NappletHostContract.webxdcOf(data)
-        // A webxdc app's one file is its archive, which comes as its own extra.
-        if (pathList.size != hashList.size || (pathList.isEmpty() && webxdc == null)) return null
+        val profileName = data.getString(NappletHostContract.EXTRA_HOST_PROFILE)
+        // Only a PAPER launch may carry a page of its own; anything else serves its listed files.
+        val paper = NappletHostContract.paperOf(data)?.takeIf { HostProfile.fromName(profileName) == HostProfile.PAPER }
+        // A webxdc app's one file is its archive, and a front page's is its page: each its own extra.
+        if (pathList.size != hashList.size || (pathList.isEmpty() && webxdc == null && paper == null)) return null
         val author = data.getString(NappletHostContract.EXTRA_AUTHOR).orEmpty()
         val launchToken = data.getString(NappletHostContract.EXTRA_LAUNCH_TOKEN).orEmpty()
         if (author.isEmpty() || launchToken.isEmpty()) return null
@@ -338,6 +343,7 @@ class NappletHostService : Service() {
                 webViewProfile = data.getString(NappletHostContract.EXTRA_WEBVIEW_PROFILE),
                 declaredDomains = declaredDomains,
                 webxdc = webxdc,
+                paper = paper,
             )
         return tab
     }
@@ -447,6 +453,7 @@ class NappletHostService : Service() {
                 tab.declaredDomains,
                 imeProxy = true,
                 webxdc = tab.webxdc,
+                paper = tab.paper,
             )
 
         hardenWebView(wv, tab)

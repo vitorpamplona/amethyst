@@ -403,11 +403,27 @@ class DesktopNappletHost(
         return runCatching { startInline(launch, account) }
     }
 
+    /**
+     * Shows the reader's front page [html] (written, resolved and checked by commons `frontpage`) as
+     * instance [instanceId], on the same off-screen Chromium as an inline nSite. No script runs in it;
+     * its art follows the user's Tor choice the way a site's traffic does.
+     */
+    fun openInlinePaper(
+        html: String,
+        title: String,
+        instanceId: String,
+    ): Result<CefNappletSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to read your front page"))
+        val launch = NappletLaunch.forPaper(account.pubKey, title, html).inline(instanceId)
+        return runCatching { startInline(launch, account, useTor = torEnabled() && networkChoices.useTor(launch.identity.coordinate)) }
+    }
+
     private fun startInline(
         launch: NappletLaunch,
         account: Account,
+        useTor: Boolean = false,
     ): CefNappletSession {
-        val session = CefNappletSession(launch, account.pubKey, useTor = false, account, brokerFor(account), runtime, OffscreenNappletView())
+        val session = CefNappletSession(launch, account.pubKey, useTor = useTor, account, brokerFor(account), runtime, OffscreenNappletView())
         inlineSessions.update { it + session }
         // The account may have left between reading it and listing the session, after the switch
         // closed what it found: this one would run on as someone who left.

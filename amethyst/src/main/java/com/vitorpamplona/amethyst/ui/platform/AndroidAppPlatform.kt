@@ -281,6 +281,23 @@ object AndroidAppPlatform : AppPlatform {
     }
 
     @Composable
+    override fun InlinePaperSurface(
+        html: String,
+        title: String,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {
+        // The :napplet sandbox renders it, as it does an nSite: no WebView ever boots in this process.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val context = LocalContext.current
+            InlineNappletView(html to instanceId, instanceId, onStatus, modifier) {
+                NappletLauncher.buildInlinePaperParams(context, html, title, instanceId)
+            }
+        }
+    }
+
+    @Composable
     override fun InlineWebxdcSurface(
         app: WebxdcApp,
         postId: HexKey,

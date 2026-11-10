@@ -166,6 +166,27 @@ object NappletLauncher {
         return buildLaunchParams(context, launch.inline(instanceId))
     }
 
+    /**
+     * The launch parameters for showing the reader's front page [html] (already written, resolved and
+     * checked in this process) as instance [instanceId], or null when nobody is logged in or the page
+     * is too large to hand to the sandbox in one message.
+     */
+    fun buildInlinePaperParams(
+        context: Context,
+        html: String,
+        title: String,
+        instanceId: String,
+    ): Bundle? {
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return null
+        val launch = NappletLaunch.forPaper(account.pubKey, title, html)
+        // One binder transaction carries the whole launch; a page this size is not a front page.
+        if ((launch.paper?.size ?: 0) > MAX_PAPER_BYTES) {
+            Log.w(TAG) { "Refusing a ${launch.paper?.size}-byte front page" }
+            return null
+        }
+        return buildLaunchParams(context, launch.inline(instanceId))
+    }
+
     /** The launch parameters for a NIP-5A nSite, or null when the event is refused. */
     fun buildSiteLaunchParams(
         context: Context,
@@ -240,8 +261,12 @@ object NappletLauncher {
             // and localStorage into another. Derived here (the sandbox never sees the pubkey).
             putString(NappletHostContract.EXTRA_WEBVIEW_PROFILE, NappletWebViewProfiles.current())
             launch.webxdc?.let { NappletHostContract.putWebxdc(this, it) }
+            launch.paper?.let { putByteArray(NappletHostContract.EXTRA_PAPER_HTML, it) }
         }
     }
+
+    /** Well under the 1 MB binder budget the rest of the launch shares. */
+    private const val MAX_PAPER_BYTES = 600_000
 
     private const val TAG = "NappletLauncher"
 }

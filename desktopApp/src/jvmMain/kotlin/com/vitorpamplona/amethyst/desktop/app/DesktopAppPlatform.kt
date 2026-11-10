@@ -179,6 +179,21 @@ class DesktopAppPlatform(
     }
 
     @Composable
+    override fun InlinePaperSurface(
+        html: String,
+        title: String,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {
+        val host = nappletHost ?: return
+        // The bundled Chromium, off screen, as for an inline nSite: drawn by the screen, no script runs.
+        InlineNappletPane(host, "front-page/${html.hashCode()}", instanceId, onStatus, modifier) {
+            host.openInlinePaper(html, title, instanceId)
+        }
+    }
+
+    @Composable
     override fun InlineWebxdcSurface(
         app: WebxdcApp,
         postId: HexKey,

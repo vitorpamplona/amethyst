@@ -117,6 +117,8 @@ object NappletWebContract {
                 HostProfile.WEBSITE -> "allow-scripts allow-same-origin"
                 // Forms post to the app's own origin (its CSP's form-action); nothing else is added.
                 HostProfile.WEBXDC -> "allow-scripts allow-same-origin allow-forms"
+                // No scripts and an opaque origin: only its links may leave, to the system browser.
+                HostProfile.PAPER -> "allow-popups allow-popups-to-escape-sandbox"
             }
         val frameSource = if (napplet) "'self'" else appOrigin
         val template =
@@ -130,7 +132,7 @@ object NappletWebContract {
 
         if (!napplet) {
             // A webxdc app opens at its root with index.html appended, as the spec requires.
-            val entry = if (profile == HostProfile.WEBXDC) "/index.html" else "/"
+            val entry = if (profile == HostProfile.WEBXDC || profile == HostProfile.PAPER) "/index.html" else "/"
             return ShellPage(before + "iframe.src = '$appOrigin$entry';".encodeToByteArray() + after, shellCsp(frameSource))
         }
 
@@ -228,6 +230,15 @@ object NappletWebContract {
             "img-src data: blob:; font-src data:; connect-src 'none'; worker-src 'none'; " +
             "child-src 'none'; frame-src 'none'; media-src 'none'; object-src 'none'; " +
             "manifest-src 'none'; base-uri 'none'; form-action 'none'"
+
+    /**
+     * The front page's CSP: no script source at all, its inline house stylesheet, and pictures from
+     * the open web over https only (its art is hotlinked where its authors published it). Nothing
+     * else loads, nothing posts, nothing frames.
+     */
+    const val PAPER_CSP: String =
+        "default-src 'none'; style-src 'unsafe-inline'; img-src https:; " +
+            "frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
 
     /**
      * A webxdc app's CSP: everything from its own origin (the archive, served locally) and inline
