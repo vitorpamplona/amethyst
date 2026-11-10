@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -42,16 +45,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -62,6 +63,7 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,6 +74,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageClock
@@ -123,6 +127,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_model_id
 import com.vitorpamplona.amethyst.commons.resources.front_page_needs_device_key
 import com.vitorpamplona.amethyst.commons.resources.front_page_no_key
 import com.vitorpamplona.amethyst.commons.resources.front_page_no_lens
+import com.vitorpamplona.amethyst.commons.resources.front_page_no_tor
 import com.vitorpamplona.amethyst.commons.resources.front_page_not_ready
 import com.vitorpamplona.amethyst.commons.resources.front_page_pick_time
 import com.vitorpamplona.amethyst.commons.resources.front_page_posts_read
@@ -133,6 +138,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_quotes_verified
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_body
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_set_up
+import com.vitorpamplona.amethyst.commons.resources.front_page_show_failed
 import com.vitorpamplona.amethyst.commons.resources.front_page_step_check
 import com.vitorpamplona.amethyst.commons.resources.front_page_step_fix
 import com.vitorpamplona.amethyst.commons.resources.front_page_step_probe
@@ -141,14 +147,20 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_step_write
 import com.vitorpamplona.amethyst.commons.resources.front_page_tagline
 import com.vitorpamplona.amethyst.commons.resources.front_page_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_tokens
+import com.vitorpamplona.amethyst.commons.resources.front_page_tor_pictures
 import com.vitorpamplona.amethyst.commons.resources.front_page_unsupported
+import com.vitorpamplona.amethyst.commons.resources.retry
 import com.vitorpamplona.amethyst.commons.resources.today
+import com.vitorpamplona.amethyst.commons.resources.tor_waiting
 import com.vitorpamplona.amethyst.commons.resources.yesterday
+import com.vitorpamplona.amethyst.commons.ui.components.PillColors
+import com.vitorpamplona.amethyst.commons.ui.components.PillTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberFileBytesAccess
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.rememberIs24HourClock
+import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -269,29 +281,42 @@ private fun Hero(
                 }
             }
             if (gate == FrontPageGate.READY) {
-                Surface(shape = RoundedCornerShape(16.dp), color = scheme.surface) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ModelPicker(models, onModel)
-                        if (run is FrontPageRun.Running) {
-                            OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
-                                Text(stringRes(Res.string.cancel))
-                            }
-                        } else {
-                            Button(
-                                onClick = onPrint,
-                                enabled = models.selected != null,
-                                modifier = Modifier.fillMaxWidth().height(52.dp),
-                                shape = RoundedCornerShape(14.dp),
-                            ) {
-                                Icon(MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(20.dp), filled = true)
-                                Spacer(Modifier.width(8.dp))
-                                val label = stringRes(if (hasEditions) Res.string.front_page_print_again else Res.string.front_page_print)
-                                // The reader pays for this: say roughly what before they press it (NIP-FA).
-                                Text(
-                                    if (estimate != null) stringRes(Res.string.front_page_print_estimate, label, formatUsd(estimate)) else label,
-                                    style = MaterialTheme.typography.titleSmall,
-                                )
-                            }
+                // Straight on the gradient, no dark box inside it: a translucent model pill and a
+                // white Print button, the strongest thing on the card.
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    ModelPicker(models, onModel, onHero)
+                    if (run is FrontPageRun.Running) {
+                        OutlinedButton(
+                            onClick = onCancel,
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.5.dp, onHero.copy(alpha = 0.7f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = onHero),
+                        ) {
+                            Text(stringRes(Res.string.cancel), style = MaterialTheme.typography.titleSmall)
+                        }
+                    } else {
+                        Button(
+                            onClick = onPrint,
+                            enabled = models.selected != null,
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = onHero,
+                                    contentColor = scheme.primary,
+                                    disabledContainerColor = onHero.copy(alpha = 0.3f),
+                                    disabledContentColor = scheme.primary.copy(alpha = 0.6f),
+                                ),
+                        ) {
+                            Icon(MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(20.dp), filled = true)
+                            Spacer(Modifier.width(8.dp))
+                            val label = stringRes(if (hasEditions) Res.string.front_page_print_again else Res.string.front_page_print)
+                            // The reader pays for this: say roughly what before they press it (NIP-FA).
+                            Text(
+                                if (estimate != null) stringRes(Res.string.front_page_print_estimate, label, formatUsd(estimate)) else label,
+                                style = MaterialTheme.typography.titleSmall,
+                            )
                         }
                     }
                 }
@@ -300,49 +325,111 @@ private fun Hero(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ModelPicker(
     models: FrontPageModels,
     onModel: (String) -> Unit,
+    onHero: Color,
 ) {
     if (models.loading) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-            Spacer(Modifier.width(10.dp))
-            Text(stringRes(Res.string.front_page_model), style = MaterialTheme.typography.bodyMedium)
+        Row(Modifier.heightIn(min = 54.dp), verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = onHero)
+            Spacer(Modifier.width(12.dp))
+            Text(stringRes(Res.string.front_page_model), style = MaterialTheme.typography.bodyMedium, color = onHero)
         }
         return
     }
     if (models.ids.isEmpty()) {
-        // The provider lists no models: the reader names one.
-        OutlinedTextField(
+        // The provider lists no models: the reader names one, in the same pill as the key field.
+        PillTextField(
             value = models.selected.orEmpty(),
             onValueChange = onModel,
-            singleLine = true,
-            label = { Text(stringRes(Res.string.front_page_model_id)) },
-            modifier = Modifier.fillMaxWidth(),
+            placeholder = stringRes(Res.string.front_page_model_id),
+            leading = MaterialSymbols.AutoAwesome,
+            colors = PillColors.onAccent(onHero),
         )
         return
     }
     var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = models.selected.orEmpty(),
-            onValueChange = {},
-            readOnly = true,
-            singleLine = true,
-            label = { Text(stringRes(Res.string.front_page_model)) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-        )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+    val shape = RoundedCornerShape(16.dp)
+    Box {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 54.dp)
+                .clip(shape)
+                .background(onHero.copy(alpha = 0.16f))
+                .clickable { expanded = true }
+                .padding(start = 16.dp, end = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(MaterialSymbols.AutoAwesome, contentDescription = null, tint = onHero.copy(alpha = 0.85f), modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stringRes(Res.string.front_page_model), style = MaterialTheme.typography.labelSmall, color = onHero.copy(alpha = 0.75f))
+                Text(
+                    models.selected.orEmpty(),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = onHero,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Icon(MaterialSymbols.ExpandMore, contentDescription = null, tint = onHero.copy(alpha = 0.85f))
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             models.ids.forEach { id ->
                 DropdownMenuItem(text = { Text(id) }, onClick = {
                     onModel(id)
                     expanded = false
                 })
             }
+        }
+    }
+}
+
+/** Ink on newsprint: the paper's frame is always light, whatever the app's theme. */
+private val Ink = Color(0xFF1A1A1A)
+
+/**
+ * Over the paper while it isn't showing. Tor gets its own words: with Tor on, the surface
+ * fetches nothing (the art) until Tor runs, and gives up rather than go around it.
+ */
+@Composable
+private fun BoxScope.PaperStatus(
+    status: InlineNappletStatus,
+    onRetry: () -> Unit,
+) {
+    if (status == InlineNappletStatus.SHOWING) return
+    Column(
+        Modifier.align(Alignment.TopCenter).padding(top = 96.dp, start = 24.dp, end = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        when (status) {
+            InlineNappletStatus.LOADING -> CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.5.dp, color = Ink.copy(alpha = 0.6f))
+            InlineNappletStatus.WAITING_FOR_TOR -> {
+                CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.5.dp, color = Ink.copy(alpha = 0.6f))
+                Text(stringRes(Res.string.tor_waiting), style = MaterialTheme.typography.titleMedium, color = Ink)
+                Text(stringRes(Res.string.front_page_tor_pictures), style = MaterialTheme.typography.bodySmall, color = Ink.copy(alpha = 0.7f), textAlign = TextAlign.Center)
+            }
+            InlineNappletStatus.NO_TOR, InlineNappletStatus.FAILED -> {
+                Text(
+                    stringRes(if (status == InlineNappletStatus.NO_TOR) Res.string.front_page_no_tor else Res.string.front_page_show_failed),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Ink,
+                )
+                if (status == InlineNappletStatus.NO_TOR) {
+                    Text(stringRes(Res.string.front_page_tor_pictures), style = MaterialTheme.typography.bodySmall, color = Ink.copy(alpha = 0.7f), textAlign = TextAlign.Center)
+                }
+                OutlinedButton(
+                    onClick = onRetry,
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Ink.copy(alpha = 0.4f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Ink),
+                ) { Text(stringRes(Res.string.retry)) }
+            }
+            InlineNappletStatus.SHOWING -> {}
         }
     }
 }
@@ -576,6 +663,9 @@ private fun Edition(shown: ShownEdition) {
     }
 
     if (platform.showsPapersInline) {
+        // What the surface says about itself: a blank frame never goes unexplained.
+        var status by remember(edition.code) { mutableStateOf(InlineNappletStatus.LOADING) }
+        var attempt by remember(edition.code) { mutableIntStateOf(0) }
         // The model writes the layout, some pages run edge to edge: a margin of newsprint keeps the
         // rounded corners off the folio. The paper itself is always light.
         Box(
@@ -588,10 +678,15 @@ private fun Edition(shown: ShownEdition) {
             platform.InlinePaperSurface(
                 html = shown.html,
                 title = "$MASTHEAD · ${edition.code}",
-                instanceId = "front-page-${edition.day}-${edition.code}",
-                onStatus = {},
+                // A new id on Retry opens a fresh session rather than waking the failed one.
+                instanceId = "front-page-${edition.day}-${edition.code}-$attempt",
+                onStatus = { status = it },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 640.dp).height(900.dp),
             )
+            PaperStatus(status, onRetry = {
+                attempt++
+                status = InlineNappletStatus.LOADING
+            })
         }
     } else {
         Notice(stringRes(Res.string.front_page_cannot_show))

@@ -239,7 +239,7 @@ private fun LiveRun(
 
     when (status) {
         // Opaque, so it also covers the surface before the page's first frame.
-        InlineNappletStatus.LOADING ->
+        InlineNappletStatus.LOADING, InlineNappletStatus.WAITING_FOR_TOR ->
             Box(
                 Modifier
                     .fillMaxSize()
@@ -250,7 +250,7 @@ private fun LiveRun(
             ) {
                 NappletDownloadIndicator(download)
             }
-        InlineNappletStatus.FAILED ->
+        InlineNappletStatus.FAILED, InlineNappletStatus.NO_TOR ->
             Column(
                 Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
                 verticalArrangement = Arrangement.Center,

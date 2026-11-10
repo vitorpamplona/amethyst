@@ -472,6 +472,12 @@ enum class InlineNappletStatus {
 
     /** It could not start here: no server had its files, or the sandbox did not come up. */
     FAILED,
+
+    /** The user routes this content through Tor and Tor is still starting: nothing is fetched yet. */
+    WAITING_FOR_TOR,
+
+    /** Tor did not connect in time, so it was not opened rather than fetched around Tor. */
+    NO_TOR,
 }
 
 @Composable

@@ -9568,4 +9568,7 @@
         <item quantity="one">%1$s token</item>
         <item quantity="other">%1$s tokens</item>
     </plurals>
+    <string name="front_page_tor_pictures">Your paper's pictures load through Tor.</string>
+    <string name="front_page_no_tor">Tor isn't connected</string>
+    <string name="front_page_show_failed">Couldn't show the paper</string>
 </resources>

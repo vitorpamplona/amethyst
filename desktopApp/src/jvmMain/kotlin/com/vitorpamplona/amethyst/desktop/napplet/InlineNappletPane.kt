@@ -107,10 +107,14 @@ fun InlineNappletPane(
     val painted by remember(frame) { derivedStateOf { frame.value != null } }
 
     LaunchedEffect(state, painted) {
+        val now = state
         status(
             when {
-                state is CefNappletSession.State.Failed -> InlineNappletStatus.FAILED
-                state is CefNappletSession.State.Showing && painted -> InlineNappletStatus.SHOWING
+                // Tor said apart from other failures, so a caller can say why nothing is showing.
+                now is CefNappletSession.State.WaitingForTor -> InlineNappletStatus.WAITING_FOR_TOR
+                now is CefNappletSession.State.Failed && now.reason == CefNappletSession.Failure.ROUTE_BLOCKED -> InlineNappletStatus.NO_TOR
+                now is CefNappletSession.State.Failed -> InlineNappletStatus.FAILED
+                now is CefNappletSession.State.Showing && painted -> InlineNappletStatus.SHOWING
                 else -> InlineNappletStatus.LOADING
             },
         )
