@@ -47,7 +47,7 @@ object NotificationCandidates {
         return CandidateSet(
             cache = cache,
             scope = scope,
-            filter = { note -> NotificationFeedFilter.mightBeANotification(note, me()) },
+            filter = NotificationFeedFilter.universeFor(account),
             dependents = { note -> childrenOfMyNote(note, me()) },
         )
     }

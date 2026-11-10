@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.home.dal
 import com.vitorpamplona.amethyst.commons.audio.hasPlayableAudio
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.UniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.isRenderableRepost
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -34,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.isLatestAnswerIn
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.latestRsvpAnswers
 import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
@@ -91,8 +94,11 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 class HomeNewThreadFeedFilter(
     val account: Account,
     /** Where a full rebuild looks: the Home candidates when given, else the whole cache. */
-    val candidates: CandidateSet? = null,
-) : AdditiveFeedFilter<Note>() {
+    override val candidates: CandidateSet? = null,
+) : AdditiveFeedFilter<Note>(),
+    UniverseFeedFilter {
+    override val universe = IFilter { note -> note.event?.let { isThreadKind(it) || it is CalendarRSVPEvent } == true }
+
     companion object {
         val ADDRESSABLE_KINDS =
             listOf(
@@ -193,40 +199,34 @@ class HomeNewThreadFeedFilter(
         val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
         val latestRsvps = lazy(LazyThreadSafetyMode.NONE) { cachedRsvpAnswers() }
 
-        // The candidates once their first walk is done; until then, and without them, the cache.
-        candidates?.snapshot()?.let { return sort(fromCandidates(it, filterParams, disabledKinds, latestRsvps)) }
+        return sort(
+            rebuildFeed("home/threads", candidates, keep = { inWalk(it) && acceptableEvent(it, filterParams, disabledKinds, latestRsvps) }) {
+                val notes =
+                    LocalCache.notes.filterIntoSet { _, note ->
+                        // Avoids processing addressables twice.
+                        (note.event?.kind ?: 99999) < 10000 && acceptableEvent(note, filterParams, disabledKinds, latestRsvps)
+                    }
 
-        val notes =
-            LocalCache.notes.filterIntoSet { _, note ->
-                // Avoids processing addressables twice.
-                (note.event?.kind ?: 99999) < 10000 && acceptableEvent(note, filterParams, disabledKinds, latestRsvps)
-            }
+                val longFormNotes =
+                    LocalCache.addressables.filterIntoSet(
+                        kinds = ADDRESSABLE_KINDS,
+                    ) { _, note ->
+                        acceptableEvent(note, filterParams, disabledKinds, latestRsvps)
+                    }
 
-        val longFormNotes =
-            LocalCache.addressables.filterIntoSet(
-                kinds = ADDRESSABLE_KINDS,
-            ) { _, note ->
-                acceptableEvent(note, filterParams, disabledKinds, latestRsvps)
-            }
-
-        return sort(notes + longFormNotes)
+                notes + longFormNotes
+            },
+        )
     }
 
     // The same notes the cache walk keeps: regular kinds from the notes map, and addressables
     // only of ADDRESSABLE_KINDS.
     private val addressableKinds = ADDRESSABLE_KINDS.toHashSet()
 
-    private fun fromCandidates(
-        candidates: Set<Note>,
-        filterParams: FilterByListParams,
-        disabledKinds: Set<Int>,
-        latestRsvps: Lazy<Map<Pair<Address, HexKey>, CalendarRSVPEvent>>,
-    ): Set<Note> =
-        candidates.filterTo(HashSet()) { note ->
-            val kind = note.event?.kind ?: 99999
-            val inWalk = if (note is AddressableNote) kind in addressableKinds else kind < 10000
-            inWalk && acceptableEvent(note, filterParams, disabledKinds, latestRsvps)
-        }
+    private fun inWalk(note: Note): Boolean {
+        val kind = note.event?.kind ?: 99999
+        return if (note is AddressableNote) kind in addressableKinds else kind < 10000
+    }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 

@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.notifications.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.UniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -32,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.wot.curatedHidesByTrust
@@ -112,8 +115,11 @@ class NotificationFeedFilter(
     val account: Account,
     val modeOverride: TopFilter? = null,
     /** Where a full rebuild looks: the account's candidates when given, else the whole cache. */
-    val candidates: CandidateSet? = null,
-) : AdditiveFeedFilter<Note>() {
+    override val candidates: CandidateSet? = null,
+) : AdditiveFeedFilter<Note>(),
+    UniverseFeedFilter {
+    override val universe: IFilter = universeFor(account)
+
     // Pin to modeOverride for split-tab mode; otherwise follow the spinner.
     // Lazy so the eagerly-collected topNavFilter pipeline is only built when
     // the split UI actually opens this filter.
@@ -393,6 +399,9 @@ class NotificationFeedFilter(
             return true
         }
 
+        /** What could be one of [account]'s notifications: [mightBeANotification] for its key. */
+        fun universeFor(account: Account) = IFilter { mightBeANotification(it, account.userProfile().pubkeyHex) }
+
         /**
          * A cheap necessary condition for [acceptableEvent]: false only for notes it would reject.
          *
@@ -466,17 +475,15 @@ class NotificationFeedFilter(
     override fun feed(): List<Note> {
         val filterParams = buildFilterParams(account)
 
-        // The candidates once their first walk is done; until then, and without them, the cache.
         val notifications =
-            candidates?.snapshot()?.filterTo(HashSet()) { acceptableEvent(it, filterParams) }
-                ?: (
-                    LocalCache.notes.filterIntoSet { _, note ->
-                        note.event !is AddressableEvent && acceptableEvent(note, filterParams)
-                    } +
-                        LocalCache.addressables.filterIntoSet(ADDRESSABLE_KINDS) { _, note ->
-                            acceptableEvent(note, filterParams)
-                        }
-                )
+            rebuildFeed("notifications/${followList().code}", candidates, keep = { acceptableEvent(it, filterParams) }) {
+                LocalCache.notes.filterIntoSet { _, note ->
+                    note.event !is AddressableEvent && acceptableEvent(note, filterParams)
+                } +
+                    LocalCache.addressables.filterIntoSet(ADDRESSABLE_KINDS) { _, note ->
+                        acceptableEvent(note, filterParams)
+                    }
+            }
 
         // Include marmot group messages as notifications (like DMs)
         val loggedInUserHex = account.userProfile().pubkeyHex

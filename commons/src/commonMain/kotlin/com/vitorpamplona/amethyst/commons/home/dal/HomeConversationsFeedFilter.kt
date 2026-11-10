@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.home.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.UniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -29,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -46,8 +49,11 @@ import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 class HomeConversationsFeedFilter(
     val account: Account,
     /** Where a full rebuild looks: the Home candidates when given, else the whole cache. */
-    val candidates: CandidateSet? = null,
-) : AdditiveFeedFilter<Note>() {
+    override val candidates: CandidateSet? = null,
+) : AdditiveFeedFilter<Note>(),
+    UniverseFeedFilter {
+    override val universe = IFilter { note -> note.event?.let { isConversationKind(it) } == true }
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
 
     override fun showHiddenKey(): Boolean =
@@ -58,16 +64,12 @@ class HomeConversationsFeedFilter(
         val filterParams = buildFilterParams(account)
         val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
 
-        // The candidates once their first walk is done (only the notes map's kind of entries, as
-        // the walk below); until then, and without them, the cache.
-        val fromCandidates =
-            candidates?.snapshot()?.filterTo(HashSet()) {
-                it !is AddressableNote && acceptableEvent(it, filterParams, disabledKinds)
-            }
-
+        // From candidates, only the notes map's kind of entries, as the walk below.
         return sort(
-            fromCandidates ?: LocalCache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it, filterParams, disabledKinds)
+            rebuildFeed("home/replies", candidates, keep = { it !is AddressableNote && acceptableEvent(it, filterParams, disabledKinds) }) {
+                LocalCache.notes.filterIntoSet { _, it ->
+                    acceptableEvent(it, filterParams, disabledKinds)
+                }
             },
         )
     }

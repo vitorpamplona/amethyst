@@ -56,7 +56,6 @@ import com.vitorpamplona.amethyst.commons.longs.dal.LongsFeedFilter
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
 import com.vitorpamplona.amethyst.commons.model.privateChats.DM_CHAT_FEED_TYPES
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.music.dal.MusicPlaylistsFeedFilter
@@ -84,7 +83,6 @@ import com.vitorpamplona.amethyst.commons.workouts.dal.WorkoutFeedFilter
 import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
-import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -115,19 +113,11 @@ class AccountFeedContentStates(
 ) {
     val homeLive = ChannelFeedContentState(HomeLiveFilter(account), scope)
 
-    // Every cached note of a type Home shows, kept current: the three Home feeds rebuild from it
-    // (applying the list, mutes and settings) instead of walking the whole cache. Held weakly, as
-    // LocalCache holds them: it takes in most of the cache. Starts with the first Home rebuild.
-    val homeCandidates =
-        CandidateSet(LocalCache, scope, weak = true, filter = { note ->
-            val event = note.event
-            event != null &&
-                (HomeNewThreadFeedFilter.isThreadKind(event) || event is CalendarRSVPEvent || HomeConversationsFeedFilter.isConversationKind(event))
-        })
-
-    val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(account, homeCandidates), scope, LocalCache, lazy = true)
-    val homeReplies = FeedContentState(HomeConversationsFeedFilter(account, homeCandidates), scope, LocalCache, lazy = true)
-    val homeEverything = FeedContentState(HomeEverythingFeedFilter(account, homeCandidates), scope, LocalCache, lazy = true)
+    // Home walks the cache on rebuild: its universe (every type Home shows) is most of the cache,
+    // so a candidate set would only copy it. It rebuilds rarely instead.
+    val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(account), scope, LocalCache, lazy = true)
+    val homeReplies = FeedContentState(HomeConversationsFeedFilter(account), scope, LocalCache, lazy = true)
+    val homeEverything = FeedContentState(HomeEverythingFeedFilter(account), scope, LocalCache, lazy = true)
 
     val dmKnown = FeedContentState(ChatroomListKnownFeedFilter(account), scope, LocalCache, lazy = true)
     val dmNew = FeedContentState(ChatroomListNewFeedFilter(account), scope, LocalCache, lazy = true)
