@@ -62,6 +62,7 @@ import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -502,10 +503,13 @@ class CardFeedContentState(
         val thisAccount = (localFilter as? NotificationFeedFilter)?.account
         val lastNotesCopy = if (thisAccount == lastAccount && builtGeneration == generation.load()) lastNotes else null
 
+        // Empty counts as built, like Loaded: a filter that currently shows nothing (a new account, a
+        // quiet list, a strict Curated) used to fall to the full rebuild below on every event bundle,
+        // walking the whole cache about once a second to find nothing again.
         if (
             lastNotesCopy != null &&
             localFilter is AdditiveFeedFilter &&
-            oldNotesState is CardFeedState.Loaded &&
+            (oldNotesState is CardFeedState.Loaded || oldNotesState is CardFeedState.Empty) &&
             lastFeedKey == localFilter.feedKey()
         ) {
             val filteredNewList = localFilter.applyFilter(newItems)
@@ -522,14 +526,15 @@ class CardFeedContentState(
                 lastNotes = lastNotesCopy + actuallyNew
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
 
+                val oldCards: ImmutableList<Card> = (oldNotesState as? CardFeedState.Loaded)?.feed?.value?.list ?: persistentListOf()
                 val updatedCards =
-                    (oldNotesState.feed.value.list + newCards)
+                    (oldCards + newCards)
                         .distinctBy { it.id() }
                         .sortedWith(NotificationFeedOrderCard)
                         .take(localFilter.limit())
                         .toImmutableList()
 
-                if (!equalImmutableLists(oldNotesState.feed.value.list, updatedCards)) {
+                if (!equalImmutableLists(oldCards, updatedCards)) {
                     updateFeed(updatedCards)
                 }
             }
@@ -593,7 +598,8 @@ class CardFeedContentState(
 
     fun updateFeedWith(newNotes: Set<Note>) {
         if (!isActive()) return
-        if (localFilter is AdditiveFeedFilter && _feedContent.value is CardFeedState.Loaded) {
+        val current = _feedContent.value
+        if (localFilter is AdditiveFeedFilter && (current is CardFeedState.Loaded || current is CardFeedState.Empty)) {
             invalidateInsertData(newNotes)
         } else {
             // Refresh Everything

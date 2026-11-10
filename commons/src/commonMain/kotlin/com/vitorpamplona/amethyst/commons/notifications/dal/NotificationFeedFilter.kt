@@ -540,7 +540,37 @@ class NotificationFeedFilter(
         return note.replyTo?.any { it.idHex in threadTargets && it.author?.pubkeyHex == me } == true
     }
 
+    /**
+     * A cheap necessary condition for [acceptableEvent]: false only for notes it would reject.
+     *
+     * [acceptableEvent] ends with a kind check and a "does this reach me" check (tags me, a
+     * public-chat reply into my messages, a bare reaction to my note, a Buzz thread reply), but
+     * computes the expensive parts first: the zap sender, the thread root for mutes, Concord
+     * membership, Buzz tag parsing. A full rebuild runs it over every note in the cache, and most of
+     * those are Home notes that tag nobody, so each one paid for all of that just to fail at the end.
+     *
+     * The types whose relevance is not a tag (Marmot messages, agent jobs, channel invites, workflow
+     * approvals, Buzz chat) always go to the full check.
+     */
+    private fun mightBeANotification(
+        note: Note,
+        me: HexKey,
+    ): Boolean {
+        if (note.inGatherers?.any { it is MarmotGroupChatroom } == true) return true
+        val event = note.event ?: return false
+        if (event is JobResultEvent || event is JobErrorEvent) return true
+        if (event.kind !in NOTIFICATION_KINDS) return false
+        if (event is MemberAddedNotificationEvent || event is WorkflowApprovalRequestedEvent) return true
+        if (event is ChatEvent || event is StreamMessageV2Event) return true
+        return event.isTaggedUser(me) || isNotifiablePublicChatReply(note, me) || isReactionToMyEvent(note, me)
+    }
+
     fun acceptableEvent(
+        it: Note,
+        filterParams: FilterByListParams,
+    ): Boolean = mightBeANotification(it, account.userProfile().pubkeyHex) && acceptableEventFull(it, filterParams)
+
+    private fun acceptableEventFull(
         it: Note,
         filterParams: FilterByListParams,
     ): Boolean {

@@ -152,4 +152,26 @@ class LazyFeedContentStateTest {
         state.activate()
         waitUntil("the card build") { state.visibleNotes().size == 1 }
     }
+
+    /**
+     * A notifications filter that shows nothing (a new account, a quiet list) is Empty, and Empty
+     * used to send every event bundle to a full rebuild: a walk over the whole cache about once a
+     * second. It now takes new events the additive way, like Loaded.
+     */
+    @Test
+    fun anEmptyCardFeedTakesNewEventsWithoutRescanningTheCache() {
+        val filter = CountingFilter(emptyList())
+        val state = CardFeedContentState(filter, scope)
+
+        state.invalidateData()
+        waitUntil("the empty build") { state.feedContent.value is CardFeedState.Empty }
+        assertEquals(1, filter.scans.get())
+
+        // The note reaches the cache and arrives in the next bundle.
+        filter.all = listOf(a)
+        state.updateFeedWith(setOf(a))
+        waitUntil("the new card") { state.visibleNotes().size == 1 }
+
+        assertEquals(1, filter.scans.get(), "an event for an empty feed rescanned the cache")
+    }
 }
