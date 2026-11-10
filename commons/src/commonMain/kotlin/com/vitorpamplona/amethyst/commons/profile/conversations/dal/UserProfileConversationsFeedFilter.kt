@@ -23,11 +23,15 @@
 package com.vitorpamplona.amethyst.commons.profile.conversations.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -41,22 +45,30 @@ import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 class UserProfileConversationsFeedFilter(
     val user: User,
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    ScreenUniverseFeedFilter {
+    override val universe = IFilter { note -> note.event?.pubKey == user.pubkeyHex }
+
+    override var candidates: CandidateSet? = null
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + user.pubkeyHex
 
-    override fun feed(): List<Note> {
-        val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it)
-            }
+    override fun feed(): List<Note> =
+        sort(
+            rebuildFeed("profile/replies", candidates, keep = { acceptableEvent(it) }) {
+                val notes =
+                    LocalCache.notes.filterIntoSet { _, it ->
+                        acceptableEvent(it)
+                    }
 
-        val longFormNotes =
-            LocalCache.addressables.filterIntoSet { _, it ->
-                acceptableEvent(it)
-            }
+                val longFormNotes =
+                    LocalCache.addressables.filterIntoSet { _, it ->
+                        acceptableEvent(it)
+                    }
 
-        return sort(notes + longFormNotes)
-    }
+                notes + longFormNotes
+            },
+        )
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 

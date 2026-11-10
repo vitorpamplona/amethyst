@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 class GeohashQueryState(
     val geohash: String,
     val relays: Set<NormalizedRelayUrl>,
+    /** The screen feed this subscription fills; a new one drops the cursors (see `feedOwner`). */
+    val owner: Any? = null,
 ) {
     val lowercaseGeohash = geohash.lowercase()
 }

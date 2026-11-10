@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -49,28 +49,30 @@ class CandidateSet(
     private val started = AtomicBoolean(false)
 
     /**
-     * The candidates, or null until the first walk of the cache has finished. Starts the set on
-     * first use, so a family of feeds nobody opens never walks the cache or watches new notes.
+     * The candidates, or null until the first walk of the cache has finished. The first call
+     * starts the set on the calling thread (a rebuild, already off the main thread), so that
+     * rebuild uses the set's own first walk instead of walking the cache a second time. A family
+     * of feeds nobody opens never walks the cache or watches new notes.
      */
     fun snapshot(): Set<Note>? {
-        start()
+        startHere()
         return observer.snapshot()
     }
 
     val size: Int get() = observer.size
 
-    /** Walks the cache once, off the main thread, then follows it until the scope ends. Idempotent. */
-    @OptIn(ExperimentalAtomicApi::class)
+    /** Starts the set in the background, for a family whose feeds are always on. Idempotent. */
     fun start(): CandidateSet {
-        if (!started.compareAndSet(expectedValue = false, newValue = true)) return this
-        scope.launch(Dispatchers.IO) {
-            try {
-                cache.registerNoteSet(observer)
-                awaitCancellation()
-            } finally {
-                cache.unregisterNoteSet(observer)
-            }
-        }
+        scope.launch(Dispatchers.IO) { startHere() }
         return this
+    }
+
+    /** Registers and walks the cache on this thread; follows the cache until the scope ends. */
+    @OptIn(ExperimentalAtomicApi::class)
+    private fun startHere() {
+        if (!started.compareAndSet(expectedValue = false, newValue = true)) return
+        cache.registerNoteSet(observer)
+        // Runs at once when the scope has already ended, so the observer never outlives it.
+        scope.coroutineContext[Job]?.invokeOnCompletion { cache.unregisterNoteSet(observer) }
     }
 }

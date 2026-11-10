@@ -38,4 +38,6 @@ class GeoHashFeedFilterSubAssembler(
      * Only one key per hashtag.
      */
     override fun id(key: GeohashQueryState) = key.lowercaseGeohash
+
+    override fun feedOwner(key: GeohashQueryState) = key.owner
 }

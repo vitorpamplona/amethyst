@@ -30,6 +30,8 @@ class UserProfileQueryState(
     val user: User,
     val loadFollowers: Boolean,
     val loadZapsReceived: Boolean,
+    /** The screen feed this subscription fills; a new one drops the cursors (see `feedOwner`). */
+    val owner: Any? = null,
 )
 
 class UserProfileFilterAssembler(

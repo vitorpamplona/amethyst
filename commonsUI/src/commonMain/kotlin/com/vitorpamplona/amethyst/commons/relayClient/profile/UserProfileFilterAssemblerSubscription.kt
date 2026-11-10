@@ -31,12 +31,14 @@ fun UserProfileFilterAssemblerSubscription(
     loadFollowers: Boolean,
     loadZapsReceived: Boolean,
     assembler: UserProfileFilterAssembler,
+    /** The screen's feeds' owner; a new one asks the relays from scratch. */
+    owner: Any? = null,
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
-        remember(user, loadFollowers, loadZapsReceived) {
-            UserProfileQueryState(user, loadFollowers, loadZapsReceived)
+        remember(user, loadFollowers, loadZapsReceived, owner) {
+            UserProfileQueryState(user, loadFollowers, loadZapsReceived, owner)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, assembler)

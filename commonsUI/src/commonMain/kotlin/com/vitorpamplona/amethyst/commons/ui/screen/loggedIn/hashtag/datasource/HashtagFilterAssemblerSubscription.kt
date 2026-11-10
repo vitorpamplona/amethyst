@@ -31,15 +31,18 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 fun HashtagFilterAssemblerSubscription(
     tag: Route.Hashtag,
     accountViewModel: AccountViewModel,
+    /** The screen's feed; a new one asks the relays from scratch. */
+    owner: Any? = null,
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
-        remember(tag) {
+        remember(tag, owner) {
             HashtagQueryState(
                 tag.hashtag,
                 accountViewModel.account.followOutboxesOrProxy.flow.value,
                 accountViewModel.account,
+                owner,
             )
         }
 

@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.profile.gallery.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -29,6 +31,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filter
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -40,30 +44,44 @@ import com.vitorpamplona.quartz.nip71Video.RegularVideoEvent
 class UserProfileGalleryFeedFilter(
     val user: User,
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    ScreenUniverseFeedFilter {
+    // By the user, or a clip of a stream the user hosted.
+    override val universe =
+        IFilter { note ->
+            val event = note.event
+            event?.pubKey == user.pubkeyHex || (event is LiveActivitiesClipEvent && event.host() == user.pubkeyHex)
+        }
+
+    override var candidates: CandidateSet? = null
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + "ProfileGallery"
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
 
-        val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it, params, user)
-            }
+        return sort(
+            rebuildFeed("profile/gallery", candidates, keep = { acceptableEvent(it, params, user) }) {
+                val notes =
+                    LocalCache.notes.filterIntoSet { _, it ->
+                        acceptableEvent(it, params, user)
+                    }
 
-        val addressableNotes =
-            LocalCache.addressables
-                .filter(
-                    // Both NIP-71 addressable kinds: acceptableEvent() takes any
-                    // AddressableVideoEvent, so listing 34236 twice silently kept every
-                    // 34235 (horizontal) video out of the gallery.
-                    listOf(AddressableShortVideoEvent.KIND, AddressableNormalVideoEvent.KIND),
-                    user.pubkeyHex,
-                ) { _, it ->
-                    acceptableEvent(it, params, user)
-                }
+                val addressableNotes =
+                    LocalCache.addressables
+                        .filter(
+                            // Both NIP-71 addressable kinds: acceptableEvent() takes any
+                            // AddressableVideoEvent, so listing 34236 twice silently kept every
+                            // 34235 (horizontal) video out of the gallery.
+                            listOf(AddressableShortVideoEvent.KIND, AddressableNormalVideoEvent.KIND),
+                            user.pubkeyHex,
+                        ) { _, it ->
+                            acceptableEvent(it, params, user)
+                        }
 
-        return sort(addressableNotes + notes).toList()
+                (addressableNotes + notes).toSet()
+            },
+        ).toList()
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)

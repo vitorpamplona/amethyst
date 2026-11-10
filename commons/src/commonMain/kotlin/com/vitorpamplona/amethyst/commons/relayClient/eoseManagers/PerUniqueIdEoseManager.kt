@@ -53,6 +53,25 @@ abstract class PerUniqueIdEoseManager<T, U : Any>(
     // map between each query Id and each subscription id
     private val userSubscriptionMap = mutableMapOf<U, String>()
 
+    /**
+     * The object that holds the notes this key's cursors vouch for: the screen's feed. Null (the
+     * default) keeps the cursors for as long as the LRU does. When a different object subscribes
+     * to the same id (the screen was closed and opened again, and the GC may have taken what the
+     * old one held), the id's cursors are dropped and the next REQ starts from scratch (see
+     * [FeedOwnerTracker]).
+     */
+    protected open fun feedOwner(key: T): Any? = null
+
+    private val feedOwners = FeedOwnerTracker<U>()
+
+    private fun dropCursorsIfFeedChanged(
+        id: U,
+        key: T,
+    ) {
+        val owner = feedOwner(key) ?: return
+        if (feedOwners.ownerChanged(id, owner)) latestEOSEs.clear(id)
+    }
+
     fun since(key: T) = latestEOSEs.since(id(key))
 
     /** Open so a subclass can also record who answered, not just when. */
@@ -117,6 +136,7 @@ abstract class PerUniqueIdEoseManager<T, U : Any>(
 
         uniqueSubscribedAccounts.forEach {
             val mainKey = id(it)
+            dropCursorsIfFeedChanged(mainKey, it)
             watchChatFeeds(mainKey, it)
             val newFilters =
                 updateFilter(it, since(it))

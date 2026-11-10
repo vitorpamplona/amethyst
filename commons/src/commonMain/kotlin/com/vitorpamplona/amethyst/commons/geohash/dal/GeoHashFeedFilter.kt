@@ -21,10 +21,14 @@
 package com.vitorpamplona.amethyst.commons.geohash.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -49,13 +53,21 @@ class GeoHashFeedFilter(
     val relays: Set<NormalizedRelayUrl>,
     val account: Account,
     val cache: LocalCache,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    ScreenUniverseFeedFilter {
+    override val universe = IFilter { note -> acceptableViaHashtag(note.event, tag) || acceptableViaScope(note.event, tag) }
+
+    override var candidates: CandidateSet? = null
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + tag
 
     override fun feed(): List<Note> {
+        // From candidates an addressable event counts once, at its latest version (see Hashtag).
         val notes =
-            cache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it, tag)
+            rebuildFeed("geohash/$tag", candidates, keep = { acceptableEvent(it, tag) }) {
+                cache.notes.filterIntoSet { _, it ->
+                    acceptableEvent(it, tag)
+                }
             }
 
         return sort(notes)

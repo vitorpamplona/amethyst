@@ -92,7 +92,7 @@ fun GeoHashScreen(
     nav: INav,
 ) {
     WatchLifecycleAndUpdateModel(feedViewModel)
-    GeoHashFilterAssemblerSubscription(tag, accountViewModel)
+    GeoHashFilterAssemblerSubscription(tag, accountViewModel, owner = feedViewModel)
 
     DisappearingScaffold(
         isInvertedLayout = false,

@@ -26,8 +26,11 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.InvalidatableContent
+import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -51,6 +54,11 @@ abstract class FeedViewModel(
 
     init {
         Log.d("Init") { "Starting new Model: ${this::class.simpleName}" }
+
+        // A screen feed rebuilds from its own candidate set, kept for as long as this screen lives.
+        if (localFilter is ScreenUniverseFeedFilter && localFilter.candidates == null && cacheProvider is EventCache) {
+            localFilter.candidates = CandidateSet(cacheProvider, viewModelScope, localFilter.universe, weak = true)
+        }
         viewModelScope.launch(Dispatchers.IO) {
             cacheProvider.getEventStream().newEventBundles.collect { newNotes ->
                 Log.d("Rendering Metrics") { "Update feeds: ${this@FeedViewModel::class.simpleName} with ${newNotes.size}" }

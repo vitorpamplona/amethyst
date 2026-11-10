@@ -39,4 +39,6 @@ class HashtagFeedFilterSubAssembler(
      * Only one key per hashtag.
      */
     override fun id(key: HashtagQueryState) = key.lowercaseHashtag
+
+    override fun feedOwner(key: HashtagQueryState) = key.owner
 }

@@ -43,4 +43,6 @@ class HashtagLabelSubAssembler(
      * Only one key per hashtag. Prefixed so it doesn't collide with the main feed sub-assembler.
      */
     override fun id(key: HashtagQueryState) = "label-" + key.lowercaseHashtag
+
+    override fun feedOwner(key: HashtagQueryState) = key.owner
 }

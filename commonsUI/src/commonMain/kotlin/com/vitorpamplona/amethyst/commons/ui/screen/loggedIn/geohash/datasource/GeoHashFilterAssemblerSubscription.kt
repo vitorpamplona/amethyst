@@ -32,12 +32,14 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 fun GeoHashFilterAssemblerSubscription(
     tag: Route.Geohash,
     accountViewModel: AccountViewModel,
+    /** The screen's feed; a new one asks the relays from scratch. */
+    owner: Any? = null,
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
-        remember(tag) {
-            GeohashQueryState(tag.geohash, accountViewModel.account.followOutboxesOrProxy.flow.value)
+        remember(tag, owner) {
+            GeohashQueryState(tag.geohash, accountViewModel.account.followOutboxesOrProxy.flow.value, owner)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().geohashes)

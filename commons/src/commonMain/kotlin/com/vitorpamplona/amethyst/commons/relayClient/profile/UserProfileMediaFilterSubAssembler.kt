@@ -37,4 +37,6 @@ class UserProfileMediaFilterSubAssembler(
     ): List<RelayBasedFilter> = filterUserProfileMedia(cache, user(key), since)
 
     override fun user(key: UserProfileQueryState) = key.user
+
+    override fun feedOwner(key: UserProfileQueryState) = key.owner
 }

@@ -22,13 +22,17 @@ package com.vitorpamplona.amethyst.commons.profile.newthreads.dal
 
 import com.vitorpamplona.amethyst.commons.audio.hasPlayableAudio
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.isRenderableRepost
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.nip64Chess.ending
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
@@ -66,22 +70,30 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 class UserProfileNewThreadFeedFilter(
     val user: User,
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    ScreenUniverseFeedFilter {
+    override val universe = IFilter { note -> note.event?.pubKey == user.pubkeyHex }
+
+    override var candidates: CandidateSet? = null
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + user.pubkeyHex
 
-    override fun feed(): List<Note> {
-        val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
-                it !is AddressableNote && it.event !is AddressableEvent && acceptableEvent(it)
-            }
+    override fun feed(): List<Note> =
+        sort(
+            rebuildFeed("profile/threads", candidates, keep = { acceptableEvent(it) }) {
+                val notes =
+                    LocalCache.notes.filterIntoSet { _, it ->
+                        it !is AddressableNote && it.event !is AddressableEvent && acceptableEvent(it)
+                    }
 
-        val longFormNotes =
-            LocalCache.addressables.filterIntoSet { _, it ->
-                acceptableEvent(it)
-            }
+                val longFormNotes =
+                    LocalCache.addressables.filterIntoSet { _, it ->
+                        acceptableEvent(it)
+                    }
 
-        return sort(notes + longFormNotes)
-    }
+                notes + longFormNotes
+            },
+        )
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 

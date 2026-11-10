@@ -31,6 +31,8 @@ class HashtagQueryState(
     val hashtag: String,
     val relays: Set<NormalizedRelayUrl>,
     override val account: Account,
+    /** The screen feed this subscription fills; a new one drops the cursors (see `feedOwner`). */
+    val owner: Any? = null,
 ) : AccountScopedQuery {
     val lowercaseHashtag = hashtag.lowercase()
 }

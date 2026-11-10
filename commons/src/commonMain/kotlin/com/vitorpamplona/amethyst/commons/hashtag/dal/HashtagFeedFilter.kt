@@ -21,11 +21,15 @@
 package com.vitorpamplona.amethyst.commons.hashtag.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.ScreenUniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.isRenderableRepost
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -49,14 +53,28 @@ class HashtagFeedFilter(
     val relays: Set<NormalizedRelayUrl>,
     val account: Account,
     val cache: LocalCache,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    ScreenUniverseFeedFilter {
+    // Labels arrive after the note (NIP-32); the cache re-notifies observers for the labelled note.
+    // Who labelled it (a follow or not) is the feed's own check below.
+    override val universe =
+        IFilter { note ->
+            acceptableViaHashtag(note.event, tag) || acceptableViaScope(note.event, tag) || note.labels[tag.lowercase()] != null
+        }
+
+    override var candidates: CandidateSet? = null
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + tag
 
     override fun feed(): List<Note> {
         val follows = account.followingKeySet()
+        // From candidates an addressable event counts once, at its latest version, as on Home; the
+        // walk below reads the notes map, which holds one note per cached version.
         val notes =
-            cache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it, tag, follows)
+            rebuildFeed("hashtag/$tag", candidates, keep = { acceptableEvent(it, tag, follows) }) {
+                cache.notes.filterIntoSet { _, it ->
+                    acceptableEvent(it, tag, follows)
+                }
             }
 
         return sort(notes)

@@ -48,6 +48,15 @@ interface UniverseFeedFilter {
 }
 
 /**
+ * A screen's feed (a profile tab, a hashtag): its universe is a small part of the cache, so the
+ * screen's `FeedViewModel` keeps it as a [CandidateSet] for as long as the screen lives, held
+ * weakly like the cache. The view model sets [candidates]; the filter only declares [universe].
+ */
+interface ScreenUniverseFeedFilter : UniverseFeedFilter {
+    override var candidates: CandidateSet?
+}
+
+/**
  * One rebuild of a [UniverseFeedFilter]: [keep] over the candidates once their first walk is done,
  * else [walkCache] (which applies the same check while walking). Logged at debug level under
  * `FeedRebuild`, so a long session shows what each feed costs and where it read from.

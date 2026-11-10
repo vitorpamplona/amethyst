@@ -37,4 +37,6 @@ class UserProfilePostsFilterSubAssembler(
     ): List<RelayBasedFilter> = filterUserProfilePosts(cache, user(key), since)
 
     override fun user(key: UserProfileQueryState) = key.user
+
+    override fun feedOwner(key: UserProfileQueryState) = key.owner
 }
