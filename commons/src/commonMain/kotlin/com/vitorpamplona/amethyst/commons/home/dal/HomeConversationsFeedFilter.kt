@@ -24,9 +24,11 @@ import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -43,6 +45,8 @@ import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 
 class HomeConversationsFeedFilter(
     val account: Account,
+    /** Where a full rebuild looks: the Home candidates when given, else the whole cache. */
+    val candidates: CandidateSet? = null,
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
 
@@ -54,8 +58,15 @@ class HomeConversationsFeedFilter(
         val filterParams = buildFilterParams(account)
         val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
 
+        // The candidates once their first walk is done (only the notes map's kind of entries, as
+        // the walk below); until then, and without them, the cache.
+        val fromCandidates =
+            candidates?.snapshot()?.filterTo(HashSet()) {
+                it !is AddressableNote && acceptableEvent(it, filterParams, disabledKinds)
+            }
+
         return sort(
-            LocalCache.notes.filterIntoSet { _, it ->
+            fromCandidates ?: LocalCache.notes.filterIntoSet { _, it ->
                 acceptableEvent(it, filterParams, disabledKinds)
             },
         )
@@ -88,17 +99,7 @@ class HomeConversationsFeedFilter(
     ): Boolean =
         event != null &&
             event.kind !in disabledKinds &&
-            (
-                event is TextNoteEvent ||
-                    event is ZapPollEvent ||
-                    event is PollResponseEvent ||
-                    event is ChannelMessageEvent ||
-                    event is CommentEvent ||
-                    event is VoiceReplyEvent ||
-                    event is PublicMessageEvent ||
-                    event is LiveActivitiesChatMessageEvent ||
-                    event is TorrentCommentEvent
-            ) &&
+            isConversationKind(event) &&
             filterParams.match(event, relays)
 
     fun acceptableEvent(
@@ -108,4 +109,19 @@ class HomeConversationsFeedFilter(
     ): Boolean = acceptableEvent(note.event, note.relays, filterParams, disabledKinds) && !note.isNewThread()
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
+
+    companion object {
+        /** The event types Home shows as conversations. Does not change once an event is cached. */
+        @Suppress("DEPRECATION")
+        fun isConversationKind(event: Event): Boolean =
+            event is TextNoteEvent ||
+                event is ZapPollEvent ||
+                event is PollResponseEvent ||
+                event is ChannelMessageEvent ||
+                event is CommentEvent ||
+                event is VoiceReplyEvent ||
+                event is PublicMessageEvent ||
+                event is LiveActivitiesChatMessageEvent ||
+                event is TorrentCommentEvent
+    }
 }

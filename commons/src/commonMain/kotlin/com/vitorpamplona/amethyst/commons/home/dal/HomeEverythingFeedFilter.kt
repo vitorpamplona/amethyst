@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -35,9 +36,10 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
  */
 class HomeEverythingFeedFilter(
     val account: Account,
+    candidates: CandidateSet? = null,
 ) : AdditiveFeedFilter<Note>() {
-    private val newThreads = HomeNewThreadFeedFilter(account)
-    private val conversations = HomeConversationsFeedFilter(account)
+    private val newThreads = HomeNewThreadFeedFilter(account, candidates)
+    private val conversations = HomeConversationsFeedFilter(account, candidates)
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
 

@@ -24,49 +24,32 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
-import com.vitorpamplona.amethyst.commons.model.observables.NoteSetMatchingFilter
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.launch
 
 /**
  * Every cached note that could be one of [account]'s notifications, kept current as notes arrive:
  * the notes [NotificationFeedFilter.mightBeANotification] lets through. Shared by the account's
- * notification feeds, which rebuild by scanning this set instead of the whole cache.
+ * notification feeds, which rebuild by scanning it instead of the whole cache.
  *
  * The rule here is only "could this reach me", which does not change with mutes, the Web of Trust
  * or the list picked at the top. Those stay in [NotificationFeedFilter.acceptableEvent], applied
- * over this set, so changing them costs a pass over the candidates, not a walk over the cache.
+ * over the set, so changing them costs a pass over the candidates, not a walk over the cache.
+ * Held strongly: these are the notes that reach this account, a small part of the cache.
  */
-class NotificationCandidates(
-    private val account: Account,
-    private val cache: EventCache,
-) {
-    private val observer =
-        NoteSetMatchingFilter(
+object NotificationCandidates {
+    fun create(
+        account: Account,
+        cache: EventCache,
+        scope: CoroutineScope,
+    ): CandidateSet {
+        val me = { account.userProfile().pubkeyHex }
+        return CandidateSet(
+            cache = cache,
+            scope = scope,
             filter = { note -> NotificationFeedFilter.mightBeANotification(note, me()) },
-            dependents = ::childrenOfMyNote,
+            dependents = { note -> childrenOfMyNote(note, me()) },
         )
-
-    private fun me() = account.userProfile().pubkeyHex
-
-    /** The candidates, or null until the first walk of the cache has finished. */
-    fun snapshot(): Set<Note>? = observer.snapshot()
-
-    val size: Int get() = observer.size
-
-    /** Walks the cache once, off the main thread, then follows it until [scope] ends. */
-    fun start(scope: CoroutineScope) {
-        scope.launch(Dispatchers.IO) {
-            try {
-                cache.registerNoteSet(observer)
-                awaitCancellation()
-            } finally {
-                cache.unregisterNoteSet(observer)
-            }
-        }
     }
 
     /**
@@ -75,9 +58,12 @@ class NotificationCandidates(
      * are its reactions, boosts and zaps, and the replies down a chat chain as deep as
      * [NotificationFeedFilter.isNotifiablePublicChatReply] looks.
      */
-    private fun childrenOfMyNote(note: Note): Collection<Note> {
+    private fun childrenOfMyNote(
+        note: Note,
+        me: String,
+    ): Collection<Note> {
         val author = (note as? AddressableNote)?.address?.pubKeyHex ?: note.author?.pubkeyHex
-        if (author != me()) return emptyList()
+        if (author != me) return emptyList()
 
         val found = ArrayList<Note>()
         val seen = HashSet<Note>()
@@ -100,8 +86,6 @@ class NotificationCandidates(
         return found
     }
 
-    companion object {
-        private const val CHAT_CHAIN_DEPTH = 30
-        private const val MAX_DEPENDENTS = 2_000
-    }
+    private const val CHAT_CHAIN_DEPTH = 30
+    private const val MAX_DEPENDENTS = 2_000
 }

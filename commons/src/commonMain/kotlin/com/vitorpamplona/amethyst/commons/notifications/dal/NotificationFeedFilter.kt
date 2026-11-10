@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.wot.curatedHidesByTrust
@@ -111,7 +112,7 @@ class NotificationFeedFilter(
     val account: Account,
     val modeOverride: TopFilter? = null,
     /** Where a full rebuild looks: the account's candidates when given, else the whole cache. */
-    val candidates: NotificationCandidates? = null,
+    val candidates: CandidateSet? = null,
 ) : AdditiveFeedFilter<Note>() {
     // Pin to modeOverride for split-tab mode; otherwise follow the spinner.
     // Lazy so the eagerly-collected topNavFilter pipeline is only built when

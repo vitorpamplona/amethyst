@@ -171,6 +171,16 @@ the cache and 2,318 candidates (jack has unusually many notifications). The walk
 cache, the scan with the notifications, so the gap widens with a long session; not measured here,
 because this environment's relays could not grow the cache past ~6,000 notes.
 
+Home uses the same mechanism (`CandidateSet`, shared by the three Home feeds): the rule is "a type
+Home shows" (`HomeNewThreadFeedFilter.isThreadKind`, `HomeConversationsFeedFilter.isConversationKind`,
+RSVPs), and the list, mutes, the kind toggles and the latest-RSVP check stay per feed. It holds
+its notes weakly (`weak = true`), since Home types are most of the cache, and starts with the first
+Home rebuild. Over 18 rebuilds: identical results, but only ~30% less time in total (144 ms walk,
+101 ms scan) and noisy, because Home types were ~60% of the cache. The levers that matter more
+for Home: every return to Home rebuilds all three feeds (`WatchLifecycleAndUpdateModel` on resume;
+four cache walks, as Everything walks twice), and the list check, which an author index for
+follow-based lists would narrow.
+
 Not yet: the per-bundle path still runs `applyFilter` on each new note (cheap since the gate), the
 set lives with the `AccountViewModel` (one walk again after a switch back, until notification feeds
 live as long as the account), and the other feeds still walk the cache.

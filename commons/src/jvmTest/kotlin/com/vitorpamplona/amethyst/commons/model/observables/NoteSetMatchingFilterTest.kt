@@ -79,4 +79,26 @@ class NoteSetMatchingFilterTest {
         set.new(parent.event!!, parent)
         assertEquals(setOf(reply), set.snapshot())
     }
+
+    @Test
+    fun aWeakSetLetsGoOfNotesNothingElseHolds() {
+        val set = NoteSetMatchingFilter(byMe, weak = true).also { it.markReady() }
+        val kept = note('5', me)
+        addUnreachable(set)
+        set.new(kept.event!!, kept)
+
+        // The unreachable one goes with the next GC, as it would from LocalCache.
+        repeat(50) {
+            if (set.snapshot()?.size == 1) return@repeat
+            System.gc()
+            Thread.sleep(20)
+        }
+        assertEquals(setOf(kept), set.snapshot())
+    }
+
+    // Its own frame, so nothing on the test's stack keeps the note reachable.
+    private fun addUnreachable(set: NoteSetMatchingFilter) {
+        val gone = note('6', me)
+        set.new(gone.event!!, gone)
+    }
 }
