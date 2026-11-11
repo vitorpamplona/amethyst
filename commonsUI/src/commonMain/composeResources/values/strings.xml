@@ -9522,6 +9522,7 @@
     <string name="front_page_model">Model</string>
     <string name="front_page_model_id">Model id</string>
     <string name="front_page_setup_title">Before your first paper</string>
+    <string name="front_page_setup_title_again">To print your paper</string>
     <string name="front_page_setup_key">AI key</string>
     <string name="front_page_setup_lens">Web of trust</string>
     <string name="front_page_setup_using">Using %1$s</string>

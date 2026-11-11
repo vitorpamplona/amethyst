@@ -206,6 +206,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_setup_lens
 import com.vitorpamplona.amethyst.commons.resources.front_page_setup_on
 import com.vitorpamplona.amethyst.commons.resources.front_page_setup_ranked_by
 import com.vitorpamplona.amethyst.commons.resources.front_page_setup_title
+import com.vitorpamplona.amethyst.commons.resources.front_page_setup_title_again
 import com.vitorpamplona.amethyst.commons.resources.front_page_setup_to_do
 import com.vitorpamplona.amethyst.commons.resources.front_page_setup_using
 import com.vitorpamplona.amethyst.commons.resources.front_page_show_failed
@@ -387,6 +388,7 @@ fun FrontPageScreen(
                     if (gate == FrontPageGate.NO_KEY || gate == FrontPageGate.NO_LENS) {
                         SetupChecklist(
                             setup,
+                            hasEditions = editions.isNotEmpty(),
                             onKey = { nav.nav(Route.AgentKeysSettings) },
                             onLens = { nav.nav(Route.WebOfTrust) },
                         )
@@ -1247,17 +1249,19 @@ private fun BoxScope.PaperStatus(
 
 /**
  * Both steps before the first paper, in the setup card at once: the reader sees the second
- * before finishing the first. A done row stays tappable, to change it.
+ * before finishing the first. A done row stays tappable, to change it. A reader with papers
+ * already, who removed a step, isn't told it is their first.
  */
 @Composable
 private fun SetupChecklist(
     setup: FrontPageSetup,
+    hasEditions: Boolean,
     onKey: () -> Unit,
     onLens: () -> Unit,
 ) {
     Column {
         Text(
-            stringRes(Res.string.front_page_setup_title),
+            stringRes(if (hasEditions) Res.string.front_page_setup_title_again else Res.string.front_page_setup_title),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 4.dp).semantics { heading() },
