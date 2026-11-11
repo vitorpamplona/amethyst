@@ -77,6 +77,11 @@ class AgentProviderPresetsTest {
         assertFalse(AgentProviderPresets.isValidUrl("ftp://x.com"))
         assertFalse(AgentProviderPresets.isValidUrl("https://"))
         assertFalse(AgentProviderPresets.isValidUrl("https://a b.com"))
+        // NIP-FA: a key never goes over http to another machine.
+        assertFalse(AgentProviderPresets.isValidUrl("http://api.example.com/v1", key = "sk-1"))
+        assertTrue(AgentProviderPresets.isValidUrl("http://192.168.1.5:11434/v1", key = ""))
+        assertTrue(AgentProviderPresets.isValidUrl("http://localhost:11434/v1", key = "sk-1"))
+        assertFalse(AgentProviderPresets.isValidUrl("http://localhost@evil.example/v1", key = "sk-1"))
     }
 
     @Test

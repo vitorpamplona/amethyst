@@ -131,11 +131,13 @@ import com.vitorpamplona.amethyst.commons.resources.agent_keys_runs_locally
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_status_none
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_status_using
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_tagline
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_test
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_title
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_unreachable
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_unsupported
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_unverified
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_url
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_url_https
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_url_invalid
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_works
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_works_models
@@ -410,8 +412,14 @@ private fun AddAgentKey(
     var connectProblem by remember { mutableStateOf<OpenRouterConnectResult?>(null) }
 
     val selected = preset
-    val urlValid = AgentProviderPresets.isValidUrl(url)
+    // NIP-FA: https, unless the host is this device or there is no key to leak.
+    val urlValid = AgentProviderPresets.isValidUrl(url, key.trim())
+    val urlNeedsHttps = !urlValid && AgentProviderPresets.isValidUrl(url)
     val canCheck = selected != null && urlValid && (!selected.needsKey || key.isNotBlank())
+    // A custom endpoint is only tried when the reader asks: checking as they type would send the
+    // key to every half-typed host on the way (https://api.ex, https://api.exa, …).
+    val isCustom = selected == AgentProviderPresets.CUSTOM
+    var testNow by remember { mutableStateOf(false) }
     val canSave = canCheck && !testing && result != null && result !is AgentKeyProbeResult.Rejected
 
     fun select(next: AgentProviderPreset) {
@@ -420,6 +428,7 @@ private fun AddAgentKey(
         key = ""
         result = null
         connectProblem = null
+        testNow = false
     }
 
     fun connectOpenRouter() {
@@ -441,11 +450,13 @@ private fun AddAgentKey(
             }
     }
 
-    // Checks the key as soon as the user stops typing: no Test button to forget.
-    LaunchedEffect(url, key, selected) {
+    // A preset's key is checked as soon as the user stops typing: no Test button to forget. A
+    // custom endpoint waits for Test.
+    LaunchedEffect(url, key, selected, testNow) {
         result = null
         if (!canCheck) return@LaunchedEffect
-        delay(700)
+        if (isCustom && !testNow) return@LaunchedEffect
+        if (!isCustom) delay(700)
         testing = true
         try {
             result = onTest(AgentKeyTag(key.trim(), url.trim()))
@@ -507,13 +518,20 @@ private fun AddAgentKey(
                         if (selected == AgentProviderPresets.CUSTOM) {
                             PillTextField(
                                 value = url,
-                                onValueChange = { url = it },
+                                onValueChange = {
+                                    url = it
+                                    testNow = false
+                                },
                                 placeholder = stringRes(Res.string.agent_keys_url),
                                 leading = MaterialSymbols.Link,
                                 tone = if (url.isNotBlank() && !urlValid) PillTone.Bad else PillTone.Neutral,
                                 keyboardType = KeyboardType.Uri,
                             )
-                            if (url.isNotBlank() && !urlValid) FieldCaption(PillTone.Bad) { urlInvalidText() }
+                            if (urlNeedsHttps) {
+                                FieldCaption(PillTone.Bad) { Text(stringRes(Res.string.agent_keys_url_https)) }
+                            } else if (url.isNotBlank() && !urlValid) {
+                                FieldCaption(PillTone.Bad) { urlInvalidText() }
+                            }
                         }
 
                         val tone =
@@ -531,6 +549,7 @@ private fun AddAgentKey(
                                 onValueChange = {
                                     key = it
                                     connectProblem = null
+                                    testNow = false
                                 },
                                 placeholder = stringRes(if (selected.needsKey) Res.string.agent_keys_key_placeholder else Res.string.agent_keys_key_optional),
                                 leading = MaterialSymbols.Key,
@@ -541,7 +560,14 @@ private fun AddAgentKey(
                                 if (key.isEmpty()) {
                                     // Keys are long and pasted, never typed: make that one tap.
                                     FilledTonalButton(
-                                        onClick = { scope.launch { clipboard.getText()?.trim()?.let { key = it } } },
+                                        onClick = {
+                                            scope.launch {
+                                                clipboard.getText()?.trim()?.let {
+                                                    key = it
+                                                    testNow = false
+                                                }
+                                            }
+                                        },
                                         contentPadding = PaddingValues(horizontal = 12.dp),
                                         modifier = Modifier.height(36.dp),
                                     ) {
@@ -563,6 +589,11 @@ private fun AddAgentKey(
                             }
                             checkCaption(testing, result, budgetHint = selected.needsKey)?.let { caption ->
                                 FieldCaption(tone) { caption() }
+                            }
+                            if (isCustom && canCheck && !testNow) {
+                                OutlinedButton(onClick = { testNow = true }, shape = RoundedCornerShape(14.dp)) {
+                                    Text(stringRes(Res.string.agent_keys_test))
+                                }
                             }
                         }
 

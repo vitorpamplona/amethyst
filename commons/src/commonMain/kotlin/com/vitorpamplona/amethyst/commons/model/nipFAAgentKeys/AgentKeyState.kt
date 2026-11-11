@@ -82,3 +82,6 @@ class AgentKeyState(
 
     suspend fun remove(key: AgentKeyTag): AgentKeyEvent? = getAgentKeyEvent()?.let { signer.sign(AgentKeyEvent.remove(it, key, signer)) }
 }
+
+/** No outbox relay answered and nothing is cached: an edit would start from nothing and delete the other keys. */
+class AgentKeysUnreadableException : IllegalStateException("Couldn't reach your relays to read your AI keys, so nothing was changed")

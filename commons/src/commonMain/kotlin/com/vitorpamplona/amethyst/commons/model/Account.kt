@@ -155,6 +155,7 @@ import com.vitorpamplona.amethyst.commons.model.nipA3PaymentTargets.NipA3Payment
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyState
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeysUnreadableException
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
@@ -247,6 +248,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
@@ -375,6 +377,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTarget
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.DualCase
@@ -3772,16 +3775,37 @@ class Account(
         challenge: String,
     ): RelayAuthEvent = RelayAuthEvent.create(relay, challenge, signer)
 
+    /**
+     * NIP-FA's Editing: read the newest kind 12000 from the outbox relays before rewriting it, so
+     * a key added on another device survives. Starting from nothing because the relays could
+     * not be read would delete the user's other keys, so then nothing is written.
+     */
+    private suspend fun readAgentKeysBeforeWriting() {
+        val filter = Filter(kinds = listOf(AgentKeyEvent.KIND), authors = listOf(signer.pubKey))
+        val relays = outboxRelays.flow.value
+        val served =
+            relays.isNotEmpty() &&
+                client
+                    .fetchAllWithHooks(relays.associateWith { listOf(filter) }, idleTimeoutMs = 8_000) { relay, event ->
+                        cache.justConsume(event, relay, wasVerified = false)
+                        true
+                    }.anyRelayServed
+        if (!served && agentKeys.getAgentKeyEvent() == null) throw AgentKeysUnreadableException()
+    }
+
     /** Saves [key] as the preferred AI agent key (adding it if new) and publishes the event. */
     suspend fun addAgentKey(key: AgentKeyTag) {
+        readAgentKeysBeforeWriting()
         sendMyPublicAndPrivateOutbox(agentKeys.add(key))
     }
 
     suspend fun setPreferredAgentKey(key: AgentKeyTag) {
+        readAgentKeysBeforeWriting()
         agentKeys.setPreferred(key)?.let { sendMyPublicAndPrivateOutbox(it) }
     }
 
     suspend fun removeAgentKey(key: AgentKeyTag) {
+        readAgentKeysBeforeWriting()
         agentKeys.remove(key)?.let { sendMyPublicAndPrivateOutbox(it) }
     }
 

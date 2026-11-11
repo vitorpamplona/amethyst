@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.agents
 
+import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
+
 /**
  * A provider the setup screen offers. Only [url] reaches the event; the rest is UI.
  * Every one serves the OpenAI Chat Completions format at `{url}/chat/completions`.
@@ -113,11 +115,19 @@ object AgentProviderPresets {
             .substringBefore('?')
             .ifBlank { null }
 
-    /** An http(s) URL with a host; the only shape the event accepts from this screen. */
-    fun isValidUrl(url: String): Boolean {
+    /**
+     * An http(s) URL with a host that NIP-FA lets [key] go to: `https`, or `http` only to this
+     * device (loopback) or with no key at all. The only shape the event accepts from this screen.
+     */
+    fun isValidUrl(
+        url: String,
+        key: String = "",
+    ): Boolean {
         val trimmed = url.trim()
         val scheme = trimmed.substringBefore("://", "").lowercase()
-        return (scheme == "https" || scheme == "http") && hostOf(trimmed) != null && trimmed.none { it.isWhitespace() }
+        if (scheme != "https" && scheme != "http") return false
+        if (hostOf(trimmed) == null || trimmed.any { it.isWhitespace() }) return false
+        return AgentKeyTag.isUrlAllowed(key, trimmed)
     }
 
     /** `sk-or-…a1b2`: enough to tell keys apart, never enough to use one. */

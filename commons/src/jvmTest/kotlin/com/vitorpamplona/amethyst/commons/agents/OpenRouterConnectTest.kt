@@ -108,10 +108,32 @@ class OpenRouterConnectTest {
     fun deniedOrForgedCallbacksGetNoKey() =
         runBlocking {
             assertEquals(OpenRouterConnectResult.Denied, clients.connectOpenRouter("done", 10_000, browser { cb, _ -> cb }))
+            // A forged answer is ignored, not taken as the end: nothing is exchanged, the wait runs out.
             assertEquals(
-                OpenRouterConnectResult.Failed,
-                clients.connectOpenRouter("done", 10_000, browser { cb, _ -> "$cb?code=x&state=forged" }),
+                OpenRouterConnectResult.TimedOut,
+                clients.connectOpenRouter("done", 2_000, browser { cb, _ -> "$cb?code=x&state=forged" }),
             )
+            assertEquals(null, exchangedBody)
+        }
+
+    @Test
+    fun aStrayCallbackDoesNotEndTheRealOne() =
+        runBlocking {
+            val result =
+                clients.connectOpenRouter("done", timeoutMs = 10_000) { authUrl ->
+                    val query = OpenRouterOAuth.parseQuery(authUrl.substringAfter('?'))
+                    val cb = query.getValue("callback_url")
+                    thread {
+                        listOf("$cb?code=forged&state=other", "$cb?code=the-code&state=${query.getValue("state")}").forEach { url ->
+                            (URI(url).toURL().openConnection() as HttpURLConnection).apply {
+                                responseCode
+                                disconnect()
+                            }
+                        }
+                    }
+                }
+            assertEquals(OpenRouterConnectResult.Connected("sk-or-v1-from-oauth"), result)
+            assertTrue(exchangedBody!!.contains("\"code\":\"the-code\""))
         }
 
     @Test

@@ -62,6 +62,17 @@ class OpenRouterOAuthTest {
         assertEquals(OpenRouterCallback.StateMismatch, OpenRouterOAuth.readCallback(request, OpenRouterOAuth.parseQuery("code=c1&state=other")))
         // OpenRouter sends no state when the user denies.
         assertEquals(OpenRouterCallback.Denied, OpenRouterOAuth.readCallback(request, OpenRouterOAuth.parseQuery("")))
+        // Another flow's answer, code or not, is never this one's: the wait goes on.
+        assertEquals(OpenRouterCallback.StateMismatch, OpenRouterOAuth.readCallback(request, OpenRouterOAuth.parseQuery("state=other")))
+        assertEquals(OpenRouterCallback.StateMismatch, OpenRouterOAuth.readCallback(request, OpenRouterOAuth.parseQuery("code=c1")))
+    }
+
+    @Test
+    fun percentDecodingNeverOverflowsOrTakesSigns() {
+        // Each "é" is two bytes: a buffer sized by characters overflowed here.
+        assertEquals("ééé", OpenRouterOAuth.percentDecode("ééé"))
+        assertEquals("% 5%-1", OpenRouterOAuth.percentDecode("%+5%-1"))
+        assertEquals("é", OpenRouterOAuth.percentDecode("%C3%A9"))
     }
 
     @Test

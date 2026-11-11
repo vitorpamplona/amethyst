@@ -62,7 +62,7 @@ actual suspend fun IRoleBasedHttpClientBuilder.connectOpenRouter(
             return@use OpenRouterConnectResult.Failed
         }
 
-        val query = withContext(Dispatchers.IO) { awaitCallback(server, donePageText, timeoutMs) }
+        val query = withContext(Dispatchers.IO) { awaitCallback(server, donePageText, timeoutMs) { OpenRouterOAuth.readCallback(request, it) != OpenRouterCallback.StateMismatch } }
         if (query == null) return@use OpenRouterConnectResult.TimedOut
 
         when (val callback = OpenRouterOAuth.readCallback(request, query)) {
@@ -73,11 +73,16 @@ actual suspend fun IRoleBasedHttpClientBuilder.connectOpenRouter(
     }
 }
 
-/** Accepts connections until one asks for `/callback`; returns its query, or null on timeout. */
+/**
+ * Accepts connections until one asks for `/callback` with a query [isOurs] accepts (the state
+ * this flow sent); returns that query, or null on timeout. A stray request (another local
+ * program, a prefetch, a stale tab) gets a 400 and the wait goes on: it can't end the flow.
+ */
 private suspend fun awaitCallback(
     server: ServerSocket,
     donePageText: String,
     timeoutMs: Long,
+    isOurs: (Map<String, String>) -> Boolean,
 ): Map<String, String>? {
     val deadline = System.currentTimeMillis() + timeoutMs
     while (System.currentTimeMillis() < deadline) {
@@ -95,8 +100,13 @@ private suspend fun awaitCallback(
                 respond(it, 404, "")
                 return@use
             }
+            val query = OpenRouterOAuth.parseQuery(target.substringAfter('?', ""))
+            if (!isOurs(query)) {
+                respond(it, 400, "")
+                return@use
+            }
             respond(it, 200, donePageText)
-            return OpenRouterOAuth.parseQuery(target.substringAfter('?', ""))
+            return query
         }
     }
     return null

@@ -93,9 +93,13 @@ object OpenRouterOAuth {
         query: Map<String, String>,
     ): OpenRouterCallback {
         val code = query["code"]
+        val state = query["state"]
+        // Another flow's state is never ours, whatever it carries. OpenRouter sends no state
+        // when the user denies, so a bare callback is a denial; a code needs our state.
         return when {
+            state != null && state != request.state -> OpenRouterCallback.StateMismatch
             code.isNullOrBlank() -> OpenRouterCallback.Denied
-            query["state"] != request.state -> OpenRouterCallback.StateMismatch
+            state != request.state -> OpenRouterCallback.StateMismatch
             else -> OpenRouterCallback.Code(code)
         }
     }
@@ -126,26 +130,38 @@ object OpenRouterOAuth {
             }
         }
 
+    /**
+     * `%XX` escapes and `+` as space. Grows as it goes: a non-ASCII character is several bytes, so
+     * a buffer of `value.length` bytes overflowed on one. Only two hex digits make an escape
+     * (`toIntOrNull(16)` also took `%+5` and `%-1`).
+     */
     fun percentDecode(value: String): String {
-        val out = ByteArray(value.length)
-        var size = 0
+        val out = ArrayList<Byte>(value.length)
         var i = 0
         while (i < value.length) {
             val c = value[i]
             if (c == '%' && i + 2 <= value.lastIndex) {
-                val hex = value.substring(i + 1, i + 3).toIntOrNull(16)
-                if (hex != null) {
-                    out[size++] = hex.toByte()
+                val high = hexDigit(value[i + 1])
+                val low = hexDigit(value[i + 2])
+                if (high >= 0 && low >= 0) {
+                    out.add(((high shl 4) or low).toByte())
                     i += 3
                     continue
                 }
             }
-            val bytes = (if (c == '+') " " else c.toString()).encodeToByteArray()
-            bytes.forEach { out[size++] = it }
+            (if (c == '+') " " else c.toString()).encodeToByteArray().forEach { out.add(it) }
             i++
         }
-        return out.decodeToString(0, size)
+        return out.toByteArray().decodeToString()
     }
+
+    private fun hexDigit(c: Char): Int =
+        when (c) {
+            in '0'..'9' -> c - '0'
+            in 'a'..'f' -> c - 'a' + 10
+            in 'A'..'F' -> c - 'A' + 10
+            else -> -1
+        }
 
     private const val HEX = "0123456789ABCDEF"
 }

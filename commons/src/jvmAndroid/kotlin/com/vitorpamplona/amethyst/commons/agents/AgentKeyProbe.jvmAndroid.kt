@@ -38,9 +38,11 @@ import java.io.IOException
 // included when the user asked for it there).
 actual suspend fun IRoleBasedHttpClientBuilder.probeAgentKey(key: AgentKeyTag): AgentKeyProbeResult =
     withContext(Dispatchers.IO) {
+        // NIP-FA: never send a key in cleartext to another machine, not even to test it.
+        if (!key.isUrlAllowed()) return@withContext AgentKeyProbeResult.Unreachable
         val preset = AgentProviderPresets.forUrl(key.url)
         val keyChecked = preset == null || preset.keyCheckPath != null
-        val url = key.url.trimEnd('/') + (preset?.keyCheckPath ?: "/models")
+        val url = key.apiRoot() + (preset?.keyCheckPath ?: "/models")
         val request =
             try {
                 Request
@@ -51,7 +53,7 @@ actual suspend fun IRoleBasedHttpClientBuilder.probeAgentKey(key: AgentKeyTag): 
                         if (key.hasKey()) header("Authorization", "Bearer ${key.key}")
                         // Anthropic's OpenAI-compatible models list still wants its version header.
                         if (AgentProviderPresets.hostOf(key.url) == "api.anthropic.com") {
-                            header("x-api-key", key.key)
+                            if (key.hasKey()) header("x-api-key", key.key)
                             header("anthropic-version", "2023-06-01")
                         }
                     }.build()
