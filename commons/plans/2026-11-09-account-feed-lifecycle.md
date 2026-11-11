@@ -335,6 +335,19 @@ Done on the branch, each step its own commit:
    - Dead candidate plumbing on the Home filters is gone, and the walk-only feeds log through a
      `rebuildFeed(name) { … }` overload without copying their set.
 
+10. **Memory on switching and logging out (2026-11-11).** Desktop, class histograms after forced
+    GCs. Switching (41 switches between a read-only and a signing account): account view models,
+    feed sets, candidate sets, kept-current groups and background subscriptions stayed constant,
+    and so did coroutine scopes. Logging out and back in with OS notifications on (10 cycles)
+    found a leak older than this work: `ForwardKind0ToLocalRelayState`'s `EventCollector` is a
+    listener on the app-wide client and was never destroyed, so every logged-out account's
+    settings, signer, relay lists and ~100 state flows stayed reachable. It now leaves the client
+    when the account's scope ends; after that, nothing per account grows across cycles. Still
+    open: one previous account's `AccountFeedContentStates` stays reachable after a logout (two
+    live with one view model; it does not grow, and its scope is cancelled), probably the last
+    `AccountQueryState` an app-wide manager remembers (`feedContentStates` is its feed owner).
+    Not measured on Android.
+
 No screen feed walks the whole cache any more. Threads, bookmarks, lists and pins read their notes
 directly; Home walks it on purpose (its universe is most of the cache).
 

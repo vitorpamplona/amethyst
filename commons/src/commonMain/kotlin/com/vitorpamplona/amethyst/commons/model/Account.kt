@@ -722,7 +722,7 @@ class Account(
             relayAcceptsSignerTraffic = { cache.appHost.nip11Cache.acceptsSignerTraffic(it) },
         )
 
-    val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings)
+    val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings, scope)
 
     val dmRelayList = DmRelayListState(signer, cache, scope, settings)
 
