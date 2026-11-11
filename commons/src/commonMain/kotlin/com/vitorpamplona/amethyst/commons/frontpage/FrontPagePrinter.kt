@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
@@ -40,11 +41,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -121,6 +126,8 @@ class FrontPagePrinter(
     val boundary: PaperBoundary? = paperBoundary(),
     private val scope: CoroutineScope = account.scope,
     private val now: () -> Long = { TimeUtils.now() },
+    private val observerPrefs: ObserverPrefsStore = ObserverPrefsStore.None,
+    observerIO: ObserverSiteIO? = observerSiteIO(account, http),
     private val press: (AgentKeyTag, String, PaperBoundary) -> FrontPagePress = { key, model, boundary ->
         FrontPagePress(account.client, Constants.brainstorm, boundary, { messages, onText -> http.chatComplete(key, model, messages, onText) })
     },
@@ -132,10 +139,40 @@ class FrontPagePrinter(
     /** The print in progress, or how the last one ended. Every observer sees the same run. */
     val run = _run.asStateFlow()
 
-    private val _editions = MutableStateFlow<List<SavedEdition>>(emptyList())
+    private val localEditions = MutableStateFlow<List<SavedEdition>>(emptyList())
 
-    /** The kept editions, newest first. */
-    val editions = _editions.asStateFlow()
+    /** The reader's own Observer site, as last read or published; null until read, or when there is none. */
+    private val siteView = MutableStateFlow<ObserverSiteView?>(null)
+
+    /**
+     * The history: editions kept on this device plus the ones on the reader's Observer site this
+     * device doesn't have (printed in another app or on another device), newest first.
+     */
+    val editions: StateFlow<List<SavedEdition>> =
+        combine(localEditions, siteView) { local, site -> mergeHistory(local, site?.editions.orEmpty()) }
+            .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    /** The reader's Observer site event, for Open and Share. */
+    val site: StateFlow<NamedSiteEvent?> =
+        siteView
+            .map { it?.site }
+            .stateIn(scope, SharingStarted.Eagerly, null)
+
+    private val publisher = observerIO?.let { ObserverPublisher(it, account.signer.pubKey, ::readerName, now) }
+
+    /** Whether this platform can publish to an Observer site at all. */
+    val canPublish: Boolean get() = publisher != null
+
+    private val _observer = MutableStateFlow<ObserverStatus>(ObserverStatus.Idle)
+
+    /** The last publish to the Observer site. */
+    val observer = _observer.asStateFlow()
+
+    fun observerPrefs(): Flow<ObserverPrefs> = observerPrefs.flow(pubKey)
+
+    suspend fun setObserverPrefs(prefs: ObserverPrefs) = observerPrefs.set(pubKey, prefs)
+
+    private val publishing = Mutex()
 
     private val _watched = MutableStateFlow(0)
 
@@ -146,7 +183,10 @@ class FrontPagePrinter(
     private val running = Mutex()
 
     init {
-        scope.launch { refresh() }
+        scope.launch {
+            refresh()
+            refreshSite()
+        }
     }
 
     /** A screen showing the paper calls this, and the returned function when it goes. */
@@ -162,9 +202,11 @@ class FrontPagePrinter(
     }
 
     suspend fun refresh() {
-        _editions.value =
+        localEditions.value =
             try {
-                store.list(pubKey)
+                // Editions kept before the Observer site existed carry no hash; it is what tells a
+                // site edition apart from one this device already has.
+                store.list(pubKey).map { kept -> if (kept.sha256 != null) kept else store.html(pubKey, kept.day)?.let { kept.copy(sha256 = publishedSha256(it)) } ?: kept }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -173,7 +215,39 @@ class FrontPagePrinter(
             }
     }
 
-    suspend fun html(day: String): String? = store.html(pubKey, day)
+    /** Reads the reader's Observer site, so its editions join the history. */
+    suspend fun refreshSite() {
+        val publisher = publisher ?: return
+        try {
+            publisher.read()?.let { siteView.value = it }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not read the Observer site", e)
+        }
+    }
+
+    /**
+     * [day]'s page: from this device, else from the reader's Observer site by its hash (verified),
+     * then kept here so it opens offline next time.
+     */
+    suspend fun html(day: String): String? {
+        store.html(pubKey, day)?.let { return it }
+        val view = siteView.value ?: return null
+        val edition = view.editions.firstOrNull { it.day == day } ?: return null
+        val page = publisher?.page(edition, view.servers) ?: return null
+        mergeHistory(emptyList(), listOf(edition)).firstOrNull()?.let { kept ->
+            try {
+                store.save(pubKey, kept, page)
+                refresh()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not keep the site's edition of $day", e)
+            }
+        }
+        return page
+    }
 
     /** Starts a print on the account's scope; false when one is already running. */
     fun print(
@@ -193,19 +267,28 @@ class FrontPagePrinter(
     }
 
     /**
-     * Prints in the caller's coroutine and publishes to [run] as it goes. Returns how it ended;
-     * a clean page is already stored and, when nobody is watching, announced.
+     * Prints in the caller's coroutine and publishes to [run] as it goes. Returns how it ended,
+     * or null when another print holds the press (nothing was started); a clean page is already
+     * stored and, when nobody is watching, announced.
      */
     suspend fun printNow(
         key: AgentKeyTag,
         model: AgentModel,
         trigger: PrintTrigger = PrintTrigger.MANUAL,
-    ): FrontPageRun {
+    ): FrontPageRun? {
         val boundary = boundary ?: return FrontPageRun.Failed(WriterFailure.UNSUPPORTED).also { _run.value = it }
-        if (!running.tryLock()) return _run.value
+        if (!running.tryLock()) return null
         try {
             _run.value = FrontPageRun.Running(PrintStep.Probe)
-            val result = press(key, model.id, boundary).print(pubKey, readerName(), readerLanguage()) { step -> _run.value = FrontPageRun.Running(step) }
+            var shown: PrintStep = PrintStep.Probe
+            val result =
+                press(key, model.id, boundary).print(pubKey, readerName(), readerLanguage()) { step ->
+                    // The stream reports every chunk; every observer recomposing per chunk is the cost.
+                    if (progressWorthShowing(shown, step)) {
+                        shown = step
+                        _run.value = FrontPageRun.Running(step)
+                    }
+                }
             if (result is PrintResult.Printed) keep(result, model, trigger)
             return FrontPageRun.Done(result).also { _run.value = it }
         } catch (e: CancellationException) {
@@ -227,6 +310,8 @@ class FrontPagePrinter(
         trigger: PrintTrigger,
     ) {
         val at = now()
+        // The page as it leaves the app (the Download, the Observer site): with the paper's CSP.
+        val html = withPaperCsp(printed.html)
         val edition =
             SavedEdition(
                 day = FrontPageClock.dayKey(at),
@@ -241,9 +326,10 @@ class FrontPagePrinter(
                 removed = printed.changes.filter { it.noteworthy }.map { it.detail },
                 digestChars = printed.digestChars,
                 rounds = printed.rounds,
+                sha256 = publishedSha256(html),
             )
         try {
-            store.save(pubKey, edition, printed.html)
+            store.save(pubKey, edition, html)
             refresh()
         } catch (e: CancellationException) {
             throw e
@@ -251,6 +337,61 @@ class FrontPagePrinter(
             Log.w(TAG, "Could not keep the edition", e)
         }
         if (trigger == PrintTrigger.SCHEDULED || _watched.value == 0) notifier.paperReady(pubKey, edition)
+        // A scheduled run publishes before it returns: the platform may end its job right after.
+        if (trigger == PrintTrigger.SCHEDULED) publishPending(trigger) else scope.launch { publishPending(trigger) }
+    }
+
+    /**
+     * Puts every kept edition the site doesn't have yet on the reader's Observer site: today's,
+     * and any an earlier publish failed to send. Only when publishing is on and the reader has
+     * said yes, once, to a public site; until then a manual print asks ([ObserverStatus.AwaitingConsent])
+     * and nothing is uploaded. A scheduled print publishes only with a signer that signs on its
+     * own. Never anything that wasn't printed (and checked) here.
+     */
+    suspend fun publishPending(trigger: PrintTrigger = PrintTrigger.MANUAL) {
+        val publisher = publisher ?: return
+        // Read now, not when the print started: turning it off mid-print keeps that paper private.
+        val prefs = observerPrefs.get(pubKey)
+        if (!prefs.publish) return
+        if (!prefs.noticeSeen) {
+            if (trigger == PrintTrigger.MANUAL) _observer.value = ObserverStatus.AwaitingConsent
+            return
+        }
+        if (trigger == PrintTrigger.SCHEDULED && !canPrintUnattended()) return
+        // One at a time: a second request waits, then publishes whatever the first left pending.
+        publishing.lock()
+        try {
+            val pending =
+                localEditions.value
+                    .filter { !it.published && it.sha256 != null }
+                    .mapNotNull { kept -> store.html(pubKey, kept.day)?.let { kept to withPaperCsp(it) } }
+                    .filter { (kept, html) -> ObserverPublisher.sha256Hex(html.encodeToByteArray()).equals(kept.sha256, ignoreCase = true) }
+            if (pending.isEmpty()) return
+            _observer.value = ObserverStatus.Publishing
+            val result = publisher.publish(pending.map { (kept, html) -> ObserverPage(ObserverPublisher.entryFor(kept, kept.sha256!!.lowercase()), html) })
+            _observer.value =
+                when (result) {
+                    is ObserverPublishResult.Published -> {
+                        pending.forEach { (kept, html) -> store.save(pubKey, kept.copy(published = true), html) }
+                        siteView.value = ObserverSiteView(result.site, result.kept, result.site.servers())
+                        refresh()
+                        ObserverStatus.Published(now())
+                    }
+                    is ObserverPublishResult.Failed -> ObserverStatus.Failed(result.reason)
+                }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Publishing to the Observer site failed", e)
+            _observer.value = ObserverStatus.Failed(ObserverFailure.PUBLISH)
+        } finally {
+            publishing.unlock()
+        }
+    }
+
+    /** The reader said "Not now" to the public site: nothing goes out, and the next print asks again. */
+    fun declinePublish() {
+        if (_observer.value == ObserverStatus.AwaitingConsent) _observer.value = ObserverStatus.Idle
     }
 
     /** The model the reader picked for this endpoint, else the best-ranked one it lists. */
@@ -271,7 +412,7 @@ class FrontPagePrinter(
     fun estimate(model: AgentModel?): Double? =
         estimateCost(
             model,
-            _editions.value
+            localEditions.value
                 .firstOrNull()
                 ?.digestChars
                 ?.takeIf { it > 0 } ?: DEFAULT_DIGEST_BUDGET,
@@ -292,7 +433,7 @@ class FrontPagePrinter(
         if (key == null) return ScheduledOutcome.NO_KEY.also { notifier.needsYou(pubKey) }
         if (!hasLens) return ScheduledOutcome.NO_LENS.also { notifier.needsYou(pubKey) }
         val model = chooseModel(key) ?: return ScheduledOutcome.FAILED
-        val ended = printNow(key, model, PrintTrigger.SCHEDULED)
+        val ended = printNow(key, model, PrintTrigger.SCHEDULED) ?: return ScheduledOutcome.BUSY
         return if (ended is FrontPageRun.Done && ended.result is PrintResult.Printed) ScheduledOutcome.PRINTED else ScheduledOutcome.FAILED
     }
 
@@ -352,6 +493,41 @@ class FrontPagePrinter(
     }
 }
 
+/** How the last publish to the reader's Observer site went. */
+sealed interface ObserverStatus {
+    data object Idle : ObserverStatus
+
+    /** A clean print would publish, but the reader hasn't said yes to a public site yet. */
+    data object AwaitingConsent : ObserverStatus
+
+    data object Publishing : ObserverStatus
+
+    data class Published(
+        val at: Long,
+    ) : ObserverStatus
+
+    data class Failed(
+        val reason: ObserverFailure,
+    ) : ObserverStatus
+}
+
+/** The hash an edition is published under: its bytes once the paper's CSP is in ([withPaperCsp]). */
+fun publishedSha256(html: String): String = ObserverPublisher.sha256Hex(withPaperCsp(html).encodeToByteArray())
+
+/**
+ * Whether [next] is worth a new [FrontPageRun.Running]: every step change is, but the writer's
+ * running character count only every [WRITE_PROGRESS_CHARS], since the stream reports each chunk.
+ */
+fun progressWorthShowing(
+    shown: PrintStep,
+    next: PrintStep,
+): Boolean {
+    if (next !is PrintStep.Write || shown !is PrintStep.Write || next.round != shown.round) return true
+    return next.chars == 0 || next.chars - shown.chars >= WRITE_PROGRESS_CHARS
+}
+
+const val WRITE_PROGRESS_CHARS = 400
+
 /** The morning schedule of one account. Off by default; 7:00 is only the suggestion. */
 @Immutable
 data class FrontPageSchedule(
@@ -370,6 +546,7 @@ class FrontPagePrinters(
     val store: FrontPageEditionStore,
     val schedules: FrontPageScheduleStore,
     private val notifier: FrontPageNotifier,
+    val observerPrefs: ObserverPrefsStore = ObserverPrefsStore.None,
 ) {
     private val printers = MutableStateFlow<Map<HexKey, FrontPagePrinter>>(emptyMap())
 
@@ -382,7 +559,7 @@ class FrontPagePrinters(
                 made = existing
                 current
             } else {
-                val printer = made ?: FrontPagePrinter(account, http, memory, store, notifier)
+                val printer = made ?: FrontPagePrinter(account, http, memory, store, notifier, observerPrefs = observerPrefs)
                 made = printer
                 current + (account.signer.pubKey to printer)
             }

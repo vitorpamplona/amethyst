@@ -41,7 +41,7 @@ import okio.Path.Companion.toPath
 /** What the reader sees about a stored edition before opening it, and on its chips once open. */
 @Immutable
 @Serializable
-class SavedEdition(
+data class SavedEdition(
     /** The local day it was printed, `yyyy-MM-dd`: one edition per day, the newest wins. */
     val day: String,
     val code: String,
@@ -59,6 +59,10 @@ class SavedEdition(
     /** The digest's size, for the next print's cost estimate. */
     val digestChars: Int = 0,
     val rounds: Int = 1,
+    /** Hex sha256 of the page: its blob on the reader's Observer site. Null on editions kept before it. */
+    val sha256: String? = null,
+    /** On the reader's Observer site: published from here, or read back from it. */
+    val published: Boolean = false,
 )
 
 /**

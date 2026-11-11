@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageModelMemory
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageScheduleStore
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreObserverPrefsStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageEditionStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -1236,6 +1237,7 @@ class AppModules(
             store = FrontPageEditionStore(File(appContext.filesDir, FrontPageEditionStore.FOLDER).path),
             schedules = DataStoreFrontPageScheduleStore(appStores),
             notifier = frontPageNotifier,
+            observerPrefs = DataStoreObserverPrefsStore(appStores),
         )
     }
 

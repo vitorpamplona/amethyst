@@ -9527,8 +9527,14 @@
     <string name="front_page_not_ready">Your rankings are on their way. Try again in a few minutes.</string>
     <string name="front_page_step_probe">Checking your ranking</string>
     <string name="front_page_step_pull">Reading the desks · %1$d of %2$d</string>
-    <string name="front_page_step_write">Writing · %1$s characters</string>
-    <string name="front_page_step_fix">Fixing what the check refused · %1$s characters</string>
+    <plurals name="front_page_step_write">
+        <item quantity="one">Writing · %1$s character</item>
+        <item quantity="other">Writing · %1$s characters</item>
+    </plurals>
+    <plurals name="front_page_step_fix">
+        <item quantity="one">Fixing what the check refused · %1$s character</item>
+        <item quantity="other">Fixing what the check refused · %1$s characters</item>
+    </plurals>
     <string name="front_page_step_check">Checking quotes, pictures and links</string>
     <string name="front_page_edition">No. %1$s</string>
     <string name="front_page_fixed_once">Fixed once</string>
@@ -9580,4 +9586,21 @@
     <string name="front_page_tor_pictures">Your paper's pictures load through Tor.</string>
     <string name="front_page_no_tor">Tor isn't connected</string>
     <string name="front_page_show_failed">Couldn't show the paper</string>
+    <string name="front_page_publish">Publish to my Observer</string>
+    <string name="front_page_observer_notice_title">Publish to your public Observer?</string>
+    <string name="front_page_observer_notice_body">Your Observer is a site anyone can open. Turn off Publish to my Observer in Print to keep papers to yourself.</string>
+    <string name="front_page_publish_confirm">Publish</string>
+    <string name="front_page_not_now">Not now</string>
+    <string name="front_page_publishing">Publishing to your Observer…</string>
+    <string name="front_page_publish_failed">Couldn't publish to your Observer. It retries with your next print.</string>
+    <string name="front_page_publish_no_servers">Your Observer needs a Blossom server to hold its pages.</string>
+    <string name="front_page_publish_read_failed">Couldn't reach your relays, so nothing was published.</string>
+    <string name="front_page_fail_cut_off">Your AI stopped before the page was finished. Try again.</string>
+    <string name="front_page_fail_insecure">Your AI key's address isn't https, so the key was never sent.</string>
+    <string name="front_page_edition_unreadable">This edition can't be opened here anymore.</string>
+    <string name="front_page_violation_quote">Quote</string>
+    <string name="front_page_violation_image">Picture</string>
+    <string name="front_page_violation_link">Link</string>
+    <string name="front_page_violation_markup">Markup</string>
+    <string name="front_page_open_observer">Open my Observer</string>
 </resources>

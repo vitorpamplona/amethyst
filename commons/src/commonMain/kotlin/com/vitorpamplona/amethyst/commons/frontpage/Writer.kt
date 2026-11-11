@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.commons.frontpage
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.util.formatDecimal
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
@@ -166,6 +168,10 @@ class StreamChunk(
     val text: String,
     val usage: Usage?,
     val done: Boolean,
+    /** The choice's `finish_reason`, on the chunk that ends it. */
+    val finishReason: String? = null,
+    /** An `{"error": …}` frame's message: the provider gave up mid-answer. */
+    val error: String? = null,
 )
 
 /** One `data:` line of a Chat Completions stream: the text it adds and any usage it carried. */
@@ -175,15 +181,67 @@ fun parseStreamLine(line: String): StreamChunk {
     val data = trimmed.removePrefix("data:").trim()
     if (data == "[DONE]") return StreamChunk("", null, true)
     val json = parse(data) as? JsonObject ?: return StreamChunk("", null, false)
-    val delta = ((json["choices"] as? JsonArray)?.firstOrNull() as? JsonObject)?.get("delta") as? JsonObject
+    errorOf(json)?.let { return StreamChunk("", null, false, error = it) }
+    val choice = (json["choices"] as? JsonArray)?.firstOrNull() as? JsonObject
+    val delta = choice?.get("delta") as? JsonObject
     val content = (delta?.get("content") as? JsonPrimitive)?.takeIf { it.isString }?.content ?: ""
-    return StreamChunk(content, readUsage(json["usage"]), false)
+    return StreamChunk(content, readUsage(json["usage"]), false, finishReason = finishReasonOf(choice))
 }
 
-/** A non-streamed answer's text. */
+private fun errorOf(json: JsonObject): String? {
+    val error = json["error"] ?: return null
+    if (error is JsonNull) return null
+    val message = ((error as? JsonObject)?.get("message") as? JsonPrimitive)?.content ?: (error as? JsonPrimitive)?.content
+    return message?.replace(Regex("\\s+"), " ")?.trim()?.take(160) ?: "error"
+}
+
+private fun finishReasonOf(choice: JsonObject?) = (choice?.get("finish_reason") as? JsonPrimitive)?.takeIf { it.isString }?.content
+
+/**
+ * A whole stream's lines, as one answer: stops at `[DONE]`; an error frame, a `finish_reason`
+ * other than `stop`, or a stream that ends with neither `[DONE]` nor `stop` is a failure, never a
+ * paper (a cut-off page could still pass the boundary, missing its second half).
+ */
+class StreamReader(
+    private val onText: (Int) -> Unit,
+) {
+    private val text = StringBuilder()
+    private var usage: Usage? = null
+    private var finish: String? = null
+    private var done = false
+
+    /** Reads one line; true when the stream has ended. */
+    fun read(line: String): Boolean {
+        val chunk = parseStreamLine(line)
+        chunk.error?.let { throw WriterException(WriterFailure.CUT_OFF, providerSaid = it) }
+        if (chunk.text.isNotEmpty()) {
+            text.append(chunk.text)
+            onText(text.length)
+        }
+        if (chunk.usage != null) usage = chunk.usage
+        chunk.finishReason?.let { finish = it }
+        if (chunk.done) done = true
+        return done
+    }
+
+    fun finish(): Written {
+        val reason = finish
+        if (reason != null && reason != "stop") throw WriterException(WriterFailure.CUT_OFF, providerSaid = reason)
+        if (reason == null && !done) throw WriterException(WriterFailure.CUT_OFF)
+        return Written(text.toString(), usage)
+    }
+}
+
+/**
+ * A non-streamed answer's text. An error body or a `finish_reason` other than `stop` is a failure;
+ * a missing `finish_reason` is accepted here, as some providers leave it out of whole answers.
+ */
 fun readCompletion(body: String): Written {
     val json = parse(body) as? JsonObject
-    val message = ((json?.get("choices") as? JsonArray)?.firstOrNull() as? JsonObject)?.get("message") as? JsonObject
+    json?.let { errorOf(it) }?.let { throw WriterException(WriterFailure.CUT_OFF, providerSaid = it) }
+    val choice = (json?.get("choices") as? JsonArray)?.firstOrNull() as? JsonObject
+    finishReasonOf(choice)?.takeIf { it != "stop" }?.let { throw WriterException(WriterFailure.CUT_OFF, providerSaid = it) }
+    val message = choice?.get("message") as? JsonObject
     val content = (message?.get("content") as? JsonPrimitive)?.takeIf { it.isString }?.content ?: ""
     return Written(content, readUsage(json?.get("usage")))
 }
@@ -323,11 +381,13 @@ fun actualCost(
     return inTokens * prompt + outTokens * completion
 }
 
-/** `$0.08`, `$1.20`, or `<$0.01`: dollars to the cent, which is what a reader budgets in. */
+/**
+ * `$0.08`, `$1.20`, or `<$0.01`: dollars to the cent, which is what a reader budgets in, with the
+ * reader's decimal mark and grouping (`$1.234,50` in German).
+ */
 fun formatUsd(amount: Double): String {
-    if (amount < 0.01) return "<$0.01"
-    val cents = round(amount * 100).toLong()
-    return "$" + (cents / 100) + "." + (cents % 100).toString().padStart(2, '0')
+    if (amount < 0.01) return "<$" + formatDecimal(0.01, maxFractionDigits = 2, minFractionDigits = 2)
+    return "$" + formatDecimal(round(amount * 100) / 100, maxFractionDigits = 2, minFractionDigits = 2)
 }
 
 /** `GET {url}/models` to ids, whichever of the two common shapes it comes in. */

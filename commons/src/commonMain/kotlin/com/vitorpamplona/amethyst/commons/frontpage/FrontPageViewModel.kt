@@ -25,9 +25,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -86,11 +88,14 @@ class FrontPageModels(
     val selectedModel: AgentModel? get() = selected?.let { byId[it] ?: AgentModel(it) }
 }
 
-/** A kept edition and its page, as the screen shows it. */
+/**
+ * A kept edition and its page, as the screen shows it. [html] is null when the page can't be
+ * read (gone from this device and not on any server): the screen says so and keeps the history.
+ */
 @Immutable
 class ShownEdition(
     val edition: SavedEdition,
-    val html: String,
+    val html: String?,
 )
 
 /**
@@ -133,7 +138,7 @@ class FrontPageViewModel(
                 if (edition == null) {
                     flowOf<ShownEdition?>(null)
                 } else {
-                    flow<ShownEdition?> { emit(printer.html(edition.day)?.let { ShownEdition(edition, it) }) }
+                    flow<ShownEdition?> { emit(ShownEdition(edition, printer.html(edition.day))) }
                 }
             }.stateIn<ShownEdition?>(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -145,32 +150,81 @@ class FrontPageViewModel(
     val schedule: StateFlow<FrontPageSchedule> =
         schedules.flow(account.signer.pubKey).stateIn(viewModelScope, SharingStarted.Eagerly, FrontPageSchedule())
 
+    /** Publishing to the reader's public Observer site: on by default, after a one-time notice. */
+    val observerPrefs: StateFlow<ObserverPrefs> =
+        printer.observerPrefs().stateIn(viewModelScope, SharingStarted.Eagerly, ObserverPrefs())
+
+    /** How the last publish went. */
+    val observer: StateFlow<ObserverStatus> = printer.observer
+
+    /** The reader's Observer site, once read or published: for Open and Share. */
+    val site: StateFlow<NamedSiteEvent?> = printer.site
+
+    /** Whether this platform publishes to an Observer site at all. */
+    val canPublish: Boolean get() = printer.canPublish
+
+    fun setPublish(on: Boolean) {
+        viewModelScope.launch { printer.setObserverPrefs(observerPrefs.value.copy(publish = on)) }
+    }
+
+    /**
+     * The reader answered the confirm that comes before the first publish. Publish: the site is
+     * public from now on, and what's kept goes out now. Not now: nothing is uploaded, and the
+     * next print asks again.
+     */
+    fun answerObserverNotice(publish: Boolean) {
+        if (!publish) {
+            printer.declinePublish()
+            return
+        }
+        viewModelScope.launch {
+            printer.setObserverPrefs(ObserverPrefs(publish = true, noticeSeen = true))
+            printer.publishPending()
+        }
+    }
+
+    /** Tries the publish again, after a failure the reader may have fixed (a Blossom server added). */
+    fun retryPublish() {
+        viewModelScope.launch { printer.publishPending() }
+    }
+
     /** Whether a scheduled edition can print with nobody there: a key on this device can, Amber cannot. */
     val printsUnattended: Boolean get() = printer.canPrintUnattended()
 
-    private var modelsFor: String? = null
+    private var modelsFor: AgentKeyTag? = null
+    private var modelsJob: Job? = null
 
     init {
         viewModelScope.launch { key.collect { it?.let { loadModels(it) } } }
     }
 
+    /**
+     * The models of [key]'s endpoint. Keyed on the whole key, not its URL: a new key at the same
+     * provider may see other models. A load for a key that is no longer the reader's is
+     * cancelled, so its list never lands on the next key.
+     */
     private fun loadModels(key: AgentKeyTag) {
-        if (modelsFor == key.url && !_models.value.loading) return
-        modelsFor = key.url
+        if (modelsFor == key) return
+        modelsFor = key
+        modelsJob?.cancel()
         _models.value = FrontPageModels(loading = true)
-        viewModelScope.launch {
-            val remembered = runCatching { printer.memory.get(key.url) }.getOrNull()
-            try {
-                val listed = http.listAgentModels(key)
-                val ranked = rankModels(listed.map { it.id })
-                val selected = remembered?.takeIf { it in ranked } ?: ranked.firstOrNull() ?: remembered
-                _models.value = FrontPageModels(ids = ranked, selected = selected, byId = listed.associateBy { it.id })
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: WriterException) {
-                _models.value = FrontPageModels(selected = remembered, failure = e.failure)
+        modelsJob =
+            viewModelScope.launch {
+                val remembered = runCatching { printer.memory.get(key.url) }.getOrNull()
+                try {
+                    val listed = http.listAgentModels(key)
+                    val ranked = rankModels(listed.map { it.id })
+                    val selected = remembered?.takeIf { it in ranked } ?: ranked.firstOrNull() ?: remembered
+                    _models.value = FrontPageModels(ids = ranked, selected = selected, byId = listed.associateBy { it.id })
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: WriterException) {
+                    _models.value = FrontPageModels(selected = remembered, failure = e.failure)
+                } catch (e: Exception) {
+                    // Never left loading: the reader can still type a model id.
+                    _models.value = FrontPageModels(selected = remembered, failure = WriterFailure.UNREACHABLE)
+                }
             }
-        }
     }
 
     fun selectModel(model: String) {

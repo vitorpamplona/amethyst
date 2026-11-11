@@ -130,4 +130,28 @@ class ChatCompleteTest {
         runBlocking {
             assertEquals(listOf("a/b"), clients(Answer(200, "application/json", """{"data":[{"id":"a/b"}]}""")).listAgentModels(key).map { it.id })
         }
+
+    @Test
+    fun aKeyIsNeverSentInCleartextOffThisDevice() {
+        val cleartext = AgentKeyTag("sk-or-v1-x", "http://openrouter.example/api/v1")
+        val failure = assertFailsWith<WriterException> { runBlocking { clients().chatComplete(cleartext, "m", messages) {} } }
+        assertEquals(WriterFailure.INSECURE_URL, failure.failure)
+        assertFailsWith<WriterException> { runBlocking { clients().listAgentModels(cleartext) } }
+        assertTrue(requests.isEmpty())
+    }
+
+    @Test
+    fun aMalformedCustomUrlIsAFailureNotACrash() {
+        val broken = AgentKeyTag("sk", "https://exa mple.com/v1")
+        assertFailsWith<WriterException> { runBlocking { clients().listAgentModels(broken) } }
+        val nohost = AgentKeyTag("", "https://")
+        assertFailsWith<WriterException> { runBlocking { clients().chatComplete(nohost, "m", messages) {} } }
+    }
+
+    @Test
+    fun aStreamCutOffIsAFailure() {
+        val sse = """data: {"choices":[{"delta":{"content":"<html>"},"finish_reason":"length"}]}""" + "\n\ndata: [DONE]"
+        val failure = assertFailsWith<WriterException> { runBlocking { clients(Answer(200, "text/event-stream", sse)).chatComplete(key, "m", messages) {} } }
+        assertEquals(WriterFailure.CUT_OFF, failure.failure)
+    }
 }

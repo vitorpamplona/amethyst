@@ -45,18 +45,31 @@ private fun Request.Builder.auth(key: AgentKeyTag): Request.Builder =
         }
     }
 
-private fun root(key: AgentKeyTag) = key.url.trimEnd('/')
+/** NIP-FA: one trailing slash stripped, and a key never sent in cleartext to a host off this device. */
+private fun root(key: AgentKeyTag): String {
+    if (!key.isUrlAllowed()) throw WriterException(WriterFailure.INSECURE_URL)
+    return key.apiRoot()
+}
+
+/** A request for [url], or the failure the reader sees: a malformed custom URL is not a crash. */
+private fun request(
+    url: String,
+    build: Request.Builder.() -> Request.Builder,
+): Request =
+    try {
+        Request
+            .Builder()
+            .url(url)
+            .run(build)
+            .build()
+    } catch (e: IllegalArgumentException) {
+        throw WriterException(WriterFailure.UNREACHABLE)
+    }
 
 actual suspend fun IRoleBasedHttpClientBuilder.listAgentModels(key: AgentKeyTag): List<AgentModel> =
     withContext(Dispatchers.IO) {
         val url = root(key) + "/models"
-        val request =
-            Request
-                .Builder()
-                .url(url)
-                .get()
-                .auth(key)
-                .build()
+        val request = request(url) { get().auth(key) }
         try {
             okHttpClientForMoney(url).newCall(request).executeAsync().use { response ->
                 if (!response.isSuccessful) throw WriterException(failureFor(response.code), response.code)
@@ -77,18 +90,12 @@ actual suspend fun IRoleBasedHttpClientBuilder.chatComplete(
 ): Written =
     withContext(Dispatchers.IO) {
         val url = root(key) + "/chat/completions"
-        // A page takes minutes to write: no read timeout between streamed chunks of that size.
-        val client = okHttpClientForMoney(url).newBuilder().readTimeout(5, TimeUnit.MINUTES).build()
 
-        fun call(stream: Boolean) =
-            Request
-                .Builder()
-                .url(url)
-                .post(chatRequestBody(key.url, model, messages, stream).toRequestBody(JSON))
-                .auth(key)
-                .build()
+        fun call(stream: Boolean) = request(url) { post(chatRequestBody(key.url, model, messages, stream).toRequestBody(JSON)).auth(key) }
 
         try {
+            // A page takes minutes to write: no read timeout between streamed chunks of that size.
+            val client = okHttpClientForMoney(url).newBuilder().readTimeout(5, TimeUnit.MINUTES).build()
             client.newCall(call(stream = true)).executeAsync().use { response ->
                 val isStream = (response.body.contentType()?.toString() ?: response.header("Content-Type").orEmpty()).contains("text/event-stream")
                 when {
@@ -105,6 +112,8 @@ actual suspend fun IRoleBasedHttpClientBuilder.chatComplete(
         } catch (e: CancellationException) {
             throw e
         } catch (e: IOException) {
+            throw WriterException(WriterFailure.UNREACHABLE)
+        } catch (e: IllegalArgumentException) {
             throw WriterException(WriterFailure.UNREACHABLE)
         }
     }
@@ -123,19 +132,12 @@ private suspend fun readStream(
     response: Response,
     onText: (Int) -> Unit,
 ): Written {
-    val text = StringBuilder()
-    var usage: Usage? = null
+    val reader = StreamReader(onText)
     val source = response.body.source()
     while (true) {
         currentCoroutineContext().ensureActive()
         val line = source.readUtf8Line() ?: break
-        val chunk = parseStreamLine(line)
-        if (chunk.text.isNotEmpty()) {
-            text.append(chunk.text)
-            onText(text.length)
-        }
-        if (chunk.usage != null) usage = chunk.usage
-        if (chunk.done) break
+        if (reader.read(line)) break
     }
-    return Written(text.toString(), usage)
+    return reader.finish()
 }

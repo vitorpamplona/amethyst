@@ -39,6 +39,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,6 +60,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * A slim pill over the app while the reader's paper prints somewhere they are not looking: the
@@ -72,9 +75,10 @@ fun FrontPagePrintingBanner(
     modifier: Modifier = Modifier,
 ) {
     val printer = LocalAppServices.current.frontPagePrinters?.of(accountViewModel.account) ?: return
-    val run by printer.run.collectAsStateWithLifecycle()
+    // Only what the pill says: the run itself changes with every streamed chunk, and the pill sits
+    // over the whole app, so every chunk would recompose it.
+    val step by remember(printer) { printer.run.map { bannerStepOf(it) }.distinctUntilChanged() }.collectAsStateWithLifecycle(null)
     val watched by printer.watched.collectAsStateWithLifecycle()
-    val step = (run as? FrontPageRun.Running)?.step
 
     AnimatedVisibility(
         visible = step != null && watched == 0,
@@ -93,10 +97,10 @@ fun FrontPagePrintingBanner(
                 CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.inversePrimary)
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    when (step) {
-                        is PrintStep.Pull -> stringRes(Res.string.front_page_banner_pull, step.desksDone, step.desksTotal)
-                        is PrintStep.Write -> stringRes(Res.string.front_page_banner_write)
-                        is PrintStep.Check -> stringRes(Res.string.front_page_banner_check)
+                    when (val shown = step) {
+                        is BannerStep.Pull -> stringRes(Res.string.front_page_banner_pull, shown.done, shown.total)
+                        BannerStep.Write -> stringRes(Res.string.front_page_banner_write)
+                        BannerStep.Check -> stringRes(Res.string.front_page_banner_check)
                         else -> stringRes(Res.string.front_page_banner_probe)
                     },
                     style = MaterialTheme.typography.labelLarge,
@@ -108,3 +112,26 @@ fun FrontPagePrintingBanner(
         }
     }
 }
+
+/** What the pill says, and nothing finer: equal values never recompose it. */
+private sealed interface BannerStep {
+    data object Probe : BannerStep
+
+    data class Pull(
+        val done: Int,
+        val total: Int,
+    ) : BannerStep
+
+    data object Write : BannerStep
+
+    data object Check : BannerStep
+}
+
+private fun bannerStepOf(run: FrontPageRun): BannerStep? =
+    when (val step = (run as? FrontPageRun.Running)?.step) {
+        null -> null
+        is PrintStep.Pull -> BannerStep.Pull(step.desksDone, step.desksTotal)
+        is PrintStep.Write -> BannerStep.Write
+        is PrintStep.Check -> BannerStep.Check
+        PrintStep.Probe -> BannerStep.Probe
+    }

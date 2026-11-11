@@ -64,7 +64,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -81,6 +80,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageClock
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageGate
@@ -89,6 +89,9 @@ import com.vitorpamplona.amethyst.commons.frontpage.FrontPageRun
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSchedule
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageViewModel
 import com.vitorpamplona.amethyst.commons.frontpage.MASTHEAD
+import com.vitorpamplona.amethyst.commons.frontpage.ObserverFailure
+import com.vitorpamplona.amethyst.commons.frontpage.ObserverPrefs
+import com.vitorpamplona.amethyst.commons.frontpage.ObserverStatus
 import com.vitorpamplona.amethyst.commons.frontpage.PrintResult
 import com.vitorpamplona.amethyst.commons.frontpage.PrintStep
 import com.vitorpamplona.amethyst.commons.frontpage.SavedEdition
@@ -97,10 +100,12 @@ import com.vitorpamplona.amethyst.commons.frontpage.Violation
 import com.vitorpamplona.amethyst.commons.frontpage.WriterFailure
 import com.vitorpamplona.amethyst.commons.frontpage.dayOfWeek
 import com.vitorpamplona.amethyst.commons.frontpage.formatUsd
+import com.vitorpamplona.amethyst.commons.frontpage.withPaperCsp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_a_blossom_server
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.confirm
 import com.vitorpamplona.amethyst.commons.resources.dlist_day_friday
@@ -117,10 +122,13 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_cost_label
 import com.vitorpamplona.amethyst.commons.resources.front_page_details
 import com.vitorpamplona.amethyst.commons.resources.front_page_download
 import com.vitorpamplona.amethyst.commons.resources.front_page_edition_label
+import com.vitorpamplona.amethyst.commons.resources.front_page_edition_unreadable
 import com.vitorpamplona.amethyst.commons.resources.front_page_every_morning
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_credit
+import com.vitorpamplona.amethyst.commons.resources.front_page_fail_cut_off
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_empty
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_http
+import com.vitorpamplona.amethyst.commons.resources.front_page_fail_insecure
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_model
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_rate
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_rejected
@@ -134,12 +142,22 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_new_edition
 import com.vitorpamplona.amethyst.commons.resources.front_page_no_key
 import com.vitorpamplona.amethyst.commons.resources.front_page_no_lens
 import com.vitorpamplona.amethyst.commons.resources.front_page_no_tor
+import com.vitorpamplona.amethyst.commons.resources.front_page_not_now
 import com.vitorpamplona.amethyst.commons.resources.front_page_not_ready
+import com.vitorpamplona.amethyst.commons.resources.front_page_observer_notice_body
+import com.vitorpamplona.amethyst.commons.resources.front_page_observer_notice_title
+import com.vitorpamplona.amethyst.commons.resources.front_page_open_observer
 import com.vitorpamplona.amethyst.commons.resources.front_page_pick_time
 import com.vitorpamplona.amethyst.commons.resources.front_page_posts_read
 import com.vitorpamplona.amethyst.commons.resources.front_page_print
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_again
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_estimate
+import com.vitorpamplona.amethyst.commons.resources.front_page_publish
+import com.vitorpamplona.amethyst.commons.resources.front_page_publish_confirm
+import com.vitorpamplona.amethyst.commons.resources.front_page_publish_failed
+import com.vitorpamplona.amethyst.commons.resources.front_page_publish_no_servers
+import com.vitorpamplona.amethyst.commons.resources.front_page_publish_read_failed
+import com.vitorpamplona.amethyst.commons.resources.front_page_publishing
 import com.vitorpamplona.amethyst.commons.resources.front_page_quotes_verified
 import com.vitorpamplona.amethyst.commons.resources.front_page_read_full
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_body
@@ -158,6 +176,11 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_tokens
 import com.vitorpamplona.amethyst.commons.resources.front_page_tokens_label
 import com.vitorpamplona.amethyst.commons.resources.front_page_tor_pictures
 import com.vitorpamplona.amethyst.commons.resources.front_page_unsupported
+import com.vitorpamplona.amethyst.commons.resources.front_page_violation_image
+import com.vitorpamplona.amethyst.commons.resources.front_page_violation_link
+import com.vitorpamplona.amethyst.commons.resources.front_page_violation_markup
+import com.vitorpamplona.amethyst.commons.resources.front_page_violation_quote
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.retry
 import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.resources.tor_waiting
@@ -166,18 +189,24 @@ import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import com.vitorpamplona.amethyst.commons.ui.components.PillColors
 import com.vitorpamplona.amethyst.commons.ui.components.PillTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberFileBytesAccess
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.DateSkeletonFormatter
+import com.vitorpamplona.amethyst.commons.ui.note.calendarYearAndDay
 import com.vitorpamplona.amethyst.commons.ui.note.rememberIs24HourClock
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberAppLauncher
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -200,8 +229,13 @@ private val editionDateFormatter = DateSkeletonFormatter("MMMEd")
 private fun editionTitle(day: String): String {
     val parts = day.split('-').mapNotNull { it.toIntOrNull() }
     if (parts.size != 3) return day
-    val noonUtc = (SearchDate(parts[0], parts[1], parts[2]).daysFromEpoch() * 86_400L + 43_200L) * 1000
-    return editionDateFormatter.format(noonUtc)
+    val days = SearchDate(parts[0], parts[1], parts[2]).daysFromEpoch()
+    val wanted = parts[0] * 1000 + (days - SearchDate(parts[0], 1, 1).daysFromEpoch() + 1).toInt()
+    val noonUtc = (days * 86_400L + 43_200L) * 1000
+    // Noon UTC is that date only from UTC-11 to UTC+11: past those (UTC+12 to +14), step half a
+    // day until the reader's own zone lands on it.
+    val at = listOf(noonUtc, noonUtc - 43_200_000L, noonUtc + 43_200_000L).firstOrNull { calendarYearAndDay(it) == wanted } ?: noonUtc
+    return editionDateFormatter.format(at)
 }
 
 /**
@@ -233,10 +267,11 @@ fun FrontPageScreen(
         rememberViewModel(key = "front-page:${account.signer.pubKey}") {
             FrontPageViewModel(account, accountViewModel.httpClientBuilder, printer, printers.schedules, services.frontPageScheduler, day)
         }
-    // While this screen shows the paper, a finished print needs no notification.
-    DisposableEffect(printer) {
+    // While this screen shows the paper, a finished print needs no notification. Only while it is
+    // started: a backgrounded app (or a screen behind another) isn't anyone watching.
+    LifecycleStartEffect(printer) {
         val release = printer.watch()
-        onDispose { release() }
+        onStopOrDispose { release() }
     }
     val gate by viewModel.gate.collectAsStateWithLifecycle()
     val models by viewModel.models.collectAsStateWithLifecycle()
@@ -245,8 +280,14 @@ fun FrontPageScreen(
     val shown by viewModel.shown.collectAsStateWithLifecycle()
     val estimate by viewModel.estimate.collectAsStateWithLifecycle()
     val schedule by viewModel.schedule.collectAsStateWithLifecycle()
+    val observerPrefs by viewModel.observerPrefs.collectAsStateWithLifecycle()
+    val observer by viewModel.observer.collectAsStateWithLifecycle()
+    val site by viewModel.site.collectAsStateWithLifecycle()
 
     var printSheet by remember { mutableStateOf(false) }
+    // The public-site confirm comes after a clean print, before anything is uploaded (ObserverLine).
+    val requestPrint: () -> Unit = viewModel::print
+    val publishPrefs = if (viewModel.canPublish) observerPrefs else null
     var detailsSheet by remember { mutableStateOf(false) }
     val platform = LocalAppPlatform.current
     val download = rememberEditionDownload()
@@ -263,10 +304,12 @@ fun FrontPageScreen(
                             Icon(MaterialSymbols.AutoAwesome, contentDescription = stringRes(Res.string.front_page_print_again))
                         }
                     }
-                    IconButton(onClick = { download(current) }) {
-                        Icon(MaterialSymbols.Download, contentDescription = stringRes(Res.string.front_page_download))
+                    if (current.html != null) {
+                        IconButton(onClick = { download(current) }) {
+                            Icon(MaterialSymbols.Download, contentDescription = stringRes(Res.string.front_page_download))
+                        }
                     }
-                    if (platform.showsPapersInline) {
+                    if (platform.showsPapersInline && current.html != null) {
                         IconButton(onClick = { nav.nav(Route.FrontPageReader(current.edition.day)) }) {
                             Icon(MaterialSymbols.Fullscreen, contentDescription = stringRes(Res.string.front_page_read_full))
                         }
@@ -296,9 +339,11 @@ fun FrontPageScreen(
                             schedule,
                             viewModel.printsUnattended,
                             onModel = viewModel::selectModel,
-                            onPrint = viewModel::print,
+                            onPrint = requestPrint,
                             onCancel = viewModel::cancel,
                             onSchedule = viewModel::setSchedule,
+                            publish = publishPrefs,
+                            onPublish = viewModel::setPublish,
                             onAccent = true,
                         )
                     }
@@ -315,8 +360,20 @@ fun FrontPageScreen(
                     if (editions.size > 1) History(editions, current.edition.day, viewModel::selectDay)
                     Facts(current.edition, onDetails = { detailsSheet = true })
                     if (schedule.enabled) ScheduleLine(schedule) { printSheet = true }
+                    ObserverLine(
+                        observer,
+                        onPublish = { viewModel.answerObserverNotice(publish = true) },
+                        onNotNow = { viewModel.answerObserverNotice(publish = false) },
+                        onAddServer = { nav.nav(Route.EditMediaServers) },
+                        onRetry = viewModel::retryPublish,
+                    )
                 }
-                Paper(current, "front-page", fill = false, Modifier.fillMaxWidth())
+                if (current.html != null) {
+                    Paper(current, "front-page", fill = false, Modifier.fillMaxWidth())
+                } else {
+                    // The history stays above, so the reader can open another day.
+                    Notice(stringRes(Res.string.front_page_edition_unreadable), error = true)
+                }
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -338,19 +395,40 @@ fun FrontPageScreen(
                     viewModel.printsUnattended,
                     onModel = viewModel::selectModel,
                     onPrint = {
-                        viewModel.print()
                         printSheet = false
+                        requestPrint()
                     },
                     onCancel = viewModel::cancel,
                     onSchedule = viewModel::setSchedule,
+                    publish = publishPrefs,
+                    onPublish = viewModel::setPublish,
                     onAccent = false,
                 )
             }
         }
     }
     if (detailsSheet && current != null) {
+        val sharer = rememberTextSharer()
+        val launcher = rememberAppLauncher()
+        val shareTitle = stringRes(Res.string.front_page_open_observer)
         ModalBottomSheet(onDismissRequest = { detailsSheet = false }) {
-            Details(current.edition, Modifier.navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 24.dp))
+            Details(
+                current.edition,
+                site,
+                onOpenSite =
+                    if (launcher.opensNapplets) {
+                        { event ->
+                            detailsSheet = false
+                            launcher.openSite(event, nav)
+                        }
+                    } else {
+                        null
+                    },
+                onShareSite = { event ->
+                    NAddress.createOrNull(event.kind, event.pubKey, event.dTag(), null)?.let { sharer.share("nostr:$it", event.title(), shareTitle) }
+                },
+                Modifier.navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
+            )
         }
     }
 }
@@ -369,8 +447,12 @@ fun FrontPageReaderScreen(
     val printer = printers?.of(accountViewModel.account)
     val editions by (printer?.editions ?: remember { MutableStateFlow(emptyList()) }).collectAsStateWithLifecycle()
     val edition = editions.firstOrNull { it.day == day }
-    val html by produceState<String?>(null, printer, day, edition?.code) { value = printer?.html(day) }
-    val shown = if (edition != null && html != null) ShownEdition(edition, html!!) else null
+    // Reset first: the last day's page must never show (or download) under this day's title.
+    val html by produceState<String?>(null, printer, day, edition?.sha256) {
+        value = null
+        value = printer?.html(day)
+    }
+    val shown = if (edition != null && html != null) ShownEdition(edition, html) else null
     val download = rememberEditionDownload()
 
     Scaffold(
@@ -397,7 +479,9 @@ private fun rememberEditionDownload(): (ShownEdition) -> Unit {
     val scope = rememberCoroutineScope()
     return remember(files, scope) {
         { shown ->
-            scope.launch { files.save("front-page-${shown.edition.day}-${shown.edition.code}.html", "text/html") { shown.html.encodeToByteArray() } }
+            val html = shown.html
+            // The copy leaves the app's sandbox: it carries the paper's CSP (older editions were kept without it).
+            if (html != null) scope.launch { files.save("front-page-${shown.edition.day}-${shown.edition.code}.html", "text/html") { withPaperCsp(html).encodeToByteArray() } }
         }
     }
 }
@@ -450,6 +534,8 @@ private fun PrintControls(
     onPrint: () -> Unit,
     onCancel: () -> Unit,
     onSchedule: (FrontPageSchedule) -> Unit,
+    publish: ObserverPrefs?,
+    onPublish: (Boolean) -> Unit,
     onAccent: Boolean,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -505,6 +591,78 @@ private fun PrintControls(
             }
         }
         ScheduleRow(schedule, unattended, onSchedule, ink)
+        publish?.let { PublishRow(it.publish, onPublish, ink) }
+    }
+}
+
+/** "Publish to my Observer": each clean edition also goes to the reader's public site. */
+@Composable
+private fun PublishRow(
+    on: Boolean,
+    onChange: (Boolean) -> Unit,
+    ink: Color,
+) {
+    Row(Modifier.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(MaterialSymbols.Public, contentDescription = null, tint = ink.copy(alpha = 0.85f), modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(12.dp))
+        Text(stringRes(Res.string.front_page_publish), style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.weight(1f))
+        Switch(checked = on, onCheckedChange = onChange)
+    }
+}
+
+/**
+ * Under the facts: the confirm before the first publish (nothing is uploaded until the reader
+ * says Publish), the publish in progress, or why it failed. Nothing when fine.
+ */
+@Composable
+private fun ObserverLine(
+    status: ObserverStatus,
+    onPublish: () -> Unit,
+    onNotNow: () -> Unit,
+    onAddServer: () -> Unit,
+    onRetry: () -> Unit,
+) {
+    when (status) {
+        ObserverStatus.AwaitingConsent ->
+            Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(MaterialSymbols.Public, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringRes(Res.string.front_page_observer_notice_title), style = MaterialTheme.typography.titleSmall)
+                    }
+                    Text(stringRes(Res.string.front_page_observer_notice_body), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                        TextButton(onClick = onNotNow) { Text(stringRes(Res.string.front_page_not_now)) }
+                        Button(onClick = onPublish, shape = RoundedCornerShape(14.dp)) { Text(stringRes(Res.string.front_page_publish_confirm)) }
+                    }
+                }
+            }
+        ObserverStatus.Publishing ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(8.dp))
+                Text(stringRes(Res.string.front_page_publishing), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        is ObserverStatus.Failed ->
+            when (status.reason) {
+                ObserverFailure.NO_SERVERS ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringRes(Res.string.front_page_publish_no_servers), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+                        TextButton(onClick = onAddServer) { Text(stringRes(Res.string.add_a_blossom_server)) }
+                    }
+                ObserverFailure.READ ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringRes(Res.string.front_page_publish_read_failed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+                        TextButton(onClick = onRetry) { Text(stringRes(Res.string.retry)) }
+                    }
+                else ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringRes(Res.string.front_page_publish_failed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+                        TextButton(onClick = onRetry) { Text(stringRes(Res.string.retry)) }
+                    }
+            }
+        else -> {}
     }
 }
 
@@ -665,10 +823,30 @@ private fun Facts(
 @Composable
 private fun Details(
     edition: SavedEdition,
+    site: NamedSiteEvent?,
+    onOpenSite: ((NamedSiteEvent) -> Unit)?,
+    onShareSite: (NamedSiteEvent) -> Unit,
     modifier: Modifier,
 ) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringRes(Res.string.front_page_details), style = MaterialTheme.typography.titleLarge)
+        // The reader's public Observer site, once there is one: open it as any nSite, or share it.
+        site?.let { event ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                onOpenSite?.let { open ->
+                    OutlinedButton(onClick = { open(event) }, shape = RoundedCornerShape(14.dp)) {
+                        Icon(MaterialSymbols.Public, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringRes(Res.string.front_page_open_observer))
+                    }
+                }
+                OutlinedButton(onClick = { onShareSite(event) }, shape = RoundedCornerShape(14.dp)) {
+                    Icon(MaterialSymbols.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringRes(Res.string.quick_action_share))
+                }
+            }
+        }
         DetailRow(stringRes(Res.string.front_page_edition_label), edition.code)
         DetailRow(stringRes(Res.string.front_page_model), edition.model)
         edition.tokens?.let { tokens ->
@@ -737,6 +915,7 @@ private fun Paper(
     fill: Boolean,
     modifier: Modifier,
 ) {
+    val html = shown.html ?: return
     val platform = LocalAppPlatform.current
     if (!platform.showsPapersInline) {
         Notice(stringRes(Res.string.front_page_cannot_show))
@@ -756,7 +935,7 @@ private fun Paper(
             .padding(if (fill) 0.dp else 8.dp),
     ) {
         platform.InlinePaperSurface(
-            html = shown.html,
+            html = html,
             title = "$MASTHEAD · ${edition.code}",
             // A new id on Retry opens a fresh session rather than waking the failed one.
             instanceId = "$instancePrefix-${edition.day}-${edition.code}-$attempt",
@@ -848,13 +1027,8 @@ private fun Notice(
     }
 }
 
-private fun grouped(n: Long): String =
-    n
-        .toString()
-        .reversed()
-        .chunked(3)
-        .joinToString(",")
-        .reversed()
+/** `12,480` in the reader's locale (`12.480`, `12 480`, …). */
+private fun grouped(n: Long): String = formatGrouped(n)
 
 /** The print in progress, or why the last one gave no page. A clean page shows as a kept edition. */
 @Composable
@@ -885,7 +1059,7 @@ private fun Progress(
             PrintStep.Probe -> stringRes(Res.string.front_page_step_probe)
             is PrintStep.Pull -> stringRes(Res.string.front_page_step_pull, step.desksDone, step.desksTotal)
             is PrintStep.Write ->
-                stringRes(if (step.round == 1) Res.string.front_page_step_write else Res.string.front_page_step_fix, grouped(step.chars.toLong()))
+                pluralStringRes(if (step.round == 1) Res.plurals.front_page_step_write else Res.plurals.front_page_step_fix, step.chars, grouped(step.chars.toLong()))
             is PrintStep.Check -> stringRes(Res.string.front_page_step_check)
         }
     Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
@@ -909,7 +1083,21 @@ private fun failureText(run: FrontPageRun.Failed): String =
         WriterFailure.HTTP -> stringRes(Res.string.front_page_fail_http, run.status ?: 0)
         WriterFailure.UNSUPPORTED -> stringRes(Res.string.front_page_unsupported)
         WriterFailure.UNREACHABLE -> stringRes(Res.string.front_page_fail_unreachable)
+        WriterFailure.CUT_OFF -> stringRes(Res.string.front_page_fail_cut_off)
+        WriterFailure.INSECURE_URL -> stringRes(Res.string.front_page_fail_insecure)
     }
+
+/** The boundary's verdict kinds in the reader's words, never the enum's name. */
+@Composable
+private fun violationLabel(kind: Violation.Kind): String =
+    stringRes(
+        when (kind) {
+            Violation.Kind.QUOTE -> Res.string.front_page_violation_quote
+            Violation.Kind.IMAGE -> Res.string.front_page_violation_image
+            Violation.Kind.LINK -> Res.string.front_page_violation_link
+            Violation.Kind.MARKUP -> Res.string.front_page_violation_markup
+        },
+    )
 
 @Composable
 private fun Refused(violations: List<Violation>) {
@@ -918,7 +1106,7 @@ private fun Refused(violations: List<Violation>) {
             Text(stringRes(Res.string.front_page_refused_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onErrorContainer)
             Text(stringRes(Res.string.front_page_refused_body), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer)
             violations.take(12).forEach {
-                Text("${it.kind} · ${it.excerpt.take(90)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+                Text("${violationLabel(it.kind)} · ${it.excerpt.take(90)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
             }
         }
     }

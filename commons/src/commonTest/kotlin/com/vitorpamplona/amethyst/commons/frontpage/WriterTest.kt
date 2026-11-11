@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.frontpage
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class WriterTest {
@@ -78,5 +79,60 @@ class WriterTest {
         assertTrue(message.contains("Reader: Alice"))
         assertTrue(systemPrompt().contains("color-scheme: light"))
         assertTrue(repairMessage(listOf(Violation(Violation.Kind.QUOTE, "not found", "x"))).contains("- QUOTE: not found"))
+    }
+
+    private fun streamOf(vararg lines: String): Written {
+        val reader = StreamReader {}
+        for (line in lines) if (reader.read(line)) break
+        return reader.finish()
+    }
+
+    @Test
+    fun aStreamEndsAtDoneAfterStop() {
+        val written =
+            streamOf(
+                """data: {"choices":[{"delta":{"content":"<html>"}}]}""",
+                """data: {"choices":[{"delta":{},"finish_reason":"stop"}]}""",
+                "data: [DONE]",
+                """data: {"choices":[{"delta":{"content":"ignored"}}]}""",
+            )
+        assertEquals("<html>", written.text)
+        // [DONE] alone still ends a provider's stream that never names a finish reason.
+        assertEquals("<p>", streamOf("""data: {"choices":[{"delta":{"content":"<p>"}}]}""", "data: [DONE]").text)
+    }
+
+    @Test
+    fun aCutOffStreamIsNeverAPaper() {
+        val length =
+            runCatching {
+                streamOf("""data: {"choices":[{"delta":{"content":"<html>"},"finish_reason":"length"}]}""", "data: [DONE]")
+            }.exceptionOrNull()
+        assertEquals(WriterFailure.CUT_OFF, (length as WriterException).failure)
+
+        val error = runCatching { streamOf("""data: {"choices":[{"delta":{"content":"<html>"}}]}""", """data: {"error":{"message":"overloaded"}}""") }.exceptionOrNull()
+        assertEquals(WriterFailure.CUT_OFF, (error as WriterException).failure)
+        assertEquals("overloaded", error.providerSaid)
+
+        val unfinished = runCatching { streamOf("""data: {"choices":[{"delta":{"content":"<html>"}}]}""") }.exceptionOrNull()
+        assertEquals(WriterFailure.CUT_OFF, (unfinished as WriterException).failure)
+    }
+
+    @Test
+    fun aWholeAnswerIsCheckedTheSameWay() {
+        assertEquals("<p>x</p>", readCompletion("""{"choices":[{"message":{"content":"<p>x</p>"}}]}""").text)
+        assertEquals("<p>x</p>", readCompletion("""{"choices":[{"message":{"content":"<p>x</p>"},"finish_reason":"stop"}]}""").text)
+        val cut = runCatching { readCompletion("""{"choices":[{"message":{"content":"<p>x"},"finish_reason":"length"}]}""") }.exceptionOrNull()
+        assertEquals(WriterFailure.CUT_OFF, (cut as WriterException).failure)
+        val error = runCatching { readCompletion("""{"error":{"message":"bad"}}""") }.exceptionOrNull()
+        assertEquals(WriterFailure.CUT_OFF, (error as WriterException).failure)
+    }
+
+    @Test
+    fun printProgressSkipsMostStreamChunks() {
+        assertTrue(progressWorthShowing(PrintStep.Probe, PrintStep.Write(1, 0)))
+        assertFalse(progressWorthShowing(PrintStep.Write(1, 0), PrintStep.Write(1, 50)))
+        assertTrue(progressWorthShowing(PrintStep.Write(1, 0), PrintStep.Write(1, WRITE_PROGRESS_CHARS)))
+        assertTrue(progressWorthShowing(PrintStep.Write(1, 5_000), PrintStep.Write(2, 10)))
+        assertTrue(progressWorthShowing(PrintStep.Write(1, 5_000), PrintStep.Check(1)))
     }
 }

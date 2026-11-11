@@ -24,7 +24,22 @@ import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuild
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 
 /** Why the writer failed, for the UI to put in words (commons has no strings). */
-enum class WriterFailure { REJECTED, NO_CREDIT, RATE_LIMITED, UNKNOWN_MODEL, UNREACHABLE, EMPTY, HTTP, UNSUPPORTED }
+enum class WriterFailure {
+    REJECTED,
+    NO_CREDIT,
+    RATE_LIMITED,
+    UNKNOWN_MODEL,
+    UNREACHABLE,
+    EMPTY,
+    HTTP,
+    UNSUPPORTED,
+
+    /** The answer stopped before the page was done: an error frame, a `finish_reason` other than `stop`, or no end at all. */
+    CUT_OFF,
+
+    /** The key's URL breaks NIP-FA's https rule, so the key was never sent. */
+    INSECURE_URL,
+}
 
 class WriterException(
     val failure: WriterFailure,
