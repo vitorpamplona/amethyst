@@ -44,14 +44,9 @@ actual object FrontPageClock {
         minute: Int,
     ): Long = atIn(zone(), nowEpochSec, hour, minute, plusDays = 0)
 
-    actual fun localZone(): String = zone().id
+    actual fun localZone(): String? = zone().id.takeIf { ZoneIdCronZone.of(it) != null }
 
-    actual fun cronZone(zone: String?): CronZone = zone?.let { ZoneIdCronZone.of(it) } ?: ZoneIdCronZone(zone())
-
-    actual fun localHourMinute(epochSec: Long): Pair<Int, Int> {
-        val time = Instant.ofEpochSecond(epochSec).atZone(zone())
-        return time.hour to time.minute
-    }
+    actual fun cronZone(zone: String?): CronZone? = zone?.let { ZoneIdCronZone.of(it) }
 
     internal fun dayKeyIn(
         zone: ZoneId,

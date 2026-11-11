@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -77,17 +78,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.frontpage.CronWords
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageClock
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageGate
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageModels
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageRun
-import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSchedule
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageViewModel
 import com.vitorpamplona.amethyst.commons.frontpage.MASTHEAD
 import com.vitorpamplona.amethyst.commons.frontpage.MorningScheduleView
@@ -97,6 +103,7 @@ import com.vitorpamplona.amethyst.commons.frontpage.ObserverStatus
 import com.vitorpamplona.amethyst.commons.frontpage.PrintResult
 import com.vitorpamplona.amethyst.commons.frontpage.PrintStep
 import com.vitorpamplona.amethyst.commons.frontpage.SavedEdition
+import com.vitorpamplona.amethyst.commons.frontpage.ScheduleState
 import com.vitorpamplona.amethyst.commons.frontpage.ShownEdition
 import com.vitorpamplona.amethyst.commons.frontpage.Violation
 import com.vitorpamplona.amethyst.commons.frontpage.WriterFailure
@@ -104,6 +111,7 @@ import com.vitorpamplona.amethyst.commons.frontpage.dayOfWeek
 import com.vitorpamplona.amethyst.commons.frontpage.formatUsd
 import com.vitorpamplona.amethyst.commons.frontpage.withPaperCsp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ScheduleEdit
@@ -126,7 +134,6 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_details
 import com.vitorpamplona.amethyst.commons.resources.front_page_download
 import com.vitorpamplona.amethyst.commons.resources.front_page_edition_label
 import com.vitorpamplona.amethyst.commons.resources.front_page_edition_unreadable
-import com.vitorpamplona.amethyst.commons.resources.front_page_every_morning
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_credit
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_cut_off
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_empty
@@ -138,6 +145,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_fail_rejected
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_unreachable
 import com.vitorpamplona.amethyst.commons.resources.front_page_fixed_once
 import com.vitorpamplona.amethyst.commons.resources.front_page_last_printed
+import com.vitorpamplona.amethyst.commons.resources.front_page_last_printed_ago
 import com.vitorpamplona.amethyst.commons.resources.front_page_model
 import com.vitorpamplona.amethyst.commons.resources.front_page_model_hint
 import com.vitorpamplona.amethyst.commons.resources.front_page_model_id
@@ -170,9 +178,24 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_read_full
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_body
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_cannot_sign
-import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_line
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_change_time
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_daily
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_days
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_every_hours
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_in_zone
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_locked
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_monthly
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_no_write_relays
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_no_zone
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_not_accepted
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_not_expressible
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_not_set_up
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_read_only
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_times_a_day
 import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_unreachable
 import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_unreadable
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_weekdays
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_weekends
 import com.vitorpamplona.amethyst.commons.resources.front_page_scheduled
 import com.vitorpamplona.amethyst.commons.resources.front_page_set_up
 import com.vitorpamplona.amethyst.commons.resources.front_page_show_failed
@@ -193,9 +216,11 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_violation_link
 import com.vitorpamplona.amethyst.commons.resources.front_page_violation_markup
 import com.vitorpamplona.amethyst.commons.resources.front_page_violation_quote
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.commons.resources.retry
 import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.resources.tor_waiting
+import com.vitorpamplona.amethyst.commons.resources.try_again
 import com.vitorpamplona.amethyst.commons.resources.yesterday
 import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import com.vitorpamplona.amethyst.commons.ui.components.PillColors
@@ -207,10 +232,9 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.DateSkeletonFormatter
 import com.vitorpamplona.amethyst.commons.ui.note.calendarYearAndDay
+import com.vitorpamplona.amethyst.commons.ui.note.durationPhrase
 import com.vitorpamplona.amethyst.commons.ui.note.rememberIs24HourClock
-import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeAgoLabels
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
-import com.vitorpamplona.amethyst.commons.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
@@ -222,7 +246,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
@@ -296,9 +319,10 @@ fun FrontPageScreen(
     val estimate by viewModel.estimate.collectAsStateWithLifecycle()
     val schedule by viewModel.schedule.collectAsStateWithLifecycle()
     val scheduleProblem by viewModel.scheduleProblem.collectAsStateWithLifecycle()
+    val schedulePending by viewModel.schedulePending.collectAsStateWithLifecycle()
     val scheduleActions =
-        remember(viewModel) {
-            ScheduleActions(viewModel::setScheduleEnabled, viewModel::setScheduleTime, viewModel::setPrintsHere)
+        remember(viewModel, nav) {
+            ScheduleActions(viewModel::setScheduleEnabled, viewModel::setScheduleTime, viewModel::setPrintsHere, viewModel::retryScheduleDecrypt) { nav.nav(Route.EditRelays) }
         }
     val observerPrefs by viewModel.observerPrefs.collectAsStateWithLifecycle()
     val observer by viewModel.observer.collectAsStateWithLifecycle()
@@ -358,6 +382,7 @@ fun FrontPageScreen(
                             hasEditions = false,
                             schedule,
                             scheduleProblem,
+                            schedulePending != null,
                             scheduleActions,
                             onModel = viewModel::selectModel,
                             onPrint = requestPrint,
@@ -414,6 +439,7 @@ fun FrontPageScreen(
                     hasEditions = editions.isNotEmpty(),
                     schedule,
                     scheduleProblem,
+                    schedulePending != null,
                     scheduleActions,
                     onModel = viewModel::selectModel,
                     onPrint = {
@@ -551,6 +577,7 @@ private fun PrintControls(
     hasEditions: Boolean,
     schedule: MorningScheduleView,
     scheduleProblem: ScheduleEdit?,
+    scheduleBusy: Boolean,
     scheduleActions: ScheduleActions,
     onModel: (String) -> Unit,
     onPrint: () -> Unit,
@@ -611,7 +638,7 @@ private fun PrintControls(
                 )
             }
         }
-        ScheduleRow(schedule, scheduleProblem, scheduleActions, ink)
+        ScheduleRow(schedule, scheduleProblem, scheduleBusy, scheduleActions, ink, onAccent)
         publish?.let { PublishRow(it.publish, onPublish, ink) }
     }
 }
@@ -745,71 +772,97 @@ private fun ModelPicker(
     }
 }
 
-/** What the schedule controls do: the first two edit the synced schedule, the last this device only. */
+/** What the schedule controls do: the first two edit the synced schedule, the third this device's part in it. */
 @Stable
 class ScheduleActions(
     val onEnabled: (Boolean) -> Unit,
     val onTime: (hour: Int, minute: Int) -> Unit,
     val onPrintsHere: (Boolean) -> Unit,
+    val onRetryDecrypt: () -> Unit,
+    val onRelaySettings: () -> Unit,
 )
 
 /**
- * "Every morning" with its time (the reader's clock: 6:00 AM or 06:00) and a switch, for the
- * schedule all of the reader's devices share; then "Print from this device", who printed last,
- * and a warning when a due morning didn't print. A schedule the editor can't show (a cron set
- * elsewhere) is shown as written, read-only.
+ * The schedule all of the reader's devices share: its switch and what it says in words ("Every
+ * weekday at 6:00 AM", on this device's clock; tap to change the time when this editor can), then
+ * "Print from this device", who printed last, and a warning when a due morning didn't print.
+ * While an edit is on its way ([busy]) the switches show it and every control waits.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScheduleRow(
     schedule: MorningScheduleView,
     problem: ScheduleEdit?,
+    busy: Boolean,
     actions: ScheduleActions,
     ink: Color,
+    onAccent: Boolean,
 ) {
+    if (schedule.state == ScheduleState.LOADING) return
     var picking by remember { mutableStateOf(false) }
-    val time = rememberScheduleTime(schedule.schedule())
-    val simple = schedule.simple
-    val daily = simple != null && simple.weekdays == null
     val note = ink.copy(alpha = 0.75f)
     val indent = Modifier.padding(start = 34.dp)
+    val canToggle = schedule.state == ScheduleState.READY || schedule.state == ScheduleState.NOT_SET_UP
     Column {
-        Row(Modifier.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(MaterialSymbols.Schedule, contentDescription = null, tint = ink.copy(alpha = 0.85f), modifier = Modifier.size(22.dp))
-            Spacer(Modifier.width(12.dp))
-            Text(
-                stringRes(if (daily) Res.string.front_page_every_morning else Res.string.front_page_scheduled),
-                style = MaterialTheme.typography.bodyLarge,
-                color = ink,
-                modifier = Modifier.weight(1f),
-            )
-            if (schedule.readable) {
-                if (simple != null) {
-                    TextButton(onClick = { picking = true }, colors = ButtonDefaults.textButtonColors(contentColor = ink)) {
-                        Text(time, style = MaterialTheme.typography.titleMedium)
-                    }
+        SwitchRow(
+            label = stringRes(Res.string.front_page_scheduled),
+            checked = schedule.enabled,
+            enabled = canToggle && !busy,
+            onChange = actions.onEnabled,
+            ink = ink,
+            icon = MaterialSymbols.Schedule,
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        when (schedule.state) {
+            ScheduleState.NOT_SET_UP -> ScheduleNote(stringRes(Res.string.front_page_schedule_not_set_up), note, indent)
+            ScheduleState.CANT_DECRYPT -> {
+                ScheduleNote(stringRes(if (schedule.retryable) Res.string.front_page_schedule_locked else Res.string.front_page_schedule_read_only), note, indent)
+                if (schedule.retryable) {
+                    TextButton(onClick = actions.onRetryDecrypt, modifier = indent, colors = ButtonDefaults.textButtonColors(contentColor = ink)) { Text(stringRes(Res.string.try_again)) }
                 }
-                Switch(checked = schedule.enabled, onCheckedChange = actions.onEnabled)
             }
+            ScheduleState.UNREADABLE -> {
+                ScheduleNote(stringRes(Res.string.front_page_schedule_unreadable), note, indent)
+                schedule.words?.let { ScheduleNote(scheduleWords(it), note, indent) }
+            }
+            else ->
+                schedule.words?.let { words ->
+                    val sentence = scheduleWords(words)
+                    val editable = schedule.editableTime != null && !busy
+                    Text(
+                        sentence,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ink,
+                        modifier =
+                            indent
+                                .heightIn(min = 48.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable(enabled = editable, onClickLabel = stringRes(Res.string.front_page_schedule_change_time), role = Role.Button) { picking = true }
+                                .padding(vertical = 12.dp, horizontal = 4.dp),
+                    )
+                }
         }
-        if (!schedule.readable) {
-            ScheduleNote(stringRes(Res.string.front_page_schedule_unreadable), note, indent)
-        } else if (!daily) {
-            // A weekday or cron schedule says exactly what it is.
-            ScheduleNote(schedule.cron, note, indent)
+        if (!schedule.hasWriteRelays) {
+            ScheduleNote(stringRes(Res.string.front_page_schedule_no_write_relays), note, indent)
+            TextButton(onClick = actions.onRelaySettings, modifier = indent, colors = ButtonDefaults.textButtonColors(contentColor = ink)) { Text(stringRes(Res.string.relay_settings)) }
         }
-        Row(Modifier.heightIn(min = 40.dp).then(indent), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringRes(Res.string.front_page_print_from_device), style = MaterialTheme.typography.bodyMedium, color = ink, modifier = Modifier.weight(1f))
-            Switch(checked = schedule.printsHere && schedule.canPrintHere, onCheckedChange = actions.onPrintsHere, enabled = schedule.canPrintHere)
-        }
+        SwitchRow(
+            label = stringRes(Res.string.front_page_print_from_device),
+            checked = schedule.printsHere && schedule.canPrintHere,
+            enabled = schedule.canPrintHere && !busy && schedule.state != ScheduleState.CANT_DECRYPT && schedule.state != ScheduleState.UNREADABLE,
+            onChange = actions.onPrintsHere,
+            ink = ink,
+            modifier = indent,
+            style = MaterialTheme.typography.bodyMedium,
+        )
         // Amber and remote signers need the reader to decrypt the AI key: say so, in few words.
         if (!schedule.canPrintHere) ScheduleNote(stringRes(Res.string.front_page_needs_device_key), note, indent)
         LastPrinted(schedule, note, indent)
-        ScheduleWarnings(schedule, indent, ink)
-        problem?.let { ScheduleNote(stringRes(scheduleProblemText(it)), MaterialTheme.colorScheme.error, indent) }
+        ScheduleWarnings(schedule, indent, ink, onAccent)
+        problem?.let { ScheduleProblem(stringRes(scheduleProblemText(it)), ink, onAccent, indent) }
     }
     if (picking) {
-        val start = remember(schedule) { pickerStart(schedule) }
+        val start = remember(schedule.editableTime) { schedule.editableTime ?: (7 to 0) }
         val state = rememberTimePickerState(initialHour = start.first, initialMinute = start.second, is24Hour = rememberIs24HourClock())
         AlertDialog(
             onDismissRequest = { picking = false },
@@ -826,15 +879,90 @@ private fun ScheduleRow(
     }
 }
 
+/** A labelled switch whose whole row toggles it, and is one switch to a screen reader. */
+@Composable
+private fun SwitchRow(
+    label: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onChange: (Boolean) -> Unit,
+    ink: Color,
+    modifier: Modifier = Modifier,
+    icon: MaterialSymbol? = null,
+    style: TextStyle,
+) {
+    Row(
+        modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onChange),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = ink.copy(alpha = 0.85f), modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(12.dp))
+        }
+        Text(label, style = style, color = ink, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
+    }
+}
+
 private fun scheduleProblemText(problem: ScheduleEdit) =
     when (problem) {
         ScheduleEdit.Unreadable -> Res.string.front_page_schedule_unreadable
         ScheduleEdit.CannotSign -> Res.string.front_page_schedule_cannot_sign
+        ScheduleEdit.NotAccepted -> Res.string.front_page_schedule_not_accepted
+        ScheduleEdit.NoWriteRelays -> Res.string.front_page_schedule_no_write_relays
+        ScheduleEdit.NotExpressible -> Res.string.front_page_schedule_not_expressible
+        ScheduleEdit.NoZone -> Res.string.front_page_schedule_no_zone
         else -> Res.string.front_page_schedule_unreachable
     }
 
-/** The picker opens on the schedule's time as this device's clock reads it, from the cron's own fields when it can. */
-private fun pickerStart(schedule: MorningScheduleView): Pair<Int, Int> = schedule.schedule().localTime(TimeUtils.now()) ?: schedule.simple?.let { it.hour to it.minute } ?: (7 to 0)
+/**
+ * The schedule in words, on this device's clock: "Every weekday at 6:00 AM", "3 times a day at
+ * …", "Every 6 hours at :15", "Monthly on day 1 at …", the zone named when the times are the
+ * schedule's own, else the expression as written.
+ */
+@Composable
+private fun scheduleWords(words: CronWords): String {
+    val format = rememberTimeOfDayFormatter()
+    val dayNames = remember { DateSkeletonFormatter("EEE") }
+    val now = TimeUtils.now()
+
+    fun time(
+        hour: Int,
+        minute: Int,
+    ) = format(FrontPageClock.todayAt(now, hour, minute) * 1000)
+    val (text, zone) =
+        when (words) {
+            is CronWords.Days -> {
+                val at = time(words.time.hour, words.time.minute)
+                val days = words.time.weekdays?.takeIf { it.size in 1..6 }
+                val said =
+                    when (days) {
+                        null -> stringRes(Res.string.front_page_schedule_daily, at)
+                        WEEKDAYS -> stringRes(Res.string.front_page_schedule_weekdays, at)
+                        WEEKEND -> stringRes(Res.string.front_page_schedule_weekends, at)
+                        else -> {
+                            // A noon of each weekday this week, on this device's clock, named the platform's way.
+                            val noon = FrontPageClock.todayAt(now, 12, 0)
+                            val today = dayOfWeek(FrontPageClock.dayKey(noon)) ?: 1
+                            val names = days.sorted().joinToString(", ") { dayNames.format((noon + (it - today) * 86_400L) * 1000) }
+                            stringRes(Res.string.front_page_schedule_days, names, at)
+                        }
+                    }
+                said to words.zone
+            }
+            is CronWords.TimesADay -> pluralStringRes(Res.plurals.front_page_schedule_times_a_day, words.times.size, words.times.size, words.times.joinToString(", ") { time(it.first, it.second) }) to words.zone
+            is CronWords.EveryHours -> pluralStringRes(Res.plurals.front_page_schedule_every_hours, words.hours, words.hours, words.minute.toString().padStart(2, '0')) to null
+            is CronWords.Monthly -> stringRes(Res.string.front_page_schedule_monthly, words.day, time(words.hour, words.minute)) to words.zone
+            is CronWords.Raw -> words.cron to null
+        }
+    return if (zone != null) stringRes(Res.string.front_page_schedule_in_zone, text, zone) else text
+}
+
+private val WEEKDAYS = setOf(1, 2, 3, 4, 5)
+private val WEEKEND = setOf(6, 7)
 
 @Composable
 private fun ScheduleNote(
@@ -845,22 +973,44 @@ private fun ScheduleNote(
     Text(text, style = MaterialTheme.typography.bodySmall, color = color, modifier = modifier)
 }
 
-/** "Last printed by Desktop (Linux), 2 hours ago": the last claim's device and when it finished; "Not printed yet" before. */
+/**
+ * Why the last change wasn't saved, announced politely. On the hero's gradient it keeps the
+ * readable ink, with an icon to mark it, rather than an error red the gradient swallows.
+ */
+@Composable
+private fun ScheduleProblem(
+    text: String,
+    ink: Color,
+    onAccent: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val color = if (onAccent) ink else MaterialTheme.colorScheme.error
+    Row(modifier.semantics { liveRegion = LiveRegionMode.Polite }, verticalAlignment = Alignment.CenterVertically) {
+        Icon(MaterialSymbols.Warning, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall, color = color)
+    }
+}
+
+/**
+ * "Last printed by Desktop (Linux), 2 hours ago": the finished claim's device and when; "Last
+ * printed 2 days ago" when the last run isn't the latest claim's; "Not printed yet" before the first.
+ */
 @Composable
 private fun LastPrinted(
     schedule: MorningScheduleView,
     color: Color,
     modifier: Modifier = Modifier,
 ) {
-    if (!schedule.readable) return
-    val ran = schedule.lastRan
-    if (ran == null) {
+    if (schedule.state != ScheduleState.READY) return
+    val ago = schedule.lastRanAgo
+    if (schedule.lastRan == null || ago == null) {
         if (schedule.enabled) ScheduleNote(stringRes(Res.string.front_page_never_printed), color, modifier)
         return
     }
-    val by = schedule.lastBy ?: return
-    val labels = rememberTimeAgoLabels()
-    ScheduleNote(stringRes(Res.string.front_page_last_printed, by, timeAgoShort(ran, labels)), color, modifier)
+    val span = durationPhrase(ago)
+    val by = schedule.lastBy
+    ScheduleNote(if (by != null) stringRes(Res.string.front_page_last_printed, by, span) else stringRes(Res.string.front_page_last_printed_ago, span), color, modifier)
 }
 
 /** A due morning that didn't print, shown on every device: dates on this device's calendar. */
@@ -869,25 +1019,10 @@ private fun ScheduleWarnings(
     schedule: MorningScheduleView,
     modifier: Modifier = Modifier,
     ink: Color = MaterialTheme.colorScheme.onSurface,
+    onAccent: Boolean = false,
 ) {
-    val warn = if (ink == MaterialTheme.colorScheme.onSurface) MaterialTheme.colorScheme.error else ink
     schedule.missedSince?.let { ran ->
-        ScheduleNote(stringRes(Res.string.front_page_not_printed_since, editionTitle(FrontPageClock.dayKey(ran))), warn, modifier)
-    }
-}
-
-/** The schedule's time on the reader's clock, kept current: a screen left open overnight moves on. */
-@Composable
-private fun rememberScheduleTime(schedule: FrontPageSchedule): String {
-    val format = rememberTimeOfDayFormatter()
-    val now by produceState(TimeUtils.now()) {
-        while (true) {
-            delay(60_000)
-            value = TimeUtils.now()
-        }
-    }
-    return remember(format, schedule.cron, schedule.zone, now / 3_600) {
-        schedule.displayRun(now)?.let { format(it * 1000) } ?: schedule.cron
+        ScheduleProblem(stringRes(Res.string.front_page_not_printed_since, editionTitle(FrontPageClock.dayKey(ran))), ink, onAccent, modifier)
     }
 }
 
@@ -897,15 +1032,19 @@ private fun ScheduleLine(
     schedule: MorningScheduleView,
     onOpen: () -> Unit,
 ) {
-    if (!schedule.readable) return
-    val time = rememberScheduleTime(schedule.schedule())
+    if (schedule.state != ScheduleState.READY) return
+    val words = schedule.words ?: return
     Row(
-        Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onOpen).padding(vertical = 4.dp, horizontal = 2.dp),
+        Modifier
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onOpen)
+            .padding(horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(MaterialSymbols.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(6.dp))
-        Text(stringRes(Res.string.front_page_schedule_line, time), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+        Text(scheduleWords(words), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
         Icon(MaterialSymbols.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
     }
 }

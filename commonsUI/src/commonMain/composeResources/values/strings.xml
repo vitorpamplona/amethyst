@@ -9557,7 +9557,6 @@
     <string name="front_page_banner_write">Writing your paper…</string>
     <string name="front_page_banner_check">Checking your paper…</string>
     <string name="front_page_banner_probe">Printing your paper…</string>
-    <string name="front_page_every_morning">Every morning</string>
     <string name="front_page_needs_device_key">Prints on its own only with your key on this device</string>
     <string name="front_page_pick_time">Print at</string>
     <string name="front_page_ready_title">Your paper is ready</string>
@@ -9579,15 +9578,37 @@
     </plurals>
     <string name="front_page_new_edition">New edition</string>
     <string name="front_page_model_hint">Name a model to print, e.g. llama3.3</string>
-    <string name="front_page_schedule_line">Every morning at %1$s</string>
-    <string name="front_page_scheduled">On a schedule</string>
+    <string name="front_page_scheduled">Print on a schedule</string>
     <string name="front_page_print_from_device">Print from this device</string>
-    <string name="front_page_last_printed">Last printed by %1$s, %2$s</string>
+    <string name="front_page_last_printed">Last printed by %1$s, %2$s ago</string>
+    <string name="front_page_last_printed_ago">Last printed %1$s ago</string>
     <string name="front_page_never_printed">Not printed yet</string>
     <string name="front_page_not_printed_since">Not printed since %1$s</string>
     <string name="front_page_schedule_unreadable">Your schedule was saved by an app this version can't read</string>
     <string name="front_page_schedule_unreachable">Couldn't reach your relays. Nothing was changed.</string>
     <string name="front_page_schedule_cannot_sign">Your signer couldn't save the schedule</string>
+    <string name="front_page_schedule_not_accepted">Only some of your relays took the change, so your other devices may not see it yet. Try again.</string>
+    <string name="front_page_schedule_no_write_relays">Your devices share this schedule through the relays you write to, and you have none set yet.</string>
+    <string name="front_page_schedule_not_expressible">That time falls on a clock change in the schedule's time zone. Pick another.</string>
+    <string name="front_page_schedule_no_zone">This device can't tell its time zone, so it can't set a time.</string>
+    <string name="front_page_schedule_not_set_up">Not set up yet</string>
+    <string name="front_page_schedule_locked">Your signer hasn't opened your schedule</string>
+    <string name="front_page_schedule_read_only">Log in with your key to see your schedule</string>
+    <string name="front_page_schedule_change_time">Change time</string>
+    <string name="front_page_schedule_daily">Every day at %1$s</string>
+    <string name="front_page_schedule_weekdays">Every weekday at %1$s</string>
+    <string name="front_page_schedule_weekends">Weekends at %1$s</string>
+    <string name="front_page_schedule_days">%1$s at %2$s</string>
+    <string name="front_page_schedule_monthly">Monthly on day %1$d at %2$s</string>
+    <string name="front_page_schedule_in_zone">%1$s (%2$s)</string>
+    <plurals name="front_page_schedule_times_a_day">
+        <item quantity="one">Once a day at %2$s</item>
+        <item quantity="other">%1$d times a day at %2$s</item>
+    </plurals>
+    <plurals name="front_page_schedule_every_hours">
+        <item quantity="one">Every hour at :%2$s</item>
+        <item quantity="other">Every %1$d hours at :%2$s</item>
+    </plurals>
     <string name="front_page_read_full">Read full screen</string>
     <string name="front_page_details">About this edition</string>
     <string name="front_page_edition_label">Edition</string>

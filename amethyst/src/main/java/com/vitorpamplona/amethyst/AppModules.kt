@@ -46,7 +46,6 @@ import com.vitorpamplona.amethyst.commons.frontpage.DataStoreObserverPrefsStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageEditionStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageInstallInfo
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
-import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSchedule
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduleWatcher
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.NoteState
@@ -1118,7 +1117,7 @@ class AppModules(
             powPublishQueue.cancelForOwner(pubkey)
             powJobStore.removeForAccount(pubkey)
             // Its morning edition must not wake for an account that is gone, nor its papers stay.
-            frontPageScheduler.reschedule(pubkey, FrontPageSchedule())
+            frontPageScheduler.forget(pubkey)
             frontPagePrinters.forget(pubkey)
         }
 

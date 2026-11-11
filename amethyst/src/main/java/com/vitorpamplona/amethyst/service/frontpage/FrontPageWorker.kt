@@ -26,11 +26,13 @@ import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageMorning
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSchedule
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduleWatcher
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduler
@@ -47,7 +49,12 @@ import java.util.concurrent.TimeUnit
  * occurrence of the synced schedule's cron in its zone, network-constrained, and only where the
  * reader turned on "Print from this device" ([FrontPageScheduleWatcher] cancels it otherwise).
  * Which of the reader's devices prints an occurrence is decided by its claim, in the run.
- * WorkManager keeps it across reboots. Each run schedules the next.
+ * WorkManager keeps it across reboots. Each run schedules the next, after itself.
+ *
+ * The job that waits and the print that runs are kept apart: a reschedule never replaces a job
+ * that is running (that would cancel a paid print), and a job already waiting for the same
+ * instant is left alone (every cold start reschedules), so it is replaced only when the time
+ * changed. The instant a job waits for is in its tags.
  */
 class AndroidFrontPageScheduler(
     private val context: Context,
@@ -60,29 +67,58 @@ class AndroidFrontPageScheduler(
         val name = workName(account)
         val now = TimeUtils.now()
         val next = if (schedule.enabled) schedule.nextRun(now) else null
-        if (next == null) {
-            manager.cancelUniqueWork(name)
-            return
+        val jobs =
+            try {
+                manager.getWorkInfosForUniqueWork(name).get()
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not read the front page job", e)
+                emptyList()
+            }
+        when (jobAction(jobs.map { it.state to it.tags }, next)) {
+            JobAction.LEAVE -> {}
+            JobAction.CANCEL -> manager.cancelUniqueWork(name)
+            JobAction.REPLACE -> {
+                val at = next ?: return
+                manager.enqueueUniqueWork(name, ExistingWorkPolicy.REPLACE, request(account, at - now, dueTag(at)))
+                Log.d(TAG) { "Next front page for ${account.take(8)} in ${(at - now) / 60} min" }
+            }
         }
-        val delaySec = next - now
-        manager.enqueueUniqueWork(name, ExistingWorkPolicy.REPLACE, request(account, delaySec))
-        Log.d(TAG) { "Next front page for ${account.take(8)} in ${delaySec / 60} min" }
+    }
+
+    /** From a run that is ending: the next one goes after it, without cancelling it. */
+    fun scheduleAfterRun(
+        account: HexKey,
+        schedule: FrontPageSchedule,
+    ) {
+        val now = TimeUtils.now()
+        val next = (if (schedule.enabled) schedule.nextRun(now) else null) ?: return
+        WorkManager.getInstance(context).enqueueUniqueWork(workName(account), ExistingWorkPolicy.APPEND_OR_REPLACE, request(account, next - now, dueTag(next)))
+        Log.d(TAG) { "Next front page for ${account.take(8)} in ${(next - now) / 60} min" }
+    }
+
+    /** A removed account: every job goes, a running one too. */
+    override fun forget(account: HexKey) {
+        val manager = WorkManager.getInstance(context)
+        manager.cancelUniqueWork(workName(account))
+        manager.cancelUniqueWork(catchUpName(account))
     }
 
     /** A morning missed while the phone was off or the app closed: once, now, beside the next one. */
     override fun runNow(account: HexKey) {
-        WorkManager.getInstance(context).enqueueUniqueWork(catchUpName(account), ExistingWorkPolicy.KEEP, request(account, 0, catchUp = true))
+        WorkManager.getInstance(context).enqueueUniqueWork(catchUpName(account), ExistingWorkPolicy.KEEP, request(account, 0, null, catchUp = true))
     }
 
     private fun request(
         account: HexKey,
         delaySec: Long,
+        due: String?,
         catchUp: Boolean = false,
     ) = OneTimeWorkRequestBuilder<FrontPageWorker>()
-        .setInitialDelay(delaySec, TimeUnit.SECONDS)
+        .setInitialDelay(delaySec.coerceAtLeast(0), TimeUnit.SECONDS)
         .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
         .setInputData(workDataOf(FrontPageWorker.KEY_ACCOUNT to account, FrontPageWorker.KEY_CATCH_UP to catchUp))
         .addTag(TAG)
+        .apply { if (due != null) addTag(due) }
         .build()
 
     companion object {
@@ -91,7 +127,29 @@ class AndroidFrontPageScheduler(
         fun workName(account: HexKey) = "front_page_${account.lowercase()}"
 
         fun catchUpName(account: HexKey) = "front_page_catchup_${account.lowercase()}"
+
+        /** The instant a job waits for, as a tag: a reschedule to the same instant leaves it. */
+        fun dueTag(epochSec: Long) = "front_page_due_$epochSec"
     }
+}
+
+/** What a reschedule does to the job already there. */
+enum class JobAction { LEAVE, CANCEL, REPLACE }
+
+/**
+ * A reschedule to [next] (null: off) given the account's [jobs] (their states and tags): a
+ * running job is left alone (it schedules the next one itself as it ends, and replacing it would
+ * cancel a print), a job already waiting for [next] too (every cold start reschedules); otherwise
+ * the job is cancelled when off, or replaced.
+ */
+fun jobAction(
+    jobs: List<Pair<WorkInfo.State, Set<String>>>,
+    next: Long?,
+): JobAction {
+    if (jobs.any { it.first == WorkInfo.State.RUNNING }) return JobAction.LEAVE
+    if (next == null) return if (jobs.any { !it.first.isFinished }) JobAction.CANCEL else JobAction.LEAVE
+    val due = AndroidFrontPageScheduler.dueTag(next)
+    return if (jobs.any { it.first == WorkInfo.State.ENQUEUED && due in it.second }) JobAction.LEAVE else JobAction.REPLACE
 }
 
 /**
@@ -107,6 +165,7 @@ class FrontPageWorker(
     override suspend fun doWork(): Result {
         val account = inputData.getString(KEY_ACCOUNT) ?: return Result.success()
         val catchUp = inputData.getBoolean(KEY_CATCH_UP, false)
+        val startedAt = TimeUtils.now()
         val app = Amethyst.instance
         val printers = app.frontPagePrinters
         var loaded: Account? = null
@@ -121,8 +180,10 @@ class FrontPageWorker(
                 return Result.success()
             }
 
-            // Whether this device prints, the claim, today's edition: all decided there.
-            val outcome = withTimeoutOrNull(RUN_LIMIT_MS) { printers.of(loaded).printScheduled() }
+            // Whether this device prints, the claim, the occurrence's edition: all decided there,
+            // within the time WorkManager gives a run, `ran` included.
+            val deadline = startedAt + RUN_LIMIT_MS / 1000
+            val outcome = withTimeoutOrNull(HARD_LIMIT_MS) { printers.of(loaded).printScheduled(deadline = deadline) }
             Log.d(TAG) { "Morning edition for ${account.take(8)}: ${outcome ?: "timed out"}" }
             return Result.success()
         } catch (e: CancellationException) {
@@ -134,9 +195,11 @@ class FrontPageWorker(
             // The next one, whatever happened to this one: from the synced schedule as read now.
             // A catch-up run leaves the regular job alone.
             if (!catchUp) {
-                runCatching {
-                    val next = loaded?.let { printers.morning.scheduleHere(it) } ?: printers.schedules.get(account)
-                    app.frontPageScheduler.reschedule(account, next)
+                try {
+                    val next = loaded?.let { printers.morning.scheduleHere(it) } ?: FrontPageSchedule()
+                    app.frontPageScheduler.scheduleAfterRun(account, next)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not schedule the next front page", e)
                 }
             }
         }
@@ -147,7 +210,13 @@ class FrontPageWorker(
         const val KEY_CATCH_UP = "catch_up"
         private const val TAG = "FrontPageWorker"
 
-        /** Under WorkManager's ten minutes, so the run ends itself before it is killed. */
-        private const val RUN_LIMIT_MS = 9 * 60 * 1000L
+        /**
+         * Under WorkManager's ten minutes: what the run plans for (the random wait, three claim
+         * rounds, the print, `ran` and its retries: [FrontPageMorning.OVERHEAD_SECONDS] plus the print).
+         */
+        private const val RUN_LIMIT_MS = 9 * 60 * 1000L + 30 * 1000L
+
+        /** The run's own deadline, should it overrun anyway: before WorkManager kills it. */
+        private const val HARD_LIMIT_MS = 9 * 60 * 1000L + 50 * 1000L
     }
 }

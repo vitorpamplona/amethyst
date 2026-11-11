@@ -45,14 +45,17 @@ expect object FrontPageClock {
         minute: Int,
     ): Long
 
-    /** This device's IANA time zone, e.g. `America/New_York`. */
-    fun localZone(): String
+    /**
+     * This device's IANA time zone, e.g. `America/New_York`; null where the platform can't name
+     * it here (iOS, for now): then nothing is written in a zone from this device.
+     */
+    fun localZone(): String?
 
-    /** The zone named [zone] (IANA) for cron; this device's zone when null or unknown here. */
-    fun cronZone(zone: String?): CronZone
-
-    /** The hour and minute [epochSec] reads on this device's clock. */
-    fun localHourMinute(epochSec: Long): Pair<Int, Int>
+    /**
+     * The zone named [zone] (IANA) for cron; null when it is missing or this platform doesn't know
+     * it. NIP-FB: a `cron` without a known zone is unreadable, never read in the device's zone.
+     */
+    fun cronZone(zone: String?): CronZone?
 }
 
 /** ISO day of week of a `yyyy-MM-dd` day, 1 = Monday … 7 = Sunday; null for anything else. */

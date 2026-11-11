@@ -41,7 +41,6 @@ import com.vitorpamplona.amethyst.commons.frontpage.DataStoreObserverPrefsStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageEditionStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageInstallInfo
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
-import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSchedule
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorageVault
@@ -763,7 +762,7 @@ class DesktopAppModules(
             scheduledPostStore.removeForAccount(pubkey)
             powPublishQueue.cancelForOwner(pubkey)
             powJobStore.removeForAccount(pubkey)
-            frontPageScheduler.reschedule(pubkey, FrontPageSchedule())
+            frontPageScheduler.forget(pubkey)
             frontPagePrinters.forget(pubkey)
             // A login imported from the legacy app may still own a bunker transport key in the keyring.
             try {

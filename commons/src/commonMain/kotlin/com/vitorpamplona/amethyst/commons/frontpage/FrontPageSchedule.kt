@@ -45,6 +45,13 @@ interface FrontPageScheduleStore {
 
     /** Every account with a schedule switched on, for a scheduler waking up cold. */
     suspend fun enabled(): Map<HexKey, FrontPageSchedule>
+
+    /** Whether this install already moved [account]'s old local schedule to the synced one (or found one there). */
+    suspend fun isMigrated(account: HexKey): Boolean = false
+
+    suspend fun setMigrated(account: HexKey) {}
+
+    suspend fun forgetMigrated(account: HexKey) {}
 }
 
 /**
@@ -64,6 +71,9 @@ interface FrontPageScheduler {
      * anything left to do.
      */
     fun runNow(account: HexKey) {}
+
+    /** [account] is gone: its jobs go, a print that is running too. */
+    fun forget(account: HexKey) = reschedule(account, FrontPageSchedule())
 
     object None : FrontPageScheduler {
         override fun reschedule(
@@ -90,6 +100,18 @@ class DataStoreFrontPageScheduleStore(
         store.edit { it[keyFor(account)] = encode(schedule) }
     }
 
+    private fun migratedKey(account: HexKey) = stringPreferencesKey(MIGRATED_PREFIX + account.lowercase())
+
+    override suspend fun isMigrated(account: HexKey): Boolean = store.data.first()[migratedKey(account)] != null
+
+    override suspend fun setMigrated(account: HexKey) {
+        store.edit { it[migratedKey(account)] = "1" }
+    }
+
+    override suspend fun forgetMigrated(account: HexKey) {
+        store.edit { it.remove(migratedKey(account)) }
+    }
+
     override suspend fun enabled(): Map<HexKey, FrontPageSchedule> =
         store.data
             .first()
@@ -102,6 +124,7 @@ class DataStoreFrontPageScheduleStore(
 
     companion object {
         private const val PREFIX = "frontpage.schedule."
+        private const val MIGRATED_PREFIX = "frontpage.migrated."
 
         /** The old per-device format, `on|7|30`: only a daily time fits it, anything else is off. */
         fun encode(schedule: FrontPageSchedule): String {

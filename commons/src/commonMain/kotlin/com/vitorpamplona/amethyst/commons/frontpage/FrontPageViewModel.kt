@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ScheduleEdit
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
-import com.vitorpamplona.quartz.nipFBScheduledTasks.SimpleCron
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -148,14 +148,38 @@ class FrontPageViewModel(
         combine(_models, printer.editions) { models, _ -> printer.estimate(models.selectedModel) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    /** A time the reader picked that isn't saved yet (or failed to save): shown until it is. */
-    private val draftCron = MutableStateFlow<String?>(null)
+    /** The edit on its way, if any: the switches and the time show it, and every control waits for it. */
+    private val _schedulePending = MutableStateFlow<PendingSchedule?>(null)
+    val schedulePending = _schedulePending.asStateFlow()
 
-    /** The reader's morning schedule, synced across their devices, as this device sees it. */
+    /** A time that failed to save, kept on screen until the schedule it was picked on changes. */
+    private val draft = MutableStateFlow<DraftTime?>(null)
+
+    /**
+     * The reader's morning schedule, synced across their devices, as this device sees it. Its
+     * clock ticks only while the screen collects it (and five seconds after, across a rotation).
+     */
     val schedule: StateFlow<MorningScheduleView> =
-        combine(morning.view(account), draftCron) { view, draft ->
-            if (draft == null || draft == view.cron) view else view.copy(cron = draft, zone = FrontPageClock.localZone(), simple = SimpleCron.parse(draft))
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, MorningScheduleView())
+        combine(morning.view(account), _schedulePending, draft) { view, pending, draft ->
+            var shown = view
+            if (draft != null && draft.cron == view.cron) shown = shown.withTime(draft.time)
+            if (pending != null) {
+                shown = shown.copy(enabled = pending.enabled ?: shown.enabled, printsHere = pending.printsHere ?: shown.printsHere)
+                pending.time?.let { shown = shown.withTime(it) }
+            }
+            shown
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MorningScheduleView())
+
+    /** While this screen exists, a signer that needs the reader may be asked to open the schedule. */
+    private val releaseSchedule = account.observerSchedule.opened()
+
+    override fun onCleared() {
+        releaseSchedule()
+        super.onCleared()
+    }
+
+    /** The signer didn't open the schedule: ask it again. */
+    fun retryScheduleDecrypt() = account.observerSchedule.retryDecrypt()
 
     private val _scheduleProblem = MutableStateFlow<ScheduleEdit?>(null)
 
@@ -259,43 +283,69 @@ class FrontPageViewModel(
     fun cancel() = printer.cancel()
 
     /** On or off for every device; switched on, this device prints too when it can. */
-    fun setScheduleEnabled(on: Boolean) = editSchedule { morning.setEnabled(account, on) }
+    fun setScheduleEnabled(on: Boolean) = editSchedule(PendingSchedule(enabled = on, printsHere = if (on && schedule.value.canPrintHere) true else null)) { morning.setEnabled(account, on) }
 
-    /** A new time on this device's clock, keeping the weekdays: written with this device's zone. */
+    /** A new time on this device's clock, the weekdays as they are ([FrontPageMorning.setTime]). */
     fun setScheduleTime(
         hour: Int,
         minute: Int,
     ) {
-        val weekdays = schedule.value.simple?.weekdays
-        val cron = SimpleCron(hour, minute, weekdays).toCron()
-        draftCron.value = cron
-        editSchedule(onSaved = { if (draftCron.value == cron) draftCron.value = null }) { morning.setCron(account, cron) }
+        val pickedOn = schedule.value.cron
+        editSchedule(PendingSchedule(time = hour to minute), onFailure = { draft.value = DraftTime(hour to minute, pickedOn) }) { morning.setTime(account, hour, minute) }
     }
 
-    /** "Print from this device": kept on this device only. */
-    fun setPrintsHere(on: Boolean) {
-        account.scope.launch { morning.setPrintsHere(account, on) }
-    }
+    /** "Print from this device": kept on this device (with no synced schedule yet, one is published). */
+    fun setPrintsHere(on: Boolean) = editSchedule(PendingSchedule(printsHere = on)) { morning.setPrintsHere(account, on) }
 
-    /** Saved on the account's scope: leaving the screen mid-write must not lose the change. */
+    /**
+     * One edit at a time: a tap while one is saving is dropped (the controls say they are busy).
+     * Saved on the account's scope: leaving the screen mid-write must not lose the change.
+     */
     private fun editSchedule(
-        onSaved: () -> Unit = {},
+        change: PendingSchedule,
+        onFailure: () -> Unit = {},
         edit: suspend () -> ScheduleEdit?,
     ) {
+        if (!_schedulePending.compareAndSet(null, change)) return
         _scheduleProblem.value = null
         account.scope.launch {
-            val outcome =
-                try {
-                    edit()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    ScheduleEdit.Unreachable
-                }
-            val failed = outcome is ScheduleEdit.Unreachable || outcome is ScheduleEdit.Unreadable || outcome is ScheduleEdit.CannotSign || outcome is ScheduleEdit.NotAccepted
-            // A failed save keeps what the reader picked on screen, with why, so they can try again.
-            if (!failed) onSaved()
-            _scheduleProblem.value = outcome?.takeIf { failed }
+            try {
+                val outcome =
+                    try {
+                        edit()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w("FrontPageViewModel", "Could not save the morning schedule", e)
+                        ScheduleEdit.Unreachable
+                    }
+                val failed = outcome != null && outcome !is ScheduleEdit.Saved && outcome != ScheduleEdit.Unchanged
+                // A failed time stays on screen, with why, so the reader can try again.
+                if (failed) onFailure() else draft.value = null
+                _scheduleProblem.value = outcome?.takeIf { failed }
+            } finally {
+                _schedulePending.value = null
+            }
         }
     }
+}
+
+/** What the schedule controls show while an edit is on its way. */
+@Immutable
+data class PendingSchedule(
+    val enabled: Boolean? = null,
+    val printsHere: Boolean? = null,
+    val time: Pair<Int, Int>? = null,
+)
+
+/** A [time] that failed to save, picked on the schedule [cron]. */
+private data class DraftTime(
+    val time: Pair<Int, Int>,
+    val cron: String?,
+)
+
+/** The view with [time] picked on this device's clock: the editor's time and the sentence both say it. */
+private fun MorningScheduleView.withTime(time: Pair<Int, Int>): MorningScheduleView {
+    val words = (words as? CronWords.Days)?.let { it.copy(time = it.time.copy(hour = time.first, minute = time.second)) } ?: words
+    return copy(editableTime = time, words = words)
 }

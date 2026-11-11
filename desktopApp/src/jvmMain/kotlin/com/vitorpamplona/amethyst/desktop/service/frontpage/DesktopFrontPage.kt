@@ -94,22 +94,31 @@ class DesktopFrontPageNotifier(
  * ([FrontPageScheduleWatcher] drives [reschedule] and [runNow]). Which device prints an
  * occurrence is its claim's call. An occurrence missed while the app was closed may run when the
  * account loads, until the next one comes.
+ *
+ * The timer that wakes and the run it starts are apart: a reschedule moves or stops the timer,
+ * never a print that is running (that costs the reader money), and a reschedule to the same
+ * schedule leaves its timer alone.
  */
 class DesktopFrontPageScheduler(
     private val printers: FrontPagePrinters,
     private val accounts: StateFlow<Map<HexKey, Account>>,
     private val scope: CoroutineScope,
 ) : FrontPageScheduler {
-    private val timers = ConcurrentHashMap<HexKey, Job>()
-    private val catchUps = ConcurrentHashMap<HexKey, Job>()
+    private class Timer(
+        val schedule: FrontPageSchedule,
+        val job: Job,
+    )
+
+    private val timers = ConcurrentHashMap<HexKey, Timer>()
+    private val runs = ConcurrentHashMap<HexKey, Job>()
 
     /** Watches accounts load, keeps each one's timer in step with the synced schedule. */
     fun start() {
         FrontPageScheduleWatcher(printers.morning, accounts, this, scope).start()
         scope.launch {
             accounts.collect { loaded ->
-                // A signed-out account's timer goes with it.
-                timers.keys.filter { it !in loaded }.forEach { timers.remove(it)?.cancel() }
+                // A signed-out account's timer, and its run, go with it.
+                timers.keys.filter { it !in loaded }.forEach { forget(it) }
             }
         }
     }
@@ -118,20 +127,34 @@ class DesktopFrontPageScheduler(
         account: HexKey,
         schedule: FrontPageSchedule,
     ) {
-        timers.remove(account)?.cancel()
+        val current = timers[account]
+        if (current != null && current.schedule == schedule && current.job.isActive) return
+        timers.remove(account)?.job?.cancel()
         if (!schedule.enabled) return
-        val next = schedule.nextRun(TimeUtils.now()) ?: return
-        timers[account] =
+        val job =
             scope.launch {
-                untilWallClock(next)
-                run(account)
-                reschedule(account, schedule)
+                var from = TimeUtils.now()
+                while (true) {
+                    val next = schedule.nextRun(from) ?: return@launch
+                    untilWallClock(next)
+                    startRun(account)
+                    from = maxOf(next, TimeUtils.now())
+                }
             }
+        timers[account] = Timer(schedule, job)
     }
 
-    override fun runNow(account: HexKey) {
-        if (catchUps[account]?.isActive == true) return
-        catchUps[account] = scope.launch { run(account) }
+    override fun runNow(account: HexKey) = startRun(account)
+
+    override fun forget(account: HexKey) {
+        timers.remove(account)?.job?.cancel()
+        runs.remove(account)?.cancel()
+    }
+
+    /** One run at a time per account, on its own job: no timer change reaches it. */
+    private fun startRun(account: HexKey) {
+        if (runs[account]?.isActive == true) return
+        runs[account] = scope.launch { run(account) }
     }
 
     private suspend fun run(account: HexKey) {

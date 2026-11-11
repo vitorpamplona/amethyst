@@ -72,12 +72,13 @@ actual object FrontPageClock {
         minute: Int,
     ): Long = (nowEpochSec).floorDiv(DAY) * DAY + hour.coerceIn(0, 23) * 3_600L + minute.coerceIn(0, 59) * 60L
 
-    actual fun localZone(): String = "UTC"
+    /**
+     * Not known here yet: this clock reads UTC days, and writing a schedule as UTC would move the
+     * reader's mornings by their offset. So iOS shows the schedule and changes nothing that needs
+     * a zone (its time, a new schedule).
+     */
+    actual fun localZone(): String? = null
 
-    actual fun cronZone(zone: String?): CronZone = CronZone.UTC
-
-    actual fun localHourMinute(epochSec: Long): Pair<Int, Int> {
-        val second = epochSec.mod(DAY)
-        return (second / 3_600L).toInt() to ((second % 3_600L) / 60L).toInt()
-    }
+    /** Only UTC is known without a zone database; any other zone's schedule is shown, never computed. */
+    actual fun cronZone(zone: String?): CronZone? = if (zone == "UTC") CronZone.UTC else null
 }

@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEve
 import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 import com.vitorpamplona.quartz.nipFBScheduledTasks.CronExpression
+import com.vitorpamplona.quartz.nipFBScheduledTasks.CronZone
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTask
 import com.vitorpamplona.quartz.nipFBScheduledTasks.SimpleCron
 import com.vitorpamplona.quartz.utils.Log
@@ -301,12 +302,15 @@ class FrontPagePrinter(
     /**
      * Prints in the caller's coroutine and publishes to [run] as it goes. Returns how it ended,
      * or null when another print holds the press (nothing was started); a clean page is already
-     * stored and, when nobody is watching, announced.
+     * stored and, when nobody is watching, announced. [keep] is asked before a clean page is kept:
+     * false (another device's claim won the morning) drops it, unkept, unannounced, unpublished,
+     * and the run ends [FrontPageRun.Idle].
      */
     suspend fun printNow(
         key: AgentKeyTag,
         model: AgentModel,
         trigger: PrintTrigger = PrintTrigger.MANUAL,
+        keep: suspend () -> Boolean = { true },
     ): FrontPageRun? {
         val boundary = boundary ?: return FrontPageRun.Failed(WriterFailure.UNSUPPORTED).also { _run.value = it }
         if (!running.tryLock()) return null
@@ -321,7 +325,10 @@ class FrontPagePrinter(
                         _run.value = FrontPageRun.Running(step)
                     }
                 }
-            if (result is PrintResult.Printed) keep(result, model, trigger)
+            if (result is PrintResult.Printed) {
+                if (!keep()) return FrontPageRun.Idle.also { _run.value = it }
+                keep(result, model, trigger)
+            }
             return FrontPageRun.Done(result).also { _run.value = it }
         } catch (e: CancellationException) {
             _run.value = FrontPageRun.Idle
@@ -455,38 +462,60 @@ class FrontPagePrinter(
      * on this device) can read the AI key. Amber, other external signers and remote bunkers need
      * the reader, and nothing here stores the AI key anywhere else to work around that.
      */
-    suspend fun printScheduled(waitMs: Long = 60_000): ScheduledOutcome {
+    suspend fun printScheduled(
+        waitMs: Long = 60_000,
+        /** When the platform stops this run (unix seconds); null when it doesn't. */
+        deadline: Long? = null,
+    ): ScheduledOutcome {
         unattendedBlocker(account.signer, boundary, busy = job?.isActive == true || running.isLocked)?.let { blocked ->
             if (blocked == ScheduledOutcome.NEEDS_SIGNER) notifier.needsYou(pubKey)
             return blocked
         }
 
-        val morning = morning ?: return printOccurrence(waitMs)
+        val morning = morning ?: return printOccurrence(waitMs, null) { true }
         // NIP-FB: only a device the reader turned on, and only the one whose claim wins; a paper
-        // that already exists for today is claimed as done without printing.
-        return morning.runOccurrence(account, alreadyDone = { alreadyPrintedToday() }) { printOccurrence(waitMs) }
+        // that already exists for the occurrence is marked done without printing.
+        return morning.runOccurrence(account, alreadyDone = { occurrence, zone -> alreadyPrinted(occurrence, zone) }, deadline) { budget, keep -> printOccurrence(waitMs, budget, keep) }
     }
 
-    /** The print itself, once the occurrence is this device's. */
-    private suspend fun printOccurrence(waitMs: Long): ScheduledOutcome {
+    /** The print itself, once the occurrence is this device's, in [budgetSeconds] at most (null: no limit). */
+    private suspend fun printOccurrence(
+        waitMs: Long,
+        budgetSeconds: Long?,
+        keep: suspend () -> Boolean,
+    ): ScheduledOutcome {
         val (key, hasLens) = awaitOwnLists(waitMs)
         if (key == null) return ScheduledOutcome.NO_KEY.also { notifier.needsYou(pubKey) }
         if (!hasLens) return ScheduledOutcome.NO_LENS.also { notifier.needsYou(pubKey) }
         val model = chooseModel(key) ?: return ScheduledOutcome.FAILED
-        val ended = printNow(key, model, PrintTrigger.SCHEDULED) ?: return ScheduledOutcome.BUSY
-        return if (ended is FrontPageRun.Done && ended.result is PrintResult.Printed) ScheduledOutcome.PRINTED else ScheduledOutcome.FAILED
+        val ended =
+            if (budgetSeconds == null) {
+                printNow(key, model, PrintTrigger.SCHEDULED, keep) ?: return ScheduledOutcome.BUSY
+            } else {
+                // Out of time: stopped before the platform kills it, so `ran` can still be written for a paper that made it.
+                withTimeoutOrNull(budgetSeconds * 1000) { printNow(key, model, PrintTrigger.SCHEDULED, keep) ?: FrontPageRun.Idle }
+                    ?: return ScheduledOutcome.FAILED
+            }
+        return when {
+            ended is FrontPageRun.Done && ended.result is PrintResult.Printed -> ScheduledOutcome.PRINTED
+            ended == FrontPageRun.Idle -> ScheduledOutcome.LOST_CLAIM
+            else -> ScheduledOutcome.FAILED
+        }
     }
 
     fun canPrintUnattended() = account.signer.localPrivKeyOrNull() != null
 
     /**
-     * Whether today's edition already exists, so a scheduled print skips: one kept here or listed
-     * on the reader's Observer site, printed in the last 20 hours, or a site entry with no print
-     * time dated today in UTC ([ObserverSite.alreadyPrintedToday]). A site that can't be read
-     * leaves the answer to this device's own editions. Manual prints never ask.
+     * Whether the edition of the occurrence due at [occurrence] already exists, so a scheduled
+     * print skips: one kept here or listed on the reader's Observer site, printed on that
+     * occurrence's calendar day on [zone]'s clock (the schedule's), or a site entry with no print
+     * time dated the occurrence's UTC date ([ObserverSite.alreadyPrinted]). A site that can't be
+     * read leaves the answer to this device's own editions. Manual prints never ask.
      */
-    suspend fun alreadyPrintedToday(): Boolean {
-        val at = now()
+    suspend fun alreadyPrinted(
+        occurrence: Long,
+        zone: CronZone,
+    ): Boolean {
         val kept =
             try {
                 store.list(pubKey)
@@ -496,7 +525,7 @@ class FrontPagePrinter(
                 Log.w(TAG, "Could not read the kept editions", e)
                 emptyList()
             }
-        if (kept.any { ObserverSite.printedToday(it.printedAt, null, at) }) return true
+        if (kept.any { ObserverSite.printedFor(it.printedAt, null, occurrence, zone) }) return true
         val site =
             try {
                 publisher?.read()
@@ -507,7 +536,7 @@ class FrontPagePrinter(
                 null
             } ?: return false
         siteView.value = site
-        return ObserverSite.alreadyPrintedToday(site.editions, at)
+        return ObserverSite.alreadyPrinted(site.editions, occurrence, zone)
     }
 
     /**
@@ -601,8 +630,9 @@ const val WRITE_PROGRESS_CHARS = 400
 
 /**
  * When this device prints one account's morning edition: [cron] (NIP-FB's five fields) on the
- * wall clock of [zone] (this device's when null). Off by default; 7:00 every day is only the
- * suggestion. [enabled] already says whether *this device* prints: see [scheduleForThisDevice].
+ * wall clock of [zone]; never, when [zone] is missing or unknown here (the old per-device
+ * schedule, kept only as this device's on/off, has none). Off by default; 7:00 every day is only
+ * the suggestion. [enabled] already says whether *this device* prints: see [scheduleForThisDevice].
  */
 @Immutable
 data class FrontPageSchedule(
@@ -610,45 +640,26 @@ data class FrontPageSchedule(
     val cron: String = ScheduledTask.DEFAULT_CRON,
     val zone: String? = null,
 ) {
+    /** Parsed once: the timers ask on every reschedule. */
+    private val parsed: CronExpression? by lazy { CronExpression.parse(cron) }
+
     /** The schedule, or null when [cron] is outside NIP-FB's subset: then it never runs here. */
-    fun expression(): CronExpression? = CronExpression.parse(cron)
+    fun expression(): CronExpression? = parsed
 
     /** The time and weekdays a simple editor shows, or null when it can only show [cron] as written. */
     fun simple(): SimpleCron? = SimpleCron.parse(cron)
 
-    /** The next run strictly after [now]; null when there is none. */
-    fun nextRun(now: Long): Long? = expression()?.nextAfter(now, FrontPageClock.cronZone(zone))
-
-    /** Whether [cron] is read on this device's own clock. */
-    fun isLocal(): Boolean = zone == null || zone == FrontPageClock.localZone()
-
-    /**
-     * The time a simple schedule shows on this device's clock: its own fields when it is read in
-     * this device's zone (never a time a clock change moved), else the next run's local time.
-     */
-    fun localTime(now: Long): Pair<Int, Int>? {
-        val simple = simple()
-        if (simple != null && isLocal()) return simple.hour to simple.minute
-        return nextRun(now)?.let(FrontPageClock::localHourMinute)
+    /** The next run strictly after [now]; null when there is none, or [zone] is missing or unknown here (NIP-FB: unreadable). */
+    fun nextRun(now: Long): Long? {
+        val zone = FrontPageClock.cronZone(zone) ?: return null
+        return expression()?.nextAfter(now, zone)
     }
 
-    /**
-     * A run to show: the next one, or, read in this device's zone, the next one that isn't on a
-     * clock-change day, so the time shown is the time the reader set.
-     */
-    fun displayRun(now: Long): Long? {
-        val first = nextRun(now) ?: return null
-        val simple = simple()?.takeIf { isLocal() } ?: return first
-        var at: Long = first
-        repeat(8) {
-            if (FrontPageClock.localHourMinute(at) == (simple.hour to simple.minute)) return at
-            at = nextRun(at) ?: return first
-        }
-        return first
+    /** The last occurrence at or before [now]: what a run woken now is for. Null when none, or the zone is unknown. */
+    fun lastRun(now: Long): Long? {
+        val zone = FrontPageClock.cronZone(zone) ?: return null
+        return expression()?.lastAtOrBefore(now, zone)
     }
-
-    /** The last occurrence at or before [now]: what a run woken now is for. Null when none. */
-    fun lastRun(now: Long): Long? = expression()?.lastAtOrBefore(now, FrontPageClock.cronZone(zone))
 
     companion object {
         /** Every day at [hour]:[minute] on this device's clock: the old per-device schedule. */
