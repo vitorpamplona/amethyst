@@ -351,6 +351,12 @@ Done on the branch, each step its own commit:
     itself. The key now holds it weakly, and the two notification managers' jobs hold only the
     notifications feed's depth flow. After: one feed set per view model across logout cycles and
     switches. Not measured on Android.
+    The inbox notifications manager also started its "feed loaded deeper, re-plan" watcher only
+    once per user, so after leaving an account and coming back it watched the old screen's feed
+    and never fired again. It now restarts on a new screen's feed and stops when the account has
+    no screen; with a screen key and a background key for one user, the screen's wins. Checked on
+    desktop: the watcher followed the screen across switches, and Active Subscriptions showed the
+    background account's DM inbox (gift wraps) and notifications queries still open on its relays.
 
 No screen feed walks the whole cache any more. Threads, bookmarks, lists and pins read their notes
 directly; Home walks it on purpose (its universe is most of the cache).

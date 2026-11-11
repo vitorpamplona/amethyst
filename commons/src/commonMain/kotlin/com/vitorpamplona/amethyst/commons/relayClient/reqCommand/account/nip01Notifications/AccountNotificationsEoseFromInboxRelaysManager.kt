@@ -31,10 +31,11 @@ import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
@@ -178,39 +179,58 @@ class AccountNotificationsEoseFromInboxRelaysManager(
 
     private val feedOwners = FeedOwnerTracker<User>()
 
-    private val userJobMap = mutableMapOf<User, List<Job>>()
+    // Per user: re-plans the filter when the account's notification relays change.
+    private val userJobMap = mutableMapOf<User, Job>()
 
-    @OptIn(FlowPreview::class)
+    // Per user with a screen: re-plans when that screen's notifications feed loads deeper, which
+    // lowers the cold-start floor. Keyed to the feed it watches, because the subscription outlives
+    // the screen: a new screen for the same account must be watched instead, and a background
+    // account (no screen) has nothing to watch.
+    private val depthJobMap = mutableMapOf<User, Pair<StateFlow<Long?>, Job>>()
+
     override fun updateSubscriptions(keys: Set<AccountQueryState>) {
-        val wanted = keys.associateBy { it.account.userProfile() }
+        // A user can have a screen's key and a background key at once: the screen's carries the feed.
+        val wanted =
+            keys.groupBy { it.account.userProfile() }.mapValues { (_, userKeys) ->
+                userKeys.firstOrNull { it.feedContentStates != null } ?: userKeys.first()
+            }
 
         (userJobMap.keys - wanted.keys).toList().forEach { user ->
-            userJobMap.remove(user)?.forEach { it.cancel() }
+            userJobMap.remove(user)?.cancel()
         }
 
         wanted.forEach { (user, key) ->
             if (user !in userJobMap) {
                 userJobMap[user] =
-                    listOf(
+                    key.account.scope.launch(Dispatchers.IO) {
+                        key.account.notificationRelays.flow.sample(1000).collectLatest {
+                            invalidateFilters()
+                        }
+                    }
+            }
+
+            // Holds the flow, not the feed set: the feed set belongs to the screen.
+            val depth = key.feedContentStates?.notifications?.lastNoteCreatedAtWhenFullyLoaded
+            val watching = depthJobMap[user]
+            if (watching?.first !== depth) {
+                Log.d("NotificationsInbox") { "${user.pubkeyHex.take(8)}: ${if (depth == null) "no screen, depth watch stopped" else "watching a new screen's notifications depth"}" }
+                watching?.second?.cancel()
+                if (depth == null) {
+                    depthJobMap.remove(user)
+                } else {
+                    depthJobMap[user] =
+                        depth to
                         key.account.scope.launch(Dispatchers.IO) {
-                            key.account.notificationRelays.flow.sample(1000).collectLatest {
+                            depth.sample(5000).collectLatest {
                                 invalidateFilters()
                             }
-                        },
-                    ) +
-                    // Only a screen can fill a feed, so there is nothing to watch for a
-                    // background account. The job holds the flow, not the feed set: it lives as long
-                    // as the user's subscription, past the screen that started it.
-                    listOfNotNull(
-                        key.feedContentStates?.notifications?.lastNoteCreatedAtWhenFullyLoaded?.let { depth ->
-                            key.account.scope.launch(Dispatchers.IO) {
-                                depth.sample(5000).collectLatest {
-                                    invalidateFilters()
-                                }
-                            }
-                        },
-                    )
+                        }
+                }
             }
+        }
+
+        (depthJobMap.keys - wanted.keys).toList().forEach { user ->
+            depthJobMap.remove(user)?.second?.cancel()
         }
 
         super.updateSubscriptions(keys)
@@ -219,8 +239,10 @@ class AccountNotificationsEoseFromInboxRelaysManager(
     override fun destroy() {
         authorsPerRelay.clear()
         feedOwners.clear()
-        userJobMap.values.forEach { jobs -> jobs.forEach { it.cancel() } }
+        userJobMap.values.forEach { it.cancel() }
         userJobMap.clear()
+        depthJobMap.values.forEach { it.second.cancel() }
+        depthJobMap.clear()
         super.destroy()
     }
 }
