@@ -75,7 +75,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
@@ -215,29 +214,30 @@ fun AgentKeysSettingsScreen(
     }
 }
 
+/** What the screen is for and which key is in use: a quiet surface in the app's own colours, like the front page's. */
 @Composable
 private fun AgentHero(using: String?) {
     var showTip by remember { mutableStateOf(false) }
     val scheme = MaterialTheme.colorScheme
-    val onHero = scheme.onPrimary
 
     Box(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .background(Brush.linearGradient(listOf(scheme.primary, scheme.tertiary)))
+            .clip(RoundedCornerShape(24.dp))
+            .background(scheme.surfaceContainerLow)
+            .border(1.dp, scheme.outlineVariant, RoundedCornerShape(24.dp))
             .padding(20.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier
-                        .size(52.dp)
+                        .size(44.dp)
                         .clip(CircleShape)
-                        .background(onHero.copy(alpha = 0.18f)),
+                        .background(scheme.primary.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(MaterialSymbols.AutoAwesome, contentDescription = null, tint = onHero, modifier = Modifier.size(30.dp), filled = true)
+                    Icon(MaterialSymbols.AutoAwesome, contentDescription = null, tint = scheme.primary, modifier = Modifier.size(24.dp), filled = true)
                 }
                 Spacer(Modifier.width(14.dp))
                 // The top bar names the screen; the hero only says what it is for.
@@ -245,34 +245,34 @@ private fun AgentHero(using: String?) {
                     stringRes(Res.string.agent_keys_tagline),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = onHero,
+                    color = scheme.onSurface,
                     modifier = Modifier.weight(1f),
                 )
                 IconButton(onClick = { showTip = !showTip }) {
-                    Icon(MaterialSymbols.Info, contentDescription = stringRes(Res.string.agent_keys_cap_tip), tint = onHero.copy(alpha = 0.85f))
+                    Icon(MaterialSymbols.Info, contentDescription = stringRes(Res.string.agent_keys_cap_tip), tint = scheme.onSurfaceVariant)
                 }
             }
 
             // "Using", not "Connected": saving a key says nothing about whether it works right now.
-            Surface(shape = CircleShape, color = onHero.copy(alpha = if (using != null) 0.24f else 0.14f)) {
+            Surface(shape = CircleShape, color = scheme.surfaceContainerHighest) {
                 Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier
                             .size(8.dp)
                             .clip(CircleShape)
-                            .background(onHero.copy(alpha = if (using != null) 0.85f else 0.5f)),
+                            .background(if (using != null) PillGood else scheme.onSurfaceVariant.copy(alpha = 0.6f)),
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         if (using != null) stringRes(Res.string.agent_keys_status_using, using) else stringRes(Res.string.agent_keys_status_none),
                         style = MaterialTheme.typography.labelLarge,
-                        color = onHero,
+                        color = scheme.onSurface,
                     )
                 }
             }
 
             AnimatedVisibility(showTip) {
-                Text(stringRes(Res.string.agent_keys_cap_tip), style = MaterialTheme.typography.bodySmall, color = onHero.copy(alpha = 0.9f))
+                Text(stringRes(Res.string.agent_keys_cap_tip), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
             }
         }
     }
