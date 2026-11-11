@@ -272,7 +272,18 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
       An answer reaches a note only through filters that name it (`#e`/`#E`/`#q`/`#a`/`#A`) and
       only when asked from scratch or from no later than its own cursor. After: 119 / 124 / 424
       / 42k and the card back, same steps.
-   7. Account lists and gift wraps.
+   7. **Done:** account lists; gift wraps needed nothing. `AccountMetadataEoseManager` (profile,
+      follows, mutes, bookmarks, lists, DRSS, the last month of posts, the switcher avatars)
+      keeps its cursors on the `Account` (`ownEventsCursors`) and plans each account against its
+      own, merging the accounts whose windows agree (`windowPerMember`), so a newcomer on a relay
+      no longer clears the cursor for everyone there (`MergedAuthorTracker` is gone from it). A
+      holder's planned windows now add up across passes (the manager plans one relay twice).
+      The gift-wrap live tail asks the last week on every REQ and reads no cursor, and its history
+      pager's progress already lives on the account's `ChatroomList`, which holds the messages
+      (`pruneOldMessages` rewinds it). Drafts, wallet (NWC, Cashu), Marmot and Buzz keep the
+      managers' maps. Desktop: the signing account joining after unlock was asked from scratch
+      while jack's lists stayed caught up, then they shared filters; logging it out and back in (a
+      new `Account`) asked it from scratch again, jack untouched.
    8. Hooks: pruner `rewindTo`, local-filter widening `clear()`.
    Each ends with the desktop switch test and a heap check.
 4. `AccountFeeds` with Active / Warm (15 min) / Cold, notification feeds account-lifetime;

@@ -134,16 +134,26 @@ class RelayCursors {
     private val lock = KmpLock()
     private val byRelay = mutableMapOf<Slot, Entry>()
 
-    // The `since` values last planned for this holder, per relay and source: an answer to a filter
-    // asked with one of them is an answer to this holder's own plan.
-    private val planned = mutableMapOf<Slot, Set<Long>>()
+    // The `since` values recently planned for this holder, per relay and source: an answer to a
+    // filter asked with one of them is an answer to this holder's own plan. A manager can plan one
+    // relay in several passes (one per filter group), so they add up, keeping the last few.
+    private val planned = mutableMapOf<Slot, ArrayDeque<Long>>()
 
-    /** [source] asked [relay], on this holder's behalf, with these `since` values. Replaces the last plan. */
+    /** [source] asked [relay], on this holder's behalf, with these `since` values. */
     fun planned(
         relay: NormalizedRelayUrl,
         source: CursorSource,
         windows: Set<Long>,
-    ) = lock.withLock { planned[Slot(relay, source)] = windows }
+    ) = lock.withLock {
+        if (windows.isEmpty()) return@withLock
+        val recent = planned.getOrPut(Slot(relay, source)) { ArrayDeque() }
+        windows.forEach { window ->
+            if (window !in recent) {
+                recent.addLast(window)
+                if (recent.size > MAX_PLANNED) recent.removeFirst()
+            }
+        }
+    }
 
     /**
      * Whether an answer to [shape] asked `since` [since] tells this holder it has everything up to
@@ -267,6 +277,8 @@ class RelayCursors {
             planned.clear()
         }
 }
+
+private const val MAX_PLANNED = 16
 
 /** Keeps notes, and so the [RelayCursors] that vouch for them. */
 interface RelayCursorHolder {

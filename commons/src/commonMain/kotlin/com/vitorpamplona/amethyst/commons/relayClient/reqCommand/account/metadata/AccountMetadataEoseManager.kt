@@ -27,12 +27,16 @@ import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterBoo
 import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterDrssFromKey
 import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterFollowsAndMutesFromKey
 import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterLastPostsFromKey
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.MergedAuthorTracker
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.CursorPlanner
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +75,11 @@ fun pickAccountDataRelays(
  * The per-account `limit`s are summed rather than shared. These are mostly replaceable events, so
  * the limit is a safety bound rather than a page size, and scaling it by the number of accounts
  * keeps each one exactly the headroom it had alone.
+ *
+ * Each account's window comes from its own cursors ([Account.ownEventsCursors]), and accounts whose
+ * windows agree share the filters ([CursorPlanner.windowPerMember]): an account that joins a relay
+ * this subscription already covers inherits no other account's cursor, and one logged out and back
+ * in (a new `Account`) is asked from scratch without making the others refetch.
  */
 class AccountMetadataEoseManager(
     client: INostrClient,
@@ -107,6 +116,26 @@ class AccountMetadataEoseManager(
             defaults = Constants.eventFinderRelays,
         )
 
+    override fun cursorHoldersOf(key: AccountQueryState): List<RelayCursorHolder> = listOf(OwnEvents(key.account.ownEventsCursors))
+
+    private class OwnEvents(
+        override val relayCursors: RelayCursors,
+    ) : RelayCursorHolder
+
+    private fun ownEvents(
+        relay: NormalizedRelayUrl,
+        pubkeys: List<HexKey>,
+        since: Long?,
+    ) = filterAccountInfoAndListsFromKey(relay, pubkeys, since) +
+        filterFollowsAndMutesFromKey(relay, pubkeys, since) +
+        filterBookmarksAndReportsFromKey(relay, pubkeys, since) +
+        filterDrssFromKey(relay, pubkeys, since) +
+        filterLastPostsFromKey(relay, pubkeys, since ?: TimeUtils.oneMonthAgo())
+
+    /**
+     * One filter set per relay, naming every account that reads from it whose window agrees. [since],
+     * the manager's shared map, is not used: each account plans against its own cursors.
+     */
     override fun updateFilter(
         keys: List<AccountQueryState>,
         since: SincePerRelayMap?,
@@ -119,35 +148,20 @@ class AccountMetadataEoseManager(
         }
 
         return accountsPerRelay.flatMap { (relay, accounts) ->
-            val pubkeys = accounts.map { it.account.userProfile().pubkeyHex }
+            val byPubkey = accounts.associateBy { it.account.userProfile().pubkeyHex }
+            val pubkeys = byPubkey.keys
+            val members = byPubkey.map { (pubkey, key) -> CursorPlanner.Member(pubkey, null, cursorsNamedBy(listOf(key))) }
 
-            // An account joining a relay this subscription already covers must not inherit the cursor
-            // the earlier accounts earned — it would never ask for its own profile, follows or lists.
-            // This matters more here than for notifications: there is no backward pager to rescue it,
-            // so the account would go without until the next launch cleared the in-memory cursor.
-            // Drop the stored cursor AND ignore it for this pass, so the refetch does not depend on
-            // `since` being a live view of the map we just mutated.
-            val gained = authorsPerRelay.gainedAuthors(relay, pubkeys)
-            if (gained) clearEoseFor(relay)
-
-            val relaySince = if (gained) null else since?.get(relay)?.time
-
-            // The account-switcher avatars: other logged-in accounts this screen wants to name.
+            // The account-switcher avatars: other logged-in accounts these screens want to name.
             // Screens supply them; the background registry does not, so this is usually empty.
-            val otherAccounts = accounts.flatMapTo(mutableSetOf()) { it.otherAccounts }.minus(pubkeys.toSet())
+            fun othersOf(ids: List<HexKey>) = ids.flatMapTo(mutableSetOf()) { byPubkey[it]?.otherAccounts.orEmpty() }.minus(pubkeys)
 
-            listOf(
-                filterAccountInfoAndListsFromKey(relay, pubkeys, relaySince),
-                filterFollowsAndMutesFromKey(relay, pubkeys, relaySince),
-                filterBookmarksAndReportsFromKey(relay, pubkeys, relaySince),
-                filterDrssFromKey(relay, pubkeys, relaySince),
-                filterLastPostsFromKey(relay, pubkeys, relaySince ?: TimeUtils.oneMonthAgo()),
-                filterBasicAccountInfoFromKeys(relay, otherAccounts.toList(), relaySince, pubkeys),
-            ).flatten()
+            CursorPlanner.windowPerMember(members, cursorSource) { ids, window -> ownEvents(relay, ids, window) } +
+                CursorPlanner.windowPerMember(members, cursorSource) { ids, window ->
+                    filterBasicAccountInfoFromKeys(relay, othersOf(ids).toList(), window, ids)
+                }
         }
     }
-
-    private val authorsPerRelay = MergedAuthorTracker()
 
     /** Per-account relay watchers, reconciled as accounts come and go. See the notifications manager. */
     private val userJobMap = mutableMapOf<User, List<Job>>()
@@ -177,11 +191,17 @@ class AccountMetadataEoseManager(
             }
         }
 
-        super.updateSubscriptions(keys)
+        // One key per account (the screen's or the background registry's: they name the same
+        // cursors); every account's cursors get what the REQ answers.
+        val accounts =
+            keys.groupBy { it.account.userProfile() }.values.map { userKeys ->
+                userKeys.firstOrNull { it.otherAccounts.isNotEmpty() } ?: userKeys.first()
+            }
+        serve(sub.id, cursorsNamedBy(accounts))
+        sub.updateFilters(updateFilter(accounts, null).ifEmpty { null }?.groupByRelay())
     }
 
     override fun destroy() {
-        authorsPerRelay.clear()
         userJobMap.values.forEach { jobs -> jobs.forEach { it.cancel() } }
         userJobMap.clear()
         super.destroy()

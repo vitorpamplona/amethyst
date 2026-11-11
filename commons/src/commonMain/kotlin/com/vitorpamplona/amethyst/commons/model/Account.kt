@@ -182,6 +182,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionLe
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthSessionGrants
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthVenues
 import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.ChatDeliveryTracker
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyRequestsCache
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
@@ -1019,6 +1020,13 @@ class Account(
     val notificationRelays = NotificationInboxRelayState(nip65RelayList, localRelayList, scope)
 
     val nwcBackup = NwcBackupState(signer, client, scope, settings, outboxRelays.flow, nip65RelayList.inboxFlowNoDefaults)
+
+    /**
+     * How far each relay has been asked for this account's own profile, follows, mutes, lists and
+     * recent posts (`AccountMetadataEoseManager`). Held here because this object holds what they
+     * load: a new `Account` for the same key (a log out and back in) asks from scratch.
+     */
+    val ownEventsCursors = RelayCursors()
 
     // Per-relay backward-paging cursors for the NIP-60 spending history (kind:7376): how far back each
     // outbox relay has been paged by until+limit. Held here so paging progress survives leaving and

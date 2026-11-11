@@ -282,6 +282,19 @@ class CursorPlannerTest {
     }
 
     @Test
+    fun windowsPlannedInSeveralPassesAreAllTheHoldersOwn() {
+        // The account metadata plans one relay twice (its lists, then the switcher avatars): the
+        // second pass must not make the first pass's answers look like someone else's.
+        val holder = RelayCursors()
+        val lists = CursorPlanner.window(listOf(RelayBasedFilter(relay, notes(alice).copy(since = 700))), listOf(holder))
+        val avatars = CursorPlanner.window(listOf(RelayBasedFilter(relay, Filter(kinds = listOf(0), authors = listOf(bob), since = 900))), listOf(holder))
+
+        CursorPlanner.record(listOf(holder), relay, (lists + avatars).map { it.filter }, 2_000)
+
+        assertEquals(listOf(CursorPart(shape(alice), 2_000)), holder.plan(relay, shape(alice)))
+    }
+
+    @Test
     fun eachManagerWritesUnderItsOwnName() {
         val holder = Holder()
         val key = Key("feed", holder)
