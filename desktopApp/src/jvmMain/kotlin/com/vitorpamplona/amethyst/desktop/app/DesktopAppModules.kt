@@ -803,7 +803,7 @@ class DesktopAppModules(
                     lastRunAt = now
                     Log.w("DesktopAppModules") { "Heap at ${(ratio * 100).toInt()}% (${used shr 20} MB of ${max shr 20} MB): reclaiming" }
                     memoryPressureEvents.tryEmit(Unit)
-                    trimmingService.run(accountsCache.accounts.value.values, sessionStore.allSavedAccounts())
+                    trimmingService.run(accountsCache.accounts.value.values)
                 }
             }
         }

@@ -1,7 +1,7 @@
 # Account feed lifecycle: switch accounts at will
 
-Status: proposed 2026-11-09. Steps 1 (`FeedOwnerTracker`) and 2 (lazy feeds) are implemented on
-`claude/determined-meitner-wf8m3i`; the rest is design.
+Status (2026-11-11), on `claude/determined-meitner-wf8m3i`: steps 1, 2, 3.1-3.7, 5 and 6 (the
+pruner) are implemented; 3.8's filter-widening half and step 4 (warm accounts) remain.
 
 ## Problem
 
@@ -139,11 +139,13 @@ Hashtag, geohash, relay, URL, community and follow pack feeds and profile tabs g
 treatment: their query key names the screen feed's cursors, so a new visit asks from scratch.
 Optionally keep recently closed screens warm the same way as accounts.
 
-### 4. The pruner coordinates with feeds
+### 4. The pruner leaves feeds alone
 
-After tier-2 pruning, clear the cursors of every feed that held a removed note, or skip notes a
-live feed holds. `pruneOldMessages` already rewinds the chatroom history cursors when it trims
-DMs; this extends that rule to feeds.
+The reply/reaction pass dates from before `LocalCache` held notes weakly. Now a note lives while a
+feed, a channel or a screen holds it, and its children live with it, so dropping the holder frees
+them; pruning them earlier only broke what still held them. The pruner keeps to what is held
+strongly and grows without bound (channels, DMs), and rewinds the history cursors of what it
+drops (see step 6).
 
 ### 5. Every account notified, and labelled
 
@@ -284,7 +286,8 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
       managers' maps. Desktop: the signing account joining after unlock was asked from scratch
       while jack's lists stayed caught up, then they shared filters; logging it out and back in (a
       new `Account`) asked it from scratch again, jack untouched.
-   8. Hooks: pruner `rewindTo`, local-filter widening `clear()`.
+   8. Hooks: local-filter widening `clear()`. The pruner half is step 6: it no longer removes
+      what feeds hold, so no feed cursor needs rewinding.
    Each ends with the desktop switch test and a heap check.
 4. `AccountFeeds` with Active / Warm (15 min) / Cold, notification feeds account-lifetime;
    with tabs-and-windows Phase 2b.
@@ -308,7 +311,21 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
    (read-only jack → a Notifications link for the signing account switched and opened it, then a
    link for jack switched back); the OS click callbacks themselves were not clicked: the container
    has no notification daemon.
-6. Pruner coordination.
+6. **Done (2026-11-11):** the pruner. Measured first on desktop, with a hook that ran tier 2 on
+   demand: a pass removed ~3,000 replies, reactions, zaps and reports (only ~650 of their parents
+   were loaded: most removed notes were themselves Replies/Conversations feed items, and removal is
+   a deletion to feeds), and a later pass freed 0.84 MB of 179.6 MB (0.5%). fiatjaf's profile, in
+   the back stack, lost every reply and reaction on its notes (23 and 21 children to 0), and they
+   stayed at 0 after returning to it: their cursors still said covered. Android runs that tier on
+   most trips to the background. Changes: `pruneRepliesAndReactions` and the cache-wide
+   `pruneHiddenEvents` are gone (the notes they removed go with their holders, and a pruned muted
+   note never came back after an unmute); `prunePastVersionsOfReplaceables` moved to tier 2;
+   channel prunes (`pruneOldMessages`, `pruneHiddenMessages`) now rewind the history cursors of
+   what they drop, as DMs did: a relay group's chat and Threads windows and a Concord channel's
+   (scrolling back after a prune used to end at a hole). Tier 2 went from ~5 s to ~50 ms on
+   desktop. Decryption caches (`PrivateDMCache`, `PrivateZapCache`, the shared-key cache, the list
+   caches) are LRU-bounded or per list and never needed the pruner; gift wraps and seals are weak
+   notes, re-decrypted if collected and re-delivered.
 
 ## Feed conversion (2026-11-10)
 

@@ -501,9 +501,8 @@ class CardFeedContentState(
                 // limit() notes from LocalCache and undoing the trim immediately. With
                 // lastNotes intact, the fast additive path stays active: only genuinely
                 // new notifications are appended, so the card list stays near maxItems.
-                // The Note refs in lastNotes are the same objects already held by LocalCache;
-                // they are freed when pruneRepliesAndReactions() prunes LocalCache and the
-                // next full refreshSuspended() replaces lastNotes with the pruned set.
+                // The trimmed notes stay reachable through lastNotes, bounded by limit(), until
+                // the next full refreshSuspended() replaces it.
             }
         }
     }

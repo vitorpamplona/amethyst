@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cache
 
-import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -34,7 +33,7 @@ import kotlin.test.assertNull
 
 /**
  * Pruning an addressable has to drop it from `addressables`, the map every address lookup reads:
- * removing it from `notes` alone leaves the expired or muted event served as if nothing happened.
+ * removing it from `notes` alone leaves the expired event served as if nothing happened.
  *
  * Events go in through [consumePinned]: the cache holds notes weakly (LargeSoftCache), so a GC
  * mid-test would drop a note the pruner kept and fail the "kept" assertion.
@@ -62,22 +61,5 @@ class CachePrunerAddressablesTest {
             cache.pruner.pruneExpiredEvents()
 
             assertNull(cache.getAddressableNoteIfExists(expired.address())?.event)
-        }
-
-    @Test
-    fun hiddenAuthorsAddressableIsDroppedFromAddressables() =
-        runTest {
-            val cache = EventCache()
-            val muted = alice.sign(LongFormContentEvent.build("muted", "Article", dTag = "post", createdAt = 1_000))
-            val kept = bob.sign(LongFormContentEvent.build("kept", "Article", dTag = "post", createdAt = 1_000))
-            cache.consumePinned(muted)
-            cache.consumePinned(kept)
-
-            cache.pruner.pruneHiddenEvents(LiveHiddenUsers(null, emptyList(), emptySet(), emptySet(), hiddenUsers = setOf(alice.pubKey)))
-
-            assertNull(cache.getAddressableNoteIfExists(muted.address())?.event)
-            assertNull(cache.getNoteIfExists(muted.id)?.event)
-            assertNotNull(cache.getAddressableNoteIfExists(kept.address())?.event)
-            assertNotNull(cache.getNoteIfExists(kept.id)?.event)
         }
 }

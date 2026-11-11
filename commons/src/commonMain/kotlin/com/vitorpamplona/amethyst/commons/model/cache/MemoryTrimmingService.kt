@@ -20,9 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cache
 
-import com.vitorpamplona.amethyst.commons.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.sync.Mutex
 
@@ -38,50 +36,48 @@ class MemoryTrimmingService(
     /**
      * Two tiers.
      *
-     * Tier 1 — always (on Android, every app switch):
-     *   Sweep stale WeakRefs, drop expired and superseded-replaceable events.
-     *   Safe to run frequently; no UI-visible side effects.
+     * Tier 1 — always (on Android, every app switch): sweep collected WeakRefs and unused note
+     * flows, drop expired events. Cheap, and nothing a screen shows changes.
      *
-     * Tier 2 — [underPressure], real reclaim pressure:
-     *   Tier 1 + drop events from muted/blocked users + old chat messages +
-     *   unobserved thread replies / reactions. May cause feeds to re-fetch content
-     *   that was scrolled past; triggers recomposition wherever StateFlows cleared.
+     * Tier 2 — [underPressure], real reclaim pressure: tier 1, plus old versions of replaceables
+     * and the stores that hold notes strongly and would otherwise grow for as long as the app runs:
+     * channel messages (the newest few hundred kept, muted authors' dropped) and DMs (the recent
+     * ones kept). Those prunes rewind the history cursors of what they drop, so scrolling back
+     * pages it in again.
+     *
+     * Feeds, threads and their replies, reactions and zaps are not pruned here. `LocalCache` holds
+     * notes weakly: a note lives while a feed, a channel or a screen holds it, and its children live
+     * with it, so they go when the holder does (the account feeds trim to their newest notes on the
+     * same pressure signal). Removing them earlier did not free memory the GC would not, and broke
+     * what still held them: measured on desktop (2026-11-11), a pass removed ~3,000 replies and
+     * reactions, most of them items the Replies and Conversations feeds showed, while freeing ~0.5%
+     * of the heap; a profile's notes lost every reply and reaction and, their cursors still saying
+     * covered, never got them back.
      */
     private fun doTrim(
         account: Collection<Account>,
-        otherAccounts: List<AccountInfo>,
         underPressure: Boolean,
     ) {
-        // Tier 1: always run — cheap housekeeping; cleanObservers only removes flows that are
-        // not currently held by the UI, so it is safe and inexpensive at any pressure level.
         cache.pruner.cleanMemory()
         cache.pruner.cleanObservers()
         cache.pruner.pruneExpiredEvents()
-        cache.pruner.prunePastVersionsOfReplaceables()
 
         if (underPressure) {
-            // Tier 2: real reclaim pressure — drop events from muted/blocked users, old
-            // messages, and unobserved reactions.
-            account.forEach {
-                cache.pruner.pruneHiddenEvents(it.hiddenUsers.flow.value)
-                cache.pruner.pruneHiddenMessages(it)
-            }
-            val accounts = otherAccounts.mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }.toSet()
+            cache.pruner.prunePastVersionsOfReplaceables()
+            account.forEach { cache.pruner.pruneHiddenMessages(it) }
             cache.pruner.pruneOldMessages()
-            cache.pruner.pruneRepliesAndReactions(accounts)
         }
     }
 
     /** Prunes, unless a trim is already running. */
     suspend fun run(
         account: Collection<Account>,
-        otherAccounts: List<AccountInfo>,
         underPressure: Boolean = true,
     ) {
         if (trimming.tryLock()) {
             Log.d("MemoryTrimmingService") { "Trimming memory (underPressure=$underPressure)" }
             try {
-                doTrim(account, otherAccounts, underPressure)
+                doTrim(account, underPressure)
             } finally {
                 trimming.unlock()
             }

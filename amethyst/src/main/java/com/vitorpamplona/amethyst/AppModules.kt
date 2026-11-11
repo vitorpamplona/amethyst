@@ -1615,7 +1615,7 @@ class AppModules(
             // Backgrounding is a natural moment to flush the DNS cache.
             dnsStore.save()
             val loggedIn = accountsCache.accounts.value.values
-            trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts(), underPressure = level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND)
+            trimmingService.run(loggedIn, underPressure = level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND)
             // Trim in-process caches proportional to OS memory pressure.
             //
             // Since API 34 the OS only ever delivers two trim levels (the foreground
