@@ -77,4 +77,18 @@ class FrontPageEditionStoreTest {
             // A day is read as a file name: nothing else may become one.
             assertNull(store.html(alice, "../../etc/passwd"))
         }
+
+    @Test
+    fun aRemovedAccountLeavesNoPapers() =
+        runBlocking {
+            val store = store()
+            store.save(alice, edition("2026-11-10"), "alice's")
+            store.save(bob, edition("2026-11-10"), "bob's")
+            store.removeAccount(alice)
+            assertEquals(emptyList(), store.list(alice))
+            assertNull(store.html(alice, "2026-11-10"))
+            assertEquals("bob's", store.html(bob, "2026-11-10"))
+            // Twice is fine.
+            store.removeAccount(alice)
+        }
 }

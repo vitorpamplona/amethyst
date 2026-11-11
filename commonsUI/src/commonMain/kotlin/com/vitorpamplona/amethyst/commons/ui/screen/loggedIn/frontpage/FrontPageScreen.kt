@@ -174,6 +174,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_tagline
 import com.vitorpamplona.amethyst.commons.resources.front_page_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_tokens
 import com.vitorpamplona.amethyst.commons.resources.front_page_tokens_label
+import com.vitorpamplona.amethyst.commons.resources.front_page_too_large
 import com.vitorpamplona.amethyst.commons.resources.front_page_tor_pictures
 import com.vitorpamplona.amethyst.commons.resources.front_page_unsupported
 import com.vitorpamplona.amethyst.commons.resources.front_page_violation_image
@@ -991,6 +992,10 @@ private fun BoxScope.PaperStatus(
                     border = BorderStroke(1.dp, Ink.copy(alpha = 0.4f)),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Ink),
                 ) { Text(stringRes(Res.string.retry)) }
+            }
+            InlineNappletStatus.TOO_LARGE -> {
+                // Retrying can't shrink it; the Download can still open it in a browser.
+                Text(stringRes(Res.string.front_page_too_large), style = MaterialTheme.typography.titleMedium, color = Ink, textAlign = TextAlign.Center)
             }
             InlineNappletStatus.SHOWING -> {}
         }

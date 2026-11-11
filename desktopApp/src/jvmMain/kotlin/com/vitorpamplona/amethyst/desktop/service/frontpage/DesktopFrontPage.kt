@@ -54,16 +54,18 @@ class DesktopFrontPageNotifier(
     override suspend fun paperReady(
         account: HexKey,
         edition: SavedEdition,
-    ) = send(loadStringRes(Res.string.front_page_ready_title), edition.headline.orEmpty())
+    ) = send(account, loadStringRes(Res.string.front_page_ready_title), edition.headline.orEmpty())
 
-    override suspend fun needsYou(account: HexKey) = send(loadStringRes(Res.string.front_page_needs_you_title), loadStringRes(Res.string.front_page_needs_you_body))
+    override suspend fun needsYou(account: HexKey) = send(account, loadStringRes(Res.string.front_page_needs_you_title), loadStringRes(Res.string.front_page_needs_you_body))
 
     private suspend fun send(
+        account: HexKey,
         title: String,
         body: String,
     ) {
         if (!notifications.settings.enabled.value) return
-        val result = notifications.dispatcher.send(NotificationSpec(title = title, body = body, kind = NotifKind.FRONT_PAGE, threadId = THREAD_ID))
+        // One thread per account: one account's paper never replaces another's.
+        val result = notifications.dispatcher.send(NotificationSpec(title = title, body = body, kind = NotifKind.FRONT_PAGE, threadId = "$THREAD_ID-${account.take(16)}"))
         if (result is SendResult.Failed) Log.w(TAG, "Could not post the front page notification", result.error)
     }
 
@@ -89,6 +91,8 @@ class DesktopFrontPageScheduler(
     fun start() {
         scope.launch {
             accounts.collect { loaded ->
+                // A signed-out account's timer goes with it.
+                timers.keys.filter { it !in loaded }.forEach { timers.remove(it)?.cancel() }
                 loaded.keys.filter { !timers.containsKey(it) }.forEach { account ->
                     val schedule = printers.schedules.get(account)
                     if (!schedule.enabled) return@forEach
@@ -106,8 +110,7 @@ class DesktopFrontPageScheduler(
         if (!schedule.enabled) return
         timers[account] =
             scope.launch {
-                val now = TimeUtils.now()
-                delay((FrontPageClock.nextRun(now, schedule.hour, schedule.minute) - now) * 1000)
+                untilWallClock(FrontPageClock.nextRun(TimeUtils.now(), schedule.hour, schedule.minute))
                 run(account)
                 reschedule(account, printers.schedules.get(account))
             }
@@ -147,5 +150,25 @@ class DesktopFrontPageScheduler(
 
     companion object {
         private const val TAG = "DesktopFrontPage"
+
+        /** How often a waiting timer looks at the wall clock. */
+        private const val SLICE_MS = 60_000L
+
+        /**
+         * Waits until the wall clock reaches [atSeconds]. In slices, not one long delay: the
+         * coroutine clock is monotonic and stops while a laptop sleeps, so a single delay set at
+         * night fires late by however long the lid was closed.
+         */
+        suspend fun untilWallClock(
+            atSeconds: Long,
+            now: () -> Long = { TimeUtils.now() },
+            pause: suspend (Long) -> Unit = { delay(it) },
+        ) {
+            while (true) {
+                val left = atSeconds - now()
+                if (left <= 0) return
+                pause(minOf(left * 1000, SLICE_MS))
+            }
+        }
     }
 }

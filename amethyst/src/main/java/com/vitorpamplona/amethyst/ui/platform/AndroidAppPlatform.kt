@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.platform
 import android.content.Context
 import android.os.Build
 import android.widget.Toast
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -290,6 +291,13 @@ object AndroidAppPlatform : AppPlatform {
     ) {
         // The :napplet sandbox renders it, as it does an nSite: no WebView ever boots in this process.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val tooLarge = remember(html) { html.encodeToByteArray().size > NappletLauncher.MAX_PAPER_BYTES }
+            if (tooLarge) {
+                // Said as what it is, not as a failure Retry could fix.
+                LaunchedEffect(instanceId) { onStatus(InlineNappletStatus.TOO_LARGE) }
+                Box(modifier)
+                return
+            }
             val context = LocalContext.current
             InlineNappletView(html to instanceId, instanceId, onStatus, modifier) {
                 NappletLauncher.buildInlinePaperParams(context, html, title, instanceId)

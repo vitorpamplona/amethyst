@@ -129,6 +129,18 @@ class FrontPageEditionStore(
         }
     }
 
+    /** Deletes every page kept for [account]: for a removed account. */
+    suspend fun removeAccount(account: HexKey) =
+        withContext(Dispatchers.IO) {
+            lock.withLock {
+                try {
+                    fs.deleteRecursively(dir(account), mustExist = false)
+                } catch (e: IOException) {
+                    Log.w(TAG, "Could not delete a removed account's papers", e)
+                }
+            }
+        }
+
     /** Written beside, then moved: a crash mid-write never leaves a half page where a whole one was. */
     private fun write(
         target: Path,

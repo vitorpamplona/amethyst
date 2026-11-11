@@ -265,8 +265,11 @@ object NappletLauncher {
         }
     }
 
-    /** Well under the 1 MB binder budget the rest of the launch shares. */
-    private const val MAX_PAPER_BYTES = 600_000
+    /**
+     * The largest page handed to the sandbox. The whole launch is one binder transaction, whose
+     * buffer (1 MB) is shared by everything the process has in flight: 600 KB left too little.
+     */
+    const val MAX_PAPER_BYTES = 400_000
 
     private const val TAG = "NappletLauncher"
 }

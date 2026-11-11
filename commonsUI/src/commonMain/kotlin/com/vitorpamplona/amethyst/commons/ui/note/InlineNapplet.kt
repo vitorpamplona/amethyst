@@ -250,7 +250,7 @@ private fun LiveRun(
             ) {
                 NappletDownloadIndicator(download)
             }
-        InlineNappletStatus.FAILED, InlineNappletStatus.NO_TOR ->
+        InlineNappletStatus.FAILED, InlineNappletStatus.NO_TOR, InlineNappletStatus.TOO_LARGE ->
             Column(
                 Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
                 verticalArrangement = Arrangement.Center,

@@ -478,6 +478,9 @@ enum class InlineNappletStatus {
 
     /** Tor did not connect in time, so it was not opened rather than fetched around Tor. */
     NO_TOR,
+
+    /** Too large to hand to the sandbox in one message (Android's binder limit): never sent. */
+    TOO_LARGE,
 }
 
 @Composable

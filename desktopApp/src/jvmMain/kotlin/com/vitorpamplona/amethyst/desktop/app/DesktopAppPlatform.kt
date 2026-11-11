@@ -188,7 +188,7 @@ class DesktopAppPlatform(
     ) {
         val host = nappletHost ?: return
         // The bundled Chromium, off screen, as for an inline nSite: drawn by the screen, no script runs.
-        InlineNappletPane(host, "front-page/${html.hashCode()}", instanceId, onStatus, modifier) {
+        InlineNappletPane(host, posterKey = null, instanceId, onStatus, modifier) {
             host.openInlinePaper(html, title, instanceId)
         }
     }

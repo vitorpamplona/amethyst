@@ -61,13 +61,14 @@ fun InlineNappletPane(
 
 /**
  * [InlineNappletPane] for any app a note runs: [open] starts its off-screen session, and the last
- * frame is kept as the poster under [posterKey].
+ * frame is kept as the poster under [posterKey]. A null key keeps none: the front page is private
+ * and never shown as a poster, so its frames have no business in the shared cache.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun InlineNappletPane(
     host: DesktopNappletHost,
-    posterKey: String,
+    posterKey: String?,
     instanceId: String,
     onStatus: (InlineNappletStatus) -> Unit,
     modifier: Modifier,
@@ -85,7 +86,7 @@ fun InlineNappletPane(
                 val last = opened.offscreen?.keepLastFrame()
                 // A session the host already closed belonged to an account that left: its screen is
                 // never a poster for the next one.
-                if (last != null && !opened.isClosed) InlineNappletPosters.put(posterKey, last)
+                if (posterKey != null && last != null && !opened.isClosed) InlineNappletPosters.put(posterKey, last)
                 host.closeInline(opened)
             }
             session = null

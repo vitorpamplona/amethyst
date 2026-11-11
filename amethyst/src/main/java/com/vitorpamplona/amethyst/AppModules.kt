@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageScheduleSt
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreObserverPrefsStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageEditionStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSchedule
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettings
@@ -1107,12 +1108,15 @@ class AppModules(
         /**
          * Drops everything a deleted account left in the publish pipelines: parked scheduled posts,
          * checkpointed PoW mining jobs, and any of its jobs still queued or mining (a post must not
-         * publish after its account is gone).
+         * publish after its account is gone), and its front page's job, papers and settings.
          */
         override suspend fun onAccountRemoved(pubkey: HexKey) {
             scheduledPostStore.removeForAccount(pubkey)
             powPublishQueue.cancelForOwner(pubkey)
             powJobStore.removeForAccount(pubkey)
+            // Its morning edition must not wake for an account that is gone, nor its papers stay.
+            frontPageScheduler.reschedule(pubkey, FrontPageSchedule())
+            frontPagePrinters.forget(pubkey)
         }
 
         override fun cashuCountersFor(npub: String) = CashuPreferences.forAccount(npub)

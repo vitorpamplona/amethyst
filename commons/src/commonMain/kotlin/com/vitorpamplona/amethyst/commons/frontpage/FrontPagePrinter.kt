@@ -569,4 +569,16 @@ class FrontPagePrinters(
 
     /** The printer already made for [account], without making one. */
     fun existing(account: HexKey): FrontPagePrinter? = printers.value[account]
+
+    /**
+     * A removed account leaves nothing behind: its print stops, and its kept papers, schedule
+     * and Observer choice go. The platform cancels its own scheduled job ([FrontPageScheduler]).
+     */
+    suspend fun forget(account: HexKey) {
+        printers.value[account]?.cancel()
+        printers.update { it - account }
+        store.removeAccount(account)
+        schedules.set(account, FrontPageSchedule())
+        observerPrefs.set(account, ObserverPrefs())
+    }
 }
