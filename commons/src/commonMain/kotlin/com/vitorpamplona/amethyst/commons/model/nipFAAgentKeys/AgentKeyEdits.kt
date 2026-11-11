@@ -99,6 +99,17 @@ object AgentKeyEdits {
         return keys.filterNot { sameUrl(it.url, url) }
     }
 
+    /**
+     * Where to read kind 12000 before rewriting it: the user's NIP-65 write relays, as NIP-FA
+     * says. Never the app's default relays beside them: one of those answering "nothing here"
+     * would count as a read and let an edit start from nothing. [outbox], where this app
+     * publishes, only when the user has no NIP-65 list at all.
+     */
+    fun readRelays(
+        writeRelays: Set<NormalizedRelayUrl>,
+        outbox: Set<NormalizedRelayUrl>,
+    ): Set<NormalizedRelayUrl> = writeRelays.ifEmpty { outbox }
+
     /** What stops [key] being saved for [url] (both trimmed), or null when it can be. */
     fun problem(
         url: String,

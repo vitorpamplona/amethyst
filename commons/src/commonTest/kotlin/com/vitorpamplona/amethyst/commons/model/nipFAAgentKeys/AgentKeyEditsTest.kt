@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
@@ -120,4 +121,14 @@ class AgentKeyEditsTest {
             val odd = signed(EventTemplate(1_000, AgentKeyEvent.KIND, emptyArray(), signer.nip44Encrypt("not json", signer.pubKey)))
             assertFailsWith<UnreadableAgentKeysException> { rewriteAgentKeys(odd, signer) { emptyList() } }
         }
+
+    @Test
+    fun keysAreReadFromTheWriteRelaysAndTheOutboxOnlyWithoutAList() {
+        val mine = setOf(RelayUrlNormalizer.normalizeOrNull("wss://mine.example")!!)
+        val defaults = setOf(RelayUrlNormalizer.normalizeOrNull("wss://default.example")!!)
+        // A default relay answering "nothing here" must not stand in for the user's own relays.
+        assertEquals(mine, AgentKeyEdits.readRelays(writeRelays = mine, outbox = mine + defaults))
+        // No NIP-65 list yet: where this app publishes is all there is.
+        assertEquals(defaults, AgentKeyEdits.readRelays(writeRelays = emptySet(), outbox = defaults))
+    }
 }

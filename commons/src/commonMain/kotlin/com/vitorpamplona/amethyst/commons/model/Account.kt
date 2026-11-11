@@ -154,6 +154,7 @@ import com.vitorpamplona.amethyst.commons.model.nip89AppHandlers.AppRecommendati
 import com.vitorpamplona.amethyst.commons.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEdits
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyState
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.readAgentKeysForRewrite
 import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ObserverScheduleState
@@ -3778,12 +3779,13 @@ class Account(
     ): RelayAuthEvent = RelayAuthEvent.create(relay, challenge, signer)
 
     /**
-     * NIP-FA's Editing: read the newest kind 12000 from the outbox relays before rewriting it, so
-     * a key added on another device survives. Starting from nothing because the relays could
-     * not be read would delete the user's other keys, so then nothing is written.
+     * NIP-FA's Editing: read the newest kind 12000 from the user's write relays before rewriting
+     * it, so a key added on another device survives. Starting from nothing because the relays
+     * could not be read would delete the user's other keys, so then nothing is written.
      */
     private suspend fun readAgentKeysBeforeWriting() {
-        client.readAgentKeysForRewrite(outboxRelays.flow.value, signer.pubKey, agentKeys.getAgentKeyEvent()) { event, relay ->
+        val relays = AgentKeyEdits.readRelays(nip65RelayList.outboxFlowNoDefaults.value, outboxRelays.flow.value)
+        client.readAgentKeysForRewrite(relays, signer.pubKey, agentKeys.getAgentKeyEvent()) { event, relay ->
             cache.justConsume(event, relay, wasVerified = true)
         }
     }
