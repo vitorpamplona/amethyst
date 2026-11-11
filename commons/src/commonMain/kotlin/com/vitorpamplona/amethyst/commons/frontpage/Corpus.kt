@@ -310,7 +310,8 @@ fun digest(
             p("- [${event.id}] kind ${event.kind} · $author · ${utc(event.createdAt)}")
             if (!title.isNullOrEmpty()) p("  title: $title")
             val link = DESK_LINKS[desk.key]
-            if (link != null && event.firstTagValue("d") != null) p("  ${link.line}: ${link.writerUrl(event.id)}")
+            // Only an address that encodes gets a link: resolve could not verify any other.
+            if (link != null && link.canonicalUrlOrNull(event) != null) p("  ${link.line}: ${link.writerUrl(event.id)}")
             val text = body(event, excerptOf(desk.key))
             if (text.isNotEmpty()) p("  $text")
         }

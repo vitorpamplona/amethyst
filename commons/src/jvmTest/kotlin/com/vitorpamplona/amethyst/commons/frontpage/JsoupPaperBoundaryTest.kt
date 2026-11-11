@@ -72,10 +72,11 @@ class JsoupPaperBoundaryTest {
     }
 
     @Test
-    fun srcsetAndCssUrlsMustBeShortlistArt() {
-        assertTrue(Violation.Kind.IMAGE in kinds("<img src=\"art-1\" srcset=\"https://evil.example/x.png 2x\" alt=\"x\">"))
+    fun artIsOnlyEverAnImg() {
+        assertTrue(Violation.Kind.MARKUP in kinds("<img src=\"art-1\" srcset=\"https://evil.example/x.png 2x\" alt=\"x\">"))
         assertEquals(listOf(Violation.Kind.IMAGE), kinds("<div style=\"background:url(https://evil.example/x.png)\">x</div>"))
-        assertEquals(emptyList(), kinds("<div style=\"background:url('https://img.example/sun.jpg')\">x</div>"))
+        // v2: not even shortlist art goes through CSS.
+        assertEquals(listOf(Violation.Kind.IMAGE), kinds("<div style=\"background:url('https://img.example/sun.jpg')\">x</div>"))
     }
 
     @Test
@@ -133,5 +134,124 @@ class JsoupPaperBoundaryTest {
         // If resolve ever regressed, the boundary still fails closed.
         val doc = JsoupPaperBoundary.parsePage(page("<a href=\"https://evil.example/x\">x</a>"))
         assertEquals(listOf(Violation.Kind.LINK), JsoupPaperBoundary.check(doc, corpus).violations.map { it.kind })
+    }
+
+    // --- paper boundary v2: every bypass the 2026-11-11 audit found ---------------
+
+    private fun markup(body: String) = kinds(body).filter { it == Violation.Kind.MARKUP }
+
+    @Test
+    fun declarativeShadowDomIsRefused() {
+        assertTrue(markup("<div><template shadowrootmode=\"open\"><img src=x onerror=alert(1)></template></div>").isNotEmpty())
+    }
+
+    @Test
+    fun noscriptCommentSmugglingIsRefused() {
+        assertTrue(markup("<noscript><p title=\"</noscript><img src=x onerror=alert(1)>\"></p></noscript>").isNotEmpty())
+    }
+
+    @Test
+    fun svgAndMathLinksAndAnimationsAreRefused() {
+        assertTrue(markup("<svg><a href=\"javascript:alert(1)\"><text>x</text></a></svg>").isNotEmpty())
+        assertTrue(markup("<svg><set attributeName=\"href\" to=\"javascript:alert(1)\"/></svg>").isNotEmpty())
+        assertTrue(markup("<svg><image href=\"https://evil.example/x.png\"/></svg>").isNotEmpty())
+        assertTrue(markup("<math><mi href=\"javascript:alert(1)\">x</mi></math>").isNotEmpty())
+    }
+
+    @Test
+    fun outsideResourcesBeyondImgAreRefused() {
+        assertTrue(markup("<link rel=\"stylesheet\" href=\"https://evil.example/x.css\">").isNotEmpty())
+        assertTrue(markup("<video poster=\"https://evil.example/x.png\"></video>").isNotEmpty())
+        assertTrue(markup("<table background=\"https://evil.example/x.png\"><tr><td>x</td></tr></table>").isNotEmpty())
+        assertTrue(markup("<base href=\"https://evil.example/\">").isNotEmpty())
+        assertTrue(markup("<meta http-equiv=\"refresh\" content=\"0;url=https://evil.example\">").isNotEmpty())
+        // The model may not write its own CSP either: the app adds it.
+        assertTrue(markup("<meta http-equiv=\"Content-Security-Policy\" content=\"default-src *\">").isNotEmpty())
+    }
+
+    @Test
+    fun urlsAreJudgedAsABrowserCleansThem() {
+        for (href in listOf(" javascript:alert(1)", "java\tscript:alert(1)", "//evil.example/x", "https:\\\\evil.example", "\u0001javascript:alert(1)", "data:text/html,x")) {
+            val doc = JsoupPaperBoundary.parsePage(page("<a href=\"$href\">x</a>"))
+            assertEquals(listOf(Violation.Kind.LINK), JsoupPaperBoundary.check(doc, corpus).violations.map { it.kind }, href)
+            // Resolve unwraps every one of them.
+            assertFalse(run("<a href=\"$href\">x</a>").html.contains("href="), href)
+        }
+        // A same-document fragment is fine.
+        assertEquals(emptyList(), kinds("<a href=\"#lead\">x</a><h2 id=\"lead\">Lead</h2>"))
+        // A shortlist picture behind stray whitespace is still that picture; anything else is not.
+        assertEquals(emptyList(), kinds("<img src=\" https://img.example/sun.jpg \" alt=\"x\">"))
+    }
+
+    @Test
+    fun cssEscapesAndOtherFetchersAreRefused() {
+        assertTrue(kinds("<style>@\\69mport 'https://evil.example/x.css';</style>").isNotEmpty())
+        assertTrue(kinds("<p style=\"background:\\75rl(https://evil.example/x.png)\">x</p>").isNotEmpty())
+        assertTrue(Violation.Kind.IMAGE in kinds("<style>p{background:image-set('https://evil.example/x.png' 1x)}</style>"))
+        assertTrue(Violation.Kind.IMAGE in kinds("<style>p{background:-webkit-image-set(\"x.png\" 1x)}</style>"))
+        assertTrue(Violation.Kind.IMAGE in kinds("<style>p{background:cross-fade(a, b)}</style>"))
+        assertTrue(markup("<style>@font-face{font-family:x}</style>").isNotEmpty())
+        assertTrue(markup("<style>@namespace x 'y';</style>").isNotEmpty())
+        assertEquals(emptyList(), markup("<style>@media (max-width: 600px) { p { margin: 0 } }</style>"))
+    }
+
+    @Test
+    fun generatedTextIsRefused() {
+        assertTrue(markup("<style>h1::after{content:'Bob resigned'}</style><h1>x</h1>").isNotEmpty())
+        assertTrue(markup("<style>q{quotes:'Bob said ' ''}</style><q>The relay answered in three seconds flat</q>").isNotEmpty())
+        assertEquals(emptyList(), markup("<style>q{quotes:'\u201c' '\u201d'}</style><q>The relay answered in three seconds flat</q>"))
+    }
+
+    @Test
+    fun hiddenTextInsideAQuoteIsRefused() {
+        // "never" hidden from the reader but counted by the check would let a quote say the opposite.
+        assertTrue(markup("<q>The relay <span hidden>never</span> answered</q>").isNotEmpty())
+        assertTrue(markup("<q>The relay answered in three seconds flat<em style=\"display:none\">!</em></q>").isNotEmpty())
+        assertTrue(markup("<q aria-hidden=\"true\">The relay answered in three seconds flat</q>").isNotEmpty())
+        assertTrue(markup("<q dir=\"rtl\">The relay answered in three seconds flat</q>").isNotEmpty())
+        assertTrue(markup("<style>blockquote em{display:none}</style><blockquote>The relay answered <em>in</em> three seconds flat</blockquote>").isNotEmpty())
+        assertTrue(markup("<style>.x{font-size:0}</style><q>The relay answered in three seconds flat</q><q><em class=\"x\">y</em></q>").isNotEmpty())
+        assertTrue(markup("<style>q{height:1px;overflow:hidden}</style><q>The relay answered in three seconds flat</q>").isNotEmpty())
+        // Emphasis that only changes how it looks is fine.
+        assertEquals(emptyList(), kinds("<style>q em{font-style:italic}</style><q>The relay answered in <em>three seconds</em> flat</q>"))
+    }
+
+    @Test
+    fun aBylineMaySitInTheQuotesAttribution() {
+        val checked = run("<blockquote><p>The relay answered in three seconds flat</p><footer><a href=\"https://jumble.social/users/${id(1)}\">Alice</a></footer></blockquote>")
+        assertEquals(emptyList(), checked.violations.map { it.kind })
+        // But not elsewhere inside the quote.
+        assertTrue(markup("<blockquote><span>The relay answered in three seconds flat</span></blockquote>").isNotEmpty())
+    }
+
+    @Test
+    fun everyElidedFragmentCountsHoweverShort() {
+        // v1 skipped fragments of two characters or fewer: "no" slipped in.
+        assertEquals(listOf(Violation.Kind.QUOTE), kinds("<q>the relay answered … no … went quiet</q>"))
+    }
+
+    @Test
+    fun detailsMayStartOpenAndUnknownAttributesAreRefused() {
+        assertEquals(emptyList(), kinds("<details open><summary>More</summary><p>x</p></details>"))
+        assertTrue(markup("<p data-x=\"1\">x</p>").isNotEmpty())
+        assertTrue(markup("<a href=\"#x\" target=\"_top\">x</a>").isNotEmpty())
+        assertTrue(markup("<div ping=\"https://evil.example\">x</div>").isNotEmpty())
+    }
+
+    @Test
+    fun anUnencodableDeskAddressNeverThrows() {
+        val longD = event(9, 30311, tags = arrayOf(arrayOf("d", "x".repeat(300)), arrayOf("status", "live")))
+        val big = Fixtures.corpus(mapOf("notes" to listOf(note), "live" to listOf(longD)))
+        val checked = JsoupPaperBoundary.resolveAndCheck(page("<a href=\"https://zap.stream/stream/${id(9)}\">Watch</a>"), big)
+        assertEquals(emptyList(), checked.violations.map { it.kind })
+        assertFalse(checked.html.contains("zap.stream"))
+        assertEquals(null, DESK_LINKS.getValue("live").canonicalUrlOrNull(longD))
+    }
+
+    @Test
+    fun theCheckedPageIsTheSettledOne() {
+        // A page that changes when read back is checked in the form it settles into.
+        val checked = run("<p>x</p>")
+        assertEquals(checked.html, JsoupPaperBoundary.serialize(JsoupPaperBoundary.parsePage(checked.html)))
     }
 }

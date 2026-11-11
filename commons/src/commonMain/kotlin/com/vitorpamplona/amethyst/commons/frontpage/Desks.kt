@@ -225,10 +225,20 @@ class DeskLink(
         return writerPrefix + id
     }
 
-    fun canonicalUrl(event: Event): String {
-        val d = event.firstTagValue("d")
-        require(d != null && event.kind in kinds) { "Not an address on this host" }
-        val naddr = NAddress.createOrNull(event.kind, event.pubKey, d, emptyList()) ?: throw IllegalArgumentException("d tag cannot be encoded")
+    /**
+     * The host's naddr page for [event], or null when it has none: not this desk's kind, no `d`
+     * tag, or an address that won't encode (a `d` tag over 255 bytes). Never throws: the corpus
+     * is written by anyone, and nothing in resolve or check may fail on it.
+     */
+    fun canonicalUrlOrNull(event: Event): String? {
+        val d = event.firstTagValue("d") ?: return null
+        if (event.kind !in kinds || d.encodeToByteArray().size > 255) return null
+        val naddr =
+            try {
+                NAddress.createOrNull(event.kind, event.pubKey, d, emptyList())
+            } catch (e: Exception) {
+                null
+            } ?: return null
         return naddrPrefix + naddr
     }
 }
