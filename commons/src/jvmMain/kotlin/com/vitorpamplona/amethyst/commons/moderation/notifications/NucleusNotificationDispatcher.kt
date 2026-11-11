@@ -53,12 +53,16 @@ class NucleusNotificationDispatcher(
     private val appLabel: String,
     private val fallback: AwtTrayNotifier,
     @Suppress("unused") private val scope: CoroutineScope,
+    /** Opens a clicked notification's [NotificationSpec.openUri]. Called on the OS's callback thread. */
+    private val onOpen: (uri: String) -> Unit = {},
 ) : NotificationDispatcher {
     private val host: HostOs = detectHostOs()
 
     private companion object {
         const val PERMISSION_REQUEST_TIMEOUT_MS = 90_000L
         const val SEND_ACK_TIMEOUT_MS = 10_000L
+        const val MAX_OPEN_URIS = 256
+        const val MAC_DISMISS_ACTION = "com.apple.UNNotificationDismissActionIdentifier"
         const val TIMEOUT_ERROR_MESSAGE =
             "macOS never answered the permission request. The permission banner may have " +
                 "auto-dismissed — click again and watch the top-right of the screen for the " +
@@ -93,6 +97,26 @@ class NucleusNotificationDispatcher(
     @Volatile
     private var winInitialized: Boolean = false
 
+    // The link each shown notification opens, by the id its OS reports a click with (macOS request
+    // identifier, Linux notification id). Windows carries the link in the toast itself. Bounded:
+    // a notification old enough to fall off is one nobody is going to click.
+    private val openUris =
+        object : LinkedHashMap<String, String>() {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > MAX_OPEN_URIS
+        }
+
+    private fun rememberOpenUri(
+        id: String,
+        uri: String?,
+    ) {
+        if (uri != null) synchronized(openUris) { openUris[id] = uri }
+    }
+
+    private fun clicked(id: String) {
+        val uri = synchronized(openUris) { openUris.remove(id) } ?: return
+        onOpen(uri)
+    }
+
     init {
         // Refresh macOS permission from the OS in case the user already granted
         // in a previous session. On unbundled runs, Nucleus reports isAvailable
@@ -105,6 +129,52 @@ class NucleusNotificationDispatcher(
                 // BundleRequired / NotRequested. User can still trigger the
                 // request from settings.
             }
+        }
+        if (_nativeAvailable.value) {
+            try {
+                listenForClicks()
+            } catch (_: Throwable) {
+                // Toasts still show; a click just opens nothing.
+            }
+        }
+    }
+
+    /** Hooks each OS's "the user clicked a notification" callback up to [onOpen]. */
+    private fun listenForClicks() {
+        when (host) {
+            HostOs.MAC ->
+                io.github.kdroidfilter.nucleus.notification.NotificationCenter.setDelegate(
+                    object : io.github.kdroidfilter.nucleus.notification.NotificationCenterDelegate {
+                        // Shown while the app is in front too: a toast for an account that is not
+                        // on screen is the only sign of it. The on-screen account's are held back
+                        // before they get here.
+                        override fun willPresent(notification: io.github.kdroidfilter.nucleus.notification.DeliveredNotification) =
+                            setOf(
+                                io.github.kdroidfilter.nucleus.notification.PresentationOption.BANNER,
+                                io.github.kdroidfilter.nucleus.notification.PresentationOption.LIST,
+                                io.github.kdroidfilter.nucleus.notification.PresentationOption.SOUND,
+                            )
+
+                        override fun didReceive(response: io.github.kdroidfilter.nucleus.notification.NotificationResponse) {
+                            if (response.actionIdentifier != MAC_DISMISS_ACTION) clicked(response.notification.identifier)
+                        }
+                    },
+                )
+            HostOs.LINUX ->
+                io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationCenter.addListener(
+                    object : io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationListener {
+                        override fun onActionInvoked(
+                            notificationId: Int,
+                            actionKey: String,
+                        ) {
+                            if (actionKey == io.github.kdroidfilter.nucleus.notification.linux.NotificationAction.DEFAULT_KEY) {
+                                clicked(notificationId.toString())
+                            }
+                        }
+                    },
+                )
+            // Registered with the AUMID, in ensureWindowsInitialized.
+            HostOs.WINDOWS, HostOs.UNKNOWN -> Unit
         }
     }
 
@@ -266,6 +336,7 @@ class NucleusNotificationDispatcher(
                 identifier = UUID.randomUUID().toString(),
                 content = content,
             )
+        rememberOpenUri(request.identifier, spec.openUri)
         // Nucleus delivers add() asynchronously; the optional callback carries
         // the OS error string (null on success). Without it, a rejected
         // notification (e.g. unauthorized at send time) is silently swallowed
@@ -299,6 +370,31 @@ class NucleusNotificationDispatcher(
         try {
             io.github.kdroidfilter.nucleus.notification.windows.WindowsNotificationCenter
                 .initialize(aumid = bundleId, appName = appLabel)
+            io.github.kdroidfilter.nucleus.notification.windows.WindowsNotificationCenter.addListener(
+                object : io.github.kdroidfilter.nucleus.notification.windows.ToastNotificationListener {
+                    // A click on the toast body hands back its launch arguments: the link itself.
+                    override fun onActivated(
+                        tag: String,
+                        group: String,
+                        arguments: String,
+                        userInputs: Map<String, String>,
+                    ) {
+                        if (arguments.isNotBlank()) onOpen(arguments)
+                    }
+
+                    override fun onDismissed(
+                        tag: String,
+                        group: String,
+                        reason: io.github.kdroidfilter.nucleus.notification.windows.DismissalReason,
+                    ) = Unit
+
+                    override fun onFailed(
+                        tag: String,
+                        group: String,
+                        errorCode: Int,
+                    ) = Unit
+                },
+            )
             winInitialized = true
         } catch (_: Throwable) {
             // Best-effort; showSimple will surface any hard failure.
@@ -307,9 +403,26 @@ class NucleusNotificationDispatcher(
 
     private fun sendWindows(spec: NotificationSpec): SendResult {
         ensureWindowsInitialized()
-        io.github.kdroidfilter.nucleus.notification.windows.WindowsNotificationCenter.showSimple(
-            title = spec.title,
-            body = spec.body,
+        val text =
+            listOfNotNull(
+                io.github.kdroidfilter.nucleus.notification.windows
+                    .AdaptiveText(spec.title),
+                spec.body.takeIf { it.isNotEmpty() }?.let {
+                    io.github.kdroidfilter.nucleus.notification.windows
+                        .AdaptiveText(it)
+                },
+            )
+        io.github.kdroidfilter.nucleus.notification.windows.WindowsNotificationCenter.show(
+            content =
+                io.github.kdroidfilter.nucleus.notification.windows.ToastContent(
+                    visual =
+                        io.github.kdroidfilter.nucleus.notification.windows.ToastVisual(
+                            binding =
+                                io.github.kdroidfilter.nucleus.notification.windows
+                                    .ToastBindingGeneric(children = text),
+                        ),
+                    launch = spec.openUri.orEmpty(),
+                ),
             group = spec.threadId.orEmpty(),
         )
         return SendResult.Delivered
@@ -323,10 +436,24 @@ class NucleusNotificationDispatcher(
                 appName = appLabel,
                 summary = spec.title,
                 body = spec.body,
+                // The "default" action is a click on the notification body; daemons show no button
+                // for it, so its label is never read.
+                actions =
+                    if (spec.openUri != null) {
+                        listOf(
+                            io.github.kdroidfilter.nucleus.notification.linux.NotificationAction(
+                                io.github.kdroidfilter.nucleus.notification.linux.NotificationAction.DEFAULT_KEY,
+                                appLabel,
+                            ),
+                        )
+                    } else {
+                        emptyList()
+                    },
             )
         val id =
             io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationCenter
                 .notify(notification)
+        if (id > 0) rememberOpenUri(id.toString(), spec.openUri)
         return if (id > 0) SendResult.Delivered else SendResult.Failed(IllegalStateException("libnotify returned id=0"))
     }
 
@@ -336,7 +463,7 @@ class NucleusNotificationDispatcher(
         spec: NotificationSpec,
         reason: String,
     ): SendResult {
-        val result = fallback.send(spec.title, spec.body)
+        val result = fallback.send(spec.title, spec.body, onClick = spec.openUri?.let { uri -> { onOpen(uri) } })
         return result.fold(
             onSuccess = { SendResult.DeliveredViaFallback },
             onFailure = { SendResult.Failed(IllegalStateException("$reason; AWT fallback also failed: ${it.message}", it)) },

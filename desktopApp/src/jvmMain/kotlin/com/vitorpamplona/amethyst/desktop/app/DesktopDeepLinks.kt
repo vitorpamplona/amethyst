@@ -88,6 +88,17 @@ object DesktopDeepLinks {
     }
 
     /**
+     * A click on one of our own notifications: [uri] is a link `NotificationRoutes` built, with
+     * the account it is for, and goes through the same routing as an OS-opened link, after the
+     * window comes to the front. Not filtered by scheme like [offer]: it never came from outside.
+     */
+    fun openFromNotification(uri: String) {
+        Log.d(TAG) { "Notification clicked: ${uri.take(24)}…" }
+        requestForeground()
+        pending.value = uri
+    }
+
+    /**
      * Installs the OS-side delivery mechanisms that are runtime's job (see the class docs). The
      * macOS handler must be in place before AWT can deliver an open-URI event, so it installs
      * synchronously; the Windows registry writes shell out to reg.exe once per value, so they

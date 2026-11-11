@@ -74,7 +74,14 @@ class DesktopNotifications(
 
     // Built on first use: it loads the native notifier.
     val dispatcher: NotificationDispatcher by lazy {
-        NucleusNotificationDispatcher(bundleId = BUNDLE_ID, appLabel = APP_LABEL, fallback = AwtTrayNotifier(), scope = scope)
+        NucleusNotificationDispatcher(
+            bundleId = BUNDLE_ID,
+            appLabel = APP_LABEL,
+            fallback = AwtTrayNotifier(),
+            scope = scope,
+            // A click opens what the notification is about, in the account it is for.
+            onOpen = DesktopDeepLinks::openFromNotification,
+        )
     }
 
     /** Events older than the app are history, not news. */

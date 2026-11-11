@@ -95,6 +95,11 @@ data class NotificationSpec(
     val threadId: String? = null,
     /** Amethyst event id for deep-linking from a click. */
     val deepLinkNoteId: String? = null,
+    /**
+     * What a click opens: an app link from `NotificationRoutes`, carrying `?account=` so the click
+     * switches to the account the notification is for. Null opens nothing.
+     */
+    val openUri: String? = null,
 )
 
 sealed interface SendResult {

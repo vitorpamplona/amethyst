@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.navigation.uri.findQueryParameterValue
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.uriToRoute
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -246,12 +247,20 @@ class DesktopAppRoot(
         }
 
         // OS-opened nostr:/amethyst: links, queued by DesktopDeepLinks (main()'s argv, the macOS
-        // open-URI event, or a second launch forwarded over the instance bus), routed through the
-        // shared parser once a logged-in shell exists.
+        // open-URI event, or a second launch forwarded over the instance bus) and clicked
+        // notifications, routed through the shared parser once a logged-in shell exists. A link
+        // for another saved account (`?account=`, which every notification carries) switches to it
+        // first and opens there, as on Android; this shell then goes away with its account.
         LaunchedEffect(nav, accountViewModel) {
             DesktopDeepLinks.pending.filterNotNull().collect { uri ->
                 DesktopDeepLinks.pending.value = null
-                uriToRoute(uri, accountViewModel.account)?.let { route -> nav.nav(route) }
+                val npub = uri.findQueryParameterValue("account")
+                val sessions = modules.sessionManager
+                if (npub != null && npub != sessions.currentAccountNPub()) {
+                    sessions.checkAndSwitchUserSync(npub) { account -> uriToRoute(uri, account) }
+                } else {
+                    uriToRoute(uri, accountViewModel.account)?.let { route -> nav.nav(route) }
+                }
             }
         }
     }

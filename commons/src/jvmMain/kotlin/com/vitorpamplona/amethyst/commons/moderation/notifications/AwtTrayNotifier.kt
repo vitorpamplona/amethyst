@@ -51,16 +51,22 @@ class AwtTrayNotifier(
     @Volatile
     private var trayIcon: TrayIcon? = null
 
+    // What clicking the balloon does: AWT reports a click on the last message shown, not on a given one.
+    @Volatile
+    private var onClick: (() -> Unit)? = null
+
     val isSupported: Boolean get() = supported
 
     fun send(
         title: String,
         message: String,
         type: MessageType = MessageType.INFO,
+        onClick: (() -> Unit)? = null,
     ): Result<Unit> {
         if (!supported) return Result.failure(IllegalStateException("System tray not supported"))
         return try {
             val icon = ensureTrayIcon() ?: return Result.failure(IllegalStateException("Failed to install tray icon"))
+            this.onClick = onClick
             icon.displayMessage(title, message, type.toAwt())
             Result.success(Unit)
         } catch (e: SecurityException) {
@@ -95,7 +101,12 @@ class AwtTrayNotifier(
                     // ignore the icon body when displayMessage is called.
                     Toolkit.getDefaultToolkit().createImage(EMPTY_ICON_PNG)
                 }
-            val icon = TrayIcon(image, appLabel).apply { isImageAutoSize = true }
+            val icon =
+                TrayIcon(image, appLabel).apply {
+                    isImageAutoSize = true
+                    // Fired when the user clicks the balloon (Windows) or the icon itself.
+                    addActionListener { onClick?.invoke() }
+                }
             tray.add(icon)
             trayIcon = icon
             icon

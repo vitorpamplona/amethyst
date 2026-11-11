@@ -111,6 +111,8 @@ class DesktopCalendarReminders(
                                 kind = NotifKind.CALENDAR,
                                 threadId = THREAD_ID,
                                 deepLinkNoteId = due.eventId,
+                                // A public appointment: it opens the same in any account.
+                                openUri = due.deepLink,
                             ),
                         )
                     // Not posted: leave it unmarked, so the next scan tries again while it is due.

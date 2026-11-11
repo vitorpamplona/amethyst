@@ -218,8 +218,16 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
    launch by itself, so they wait until the user opens a signing account. Toasts read "For
    <account>: …" and Android notifications carry the account as sub-text, both only when more
    than one account is loaded (`NotificationAccountLabel`). Read-only accounts are not loaded in
-   the background (as on Android). Clicking a desktop toast does nothing yet, on any account:
-   switching to its account is still to do.
+   the background (as on Android). A click on a desktop toast opens what Android's tap does, in the
+   notification's account (2026-11-11): each `NotificationSpec` carries `openUri`, the same
+   `NotificationRoutes` link Android uses (`?account=`), and `NucleusNotificationDispatcher` maps
+   each OS's click back to it (macOS delegate by request id, Linux default action by notification
+   id, Windows toast launch arguments, the tray balloon's action). The click goes through
+   `DesktopDeepLinks.openFromNotification`, and the deep-link routing now switches to the link's
+   account first, as `AppNavigation` does on Android. Checked on desktop through the instance bus
+   (read-only jack → a Notifications link for the signing account switched and opened it, then a
+   link for jack switched back); the OS click callbacks themselves were not clicked: the container
+   has no notification daemon.
 6. Pruner coordination.
 
 ## Feed conversion (2026-11-10)
