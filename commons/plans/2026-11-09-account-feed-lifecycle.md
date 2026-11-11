@@ -364,7 +364,11 @@ Done on the branch, each step its own commit:
     (`rechecked 2 shown: 0 kept`, no cache walk); unblock brought them back (full rebuild,
     2 kept); a report on B's picture kept it off Media while it stayed on Home (Home does not
     filter on reports, as before); unfollow emptied Home (rebuild, 0 kept). Single relay as a
-    feed's list is still unchecked.
+    feed's list: a local geode (`amy serve`) added to A's Relay Feeds and picked on Home. B posted
+    to damus only; A held the note open in a thread (so the cache kept it), then the same event
+    was published to the local relay. It joined Home through `seenOnSelectedRelay` with no new
+    event bundle and no rebuild. A note not held by anything is dropped by the cache and comes
+    back as a new event, which the ordinary path handles.
 
 No screen feed walks the whole cache any more. Threads, bookmarks, lists and pins read their notes
 directly; Home walks it on purpose (its universe is most of the cache).
