@@ -80,8 +80,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -94,6 +96,7 @@ import com.vitorpamplona.amethyst.commons.frontpage.FrontPageClock
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageGate
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageModels
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageRun
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSetup
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageViewModel
 import com.vitorpamplona.amethyst.commons.frontpage.MASTHEAD
 import com.vitorpamplona.amethyst.commons.frontpage.MorningScheduleView
@@ -152,8 +155,6 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_model_id
 import com.vitorpamplona.amethyst.commons.resources.front_page_needs_device_key
 import com.vitorpamplona.amethyst.commons.resources.front_page_never_printed
 import com.vitorpamplona.amethyst.commons.resources.front_page_new_edition
-import com.vitorpamplona.amethyst.commons.resources.front_page_no_key
-import com.vitorpamplona.amethyst.commons.resources.front_page_no_lens
 import com.vitorpamplona.amethyst.commons.resources.front_page_no_tor
 import com.vitorpamplona.amethyst.commons.resources.front_page_not_now
 import com.vitorpamplona.amethyst.commons.resources.front_page_not_printed_since
@@ -198,6 +199,15 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_weekdays
 import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_weekends
 import com.vitorpamplona.amethyst.commons.resources.front_page_scheduled
 import com.vitorpamplona.amethyst.commons.resources.front_page_set_up
+import com.vitorpamplona.amethyst.commons.resources.front_page_setup_change
+import com.vitorpamplona.amethyst.commons.resources.front_page_setup_done
+import com.vitorpamplona.amethyst.commons.resources.front_page_setup_key
+import com.vitorpamplona.amethyst.commons.resources.front_page_setup_lens
+import com.vitorpamplona.amethyst.commons.resources.front_page_setup_on
+import com.vitorpamplona.amethyst.commons.resources.front_page_setup_ranked_by
+import com.vitorpamplona.amethyst.commons.resources.front_page_setup_title
+import com.vitorpamplona.amethyst.commons.resources.front_page_setup_to_do
+import com.vitorpamplona.amethyst.commons.resources.front_page_setup_using
 import com.vitorpamplona.amethyst.commons.resources.front_page_show_failed
 import com.vitorpamplona.amethyst.commons.resources.front_page_step_check
 import com.vitorpamplona.amethyst.commons.resources.front_page_step_fix
@@ -248,7 +258,6 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.StringResource
 
 /** The house stylesheet's `--paper`: the newsprint the paper sits on, whatever the app's theme. */
 private val Newsprint = Color(0xFFFAF8F3)
@@ -312,6 +321,7 @@ fun FrontPageScreen(
         onStopOrDispose { release() }
     }
     val gate by viewModel.gate.collectAsStateWithLifecycle()
+    val setup by viewModel.setup.collectAsStateWithLifecycle()
     val models by viewModel.models.collectAsStateWithLifecycle()
     val run by viewModel.run.collectAsStateWithLifecycle()
     val editions by viewModel.editions.collectAsStateWithLifecycle()
@@ -374,7 +384,13 @@ fun FrontPageScreen(
             if (firstRun || gate != FrontPageGate.READY) {
                 Hero {
                     // First run: the print controls stay inline, in the card.
-                    if (gate == FrontPageGate.READY) {
+                    if (gate == FrontPageGate.NO_KEY || gate == FrontPageGate.NO_LENS) {
+                        SetupChecklist(
+                            setup,
+                            onKey = { nav.nav(Route.AgentKeysSettings) },
+                            onLens = { nav.nav(Route.WebOfTrust) },
+                        )
+                    } else if (gate == FrontPageGate.READY) {
                         PrintControls(
                             models,
                             run,
@@ -394,8 +410,7 @@ fun FrontPageScreen(
                 }
             }
             when (gate) {
-                FrontPageGate.NO_KEY -> GateCard(Res.string.front_page_no_key, Res.string.front_page_connect) { nav.nav(Route.AgentKeysSettings) }
-                FrontPageGate.NO_LENS -> GateCard(Res.string.front_page_no_lens, Res.string.front_page_set_up) { nav.nav(Route.WebOfTrust) }
+                FrontPageGate.NO_KEY, FrontPageGate.NO_LENS -> {}
                 FrontPageGate.UNSUPPORTED -> Notice(stringRes(Res.string.front_page_unsupported))
                 FrontPageGate.READY -> RunStatus(run, onCancel = viewModel::cancel)
             }
@@ -1230,18 +1245,95 @@ private fun BoxScope.PaperStatus(
     }
 }
 
+/**
+ * Both steps before the first paper, in the setup card at once: the reader sees the second
+ * before finishing the first. A done row stays tappable, to change it.
+ */
 @Composable
-private fun GateCard(
-    message: StringResource,
-    action: StringResource,
-    onAction: () -> Unit,
+private fun SetupChecklist(
+    setup: FrontPageSetup,
+    onKey: () -> Unit,
+    onLens: () -> Unit,
 ) {
-    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringRes(message), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            Spacer(Modifier.width(12.dp))
-            Button(onClick = onAction, shape = RoundedCornerShape(14.dp)) { Text(stringRes(action)) }
-        }
+    Column {
+        Text(
+            stringRes(Res.string.front_page_setup_title),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 4.dp).semantics { heading() },
+        )
+        SetupStep(
+            label = stringRes(Res.string.front_page_setup_key),
+            status = setup.provider?.let { stringRes(Res.string.front_page_setup_using, it) },
+            action = stringRes(Res.string.front_page_connect),
+            onClick = onKey,
+        )
+        SetupStep(
+            label = stringRes(Res.string.front_page_setup_lens),
+            status =
+                if (setup.hasLens) {
+                    setup.lensName?.let { stringRes(Res.string.front_page_setup_ranked_by, it) } ?: stringRes(Res.string.front_page_setup_on)
+                } else {
+                    null
+                },
+            action = stringRes(Res.string.front_page_set_up),
+            onClick = onLens,
+        )
+    }
+}
+
+/**
+ * One checklist row: a check when [status] says it is done, an empty circle and [action] when
+ * not. One element for a screen reader, its state announced, and a button that names what it does.
+ */
+@Composable
+private fun SetupStep(
+    label: String,
+    status: String?,
+    action: String,
+    onClick: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val done = status != null
+    val state = stringRes(if (done) Res.string.front_page_setup_done else Res.string.front_page_setup_to_do)
+    val clickLabel = if (done) stringRes(Res.string.front_page_setup_change) else action
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClickLabel = clickLabel, role = Role.Button, onClick = onClick)
+            .semantics(mergeDescendants = true) { stateDescription = state }
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            if (done) MaterialSymbols.CheckCircle else MaterialSymbols.RadioButtonUnchecked,
+            contentDescription = null,
+            tint = if (done) scheme.primary else scheme.outline,
+            filled = done,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(label, style = MaterialTheme.typography.bodyLarge, color = scheme.onSurface, maxLines = 1)
+        Spacer(Modifier.width(12.dp))
+        // The status or the action, at the end of the row; a long provider name is cut, not the label.
+        Text(
+            status ?: action,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (done) FontWeight.Normal else FontWeight.SemiBold,
+            color = if (done) scheme.onSurfaceVariant else scheme.primary,
+            textAlign = TextAlign.End,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            MaterialSymbols.AutoMirrored.KeyboardArrowRight,
+            contentDescription = null,
+            tint = if (done) scheme.outline else scheme.primary,
+            modifier = Modifier.size(20.dp),
+        )
     }
 }
 

@@ -23,15 +23,19 @@ package com.vitorpamplona.amethyst.commons.frontpage
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.agents.AgentProviderPresets
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ScheduleEdit
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -57,6 +61,39 @@ enum class FrontPageGate {
     UNSUPPORTED,
     READY,
 }
+
+/**
+ * Both things a first paper needs, known together, for the setup checklist. [FrontPageGate]
+ * names only the first one missing; this tells the reader about the second before they finish
+ * the first.
+ */
+@Immutable
+data class FrontPageSetup(
+    /** The default AI key's provider, as the reader knows it ("OpenRouter"); null with no key. */
+    val provider: String?,
+    /** The rank provider's pubkey (kind 10040 `30382:rank`); null with no lens. */
+    val lens: HexKey?,
+    /** The rank provider's profile name, when this device already has it. */
+    val lensName: String? = null,
+) {
+    val hasKey: Boolean get() = provider != null
+    val hasLens: Boolean get() = lens != null
+
+    /** Nothing left to set up: Print takes the checklist's place. */
+    val complete: Boolean get() = hasKey && hasLens
+}
+
+/** The setup from the reader's default AI [key] and their [rank] provider, the facts [gateOf] reads. */
+fun frontPageSetupOf(
+    key: AgentKeyTag?,
+    rank: ServiceProviderTag?,
+    lensName: String? = null,
+): FrontPageSetup =
+    FrontPageSetup(
+        provider = key?.let { AgentProviderPresets.displayName(it.url) },
+        lens = rank?.pubkey,
+        lensName = lensName?.takeIf { rank != null && it.isNotBlank() },
+    )
 
 @Immutable
 sealed interface FrontPageRun {
@@ -121,6 +158,20 @@ class FrontPageViewModel(
     val gate: StateFlow<FrontPageGate> =
         combine(key, account.trustProviderList.liveUserRankProvider) { key, rank -> gateOf(key, rank != null, printer.boundary) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, FrontPageGate.NO_KEY)
+
+    /**
+     * The setup checklist: the key and the lens both, from the same flows as [gate]. The lens is
+     * named from the profile this device already holds; no relay is asked for it.
+     */
+    val setup: StateFlow<FrontPageSetup> =
+        combine(key, account.trustProviderList.liveUserRankProvider.flatMapLatest(::withLensName)) { key, (rank, name) ->
+            frontPageSetupOf(key, rank, name)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, frontPageSetupOf(key.value, account.trustProviderList.liveUserRankProvider.value))
+
+    private fun withLensName(rank: ServiceProviderTag?): Flow<Pair<ServiceProviderTag?, String?>> {
+        val user = rank?.let { account.cache.getUserIfExists(it.pubkey) } ?: return flowOf(rank to null)
+        return user.metadata().flow.map { rank to it?.info?.bestName() }
+    }
 
     private val _models = MutableStateFlow(FrontPageModels())
     val models = _models.asStateFlow()
