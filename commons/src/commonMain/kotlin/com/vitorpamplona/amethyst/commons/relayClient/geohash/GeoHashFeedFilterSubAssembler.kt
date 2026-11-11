@@ -39,5 +39,5 @@ class GeoHashFeedFilterSubAssembler(
      */
     override fun id(key: GeohashQueryState) = key.lowercaseGeohash
 
-    override fun feedOwner(key: GeohashQueryState) = key.owner
+    override fun cursorHoldersOf(key: GeohashQueryState) = key.feeds
 }

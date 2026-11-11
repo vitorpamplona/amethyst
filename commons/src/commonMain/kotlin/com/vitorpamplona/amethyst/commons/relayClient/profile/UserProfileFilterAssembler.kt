@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.profile
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
@@ -30,8 +31,11 @@ class UserProfileQueryState(
     val user: User,
     val loadFollowers: Boolean,
     val loadZapsReceived: Boolean,
-    /** The screen feed this subscription fills; a new one drops the cursors (see `feedOwner`). */
-    val owner: Any? = null,
+    /**
+     * The profile's tab feeds, which hold the posts and media this subscription loads: their cursors
+     * set those REQs' windows. Metadata, followers and zaps are held elsewhere and keep their own.
+     */
+    val feeds: List<RelayCursorHolder> = emptyList(),
 )
 
 class UserProfileFilterAssembler(

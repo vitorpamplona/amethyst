@@ -250,7 +250,18 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
       managers (step 5). Desktop: Home asked from scratch after a switch back and from its
       floor after a list switch, Pictures and Discover filled, and 6 round trips left one feed
       set and one `AccountViewModel`.
-   5. Screen feeds (profile, hashtag, geohash, URL, community, relay); each community its own.
+   5. **Done:** screen feeds. The hashtag, geohash, URL, relay, community and follow-pack keys
+      carry the screen's feeds (`feeds`, replacing the view-model `owner`), and the profile key
+      its tabs that hold posts and media; only the managers that fill those feeds name them
+      (`cursorHoldersOf`), so profile metadata, followers and zaps and the community rules keep
+      their own maps. A subscription shared by several entities (`SingleSubEoseManager`:
+      communities, follow packs) windows each entity by its own keys' holders, so one opened
+      later is asked from scratch without the others refetching and closing one takes its
+      cursors along; with no holders it keeps the shared map as before. Desktop: profile,
+      hashtag and community screens asked from scratch on each visit and filled; going back
+      released their feeds. Found, not changed: a profile whose relay list has not loaded yet
+      asks no relays and nothing re-plans it until the screen is opened again (same before this
+      step).
    6. Note counters with the `Note` as holder; reproduce the 29/110 vs 119/416 bug first.
    7. Account lists and gift wraps.
    8. Hooks: pruner `rewindTo`, local-filter widening `clear()`.

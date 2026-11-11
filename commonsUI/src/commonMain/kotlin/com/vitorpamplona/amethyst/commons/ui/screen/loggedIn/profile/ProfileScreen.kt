@@ -351,8 +351,15 @@ fun ProfileScreen(
         loadFollowers = showFollowersFeed,
         loadZapsReceived = showZapReceivedFeed,
         assembler = accountViewModel.dataSources().profile,
-        // The tabs' view models live and go with this screen; one stands for all of them.
-        owner = threadsViewModel,
+        // The tabs that hold the posts and media it loads; they live and go with this screen.
+        feeds =
+            listOf(
+                threadsViewModel.feedState,
+                repliesViewModel.feedState,
+                galleryFeedViewModel.feedState,
+                gitReposFeedViewModel.feedState,
+                appsFeedViewModel.feedState,
+            ),
     )
 
     val scrollState = rememberScrollState()

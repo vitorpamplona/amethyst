@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geohash.datasource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.geohash.GeohashQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -32,14 +33,14 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 fun GeoHashFilterAssemblerSubscription(
     tag: Route.Geohash,
     accountViewModel: AccountViewModel,
-    /** The screen's feed; a new one asks the relays from scratch. */
-    owner: Any? = null,
+    /** The screen's feeds: they hold what this loads, and a new set asks the relays from scratch. */
+    feeds: List<RelayCursorHolder> = emptyList(),
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
-        remember(tag, owner) {
-            GeohashQueryState(tag.geohash, accountViewModel.account.followOutboxesOrProxy.flow.value, owner)
+        remember(tag, feeds) {
+            GeohashQueryState(tag.geohash, accountViewModel.account.followOutboxesOrProxy.flow.value, feeds)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().geohashes)

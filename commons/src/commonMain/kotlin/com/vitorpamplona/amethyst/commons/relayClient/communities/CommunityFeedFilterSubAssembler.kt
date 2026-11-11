@@ -99,4 +99,7 @@ class CommunityFeedFilterSubAssembler(
     }
 
     override fun distinct(key: CommunityQueryState) = key.community.idHex
+
+    // Each community is windowed by its own screen's feeds (see SingleSubEoseManager).
+    override fun cursorHoldersOf(key: CommunityQueryState) = key.feeds
 }

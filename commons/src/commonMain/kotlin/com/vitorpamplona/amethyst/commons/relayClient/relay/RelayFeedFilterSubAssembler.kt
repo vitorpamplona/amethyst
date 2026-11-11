@@ -38,4 +38,6 @@ class RelayFeedFilterSubAssembler(
      * One key per relay URL.
      */
     override fun id(key: RelayFeedQueryState) = key.relayUrl.url
+
+    override fun cursorHoldersOf(key: RelayFeedQueryState) = key.feeds
 }

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.url
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
@@ -29,8 +30,8 @@ import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 class UrlQueryState(
     val url: String,
     val relays: Set<NormalizedRelayUrl>,
-    /** The feed that holds what this subscription loads; its cursor is dropped when that changes. */
-    val owner: Any? = null,
+    /** The screen's feeds, which hold what this subscription loads: their cursors set its windows. */
+    val feeds: List<RelayCursorHolder> = emptyList(),
 ) {
     val normalizedUrl = UrlId.toScopeOrNull(url).orEmpty()
 }

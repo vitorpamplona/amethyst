@@ -44,5 +44,6 @@ class HashtagLabelSubAssembler(
      */
     override fun id(key: HashtagQueryState) = "label-" + key.lowercaseHashtag
 
-    override fun feedOwner(key: HashtagQueryState) = key.owner
+    // The labels only lead to posts, and the feed holds those: a new feed finds them again.
+    override fun cursorHoldersOf(key: HashtagQueryState) = key.feeds
 }

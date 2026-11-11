@@ -24,12 +24,15 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
 class FollowPackFeedQueryState(
     var followPack: AddressableNote,
     var account: Account,
+    /** The pack's feeds (new threads, conversations), which hold what its REQ loads. */
+    val feeds: List<RelayCursorHolder> = emptyList(),
 )
 
 @Stable

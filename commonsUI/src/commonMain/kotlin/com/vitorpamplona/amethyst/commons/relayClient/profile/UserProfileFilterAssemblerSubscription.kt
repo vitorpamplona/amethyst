@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.profile
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 
 @Composable
@@ -31,14 +32,14 @@ fun UserProfileFilterAssemblerSubscription(
     loadFollowers: Boolean,
     loadZapsReceived: Boolean,
     assembler: UserProfileFilterAssembler,
-    /** The screen's feeds' owner; a new one asks the relays from scratch. */
-    owner: Any? = null,
+    /** The screen's feeds: they hold what this loads, and a new set asks the relays from scratch. */
+    feeds: List<RelayCursorHolder> = emptyList(),
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
-        remember(user, loadFollowers, loadZapsReceived, owner) {
-            UserProfileQueryState(user, loadFollowers, loadZapsReceived, owner)
+        remember(user, loadFollowers, loadZapsReceived, feeds) {
+            UserProfileQueryState(user, loadFollowers, loadZapsReceived, feeds)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, assembler)

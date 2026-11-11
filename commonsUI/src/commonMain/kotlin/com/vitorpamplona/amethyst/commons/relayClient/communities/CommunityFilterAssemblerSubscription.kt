@@ -23,18 +23,21 @@ package com.vitorpamplona.amethyst.commons.relayClient.communities
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 
 @Composable
 fun CommunityFilterAssemblerSubscription(
     channel: AddressableNote,
     filterAssembler: CommunityFilterAssembler,
+    /** The screen's feeds: they hold what this loads, and a new set asks the relays from scratch. */
+    feeds: List<RelayCursorHolder> = emptyList(),
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
-        remember(channel) {
-            CommunityQueryState(channel)
+        remember(channel, feeds) {
+            CommunityQueryState(channel, feeds)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, filterAssembler)

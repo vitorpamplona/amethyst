@@ -23,11 +23,14 @@ package com.vitorpamplona.amethyst.commons.relayClient.communities
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
 class CommunityQueryState(
     var community: AddressableNote,
+    /** The community's feeds (posts, moderation), which hold what its posts REQ loads. */
+    val feeds: List<RelayCursorHolder> = emptyList(),
 )
 
 class CommunityFilterAssembler(

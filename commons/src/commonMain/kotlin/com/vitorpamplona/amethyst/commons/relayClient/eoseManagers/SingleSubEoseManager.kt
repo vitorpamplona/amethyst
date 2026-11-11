@@ -123,11 +123,27 @@ abstract class SingleSubEoseManager<T>(
         )
 
     override fun updateSubscriptions(keys: Set<T>) {
-        val uniqueSubscribedAccounts = keys.distinctBy { distinct(it) }
-        val (filters, cursors) = filtersFor(keys, { since() }) { s -> updateFilter(uniqueSubscribedAccounts, s) }
-        serve(sub.id, cursors)
+        val groups = keys.groupBy { distinct(it) }.values
+        val holders = groups.map { cursorsNamedBy(it) }
 
-        sub.updateFilters(filters?.ifEmpty { null }?.groupByRelay())
+        if (holders.all { it.isEmpty() }) {
+            val uniqueSubscribedAccounts = groups.map { it.first() }
+            serve(sub.id, emptyList())
+            sub.updateFilters(updateFilter(uniqueSubscribedAccounts, since())?.ifEmpty { null }?.groupByRelay())
+            return
+        }
+
+        // The keys name the holders of what they load: each entity (a community, a follow pack) is
+        // windowed by its own holders' cursors, so one opened later is asked from scratch without
+        // making the others refetch, and closing one takes its cursors with it. An entity whose keys
+        // name none asks from scratch.
+        val filters =
+            groups.flatMapIndexed { index, group ->
+                val own = updateFilter(listOf(group.first()), null).orEmpty()
+                if (holders[index].isEmpty()) own else CursorPlanner.window(own, holders[index], cursorSource)
+            }
+        serve(sub.id, holders.flatten().distinct())
+        sub.updateFilters(filters.ifEmpty { null }?.groupByRelay())
     }
 
     abstract fun updateFilter(

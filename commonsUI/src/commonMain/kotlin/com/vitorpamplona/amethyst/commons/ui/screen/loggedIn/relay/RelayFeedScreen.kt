@@ -88,7 +88,7 @@ fun RelayFeedScreen(
     nav: INav,
 ) {
     WatchLifecycleAndUpdateModel(feedViewModel)
-    RelayFeedFilterAssemblerSubscription(tag, accountViewModel)
+    RelayFeedFilterAssemblerSubscription(tag, accountViewModel, feeds = listOf(feedViewModel.feedState))
 
     DisappearingScaffold(
         isInvertedLayout = false,

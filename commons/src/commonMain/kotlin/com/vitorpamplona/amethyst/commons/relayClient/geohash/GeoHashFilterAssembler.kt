@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.geohash
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -29,8 +30,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 class GeohashQueryState(
     val geohash: String,
     val relays: Set<NormalizedRelayUrl>,
-    /** The screen feed this subscription fills; a new one drops the cursors (see `feedOwner`). */
-    val owner: Any? = null,
+    /** The screen's feeds, which hold what this subscription loads: their cursors set its windows. */
+    val feeds: List<RelayCursorHolder> = emptyList(),
 ) {
     val lowercaseGeohash = geohash.lowercase()
 }

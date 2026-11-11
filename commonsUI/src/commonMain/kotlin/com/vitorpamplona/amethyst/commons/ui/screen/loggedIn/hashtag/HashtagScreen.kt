@@ -109,7 +109,7 @@ fun HashtagScreen(
     nav: INav,
 ) {
     WatchLifecycleAndUpdateModel(feedViewModel)
-    HashtagFilterAssemblerSubscription(tag, accountViewModel, owner = feedViewModel)
+    HashtagFilterAssemblerSubscription(tag, accountViewModel, feeds = listOf(feedViewModel.feedState))
 
     DisappearingScaffold(
         isInvertedLayout = false,

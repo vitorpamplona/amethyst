@@ -75,4 +75,7 @@ class FollowPackFeedFilterSubAssembler(
     }
 
     override fun distinct(key: FollowPackFeedQueryState) = key.followPack.idHex
+
+    // Each pack is windowed by its own screen's feeds (see SingleSubEoseManager).
+    override fun cursorHoldersOf(key: FollowPackFeedQueryState) = key.feeds
 }

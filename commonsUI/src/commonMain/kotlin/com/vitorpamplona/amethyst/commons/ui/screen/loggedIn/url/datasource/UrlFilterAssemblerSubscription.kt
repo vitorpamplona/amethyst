@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.url.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.url.UrlQueryState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -31,11 +32,12 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 fun UrlFilterAssemblerSubscription(
     url: String,
     accountViewModel: AccountViewModel,
-    owner: Any? = null,
+    /** The screen's feeds: they hold what this loads, and a new set asks the relays from scratch. */
+    feeds: List<RelayCursorHolder> = emptyList(),
 ) {
     val state =
-        remember(url, owner) {
-            UrlQueryState(url, accountViewModel.account.followOutboxesOrProxy.flow.value, owner)
+        remember(url, feeds) {
+            UrlQueryState(url, accountViewModel.account.followOutboxesOrProxy.flow.value, feeds)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().urls)

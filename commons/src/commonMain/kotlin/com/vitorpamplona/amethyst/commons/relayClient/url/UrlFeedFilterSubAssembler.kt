@@ -36,5 +36,5 @@ class UrlFeedFilterSubAssembler(
 
     override fun id(key: UrlQueryState) = key.normalizedUrl
 
-    override fun feedOwner(key: UrlQueryState) = key.owner
+    override fun cursorHoldersOf(key: UrlQueryState) = key.feeds
 }

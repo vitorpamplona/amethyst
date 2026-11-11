@@ -38,5 +38,5 @@ class UserProfileMediaFilterSubAssembler(
 
     override fun user(key: UserProfileQueryState) = key.user
 
-    override fun feedOwner(key: UserProfileQueryState) = key.owner
+    override fun cursorHoldersOf(key: UserProfileQueryState) = key.feeds
 }

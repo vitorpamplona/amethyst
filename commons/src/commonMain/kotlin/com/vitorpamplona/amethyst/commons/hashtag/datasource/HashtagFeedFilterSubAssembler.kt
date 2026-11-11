@@ -40,5 +40,5 @@ class HashtagFeedFilterSubAssembler(
      */
     override fun id(key: HashtagQueryState) = key.lowercaseHashtag
 
-    override fun feedOwner(key: HashtagQueryState) = key.owner
+    override fun cursorHoldersOf(key: HashtagQueryState) = key.feeds
 }
