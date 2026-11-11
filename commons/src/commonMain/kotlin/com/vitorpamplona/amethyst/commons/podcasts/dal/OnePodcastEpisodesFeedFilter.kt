@@ -21,11 +21,15 @@
 package com.vitorpamplona.amethyst.commons.podcasts.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
@@ -43,23 +47,29 @@ class OnePodcastEpisodesFeedFilter(
     val podcastPubkey: HexKey,
     val account: Account,
     val cache: LocalCache,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    OwnedUniverseFeedFilter {
+    // This show's episodes and trailers: the mutes and reports are checked at each rebuild.
+    override val universe = IFilter { note -> note.event.let { (it is PodcastEpisode || it is Podcasting20TrailerEvent) && it.pubKey == podcastPubkey } }
+
+    override var candidates: CandidateSet? = null
+
     override fun feedKey(): String = "podcast-" + podcastPubkey
 
     override fun feed(): List<Note> {
-        val regular =
-            cache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it)
+        val notes =
+            rebuildFeed("podcast", candidates, keep = { acceptableEvent(it) }) {
+                cache.notes.filterIntoSet { _, it ->
+                    acceptableEvent(it)
+                } +
+                    cache.addressables.filterIntoSet(Podcasting20EpisodeEvent.KIND) { _, it ->
+                        acceptableEvent(it)
+                    } +
+                    cache.addressables.filterIntoSet(Podcasting20TrailerEvent.KIND) { _, it ->
+                        acceptableEvent(it)
+                    }
             }
-        val episodes =
-            cache.addressables.filterIntoSet(Podcasting20EpisodeEvent.KIND) { _, it ->
-                acceptableEvent(it)
-            }
-        val trailers =
-            cache.addressables.filterIntoSet(Podcasting20TrailerEvent.KIND) { _, it ->
-                acceptableEvent(it)
-            }
-        return sort(regular + episodes + trailers)
+        return sort(notes)
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { acceptableEvent(it) }

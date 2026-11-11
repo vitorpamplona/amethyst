@@ -1061,11 +1061,12 @@ open class Note(
 
     fun hasRelay(relay: NormalizedRelayUrl) = relay in relays
 
-    fun addRelay(relay: NormalizedRelayUrl) {
-        if (relay !in relays) {
-            addRelaySync(relay)
-            flowSet?.relays?.invalidateData()
-        }
+    /** Returns true when [relay] is new for this note. */
+    fun addRelay(relay: NormalizedRelayUrl): Boolean {
+        if (relay in relays) return false
+        addRelaySync(relay)
+        flowSet?.relays?.invalidateData()
+        return true
     }
 
     private suspend fun isPaidByCalculation(

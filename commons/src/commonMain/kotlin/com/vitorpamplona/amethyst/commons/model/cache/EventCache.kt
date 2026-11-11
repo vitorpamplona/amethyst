@@ -66,6 +66,8 @@ import com.vitorpamplona.amethyst.commons.rendering.unknown.isStorableUnknownKin
 import com.vitorpamplona.amethyst.commons.rendering.unknown.unknownKindAddress
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
 import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
@@ -831,6 +833,7 @@ open class EventCache :
      */
     fun registerNoteSet(observer: NoteSetMatchingFilter) {
         observables.registerUnindexed(observer)
+        if (observer.watchesRelays) relayWatchersLock.withLock { relayWatchers = relayWatchers + observer }
         notes.forEach { _, note -> observer.consider(note) }
         addressables.forEach { _, note -> observer.consider(note) }
         observer.markReady()
@@ -838,6 +841,7 @@ open class EventCache :
 
     fun unregisterNoteSet(observer: NoteSetMatchingFilter) {
         observables.unregister(observer)
+        if (observer.watchesRelays) relayWatchersLock.withLock { relayWatchers = relayWatchers - observer }
     }
 
     /**
@@ -1178,7 +1182,7 @@ open class EventCache :
         // the message actually came from, not just the channel's configured relays.
         if (seenOnRelays.isNotEmpty()) {
             getNoteIfExists(rumor.id)?.takeIf { it.event != null }?.let { note ->
-                seenOnRelays.forEach { note.addRelay(it) }
+                seenOnRelays.forEach { seenOn(note, it) }
             }
         }
 
@@ -1246,7 +1250,7 @@ open class EventCache :
         }
         val relayHint = key.relay
         if (relayHint != null) {
-            note.addRelay(relayHint)
+            seenOn(note, relayHint)
         }
         return note
     }
@@ -1368,7 +1372,7 @@ open class EventCache :
 
         if (relay != null) {
             author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
+            seenOn(note, relay)
         }
 
         // Already processed this event.
@@ -1413,7 +1417,7 @@ open class EventCache :
 
         if (relay != null) {
             author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
+            seenOn(note, relay)
         }
 
         // Already processed this event.
@@ -1458,7 +1462,7 @@ open class EventCache :
 
         if (relay != null) {
             author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
+            seenOn(note, relay)
         }
 
         // Already processed this event.
@@ -1501,7 +1505,7 @@ open class EventCache :
 
         if (relay != null) {
             author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
+            seenOn(note, relay)
         }
 
         // Already processed this event.
@@ -1917,7 +1921,7 @@ open class EventCache :
 
         if (relay != null) {
             author.addRelayBeingUsed(relay, event.createdAt)
-            replaceableNote.addRelay(relay)
+            seenOn(replaceableNote, relay)
         }
 
         // Already processed this event.
@@ -1949,7 +1953,7 @@ open class EventCache :
 
         if (relay != null) {
             author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
+            seenOn(note, relay)
         }
 
         // Already processed this event.
@@ -2138,7 +2142,7 @@ open class EventCache :
 
         if (relay != null) {
             getOrCreateUser(event.pubKey).addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
+            seenOn(note, relay)
         }
 
         // Already processed this event.
@@ -2173,7 +2177,7 @@ open class EventCache :
 
         if (relay != null) {
             getOrCreateUser(event.pubKey).addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
+            seenOn(note, relay)
         }
 
         // Already processed this event.
@@ -2212,7 +2216,7 @@ open class EventCache :
         // this attribution the "accepted by relays" gallery line stays empty forever.
         if (relay != null) {
             getOrCreateUser(event.pubKey).addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
+            seenOn(note, relay)
         }
 
         // Already processed this event.
@@ -3383,7 +3387,7 @@ open class EventCache :
 
         if (relay != null) {
             author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
+            seenOn(note, relay)
         }
 
         // Already processed this event.
@@ -3417,7 +3421,7 @@ open class EventCache :
 
         if (relay != null) {
             author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
+            seenOn(note, relay)
         }
 
         // Already processed this event.
@@ -3494,7 +3498,7 @@ open class EventCache :
 
         if (relay != null) {
             author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
+            seenOn(note, relay)
         }
 
         // A host with nowhere to spill keeps the bytes in memory below instead.
@@ -3581,7 +3585,7 @@ open class EventCache :
             note.loadEvent(event, author, emptyList())
 
             relay?.let {
-                note.addRelay(relay)
+                seenOn(note, relay)
             }
 
             zappedNote?.addZapPayment(note, null)
@@ -3681,7 +3685,7 @@ open class EventCache :
 
         note?.event?.let { noteEvent ->
             if (noteEvent is AddressableEvent) {
-                getAddressableNoteIfExists(noteEvent.address())?.addRelay(relay)
+                getAddressableNoteIfExists(noteEvent.address())?.let { seenOn(it, relay) }
             }
         }
 
@@ -3699,7 +3703,7 @@ open class EventCache :
         note: Note,
         relay: NormalizedRelayUrl,
     ) {
-        note.addRelay(relay)
+        seenOn(note, relay)
 
         val noteEvent = note.event
         if (noteEvent is HasInnerEvent) {
@@ -3711,6 +3715,24 @@ open class EventCache :
 
     // Observers line up here.
     val live: LocalCacheFlow = LocalCacheFlow()
+
+    // Candidate sets whose universe reads Note.relays (a relay's feed): told when a note is seen
+    // on a relay for the first time, which is no new event. Usually empty.
+    private val relayWatchersLock = KmpLock()
+
+    @Volatile
+    private var relayWatchers: List<NoteSetMatchingFilter> = emptyList()
+
+    /** Every relay a cached note is seen on goes through here. */
+    private fun seenOn(
+        note: Note,
+        relay: NormalizedRelayUrl,
+    ) {
+        if (note.addRelay(relay)) {
+            val watchers = relayWatchers
+            if (watchers.isNotEmpty()) watchers.forEach { it.seenOnRelay(note) }
+        }
+    }
 
     private fun refreshNewNoteObservers(newNote: Note) {
         val event = newNote.event as Event
@@ -3802,7 +3824,7 @@ open class EventCache :
                                 Log.d("LocalCache") { "Updating ${relay.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}" }
                             }
                             sendBack(deletionEvent, relay)
-                            note.addRelay(relay)
+                            seenOn(note, relay)
                         }
                     }
                 }
@@ -3821,7 +3843,7 @@ open class EventCache :
 
                         sendBack(existingEvent, relay)
                         // only send once.
-                        note.addRelay(relay)
+                        seenOn(note, relay)
                     }
                 }
             }
@@ -4593,7 +4615,7 @@ open class EventCache :
     ) {
         val toNote = getOrCreateNote(to)
         from.relays.forEach {
-            toNote.addRelay(it)
+            seenOn(toNote, it)
         }
     }
 
@@ -4603,7 +4625,7 @@ open class EventCache :
     ) {
         val toNote = getOrCreateNote(to)
         from.relays.forEach {
-            toNote.addRelay(it)
+            seenOn(toNote, it)
         }
     }
 }

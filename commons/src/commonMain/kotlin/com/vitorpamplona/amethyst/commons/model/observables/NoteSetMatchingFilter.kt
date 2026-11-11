@@ -49,6 +49,8 @@ class NoteSetMatchingFilter(
     private val filter: IFilter,
     private val weak: Boolean = false,
     private val dependents: (Note) -> Collection<Note> = { emptyList() },
+    /** The filter reads `Note.relays`, which grows without a new event: see [seenOnRelay]. */
+    val watchesRelays: Boolean = false,
 ) : Observable {
     private val lock = KmpLock()
     private val strong = HashSet<Note>()
@@ -85,6 +87,9 @@ class NoteSetMatchingFilter(
         if (event is AddressableEvent && note !is AddressableNote) return
         if (filter.matches(note)) add(note)
     }
+
+    /** [note] was just seen on a relay it was not known on: the cache calls this when [watchesRelays]. */
+    fun seenOnRelay(note: Note) = consider(note)
 
     fun markReady() {
         ready = true

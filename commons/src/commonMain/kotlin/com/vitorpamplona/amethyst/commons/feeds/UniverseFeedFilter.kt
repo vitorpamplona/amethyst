@@ -45,6 +45,12 @@ interface UniverseFeedFilter {
 
     /** Where rebuilds take the universe from; null walks the cache. */
     val candidates: CandidateSet?
+
+    /**
+     * Whether [universe] reads the relays a note was seen on, which grow without a new event (a
+     * relay's feed). Its candidate set then also hears about each new relay of a cached note.
+     */
+    val universeReadsRelays: Boolean get() = false
 }
 
 /**

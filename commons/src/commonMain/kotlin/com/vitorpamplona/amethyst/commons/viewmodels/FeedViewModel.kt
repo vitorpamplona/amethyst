@@ -57,7 +57,7 @@ abstract class FeedViewModel(
 
         // A screen feed rebuilds from its own candidate set, kept for as long as this screen lives.
         if (localFilter is OwnedUniverseFeedFilter && localFilter.candidates == null && cacheProvider is EventCache) {
-            localFilter.candidates = CandidateSet(cacheProvider, viewModelScope, localFilter.universe, weak = true)
+            localFilter.candidates = CandidateSet(cacheProvider, viewModelScope, localFilter.universe, weak = true, watchesRelays = localFilter.universeReadsRelays)
         }
         viewModelScope.launch(Dispatchers.IO) {
             cacheProvider.getEventStream().newEventBundles.collect { newNotes ->

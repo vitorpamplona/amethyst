@@ -284,10 +284,21 @@ Done on the branch, each step its own commit:
    (open polls, which still rebuild on every return, 1-10 ms) against 7-13 ms walks on that small
    cache. Home keeps walking: its universe is most of the cache.
 
-Screen feeds still walking the whole cache on resume: single relay (a note's relays change
-without a new event, so it has no fixed universe), mutual follows and a follow pack's feeds (the
-people change with the list), and a podcast's episodes. Threads, bookmarks, lists and pins read
-their notes directly and do not walk.
+8. **The last screen feeds.** Single relay, mutual ("Yours" on a profile), one podcast's episodes
+   and a follow pack's New threads and Conversations are `OwnedUniverseFeedFilter`s too. A follow
+   pack's filter reads the pack's people once, when the screen opens, so its universe is fixed for
+   the screen's life (as its walk already was). A relay's universe reads `Note.relays`, which grows
+   without a new event when a cached note is seen on another relay, so the cache now routes every
+   relay it records through one place (`EventCache.seenOn`) and tells the candidate sets that ask
+   (`watchesRelays`, from `UniverseFeedFilter.universeReadsRelays`); the list of those is empty
+   unless a relay screen is open. Like the walk, it leaves out addressable notes: without that the
+   set took in ~415 relay lists, profiles and contact lists (kind 10002, 0, 3) as feed items.
+   Desktop A/B: follow pack 79 and 96 notes, identical; relay.nos.social 443, 790 and 794 notes
+   across rebuilds while it streamed, identical except two superseded relay-list versions the walk
+   picked up from the notes map. One podcast and mutual compared empty to empty on that account.
+
+No screen feed walks the whole cache any more. Threads, bookmarks, lists and pins read their notes
+directly; Home walks it on purpose (its universe is most of the cache).
 
 ## Open questions
 

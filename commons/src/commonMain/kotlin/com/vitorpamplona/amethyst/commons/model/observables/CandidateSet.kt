@@ -42,8 +42,9 @@ class CandidateSet(
     filter: IFilter,
     weak: Boolean = false,
     dependents: (Note) -> Collection<Note> = { emptyList() },
+    watchesRelays: Boolean = false,
 ) {
-    private val observer = NoteSetMatchingFilter(filter, weak, dependents)
+    private val observer = NoteSetMatchingFilter(filter, weak, dependents, watchesRelays)
 
     @OptIn(ExperimentalAtomicApi::class)
     private val started = AtomicBoolean(false)

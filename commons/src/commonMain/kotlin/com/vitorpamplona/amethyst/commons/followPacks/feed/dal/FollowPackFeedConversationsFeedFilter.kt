@@ -22,11 +22,15 @@ package com.vitorpamplona.amethyst.commons.followPacks.feed.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allUserFollows.AllUserFollowsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allUserFollows.AllUserFollowsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
@@ -45,7 +49,14 @@ import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 class FollowPackFeedConversationsFeedFilter(
     val followPackNote: AddressableNote,
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    OwnedUniverseFeedFilter {
+    // What the pack's people posted, of the kinds this tab shows. The pack is read once, when the
+    // screen opens; relays, mutes and whether it is a reply are checked at each rebuild.
+    override val universe = IFilter { note -> note.event.let { it != null && it.pubKey in follows && isConversationContent(it) } }
+
+    override var candidates: CandidateSet? = null
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultFollowPacksFollowList.value
 
     override fun showHiddenKey(): Boolean =
@@ -56,8 +67,10 @@ class FollowPackFeedConversationsFeedFilter(
         val filterParams = buildFilterParams(account)
 
         return sort(
-            LocalCache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it, filterParams)
+            rebuildFeed("follow-pack/conversations", candidates, keep = { acceptableEvent(it, filterParams) }) {
+                LocalCache.notes.filterIntoSet { _, it ->
+                    acceptableEvent(it, filterParams)
+                }
             },
         )
     }
@@ -99,7 +112,9 @@ class FollowPackFeedConversationsFeedFilter(
         event: Event?,
         relays: List<NormalizedRelayUrl>,
         filterParams: FilterByListParams,
-    ): Boolean =
+    ): Boolean = event != null && isConversationContent(event) && filterParams.match(event, relays)
+
+    private fun isConversationContent(event: Event): Boolean =
         (
             event is TextNoteEvent ||
                 event is ZapPollEvent ||
@@ -108,8 +123,7 @@ class FollowPackFeedConversationsFeedFilter(
                 event is VoiceReplyEvent ||
                 event is PublicMessageEvent ||
                 event is LiveActivitiesChatMessageEvent
-        ) &&
-            filterParams.match(event, relays)
+        )
 
     fun acceptableEvent(
         note: Note,

@@ -21,23 +21,40 @@
 package com.vitorpamplona.amethyst.commons.relay.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class RelayFeedFilter(
     val relayUrl: NormalizedRelayUrl,
     val account: Account,
     val cache: LocalCache,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    OwnedUniverseFeedFilter {
+    // Every note seen on this relay, from the notes map as the walk below reads it: replaceable
+    // lists and profiles (kind 0, 3, 10002…) are not feed items. A note already cached can be seen
+    // on the relay later, without a new event: the cache tells the candidate set (universeReadsRelays).
+    override val universe = IFilter { it !is AddressableNote && it.hasRelay(relayUrl) }
+
+    override var candidates: CandidateSet? = null
+
+    override val universeReadsRelays = true
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + relayUrl.url
 
     override fun feed(): List<Note> {
         val notes =
-            cache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it)
+            rebuildFeed("relay", candidates, keep = { acceptableEvent(it) }) {
+                cache.notes.filterIntoSet { _, it ->
+                    acceptableEvent(it)
+                }
             }
 
         return sort(notes)
