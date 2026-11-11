@@ -23,13 +23,14 @@ package com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip01N
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.filterNotificationsToPubkeys
 import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.filterSummaryNotificationsToPubkeys
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.FeedOwnerTracker
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.MergedAuthorTracker
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.CursorPlanner
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -68,6 +69,13 @@ import kotlinx.coroutines.launch
  * So on a cold start a busy account can crowd a quiet one out of the shared newest-N. What recovers it
  * is [AccountNotificationsHistoryEoseManager], which pages backward per account and stays unmerged for
  * exactly that reason.
+ *
+ * ## The cursors live with the notes
+ *
+ * Each account's window comes from its own holders ([AccountQueryState.notificationCursorHolders]):
+ * the notification feeds a screen renders, or the background tail. Accounts whose windows agree share
+ * a filter; the rest get their own in the same REQ. So an account back with a new, empty feed is asked
+ * from scratch without making the others refetch, and one that joins a relay inherits nothing.
  */
 class AccountNotificationsEoseFromInboxRelaysManager(
     client: INostrClient,
@@ -75,27 +83,26 @@ class AccountNotificationsEoseFromInboxRelaysManager(
 ) : SingleSubEoseManager<AccountQueryState>(client, allKeys) {
     override fun distinct(key: AccountQueryState) = key.account.userProfile()
 
+    override fun cursorHoldersOf(key: AccountQueryState) = key.notificationCursorHolders
+
+    private fun build(
+        relay: NormalizedRelayUrl,
+        pubkeys: List<HexKey>,
+        since: Long?,
+    ) = filterSummaryNotificationsToPubkeys(relay = relay, pubkeys = pubkeys, since = since) +
+        filterNotificationsToPubkeys(relay = relay, pubkeys = pubkeys, since = since)
+
     /**
-     * One filter set per inbox relay, naming every account that reads from it.
+     * One filter set per inbox relay, naming every account that reads from it whose window agrees.
      *
-     * The `since` floor is per relay rather than per account, because the merged filter is per relay:
-     * the **oldest** of the participating accounts' floors wins, so widening the query for one account
-     * can never cut another one short.
+     * Each account's window is planned against its own holders ([cursorHoldersOf]); [since], the
+     * manager's shared map, is not used. Accounts with the same window for a filter share it, so the
+     * usual case (every account caught up, or every account new) is still one filter per kind set.
      */
     override fun updateFilter(
         keys: List<AccountQueryState>,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        // Accounts whose notifications feed is not the one that earned the relays' cursors: a switch
-        // away and back builds a new, empty feed, and the notes the cursors vouch for may be gone.
-        // Background keys carry no feed and never count.
-        val newFeeds =
-            keys.mapNotNullTo(mutableSetOf()) { key ->
-                val feeds = key.feedContentStates ?: return@mapNotNullTo null
-                val user = key.account.userProfile()
-                if (feedOwners.ownerChanged(user, feeds)) user.pubkeyHex else null
-            }
-
         // The split tabs read the same REQ. They are lazy, so while the split is on they are woken
         // here: otherwise what this loads for them would have no holder until a tab was opened.
         keys.forEach { key ->
@@ -114,46 +121,25 @@ class AccountNotificationsEoseFromInboxRelaysManager(
         }
 
         return accountsPerRelay.flatMap { (relay, accounts) ->
-            val pubkeys = accounts.map { it.account.userProfile().pubkeyHex }
-
-            // An account that joins a relay this subscription already covers would otherwise inherit
-            // the cursor the earlier accounts earned, and never ask for anything older than it. Drop
-            // the stored cursor AND ignore it for this pass — not just the former, which would leave
-            // the refetch depending on `since` being a live view of the map we just mutated.
-            //
-            // An account back with a new feed refetches the same way: its cursor is the earlier one's.
-            val gained = authorsPerRelay.gainedAuthors(relay, pubkeys) || pubkeys.any { it in newFeeds }
-            if (gained) clearEoseFor(relay)
-
-            // A cold-start floor, NOT paging — backward paging lives in
-            // [AccountNotificationsHistoryEoseManager]. Read only when a relay has no EOSE yet; once it
-            // does, the EOSE time wins and this is never consulted.
-            //
-            // `since` means *newer than*, so this floors the query at the depth the feed already reaches
-            // rather than asking all-time again. It stays null until the feed holds a full page — and a
-            // background account has no feed at all (no screen ever mounted one), which is why the key
-            // carries none and this reads null there. Null for ANY account on the relay means no floor
-            // at all, since a floor derived from one account's feed would truncate the others'.
-            val floors = accounts.map { it.feedContentStates?.notifications?.lastNoteCreatedAtIfFilled() }
-            val pagingBoundary = if (floors.any { it == null }) null else floors.filterNotNull().min()
-
-            // No `since` floor on the first fetch. These filters are scoped by `#p` to my own
-            // keys and carry a relay-side `limit`, so an all-time query costs one index scan and
-            // returns at most `limit` events, newest first — exactly what Home does (it passes
-            // `since ?: boundary`, i.e. null on a cold start).
-            //
-            // This used to fall back to `oneWeekAgo()`, which silently emptied the tab for
-            // anyone whose last mention was older than a week: EOSE `since` is in-memory only,
-            // so EVERY cold start re-pinned the window to 7 days, and the paging boundary above
-            // could never rescue it — it only arms once the feed holds a full page, and the feed
-            // could not fill because the query only ever asked for a week. A fresh install of an
-            // established account hit the same deadlock.
-            val notificationSince = (if (gained) null else since?.get(relay)?.time) ?: pagingBoundary
+            // A floor, not paging (that is [AccountNotificationsHistoryEoseManager]): `since` means
+            // *newer than*, so a feed that already holds a full page needs nothing older from here. Null
+            // until it does, and for a background account, which has no feed: then the first fetch has
+            // no floor at all. These filters are `#p`-scoped with a relay-side `limit`, so an all-time
+            // query is one index scan returning the newest `limit` events. (A one-week fallback here once
+            // emptied the tab for anyone quiet for a week.)
+            val members =
+                accounts.map { key ->
+                    CursorPlanner.Member(
+                        id = key.account.userProfile().pubkeyHex,
+                        floor = key.feedContentStates?.notifications?.lastNoteCreatedAtIfFilled(),
+                        holders = cursorsNamedBy(listOf(key)),
+                    )
+                }
 
             // NIP-29 group activity (reactions/replies to my messages) is deliberately NOT requested
             // here. It lives on the group's host relay and used to be one `#h` filter per relay carrying
-            // every joined group id — but this subscription also carries the inbox filters below, which
-            // have no `#h` at all, and `block/buzz` downgrades any subscription with a channel-less (or
+            // every joined group id — but this subscription also carries the inbox filters, which have
+            // no `#h` at all, and `block/buzz` downgrades any subscription with a channel-less (or
             // multi-channel) filter to "global", a class that by design never receives channel-scoped
             // events. So those filters answered the stored query at EOSE and then went deaf until the
             // next launch.
@@ -162,8 +148,7 @@ class AccountNotificationsEoseFromInboxRelaysManager(
             // to exactly one channel — RelayGroupJoinedChatTailSubAssembler and
             // BuzzDmJoinedChatTailSubAssembler, both mounted app-wide from LoggedInPage, so coverage is
             // unchanged and delivery is live.
-            filterSummaryNotificationsToPubkeys(relay = relay, pubkeys = pubkeys, since = notificationSince) +
-                filterNotificationsToPubkeys(relay = relay, pubkeys = pubkeys, since = notificationSince)
+            CursorPlanner.windowPerMember(members) { pubkeys, since -> build(relay, pubkeys, since) }
         }
     }
 
@@ -174,12 +159,9 @@ class AccountNotificationsEoseFromInboxRelaysManager(
      * by user and reconciled here: an account that leaves has its jobs cancelled, and one that arrives
      * gets its own. Re-entrancy is safe — the watchers call `invalidateFilters()`, which lands back
      * here and finds every account already watched.
+     *
+     * This one re-plans the filter when the account's notification relays change.
      */
-    private val authorsPerRelay = MergedAuthorTracker()
-
-    private val feedOwners = FeedOwnerTracker<User>()
-
-    // Per user: re-plans the filter when the account's notification relays change.
     private val userJobMap = mutableMapOf<User, Job>()
 
     // Per user with a screen: re-plans when that screen's notifications feed loads deeper, which
@@ -233,12 +215,13 @@ class AccountNotificationsEoseFromInboxRelaysManager(
             depthJobMap.remove(user)?.second?.cancel()
         }
 
-        super.updateSubscriptions(keys)
+        // One key per account; every account's holders get what the REQ answers.
+        val accounts = wanted.values.toList()
+        serve(sub.id, cursorsNamedBy(accounts))
+        sub.updateFilters(updateFilter(accounts, null).ifEmpty { null }?.groupByRelay())
     }
 
     override fun destroy() {
-        authorsPerRelay.clear()
-        feedOwners.clear()
         userJobMap.values.forEach { it.cancel() }
         userJobMap.clear()
         depthJobMap.values.forEach { it.second.cancel() }

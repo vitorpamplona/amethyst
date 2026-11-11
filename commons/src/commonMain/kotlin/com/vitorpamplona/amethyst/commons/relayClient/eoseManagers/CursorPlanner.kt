@@ -37,13 +37,6 @@ interface CursorHoldingQuery {
     val cursorHolders: List<RelayCursorHolder>
 }
 
-/** The cursors of every holder [keys] name, once each; empty when none of them name any. */
-fun cursorsNamedBy(keys: Collection<*>): List<RelayCursors> =
-    keys
-        .flatMap { (it as? CursorHoldingQuery)?.cursorHolders.orEmpty() }
-        .map { it.relayCursors }
-        .distinct()
-
 object CursorPlanner {
     /**
      * The windows of a live request for [holders]: each filter without `until` is split into the
@@ -92,6 +85,43 @@ object CursorPlanner {
             .map { (since, group) -> CursorPart(requested.copy(authors = group.toSet()), since) }
             .sortedWith(compareByDescending(nullsFirst()) { it.since })
     }
+
+    /**
+     * The windows of one relay's request that names several members (accounts in a `#p` filter),
+     * each with its own holders: every member is planned against its own cursors on top of its own
+     * floor, and members whose windows agree share a filter. [build] makes the relay's filters for a
+     * set of members from one `since`, in the same order whatever the members, so a member that is new
+     * (or back with an empty feed) is asked from scratch without making the others refetch, and one
+     * that joins a relay inherits no other member's cursor.
+     */
+    fun <M> windowPerMember(
+        members: List<Member<M>>,
+        build: (members: List<M>, since: Long?) -> List<RelayBasedFilter>,
+    ): List<RelayBasedFilter> {
+        // (which filter of [build], its `since`) -> the members asking it with that window.
+        val shared = LinkedHashMap<Pair<Int, Long?>, MutableList<M>>()
+        val unshared = mutableListOf<RelayBasedFilter>()
+
+        members.forEach { member ->
+            val own = build(listOf(member.id), member.floor)
+            val windowed = window(own, member.holders)
+            // A filter split by authors no longer lines up with [build]'s order: sent as planned.
+            if (windowed.size != own.size) {
+                unshared.addAll(windowed)
+            } else {
+                windowed.forEachIndexed { index, it -> shared.getOrPut(index to it.filter.since) { mutableListOf() }.add(member.id) }
+            }
+        }
+
+        return shared.map { (slot, ids) -> build(ids, slot.second)[slot.first] } + unshared
+    }
+
+    /** One member of a merged request: [floor] is its own lower bound, [holders] its own cursors. */
+    class Member<M>(
+        val id: M,
+        val floor: Long?,
+        val holders: List<RelayCursors>,
+    )
 
     /** The oldest of [windows]; null (from scratch) when any of them is. */
     private fun oldest(windows: List<Long?>): Long? = if (windows.any { it == null }) null else windows.filterNotNull().minOrNull()

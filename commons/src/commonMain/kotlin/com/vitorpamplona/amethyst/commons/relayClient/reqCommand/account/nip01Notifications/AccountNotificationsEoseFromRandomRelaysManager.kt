@@ -46,8 +46,9 @@ class AccountNotificationsEoseFromRandomRelaysManager(
 ) : PerUserEoseManager<AccountUiQueryState>(client, allKeys) {
     override fun user(key: AccountUiQueryState) = key.account.userProfile()
 
-    // A new AccountViewModel's notifications feed starts empty: the old cursors would skip what it lost.
-    override fun feedOwner(key: AccountUiQueryState): Any? = key.feedContentStates
+    // The screen's notification feeds hold what this loads: a new AccountViewModel's feeds start
+    // empty, with empty cursors, so they are asked from scratch.
+    override fun cursorHoldersOf(key: AccountUiQueryState) = key.notificationCursorHolders
 
     /**
      * Most notifications arrive on the user's own inbox relays. This is the straggler probe for the
@@ -83,9 +84,10 @@ class AccountNotificationsEoseFromRandomRelaysManager(
         val start = (passIndex * RELAYS_PER_PASS).mod(candidates.size)
         val window = List(minOf(RELAYS_PER_PASS, candidates.size)) { candidates[(start + it).mod(candidates.size)] }
 
+        // The feeds' cursors set the windows on top of this floor ([cursorHoldersOf]); the manager's
+        // own map is never read, so a screen whose feeds are already gone asks from the floor.
         return window.flatMap {
-            val since = since?.get(it)?.time ?: defaultSince
-            filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, since)
+            filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, defaultSince)
         }
     }
 

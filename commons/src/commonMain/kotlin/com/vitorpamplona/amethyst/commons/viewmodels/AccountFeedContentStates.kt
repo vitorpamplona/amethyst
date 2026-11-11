@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.commons.webBookmarks.dal.WebBookmarkFeedFilter
 import com.vitorpamplona.amethyst.commons.workouts.dal.WorkoutFeedFilter
 import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
@@ -289,6 +290,14 @@ class AccountFeedContentStates(
     val notifications = CardFeedContentState(NotificationFeedFilter(account, candidates = notificationCandidates), scope)
     val notificationsFollowing = CardFeedContentState(NotificationFeedFilter(account, TopFilter.AllFollows, notificationCandidates), scope, lazy = true)
     val notificationsEveryone = CardFeedContentState(NotificationFeedFilter(account, TopFilter.Global, notificationCandidates), scope, lazy = true)
+
+    /**
+     * How far back each notification relay has been paged by until+limit, for these feeds: the pages
+     * are only loaded while these feeds hold them, so a new feed set pages again from the newest.
+     * The history loader ([com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsHistoryEoseManager])
+     * binds its pager to these.
+     */
+    val notificationHistory = RelayLoadingCursors()
 
     val notificationsOpenPolls = OpenPollsState(account, scope)
 

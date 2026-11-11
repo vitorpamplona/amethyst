@@ -1020,14 +1020,9 @@ class Account(
 
     val nwcBackup = NwcBackupState(signer, client, scope, settings, outboxRelays.flow, nip65RelayList.inboxFlowNoDefaults)
 
-    // Account-level notification history paging cursors (one scope per account): how far back each
-    // notification relay has been paged by until+limit. Held here so they share the account's lifetime;
-    // the history loader ([AccountNotificationsHistoryEoseManager]) binds its orchestrator to these.
-    val notificationHistory = RelayLoadingCursors()
-
     // Per-relay backward-paging cursors for the NIP-60 spending history (kind:7376): how far back each
-    // outbox relay has been paged by until+limit. Same lifetime rule as notificationHistory — held here
-    // so paging progress survives leaving and re-entering the wallet screen; the history loader
+    // outbox relay has been paged by until+limit. Held here so paging progress survives leaving and
+    // re-entering the wallet screen; the history loader
     // ([CashuWalletHistoryEoseManager]) binds its orchestrator to these.
     val cashuHistory = RelayLoadingCursors()
 

@@ -74,6 +74,16 @@ abstract class BaseEoseManager<T>(
     }
 
     /**
+     * The holders of the notes [key]'s subscription loads, whose cursors set its windows and receive
+     * its EOSEs. By default what a [CursorHoldingQuery] key names; a manager whose keys serve other
+     * managers too (one key type for every account loader) names them here instead.
+     */
+    protected open fun cursorHoldersOf(key: T): List<RelayCursorHolder> = (key as? CursorHoldingQuery)?.cursorHolders.orEmpty()
+
+    /** The cursors of every holder [keys] name, once each; empty when none of them name any. */
+    fun cursorsNamedBy(keys: Collection<T>): List<RelayCursors> = keys.flatMap { cursorHoldersOf(it) }.map { it.relayCursors }.distinct()
+
+    /**
      * The filters for a subscription serving [keys]. When the keys name holders of notes, their
      * cursors set the windows ([CursorPlanner.window]) and [ownSince] is not read: the manager's own
      * map stays only for keys that name none.

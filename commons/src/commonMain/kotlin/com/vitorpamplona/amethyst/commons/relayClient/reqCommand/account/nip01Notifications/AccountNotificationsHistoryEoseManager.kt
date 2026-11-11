@@ -31,8 +31,11 @@ import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
@@ -67,8 +70,10 @@ import kotlinx.coroutines.launch
  * The foreground "random follows" straggler query ([AccountNotificationsEoseFromRandomRelaysManager],
  * tiny latest-N limits) is deliberately live-tail only and is NOT paged here.
  *
- * The per-relay cursors live on the [Account] (so they share the account's lifetime); this class binds
- * the single-active [BackwardRelayPager] orchestrator to them on [newSub], builds the notification REQ
+ * The per-relay cursors live with the feeds that hold the pages
+ * ([com.vitorpamplona.amethyst.commons.viewmodels.AccountFeedContentStates.notificationHistory]): a new
+ * feed set starts from the newest again, since the pages the old one loaded may be gone with it. This
+ * class binds the single-active [BackwardRelayPager] orchestrator to them, builds the notification REQ
  * filters, and forwards relay callbacks into the pager. A relay is *done* once it answers an empty page;
  * one that won't answer (auth CLOSE, unreachable, or silent) is flagged *stalled* but kept. [exhausted]
  * flips once every relay is either done or stalled.
@@ -79,16 +84,29 @@ class AccountNotificationsHistoryEoseManager(
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
-    // Background keys carry no feed and leave the cursors alone.
-    override fun feedOwner(key: AccountQueryState): Any? = key.feedContentStates
+    // The paging cursors each user's subscription is bound to: its screen's feed set's. Read by the
+    // listeners, so a late callback after a rebind can't move cursors the pager no longer serves.
+    private val boundLock = KmpLock()
+    private val bound = mutableMapOf<User, RelayLoadingCursors>()
+
+    private fun boundFor(user: User) = boundLock.withLock { bound[user] }
 
     /**
-     * The paging cursors live on the [Account] and outlive the feed they filled. Pointing a new, empty
-     * feed at them would resume paging below the depth the old one reached, so everything between the
-     * live tail and that depth (collected with the old feed) would never be asked for again.
+     * Points the pager at [key]'s feed set's cursors when the user's subscription is not on them yet:
+     * a new subscription, or a new screen (a new feed set) for the same account. Null when the
+     * screen's feed set is already gone: nothing would hold the pages.
      */
-    override fun onFeedOwnerChanged(key: AccountQueryState) {
-        key.account.notificationHistory.reset()
+    private fun bindTo(key: AccountQueryState): RelayLoadingCursors? {
+        val cursors = key.feedContentStates?.notificationHistory ?: return null
+        val user = user(key)
+        val changed =
+            boundLock.withLock {
+                (bound[user] !== cursors).also { if (it) bound[user] = cursors }
+            }
+        if (changed) {
+            pager.bind(cursors, key.account.scope, owner = user) { notificationRelaySet(key.account) }
+        }
+        return cursors
     }
 
     // A modest page: each marker-triggered advance pulls ~500 older notifications, digestible to render
@@ -128,6 +146,7 @@ class AccountNotificationsHistoryEoseManager(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         if (!key.account.isWriteable()) return emptyList()
+        bindTo(key) ?: return emptyList()
 
         val pubkey = user(key).pubkeyHex
         val inbox = key.account.notificationRelays.flow.value
@@ -170,10 +189,7 @@ class AccountNotificationsHistoryEoseManager(
 
     @OptIn(FlowPreview::class)
     override fun newSub(key: AccountQueryState): Subscription {
-        // Repoint the single-active orchestrator at this account's notification cursors and the relay set
-        // it fans out to, refreshing the display flows from the restored progress.
-        pager.bind(key.account.notificationHistory, key.account.scope, owner = user(key)) { notificationRelaySet(key.account) }
-
+        // The pager was bound to this account's feed set by updateFilter, which runs first.
         val user = user(key)
         userJobMap[user]?.forEach { it.cancel() }
         userJobMap[user] =
@@ -206,7 +222,7 @@ class AccountNotificationsHistoryEoseManager(
         // A just-backgrounded account's subscription can still deliver after the orchestrator rebinds to
         // another account; gate the pager (single-active) on whether it's still bound to THIS account's
         // cursors so a late callback can't move another account's cursors. newEose runs regardless.
-        val myCursors = key.account.notificationHistory
+        val user = user(key)
         return object : SubscriptionListener {
             override suspend fun onEvent(
                 event: Event,
@@ -214,14 +230,14 @@ class AccountNotificationsHistoryEoseManager(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                if (pager.isBoundTo(myCursors)) pager.onEvent(relay, event.createdAt)
+                if (isBound(user)) pager.onEvent(relay, event.createdAt)
             }
 
             override fun onEose(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                if (pager.isBoundTo(myCursors) && pager.onEose(relay)) {
+                if (isBound(user) && pager.onEose(relay)) {
                     Log.d(TAG) { "[notifications.history] ${relay.url} reached the bottom (done)" }
                 }
                 // No auto-advance: the relay parks here until its marker asks for the next page.
@@ -233,7 +249,7 @@ class AccountNotificationsHistoryEoseManager(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                if (pager.isBoundTo(myCursors)) pager.onClosed(relay, message)
+                if (isBound(user)) pager.onClosed(relay, message)
             }
 
             override fun onCannotConnect(
@@ -241,7 +257,7 @@ class AccountNotificationsHistoryEoseManager(
                 message: String,
                 forFilters: List<Filter>?,
             ) {
-                if (pager.isBoundTo(myCursors)) pager.onCannotConnect(relay, message)
+                if (isBound(user)) pager.onCannotConnect(relay, message)
             }
         }
     }
@@ -253,8 +269,11 @@ class AccountNotificationsHistoryEoseManager(
         super.endSub(key, subId)
         userJobMap.remove(key)?.forEach { it.cancel() }
         // The subscription is gone: let go of what the app-wide pager holds for it.
+        boundLock.withLock { bound.remove(key) }
         pager.unbind(key)
     }
+
+    private fun isBound(user: User) = boundFor(user)?.let { pager.isBoundTo(it) } == true
 
     companion object {
         private const val TAG = "NotificationPagination"

@@ -220,7 +220,20 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
       set the windows, and every subscription's listener is wrapped (`CursorRoutingListener`) so
       EOSEs and live events reach the holders it serves at that moment (`serve`, per subscription,
       from every key sharing it). Keys that name none keep the old maps; none name any yet.
-   3. Notifications (inbox, random relays, history); `FeedOwnerTracker` goes there.
+   3. **Done:** notifications. A key names its holders through `notificationCursorHolders`
+      (the managers' `cursorHoldersOf`): the notification feeds being built when a screen is
+      attached (a split tab joins when it wakes), or the background key's own tail cursor, which
+      lives as long as the background registry keeps the account mounted. The inbox tail plans
+      each account against its own holders and merges the accounts whose windows agree
+      (`CursorPlanner.windowPerMember`): an account back with a new feed set is asked from
+      scratch alone, one joining a relay inherits nothing. The straggler probe reads the same
+      holders. The history pager's progress moved from the `Account` to the feed set
+      (`AccountFeedContentStates.notificationHistory`), so a new feed set pages from the newest.
+      `FeedOwnerTracker`, `MergedAuthorTracker` and the history reset are gone from these three
+      managers. Desktop, jack + a signing account: the tail asked jack from scratch on return and
+      the background account resumed from its own cursor; 6 round trips left one feed set, one
+      `AccountViewModel` and three card feeds in the heap; the signing account's history
+      bootstrapped a fresh page on each return.
    4. Top-nav feeds (Home, Video, Discover, media tabs); per-list maps and `MergedAuthorTracker` go.
    5. Screen feeds (profile, hashtag, geohash, URL, community, relay); each community its own.
    6. Note counters with the `Note` as holder; reproduce the 29/110 vs 119/416 bug first.
