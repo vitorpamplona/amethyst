@@ -47,7 +47,7 @@ class AccountNotificationsEoseFromRandomRelaysManager(
     override fun user(key: AccountUiQueryState) = key.account.userProfile()
 
     // A new AccountViewModel's notifications feed starts empty: the old cursors would skip what it lost.
-    override fun feedOwner(key: AccountUiQueryState): Any = key.feedContentStates
+    override fun feedOwner(key: AccountUiQueryState): Any? = key.feedContentStates
 
     /**
      * Most notifications arrive on the user's own inbox relays. This is the straggler probe for the
@@ -74,7 +74,7 @@ class AccountNotificationsEoseFromRandomRelaysManager(
         // behind it: this probe is `#p`-scoped to me with `limit = 20`, so relays answer with the 20
         // newest either way — the floor only ever hid notifications older than a week, and since the
         // boundary above needs a full page to arm, a quiet inbox could never page past it.
-        val defaultSince = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled()
+        val defaultSince = key.feedContentStates?.notifications?.lastNoteCreatedAtIfFilled()
         val candidates =
             (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value)
                 .sortedBy { it.url }
@@ -101,17 +101,21 @@ class AccountNotificationsEoseFromRandomRelaysManager(
     override fun newSub(key: AccountUiQueryState): Subscription {
         val user = user(key)
         userJobMap[user]?.forEach { it.cancel() }
+        // The flow, not the feed set: this job lives as long as the user's subscription.
+        val feedDepth = key.feedContentStates?.notifications?.lastNoteCreatedAtWhenFullyLoaded
         userJobMap[user] =
-            listOf(
+            listOfNotNull(
                 key.account.scope.launch(Dispatchers.IO) {
                     // no need to hurry here. we can wait the app stabilize
                     key.account.followsPerRelay.debounce(5000).collectLatest {
                         invalidateFilters()
                     }
                 },
-                key.account.scope.launch(Dispatchers.IO) {
-                    key.feedContentStates.notifications.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
-                        invalidateFilters()
+                feedDepth?.let { depth ->
+                    key.account.scope.launch(Dispatchers.IO) {
+                        depth.sample(5000).collectLatest {
+                            invalidateFilters()
+                        }
                     }
                 },
                 // Slides the window. Cancelled with the others in endSub, so it stops with the account.

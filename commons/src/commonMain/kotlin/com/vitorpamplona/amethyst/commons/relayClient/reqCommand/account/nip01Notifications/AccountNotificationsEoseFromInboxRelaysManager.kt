@@ -199,11 +199,12 @@ class AccountNotificationsEoseFromInboxRelaysManager(
                         },
                     ) +
                     // Only a screen can fill a feed, so there is nothing to watch for a
-                    // background account.
+                    // background account. The job holds the flow, not the feed set: it lives as long
+                    // as the user's subscription, past the screen that started it.
                     listOfNotNull(
-                        key.feedContentStates?.let { feeds ->
+                        key.feedContentStates?.notifications?.lastNoteCreatedAtWhenFullyLoaded?.let { depth ->
                             key.account.scope.launch(Dispatchers.IO) {
-                                feeds.notifications.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
+                                depth.sample(5000).collectLatest {
                                     invalidateFilters()
                                 }
                             }

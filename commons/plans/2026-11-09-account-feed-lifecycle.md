@@ -342,11 +342,15 @@ Done on the branch, each step its own commit:
     found a leak older than this work: `ForwardKind0ToLocalRelayState`'s `EventCollector` is a
     listener on the app-wide client and was never destroyed, so every logged-out account's
     settings, signer, relay lists and ~100 state flows stayed reachable. It now leaves the client
-    when the account's scope ends; after that, nothing per account grows across cycles. Still
-    open: one previous account's `AccountFeedContentStates` stays reachable after a logout (two
-    live with one view model; it does not grow, and its scope is cancelled), probably the last
-    `AccountQueryState` an app-wide manager remembers (`feedContentStates` is its feed owner).
-    Not measured on Android.
+    when the account's scope ends; after that, nothing per account grows across cycles. A
+    previous screen's `AccountFeedContentStates` also stayed reachable (two live with one view
+    model). A heap dump traced it: the account-level relay managers keep one subscription per user
+    for as long as the account stays subscribed (always, now that background accounts are
+    notified), and the jobs they start in `newSub` / `updateSubscriptions` captured the key that
+    opened it, `AccountUiQueryState`, which held the screen's feed set, or captured the feed set
+    itself. The key now holds it weakly, and the two notification managers' jobs hold only the
+    notifications feed's depth flow. After: one feed set per view model across logout cycles and
+    switches. Not measured on Android.
 
 No screen feed walks the whole cache any more. Threads, bookmarks, lists and pins read their notes
 directly; Home walks it on purpose (its universe is most of the cache).

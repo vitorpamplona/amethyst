@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip59Gi
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsHistoryEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip60Cashu.CashuWalletEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip60Cashu.CashuWalletHistoryEoseManager
+import com.vitorpamplona.amethyst.commons.util.WeakReference
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -69,13 +70,22 @@ open class AccountQueryState(
  * The key for an account with a screen attached. Adds the feed states, which
  * lets the notification loaders floor their cold-start queries at the depth the
  * rendered feed already reaches instead of asking all-time again.
+ *
+ * Held weakly. The relay managers keep one subscription per user for as long as the account
+ * stays subscribed (always, for an account notified in the background), and its listeners and
+ * jobs capture the key that opened it. A strong reference here kept that screen's whole feed set,
+ * with its notes, alive after the screen was gone, until the account itself was dropped.
  */
 @Stable
 class AccountUiQueryState(
     account: Account,
-    override val feedContentStates: AccountFeedContentStates,
+    feedContentStates: AccountFeedContentStates,
     otherAccounts: Set<HexKey>,
-) : AccountQueryState(account, otherAccounts)
+) : AccountQueryState(account, otherAccounts) {
+    private val feeds = WeakReference(feedContentStates)
+
+    override val feedContentStates: AccountFeedContentStates? get() = feeds.get()
+}
 
 /**
  * Always-on account loaders: metadata, gift wraps, drafts, inbox-relay
