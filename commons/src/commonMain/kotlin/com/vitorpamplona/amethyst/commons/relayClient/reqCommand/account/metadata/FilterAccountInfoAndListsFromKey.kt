@@ -58,6 +58,7 @@ import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
+import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskEvent
 
 val AccountInfoAndListsFromKeyKinds =
     listOf(
@@ -111,6 +112,9 @@ val AccountInfoAndListsFromKeyKinds2 =
         // The user's AI agent keys (kind 12000), so a fresh sign-in can run AI tasks with the
         // key set up in another app.
         AgentKeyEvent.KIND,
+        // The user's scheduled tasks (NIP-FB, kind 34817), such as the morning front page: which
+        // device runs it is decided there, so every device must see the newest one.
+        ScheduledTaskEvent.KIND,
     )
 
 val AmethystMetadataKinds = listOf(AppSpecificDataEvent.KIND)

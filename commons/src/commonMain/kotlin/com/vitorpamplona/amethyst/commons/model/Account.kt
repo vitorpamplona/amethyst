@@ -156,6 +156,7 @@ import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListSt
 import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyState
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeysUnreadableException
+import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ObserverScheduleState
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
@@ -1050,6 +1051,9 @@ class Account(
 
     /** The user's AI agent keys (kind 12000), first one preferred. */
     val agentKeys = AgentKeyState(signer, cache, scope)
+
+    /** The morning front page's schedule (NIP-FB kind 34817, `d` = `observer`), shared by every device. */
+    val observerSchedule = ObserverScheduleState(signer, cache, scope, client, nip65RelayList.outboxFlowNoDefaults)
 
     val cashuWalletState =
         CashuWalletState(

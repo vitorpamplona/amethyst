@@ -64,6 +64,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -89,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.frontpage.FrontPageRun
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSchedule
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageViewModel
 import com.vitorpamplona.amethyst.commons.frontpage.MASTHEAD
+import com.vitorpamplona.amethyst.commons.frontpage.MorningScheduleView
 import com.vitorpamplona.amethyst.commons.frontpage.ObserverFailure
 import com.vitorpamplona.amethyst.commons.frontpage.ObserverPrefs
 import com.vitorpamplona.amethyst.commons.frontpage.ObserverStatus
@@ -104,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.frontpage.withPaperCsp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ScheduleEdit
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_a_blossom_server
 import com.vitorpamplona.amethyst.commons.resources.cancel
@@ -134,15 +137,18 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_fail_rate
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_rejected
 import com.vitorpamplona.amethyst.commons.resources.front_page_fail_unreachable
 import com.vitorpamplona.amethyst.commons.resources.front_page_fixed_once
+import com.vitorpamplona.amethyst.commons.resources.front_page_last_printed
 import com.vitorpamplona.amethyst.commons.resources.front_page_model
 import com.vitorpamplona.amethyst.commons.resources.front_page_model_hint
 import com.vitorpamplona.amethyst.commons.resources.front_page_model_id
 import com.vitorpamplona.amethyst.commons.resources.front_page_needs_device_key
+import com.vitorpamplona.amethyst.commons.resources.front_page_never_printed
 import com.vitorpamplona.amethyst.commons.resources.front_page_new_edition
 import com.vitorpamplona.amethyst.commons.resources.front_page_no_key
 import com.vitorpamplona.amethyst.commons.resources.front_page_no_lens
 import com.vitorpamplona.amethyst.commons.resources.front_page_no_tor
 import com.vitorpamplona.amethyst.commons.resources.front_page_not_now
+import com.vitorpamplona.amethyst.commons.resources.front_page_not_printed_since
 import com.vitorpamplona.amethyst.commons.resources.front_page_not_ready
 import com.vitorpamplona.amethyst.commons.resources.front_page_observer_notice_body
 import com.vitorpamplona.amethyst.commons.resources.front_page_observer_notice_title
@@ -152,6 +158,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_posts_read
 import com.vitorpamplona.amethyst.commons.resources.front_page_print
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_again
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_estimate
+import com.vitorpamplona.amethyst.commons.resources.front_page_print_from_device
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish_confirm
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish_failed
@@ -162,7 +169,11 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_quotes_verified
 import com.vitorpamplona.amethyst.commons.resources.front_page_read_full
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_body
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_title
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_cannot_sign
 import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_line
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_unreachable
+import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_unreadable
+import com.vitorpamplona.amethyst.commons.resources.front_page_scheduled
 import com.vitorpamplona.amethyst.commons.resources.front_page_set_up
 import com.vitorpamplona.amethyst.commons.resources.front_page_show_failed
 import com.vitorpamplona.amethyst.commons.resources.front_page_step_check
@@ -197,7 +208,9 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.note.DateSkeletonFormatter
 import com.vitorpamplona.amethyst.commons.ui.note.calendarYearAndDay
 import com.vitorpamplona.amethyst.commons.ui.note.rememberIs24HourClock
+import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeAgoLabels
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
@@ -209,6 +222,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
@@ -266,7 +280,7 @@ fun FrontPageScreen(
     val printer = printers.of(account)
     val viewModel =
         rememberViewModel(key = "front-page:${account.signer.pubKey}") {
-            FrontPageViewModel(account, accountViewModel.httpClientBuilder, printer, printers.schedules, services.frontPageScheduler, day)
+            FrontPageViewModel(account, accountViewModel.httpClientBuilder, printer, printers.morning, day)
         }
     // While this screen shows the paper, a finished print needs no notification. Only while it is
     // started: a backgrounded app (or a screen behind another) isn't anyone watching.
@@ -281,6 +295,11 @@ fun FrontPageScreen(
     val shown by viewModel.shown.collectAsStateWithLifecycle()
     val estimate by viewModel.estimate.collectAsStateWithLifecycle()
     val schedule by viewModel.schedule.collectAsStateWithLifecycle()
+    val scheduleProblem by viewModel.scheduleProblem.collectAsStateWithLifecycle()
+    val scheduleActions =
+        remember(viewModel) {
+            ScheduleActions(viewModel::setScheduleEnabled, viewModel::setScheduleTime, viewModel::setPrintsHere)
+        }
     val observerPrefs by viewModel.observerPrefs.collectAsStateWithLifecycle()
     val observer by viewModel.observer.collectAsStateWithLifecycle()
     val site by viewModel.site.collectAsStateWithLifecycle()
@@ -338,11 +357,11 @@ fun FrontPageScreen(
                             estimate,
                             hasEditions = false,
                             schedule,
-                            viewModel.printsUnattended,
+                            scheduleProblem,
+                            scheduleActions,
                             onModel = viewModel::selectModel,
                             onPrint = requestPrint,
                             onCancel = viewModel::cancel,
-                            onSchedule = viewModel::setSchedule,
                             publish = publishPrefs,
                             onPublish = viewModel::setPublish,
                             onAccent = true,
@@ -361,6 +380,7 @@ fun FrontPageScreen(
                     if (editions.size > 1) History(editions, current.edition.day, viewModel::selectDay)
                     Facts(current.edition, onDetails = { detailsSheet = true })
                     if (schedule.enabled) ScheduleLine(schedule) { printSheet = true }
+                    ScheduleWarnings(schedule)
                     ObserverLine(
                         observer,
                         onPublish = { viewModel.answerObserverNotice(publish = true) },
@@ -393,14 +413,14 @@ fun FrontPageScreen(
                     estimate,
                     hasEditions = editions.isNotEmpty(),
                     schedule,
-                    viewModel.printsUnattended,
+                    scheduleProblem,
+                    scheduleActions,
                     onModel = viewModel::selectModel,
                     onPrint = {
                         printSheet = false
                         requestPrint()
                     },
                     onCancel = viewModel::cancel,
-                    onSchedule = viewModel::setSchedule,
                     publish = publishPrefs,
                     onPublish = viewModel::setPublish,
                     onAccent = false,
@@ -529,12 +549,12 @@ private fun PrintControls(
     run: FrontPageRun,
     estimate: Double?,
     hasEditions: Boolean,
-    schedule: FrontPageSchedule,
-    unattended: Boolean,
+    schedule: MorningScheduleView,
+    scheduleProblem: ScheduleEdit?,
+    scheduleActions: ScheduleActions,
     onModel: (String) -> Unit,
     onPrint: () -> Unit,
     onCancel: () -> Unit,
-    onSchedule: (FrontPageSchedule) -> Unit,
     publish: ObserverPrefs?,
     onPublish: (Boolean) -> Unit,
     onAccent: Boolean,
@@ -591,7 +611,7 @@ private fun PrintControls(
                 )
             }
         }
-        ScheduleRow(schedule, unattended, onSchedule, ink)
+        ScheduleRow(schedule, scheduleProblem, scheduleActions, ink)
         publish?.let { PublishRow(it.publish, onPublish, ink) }
     }
 }
@@ -725,39 +745,72 @@ private fun ModelPicker(
     }
 }
 
-/** "Every morning" with its time (the reader's clock: 6:00 AM or 06:00) and a switch. */
+/** What the schedule controls do: the first two edit the synced schedule, the last this device only. */
+@Stable
+class ScheduleActions(
+    val onEnabled: (Boolean) -> Unit,
+    val onTime: (hour: Int, minute: Int) -> Unit,
+    val onPrintsHere: (Boolean) -> Unit,
+)
+
+/**
+ * "Every morning" with its time (the reader's clock: 6:00 AM or 06:00) and a switch, for the
+ * schedule all of the reader's devices share; then "Print from this device", who printed last,
+ * and a warning when a due morning didn't print. A schedule the editor can't show (a cron set
+ * elsewhere) is shown as written, read-only.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScheduleRow(
-    schedule: FrontPageSchedule,
-    unattended: Boolean,
-    onChange: (FrontPageSchedule) -> Unit,
+    schedule: MorningScheduleView,
+    problem: ScheduleEdit?,
+    actions: ScheduleActions,
     ink: Color,
 ) {
     var picking by remember { mutableStateOf(false) }
-    val time = rememberScheduleTime(schedule)
+    val time = rememberScheduleTime(schedule.schedule())
+    val simple = schedule.simple
+    val daily = simple != null && simple.weekdays == null
+    val note = ink.copy(alpha = 0.75f)
+    val indent = Modifier.padding(start = 34.dp)
     Column {
         Row(Modifier.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(MaterialSymbols.Schedule, contentDescription = null, tint = ink.copy(alpha = 0.85f), modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(12.dp))
-            Text(stringRes(Res.string.front_page_every_morning), style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.weight(1f))
-            TextButton(onClick = { picking = true }, colors = ButtonDefaults.textButtonColors(contentColor = ink)) {
-                Text(time, style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringRes(if (daily) Res.string.front_page_every_morning else Res.string.front_page_scheduled),
+                style = MaterialTheme.typography.bodyLarge,
+                color = ink,
+                modifier = Modifier.weight(1f),
+            )
+            if (schedule.readable) {
+                if (simple != null) {
+                    TextButton(onClick = { picking = true }, colors = ButtonDefaults.textButtonColors(contentColor = ink)) {
+                        Text(time, style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+                Switch(checked = schedule.enabled, onCheckedChange = actions.onEnabled)
             }
-            Switch(checked = schedule.enabled, onCheckedChange = { onChange(schedule.copy(enabled = it)) })
+        }
+        if (!schedule.readable) {
+            ScheduleNote(stringRes(Res.string.front_page_schedule_unreadable), note, indent)
+        } else if (!daily) {
+            // A weekday or cron schedule says exactly what it is.
+            ScheduleNote(schedule.cron, note, indent)
+        }
+        Row(Modifier.heightIn(min = 40.dp).then(indent), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringRes(Res.string.front_page_print_from_device), style = MaterialTheme.typography.bodyMedium, color = ink, modifier = Modifier.weight(1f))
+            Switch(checked = schedule.printsHere && schedule.canPrintHere, onCheckedChange = actions.onPrintsHere, enabled = schedule.canPrintHere)
         }
         // Amber and remote signers need the reader to decrypt the AI key: say so, in few words.
-        if (!unattended) {
-            Text(
-                stringRes(Res.string.front_page_needs_device_key),
-                style = MaterialTheme.typography.bodySmall,
-                color = ink.copy(alpha = 0.75f),
-                modifier = Modifier.padding(start = 34.dp),
-            )
-        }
+        if (!schedule.canPrintHere) ScheduleNote(stringRes(Res.string.front_page_needs_device_key), note, indent)
+        LastPrinted(schedule, note, indent)
+        ScheduleWarnings(schedule, indent, ink)
+        problem?.let { ScheduleNote(stringRes(scheduleProblemText(it)), MaterialTheme.colorScheme.error, indent) }
     }
     if (picking) {
-        val state = rememberTimePickerState(initialHour = schedule.hour, initialMinute = schedule.minute, is24Hour = rememberIs24HourClock())
+        val start = remember(schedule) { pickerStart(schedule) }
+        val state = rememberTimePickerState(initialHour = start.first, initialMinute = start.second, is24Hour = rememberIs24HourClock())
         AlertDialog(
             onDismissRequest = { picking = false },
             title = { Text(stringRes(Res.string.front_page_pick_time)) },
@@ -765,7 +818,7 @@ private fun ScheduleRow(
             confirmButton = {
                 TextButton(onClick = {
                     picking = false
-                    onChange(schedule.copy(hour = state.hour, minute = state.minute, enabled = true))
+                    actions.onTime(state.hour, state.minute)
                 }) { Text(stringRes(Res.string.confirm)) }
             },
             dismissButton = { TextButton(onClick = { picking = false }) { Text(stringRes(Res.string.cancel)) } },
@@ -773,22 +826,79 @@ private fun ScheduleRow(
     }
 }
 
-/** The schedule's time on the reader's clock, from its next run. */
+private fun scheduleProblemText(problem: ScheduleEdit) =
+    when (problem) {
+        ScheduleEdit.Unreadable -> Res.string.front_page_schedule_unreadable
+        ScheduleEdit.CannotSign -> Res.string.front_page_schedule_cannot_sign
+        else -> Res.string.front_page_schedule_unreachable
+    }
+
+/** The picker opens on the schedule's time as this device's clock reads it, from the cron's own fields when it can. */
+private fun pickerStart(schedule: MorningScheduleView): Pair<Int, Int> = schedule.schedule().localTime(TimeUtils.now()) ?: schedule.simple?.let { it.hour to it.minute } ?: (7 to 0)
+
+@Composable
+private fun ScheduleNote(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Text(text, style = MaterialTheme.typography.bodySmall, color = color, modifier = modifier)
+}
+
+/** "Last printed by Desktop (Linux), 2 hours ago": the last claim's device and when it finished; "Not printed yet" before. */
+@Composable
+private fun LastPrinted(
+    schedule: MorningScheduleView,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    if (!schedule.readable) return
+    val ran = schedule.lastRan
+    if (ran == null) {
+        if (schedule.enabled) ScheduleNote(stringRes(Res.string.front_page_never_printed), color, modifier)
+        return
+    }
+    val by = schedule.lastBy ?: return
+    val labels = rememberTimeAgoLabels()
+    ScheduleNote(stringRes(Res.string.front_page_last_printed, by, timeAgoShort(ran, labels)), color, modifier)
+}
+
+/** A due morning that didn't print, shown on every device: dates on this device's calendar. */
+@Composable
+private fun ScheduleWarnings(
+    schedule: MorningScheduleView,
+    modifier: Modifier = Modifier,
+    ink: Color = MaterialTheme.colorScheme.onSurface,
+) {
+    val warn = if (ink == MaterialTheme.colorScheme.onSurface) MaterialTheme.colorScheme.error else ink
+    schedule.missedSince?.let { ran ->
+        ScheduleNote(stringRes(Res.string.front_page_not_printed_since, editionTitle(FrontPageClock.dayKey(ran))), warn, modifier)
+    }
+}
+
+/** The schedule's time on the reader's clock, kept current: a screen left open overnight moves on. */
 @Composable
 private fun rememberScheduleTime(schedule: FrontPageSchedule): String {
     val format = rememberTimeOfDayFormatter()
-    return remember(format, schedule.hour, schedule.minute) {
-        format(FrontPageClock.nextRun(TimeUtils.now(), schedule.hour, schedule.minute) * 1000)
+    val now by produceState(TimeUtils.now()) {
+        while (true) {
+            delay(60_000)
+            value = TimeUtils.now()
+        }
+    }
+    return remember(format, schedule.cron, schedule.zone, now / 3_600) {
+        schedule.displayRun(now)?.let { format(it * 1000) } ?: schedule.cron
     }
 }
 
 /** When the schedule is on, one line under the facts: when, and the way to change it. */
 @Composable
 private fun ScheduleLine(
-    schedule: FrontPageSchedule,
+    schedule: MorningScheduleView,
     onOpen: () -> Unit,
 ) {
-    val time = rememberScheduleTime(schedule)
+    if (!schedule.readable) return
+    val time = rememberScheduleTime(schedule.schedule())
     Row(
         Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onOpen).padding(vertical = 4.dp, horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,

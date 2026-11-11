@@ -23,10 +23,14 @@ package com.vitorpamplona.amethyst.commons.frontpage
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Each account's morning schedule. Kept on this device: a schedule is about this device's clock. */
 interface FrontPageScheduleStore {
@@ -48,10 +52,18 @@ interface FrontPageScheduleStore {
  * app runs on desktop. Called whenever a schedule changes, and after each scheduled run.
  */
 interface FrontPageScheduler {
+    /** Schedules [account]'s next run of [schedule] on this platform, or cancels it when off. */
     fun reschedule(
         account: HexKey,
         schedule: FrontPageSchedule,
     )
+
+    /**
+     * Runs [account]'s scheduled print now: at launch, an occurrence may have been missed while
+     * the app was closed ([FrontPageScheduleWatcher]). The claim decides whether there is
+     * anything left to do.
+     */
+    fun runNow(account: HexKey) {}
 
     object None : FrontPageScheduler {
         override fun reschedule(
@@ -91,14 +103,63 @@ class DataStoreFrontPageScheduleStore(
     companion object {
         private const val PREFIX = "frontpage.schedule."
 
-        fun encode(schedule: FrontPageSchedule) = "${if (schedule.enabled) "on" else "off"}|${schedule.hour}|${schedule.minute}"
+        /** The old per-device format, `on|7|30`: only a daily time fits it, anything else is off. */
+        fun encode(schedule: FrontPageSchedule): String {
+            val simple = schedule.simple()?.takeIf { it.weekdays == null } ?: return "off|7|0"
+            return "${if (schedule.enabled) "on" else "off"}|${simple.hour}|${simple.minute}"
+        }
 
         fun decode(raw: String?): FrontPageSchedule {
             val parts = raw?.split('|') ?: return FrontPageSchedule()
             if (parts.size != 3) return FrontPageSchedule()
             val hour = parts[1].toIntOrNull()?.takeIf { it in 0..23 } ?: return FrontPageSchedule()
             val minute = parts[2].toIntOrNull()?.takeIf { it in 0..59 } ?: return FrontPageSchedule()
-            return FrontPageSchedule(parts[0] == "on", hour, minute)
+            // `on|7|30` is "30 7 * * *" on this device's clock.
+            return FrontPageSchedule.daily(parts[0] == "on", hour, minute)
         }
+    }
+}
+
+/**
+ * This install's id for each account (NIP-FB `claim.id`): random, made on first use and kept in
+ * this install's own settings, never synced or backed up, so no other device and no other account
+ * signed in here ever has it.
+ */
+interface FrontPageInstallStore {
+    suspend fun id(account: HexKey): String
+
+    /** A removed account's id goes with it: signing in again makes a new one. */
+    suspend fun forget(account: HexKey)
+}
+
+class DataStoreFrontPageInstallStore(
+    private val stores: AppPreferenceStores,
+) : FrontPageInstallStore {
+    private val store get() = stores.getDataStore(AppPreferenceStores.SHARED_SETTINGS)
+
+    private fun keyFor(account: HexKey) = stringPreferencesKey(PREFIX + account.lowercase())
+
+    private val making = Mutex()
+
+    override suspend fun id(account: HexKey): String {
+        store.data.first()[keyFor(account)]?.let { return it }
+        return making.withLock {
+            var made = ""
+            store.edit { prefs ->
+                made = prefs[keyFor(account)] ?: newId().also { prefs[keyFor(account)] = it }
+            }
+            made
+        }
+    }
+
+    override suspend fun forget(account: HexKey) {
+        store.edit { it.remove(keyFor(account)) }
+    }
+
+    companion object {
+        private const val PREFIX = "frontpage.install."
+
+        /** 16 random bytes as hex: never guessed, never shared by two installs. */
+        fun newId(): String = RandomInstance.bytes(16).toHexKey()
     }
 }

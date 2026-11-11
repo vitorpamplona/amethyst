@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.frontpage
 
+import com.vitorpamplona.quartz.nipFBScheduledTasks.CronZone
+import com.vitorpamplona.quartz.nipFBScheduledTasks.ZoneIdCronZone
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
@@ -41,6 +43,15 @@ actual object FrontPageClock {
         hour: Int,
         minute: Int,
     ): Long = atIn(zone(), nowEpochSec, hour, minute, plusDays = 0)
+
+    actual fun localZone(): String = zone().id
+
+    actual fun cronZone(zone: String?): CronZone = zone?.let { ZoneIdCronZone.of(it) } ?: ZoneIdCronZone(zone())
+
+    actual fun localHourMinute(epochSec: Long): Pair<Int, Int> {
+        val time = Instant.ofEpochSecond(epochSec).atZone(zone())
+        return time.hour to time.minute
+    }
 
     internal fun dayKeyIn(
         zone: ZoneId,

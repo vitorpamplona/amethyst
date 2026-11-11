@@ -24,9 +24,11 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ScheduleEdit
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
+import com.vitorpamplona.quartz.nipFBScheduledTasks.SimpleCron
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -108,8 +110,7 @@ class FrontPageViewModel(
     private val account: Account,
     private val http: IRoleBasedHttpClientBuilder,
     val printer: FrontPagePrinter,
-    private val schedules: FrontPageScheduleStore,
-    private val scheduler: FrontPageScheduler,
+    private val morning: FrontPageMorning,
     initialDay: String? = null,
 ) : ViewModel() {
     val key: StateFlow<AgentKeyTag?> =
@@ -147,8 +148,19 @@ class FrontPageViewModel(
         combine(_models, printer.editions) { models, _ -> printer.estimate(models.selectedModel) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    val schedule: StateFlow<FrontPageSchedule> =
-        schedules.flow(account.signer.pubKey).stateIn(viewModelScope, SharingStarted.Eagerly, FrontPageSchedule())
+    /** A time the reader picked that isn't saved yet (or failed to save): shown until it is. */
+    private val draftCron = MutableStateFlow<String?>(null)
+
+    /** The reader's morning schedule, synced across their devices, as this device sees it. */
+    val schedule: StateFlow<MorningScheduleView> =
+        combine(morning.view(account), draftCron) { view, draft ->
+            if (draft == null || draft == view.cron) view else view.copy(cron = draft, zone = FrontPageClock.localZone(), simple = SimpleCron.parse(draft))
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, MorningScheduleView())
+
+    private val _scheduleProblem = MutableStateFlow<ScheduleEdit?>(null)
+
+    /** Why the last schedule change wasn't saved; null when it was, or none was tried. */
+    val scheduleProblem = _scheduleProblem.asStateFlow()
 
     /** Publishing to the reader's public Observer site: on by default, after a one-time notice. */
     val observerPrefs: StateFlow<ObserverPrefs> =
@@ -246,10 +258,44 @@ class FrontPageViewModel(
 
     fun cancel() = printer.cancel()
 
-    fun setSchedule(schedule: FrontPageSchedule) {
-        viewModelScope.launch {
-            schedules.set(account.signer.pubKey, schedule)
-            scheduler.reschedule(account.signer.pubKey, schedule)
+    /** On or off for every device; switched on, this device prints too when it can. */
+    fun setScheduleEnabled(on: Boolean) = editSchedule { morning.setEnabled(account, on) }
+
+    /** A new time on this device's clock, keeping the weekdays: written with this device's zone. */
+    fun setScheduleTime(
+        hour: Int,
+        minute: Int,
+    ) {
+        val weekdays = schedule.value.simple?.weekdays
+        val cron = SimpleCron(hour, minute, weekdays).toCron()
+        draftCron.value = cron
+        editSchedule(onSaved = { if (draftCron.value == cron) draftCron.value = null }) { morning.setCron(account, cron) }
+    }
+
+    /** "Print from this device": kept on this device only. */
+    fun setPrintsHere(on: Boolean) {
+        account.scope.launch { morning.setPrintsHere(account, on) }
+    }
+
+    /** Saved on the account's scope: leaving the screen mid-write must not lose the change. */
+    private fun editSchedule(
+        onSaved: () -> Unit = {},
+        edit: suspend () -> ScheduleEdit?,
+    ) {
+        _scheduleProblem.value = null
+        account.scope.launch {
+            val outcome =
+                try {
+                    edit()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    ScheduleEdit.Unreachable
+                }
+            val failed = outcome is ScheduleEdit.Unreachable || outcome is ScheduleEdit.Unreadable || outcome is ScheduleEdit.CannotSign || outcome is ScheduleEdit.NotAccepted
+            // A failed save keeps what the reader picked on screen, with why, so they can try again.
+            if (!failed) onSaved()
+            _scheduleProblem.value = outcome?.takeIf { failed }
         }
     }
 }

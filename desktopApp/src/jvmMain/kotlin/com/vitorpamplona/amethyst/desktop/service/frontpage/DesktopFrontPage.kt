@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.frontpage
 
-import com.vitorpamplona.amethyst.commons.frontpage.FrontPageClock
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageNotifier
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSchedule
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduleWatcher
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduler
 import com.vitorpamplona.amethyst.commons.frontpage.SavedEdition
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -46,6 +46,19 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
+
+/** How this computer names itself in the synced schedule: "Desktop (Linux)", "Desktop (macOS)". */
+fun desktopInstallName(): String {
+    val os = System.getProperty("os.name").orEmpty()
+    val name =
+        when {
+            os.startsWith("Mac", ignoreCase = true) -> "macOS"
+            os.startsWith("Windows", ignoreCase = true) -> "Windows"
+            os.startsWith("Linux", ignoreCase = true) -> "Linux"
+            else -> os.ifBlank { null }
+        }
+    return if (name != null) "Desktop ($name)" else "Desktop"
+}
 
 /** "Your paper is ready" through the desktop's own notifier, when the reader has notifications on. */
 class DesktopFrontPageNotifier(
@@ -77,8 +90,10 @@ class DesktopFrontPageNotifier(
 
 /**
  * The morning edition on desktop: a timer per account while the app runs, since nothing here
- * wakes a closed app. When an account loads after its time has passed and today's edition is
- * missing, it prints right away; that is the catch-up for a computer that was off at 7:00.
+ * wakes a closed app, and only where the reader turned on "Print from this device"
+ * ([FrontPageScheduleWatcher] drives [reschedule] and [runNow]). Which device prints an
+ * occurrence is its claim's call. An occurrence missed while the app was closed may run when the
+ * account loads, until the next one comes.
  */
 class DesktopFrontPageScheduler(
     private val printers: FrontPagePrinters,
@@ -86,18 +101,15 @@ class DesktopFrontPageScheduler(
     private val scope: CoroutineScope,
 ) : FrontPageScheduler {
     private val timers = ConcurrentHashMap<HexKey, Job>()
+    private val catchUps = ConcurrentHashMap<HexKey, Job>()
 
-    /** Watches accounts load and starts each one's timer, catching up on a missed morning. */
+    /** Watches accounts load, keeps each one's timer in step with the synced schedule. */
     fun start() {
+        FrontPageScheduleWatcher(printers.morning, accounts, this, scope).start()
         scope.launch {
             accounts.collect { loaded ->
                 // A signed-out account's timer goes with it.
                 timers.keys.filter { it !in loaded }.forEach { timers.remove(it)?.cancel() }
-                loaded.keys.filter { !timers.containsKey(it) }.forEach { account ->
-                    val schedule = printers.schedules.get(account)
-                    if (!schedule.enabled) return@forEach
-                    if (missedToday(account, schedule)) launchRun(account, schedule) else reschedule(account, schedule)
-                }
             }
         }
     }
@@ -108,33 +120,18 @@ class DesktopFrontPageScheduler(
     ) {
         timers.remove(account)?.cancel()
         if (!schedule.enabled) return
+        val next = schedule.nextRun(TimeUtils.now()) ?: return
         timers[account] =
             scope.launch {
-                untilWallClock(FrontPageClock.nextRun(TimeUtils.now(), schedule.hour, schedule.minute))
+                untilWallClock(next)
                 run(account)
-                reschedule(account, printers.schedules.get(account))
+                reschedule(account, schedule)
             }
     }
 
-    private suspend fun missedToday(
-        account: HexKey,
-        schedule: FrontPageSchedule,
-    ): Boolean {
-        val now = TimeUtils.now()
-        if (FrontPageClock.todayAt(now, schedule.hour, schedule.minute) > now) return false
-        val today = FrontPageClock.dayKey(now)
-        return printers.store.list(account).none { it.day == today }
-    }
-
-    private fun launchRun(
-        account: HexKey,
-        schedule: FrontPageSchedule,
-    ) {
-        timers[account] =
-            scope.launch {
-                run(account)
-                reschedule(account, printers.schedules.get(account))
-            }
+    override fun runNow(account: HexKey) {
+        if (catchUps[account]?.isActive == true) return
+        catchUps[account] = scope.launch { run(account) }
     }
 
     private suspend fun run(account: HexKey) {

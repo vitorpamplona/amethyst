@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.frontpage
 
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
+import com.vitorpamplona.quartz.nipFBScheduledTasks.CronZone
 
 actual suspend fun IRoleBasedHttpClientBuilder.listAgentModels(key: AgentKeyTag): List<AgentModel> = throw WriterException(WriterFailure.UNSUPPORTED)
 
@@ -70,4 +71,13 @@ actual object FrontPageClock {
         hour: Int,
         minute: Int,
     ): Long = (nowEpochSec).floorDiv(DAY) * DAY + hour.coerceIn(0, 23) * 3_600L + minute.coerceIn(0, 59) * 60L
+
+    actual fun localZone(): String = "UTC"
+
+    actual fun cronZone(zone: String?): CronZone = CronZone.UTC
+
+    actual fun localHourMinute(epochSec: Long): Pair<Int, Int> {
+        val second = epochSec.mod(DAY)
+        return (second / 3_600L).toInt() to ((second % 3_600L) / 60L).toInt()
+    }
 }

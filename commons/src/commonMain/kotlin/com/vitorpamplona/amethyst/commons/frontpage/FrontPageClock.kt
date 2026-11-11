@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.frontpage
 
+import com.vitorpamplona.quartz.nipFBScheduledTasks.CronZone
+
 /**
  * The reader's own clock, for two questions the front page asks: which day an edition belongs
  * to ("Today", "Yesterday"), and when the next morning edition is due. Read per call, never
@@ -42,6 +44,15 @@ expect object FrontPageClock {
         hour: Int,
         minute: Int,
     ): Long
+
+    /** This device's IANA time zone, e.g. `America/New_York`. */
+    fun localZone(): String
+
+    /** The zone named [zone] (IANA) for cron; this device's zone when null or unknown here. */
+    fun cronZone(zone: String?): CronZone
+
+    /** The hour and minute [epochSec] reads on this device's clock. */
+    fun localHourMinute(epochSec: Long): Pair<Int, Int>
 }
 
 /** ISO day of week of a `yyyy-MM-dd` day, 1 = Monday … 7 = Sunday; null for anything else. */

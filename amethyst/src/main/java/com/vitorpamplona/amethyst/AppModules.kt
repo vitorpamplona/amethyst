@@ -39,12 +39,15 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46Clie
 import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageInstallStore
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageModelMemory
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageScheduleStore
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreObserverPrefsStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageEditionStore
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageInstallInfo
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSchedule
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduleWatcher
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettings
@@ -1242,6 +1245,9 @@ class AppModules(
             schedules = DataStoreFrontPageScheduleStore(appStores),
             notifier = frontPageNotifier,
             observerPrefs = DataStoreObserverPrefsStore(appStores),
+            installs = DataStoreFrontPageInstallStore(appStores),
+            // How this phone appears in the reader's synced schedule ("Printed each morning by Pixel 8").
+            installInfo = FrontPageInstallInfo(name = Build.MODEL?.trim()?.ifEmpty { null } ?: "Android", app = "amethyst-android"),
         )
     }
 
@@ -1429,6 +1435,9 @@ class AppModules(
 
         // starts observing LocalCache for notification-worthy events
         notificationDispatcher.start()
+
+        // Keeps each account's morning edition job on the one device the synced schedule names.
+        FrontPageScheduleWatcher(frontPagePrinters.morning, accountsCache.accounts, frontPageScheduler, applicationIOScope).start()
 
         // Keep the scheduled-posts worker (15-min periodic + one-time catch-up)
         // enqueued exactly while the store holds a PENDING post — see

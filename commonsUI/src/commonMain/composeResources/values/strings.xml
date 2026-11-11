@@ -9580,6 +9580,14 @@
     <string name="front_page_new_edition">New edition</string>
     <string name="front_page_model_hint">Name a model to print, e.g. llama3.3</string>
     <string name="front_page_schedule_line">Every morning at %1$s</string>
+    <string name="front_page_scheduled">On a schedule</string>
+    <string name="front_page_print_from_device">Print from this device</string>
+    <string name="front_page_last_printed">Last printed by %1$s, %2$s</string>
+    <string name="front_page_never_printed">Not printed yet</string>
+    <string name="front_page_not_printed_since">Not printed since %1$s</string>
+    <string name="front_page_schedule_unreadable">Your schedule was saved by an app this version can't read</string>
+    <string name="front_page_schedule_unreachable">Couldn't reach your relays. Nothing was changed.</string>
+    <string name="front_page_schedule_cannot_sign">Your signer couldn't save the schedule</string>
     <string name="front_page_read_full">Read full screen</string>
     <string name="front_page_details">About this edition</string>
     <string name="front_page_edition_label">Edition</string>

@@ -48,8 +48,10 @@ class FrontPageScheduleTest {
 
     @Test
     fun theScheduleSurvivesItsOwnEncoding() {
-        val schedule = FrontPageSchedule(enabled = true, hour = 6, minute = 45)
+        val schedule = FrontPageSchedule.daily(enabled = true, hour = 6, minute = 45)
         assertEquals(schedule, DataStoreFrontPageScheduleStore.decode(DataStoreFrontPageScheduleStore.encode(schedule)))
+        // The old per-device `on|7|30` is NIP-FB's "30 7 * * *".
+        assertEquals(FrontPageSchedule(enabled = true, cron = "30 7 * * *"), DataStoreFrontPageScheduleStore.decode("on|7|30"))
         // Anything unreadable is the default: off.
         assertEquals(FrontPageSchedule(), DataStoreFrontPageScheduleStore.decode("on|25|00"))
         assertEquals(FrontPageSchedule(), DataStoreFrontPageScheduleStore.decode(null))

@@ -34,10 +34,12 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46Clie
 import com.vitorpamplona.amethyst.commons.cordn.SecretEncryptionCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageInstallStore
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageModelMemory
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageScheduleStore
 import com.vitorpamplona.amethyst.commons.frontpage.DataStoreObserverPrefsStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageEditionStore
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageInstallInfo
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSchedule
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
@@ -115,6 +117,7 @@ import com.vitorpamplona.amethyst.desktop.network.runSleepResumeMonitor
 import com.vitorpamplona.amethyst.desktop.service.calendar.DesktopCalendarReminders
 import com.vitorpamplona.amethyst.desktop.service.frontpage.DesktopFrontPageNotifier
 import com.vitorpamplona.amethyst.desktop.service.frontpage.DesktopFrontPageScheduler
+import com.vitorpamplona.amethyst.desktop.service.frontpage.desktopInstallName
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostScheduler
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostStore
@@ -521,6 +524,9 @@ class DesktopAppModules(
             schedules = DataStoreFrontPageScheduleStore(appStores),
             notifier = DesktopFrontPageNotifier(notifications),
             observerPrefs = DataStoreObserverPrefsStore(appStores),
+            installs = DataStoreFrontPageInstallStore(appStores),
+            // How this computer appears in the reader's synced schedule ("Desktop (Linux)").
+            installInfo = FrontPageInstallInfo(name = desktopInstallName(), app = "amethyst-desktop"),
         )
     }
 
