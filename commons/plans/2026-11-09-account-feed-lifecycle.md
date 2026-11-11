@@ -358,6 +358,14 @@ Done on the branch, each step its own commit:
     desktop: the watcher followed the screen across switches, and Active Subscriptions showed the
     background account's DM inbox (gift wraps) and notifications queries still open on its relays.
 
+11. **Signing flows checked (2026-11-11).** Two throwaway accounts: A signed up in the desktop
+    app, B made with `amy` and posting a note and a kind-20 picture. In A, with no screen
+    revisit: follow B put both posts on Home (one rebuild, 2 kept); Block & Hide took them off
+    (`rechecked 2 shown: 0 kept`, no cache walk); unblock brought them back (full rebuild,
+    2 kept); a report on B's picture kept it off Media while it stayed on Home (Home does not
+    filter on reports, as before); unfollow emptied Home (rebuild, 0 kept). Single relay as a
+    feed's list is still unchecked.
+
 No screen feed walks the whole cache any more. Threads, bookmarks, lists and pins read their notes
 directly; Home walks it on purpose (its universe is most of the cache).
 
