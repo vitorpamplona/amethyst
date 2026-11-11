@@ -183,6 +183,12 @@ class RelayCursors {
 
     fun isEmpty(): Boolean = lock.withLock { byRelay.isEmpty() }
 
+    /** Every relay [source] has a time for, with that time. */
+    fun sinceByRelay(source: CursorSource): Map<NormalizedRelayUrl, Long> =
+        lock.withLock {
+            byRelay.entries.filter { it.key.source === source }.associate { it.key.relay to it.value.time }
+        }
+
     /**
      * How to ask [relay] for [requested]: one part `since` the cursor when a stored filter covers
      * it; a covered part and a from-scratch part for authors the stored filter did not have; or the

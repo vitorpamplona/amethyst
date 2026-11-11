@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.commons.util.replace
@@ -195,6 +196,21 @@ open class Note(
      */
     @Volatile
     var otsVerification: VerificationState? = null
+
+    /**
+     * How far each relay has been asked for this note's replies, reactions, boosts and zaps
+     * (`EventWatcherSubAssembler`). It lives here because this object holds those children: when
+     * `LocalCache` drops the note and builds a new one for the same id, the new one has none of
+     * them and no cursor, so it is asked from scratch. Created on first watch: most notes are never
+     * watched.
+     */
+    @Volatile
+    private var childCursors: RelayCursors? = null
+
+    fun childCursorsOrNull(): RelayCursors? = childCursors
+
+    // Two threads racing here each make one and one is kept: the other's answer is asked again.
+    fun childCursors(): RelayCursors = childCursors ?: RelayCursors().also { childCursors = it }
 
     // These fields are updated every time an event related to this note is received.
     @Volatile

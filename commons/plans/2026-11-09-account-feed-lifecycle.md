@@ -261,8 +261,17 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
       hashtag and community screens asked from scratch on each visit and filled; going back
       released their feeds. Found, not changed: a profile whose relay list has not loaded yet
       asks no relays and nothing re-plans it until the screen is opened again (same before this
-      step).
-   6. Note counters with the `Note` as holder; reproduce the 29/110 vs 119/416 bug first.
+      step). Fixed after step 5: the posts and media managers re-plan when that user's relay
+      list arrives (`ProfileRelayListWatchers`); same steps, the notes show on the first visit.
+   6. **Done:** note counters. Reproduced first on desktop: jack's "built on nostr" note showed
+      119 replies / 125 boosts / 424 likes / 42k sats; after a switch to another account, forced
+      GCs and a switch back, 5 / 8 / 36 / 189, and it stayed there (its reaction card also left
+      the notifications). The cursors of `EventWatcherSubAssembler` moved from an LRU by note id
+      to the `Note` (`childCursors()`, created on first watch), which holds the replies,
+      reactions and zaps they vouch for: a note rebuilt for the same id is asked from scratch.
+      An answer reaches a note only through filters that name it (`#e`/`#E`/`#q`/`#a`/`#A`) and
+      only when asked from scratch or from no later than its own cursor. After: 119 / 124 / 424
+      / 42k and the card back, same steps.
    7. Account lists and gift wraps.
    8. Hooks: pruner `rewindTo`, local-filter widening `clear()`.
    Each ends with the desktop switch test and a heap check.
