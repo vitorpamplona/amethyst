@@ -1157,6 +1157,8 @@
     <string name="napplet_desktop_fetching">Fetching %1$s…</string>
     <string name="napplet_desktop_failed_fetch">Could not fetch %1$s from its Blossom servers.</string>
     <string name="napplet_desktop_failed_engine">The browser engine napplets run in did not start.</string>
+    <string name="napplet_desktop_engine_in_use">Another copy of Amethyst is using the browser engine. Quit it, then try again.</string>
+    <string name="napplet_desktop_engine_restart">The browser engine did not start. Restart Amethyst to try again.</string>
     <string name="napplet_desktop_permission_title">%1$s asks for permission</string>
     <string name="napplet_desktop_open_failed">This napplet can’t be opened here.</string>
     <string name="nsite_open_failed">This site can’t be opened here.</string>

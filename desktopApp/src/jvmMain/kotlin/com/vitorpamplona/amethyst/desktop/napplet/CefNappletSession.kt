@@ -489,7 +489,11 @@ class CefNappletSession(
                     browser: CefBrowser,
                     frame: CefFrame,
                     httpStatusCode: Int,
-                ) = PageScrollbars.apply(frame)
+                ) {
+                    PageScrollbars.apply(frame)
+                    // An nSite's next page starts unfocused even while it holds the keyboard.
+                    if (frame.isMain) offscreen?.refocus()
+                }
 
                 // A missing blob, a verify miss or a request the posture refused, so a site's author can
                 // see what broke (Android's host logs these to its console panel).

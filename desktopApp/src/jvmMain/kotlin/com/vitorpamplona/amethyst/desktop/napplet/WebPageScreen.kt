@@ -209,13 +209,11 @@ private fun WebPage(
                 is CefBrowserSession.State.Loading -> LoadingPane(host, null, BrowserChrome.displayHost(session.startUrl))
                 is CefBrowserSession.State.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
                 is CefBrowserSession.State.Failed ->
-                    MessagePane(
-                        when (current.reason) {
-                            CefBrowserSession.Failure.ENGINE -> stringRes(Res.string.napplet_desktop_failed_engine)
-                            CefBrowserSession.Failure.ROUTE_BLOCKED -> stringRes(Res.string.napplet_desktop_failed_route, BrowserChrome.displayHost(session.startUrl))
-                        },
-                        onRetry = viewModel::retry,
-                    )
+                    when (current.reason) {
+                        CefBrowserSession.Failure.ENGINE -> EngineFailurePane(host.engine, onRetry = viewModel::retry)
+                        CefBrowserSession.Failure.ROUTE_BLOCKED ->
+                            MessagePane(stringRes(Res.string.napplet_desktop_failed_route, BrowserChrome.displayHost(session.startUrl)), onRetry = viewModel::retry)
+                    }
             }
         }
         DownloadsBar(session)

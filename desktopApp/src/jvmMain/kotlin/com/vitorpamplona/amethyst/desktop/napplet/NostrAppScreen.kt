@@ -44,7 +44,6 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_failed_engine
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_failed_fetch
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_failed_route
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_open_failed
@@ -173,14 +172,11 @@ private fun NostrApp(
                 }
                 is CefNappletSession.State.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
                 is CefNappletSession.State.Failed ->
-                    MessagePane(
-                        when (current.reason) {
-                            CefNappletSession.Failure.UNREACHABLE -> stringRes(Res.string.napplet_desktop_failed_fetch, title)
-                            CefNappletSession.Failure.ENGINE -> stringRes(Res.string.napplet_desktop_failed_engine)
-                            CefNappletSession.Failure.ROUTE_BLOCKED -> stringRes(Res.string.napplet_desktop_failed_route, title)
-                        },
-                        onRetry = viewModel::retry,
-                    )
+                    when (current.reason) {
+                        CefNappletSession.Failure.UNREACHABLE -> MessagePane(stringRes(Res.string.napplet_desktop_failed_fetch, title), onRetry = viewModel::retry)
+                        CefNappletSession.Failure.ENGINE -> EngineFailurePane(host.engine, onRetry = viewModel::retry)
+                        CefNappletSession.Failure.ROUTE_BLOCKED -> MessagePane(stringRes(Res.string.napplet_desktop_failed_route, title), onRetry = viewModel::retry)
+                    }
             }
         }
     }

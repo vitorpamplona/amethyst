@@ -434,6 +434,8 @@ class CefBrowserSession(
                 ) {
                     if (frame.isMain && frame.url == PLACEHOLDER_URL && !placeholderLoaded.getAndSet(true)) leavePlaceholder(browser)
                     PageScrollbars.apply(frame)
+                    // The new document starts unfocused even while the page holds the keyboard.
+                    if (frame.isMain) view.refocus()
                 }
 
                 override fun onLoadError(

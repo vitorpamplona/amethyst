@@ -102,6 +102,9 @@ fun OffscreenPage(
                         when (event.type) {
                             PointerEventType.Press -> {
                                 focus.requestFocus()
+                                // Already focused, the request changes nothing; Chromium may have
+                                // dropped the focus meanwhile (a navigation), so it hears it again.
+                                if (focused) view.refocus()
                                 view.mouse(native, MouseEvent.MOUSE_PRESSED, x, y)
                                 event.changes.forEach { it.consume() }
                             }

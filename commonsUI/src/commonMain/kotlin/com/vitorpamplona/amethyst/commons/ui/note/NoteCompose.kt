@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderBidConfirmat
 import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderMarketplace
 import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderProduct
 import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderStall
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitSummaryEdits
 import com.vitorpamplona.amethyst.commons.nip69P2pOrderEvents.ui.RenderMostroInfo
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.RenderProductCollection
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.RenderProductReview
@@ -2024,6 +2025,7 @@ internal fun RenderNoteRow(
                     canPreview,
                     quotesLeft,
                     backgroundColor,
+                    editState,
                     accountViewModel,
                     nav,
                 )
@@ -2036,6 +2038,7 @@ internal fun RenderNoteRow(
                     canPreview,
                     quotesLeft,
                     backgroundColor,
+                    editState,
                     accountViewModel,
                     nav,
                 )
@@ -2048,6 +2051,7 @@ internal fun RenderNoteRow(
                     canPreview,
                     quotesLeft,
                     backgroundColor,
+                    editState,
                     accountViewModel,
                     nav,
                 )
@@ -3470,7 +3474,12 @@ fun observeEdits(
     baseNote: Note,
     accountViewModel: AccountViewModel,
 ): State<GenericLoadable<EditState>> {
-    if (baseNote.event !is TextNoteEvent) {
+    val event = baseNote.event
+    // A git issue, patch or PR is edited by cover notes, presented as kind-1 edits are.
+    if (event is GitIssueEvent || event is GitPullRequestEvent || event is GitPatchEvent) {
+        return observeGitSummaryEdits(baseNote)
+    }
+    if (event !is TextNoteEvent) {
         return EmptyState
     }
 

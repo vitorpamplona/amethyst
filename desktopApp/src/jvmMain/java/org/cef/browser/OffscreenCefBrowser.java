@@ -116,6 +116,17 @@ public final class OffscreenCefBrowser extends CefBrowser_N implements CefRender
         super.setFocus(enable);
     }
 
+    /**
+     * Tells Chromium again that the page has the focus, when this browser counts itself focused. A
+     * navigation hands the page to a new renderer, which starts unfocused while {@link #setFocus} still
+     * remembers true and passes nothing on: the page took typing but drew no caret, and
+     * {@code document.hasFocus()} was false, until the focus left the page and came back. Chromium's
+     * OnGotFocus answer reaches {@link #setFocus} with true and stops there.
+     */
+    public void refocus() {
+        if (focused.get()) super.setFocus(true);
+    }
+
     @Override
     public void createImmediately() {
         createBrowser(getClient(), 0L, getUrl(), true, false, null, getRequestContext());

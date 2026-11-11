@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.note.InlineNappletPosters
 import com.vitorpamplona.amethyst.desktop.app.DesktopAppModules
+import com.vitorpamplona.amethyst.desktop.app.DesktopInstance
 import com.vitorpamplona.amethyst.desktop.service.media.ChromiumMediaSession
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -82,7 +83,7 @@ class DesktopNappletHost(
 ) {
     val runtime =
         DesktopNappletRuntime(
-            engine = DesktopCefEngine(File(modules.filesDir, "jcef"), File(modules.filesDir, "jcef-cache"), onQuit = { modules.quitRequests.tryEmit(Unit) }),
+            engine = DesktopCefEngine(File(modules.filesDir, "jcef"), DesktopInstance.ownFolder(DesktopInstance.PerCopyFolder.BROWSER_PROFILE), onQuit = { modules.quitRequests.tryEmit(Unit) }),
             blobCache = NappletBlobCache(NappletBlobCache.dirFor(modules.filesDir)),
             httpClient = { useTor -> modules.okHttpClients.getHttpClient(useTor) },
             scope = modules.applicationIOScope,

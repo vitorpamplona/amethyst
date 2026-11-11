@@ -44,6 +44,8 @@ import java.nio.file.StandardOpenOption
  *   entries.
  * - Mining jobs checkpointed to disk were resumed by every copy that logged in, publishing the
  *   same post twice.
+ * - Chromium locks its profile: a second copy's browser handed every page it opened to the first
+ *   copy's Chromium, which opened it in a window of its own, and never started.
  *
  * So slot 1, the primary, keeps the usual folders and is the only one that checkpoints and resumes
  * mining jobs; every later slot puts the [PerCopyFolder]s under its own name ([ownFolder]) and mines
@@ -65,8 +67,9 @@ object DesktopInstance {
     /**
      * Every folder a later copy keeps its own sibling of (`videos-2`). The one list both [ownFolder]
      * and [removeIdleCopies] read, so a new per-copy folder cannot get its own copies without them
-     * also being cleaned up. [isCache] folders of idle slots are deleted; Tor's are kept, a few
-     * dozen MB that let a later copy connect quickly next time.
+     * also being cleaned up. [isCache] folders of idle slots are deleted. Tor's are kept, a few
+     * dozen MB that let a later copy connect quickly next time, and so is the browser profile, which
+     * holds what the user's sites saved.
      */
     enum class PerCopyFolder(
         val isCache: Boolean,
@@ -76,6 +79,9 @@ object DesktopInstance {
         VIDEOS(true, { File(System.getProperty("user.home"), ".cache/amethyst-desktop/videos") }),
         VIDEO_THUMBS(true, { File(System.getProperty("user.home"), ".cache/amethyst-desktop/video-thumbs") }),
         IMAGES(true, { DesktopImageLoaderSetup.cacheDir().resolve("AmethystDesktop/image_cache") }),
+
+        // An nSite's localStorage and cookies, and the in-app browser's per-account jars: kept.
+        BROWSER_PROFILE(false, { File(desktopDataDir(), "jcef-cache") }),
     }
 
     /** A slot, and the lock that holds it (null for [OVERFLOW_SLOT]). */
