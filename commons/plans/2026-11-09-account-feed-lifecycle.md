@@ -67,41 +67,48 @@ them. A switch throws that away and builds it again for the other account.
 
 ## Design
 
-### 1. The feed owns the cursor, the manager owns the wire
+### 1. The cursor lives with the notes it vouches for
 
-A cursor is a claim about one holder of notes, so it lives in that holder:
+An EOSE cursor claims "this holder has everything relay R sent, up to T, for this query". That
+is only true while the holder keeps those notes, and `LocalCache` keeps nothing on its own (weak
+references), so the cursor lives in the holder and dies with it:
 
-```kotlin
-/** Per-relay EOSE times for one holder of notes. Dies with the holder; nothing resets it. */
-class RelayCursors {
-    fun since(relay: NormalizedRelayUrl): Long?
-    fun newEose(relay: NormalizedRelayUrl, time: Long)
-    fun clear()
-}
-```
+| Holder (keeps the notes) | Cursor on | Replaces |
+|---|---|---|
+| A feed (`FeedContentState`, `CardFeedContentState`) | the feed | the managers' per-user, per-list and per-id maps; `FeedOwnerTracker` |
+| A note's replies, reactions and zaps (`Note.replies` and friends are strong lists) | the `Note` object | `EventWatcherSubAssembler`'s cursors by note id (the stuck-counter bug) |
+| An account's own lists; its DMs in the chatroom index | the `Account` | per-user maps |
 
-- `FeedContentState` and `CardFeedContentState` each own a `RelayCursors`.
-- A feed clears its own cursors when its `feedKey()` changes (a different list or filter) and on
-  `clear()`. That makes `SingleTopNavFeedSubAssembler.resetEoseOnListChange` the rule for every
-  feed instead of an opt-in, and replaces the per-list cursor maps (`EOSEAccountKey`).
-- A query key lists the cursors its REQ fills: `HomeQueryState` → new threads + replies;
-  `AccountUiQueryState` → the notification feeds; `HashtagQueryState` → the screen's feed. Keys
-  with no feed name the holder that keeps their data: the account's notification feed for the
-  background tails, `Account` for its own lists, the chatroom index for gift wraps.
+**A cursor records what it covered, not only when.** Per relay, `RelayCursors` keeps the time T
+and the filter shape (kinds, authors, tags) that T vouches for. `plan(relay, requested)` returns
+the parts of a request: what the stored shape covers is asked `since T`, the rest from scratch.
+Narrowing keeps the cursor; widening by authors (a new follow, another account joining a merged
+REQ) refetches only the new authors; any other widening (a kind turned back on, different tags)
+asks the whole request from scratch. After an EOSE or a live event, the cursor covers exactly the
+request that was sent, up to that time. This replaces `MergedAuthorTracker`, `gainedAuthors` and
+the per-list reset flags.
 
-The EOSE managers keep everything about subscriptions (grouping keys, one REQ per relay, relay
-limits) and lose their cursor maps:
+**Every way a holder loses notes adjusts its own cursor:**
 
-- **Reading:** `since(relay)` for a subscription is the **minimum** over every holder it serves,
-  and null if any holder has none. This is the rule the merged notification REQ already uses for
-  its floors ("the oldest wins"), and it replaces `MergedAuthorTracker`: an account or screen
-  that joins has no cursor, so the relay is asked from scratch.
-- **Writing:** an EOSE (or a live event) is written to the holders the subscription serves
-  *at that moment*, resolved through a `subId → keys` map kept by `updateSubscriptions`. Today's
-  listeners capture the key from `newSub(key)`, which goes stale when a new key takes over the
-  same subscription.
-- **Lifetime:** nothing to detect. A new feed has empty cursors; a released feed takes its
-  cursors with it. `FeedOwnerTracker` (step 1) goes away.
+| Notes lost because | Cursor |
+|---|---|
+| The holder is released (screen closed, account switched, logout) | gone with it; the next holder asks from scratch, with nothing to detect |
+| The feed's key changes (another list) | `clear()`, for every feed |
+| `LocalCache` drops a `Note` and rebuilds one for the same id | was on the old object; the new one asks from scratch |
+| The pruner removes notes a feed holds | the pruner tells the feed, which drops them and `rewindTo(oldest removed)` |
+| A local filter widens (unmute; notes fetched, rejected and collected) | `clear()`, in the branch of `FeedsKeptCurrent` that rebuilds |
+| `trimFeedsToSize` drops the oldest | nothing: below the paging floor, which refetches on scroll |
+| A deletion (kind 5) | nothing: meant to be gone |
+
+**The managers keep the wire, not the cursors.** A query key names its holders (`HomeQueryState`
+the two Home feeds, `AccountUiQueryState` the notification feeds, a background account its
+`Account`). Reading: per relay, the manager asks each holder the subscription serves for its plan
+and groups holders by the `since` they need, one filter per group in the same REQ, so a holder
+that joins does not make the others refetch. Relays cap filters per REQ: past the cap, groups
+merge on the oldest `since`, which is always safe. Writing: an EOSE or live event goes to the
+holders the subscription serves at that moment, through a `subId → keys` map kept by
+`updateSubscriptions` (today's listeners capture the key from `newSub(key)`, which goes stale).
+Cursors never reference their holder; a heap check after each step confirms it.
 
 ### 2. Account feeds outlive the ViewModel: Active, Warm, Cold
 
@@ -202,10 +209,19 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
    60 s after start: 3 feeds built instead of 14, and only the pinned tabs' feeds (5 by default)
    plus notifications take event bundles instead of all 46. Notes in memory barely change
    (4,476 vs 4,372): the gain is work, not memory.
-3. `RelayCursors` in the feeds, keys name their holders, managers read the minimum and fan
-   EOSEs out. Remove `FeedOwnerTracker`, `MergedAuthorTracker` and the per-list cursor maps.
-   Covers the screen feeds (section 3) too, and the note counters: their holder is the `Note`
-   object, not its id.
+3. Cursors with their holders (section 1), one family at a time, the managers' maps kept as the
+   fallback for keys that name no holder yet:
+   1. `RelayCursors` (time + shape per relay) and `RelayCursorHolder`, on both feed classes;
+      cleared on a feed key change (a card feed's `clear()` is a rebuild, not a loss: a widened
+      local filter clears the cursors in step 8). Unit tests.
+   2. Manager plumbing: `holders(key)`, per-relay plan and grouping, `subId → keys` routing.
+   3. Notifications (inbox, random relays, history); `FeedOwnerTracker` goes there.
+   4. Top-nav feeds (Home, Video, Discover, media tabs); per-list maps and `MergedAuthorTracker` go.
+   5. Screen feeds (profile, hashtag, geohash, URL, community, relay); each community its own.
+   6. Note counters with the `Note` as holder; reproduce the 29/110 vs 119/416 bug first.
+   7. Account lists and gift wraps.
+   8. Hooks: pruner `rewindTo`, local-filter widening `clear()`.
+   Each ends with the desktop switch test and a heap check.
 4. `AccountFeeds` with Active / Warm (15 min) / Cold, notification feeds account-lifetime;
    with tabs-and-windows Phase 2b.
 5. **Done (2026-11-11):** every account notified on desktop, labelled on both platforms.

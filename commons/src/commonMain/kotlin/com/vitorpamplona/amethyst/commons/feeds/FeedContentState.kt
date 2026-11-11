@@ -25,6 +25,8 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
 import com.vitorpamplona.amethyst.commons.service.BasicBundledUpdate
 import com.vitorpamplona.amethyst.commons.util.KmpLock
@@ -64,7 +66,14 @@ class FeedContentState(
      * on resume if it has never been built.
      */
     private val refreshOnResume: Boolean = true,
-) : InvalidatableContent {
+) : InvalidatableContent,
+    RelayCursorHolder {
+    /**
+     * What the relays already sent for this feed, held here because it is only true while this
+     * feed keeps the notes: a new feed object starts empty and asks from scratch.
+     */
+    override val relayCursors = RelayCursors()
+
     private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
@@ -91,6 +100,12 @@ class FeedContentState(
     var scrollToTopPending = false
 
     private var lastFeedKey: Any? = null
+
+    /** Records the key this build used; another list or filter makes the cursors vouch for nothing. */
+    private fun builtWithKey(key: Any?) {
+        if (lastFeedKey != null && lastFeedKey != key) relayCursors.clear()
+        lastFeedKey = key
+    }
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
 
@@ -178,7 +193,7 @@ class FeedContentState(
         isRefreshing.value = true
         try {
             write {
-                lastFeedKey = localFilter.feedKey()
+                builtWithKey(localFilter.feedKey())
                 localFilter.loadTop().distinctBy { it.idHex }.toImmutableList()
             }
         } finally {

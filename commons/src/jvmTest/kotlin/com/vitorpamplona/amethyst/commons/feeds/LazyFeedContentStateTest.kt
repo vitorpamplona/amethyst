@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.feeds
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.StubCache
 import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.FilterShape
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -61,7 +63,10 @@ class LazyFeedContentStateTest {
         /** Notes the filter now rejects, as a report or a mute would make it. */
         var rejected = emptySet<Note>()
 
-        override fun feedKey(): Any = "feed"
+        /** The list or filter the feed is built for; changing it is another feed. */
+        var key: Any = "feed"
+
+        override fun feedKey(): Any = key
 
         override fun feed(): List<Note> {
             scans.incrementAndGet()
@@ -221,5 +226,24 @@ class LazyFeedContentStateTest {
 
         assertEquals(listOf(a), state.visibleNotes())
         assertEquals(scans, filter.scans.get(), "refiltering walked the cache")
+    }
+
+    @Test
+    fun theCursorsSurviveRebuildsAndClearWhenTheFeedChangesKey() {
+        val relay = NormalizedRelayUrl("wss://relay.example.com/")
+        val filter = CountingFilter(listOf(a))
+        val state = FeedContentState(filter, scope, StubCache(), lazy = true)
+        state.activate()
+        waitUntil("the first build") { state.visibleNotes() == listOf(a) }
+
+        state.relayCursors.newEose(relay, listOf(FilterShape(kinds = setOf(1))), 1_000)
+        val scans = filter.scans.get()
+        state.invalidateData()
+        waitUntil("a rebuild with the same key") { filter.scans.get() > scans }
+        assertEquals(1_000L, state.relayCursors.since(relay), "a rebuild keeps the same notes, so the same cursors")
+
+        filter.key = "another list"
+        state.checkKeysInvalidateDataAndSendToTop()
+        waitUntil("the rebuild for the new key") { state.relayCursors.isEmpty() }
     }
 }

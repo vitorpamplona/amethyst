@@ -40,6 +40,8 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache.getNoteIfExists
 import com.vitorpamplona.amethyst.commons.model.chats.ConcordDirectInviteNote
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
@@ -81,7 +83,14 @@ class CardFeedContentState(
     val viewModelScope: CoroutineScope,
     /** Builds nothing until [activate] or a collector of [feedContent]; see [FeedContentState]. */
     lazy: Boolean = false,
-) : InvalidatableContent {
+) : InvalidatableContent,
+    RelayCursorHolder {
+    /**
+     * What the relays already sent for this feed, held here because it is only true while this
+     * feed keeps the notes: a new feed object starts empty and asks from scratch.
+     */
+    override val relayCursors = RelayCursors()
+
     private val _feedContent = MutableStateFlow<CardFeedState>(CardFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
@@ -104,6 +113,12 @@ class CardFeedContentState(
     var scrolltoTopPending = false
 
     private var lastFeedKey: Any? = null
+
+    /** Records the key this build used; another list or filter makes the cursors vouch for nothing. */
+    private fun builtWithKey(key: Any?) {
+        if (lastFeedKey != null && lastFeedKey != key) relayCursors.clear()
+        lastFeedKey = key
+    }
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
 
@@ -160,7 +175,7 @@ class CardFeedContentState(
             // Read before the filter runs: a clear after this point marks the result stale.
             val gen = generation.load()
             val notes = localFilter.feed()
-            lastFeedKey = localFilter.feedKey()
+            builtWithKey(localFilter.feedKey())
 
             val thisAccount = (localFilter as? NotificationFeedFilter)?.account
             val lastNotesCopy = if (thisAccount == lastAccount && builtGeneration == gen) lastNotes else null
