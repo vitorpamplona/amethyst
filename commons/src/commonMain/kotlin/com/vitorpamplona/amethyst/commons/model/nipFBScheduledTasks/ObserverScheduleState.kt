@@ -28,18 +28,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DONE_REASON_EOSE
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverSchedule
-import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.withoutClientTag
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTask
-import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskClaims
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -238,9 +233,6 @@ class ObserverScheduleState(
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val scheduleNote = cache.getOrCreateAddressableNote(ObserverSchedule.address(signer.pubKey))
 
-    /** The schedule is never signed with the account's `client` tag (NIP-FB: nothing public but `d`). */
-    private val plainSigner = signer.withoutClientTag()
-
     /** A key held here decrypts on its own; anything else asks the reader, so only when they are here. */
     private val decryptsAlone get() = signer.localPrivKeyOrNull() != null
 
@@ -365,58 +357,26 @@ class ObserverScheduleState(
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, SyncedSchedule.Unknown)
 
-    private val editing = Mutex()
+    /** The quorum read, the publish and the read-modify-write, with this cache as their memory. */
+    private val relays =
+        ScheduledTaskRelays(
+            signer = signer,
+            client = client,
+            dTag = ObserverSchedule.D_TAG,
+            writeRelays = { writeRelays.value },
+            decrypt = ::taskOf,
+            known = ::event,
+            onRead = { event, relay -> cache.justConsume(event, relay, wasVerified = true) },
+            onSigned = { cache.justConsumeMyOwnEvent(it) },
+        )
 
-    override suspend fun readQuorum(): QuorumRead {
-        val relays = writeRelays.value
-        if (relays.isEmpty()) return QuorumRead(null, null, false, relays)
-        val read = mutableListOf<ScheduledTaskEvent>()
-        val result =
-            try {
-                client.fetchAllWithHooks(relays.associateWith { listOf(ObserverSchedule.filter(signer.pubKey)) }, idleTimeoutMs = READ_IDLE_MS) { relay, event ->
-                    if (event is ScheduledTaskEvent && ObserverSchedule.isObserverSchedule(event) && event.pubKey == signer.pubKey && event.verify()) {
-                        cache.justConsume(event, relay, wasVerified = true)
-                        read += event
-                    }
-                    true
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not read the morning schedule", e)
-                null
-            }
-        val answered = result?.doneReasons?.values?.count { it == DONE_REASON_EOSE } ?: 0
-        // Only what the relays returned is evidence: this device's own copy of a write they
-        // didn't take is not the schedule. A new write still has to beat it.
-        val newest = ScheduledTaskClaims.winner(read)
-        val floor = ScheduledTaskClaims.winner(listOfNotNull(newest, event()))
-        return QuorumRead(newest, newest?.let { taskOf(it) }, ScheduledTaskClaims.hasQuorum(relays.size, answered), relays, floor)
-    }
-
-    /** Sends [signed] to [relays]; how many accepted it, 0 when the send itself failed. */
-    private suspend fun send(
-        signed: ScheduledTaskEvent,
-        relays: Set<NormalizedRelayUrl>,
-    ): Int =
-        try {
-            client.publishAndCollectResults(signed, relays, timeoutInSeconds = WRITE_CONFIRM_SECONDS).count { it.value.accepted }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not publish the schedule", e)
-            0
-        }
+    override suspend fun readQuorum(): QuorumRead = relays.readQuorum()
 
     override suspend fun publish(
         previous: ScheduledTaskEvent?,
         task: ScheduledTask,
         relays: Set<NormalizedRelayUrl>,
-    ): Pair<ScheduledTaskEvent, Boolean> {
-        val signed = plainSigner.sign(ObserverSchedule.build(task, plainSigner, previous, TimeUtils.now()))
-        cache.justConsumeMyOwnEvent(signed)
-        return signed to ScheduledTaskClaims.hasQuorum(relays.size, send(signed, relays))
-    }
+    ): Pair<ScheduledTaskEvent, Boolean> = this.relays.publish(previous, task, relays)
 
     override fun watch(
         relays: Set<NormalizedRelayUrl>,
@@ -465,38 +425,10 @@ class ObserverScheduleState(
         now: Long,
         resend: Boolean,
         transform: (ScheduledTask?) -> ScheduledTask?,
-    ): ScheduleEdit =
-        editing.withLock {
-            if (!signer.isWriteable()) return@withLock ScheduleEdit.CannotSign
-            if (writeRelays.value.isEmpty()) return@withLock ScheduleEdit.NoWriteRelays
-            val read = readQuorum()
-            val (next, outcome) = planScheduleEdit(read.event != null, read.task, read.quorum, transform)
-            if (next == null) {
-                val again = read.event
-                if (resend && outcome == ScheduleEdit.Unchanged && again != null && read.task != null && transform(read.task) == read.task) {
-                    val accepted = send(again, read.relays)
-                    return@withLock if (ScheduledTaskClaims.hasQuorum(read.relays.size, accepted)) outcome else ScheduleEdit.NotAccepted
-                }
-                return@withLock outcome
-            }
-            val signed =
-                try {
-                    plainSigner.sign<ScheduledTaskEvent>(ObserverSchedule.build(next, plainSigner, read.floor, now))
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.w(TAG, "Could not sign the morning schedule", e)
-                    return@withLock ScheduleEdit.CannotSign
-                }
-            cache.justConsumeMyOwnEvent(signed)
-            // A send that fails is the network's, not the signer's.
-            if (ScheduledTaskClaims.hasQuorum(read.relays.size, send(signed, read.relays))) outcome else ScheduleEdit.NotAccepted
-        }
+    ): ScheduleEdit = relays.edit(now, resend, transform)
 
     companion object {
         private const val TAG = "ObserverScheduleState"
-        private const val READ_IDLE_MS = 8_000L
-        private const val WRITE_CONFIRM_SECONDS = 10L
         private const val KEEP_DECRYPTED = 8
     }
 }

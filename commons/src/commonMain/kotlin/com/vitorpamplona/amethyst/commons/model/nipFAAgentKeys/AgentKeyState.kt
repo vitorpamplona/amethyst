@@ -67,21 +67,15 @@ class AgentKeyState(
     /** The key apps use, or null when the user hasn't set one. */
     fun preferred(): AgentKeyTag? = flow.value.firstOrNull()
 
-    /** Adds [key], or moves it, to the front: a key the user just added is the one they mean to use. */
-    suspend fun add(key: AgentKeyTag): AgentKeyEvent {
-        val earlier = getAgentKeyEvent()
-        val template =
-            if (earlier != null) {
-                AgentKeyEvent.setPreferred(earlier, key, signer)
-            } else {
-                AgentKeyEvent.build(listOf(key), signer)
-            }
-        return signer.sign(template)
-    }
+    /**
+     * Adds [key], or moves it, to the front: a key the user just added is the one they mean to
+     * use. Null when it already is the first.
+     */
+    suspend fun add(key: AgentKeyTag): AgentKeyEvent? = rewriteAgentKeys(getAgentKeyEvent(), signer) { keys -> listOf(key) + keys.filter { it != key } }?.let { signer.sign(it) }
 
-    suspend fun setPreferred(key: AgentKeyTag): AgentKeyEvent? = getAgentKeyEvent()?.let { signer.sign(AgentKeyEvent.setPreferred(it, key, signer)) }
+    suspend fun setPreferred(key: AgentKeyTag): AgentKeyEvent? = getAgentKeyEvent()?.let { earlier -> rewriteAgentKeys(earlier, signer) { keys -> listOf(key) + keys.filter { it != key } }?.let { signer.sign(it) } }
 
-    suspend fun remove(key: AgentKeyTag): AgentKeyEvent? = getAgentKeyEvent()?.let { signer.sign(AgentKeyEvent.remove(it, key, signer)) }
+    suspend fun remove(key: AgentKeyTag): AgentKeyEvent? = getAgentKeyEvent()?.let { earlier -> rewriteAgentKeys(earlier, signer) { keys -> keys.filter { it != key } }?.let { signer.sign(it) } }
 }
 
 /** No outbox relay answered and nothing is cached: an edit would start from nothing and delete the other keys. */
