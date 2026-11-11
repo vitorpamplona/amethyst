@@ -52,7 +52,7 @@ open class DiscoverCommunityFeedFilter(
 
     override fun feed(): List<Note> =
         sort(
-            rebuildFeed("discover/communities", candidates = null, keep = { false }) {
+            rebuildFeed("discover/communities") {
                 val filterParams =
                     FilterByListParams.create(
                         followLists = account.liveDiscoveryFollowLists.value,
@@ -72,7 +72,7 @@ open class DiscoverCommunityFeedFilter(
                             null
                         }
                     }
-                notes.toSet()
+                notes
             },
         )
 

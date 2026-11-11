@@ -91,7 +91,7 @@ class VideoFeedFilter(
                         LocalCache.addressables.filterIntoSet(AddressableShortVideoEvent.KIND) { _, it ->
                             acceptableEvent(it, params)
                         }
-                notes.toSet()
+                notes
             },
         )
     }

@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlin.concurrent.Volatile
 
 /**
@@ -51,7 +52,8 @@ class NoteSetMatchingFilter(
     private val dependents: (Note) -> Collection<Note> = { emptyList() },
     /** The filter reads `Note.relays`, which grows without a new event: see [seenOnRelay]. */
     val watchesRelays: Boolean = false,
-) : Observable {
+) : Observable,
+    RelaySeenObserver {
     private val lock = KmpLock()
     private val strong = HashSet<Note>()
     private val weakRefs = HashMap<HexKey, WeakReference<Note>>()
@@ -89,7 +91,10 @@ class NoteSetMatchingFilter(
     }
 
     /** [note] was just seen on a relay it was not known on: the cache calls this when [watchesRelays]. */
-    fun seenOnRelay(note: Note) = consider(note)
+    override fun seenOnRelay(
+        note: Note,
+        relay: NormalizedRelayUrl,
+    ) = consider(note)
 
     fun markReady() {
         ready = true

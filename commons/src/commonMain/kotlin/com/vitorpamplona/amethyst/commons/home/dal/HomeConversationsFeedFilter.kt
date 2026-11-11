@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.commons.feeds.UniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -48,11 +47,13 @@ import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 
 class HomeConversationsFeedFilter(
     val account: Account,
-    /** Where a full rebuild looks: the Home candidates when given, else the whole cache. */
-    override val candidates: CandidateSet? = null,
 ) : AdditiveFeedFilter<Note>(),
     UniverseFeedFilter {
     override val universe = IFilter { note -> note.event?.let { isConversationKind(it) } == true }
+
+    // Home walks the cache: its universe is most of it, so a candidate set would only copy it.
+    // The universe still tells FeedsKeptCurrent which future-dated notes could ever show here.
+    override val candidates: CandidateSet? get() = null
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
 
@@ -64,9 +65,8 @@ class HomeConversationsFeedFilter(
         val filterParams = buildFilterParams(account)
         val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
 
-        // From candidates, only the notes map's kind of entries, as the walk below.
         return sort(
-            rebuildFeed("home/replies", candidates, keep = { it !is AddressableNote && acceptableEvent(it, filterParams, disabledKinds) }) {
+            rebuildFeed("home/replies") {
                 LocalCache.notes.filterIntoSet { _, it ->
                     acceptableEvent(it, filterParams, disabledKinds)
                 }

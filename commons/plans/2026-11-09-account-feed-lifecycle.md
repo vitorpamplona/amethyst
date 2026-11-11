@@ -297,6 +297,25 @@ Done on the branch, each step its own commit:
    across rebuilds while it streamed, identical except two superseded relay-list versions the walk
    picked up from the notes map. One podcast and mutual compared empty to empty on that account.
 
+9. **Audit fixes (2026-11-11).** A review of the branch found, and this fixed:
+   - A relay picked as a kept-current group's list: a cached note seen on that relay later is no
+     new event, and with no resume rebuild it never joined. The cache's relay hook
+     (`RelaySeenObserver`, `EventCache.seenOn`) now also reaches the account, which hands such
+     notes to the groups reading that relay (`FeedsKeptCurrent.seenOnSelectedRelay`, batched).
+     Not run in the app: a read-only account cannot add a relay feed.
+   - Future-dated notes: only the earliest was rescheduled, so a later one stayed hidden. Each
+     group now keeps every pending time (up to 64) and only those of notes in its universe, so a
+     future-dated reaction no longer rebuilds Home.
+   - The account's event-bundle collector queued without bound; bundles that arrive while the
+     feeds are busy now merge into one set (`coalesced()`).
+   - The Home badge and the Home bar item built hidden tabs (Everything walks the whole cache);
+     they now only build the tabs Settings shows.
+   - A public-chat message loading after the replies below it now re-checks them for
+     notifications (`NotificationCandidates.chatRepliesBelow`).
+   - The per-user cursor-owner tracker held every visited `User`; it keys by pubkey now.
+   - Dead candidate plumbing on the Home filters is gone, and the walk-only feeds log through a
+     `rebuildFeed(name) { … }` overload without copying their set.
+
 No screen feed walks the whole cache any more. Threads, bookmarks, lists and pins read their notes
 directly; Home walks it on purpose (its universe is most of the cache).
 

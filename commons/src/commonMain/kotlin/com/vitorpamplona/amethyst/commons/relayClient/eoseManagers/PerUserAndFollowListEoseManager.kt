@@ -65,14 +65,15 @@ abstract class PerUserAndFollowListEoseManager<T, U : Any>(
     /** Runs after the cursors of [key]'s user were dropped for a new feed; for state kept elsewhere. */
     protected open fun onFeedOwnerChanged(key: T) {}
 
-    private val feedOwners = FeedOwnerTracker<User>()
+    // By pubkey, not User: the tracker outlives the screens and must not keep every visited User.
+    private val feedOwners = FeedOwnerTracker<String>()
 
     private fun dropCursorsIfFeedChanged(
         user: User,
         key: T,
     ) {
         val owner = feedOwner(key) ?: return
-        if (feedOwners.ownerChanged(user, owner)) {
+        if (feedOwners.ownerChanged(user.pubkeyHex, owner)) {
             latestEOSEs.removeDataFor(user)
             onFeedOwnerChanged(key)
         }

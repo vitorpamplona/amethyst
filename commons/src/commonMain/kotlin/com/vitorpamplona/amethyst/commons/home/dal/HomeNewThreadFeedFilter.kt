@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.commons.feeds.isRenderableRepost
 import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -93,11 +92,13 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 class HomeNewThreadFeedFilter(
     val account: Account,
-    /** Where a full rebuild looks: the Home candidates when given, else the whole cache. */
-    override val candidates: CandidateSet? = null,
 ) : AdditiveFeedFilter<Note>(),
     UniverseFeedFilter {
     override val universe = IFilter { note -> note.event?.let { isThreadKind(it) || it is CalendarRSVPEvent } == true }
+
+    // Home walks the cache: its universe is most of it, so a candidate set would only copy it.
+    // The universe still tells FeedsKeptCurrent which future-dated notes could ever show here.
+    override val candidates: CandidateSet? get() = null
 
     companion object {
         val ADDRESSABLE_KINDS =
@@ -200,7 +201,7 @@ class HomeNewThreadFeedFilter(
         val latestRsvps = lazy(LazyThreadSafetyMode.NONE) { cachedRsvpAnswers() }
 
         return sort(
-            rebuildFeed("home/threads", candidates, keep = { inWalk(it) && acceptableEvent(it, filterParams, disabledKinds, latestRsvps) }) {
+            rebuildFeed("home/threads") {
                 val notes =
                     LocalCache.notes.filterIntoSet { _, note ->
                         // Avoids processing addressables twice.
@@ -217,15 +218,6 @@ class HomeNewThreadFeedFilter(
                 notes + longFormNotes
             },
         )
-    }
-
-    // The same notes the cache walk keeps: regular kinds from the notes map, and addressables
-    // only of ADDRESSABLE_KINDS.
-    private val addressableKinds = ADDRESSABLE_KINDS.toHashSet()
-
-    private fun inWalk(note: Note): Boolean {
-        val kind = note.event?.kind ?: 99999
-        return if (note is AddressableNote) kind in addressableKinds else kind < 10000
     }
 
     /** This feed's check with its parameters built once, for a walk shared with another feed. */

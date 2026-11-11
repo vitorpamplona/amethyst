@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssemblerSubscription
@@ -228,13 +229,28 @@ private fun WakeFeedsOf(
     accountViewModel: AccountViewModel,
 ) {
     LaunchedEffect(item, accountViewModel) {
-        accountViewModel.feedStates.feedsShownBy(item).forEach { it.activate() }
+        accountViewModel.feedStates.feedsShownBy(item, accountViewModel.settings.uiSettingsFlow).forEach { it.activate() }
     }
 }
 
-private fun AccountFeedContentStates.feedsShownBy(item: NavBarItem): List<FeedContentState> =
+private fun AccountFeedContentStates.feedsShownBy(
+    item: NavBarItem,
+    ui: UiSettingsFlow,
+): List<FeedContentState> =
     when (item) {
-        NavBarItem.HOME -> listOf(homeNewThreads, homeReplies, homeEverything)
+        // Only the tabs Settings shows: Everything walks the whole cache, and a hidden tab's feed
+        // is built when the tab comes back and its page collects it.
+        NavBarItem.HOME -> {
+            val threads = ui.showHomeNewThreadsTab.value
+            val replies = ui.showHomeConversationsTab.value
+            val everything = ui.showHomeEverythingTab.value
+            buildList {
+                // HomeScreen falls back to New Threads when every tab is off.
+                if (threads || !(replies || everything)) add(homeNewThreads)
+                if (replies) add(homeReplies)
+                if (everything) add(homeEverything)
+            }
+        }
         NavBarItem.MESSAGES -> listOf(dmKnown, dmNew)
         NavBarItem.VIDEO -> listOf(videoFeed)
         NavBarItem.DISCOVER -> listOf(discoverReads, discoverMarketplace, discoverDVMs, discoverFollowSets, discoverLive, discoverPublicChats, discoverCommunities)

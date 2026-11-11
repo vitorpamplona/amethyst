@@ -50,14 +50,14 @@ open class DiscoverLongFormFeedFilter(
 
     override fun feed(): List<Note> =
         sort(
-            rebuildFeed("discover/reads", candidates = null, keep = { false }) {
+            rebuildFeed("discover/reads") {
                 val params = buildFilterParams(account)
                 val notes =
                     LocalCache.addressables.filterIntoSet(LongFormContentEvent.KIND) { _, it ->
                         val noteEvent = it.event
                         noteEvent is LongFormContentEvent && params.match(noteEvent, it.relays)
                     }
-                notes.toSet()
+                notes
             },
         )
 

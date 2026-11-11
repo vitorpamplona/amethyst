@@ -60,12 +60,12 @@ open class DiscoverLiveFeedFilter(
 
     override fun feed(): List<Note> =
         sort(
-            rebuildFeed("discover/live", candidates = null, keep = { false }) {
+            rebuildFeed("discover/live") {
                 val allChannelNotes = LocalCache.liveChatChannels.mapNotNull { _, channel -> LocalCache.getAddressableNoteIfExists(channel.address) }
                 val allMessageNotes = LocalCache.liveChatChannels.map { _, channel -> channel.notes.filter { _, it -> it.event is LiveActivitiesEvent } }.flatten()
 
                 val notes = innerApplyFilter(allChannelNotes + allMessageNotes)
-                notes.toSet()
+                notes
             },
         )
 

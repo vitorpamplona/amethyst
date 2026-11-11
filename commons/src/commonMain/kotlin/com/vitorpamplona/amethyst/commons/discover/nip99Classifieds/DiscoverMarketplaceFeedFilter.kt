@@ -50,7 +50,7 @@ open class DiscoverMarketplaceFeedFilter(
 
     override fun feed(): List<Note> =
         sort(
-            rebuildFeed("discover/marketplace", candidates = null, keep = { false }) {
+            rebuildFeed("discover/marketplace") {
                 val params = buildFilterParams(account)
 
                 val notes =
@@ -58,7 +58,7 @@ open class DiscoverMarketplaceFeedFilter(
                         val noteEvent = it.event
                         noteEvent is ClassifiedsEvent && noteEvent.isWellFormed() && noteEvent.isInCatalog() && params.match(noteEvent, it.relays)
                     }
-                notes.toSet()
+                notes
             },
         )
 

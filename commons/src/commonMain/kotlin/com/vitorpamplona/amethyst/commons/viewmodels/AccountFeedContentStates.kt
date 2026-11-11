@@ -58,7 +58,9 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.RelaySeenObserver
 import com.vitorpamplona.amethyst.commons.model.privateChats.DM_CHAT_FEED_TYPES
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.music.dal.MusicPlaylistsFeedFilter
 import com.vitorpamplona.amethyst.commons.music.dal.MusicTracksFeedFilter
@@ -85,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.webBookmarks.dal.WebBookmarkFeedFilter
 import com.vitorpamplona.amethyst.commons.workouts.dal.WorkoutFeedFilter
 import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
@@ -92,8 +95,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -102,6 +108,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
 
 /**
  * Every feed the account's screens show. All but the main notifications feed are lazy: a feed is
@@ -129,7 +136,7 @@ class AccountFeedContentStates(
     // Besides the events, Home reads whom the selected list resolves to (the feed key only covers
     // the list's name), and mutes and spam flags.
     private val homeKeptCurrent =
-        FeedsKeptCurrent(scope, listOf(homeNewThreads, homeReplies, homeEverything), listOf(account.liveHomeFollowLists), account.hiddenUsers.flow)
+        FeedsKeptCurrent(scope, listOf(homeNewThreads, homeReplies, homeEverything), emptyList(), account.hiddenUsers.flow, account.liveHomeFollowLists)
 
     val dmKnown = FeedContentState(ChatroomListKnownFeedFilter(account), scope, LocalCache, lazy = true)
     val dmNew = FeedContentState(ChatroomListNewFeedFilter(account), scope, LocalCache, lazy = true)
@@ -156,8 +163,9 @@ class AccountFeedContentStates(
 
     private fun keptCurrent(
         feed: FeedContentState,
+        list: StateFlow<IFeedTopNavFilter>?,
         vararg inputs: Flow<*>,
-    ) = FeedsKeptCurrent(scope, listOf(feed), inputs.toList(), account.hiddenUsers.flow)
+    ) = FeedsKeptCurrent(scope, listOf(feed), inputs.toList(), account.hiddenUsers.flow, list)
 
     private val videoKeptCurrent = keptCurrent(videoFeed, account.liveStoriesFollowLists, *acceptableInputs)
 
@@ -174,7 +182,7 @@ class AccountFeedContentStates(
     val discoverPublicChats = FeedContentState(DiscoverChatFeedFilter(account), scope, LocalCache, lazy = true)
 
     private val discoverKeptCurrent =
-        FeedsKeptCurrent(scope, listOf(discoverFollowSets, discoverReads, discoverMarketplace), listOf(account.liveDiscoveryFollowLists), account.hiddenUsers.flow)
+        FeedsKeptCurrent(scope, listOf(discoverFollowSets, discoverReads, discoverMarketplace), emptyList(), account.hiddenUsers.flow, account.liveDiscoveryFollowLists)
 
     // One set for the three poll tabs: they differ only in what they check over it.
     private val pollCandidates = CandidateSet(LocalCache, scope, pollsUniverse, weak = true)
@@ -236,8 +244,8 @@ class AccountFeedContentStates(
             keptCurrent(productsFeed, account.liveProductsFollowLists),
             keptCurrent(geocachesFeed, account.liveGeocachesFollowLists),
             keptCurrent(geocacheHuntsFeed, account.liveGeocachesFollowLists),
-            keptCurrent(geocacheFindsFeed),
-            keptCurrent(geocacheMineFeed),
+            keptCurrent(geocacheFindsFeed, null),
+            keptCurrent(geocacheMineFeed, null),
             keptCurrent(articlesFeed, account.liveArticlesFollowLists),
             keptCurrent(followPacksFeed, account.liveFollowPacksFollowLists),
             keptCurrent(shortsFeed, account.liveShortsFollowLists, *acceptableInputs),
@@ -253,6 +261,24 @@ class AccountFeedContentStates(
     // see updateFeedsWith.
     private val hideReported =
         listOf(videoFeed, shortsFeed, longsFeed, podcastEpisodesFeed, musicTracksFeed, musicPlaylistsFeed, podcastsFeed, softwareAppsFeed)
+
+    // A relay picked as a group's list (Home on one relay…) takes in the notes seen on it, and a
+    // cached note seen there again is no new event: the cache tells this observer, which hands the
+    // note to the groups reading that relay. Empty map, and one lookup per relay seen, otherwise.
+    @Volatile
+    private var groupsByRelay: Map<NormalizedRelayUrl, List<FeedsKeptCurrent>> = emptyMap()
+
+    private val seenOnRelay = RelaySeenObserver { note, relay -> groupsByRelay[relay]?.forEach { it.seenOnSelectedRelay(note) } }
+
+    init {
+        scope.launch(Dispatchers.IO) {
+            combine(keptCurrent.mapNotNull { it.list }) { }.collect {
+                groupsByRelay = keptCurrent.mapNotNull { group -> group.selectedRelay()?.let { it to group } }.groupBy({ it.first }, { it.second })
+            }
+        }
+        LocalCache.registerRelayObserver(seenOnRelay)
+        scope.coroutineContext[Job]?.invokeOnCompletion { LocalCache.unregisterRelayObserver(seenOnRelay) }
+    }
 
     // Eager: the always-on notification subscription fills it whether or not a screen shows it, and
     // its EOSE cursor is only true while something holds those notes.
@@ -565,7 +591,7 @@ class AccountFeedContentStates(
 
     fun updateFeedsWith(newNotes: Set<Note>) {
         // See FeedsKeptCurrent: a future-dated note shows when its time comes, without a new event.
-        FeedsKeptCurrent.earliestHiddenFuture(newNotes)?.let { at -> keptCurrent.forEach { it.rebuildWhenVisible(at) } }
+        FeedsKeptCurrent.hiddenFuture(newNotes).let { future -> if (future.isNotEmpty()) keptCurrent.forEach { it.rebuildWhenVisible(future) } }
 
         // Video and the media feeds hide reported authors (Account.isAcceptable), and a report is
         // not one of their items, so the additive path never sees it: check what is shown again,

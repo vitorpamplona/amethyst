@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -63,7 +64,7 @@ object NotificationCandidates {
         me: String,
     ): Collection<Note> {
         val author = (note as? AddressableNote)?.address?.pubKeyHex ?: note.author?.pubkeyHex
-        if (author != me) return emptyList()
+        if (author != me) return chatRepliesBelow(note)
 
         val found = ArrayList<Note>()
         val seen = HashSet<Note>()
@@ -80,6 +81,31 @@ object NotificationCandidates {
                         found.add(reply)
                         queue.add(reply to depth + 1)
                     }
+                }
+            }
+        }
+        return found
+    }
+
+    /**
+     * A chat message that is not mine can still be the missing link between my message and a reply
+     * further down ([NotificationFeedFilter.isNotifiablePublicChatReply] walks up through it): when
+     * it loads after the replies below it, they are checked again. Usually it has none yet.
+     */
+    private fun chatRepliesBelow(note: Note): Collection<Note> {
+        if (note.event !is ChannelMessageEvent || note.replies.isEmpty()) return emptyList()
+
+        val found = ArrayList<Note>()
+        val seen = HashSet<Note>()
+        val queue = ArrayDeque<Pair<Note, Int>>()
+        queue.add(note to 0)
+        while (queue.isNotEmpty() && found.size < MAX_DEPENDENTS) {
+            val (current, depth) = queue.removeFirst()
+            if (depth >= CHAT_CHAIN_DEPTH) continue
+            current.replies.forEach { reply ->
+                if (reply.event is ChannelMessageEvent && seen.add(reply)) {
+                    found.add(reply)
+                    queue.add(reply to depth + 1)
                 }
             }
         }

@@ -63,12 +63,12 @@ open class DiscoverNIP89FeedFilter(
 
     override fun feed(): List<Note> =
         sort(
-            rebuildFeed("discover/dvms", candidates = null, keep = { false }) {
+            rebuildFeed("discover/dvms") {
                 val notes =
                     LocalCache.addressables.filterIntoSet(AppDefinitionEvent.KIND) { _, it ->
                         acceptApp(it)
                     }
-                notes.toSet()
+                notes
             },
         )
 

@@ -190,18 +190,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -466,14 +466,32 @@ open class BaseAccountViewModel(
             emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
         }
 
+    // Collecting a tab's feed builds it (the Home feeds are lazy), so a hidden tab's is never
+    // collected: the badge would otherwise build Everything, the costliest Home feed, for nothing.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun tabHasNewItemsIfShown(
+        shown: Flow<Boolean>,
+        route: String,
+        feedContent: StateFlow<FeedState>,
+    ): Flow<Boolean> = shown.distinctUntilChanged().flatMapLatest { if (it) tabHasNewItems(route, feedContent) else flowOf(false) }
+
     val homeHasNewItems: Flow<Boolean> =
         combine(
             settings.uiSettingsFlow.showHomeNewThreadsTab,
             settings.uiSettingsFlow.showHomeConversationsTab,
             settings.uiSettingsFlow.showHomeEverythingTab,
-            tabHasNewItems("HomeFollows", feedStates.homeNewThreads.feedContent),
-            tabHasNewItems("HomeFollowsReplies", feedStates.homeReplies.feedContent),
-            tabHasNewItems("HomeFollowsEverything", feedStates.homeEverything.feedContent),
+            tabHasNewItemsIfShown(
+                // HomeScreen falls back to New Threads when every tab is off.
+                combine(
+                    settings.uiSettingsFlow.showHomeNewThreadsTab,
+                    settings.uiSettingsFlow.showHomeConversationsTab,
+                    settings.uiSettingsFlow.showHomeEverythingTab,
+                ) { threads, replies, everything -> threads || !(replies || everything) },
+                "HomeFollows",
+                feedStates.homeNewThreads.feedContent,
+            ),
+            tabHasNewItemsIfShown(settings.uiSettingsFlow.showHomeConversationsTab, "HomeFollowsReplies", feedStates.homeReplies.feedContent),
+            tabHasNewItemsIfShown(settings.uiSettingsFlow.showHomeEverythingTab, "HomeFollowsEverything", feedStates.homeEverything.feedContent),
         ) { values ->
             val showThreads = values[0]
             val showReplies = values[1]
@@ -2358,10 +2376,11 @@ open class BaseAccountViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             feedStates.init()
             // awaits for init to finish before starting to capture new events.
-            // Unbounded: the shared flow drops a slow collector's oldest bundles, and the feeds
-            // would never learn of those notes (Home no longer rebuilds on every resume to cover
-            // for it). Taken off the shared buffer at once; the work queues here instead.
-            LocalCache.live.newEventBundles.buffer(Channel.UNLIMITED).collect { newNotes ->
+            // Coalesced, not dropped: the shared flow drops a slow collector's oldest bundles, and
+            // the feeds would never learn of those notes (Home no longer rebuilds on every resume
+            // to cover for it). Bundles that arrive while the feeds are busy merge into one, so
+            // what waits is at most one set of distinct notes, never a queue of them.
+            LocalCache.live.newEventBundles.coalesced().collect { newNotes ->
                 logTime("AccountViewModel newEventBundle Update with ${newNotes.size} new notes") {
                     feedStates.updateFeedsWith(newNotes)
                 }
@@ -2369,7 +2388,7 @@ open class BaseAccountViewModel(
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.deletedEventBundles.buffer(Channel.UNLIMITED).collect { newNotes ->
+            LocalCache.live.deletedEventBundles.coalesced().collect { newNotes ->
                 logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
                     feedStates.deleteNotes(newNotes)
                 }

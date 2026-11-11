@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.home.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.UniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -28,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -39,10 +41,15 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
  */
 class HomeEverythingFeedFilter(
     val account: Account,
-    candidates: CandidateSet? = null,
-) : AdditiveFeedFilter<Note>() {
-    private val newThreads = HomeNewThreadFeedFilter(account, candidates)
-    private val conversations = HomeConversationsFeedFilter(account, candidates)
+) : AdditiveFeedFilter<Note>(),
+    UniverseFeedFilter {
+    private val newThreads = HomeNewThreadFeedFilter(account)
+    private val conversations = HomeConversationsFeedFilter(account)
+
+    override val universe = IFilter { newThreads.universe.matches(it) || conversations.universe.matches(it) }
+
+    // Walks the cache, as the two feeds it joins.
+    override val candidates: CandidateSet? get() = null
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
 
@@ -55,7 +62,7 @@ class HomeEverythingFeedFilter(
         val isThread = newThreads.acceptor()
         val isReply = conversations.acceptor()
         return sort(
-            rebuildFeed("home/everything", candidates = null, keep = { false }) {
+            rebuildFeed("home/everything") {
                 LocalCache.notes.filterIntoSet { _, note ->
                     // As the two feeds walk: threads skip the notes map's addressable copies.
                     ((note.event?.kind ?: 99999) < 10000 && isThread(note)) || isReply(note)

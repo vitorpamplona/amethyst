@@ -21,8 +21,13 @@
 package com.vitorpamplona.amethyst.commons.viewmodels
 
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.viewmodels.FeedsKeptCurrent.Companion.hiddenFuture
 import com.vitorpamplona.amethyst.commons.viewmodels.FeedsKeptCurrent.Companion.onlyHidesMoreThan
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -61,5 +66,22 @@ class FeedsKeptCurrentTest {
         assertFalse(hidden(users = setOf("a"), spammers = setOf("s")).onlyHidesMoreThan(before))
         assertFalse(hidden(users = setOf("a", "b")).onlyHidesMoreThan(before))
         assertFalse(hidden(users = setOf("a", "b"), spammers = setOf("s"), showSensitive = true).onlyHidesMoreThan(before))
+    }
+
+    private fun noteAt(
+        id: Char,
+        createdAt: Long,
+    ) = Note(id.toString().repeat(64)).also { it.event = TextNoteEvent(it.idHex, "a".repeat(64), createdAt, emptyArray(), "hi", "") }
+
+    @Test
+    fun everyNoteStillInTheFutureIsFoundNotOnlyTheEarliest() {
+        val now = TimeUtils.now()
+        val soon = noteAt('1', now + 5 * 60)
+        val later = noteAt('2', now + 10 * 60)
+        val present = noteAt('3', now)
+        val nextWeek = noteAt('4', now + 7 * TimeUtils.ONE_DAY)
+
+        assertEquals(setOf(soon, later), hiddenFuture(setOf(soon, later, present, nextWeek)).toSet())
+        assertTrue(hiddenFuture(setOf(present)).isEmpty())
     }
 }

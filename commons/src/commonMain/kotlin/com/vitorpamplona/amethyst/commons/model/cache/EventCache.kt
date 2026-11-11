@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.model.observables.NewEventMatchingFilt
 import com.vitorpamplona.amethyst.commons.model.observables.NoteListMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.NoteSetMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.Observable
+import com.vitorpamplona.amethyst.commons.model.observables.RelaySeenObserver
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.model.redirectStrayRelayGroupContent
 import com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority
@@ -833,7 +834,7 @@ open class EventCache :
      */
     fun registerNoteSet(observer: NoteSetMatchingFilter) {
         observables.registerUnindexed(observer)
-        if (observer.watchesRelays) relayWatchersLock.withLock { relayWatchers = relayWatchers + observer }
+        if (observer.watchesRelays) registerRelayObserver(observer)
         notes.forEach { _, note -> observer.consider(note) }
         addressables.forEach { _, note -> observer.consider(note) }
         observer.markReady()
@@ -841,7 +842,7 @@ open class EventCache :
 
     fun unregisterNoteSet(observer: NoteSetMatchingFilter) {
         observables.unregister(observer)
-        if (observer.watchesRelays) relayWatchersLock.withLock { relayWatchers = relayWatchers - observer }
+        if (observer.watchesRelays) unregisterRelayObserver(observer)
     }
 
     /**
@@ -3716,21 +3717,26 @@ open class EventCache :
     // Observers line up here.
     val live: LocalCacheFlow = LocalCacheFlow()
 
-    // Candidate sets whose universe reads Note.relays (a relay's feed): told when a note is seen
-    // on a relay for the first time, which is no new event. Usually empty.
+    // Told when a note is seen on a relay for the first time, which is no new event: candidate
+    // sets whose universe reads Note.relays (a relay's feed), and the account's feeds while a
+    // relay is their selected list. Usually empty.
     private val relayWatchersLock = KmpLock()
 
     @Volatile
-    private var relayWatchers: List<NoteSetMatchingFilter> = emptyList()
+    private var relayWatchers: List<RelaySeenObserver> = emptyList()
 
-    /** Every relay a cached note is seen on goes through here. */
-    private fun seenOn(
+    fun registerRelayObserver(observer: RelaySeenObserver) = relayWatchersLock.withLock { relayWatchers = relayWatchers + observer }
+
+    fun unregisterRelayObserver(observer: RelaySeenObserver) = relayWatchersLock.withLock { relayWatchers = relayWatchers - observer }
+
+    /** Records that [note] was seen on [relay]. Every relay a cached note is seen on goes through here. */
+    fun seenOn(
         note: Note,
         relay: NormalizedRelayUrl,
     ) {
         if (note.addRelay(relay)) {
             val watchers = relayWatchers
-            if (watchers.isNotEmpty()) watchers.forEach { it.seenOnRelay(note) }
+            if (watchers.isNotEmpty()) watchers.forEach { it.seenOnRelay(note, relay) }
         }
     }
 

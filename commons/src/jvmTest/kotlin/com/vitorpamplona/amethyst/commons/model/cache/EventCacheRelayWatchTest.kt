@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.cache
 
 import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.observables.NoteSetMatchingFilter
+import com.vitorpamplona.amethyst.commons.model.observables.RelaySeenObserver
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -80,5 +81,22 @@ class EventCacheRelayWatchTest {
         cache.justConsume(event, first, true)
         cache.justConsume(event, watched, true)
         assertEquals(0, set.snapshot()?.size)
+    }
+
+    @Test
+    fun aRelayObserverHearsTheNoteAndTheRelayOnce() {
+        val cache = EventCache()
+        val heard = mutableListOf<Pair<String, NormalizedRelayUrl>>()
+        val observer = RelaySeenObserver { note, relay -> heard.add(note.idHex to relay) }
+        cache.registerRelayObserver(observer)
+
+        val event = post()
+        cache.justConsume(event, first, true)
+        cache.justConsume(event, watched, true)
+        cache.justConsume(event, watched, true)
+        cache.unregisterRelayObserver(observer)
+        cache.justConsume(event, NormalizedRelayUrl("wss://later.example.com/"), true)
+
+        assertEquals(listOf(event.id to first, event.id to watched), heard)
     }
 }

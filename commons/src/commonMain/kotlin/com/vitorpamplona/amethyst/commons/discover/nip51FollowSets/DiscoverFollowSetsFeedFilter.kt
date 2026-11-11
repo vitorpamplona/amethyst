@@ -48,7 +48,7 @@ open class DiscoverFollowSetsFeedFilter(
 
     override fun feed(): List<Note> =
         sort(
-            rebuildFeed("discover/followSets", candidates = null, keep = { false }) {
+            rebuildFeed("discover/followSets") {
                 val params = buildFilterParams(account)
 
                 val notes =
@@ -56,7 +56,7 @@ open class DiscoverFollowSetsFeedFilter(
                         val noteEvent = it.event
                         noteEvent is StarterPackEvent && params.match(noteEvent, it.relays)
                     }
-                notes.toSet()
+                notes
             },
         )
 

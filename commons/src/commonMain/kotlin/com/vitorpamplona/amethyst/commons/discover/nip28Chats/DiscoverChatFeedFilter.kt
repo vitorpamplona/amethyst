@@ -49,7 +49,7 @@ open class DiscoverChatFeedFilter(
 
     override fun feed(): List<Note> =
         sort(
-            rebuildFeed("discover/chats", candidates = null, keep = { false }) {
+            rebuildFeed("discover/chats") {
                 val params = buildFilterParams(account)
 
                 val allChannelNotes =
@@ -63,7 +63,7 @@ open class DiscoverChatFeedFilter(
                             null
                         }
                     }
-                allChannelNotes.toSet()
+                allChannelNotes
             },
         )
 

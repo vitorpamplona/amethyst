@@ -84,6 +84,12 @@ inline fun rebuildFeed(
     return result
 }
 
+/** [rebuildFeed] for a feed that always walks (its universe is most of the cache, or one kind's slice). */
+inline fun rebuildFeed(
+    feedName: String,
+    walkCache: () -> Set<Note>,
+): Set<Note> = rebuildFeed(feedName, candidates = null, keep = { false }, walkCache)
+
 /**
  * [rebuildFeed] for a feed whose rows are not the candidates themselves (a community's approvals
  * stand for the posts they approve): [rows] maps each candidate to the notes it puts on the feed.
