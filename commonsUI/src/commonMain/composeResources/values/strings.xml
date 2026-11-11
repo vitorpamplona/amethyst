@@ -9451,4 +9451,6 @@
     <string name="media_kind_audio">Audio</string>
     <string name="media_kind_pdf">PDF</string>
     <string name="media_type_and_size">%1$s · %2$s</string>
+    <!-- An OS notification's title when more than one account is notified: %1$s is the account it is for, %2$s the usual title. -->
+    <string name="notification_for_account">For %1$s: %2$s</string>
 </resources>

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.notifications.renderers
 import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.notifications.composers.PaymentNotificationComposer
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.accountLabelFor
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
@@ -46,6 +47,6 @@ object NwcPaymentNotifier {
         if (!nm.areNotificationsEnabled()) return
 
         val message = PaymentNotificationComposer.compose(account, tx) ?: return
-        nm.postStandard(message, context)
+        nm.postStandard(message, context, accountLabelFor(account))
     }
 }

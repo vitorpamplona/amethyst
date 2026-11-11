@@ -46,7 +46,10 @@ import coil3.SingletonImageLoader
 import coil3.asDrawable
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.notifications.NotificationAccountLabel
 import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_mark_read_label
@@ -214,6 +217,12 @@ object NotificationUtils {
         val isFromMe: Boolean = false,
     )
 
+    /**
+     * The name of the account a notification is for, when more than one account is loaded (every
+     * loaded account is notified, whichever one is on screen); null otherwise.
+     */
+    fun accountLabelFor(account: Account): String? = NotificationAccountLabel.of(account, Amethyst.instance.accountsCache.accounts.value.size)
+
     // ---------------------------------------------------------------------
     // Standard notification (BigText, or BigPicture when [bigPictureUrl] set)
     // ---------------------------------------------------------------------
@@ -222,6 +231,7 @@ object NotificationUtils {
     suspend fun NotificationManager.postStandard(
         message: NotificationMessage,
         applicationContext: Context,
+        accountLabel: String? = null,
     ) = postStandard(
         category = message.topic.category(),
         id = message.id,
@@ -233,6 +243,7 @@ object NotificationUtils {
         applicationContext = applicationContext,
         bigPictureUrl = message.bigPictureUrl,
         badgeUrl = message.badgeUrl,
+        accountLabel = accountLabel,
     )
 
     suspend fun NotificationManager.postStandard(
@@ -249,6 +260,8 @@ object NotificationUtils {
         inlineReply: InlineReplyTarget? = null,
         groupKey: String = category.group,
         summaryId: Int = category.summaryId,
+        /** Which account this is for, when more than one is notified ([accountLabelFor]). */
+        accountLabel: String? = null,
     ) {
         // The user read/dismissed this event in-app while enrichment was still
         // running — don't resurrect it (and skip the bitmap work).
@@ -294,6 +307,7 @@ object NotificationUtils {
                 .setWhen(time * 1000)
 
         if (category.colorized) builder.setColorized(true)
+        accountLabel?.let { builder.setSubText(it) }
 
         if (bigPicture != null) {
             builder.setStyle(
@@ -335,6 +349,8 @@ object NotificationUtils {
         conversation: Conversation? = null,
         groupKey: String = category.group,
         summaryId: Int = category.summaryId,
+        /** Which account this is for, when more than one is notified ([accountLabelFor]). */
+        accountLabel: String? = null,
     ) {
         // The user read/dismissed this event in-app while enrichment was still
         // running — don't resurrect it (and skip the bitmap work).
@@ -431,6 +447,7 @@ object NotificationUtils {
             builder.setLocusId(LocusIdCompat(shortcutId))
         }
         builder.addPerson(sender)
+        accountLabel?.let { builder.setSubText(it) }
 
         when (replyAction) {
             is ReplyAction.Dm -> builder.addAction(dmReplyAction(applicationContext, notId, id, replyAction))

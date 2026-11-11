@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.Conversation
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.accountLabelFor
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.amethyst.service.notifications.privateMessagesLocked
@@ -115,6 +116,7 @@ object BuzzDmNotification {
         ) {
             nm.postConversation(
                 category = NotificationCategory.DIRECT_MESSAGE,
+                accountLabel = accountLabelFor(account),
                 id = event.id,
                 senderName = channel.toBestDisplayName(),
                 pictureUrl = sender.profilePicture() ?: channel.profilePicture(),

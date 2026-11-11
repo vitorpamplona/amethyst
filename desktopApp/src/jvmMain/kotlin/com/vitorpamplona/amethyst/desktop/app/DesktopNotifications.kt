@@ -81,15 +81,18 @@ class DesktopNotifications(
     private val sessionStartSec = nowEpochSeconds()
 
     /**
-     * Notifies [account] of new events for it while the window is not focused. Watches the event
-     * stream only while notifications are on (they start off), and loads the native notifier off
-     * the UI thread the first time they are. A toast goes out only for what the Notifications tab
-     * would list under its current top-nav filter, read at each event so a change applies at once.
+     * Notifies [account] of new events for it, except while [holdBack] is true (the account is on
+     * screen in a focused window). Watches the event stream only while notifications are on (they
+     * start off), and loads the native notifier off the UI thread the first time they are. A toast
+     * goes out only for what the Notifications tab would list under its current top-nav filter,
+     * read at each event so a change applies at once. [accountLabel] names the account in the
+     * toast when more than one is notified.
      */
     fun watch(
         account: Account,
         cache: LocalCache,
-        isWindowFocused: StateFlow<Boolean>,
+        holdBack: StateFlow<Boolean>,
+        accountLabel: () -> String? = { null },
     ): Job =
         scope.launch {
             settings.enabled.collectLatest { on ->
@@ -105,9 +108,10 @@ class DesktopNotifications(
                         displayNameOf = { pubKey -> cache.getUserIfExists(pubKey)?.toBestDisplayName() },
                         compose = { event -> composeNotification(account, event) },
                         isAcceptable = notifiesAbout(account),
-                        isWindowFocused = isWindowFocused,
+                        isWindowFocused = holdBack,
                         sessionStartSec = sessionStartSec,
                         scope = this,
+                        accountLabel = accountLabel,
                     ).start()
                 }
             }

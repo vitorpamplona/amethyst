@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.Conversation
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.ReplyAction
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.accountLabelFor
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.amethyst.service.notifications.privateMessagesLocked
@@ -92,6 +93,7 @@ object GroupMessageNotification {
         ) {
             nm.postConversation(
                 category = NotificationCategory.DIRECT_MESSAGE,
+                accountLabel = accountLabelFor(account),
                 id = innerEvent.id,
                 senderName = groupName,
                 pictureUrl = sender.profilePicture(),
@@ -145,6 +147,7 @@ object GroupMessageNotification {
         ) {
             nm.postConversation(
                 category = NotificationCategory.DIRECT_MESSAGE,
+                accountLabel = accountLabelFor(account),
                 id = event.id,
                 senderName = inviter.toBestDisplayName(),
                 pictureUrl = inviter.profilePicture(),

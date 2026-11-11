@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.Conversation
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.ReplyAction
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.accountLabelFor
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.amethyst.service.notifications.privateMessagesLocked
@@ -147,6 +148,7 @@ object DirectMessageNotification {
         ) {
             nm.postConversation(
                 category = NotificationCategory.DIRECT_MESSAGE,
+                accountLabel = accountLabelFor(account),
                 id = eventId,
                 senderName = author.toBestDisplayName(),
                 pictureUrl = author.profilePicture(),

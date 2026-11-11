@@ -63,7 +63,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.withContext
@@ -126,17 +125,14 @@ class DesktopAppRoot(
         }
     }
 
-    /** OS notifications for the logged-in account, held back while the window has focus. */
+    /** Tells the account notifications whether the main window has the focus. */
     @Composable
     override fun LoggedInEffects(accountViewModel: AccountViewModel) {
+        // Every account is notified (DesktopAccountsNotified); the one on screen holds its toasts
+        // back while this window has the focus.
         val windowInfo = LocalWindowInfo.current
-        val focused = remember { MutableStateFlow(windowInfo.isWindowFocused) }
         LaunchedEffect(windowInfo) {
-            snapshotFlow { windowInfo.isWindowFocused }.collect { focused.value = it }
-        }
-        DisposableEffect(accountViewModel.account) {
-            val job = modules.notifications.watch(accountViewModel.account, modules.cache, focused)
-            onDispose { job.cancel() }
+            snapshotFlow { windowInfo.isWindowFocused }.collect { modules.mainWindowFocused.value = it }
         }
 
         // Each account publishes only its own scheduled posts, to its outbox relays.

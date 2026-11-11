@@ -208,7 +208,18 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
    object, not its id.
 4. `AccountFeeds` with Active / Warm (15 min) / Cold, notification feeds account-lifetime;
    with tabs-and-windows Phase 2b.
-5. Every account notified on desktop, labelled on both platforms.
+5. **Done (2026-11-11):** every account notified on desktop, labelled on both platforms.
+   `DesktopAccountsNotified` keeps each saved account that signs without asking (a key the vault
+   keeps, or a remote signer) loaded, mounts its loaders through `AccountSubscriptionRegistry`,
+   and runs `DesktopNotifications.watch` for it; the account on screen holds its toasts back while
+   the main window has the focus, the others never do. They load only once keys read silently
+   (the OS keyring answered, or the password file is unlocked): with a read-only account on
+   screen the key store stays closed, and loading the others would raise the unlock prompt at
+   launch by itself, so they wait until the user opens a signing account. Toasts read "For
+   <account>: …" and Android notifications carry the account as sub-text, both only when more
+   than one account is loaded (`NotificationAccountLabel`). Read-only accounts are not loaded in
+   the background (as on Android). Clicking a desktop toast does nothing yet, on any account:
+   switching to its account is still to do.
 6. Pruner coordination.
 
 ## Feed conversion (2026-11-10)

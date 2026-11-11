@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.resources.desktop_notification_repost
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_someone
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_zap
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_zap_amount
+import com.vitorpamplona.amethyst.commons.resources.notification_for_account
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
@@ -102,9 +103,12 @@ class DesktopNotificationAutoDispatcher(
      * or the Notifications tab's top-nav filter (Curated, All Follows, a list...) would hide it.
      */
     private val isAcceptable: (Note) -> Boolean = { true },
+    /** True to hold toasts back: the account is on screen in a focused window, which already shows them. */
     private val isWindowFocused: StateFlow<Boolean>,
     private val sessionStartSec: Long,
     private val scope: CoroutineScope,
+    /** The account's name when more than one account is notified (see NotificationAccountLabel), else null. */
+    private val accountLabel: () -> String? = { null },
 ) {
     private val recentFires = HashMap<String, Long>()
 
@@ -295,7 +299,7 @@ class DesktopNotificationAutoDispatcher(
             }
 
         return NotificationSpec(
-            title = title,
+            title = accountLabel()?.let { loadStringRes(Res.string.notification_for_account, it, title) } ?: title,
             body = body,
             kind = kind,
             threadId = event.id,
