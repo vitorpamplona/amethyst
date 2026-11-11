@@ -130,22 +130,26 @@ abstract class PerUniqueIdEoseManager<T, U : Any>(
     }
 
     override fun updateSubscriptions(keys: Set<T>) {
-        val uniqueSubscribedAccounts = keys.distinctBy { id(it) }
+        val keysById = keys.groupBy { id(it) }
 
         val updated = mutableSetOf<U>()
 
-        uniqueSubscribedAccounts.forEach {
-            val mainKey = id(it)
+        keysById.forEach { (mainKey, idKeys) ->
+            val it = idKeys.first()
             dropCursorsIfFeedChanged(mainKey, it)
             watchChatFeeds(mainKey, it)
+            // Every key with this id shares the subscription, so every holder they name gets its answers.
+            val (filters, cursors) = filtersFor(idKeys, { since(it) }) { s -> updateFilter(it, s) }
             val newFilters =
-                updateFilter(it, since(it))
+                filters
                     ?.ifEmpty { null }
                     // Attribute to the account that owns this subscription, once, here — rather than
                     // threading a pubkey through every filter builder underneath. Builders that already
                     // know their account keep what they set.
                     ?.let { f -> accountPubKeyOf(it)?.let { pk -> f.attributedTo(pk) } ?: f }
-            findOrCreateSubFor(it).updateFilters(newFilters?.groupByRelay())
+            val sub = findOrCreateSubFor(it)
+            serve(sub.id, cursors)
+            sub.updateFilters(newFilters?.groupByRelay())
 
             updated.add(mainKey)
         }

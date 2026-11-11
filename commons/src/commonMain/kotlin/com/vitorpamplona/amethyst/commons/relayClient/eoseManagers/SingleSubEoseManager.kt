@@ -124,9 +124,10 @@ abstract class SingleSubEoseManager<T>(
 
     override fun updateSubscriptions(keys: Set<T>) {
         val uniqueSubscribedAccounts = keys.distinctBy { distinct(it) }
-        val newFilters = updateFilter(uniqueSubscribedAccounts, since())?.ifEmpty { null }
+        val (filters, cursors) = filtersFor(keys, { since() }) { s -> updateFilter(uniqueSubscribedAccounts, s) }
+        serve(sub.id, cursors)
 
-        sub.updateFilters(newFilters?.groupByRelay())
+        sub.updateFilters(filters?.ifEmpty { null }?.groupByRelay())
     }
 
     abstract fun updateFilter(

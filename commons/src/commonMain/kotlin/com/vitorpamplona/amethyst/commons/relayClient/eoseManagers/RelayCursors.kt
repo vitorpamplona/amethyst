@@ -150,7 +150,26 @@ class RelayCursors {
         sent: List<FilterShape>,
         time: Long,
     ) = lock.withLock {
-        byRelay[relay] = Entry(time, sent)
+        byRelay[relay] = Entry(time, mergeByAuthors(sent))
+    }
+
+    /**
+     * Filters that differ only in their authors become one with all of them: a request split by
+     * cursor (the covered authors and the new ones) vouches for the whole request once answered.
+     */
+    private fun mergeByAuthors(shapes: List<FilterShape>): List<FilterShape> {
+        val merged = LinkedHashMap<FilterShape, FilterShape>()
+        shapes.forEach { shape ->
+            val authors = shape.authors
+            if (authors == null) {
+                merged[shape] = shape
+                return@forEach
+            }
+            val rest = shape.copy(authors = null)
+            val before = merged[rest]
+            merged[rest] = if (before?.authors != null) before.copy(authors = before.authors + authors) else shape
+        }
+        return merged.values.toList()
     }
 
     /** Notes created at [createdAt] or later were dropped: every relay asks again from there. */

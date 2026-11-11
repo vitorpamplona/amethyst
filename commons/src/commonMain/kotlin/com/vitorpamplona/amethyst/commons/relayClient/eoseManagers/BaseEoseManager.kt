@@ -22,10 +22,15 @@ package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -41,9 +46,47 @@ abstract class BaseEoseManager<T>(
 
     fun getSubscription(subId: String) = orchestrator.getSub(subId)
 
-    fun requestNewSubscription(listener: SubscriptionListener) = orchestrator.requestNewSubscription(newSubId(), listener)
+    /**
+     * Opens a subscription whose EOSEs and live events also reach the cursors of the holders it
+     * serves at that moment (see [serve]), whatever key its [listener] captured.
+     */
+    fun requestNewSubscription(listener: SubscriptionListener): Subscription {
+        val subId = newSubId()
+        return orchestrator.requestNewSubscription(subId, CursorRoutingListener(listener) { cursorsServedBy(subId) })
+    }
 
-    fun dismissSubscription(subId: String) = orchestrator.dismissSubscription(subId)
+    fun dismissSubscription(subId: String) {
+        serve(subId, emptyList())
+        orchestrator.dismissSubscription(subId)
+    }
+
+    private val servedLock = KmpLock()
+    private val served = mutableMapOf<String, List<RelayCursors>>()
+
+    private fun cursorsServedBy(subId: String): List<RelayCursors> = servedLock.withLock { served[subId].orEmpty() }
+
+    /** Records whose cursors [subId]'s answers go to: the holders its current keys name. */
+    protected fun serve(
+        subId: String,
+        cursors: List<RelayCursors>,
+    ) = servedLock.withLock {
+        if (cursors.isEmpty()) served.remove(subId) else served[subId] = cursors
+    }
+
+    /**
+     * The filters for a subscription serving [keys]. When the keys name holders of notes, their
+     * cursors set the windows ([CursorPlanner.window]) and [ownSince] is not read: the manager's own
+     * map stays only for keys that name none.
+     */
+    protected inline fun filtersFor(
+        keys: Collection<T>,
+        ownSince: () -> SincePerRelayMap?,
+        build: (SincePerRelayMap?) -> List<RelayBasedFilter>?,
+    ): Pair<List<RelayBasedFilter>?, List<RelayCursors>> {
+        val cursors = cursorsNamedBy(keys)
+        if (cursors.isEmpty()) return build(ownSince()) to cursors
+        return build(null)?.let { CursorPlanner.window(it, cursors) } to cursors
+    }
 
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(sampleTime, Dispatchers.IO)

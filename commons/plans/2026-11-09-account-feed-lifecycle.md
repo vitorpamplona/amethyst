@@ -103,9 +103,10 @@ the per-list reset flags.
 **The managers keep the wire, not the cursors.** A query key names its holders (`HomeQueryState`
 the two Home feeds, `AccountUiQueryState` the notification feeds, a background account its
 `Account`). Reading: per relay, the manager asks each holder the subscription serves for its plan
-and groups holders by the `since` they need, one filter per group in the same REQ, so a holder
-that joins does not make the others refetch. Relays cap filters per REQ: past the cap, groups
-merge on the oldest `since`, which is always safe. Writing: an EOSE or live event goes to the
+and asks each author from the oldest cursor any holder has for it (from scratch if one has none),
+so a holder that joins does not make the others refetch beyond what it is missing. A holder keeps
+one time per relay, so a filter splits into two parts at most (caught up, from scratch), well
+within what relays allow per REQ. Older pages (filters with `until`) are not governed by cursors. Writing: an EOSE or live event goes to the
 holders the subscription serves at that moment, through a `subId → keys` map kept by
 `updateSubscriptions` (today's listeners capture the key from `newSub(key)`, which goes stale).
 Cursors never reference their holder; a heap check after each step confirms it.
@@ -214,7 +215,11 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
    1. `RelayCursors` (time + shape per relay) and `RelayCursorHolder`, on both feed classes;
       cleared on a feed key change (a card feed's `clear()` is a rebuild, not a loss: a widened
       local filter clears the cursors in step 8). Unit tests.
-   2. Manager plumbing: `holders(key)`, per-relay plan and grouping, `subId → keys` routing.
+   2. **Done:** manager plumbing. A key implements `CursorHoldingQuery` to name its holders; the
+      base managers then build its filters without their own map and let `CursorPlanner.window`
+      set the windows, and every subscription's listener is wrapped (`CursorRoutingListener`) so
+      EOSEs and live events reach the holders it serves at that moment (`serve`, per subscription,
+      from every key sharing it). Keys that name none keep the old maps; none name any yet.
    3. Notifications (inbox, random relays, history); `FeedOwnerTracker` goes there.
    4. Top-nav feeds (Home, Video, Discover, media tabs); per-list maps and `MergedAuthorTracker` go.
    5. Screen feeds (profile, hashtag, geohash, URL, community, relay); each community its own.

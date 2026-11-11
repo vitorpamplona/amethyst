@@ -128,14 +128,18 @@ abstract class PerKeyEoseManager<T, K : Any>(
     }
 
     override fun updateSubscriptions(keys: Set<T>) {
-        val uniqueByKey = keys.distinctBy { extractKey(it) }
+        val keysByKey = keys.groupBy { extractKey(it) }
 
         val updatedKeys = mutableSetOf<K>()
 
-        uniqueByKey.forEach { queryState ->
-            val key = extractKey(queryState)
-            val newFilters = updateFilter(queryState, since(queryState))?.ifEmpty { null }
-            findOrCreateSubFor(queryState).updateFilters(newFilters?.groupByRelay())
+        keysByKey.forEach { (key, sameKey) ->
+            val queryState = sameKey.first()
+            // Every query state with this key shares the subscription, so every holder they name gets its answers.
+            val (filters, cursors) = filtersFor(sameKey, { since(queryState) }) { s -> updateFilter(queryState, s) }
+            val newFilters = filters?.ifEmpty { null }
+            val sub = findOrCreateSubFor(queryState)
+            serve(sub.id, cursors)
+            sub.updateFilters(newFilters?.groupByRelay())
             updatedKeys.add(key)
         }
 

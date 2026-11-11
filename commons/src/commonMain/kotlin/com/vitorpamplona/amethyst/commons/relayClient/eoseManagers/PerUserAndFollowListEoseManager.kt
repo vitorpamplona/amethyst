@@ -157,17 +157,20 @@ abstract class PerUserAndFollowListEoseManager<T, U : Any>(
     override fun updateSubscriptions(keys: Set<T>) {
         keys.forEach(::activateFeeds)
 
-        val uniqueSubscribedAccounts = keys.distinctBy { user(it) }
+        val keysByUser = keys.groupBy { user(it) }
 
         val updated = mutableSetOf<User>()
 
-        uniqueSubscribedAccounts.forEach {
-            val user = user(it)
+        keysByUser.forEach { (user, userKeys) ->
+            val it = userKeys.first()
             dropCursorsIfFeedChanged(user, it)
             watchChatFeeds(user, it)
             val sub = findOrCreateSubFor(it)
+            // Every key of this user shares the subscription, so every holder they name gets its answers.
+            val (filters, cursors) = filtersFor(userKeys, { since(it) }) { s -> updateFilter(it, s) }
+            serve(sub.id, cursors)
             val newFilters =
-                updateFilter(it, since(it))
+                filters
                     ?.ifEmpty { null }
                     // Attribute to the account that owns this subscription, once, here — rather than
                     // threading a pubkey through every filter builder underneath. Builders that already
