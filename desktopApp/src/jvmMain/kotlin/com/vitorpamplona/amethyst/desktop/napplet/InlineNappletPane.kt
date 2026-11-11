@@ -72,6 +72,8 @@ fun InlineNappletPane(
     instanceId: String,
     onStatus: (InlineNappletStatus) -> Unit,
     modifier: Modifier,
+    // In a feed the wheel scrolls the feed until the app is clicked; a page that fills the screen takes it at once.
+    wheelNeedsFocus: Boolean = true,
     open: () -> Result<CefNappletSession>,
 ) {
     val status by rememberUpdatedState(onStatus)
@@ -121,5 +123,5 @@ fun InlineNappletPane(
         )
     }
 
-    OffscreenPage(view, modifier, wheelNeedsFocus = true)
+    OffscreenPage(view, modifier, wheelNeedsFocus = wheelNeedsFocus)
 }

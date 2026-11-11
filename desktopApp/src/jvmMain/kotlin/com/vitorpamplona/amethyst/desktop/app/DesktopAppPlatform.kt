@@ -185,10 +185,11 @@ class DesktopAppPlatform(
         instanceId: String,
         onStatus: (InlineNappletStatus) -> Unit,
         modifier: Modifier,
+        takesWheel: Boolean,
     ) {
         val host = nappletHost ?: return
         // The bundled Chromium, off screen, as for an inline nSite: drawn by the screen, no script runs.
-        InlineNappletPane(host, posterKey = null, instanceId, onStatus, modifier) {
+        InlineNappletPane(host, posterKey = null, instanceId, onStatus, modifier, wheelNeedsFocus = !takesWheel) {
             host.openInlinePaper(html, title, instanceId)
         }
     }

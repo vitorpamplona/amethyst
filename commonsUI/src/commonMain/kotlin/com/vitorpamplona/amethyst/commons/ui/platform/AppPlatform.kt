@@ -342,6 +342,9 @@ interface AppPlatform {
      * as instance [instanceId], filling [modifier]. It runs on the same sandboxed web surface as an
      * nSite, under [com.vitorpamplona.amethyst.commons.napplet.HostProfile.PAPER]: no script runs,
      * its art loads from where it was published, and its links open in the system browser.
+     *
+     * [takesWheel]: the paper fills the screen, so the mouse wheel scrolls it straight away. Inline,
+     * among other content, it takes the wheel only once clicked, and the screen scrolls otherwise.
      */
     @Composable
     fun InlinePaperSurface(
@@ -350,6 +353,7 @@ interface AppPlatform {
         instanceId: String,
         onStatus: (InlineNappletStatus) -> Unit,
         modifier: Modifier,
+        takesWheel: Boolean = false,
     ) {}
 
     /** The icon a napplet manifest by [author] / [identifier] declares, if cached. */

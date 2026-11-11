@@ -1173,6 +1173,8 @@ private fun Paper(
                     showing -> Modifier.fillMaxWidth().height(900.dp)
                     else -> Modifier.fillMaxWidth().height(220.dp)
                 },
+            // Full screen there is nothing else to scroll: no click first.
+            takesWheel = fill,
         )
         PaperStatus(status, onRetry = {
             attempt++

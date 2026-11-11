@@ -288,6 +288,8 @@ object AndroidAppPlatform : AppPlatform {
         instanceId: String,
         onStatus: (InlineNappletStatus) -> Unit,
         modifier: Modifier,
+        // Touch scrolls the WebView directly; there is no wheel to route.
+        takesWheel: Boolean,
     ) {
         // The :napplet sandbox renders it, as it does an nSite: no WebView ever boots in this process.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
