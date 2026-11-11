@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds.TopNavFeedSubA
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import kotlinx.coroutines.flow.StateFlow
 
 class DiscoveryLongFormClassifiedsAndDVMSubAssembler1(
     client: INostrClient,
@@ -43,5 +42,6 @@ class DiscoveryLongFormClassifiedsAndDVMSubAssembler1(
             makeContentDVMsFilter(feedSettings, since, key.dvms.lastNoteCreatedAtIfFilled())
     }
 
-    override fun floors(key: DiscoveryQueryState): List<StateFlow<Long?>> = listOf(key.reads, key.marketplace, key.dvms).map { it.lastNoteCreatedAtWhenFullyLoaded }
+    // The tabs this REQ fills: their cursors set its windows and their floors re-issue it.
+    override fun cursorFeeds(key: DiscoveryQueryState) = listOf(key.reads, key.marketplace, key.dvms)
 }

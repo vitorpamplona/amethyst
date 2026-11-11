@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds
 
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -61,11 +63,20 @@ abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
     override fun list(key: K) = key.listName.value
 
     /**
-     * The feed the cursors fill. Each AccountViewModel builds its own, so a new one means the account
-     * was switched away and back (or its window reopened) and the notes behind the old cursors may
-     * have been collected. Keys with no feed fall back to the scope of the view model that built them.
+     * The feeds that hold what this manager loads for [key]: their cursors set its windows and
+     * receive its EOSEs, so a new feed (an account switched away and back, a window reopened, another
+     * list picked) asks from scratch, and the cursors go with the feed. Defaults to every feed on the
+     * key; a manager that fills only some of them names those.
      */
-    override fun feedOwner(key: K): Any = key.feeds.firstOrNull() ?: key.scope
+    protected open fun cursorFeeds(key: K): List<FeedContentState> = key.feeds
+
+    override fun cursorHoldersOf(key: K): List<RelayCursorHolder> = cursorFeeds(key)
+
+    /**
+     * For keys with no feed (the manager's own cursor map serves them): a new view model may have
+     * lost the notes the old one held.
+     */
+    override fun feedOwner(key: K): Any? = if (cursorFeeds(key).isEmpty()) key.scope else null
 
     override fun activateFeeds(key: K) = key.feeds.forEach { it.activate() }
 
@@ -75,8 +86,8 @@ abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
     /** How often (ms) a moving feed floor may re-issue the REQ; the video swipe feed wants a tighter cadence. */
     protected open val floorSampleMs: Long = 5000
 
-    /** The feed floors that re-issue the REQ (sampled) when they move. Defaults to every feed on the key. */
-    protected open fun floors(key: K): List<StateFlow<Long?>> = key.feeds.map { it.lastNoteCreatedAtWhenFullyLoaded }
+    /** The feed floors that re-issue the REQ (sampled) when they move: those of the feeds it fills. */
+    protected open fun floors(key: K): List<StateFlow<Long?>> = cursorFeeds(key).map { it.lastNoteCreatedAtWhenFullyLoaded }
 
     /** Additional flows whose every emission re-issues the REQ, unsampled. */
     protected open fun extraInvalidators(key: K): List<Flow<*>> = emptyList()
@@ -141,10 +152,10 @@ abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
  * A top-nav feed whose REQ is one [makeFilter] dispatcher over the selection, bounded by the
  * key's (single) feed floor.
  *
- * @param resetEoseOnListChange drop the per-relay EOSE cursor when the user switches lists. Needed
- *   when the feed shows addressables held only weakly by the cache: while the user views list B the
- *   strong refs from list A's UI are gone and the GC may reclaim those notes; a cursor that still
- *   says "you have everything up to T" would then stop the relay from re-sending them.
+ * @param resetEoseOnListChange drop the manager's per-relay EOSE cursor when the user switches lists,
+ *   for keys with no feed. Needed when the screen shows addressables held only weakly by the cache:
+ *   while the user views list B the strong refs from list A's UI are gone and the GC may reclaim
+ *   those notes. Keys with a feed need nothing: its cursors clear when its key (the list) changes.
  */
 open class SingleTopNavFeedSubAssembler(
     client: INostrClient,

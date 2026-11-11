@@ -234,7 +234,22 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
       the background account resumed from its own cursor; 6 round trips left one feed set, one
       `AccountViewModel` and three card feeds in the heap; the signing account's history
       bootstrapped a fresh page on each return.
-   4. Top-nav feeds (Home, Video, Discover, media tabs); per-list maps and `MergedAuthorTracker` go.
+   4. **Done:** top-nav feeds. `TopNavFeedSubAssembler` names each key's feeds as holders
+      (`cursorFeeds`; each Discover manager only the tabs it fills, whose floors also re-issue
+      it), so every top-nav screen with a feed (Home, Video, Discover, the media and content
+      tabs) reads and writes its feeds' cursors; a list switch clears them with the feed's key.
+      Two rules came with it. Each cursor entry belongs to the manager that wrote it
+      (`CursorSource`): a feed filled by several managers would otherwise have each overwrite
+      the others' shapes and refetch everything on every pass. And a holder only accepts an
+      answer to a filter planned for it, asked from scratch, or continuing its own cursor
+      (`RelayCursors.accepts`): on desktop, an EOSE for the REQ planned from the old feeds'
+      cursors arrived after a switch back and was recorded on the new, empty feeds as if they
+      had everything up to now. Keys without a feed (nsites, napplets, DRSS, the DVM
+      heartbeat) keep the managers' per-list maps. `MergedAuthorTracker` is not used by
+      top-nav managers; it stays with the account metadata, d-list and single-sub screen
+      managers (step 5). Desktop: Home asked from scratch after a switch back and from its
+      floor after a list switch, Pictures and Discover filled, and 6 round trips left one feed
+      set and one `AccountViewModel`.
    5. Screen feeds (profile, hashtag, geohash, URL, community, relay); each community its own.
    6. Note counters with the `Note` as holder; reproduce the 29/110 vs 119/416 bug first.
    7. Account lists and gift wraps.

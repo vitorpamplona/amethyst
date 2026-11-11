@@ -240,6 +240,81 @@ class CursorPlannerTest {
     }
 
     @Test
+    fun twoManagersFillingOneHolderKeepTheirOwnEntries() {
+        // Discover's tabs, Home's feeds, the notifications feed: one holder, several managers. Each
+        // plans against what it sent itself; one overwriting the other would refetch both forever.
+        val holder = Holder()
+        val inbox = CursorSource("inbox")
+        val probe = CursorSource("probe")
+        val longForm = FilterShape(kinds = setOf(30023))
+
+        holder.relayCursors.newEose(relay, listOf(shape(alice)), 1_000, inbox)
+        holder.relayCursors.newEose(relay, listOf(longForm), 2_000, probe)
+
+        assertEquals(listOf(CursorPart(shape(alice), 1_000)), holder.relayCursors.plan(relay, shape(alice), inbox))
+        assertEquals(listOf(CursorPart(longForm, 2_000)), holder.relayCursors.plan(relay, longForm, probe))
+        assertEquals(listOf(CursorPart(longForm, null)), holder.relayCursors.plan(relay, longForm, inbox), "another manager's answer is not this one's")
+
+        holder.relayCursors.rewindTo(1_500)
+        assertEquals(1_500L, holder.relayCursors.since(relay, probe))
+        assertEquals(1_000L, holder.relayCursors.since(relay, inbox))
+        holder.relayCursors.clear()
+        assertNull(holder.relayCursors.since(relay))
+    }
+
+    @Test
+    fun anAnswerPlannedForTheReplacedFeedIsNotRecordedOnTheNewOne() {
+        // The old feed was caught up to 1,000: its REQ asked only what came after.
+        val old = RelayCursors()
+        old.newEose(relay, listOf(shape(alice)), 1_000)
+        val sent = CursorPlanner.window(listOf(RelayBasedFilter(relay, notes(alice))), listOf(old))
+        assertEquals(1_000L, sent.single().filter.since)
+
+        // A switch away and back: a new, empty feed is served before that REQ's EOSE arrives.
+        val replacement = RelayCursors()
+        CursorPlanner.record(listOf(replacement), relay, sent.map { it.filter }, 2_000)
+        assertNull(replacement.since(relay), "it holds nothing older than 1,000: the answer is not its own")
+
+        // Its own plan (from scratch, or from its floor) is.
+        val own = CursorPlanner.window(listOf(RelayBasedFilter(relay, notes(alice).copy(since = 500))), listOf(replacement))
+        CursorPlanner.record(listOf(replacement), relay, own.map { it.filter }, 2_100)
+        assertEquals(2_100L, replacement.since(relay))
+    }
+
+    @Test
+    fun eachManagerWritesUnderItsOwnName() {
+        val holder = Holder()
+        val key = Key("feed", holder)
+        val first = Manager { setOf(key) }
+        val second = Manager { setOf(key) }
+
+        listOf(first, second).forEach { it.updateSubscriptions(setOf(key)) }
+        val sub = first.findOrCreateSubFor(key)
+        sub.listener.onEose(relay, sub.filters()?.get(relay))
+
+        first.updateSubscriptions(setOf(key))
+        second.updateSubscriptions(setOf(key))
+        assertEquals(
+            holder.relayCursors.since(relay),
+            first
+                .findOrCreateSubFor(key)
+                .filters()
+                ?.get(relay)
+                ?.single()
+                ?.since,
+        )
+        assertNull(
+            second
+                .findOrCreateSubFor(key)
+                .filters()
+                ?.get(relay)
+                ?.single()
+                ?.since,
+            "the first manager's answer covers nothing the second asked",
+        )
+    }
+
+    @Test
     fun aKeyWithoutHoldersKeepsTheManagersOwnCursors() {
         val key = Key("feed", null)
         val manager = Manager { setOf(key) }

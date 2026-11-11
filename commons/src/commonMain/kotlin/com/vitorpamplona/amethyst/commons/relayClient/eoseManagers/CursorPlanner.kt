@@ -46,15 +46,25 @@ object CursorPlanner {
     fun window(
         filters: List<RelayBasedFilter>,
         holders: List<RelayCursors>,
-    ): List<RelayBasedFilter> =
-        filters.flatMap { relayFilter ->
-            val filter = relayFilter.filter
-            if (filter.until != null) return@flatMap listOf(relayFilter)
-            val shape = FilterShape.of(filter)
-            plan(relayFilter.relay, shape, holders).map { part ->
-                RelayBasedFilter(relayFilter.relay, part.applyTo(filter, shape))
+        source: CursorSource = CursorSource.DEFAULT,
+    ): List<RelayBasedFilter> {
+        val windows = mutableMapOf<NormalizedRelayUrl, MutableSet<Long>>()
+        val windowed =
+            filters.flatMap { relayFilter ->
+                val filter = relayFilter.filter
+                if (filter.until != null) return@flatMap listOf(relayFilter)
+                val shape = FilterShape.of(filter)
+                plan(relayFilter.relay, shape, holders, source).map { part ->
+                    val applied = part.applyTo(filter, shape)
+                    applied.since?.let { windows.getOrPut(relayFilter.relay) { mutableSetOf() }.add(it) }
+                    RelayBasedFilter(relayFilter.relay, applied)
+                }
             }
-        }
+        // Each holder accepts answers to the windows planned for it (see [RelayCursors.accepts]).
+        val relays = filters.mapTo(mutableSetOf()) { it.relay }
+        holders.forEach { holder -> relays.forEach { relay -> holder.planned(relay, source, windows[relay].orEmpty()) } }
+        return windowed
+    }
 
     /**
      * One plan for several holders: every author (or the whole request, without authors) is asked
@@ -67,9 +77,10 @@ object CursorPlanner {
         relay: NormalizedRelayUrl,
         requested: FilterShape,
         holders: List<RelayCursors>,
+        source: CursorSource = CursorSource.DEFAULT,
     ): List<CursorPart> {
-        if (holders.size == 1) return holders[0].plan(relay, requested)
-        val plans = holders.map { it.plan(relay, requested) }
+        if (holders.size == 1) return holders[0].plan(relay, requested, source)
+        val plans = holders.map { it.plan(relay, requested, source) }
 
         val authors = requested.authors
         if (authors == null) {
@@ -96,6 +107,7 @@ object CursorPlanner {
      */
     fun <M> windowPerMember(
         members: List<Member<M>>,
+        source: CursorSource = CursorSource.DEFAULT,
         build: (members: List<M>, since: Long?) -> List<RelayBasedFilter>,
     ): List<RelayBasedFilter> {
         // (which filter of [build], its `since`) -> the members asking it with that window.
@@ -104,7 +116,7 @@ object CursorPlanner {
 
         members.forEach { member ->
             val own = build(listOf(member.id), member.floor)
-            val windowed = window(own, member.holders)
+            val windowed = window(own, member.holders, source)
             // A filter split by authors no longer lines up with [build]'s order: sent as planned.
             if (windowed.size != own.size) {
                 unshared.addAll(windowed)
@@ -145,18 +157,25 @@ object CursorPlanner {
 
     /**
      * What [relay] answered for the live filters in [sent], up to [time], goes to every holder in
-     * [holders]. Older-page filters (with `until`) vouch for no cursor.
+     * [holders] it was asked for. Older-page filters (with `until`) vouch for no cursor.
      */
     fun record(
         holders: List<RelayCursors>,
         relay: NormalizedRelayUrl,
         sent: List<Filter>?,
         time: Long,
+        source: CursorSource = CursorSource.DEFAULT,
     ) {
         if (holders.isEmpty() || sent.isNullOrEmpty()) return
-        val live = sent.filter { it.until == null }.map { FilterShape.of(it) }
+        val live = sent.filter { it.until == null }
         if (live.isEmpty()) return
-        holders.forEach { it.newEose(relay, live, time) }
+        val shapes = live.map { FilterShape.of(it) }
+        holders.forEach { holder ->
+            // Only what was asked for this holder: an answer planned for another (the feed it
+            // replaced, another account in a merged REQ) fetched only what that one lacked.
+            val accepted = shapes.filterIndexed { i, shape -> holder.accepts(relay, source, shape, live[i].since) }
+            if (accepted.isNotEmpty()) holder.newEose(relay, accepted, time, source)
+        }
     }
 }
 
@@ -167,13 +186,14 @@ object CursorPlanner {
  */
 class CursorRoutingListener(
     private val listener: SubscriptionListener,
+    private val source: CursorSource = CursorSource.DEFAULT,
     private val holders: () -> List<RelayCursors>,
 ) : SubscriptionListener by listener {
     override fun onEose(
         relay: NormalizedRelayUrl,
         forFilters: List<Filter>?,
     ) {
-        CursorPlanner.record(holders(), relay, forFilters, TimeUtils.now())
+        CursorPlanner.record(holders(), relay, forFilters, TimeUtils.now(), source)
         listener.onEose(relay, forFilters)
     }
 
@@ -182,7 +202,7 @@ class CursorRoutingListener(
         forFilters: List<Filter>?,
         eventIds: List<String>?,
     ) {
-        CursorPlanner.record(holders(), relay, forFilters, TimeUtils.now())
+        CursorPlanner.record(holders(), relay, forFilters, TimeUtils.now(), source)
         listener.onEose(relay, forFilters, eventIds)
     }
 
@@ -192,7 +212,7 @@ class CursorRoutingListener(
         relay: NormalizedRelayUrl,
         forFilters: List<Filter>?,
     ) {
-        if (isLive) CursorPlanner.record(holders(), relay, forFilters, TimeUtils.now())
+        if (isLive) CursorPlanner.record(holders(), relay, forFilters, TimeUtils.now(), source)
         listener.onEvent(event, isLive, relay, forFilters)
     }
 }

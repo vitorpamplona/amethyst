@@ -44,7 +44,7 @@ class CursorPlannerPerMemberTest {
         RelayBasedFilter(relay, Filter(kinds = listOf(7), tags = mapOf("p" to pubkeys), limit = 200, since = since)),
     )
 
-    private fun plan(vararg members: CursorPlanner.Member<String>) = CursorPlanner.windowPerMember(members.toList(), ::build)
+    private fun plan(vararg members: CursorPlanner.Member<String>) = CursorPlanner.windowPerMember(members.toList(), build = ::build)
 
     private fun asked(filters: List<RelayBasedFilter>) = filters.map { Triple(it.filter.kinds!!.single(), it.filter.tags!!.getValue("p"), it.filter.since) }
 

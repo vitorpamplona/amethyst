@@ -148,7 +148,7 @@ class AccountNotificationsEoseFromInboxRelaysManager(
             // to exactly one channel — RelayGroupJoinedChatTailSubAssembler and
             // BuzzDmJoinedChatTailSubAssembler, both mounted app-wide from LoggedInPage, so coverage is
             // unchanged and delivery is live.
-            CursorPlanner.windowPerMember(members) { pubkeys, since -> build(relay, pubkeys, since) }
+            CursorPlanner.windowPerMember(members, cursorSource) { pubkeys, since -> build(relay, pubkeys, since) }
         }
     }
 

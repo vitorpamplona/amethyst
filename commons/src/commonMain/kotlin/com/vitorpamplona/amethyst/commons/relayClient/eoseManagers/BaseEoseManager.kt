@@ -52,13 +52,16 @@ abstract class BaseEoseManager<T>(
      */
     fun requestNewSubscription(listener: SubscriptionListener): Subscription {
         val subId = newSubId()
-        return orchestrator.requestNewSubscription(subId, CursorRoutingListener(listener) { cursorsServedBy(subId) })
+        return orchestrator.requestNewSubscription(subId, CursorRoutingListener(listener, cursorSource) { cursorsServedBy(subId) })
     }
 
     fun dismissSubscription(subId: String) {
         serve(subId, emptyList())
         orchestrator.dismissSubscription(subId)
     }
+
+    /** Names this manager's entries in the holders' cursors (see [CursorSource]). */
+    protected val cursorSource = CursorSource(this::class.simpleName ?: "EoseManager")
 
     private val servedLock = KmpLock()
     private val served = mutableMapOf<String, List<RelayCursors>>()
@@ -95,7 +98,7 @@ abstract class BaseEoseManager<T>(
     ): Pair<List<RelayBasedFilter>?, List<RelayCursors>> {
         val cursors = cursorsNamedBy(keys)
         if (cursors.isEmpty()) return build(ownSince()) to cursors
-        return build(null)?.let { CursorPlanner.window(it, cursors) } to cursors
+        return build(null)?.let { CursorPlanner.window(it, cursors, cursorSource) } to cursors
     }
 
     // Refreshes observers in batches.

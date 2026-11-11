@@ -88,8 +88,26 @@ data class CursorPart(
 )
 
 /**
- * The EOSE cursors of one holder of notes: per relay, the time up to which it has everything that
- * relay sent and the filters that time vouches for. It belongs to the object that keeps those notes
+ * Who asked: the subscription manager whose REQs a cursor entry describes. A holder filled by several
+ * managers (Home's two feeds by one, the notifications feed by the inbox tail and the straggler probe)
+ * keeps one entry per manager and relay, so each manager plans against what it sent itself and never
+ * overwrites another's: one replacing the other's shapes would make both look uncovered and refetch
+ * everything on every pass. Compared by identity; [name] is for logs.
+ */
+class CursorSource(
+    val name: String,
+) {
+    override fun toString() = name
+
+    companion object {
+        /** For callers with a single source, such as tests. */
+        val DEFAULT = CursorSource("default")
+    }
+}
+
+/**
+ * The EOSE cursors of one holder of notes: per relay and [CursorSource], the time up to which it has
+ * everything that relay sent and the filters that time vouches for. It belongs to the object that keeps those notes
  * (a feed, a [com.vitorpamplona.amethyst.commons.model.Note]'s children, an account's lists) and
  * dies with it, because the claim is only true while the notes are held: `LocalCache` keeps none
  * on its own. It never references its holder.
@@ -104,11 +122,64 @@ class RelayCursors {
         val shapes: List<FilterShape>,
     )
 
-    private val lock = KmpLock()
-    private val byRelay = mutableMapOf<NormalizedRelayUrl, Entry>()
+    private class Slot(
+        val relay: NormalizedRelayUrl,
+        val source: CursorSource,
+    ) {
+        override fun equals(other: Any?) = other is Slot && other.relay == relay && other.source === source
 
-    /** The raw time for [relay], or null when nothing is vouched for there. */
-    fun since(relay: NormalizedRelayUrl): Long? = lock.withLock { byRelay[relay]?.time }
+        override fun hashCode() = relay.hashCode() * 31 + source.hashCode()
+    }
+
+    private val lock = KmpLock()
+    private val byRelay = mutableMapOf<Slot, Entry>()
+
+    // The `since` values last planned for this holder, per relay and source: an answer to a filter
+    // asked with one of them is an answer to this holder's own plan.
+    private val planned = mutableMapOf<Slot, Set<Long>>()
+
+    /** [source] asked [relay], on this holder's behalf, with these `since` values. Replaces the last plan. */
+    fun planned(
+        relay: NormalizedRelayUrl,
+        source: CursorSource,
+        windows: Set<Long>,
+    ) = lock.withLock { planned[Slot(relay, source)] = windows }
+
+    /**
+     * Whether an answer to [shape] asked `since` [since] tells this holder it has everything up to
+     * the answer's time: the filter asked from scratch, or with a window planned for this holder, or
+     * from no later than this holder's own cursor already covers. A filter planned for someone else
+     * (the feed this one replaced, another account in a merged REQ) only fetched what *they* lacked.
+     */
+    fun accepts(
+        relay: NormalizedRelayUrl,
+        source: CursorSource,
+        shape: FilterShape,
+        since: Long?,
+    ): Boolean {
+        if (since == null) return true
+        val slot = Slot(relay, source)
+        return lock.withLock {
+            planned[slot]?.contains(since) == true ||
+                byRelay[slot]?.let { it.time >= since && it.shapes.any { stored -> stored.covers(shape) } } == true
+        }
+    }
+
+    /**
+     * The raw time for [relay] as [source] left it, or the latest of any source when [source] is
+     * null; null when nothing is vouched for there.
+     */
+    fun since(
+        relay: NormalizedRelayUrl,
+        source: CursorSource? = null,
+    ): Long? =
+        lock.withLock {
+            if (source != null) {
+                byRelay[Slot(relay, source)]?.time
+            } else {
+                byRelay.entries.filter { it.key.relay == relay }.maxOfOrNull { it.value.time }
+            }
+        }
 
     fun isEmpty(): Boolean = lock.withLock { byRelay.isEmpty() }
 
@@ -120,8 +191,9 @@ class RelayCursors {
     fun plan(
         relay: NormalizedRelayUrl,
         requested: FilterShape,
+        source: CursorSource = CursorSource.DEFAULT,
     ): List<CursorPart> {
-        val entry = lock.withLock { byRelay[relay] } ?: return listOf(CursorPart(requested, null))
+        val entry = lock.withLock { byRelay[Slot(relay, source)] } ?: return listOf(CursorPart(requested, null))
         if (entry.shapes.any { it.covers(requested) }) return listOf(CursorPart(requested, entry.time))
 
         val requestedAuthors = requested.authors
@@ -149,8 +221,9 @@ class RelayCursors {
         relay: NormalizedRelayUrl,
         sent: List<FilterShape>,
         time: Long,
+        source: CursorSource = CursorSource.DEFAULT,
     ) = lock.withLock {
-        byRelay[relay] = Entry(time, mergeByAuthors(sent))
+        byRelay[Slot(relay, source)] = Entry(time, mergeByAuthors(sent))
     }
 
     /**
@@ -175,14 +248,18 @@ class RelayCursors {
     /** Notes created at [createdAt] or later were dropped: every relay asks again from there. */
     fun rewindTo(createdAt: Long) =
         lock.withLock {
-            byRelay.keys.toList().forEach { relay ->
-                val entry = byRelay.getValue(relay)
-                if (entry.time > createdAt) byRelay[relay] = Entry(createdAt, entry.shapes)
+            byRelay.keys.toList().forEach { slot ->
+                val entry = byRelay.getValue(slot)
+                if (entry.time > createdAt) byRelay[slot] = Entry(createdAt, entry.shapes)
             }
         }
 
     /** Vouches for nothing: every relay is asked from scratch. */
-    fun clear() = lock.withLock { byRelay.clear() }
+    fun clear() =
+        lock.withLock {
+            byRelay.clear()
+            planned.clear()
+        }
 }
 
 /** Keeps notes, and so the [RelayCursors] that vouch for them. */
