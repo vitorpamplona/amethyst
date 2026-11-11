@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -76,7 +77,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -373,7 +373,7 @@ fun FrontPageScreen(
             val firstRun = current == null
             if (firstRun || gate != FrontPageGate.READY) {
                 Hero {
-                    // First run: the print controls stay inline, on the gradient.
+                    // First run: the print controls stay inline, in the card.
                     if (gate == FrontPageGate.READY) {
                         PrintControls(
                             models,
@@ -389,7 +389,6 @@ fun FrontPageScreen(
                             onCancel = viewModel::cancel,
                             publish = publishPrefs,
                             onPublish = viewModel::setPublish,
-                            onAccent = true,
                         )
                     }
                 }
@@ -449,7 +448,6 @@ fun FrontPageScreen(
                     onCancel = viewModel::cancel,
                     publish = publishPrefs,
                     onPublish = viewModel::setPublish,
-                    onAccent = false,
                 )
             }
         }
@@ -533,22 +531,25 @@ private fun rememberEditionDownload(): (ShownEdition) -> Unit {
     }
 }
 
-/** First run and setup: what the page is, on the gradient, with whatever comes next inside it. */
+/**
+ * First run and setup: what the page is, with whatever comes next inside it. A quiet surface in
+ * the app's own colours: the paper is what the page is for, not this card.
+ */
 @Composable
 private fun Hero(content: @Composable ColumnScope.() -> Unit) {
     val scheme = MaterialTheme.colorScheme
-    val onHero = scheme.onPrimary
     Box(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .background(Brush.linearGradient(listOf(scheme.primary, scheme.tertiary)))
+            .clip(RoundedCornerShape(24.dp))
+            .background(scheme.surfaceContainerLow)
+            .border(1.dp, scheme.outlineVariant, RoundedCornerShape(24.dp))
             .padding(20.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(52.dp).clip(CircleShape).background(onHero.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
-                    Icon(MaterialSymbols.AutoMirrored.Article, contentDescription = null, tint = onHero, modifier = Modifier.size(28.dp))
+                Box(Modifier.size(44.dp).clip(CircleShape).background(scheme.primary.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                    Icon(MaterialSymbols.AutoMirrored.Article, contentDescription = null, tint = scheme.primary, modifier = Modifier.size(24.dp))
                 }
                 Spacer(Modifier.width(14.dp))
                 // The top bar names the screen; the hero only says what it is for.
@@ -556,7 +557,7 @@ private fun Hero(content: @Composable ColumnScope.() -> Unit) {
                     stringRes(Res.string.front_page_tagline),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = onHero,
+                    color = scheme.onSurface,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -565,10 +566,7 @@ private fun Hero(content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
-/**
- * Model, Print (with its estimate) or Cancel, and the morning schedule: inline on the first-run
- * hero ([onAccent]), or on the print sheet's surface.
- */
+/** Model, Print (with its estimate) or Cancel, and the morning schedule: in the first-run card or the print sheet. */
 @Composable
 private fun PrintControls(
     models: FrontPageModels,
@@ -584,13 +582,10 @@ private fun PrintControls(
     onCancel: () -> Unit,
     publish: ObserverPrefs?,
     onPublish: (Boolean) -> Unit,
-    onAccent: Boolean,
 ) {
-    val scheme = MaterialTheme.colorScheme
-    val onHero = scheme.onPrimary
-    val ink = if (onAccent) onHero else scheme.onSurface
+    val ink = MaterialTheme.colorScheme.onSurface
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        ModelPicker(models, onModel, if (onAccent) PillColors.onAccent(onHero) else PillColors.onCard(), ink)
+        ModelPicker(models, onModel, PillColors.onCard(), ink)
         // A Print that can't be pressed says why: the provider lists nothing and no model is named.
         if (!models.loading && models.ids.isEmpty() && models.selected == null) {
             Text(
@@ -616,17 +611,6 @@ private fun PrintControls(
                 enabled = models.selected != null,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors =
-                    if (onAccent) {
-                        ButtonDefaults.buttonColors(
-                            containerColor = onHero,
-                            contentColor = scheme.primary,
-                            disabledContainerColor = onHero.copy(alpha = 0.3f),
-                            disabledContentColor = scheme.primary.copy(alpha = 0.6f),
-                        )
-                    } else {
-                        ButtonDefaults.buttonColors()
-                    },
             ) {
                 Icon(MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(20.dp), filled = true)
                 Spacer(Modifier.width(8.dp))
@@ -638,7 +622,7 @@ private fun PrintControls(
                 )
             }
         }
-        ScheduleRow(schedule, scheduleProblem, scheduleBusy, scheduleActions, ink, onAccent)
+        ScheduleRow(schedule, scheduleProblem, scheduleBusy, scheduleActions, ink)
         publish?.let { PublishRow(it.publish, onPublish, ink) }
     }
 }
@@ -796,7 +780,6 @@ private fun ScheduleRow(
     busy: Boolean,
     actions: ScheduleActions,
     ink: Color,
-    onAccent: Boolean,
 ) {
     if (schedule.state == ScheduleState.LOADING) return
     var picking by remember { mutableStateOf(false) }
@@ -838,10 +821,13 @@ private fun ScheduleRow(
                                 .heightIn(min = 48.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable(enabled = editable, onClickLabel = stringRes(Res.string.front_page_schedule_change_time), role = Role.Button) { picking = true }
-                                .padding(vertical = 12.dp, horizontal = 4.dp),
+                                .padding(vertical = 12.dp),
                     )
                 }
         }
+        // When it last printed belongs to the schedule, not to this device's switch below.
+        LastPrinted(schedule, note, indent)
+        ScheduleWarnings(schedule, indent)
         if (!schedule.hasWriteRelays) {
             ScheduleNote(stringRes(Res.string.front_page_schedule_no_write_relays), note, indent)
             TextButton(onClick = actions.onRelaySettings, modifier = indent, colors = ButtonDefaults.textButtonColors(contentColor = ink)) { Text(stringRes(Res.string.relay_settings)) }
@@ -857,9 +843,7 @@ private fun ScheduleRow(
         )
         // Amber and remote signers need the reader to decrypt the AI key: say so, in few words.
         if (!schedule.canPrintHere) ScheduleNote(stringRes(Res.string.front_page_needs_device_key), note, indent)
-        LastPrinted(schedule, note, indent)
-        ScheduleWarnings(schedule, indent, ink, onAccent)
-        problem?.let { ScheduleProblem(stringRes(scheduleProblemText(it)), ink, onAccent, indent) }
+        problem?.let { ScheduleProblem(stringRes(scheduleProblemText(it)), indent) }
     }
     if (picking) {
         val start = remember(schedule.editableTime) { schedule.editableTime ?: (7 to 0) }
@@ -973,18 +957,13 @@ private fun ScheduleNote(
     Text(text, style = MaterialTheme.typography.bodySmall, color = color, modifier = modifier)
 }
 
-/**
- * Why the last change wasn't saved, announced politely. On the hero's gradient it keeps the
- * readable ink, with an icon to mark it, rather than an error red the gradient swallows.
- */
+/** Why the last change wasn't saved, or a morning that didn't print, announced politely. */
 @Composable
 private fun ScheduleProblem(
     text: String,
-    ink: Color,
-    onAccent: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val color = if (onAccent) ink else MaterialTheme.colorScheme.error
+    val color = MaterialTheme.colorScheme.error
     Row(modifier.semantics { liveRegion = LiveRegionMode.Polite }, verticalAlignment = Alignment.CenterVertically) {
         Icon(MaterialSymbols.Warning, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(6.dp))
@@ -1018,11 +997,9 @@ private fun LastPrinted(
 private fun ScheduleWarnings(
     schedule: MorningScheduleView,
     modifier: Modifier = Modifier,
-    ink: Color = MaterialTheme.colorScheme.onSurface,
-    onAccent: Boolean = false,
 ) {
     schedule.missedSince?.let { ran ->
-        ScheduleProblem(stringRes(Res.string.front_page_not_printed_since, editionTitle(FrontPageClock.dayKey(ran))), ink, onAccent, modifier)
+        ScheduleProblem(stringRes(Res.string.front_page_not_printed_since, editionTitle(FrontPageClock.dayKey(ran))), modifier)
     }
 }
 
