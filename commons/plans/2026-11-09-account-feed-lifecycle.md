@@ -1,7 +1,7 @@
 # Account feed lifecycle: switch accounts at will
 
-Status (2026-11-11), on `claude/determined-meitner-wf8m3i`: steps 1, 2, 3.1-3.7, 5 and 6 (the
-pruner) are implemented; 3.8's filter-widening half and step 4 (warm accounts) remain.
+Status (2026-11-11), on `claude/determined-meitner-wf8m3i`: steps 1, 2, 3 (all eight), 5 and 6
+are implemented; step 4 (warm accounts) remains.
 
 ## Problem
 
@@ -286,8 +286,21 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
       managers' maps. Desktop: the signing account joining after unlock was asked from scratch
       while jack's lists stayed caught up, then they shared filters; logging it out and back in (a
       new `Account`) asked it from scratch again, jack untouched.
-   8. Hooks: local-filter widening `clear()`. The pruner half is step 6: it no longer removes
-      what feeds hold, so no feed cursor needs rewinding.
+   8. **Done:** local-filter widening. A feed rejects what the account hides (mutes, spammers,
+      hidden words and hashtags, muted threads, sensitive content); a rejected note is held by
+      nothing and may be collected while the feed's cursors say it was loaded. When the hidden
+      set changes in any way but hiding more (`onlyHidesMoreThan`), `AccountFeedContentStates`
+      clears the cursors of every account feed. A `RelayCursors` now knows which managers serve
+      it (`serve` registers them), and clearing or rewinding it re-plans them: a live REQ keeps
+      its window otherwise, and relays never resend what is older. One rule had to loosen: a
+      holder accepts answers to filters asking from no later than a window planned for it, not
+      only exactly one, since the client does not resend a REQ whose `since` only moved forward
+      and the filter on the wire asks for more. Desktop: hiding a word or blocking an author kept
+      Home's cursors; removing the word, unblocking the author or switching sensitive content
+      cleared them and Home was asked again (0 → 4-5 of 7 relays covered within 10 s; the rest
+      never answer here). Not covered: screen feeds (a reopened screen asks from scratch anyway;
+      one left open in the back stack across an unmute keeps its cursors), Web of Trust verdicts
+      and the report settings, which also widen what feeds accept.
    Each ends with the desktop switch test and a heap check.
 4. `AccountFeeds` with Active / Warm (15 min) / Cold, notification feeds account-lifetime;
    with tabs-and-windows Phase 2b.

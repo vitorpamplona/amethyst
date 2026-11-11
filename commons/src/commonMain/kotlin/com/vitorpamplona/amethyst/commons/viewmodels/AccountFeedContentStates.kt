@@ -80,9 +80,11 @@ import com.vitorpamplona.amethyst.commons.polls.dal.PollsFeedFilter
 import com.vitorpamplona.amethyst.commons.polls.dal.pollsUniverse
 import com.vitorpamplona.amethyst.commons.products.dal.ProductsFeedFilter
 import com.vitorpamplona.amethyst.commons.publicChats.dal.PublicChatsFeedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.shorts.dal.ShortsFeedFilter
 import com.vitorpamplona.amethyst.commons.softwareapps.dal.SoftwareAppsFeedFilter
 import com.vitorpamplona.amethyst.commons.video.dal.VideoFeedFilter
+import com.vitorpamplona.amethyst.commons.viewmodels.FeedsKeptCurrent.Companion.onlyHidesMoreThan
 import com.vitorpamplona.amethyst.commons.webBookmarks.dal.WebBookmarkFeedFilter
 import com.vitorpamplona.amethyst.commons.workouts.dal.WorkoutFeedFilter
 import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
@@ -596,6 +598,86 @@ class AccountFeedContentStates(
 
     suspend fun init() {
         notificationSummary.initializeSuspend()
+    }
+
+    /**
+     * Every feed here that keeps relay cursors. A feed rejects what its filters hide (mutes, spam,
+     * hidden words), and a note it rejects is held by nothing, so the GC may take it while the
+     * feed's cursors say it was loaded.
+     */
+    private val cursorHolders: List<RelayCursorHolder> by lazy {
+        listOf<Any>(
+            homeNewThreads,
+            homeReplies,
+            homeEverything,
+            dmKnown,
+            dmNew,
+            videoFeed,
+            discoverMarketplace,
+            discoverFollowSets,
+            discoverReads,
+            discoverDVMs,
+            discoverLive,
+            discoverCommunities,
+            discoverPublicChats,
+            pollsFeed,
+            openPollsFeed,
+            closedPollsFeed,
+            badgesFeed,
+            browseEmojiSetsFeed,
+            communitiesList,
+            picturesFeed,
+            workoutsFeed,
+            chessLobbyFeed,
+            gitRepositoriesFeed,
+            highlightsFeed,
+            relayGroupsDiscoveryFeed,
+            productsFeed,
+            geocachesFeed,
+            geocacheFindsFeed,
+            geocacheMineFeed,
+            geocacheHuntsFeed,
+            shortsFeed,
+            publicChatsFeed,
+            followPacksFeed,
+            liveStreamsFeed,
+            nestsFeed,
+            longsFeed,
+            articlesFeed,
+            musicTracksFeed,
+            musicPlaylistsFeed,
+            podcastEpisodesFeed,
+            podcastsFeed,
+            softwareAppsFeed,
+            calendarAppointmentsFeed,
+            calendarCollectionsFeed,
+            notifications,
+            notificationsFollowing,
+            notificationsEveryone,
+            drafts,
+            webBookmarks,
+        ).filterIsInstance<RelayCursorHolder>()
+    }
+
+    /**
+     * When the account starts showing what it hid (an unmute, a spammer cleared, a hidden word or
+     * hashtag removed, sensitive content turned on), what the feeds rejected before is wanted now,
+     * but it may be gone from memory while their cursors still say it was loaded. Clearing them
+     * makes the managers ask again (from each feed's floor, or from scratch); the feeds rebuild on
+     * their own (FeedsKeptCurrent, the notification collector below, or on resume). Hiding more only
+     * removes notes, so it keeps the cursors.
+     */
+    private fun clearCursorsWhenTheHiddenSetWidens() =
+        scope.launch(Dispatchers.IO) {
+            var applied = account.hiddenUsers.flow.value
+            account.hiddenUsers.flow.drop(1).collect { now ->
+                if (!now.onlyHidesMoreThan(applied)) cursorHolders.forEach { it.relayCursors.clear() }
+                applied = now
+            }
+        }
+
+    init {
+        clearCursorsWhenTheHiddenSetWidens()
     }
 
     fun updateFeedsWith(newNotes: Set<Note>) {

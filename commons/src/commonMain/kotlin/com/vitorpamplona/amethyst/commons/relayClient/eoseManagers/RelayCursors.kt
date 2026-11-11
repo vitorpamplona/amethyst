@@ -157,9 +157,12 @@ class RelayCursors {
 
     /**
      * Whether an answer to [shape] asked `since` [since] tells this holder it has everything up to
-     * the answer's time: the filter asked from scratch, or with a window planned for this holder, or
-     * from no later than this holder's own cursor already covers. A filter planned for someone else
-     * (the feed this one replaced, another account in a merged REQ) only fetched what *they* lacked.
+     * the answer's time: the filter asked from scratch, or from no later than a window planned for
+     * this holder, or from no later than this holder's own cursor already covers. A filter planned
+     * for someone else (the feed this one replaced, another account in a merged REQ) only fetched
+     * what *they* lacked. "No later than" because the client does not resend a REQ whose `since`
+     * only moved forward: the filter still on the wire asks from earlier than the newest plan,
+     * which is more, not less.
      */
     fun accepts(
         relay: NormalizedRelayUrl,
@@ -170,7 +173,7 @@ class RelayCursors {
         if (since == null) return true
         val slot = Slot(relay, source)
         return lock.withLock {
-            planned[slot]?.contains(since) == true ||
+            planned[slot]?.any { window -> since <= window } == true ||
                 byRelay[slot]?.let { it.time >= since && it.shapes.any { stored -> stored.covers(shape) } } == true
         }
     }
@@ -262,20 +265,47 @@ class RelayCursors {
     }
 
     /** Notes created at [createdAt] or later were dropped: every relay asks again from there. */
-    fun rewindTo(createdAt: Long) =
+    fun rewindTo(createdAt: Long) {
         lock.withLock {
             byRelay.keys.toList().forEach { slot ->
                 val entry = byRelay.getValue(slot)
                 if (entry.time > createdAt) byRelay[slot] = Entry(createdAt, entry.shapes)
             }
         }
+        replanServers()
+    }
 
-    /** Vouches for nothing: every relay is asked from scratch. */
-    fun clear() =
+    /**
+     * Vouches for nothing: every relay is asked from scratch. The managers serving this holder plan
+     * again right away; a live REQ would otherwise keep its old window, and relays never resend
+     * what is older than it.
+     */
+    fun clear() {
+        val hadAny =
+            lock.withLock {
+                (byRelay.isNotEmpty()).also {
+                    byRelay.clear()
+                    planned.clear()
+                }
+            }
+        if (hadAny) replanServers()
+    }
+
+    // The managers whose subscriptions serve this holder, with how many of their subscriptions do.
+    // Managers live as long as the app; this never references the holder.
+    private val servers = mutableMapOf<IEoseManager, Int>()
+
+    /** [manager] now serves this holder from one more subscription. */
+    fun addServer(manager: IEoseManager) = lock.withLock { servers[manager] = (servers[manager] ?: 0) + 1 }
+
+    /** [manager] serves this holder from one subscription fewer. */
+    fun removeServer(manager: IEoseManager) =
         lock.withLock {
-            byRelay.clear()
-            planned.clear()
+            val left = (servers[manager] ?: return@withLock) - 1
+            if (left <= 0) servers.remove(manager) else servers[manager] = left
         }
+
+    private fun replanServers() = lock.withLock { servers.keys.toList() }.forEach { it.invalidateFilters() }
 }
 
 private const val MAX_PLANNED = 16

@@ -295,6 +295,19 @@ class CursorPlannerTest {
     }
 
     @Test
+    fun anAnswerToAFilterAskingFromEarlierThanThePlanIsTheHoldersOwn() {
+        // Cleared after an unmute, the feed plans from its floor (900), later than the REQ on the
+        // wire (500). The client does not resend a REQ whose `since` only moved forward, so the
+        // answers keep coming for the wire filter: they cover more than the plan and count.
+        val cleared = RelayCursors()
+        CursorPlanner.window(listOf(RelayBasedFilter(relay, notes(alice).copy(since = 900))), listOf(cleared))
+
+        CursorPlanner.record(listOf(cleared), relay, listOf(notes(alice).copy(since = 500)), 2_000)
+
+        assertEquals(2_000L, cleared.since(relay))
+    }
+
+    @Test
     fun eachManagerWritesUnderItsOwnName() {
         val holder = Holder()
         val key = Key("feed", holder)
@@ -325,6 +338,44 @@ class CursorPlannerTest {
                 ?.since,
             "the first manager's answer covers nothing the second asked",
         )
+    }
+
+    @Test
+    fun clearingAHolderReplansTheManagersServingIt() {
+        // An unmute widens what a feed accepts: its cursors are cleared, and a live REQ must ask
+        // again, or relays never resend what is older than its window.
+        val holder = Holder()
+        var keys = setOf(Key("feed", holder))
+        var replans = 0
+        val manager =
+            object : PerUniqueIdEoseManager<Key, String>(EmptyNostrClient(), { keys }) {
+                override fun updateFilter(
+                    key: Key,
+                    since: SincePerRelayMap?,
+                ) = listOf(RelayBasedFilter(relay, notes(alice)))
+
+                override fun id(key: Key) = key.id
+
+                override fun invalidateFilters(ignoreIfDoing: Boolean) {
+                    replans++
+                }
+            }
+
+        manager.updateSubscriptions(keys)
+        val sub = manager.findOrCreateSubFor(keys.first())
+        sub.listener.onEose(relay, sub.filters()?.get(relay))
+        holder.relayCursors.clear()
+        assertEquals(1, replans, "the serving manager plans again")
+
+        holder.relayCursors.clear()
+        assertEquals(1, replans, "nothing left to forget: no new REQ")
+
+        keys = emptySet()
+        manager.updateSubscriptions(keys)
+        sub.listener.onEose(relay, listOf(notes(alice)))
+        holder.relayCursors.newEose(relay, listOf(shape(alice)), 1_000)
+        holder.relayCursors.clear()
+        assertEquals(1, replans, "a manager no longer serving it is not told")
     }
 
     @Test

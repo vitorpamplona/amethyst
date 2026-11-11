@@ -72,8 +72,14 @@ abstract class BaseEoseManager<T>(
     protected fun serve(
         subId: String,
         cursors: List<RelayCursors>,
-    ) = servedLock.withLock {
-        if (cursors.isEmpty()) served.remove(subId) else served[subId] = cursors
+    ) {
+        val before =
+            servedLock.withLock {
+                (if (cursors.isEmpty()) served.remove(subId) else served.put(subId, cursors)).orEmpty()
+            }
+        // Each holder knows who serves it, so clearing it (a widened filter, a prune) re-plans them.
+        before.filter { old -> cursors.none { it === old } }.forEach { it.removeServer(this) }
+        cursors.filter { new -> before.none { it === new } }.forEach { it.addServer(this) }
     }
 
     /**
