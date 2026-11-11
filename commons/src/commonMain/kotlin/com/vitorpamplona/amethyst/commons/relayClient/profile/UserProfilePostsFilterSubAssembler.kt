@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.profile
 
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 
 class UserProfilePostsFilterSubAssembler(
     val cache: ICacheProvider,
@@ -39,4 +41,25 @@ class UserProfilePostsFilterSubAssembler(
     override fun user(key: UserProfileQueryState) = key.user
 
     override fun cursorHoldersOf(key: UserProfileQueryState) = key.feeds
+
+    // A profile opened before its relay list is known asks no relays: ask again once it arrives.
+    private val relayLists = ProfileRelayListWatchers(::invalidateFilters)
+
+    override fun newSub(key: UserProfileQueryState): Subscription {
+        relayLists.watch(key.user)
+        return super.newSub(key)
+    }
+
+    override fun endSub(
+        key: User,
+        subId: String,
+    ) {
+        super.endSub(key, subId)
+        relayLists.stop(key)
+    }
+
+    override fun destroy() {
+        relayLists.destroy()
+        super.destroy()
+    }
 }
