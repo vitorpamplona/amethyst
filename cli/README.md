@@ -853,6 +853,49 @@ Four group-chat surfaces coexist — pick by threat model and topology:
 | `concord` | Concord (CORD) | Encrypted, serverless | Ordinary relays; secrets in `concord.json` | Encrypted communities with channels + roles, no host relay to trust. |
 | `geochat` | Bitchat geohash | None (public, throwaway identity) | Ephemeral kind:20000 on geo-nearest relays | Location-based public chat; Bitchat interop. |
 
+### AI agent keys (NIP-FA)
+
+The user's keys to OpenAI-compatible AI providers, kind 12000, NIP-44 encrypted to themselves:
+the same list the app's "AI agent keys" settings edit. Every edit reads the newest list from
+your NIP-65 write relays first and keeps every tag it doesn't change (commons
+`model/nipFAAgentKeys/AgentKeyEdits.kt`, the app's path); nothing is written when none of them
+answered. **A key never goes on the command line** (it would show in `ps` and shell history):
+`--key-file PATH` or `--key-stdin`. **amy never prints a key**: `key_masked` is
+`AgentProviderPresets.maskKey`, `--json` included.
+
+| Command | What it does |
+|---|---|
+| `amy agent show` | The keys in order, the default first: `keys[{url, provider, key_masked, has_key, default, local}]`, `count`, `event_id`. |
+| `amy agent set URL [--key-file PATH \| --key-stdin] [--default]` | Add the key for URL, or replace it where it stood; a new key goes last unless `--default`. With neither key flag the key is empty (a local runner). NIP-FA's rule is checked first: `https`, or `http` only to a loopback host or with no key; a preset that needs a key (OpenRouter, OpenAI, …) needs one. Prints `changed`, the new `keys` and the publish result. |
+| `amy agent test [URL]` | One free GET against the default key's provider (or URL's): the preset's `keyCheckPath`, else `/models`. `result: ok` (exit 0, with `model_count`, `key_checked`); `key_rejected` (401/403, or a 400 that blames the key), `http_error`, `provider_unreachable` exit 1 with the same fields in the error. |
+| `amy agent default URL` | Make URL's key the default. |
+| `amy agent remove URL` | Drop URL's key (`not_found` when there is none). |
+| `amy agent clear` | Drop every key; other private and public tags stay. |
+
+### Scheduled tasks (NIP-FB)
+
+A user's recurring jobs, kind 34817 under a `d` (`observer` is the morning front page), with
+every tag but `d` encrypted. amy **edits settings only: it never claims or runs a task**. Every
+read and write goes to your NIP-65 write relays, nothing else, and more than half of them must
+answer the read and accept the write (`no_quorum` otherwise); each edit is the app's quorum'd
+read-modify-write (commons `model/nipFBScheduledTasks/ScheduledTaskRelays.kt`), keeping every
+other tag on its side, public or private.
+
+| Command | What it does |
+|---|---|
+| `amy schedule list` | Every task, the newest event per `d`, decrypted: `tasks[{d, event_id, created_at, readable, task, cron, tz, cron_readable, set_at, paused, claim{due, id, by, at, finished}, ran, next_run, missed}]`, `count`, `quorum`. A task this signer can't read is listed with `readable: false` and nothing else. |
+| `amy schedule show [D]` | One task (D defaults to `observer`), the same fields plus `quorum`. |
+| `amy schedule set [D] --cron EXPR [--tz ZONE] [--task NAME] [--paused]` | Set when D runs: five POSIX cron fields in NIP-FB's subset, read in ZONE, an IANA name (offsets such as `+05:00` are refused). ZONE defaults to the task's own zone, or this machine's for a new task, which runs NAME (default D) and starts paused with `--paused`. A changed `cron` sets its set-at time to now; the same `cron` and zone write nothing (`changed: false`). |
+| `amy schedule pause [D]` / `resume [D]` | Add or remove `paused`; resuming restarts the schedule from now. |
+| `amy schedule delete [D]` | NIP-09 deletion of the task's address (`a`) and newest event (`e`), sent to the write relays. |
+
+```bash
+amy agent set https://openrouter.ai/api/v1 --key-file ~/.config/openrouter.key --default
+amy agent test
+amy schedule set --cron "0 7 * * 1-5" --tz America/New_York
+amy schedule list
+```
+
 ### Zaps (NIP-57)
 
 Builds the kind:9734 zap request and fetches a BOLT11 invoice from the

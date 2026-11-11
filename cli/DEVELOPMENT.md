@@ -325,6 +325,10 @@ contract.
   `no_lightning`.
 - **Blossom / nsite:** `upload_failed`, `hash_mismatch`,
   `aggregate_mismatch`.
+- **Agent keys / scheduled tasks:** `key_rejected` (the provider refused the
+  key: 401/403, or a 400 that blames it), `provider_unreachable` (no answer
+  from the key's URL), `no_quorum` (not more than half of the NIP-65 write
+  relays answered a NIP-FB read or accepted its write).
 - **Misc:** `no_follows` (fof), `invalid_identifier` (namecoin),
   `no_tty` (`bunker --interactive` without a terminal).
 

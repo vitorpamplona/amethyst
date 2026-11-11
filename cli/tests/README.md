@@ -12,6 +12,11 @@ cli/tests/
 ├── lib.sh                 # shared logging, results, assertions
 ├── headless/              # shared bits used by every harness
 │   └── helpers.sh                  # amy wrappers, assertions, embedded relay boot
+├── agents/               # NIP-FA agent keys + NIP-FB scheduled tasks vs embedded
+│   ├── agents-headless.sh #   `amy serve` and a stub AI provider on loopback
+│   └── stub-provider.py
+├── interop/nipfa-nipfb/   # a signed 12000 + 34817 fixture (test key) for Brainstorm
+│   └── make-fixture.sh
 ├── blossom/               # Blossom blob lifecycle vs LIVE public servers
 │   └── blossom-live.sh
 ├── cache/                 # local-store-as-cache semantics (profile show
@@ -76,6 +81,18 @@ Suite notes:
   divergences rather than skipped, so neither can drift quietly. Reference
   checkouts are cloned into `state/` unless `CYBERSPACE_DIR` /
   `CYBERSPACE_CLI_DIR` already point at them.
+- **`agents/agents-headless.sh`** drives `amy agent` and `amy schedule` against
+  `amy serve` and `stub-provider.py`, a loopback stand-in for an AI provider that
+  answers `/models` with 200 for its key and 401 for any other. Keys go in through
+  `--key-file` / `--key-stdin` only; the run checks `show`/`set`/`test` (ok, rejected,
+  unreachable)/`default`/`remove`/`clear`, schedule `set` (named zone, this machine's
+  zone, a new time keeping the zone, an unchanged set)/`list`/`show`/`pause`/`resume`/
+  `delete`, the `--json` shapes, exit codes 0/1/2, and that none of its three
+  throwaway keys appears in any stdout, stderr, the stub's or the relay's logs. No
+  real relay or provider is touched.
+- **`interop/nipfa-nipfb/make-fixture.sh`** is offline: it signs a kind 12000 and a
+  kind 34817 with a fixed, public **test** key and writes `fixture.json` (events,
+  decrypted contents, what a reader should show) for checking Brainstorm reads them.
 - **`pow/pow-headless.sh`** is also relay-free: `pow bench` sanity,
   `pow mine` hitting its target (and exiting 124 on an impossible one),
   and mined-nonce round-trips through `pow check`.

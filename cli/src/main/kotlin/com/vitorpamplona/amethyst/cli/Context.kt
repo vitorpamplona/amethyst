@@ -514,6 +514,13 @@ class Context(
             ?: DefaultNIP65RelaySet
 
     /**
+     * NIP-65 *write* relays only, with no fallback: where a NIP-FA key list and NIP-FB tasks are
+     * read and written (their Editing names the user's write relays and nothing else). Empty when
+     * the account has advertised none.
+     */
+    suspend fun nip65WriteRelays(): Set<NormalizedRelayUrl> = relaysOf(identity.pubKeyHex)?.allWriteRelaysNorm()?.toSet().orEmpty()
+
+    /**
      * NIP-65 *read* (inbox) relays for this account — "where others reach me".
      * Mirrors the Android app's NIP-65 inbox set (the `notificationRelays`
      * flow). Used as the default `relay` tags advertised in a kind:10019
