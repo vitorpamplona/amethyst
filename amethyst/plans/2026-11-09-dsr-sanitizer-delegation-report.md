@@ -408,3 +408,43 @@ From the Kotlin review (approve; no CRITICAL, HIGH or MEDIUM findings):
 Done, device check included. Release note (draft): "A video posted with compression on and
 'remove location' on is now stripped even when compression can't make it smaller or times out.
 Before, the original went up with its location." Close dkamy-8i5 with the dsr PR.
+
+## Whole-branch Kotlin review (after 8i5)
+
+A fresh `ecc:kotlin-review` of `e3f14a9c8f..HEAD`, run at the user's request. Verdict: FAIL on one
+HIGH, the `2.4.0-SNAPSHOT` pin, which resolves only from mavenLocal. That is the release gate the
+integrator already owns, not a code defect; the reviewer's verdict becomes PASS once `2.4.0` is pinned.
+No CRITICAL findings.
+
+| Commit | |
+|---|---|
+| `55710391fe` | fix(uploads): a cancelled upload deletes its compressed temp file |
+
+- **MEDIUM, temp file left after a late cancel: the stated leak did not hold, but a nearby one did.**
+  - The reviewer said a cancel landing just after a successful `sanitize` leaves the stripped file in
+    the cache. It does not: `runInterruptible(Dispatchers.IO)` is a `withContext`, which throws
+    `CancellationException` on the way out, and the catch deletes the file. The uploader's
+    `finally { deleteTempUri(finalUri) }` would catch it too. A new test pins this.
+  - The real gap was one level up. Since `strip` is suspend, it can throw `CancellationException`,
+    and the uploader's `try` around `stripAfterCompression` caught only the AVIF exception, so the
+    compressor's temp file (a GIF converted to MP4) was left behind. That leak already existed when
+    cancellation landed at the strip-failed prompt. `upload` and `uploadEncrypted` now delete it
+    before rethrowing.
+- **LOW, tests: done.** The MP3 routing test now checks its result. A new test covers a non-IO
+  sanitizer exception (original returned unstripped, no temp file). The cancellation test is renamed
+  so it no longer implies the test proves the thread interrupt itself.
+- **MEDIUM, the hidden toggle now decides the fallback: not changed, for the user.** In
+  `ImageVideoDescription`, a user who turns strip off at UNCOMPRESSED and then moves the slider hides
+  the toggle with "off" still set, so a fallback uploads the original unstripped, by a control they
+  can no longer see. Before 8i5 every fallback from this dialog went up unstripped, so 8i5 only
+  improves on that. Showing the toggle always, as `NewMediaView` and `ChatFileUploadDialog` do, is the
+  natural fix, but which dialogs show the toggle was out of 8i5's scope.
+- **Not acted on (LOW):**
+  - Hoisting `createTempFile` out of the `try` would turn a full cache into an upload error instead of
+    the strip-failed prompt.
+  - The duplicate fast-start warning and the `runCatching` in `onSuccess` were weighed and kept
+    earlier; see the dsr sections above.
+
+Tests after `55710391fe`: `MetadataStripperTest` **11/11**; `:amethyst:testPlayDebugUnitTest` **1,543
+tests, 0 failures, 0 errors, 10 skipped**; `:amethyst:lintPlayDebug` and
+`:amethyst:compilePlayDebugAndroidTestKotlin` pass.
