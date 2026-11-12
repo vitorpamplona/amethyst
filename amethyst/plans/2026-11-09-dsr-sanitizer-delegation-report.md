@@ -3,7 +3,8 @@
 Brief: `amethyst/plans/2026-11-09-dsr-sanitizer-delegation.md`. Bead dkamy-dsr.
 Branch `feat/mp4-sanitizer` from `e3f14a9c8f` (= `upstream/main`), worktree
 `/Users/david/StudioProjects/amethyst-wt1`. Not pushed. Library: `LightCompressor-enhanced:2.4.0-SNAPSHOT`
-from mavenLocal, last built and tested against fork commit `a697ec2` (the final snapshot).
+from mavenLocal, last built and tested against fork commit `1e4c3bd`. The device runs used `a697ec2`;
+see Findings for what changed since.
 
 ## Outcome
 
@@ -40,7 +41,7 @@ fixed that, so a fallback from that dialog is now stripped too.
    `"stripped_${kind}_"`).
 4. **Snapshot timing.** No stub was written. The code was written against the contract while the
    snapshot did not exist and built once the integrator reported it published (fork `1d5e5c0`), then
-   rebuilt against the republished `e960f4d`, `2035bde` and `a697ec2`.
+   rebuilt against the republished `e960f4d`, `2035bde`, `a697ec2` and `1e4c3bd`.
 
 ## Changes
 
@@ -120,8 +121,8 @@ Unit, `./gradlew :amethyst:testPlayDebugUnitTest`: **1,541 tests, 0 failures, 0 
 
 `MediaCompressorTest`: 7 tests, 0 failures, 1 skipped (its existing `@Ignore`).
 
-The unit counts above are from the run against the final snapshot (fork `a697ec2`, AAR published
-23:21, tests run 23:22).
+The unit counts above are from the run against fork `a697ec2` (AAR published 23:21, tests run
+23:22). Later counts, against `1e4c3bd`, are in the last section.
 
 Static: `spotlessApply`, `:amethyst:compilePlayDebugKotlin`, `:amethyst:compilePlayDebugAndroidTestKotlin`
 and `:amethyst:lintPlayDebug` all pass at `d6da13f525` against `a697ec2`; the pre-commit hook passed on each commit.
@@ -186,7 +187,7 @@ it is temporary.
   Blossom server were dropped until `pm grant … ACCESS_LOCAL_NETWORK` (filed as dkamy-0a4, not this
   bead). An earlier attempt to the user's Cloudflare-fronted Blossom server took more than 120 s for
   a 50 MB PUT, which is a transport limit, not this change.
-- **Trimmed clips now get the strip-failed dialog (library `a697ec2`).** A stream-copy trim, which is
+- **Trimmed clips now get the strip-failed dialog (library `a697ec2`, narrowed in `1e4c3bd`).** A stream-copy trim, which is
   what the gallery editor produces, has an edit list that starts mid-GOP. `MediaExtractor` then reports
   the lead-in samples with negative timestamps. The old `remuxTracks` copied them, and `MediaMuxer`
   re-based the video to the lead-in keyframe. Up to one GOP of the cut-out content came back in the
@@ -196,9 +197,18 @@ it is temporary.
   the existing failure path: `StrippingResult(uri, false)`, then the "could not strip, upload anyway?"
   dialog. So a trimmed video at UNCOMPRESSED with strip on now asks the user, where it used to upload
   a wrong file silently. No code change here, only the KDoc. A trimmed clip at a compression level
-  reaches the sanitizer only if the encode falls back; whether the encoder itself honours the edit list
-  was not checked. Worth a release-note line, and possibly a bead for a clearer dialog message, or for
-  compressing trimmed clips instead of refusing them.
+  reaches the sanitizer only if the encode falls back. The library session checked the compressor
+  itself (`Transcoder`): it seeks to 0 first and keeps the audio of a trimmed source. Worth a
+  release-note line, and possibly a bead for a clearer dialog message, or for compressing trimmed
+  clips instead of refusing them.
+  - **`a697ec2` refused too much; `1e4c3bd` fixes it.** An AAC encoder puts priming samples before the
+    edit list (the first frame at -21,333 µs at 48 kHz), so `a697ec2` mistook every ffmpeg-encoded
+    file with AAC audio for a trim and refused it. Since `1e4c3bd` only video samples before the edit
+    list are refused; audio priming is copied. A trimmed clip is still refused, on its video track,
+    while ordinary ffmpeg and other-encoder files pass. The dsr and 8i5 device runs used `a697ec2` and
+    were not affected. The dsr clip is a Pixel camera file. The 8i5 clip is an ffmpeg file with AAC,
+    but its audio edit list is an empty edit followed by media time 0, so no audio sample comes
+    before it (checked with `ffprobe -v trace`). That is why `a697ec2` stripped it.
 - **Dolby Vision is refused (library `a697ec2`).** On Android 17, `MediaExtractor` lists a
   `video/dolby-vision` track plus a `video/hevc` base layer for Dolby Vision profiles 8.1 and 5, and
   `MediaMuxer.addTrack` accepts both, so the old remux probably wrote the video twice (unverified).
@@ -447,4 +457,21 @@ No CRITICAL findings.
 
 Tests after `55710391fe`: `MetadataStripperTest` **11/11**; `:amethyst:testPlayDebugUnitTest` **1,543
 tests, 0 failures, 0 errors, 10 skipped**; `:amethyst:lintPlayDebug` and
+`:amethyst:compilePlayDebugAndroidTestKotlin` pass.
+
+### Library snapshot `1e4c3bd`
+
+The integrator republished 2.4.0-SNAPSHOT from fork `1e4c3bd` (same signatures). Behaviour changes
+inside the contract:
+- Samples before the edit list are refused on video tracks only; audio priming is copied (see the
+  trimmed-clips finding).
+- An interrupt during the fast-start pass now throws `InterruptedIOException` instead of returning
+  `fastStart = false`. `sanitizeMp4`'s `runInterruptible` plus `ensureActive()` path already handles
+  that as a cancellation, so nothing changes here.
+- The same-file guard (input equal to output) also covers Uris without a scheme. It cannot trigger
+  from Amethyst, whose output is always a fresh cache file.
+
+Rebuilt against it, no code change: `:amethyst:testPlayDebugUnitTest` **1,543 tests, 0 failures, 0
+errors, 10 skipped** (the tests reran at 19:30, after the AAR landed at 19:27); `MetadataStripperTest`
+**11/11**; `:amethyst:lintPlayDebug`, `:amethyst:compilePlayDebugKotlin` and
 `:amethyst:compilePlayDebugAndroidTestKotlin` pass.
