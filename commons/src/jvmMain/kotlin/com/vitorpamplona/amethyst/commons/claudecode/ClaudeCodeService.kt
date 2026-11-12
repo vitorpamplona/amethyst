@@ -1,0 +1,261 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.claudecode
+
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.claudecode.process.ClaudeCodeLauncher
+import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
+import com.vitorpamplona.claudecode.process.ClaudeExecutable
+import com.vitorpamplona.claudecode.protocol.PermissionMode
+import com.vitorpamplona.claudecode.session.ClaudeLiveSession
+import com.vitorpamplona.claudecode.session.ClaudeSessionInfo
+import com.vitorpamplona.claudecode.session.ClaudeSessionStore
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.IOException
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+
+/** A row of the session list: a saved session, a chat open in this app, or both. */
+@Immutable
+data class ClaudeSessionRow(
+    /** What to open: the chat's key in [ClaudeCodeService]. */
+    val key: String,
+    val sessionId: String?,
+    val title: String,
+    val lastPrompt: String?,
+    val cwd: String?,
+    val gitBranch: String?,
+    val lastModified: Long,
+    /** Set while the chat is open in this app. */
+    val appStatus: ChatStatus?,
+    /** Set while another Claude Code process (a terminal) has the session open. */
+    val openElsewhere: ClaudeLiveSession?,
+)
+
+/**
+ * Claude Code on this computer: the sessions it saved and the chats open in the app. One per
+ * process ([shared]), so the chats outlive the screens that show them.
+ */
+class ClaudeCodeService(
+    val store: ClaudeSessionStore = ClaudeSessionStore(),
+    private val launcher: ClaudeCodeStarter = ClaudeCodeLauncher(),
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    private val findExecutable: () -> File? = { ClaudeExecutable.find() },
+) {
+    private val chats = MutableStateFlow<Map<String, ClaudeChat>>(emptyMap())
+    private val watchers = ConcurrentHashMap<String, Job>()
+    private val saved = MutableStateFlow<List<ClaudeSessionInfo>>(emptyList())
+    private val elsewhere = MutableStateFlow<Map<String, ClaudeLiveSession>>(emptyMap())
+
+    private val _rows = MutableStateFlow<List<ClaudeSessionRow>>(emptyList())
+
+    /** Every session, newest first. Call [refresh] to re-read the disk. */
+    val rows: StateFlow<List<ClaudeSessionRow>> = _rows.asStateFlow()
+
+    private val _executable = MutableStateFlow<File?>(null)
+
+    /** The `claude` the chats run, or null when it isn't installed (or not found yet). */
+    val executable: StateFlow<File?> = _executable.asStateFlow()
+
+    private val _loaded = MutableStateFlow(false)
+    val loaded: StateFlow<Boolean> = _loaded.asStateFlow()
+
+    /** Re-reads the saved sessions and which ones are open elsewhere. */
+    suspend fun refresh() {
+        withContext(Dispatchers.IO) {
+            _executable.value = findExecutable()
+            saved.value =
+                try {
+                    store.listSessions()
+                } catch (e: IOException) {
+                    Log.w(TAG, "Could not list Claude Code sessions", e)
+                    emptyList()
+                }
+            elsewhere.value =
+                try {
+                    store.liveSessions()
+                } catch (e: IOException) {
+                    Log.w(TAG, "Could not read the running Claude Code sessions", e)
+                    emptyMap()
+                }
+        }
+        _loaded.value = true
+        rebuildRows()
+    }
+
+    fun refreshInBackground() {
+        scope.launch { refresh() }
+    }
+
+    /** The chat for [key]: an open one, or a saved session opened from its file. */
+    fun chat(key: String): ClaudeChat? {
+        chats.value[key]?.let { return it }
+        chats.value.values
+            .firstOrNull { it.state.value.sessionId == key }
+            ?.let { return it }
+        if (!ClaudeSessionStore.isSafeId(key)) return null
+        val info = saved.value.firstOrNull { it.sessionId == key } ?: store.session(key) ?: return null
+        val cwd = info.cwd?.let { File(it) }?.takeIf { it.isDirectory } ?: File(System.getProperty("user.home"))
+        return open(key, info.sessionId, cwd, info.title, PermissionMode.DEFAULT, null)
+    }
+
+    /** A new chat in [cwd]; its process starts with the first message. */
+    fun newChat(
+        cwd: File,
+        permissionMode: PermissionMode = PermissionMode.DEFAULT,
+        model: String? = null,
+    ): ClaudeChat = open("new-${UUID.randomUUID()}", null, cwd, null, permissionMode, model)
+
+    private fun open(
+        key: String,
+        sessionId: String?,
+        cwd: File,
+        title: String?,
+        mode: PermissionMode,
+        model: String?,
+    ): ClaudeChat {
+        val chat = ClaudeChat(key, sessionId, cwd, title, mode, model, store, launcher, scope) { refreshInBackground() }
+        chats.update { it + (key to chat) }
+        // The list only shows these; streamed text must not rebuild it.
+        watchers[key] =
+            scope.launch {
+                chat.state
+                    .map { Triple(it.sessionId, it.title, it.status) to (it.items.firstOrNull() as? ChatItem.UserText) }
+                    .distinctUntilChanged()
+                    .collect { if (chats.value[key] === chat) rebuildRows() }
+            }
+        return chat
+    }
+
+    suspend fun rename(
+        row: ClaudeSessionRow,
+        title: String,
+    ) {
+        val clean = title.trim().ifEmpty { return }
+        val chat = chats.value[row.key]
+        val renamedLive = chat?.renameLive(clean) ?: false
+        val sessionId = row.sessionId
+        if (!renamedLive && sessionId != null) {
+            withContext(Dispatchers.IO) { store.rename(sessionId, clean) }
+            chat?.titleChanged(clean)
+        }
+        refresh()
+    }
+
+    /** Ends the session's chat here and deletes its file. */
+    suspend fun delete(row: ClaudeSessionRow) {
+        chats.value[row.key]?.let { chat ->
+            chat.kill()
+            watchers.remove(row.key)?.cancel()
+            chats.update { it - row.key }
+            rebuildRows()
+        }
+        val sessionId = row.sessionId
+        if (sessionId != null) withContext(Dispatchers.IO) { store.delete(sessionId) }
+        refresh()
+    }
+
+    /** Stops every process this app started. */
+    fun shutdown() {
+        chats.value.values.forEach { it.kill() }
+    }
+
+    @Synchronized
+    private fun rebuildRows() {
+        val open = chats.value
+        val openBySession =
+            open.values
+                .mapNotNull { chat ->
+                    chat.state.value.sessionId
+                        ?.let { it to chat }
+                }.toMap()
+        val live = elsewhere.value
+        val ownPids =
+            ProcessHandle
+                .current()
+                .descendants()
+                .map { it.pid() }
+                .toList()
+                .toSet()
+
+        val fromDisk =
+            saved.value.map { info ->
+                val chat = openBySession[info.sessionId]
+                ClaudeSessionRow(
+                    key = chat?.key ?: info.sessionId,
+                    sessionId = info.sessionId,
+                    title = chat?.state?.value?.title ?: info.title,
+                    lastPrompt = info.lastPrompt,
+                    cwd = info.cwd,
+                    gitBranch = info.gitBranch,
+                    lastModified = info.lastModified,
+                    appStatus = chat?.state?.value?.status,
+                    openElsewhere = live[info.sessionId]?.takeIf { it.pid !in ownPids },
+                )
+            }
+        val savedIds = saved.value.mapTo(HashSet()) { it.sessionId }
+        // New chats before their file exists.
+        val unsaved =
+            open.values
+                .filter { chat ->
+                    chat.state.value.sessionId
+                        .let { it == null || it !in savedIds }
+                }.map { chat ->
+                    val state = chat.state.value
+                    ClaudeSessionRow(
+                        key = chat.key,
+                        sessionId = state.sessionId,
+                        title = state.title ?: (state.items.firstOrNull() as? ChatItem.UserText)?.text?.lineSequence()?.first() ?: "",
+                        lastPrompt = null,
+                        cwd = state.cwd,
+                        gitBranch = null,
+                        lastModified = System.currentTimeMillis(),
+                        appStatus = state.status,
+                        openElsewhere = null,
+                    )
+                }
+        _rows.value = (unsaved + fromDisk).sortedByDescending { it.lastModified }
+    }
+
+    companion object {
+        private const val TAG = "ClaudeCodeService"
+
+        /** The app's one service. Its processes end with the app. */
+        val shared: ClaudeCodeService by lazy {
+            ClaudeCodeService().also { service ->
+                Runtime.getRuntime().addShutdownHook(Thread({ service.shutdown() }, "claude-code-shutdown"))
+            }
+        }
+    }
+}

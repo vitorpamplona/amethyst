@@ -722,6 +722,14 @@ sealed class Route {
         val url: String? = null,
     ) : Route()
 
+    /** The Claude Code sessions on this computer (desktop only: it runs the user's `claude`). */
+    @Serializable object ClaudeCode : Route()
+
+    /** One Claude Code chat; [key] is its session id, or the temporary id of a new chat. */
+    @Serializable data class ClaudeCodeChat(
+        val key: String,
+    ) : Route()
+
     @Serializable object RequestToVanish : Route()
 
     @Serializable object VanishEvents : Route()

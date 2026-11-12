@@ -116,6 +116,8 @@ private val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.GEOCACHE_HUNTS,
         NavBarItem.WORKOUTS,
         NavBarItem.GIT_REPOSITORIES,
+        // Desktop only: hidden wherever the route has no screen.
+        NavBarItem.CLAUDE_CODE,
         NavBarItem.HIGHLIGHTS,
         NavBarItem.LIVE_STREAMS,
         NavBarItem.NESTS,

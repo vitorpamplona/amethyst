@@ -83,6 +83,7 @@ enum class NavBarItem {
     EMOJI_SETS,
     SETTINGS,
     FAVORITE_ALGO_FEEDS,
+    CLAUDE_CODE,
 }
 
 private val NavBarItemsByName = NavBarItem.entries.associateBy { it.name }

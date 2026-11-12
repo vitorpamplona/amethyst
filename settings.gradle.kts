@@ -57,6 +57,7 @@ include(":nestsClient")
 include(":desktopApp")
 include(":cli")
 include(":relayBench")
+include(":claudeCodeClient")
 
 // quartz lives in its own repo (vitorpamplona/quartz) and comes from Maven Central, like crypto
 // and quic below. To change it alongside the app, point Gradle at a local checkout and it builds

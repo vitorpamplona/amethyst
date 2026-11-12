@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.resources.bottom_bar_category_main
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_category_other
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_category_you
 import com.vitorpamplona.amethyst.commons.resources.browser
+import com.vitorpamplona.amethyst.commons.resources.claude_code_title
 import com.vitorpamplona.amethyst.commons.resources.communities
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_title
@@ -298,6 +299,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 label = { Res.string.my_fitness },
                 icon = MaterialSymbols.AutoMirrored.ShowChart,
                 resolveRoute = { Route.MyFitness },
+            ),
+        NavBarItem.CLAUDE_CODE to
+            NavBarItemDef(
+                id = NavBarItem.CLAUDE_CODE,
+                label = { Res.string.claude_code_title },
+                icon = MaterialSymbols.Assistant,
+                resolveRoute = { Route.ClaudeCode },
             ),
         NavBarItem.GIT_REPOSITORIES to
             NavBarItemDef(
@@ -635,6 +643,7 @@ val BottomBarCategories: List<NavBarCategory> by lazy {
             MaterialSymbols.Apps,
             listOf(
                 NavBarItem.BROWSER,
+                NavBarItem.CLAUDE_CODE,
                 NavBarItem.FAVORITE_APPS,
                 NavBarItem.SOFTWARE_APPS,
                 NavBarItem.NAPPLETS,
