@@ -156,8 +156,8 @@ import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListSt
 import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditKind
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditor
-import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEdits
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyState
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.fetchOwnRelayList
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.readAgentKeysForRewrite
 import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ObserverScheduleState
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
@@ -3786,10 +3786,23 @@ class Account(
      * could not be read would delete the user's other keys, so then nothing is written.
      */
     private suspend fun readAgentKeysBeforeWriting() {
-        val relays = AgentKeyEdits.readRelays(nip65RelayList.outboxFlowNoDefaults.value, outboxRelays.flow.value)
-        client.readAgentKeysForRewrite(relays, signer.pubKey, agentKeys.getAgentKeyEvent()) { event, relay ->
+        client.readAgentKeysForRewrite(agentKeyWriteRelays(), signer.pubKey, agentKeys.getAgentKeyEvent()) { event, relay ->
             cache.justConsume(event, relay, wasVerified = true)
         }
+    }
+
+    /**
+     * The user's NIP-65 write relays, where NIP-FA reads and writes the keys: never a default or
+     * a bootstrap relay. A fresh login may not hold the list yet ("no list" and "not loaded yet"
+     * look the same), so it is asked of the bootstrap relays first; still none, there are none.
+     */
+    private suspend fun agentKeyWriteRelays(): Set<NormalizedRelayUrl> {
+        nip65RelayList.nip65Event(nip65RelayList.nip65ListNote)?.let { return it.allWriteRelaysNorm()?.toSet().orEmpty() }
+        val found =
+            client.fetchOwnRelayList(indexerRelayList.flow.value + Constants.eventFinderRelays, signer.pubKey) { event, relay ->
+                cache.justConsume(event, relay, wasVerified = true)
+            }
+        return found?.allWriteRelaysNorm()?.toSet().orEmpty()
     }
 
     /**
@@ -3809,7 +3822,8 @@ class Account(
             },
             current = { agentKeys.getAgentKeyEvent() },
             keepHere = { cache.justConsumeMyOwnEvent(it) },
-            publish = { client.publishAndConfirm(it, outboxRelays.flow.value, untilFirstAccept = true) },
+            // To the same relays the read came from (NIP-FA, Editing).
+            publish = { client.publishAndConfirm(it, agentKeyWriteRelays(), untilFirstAccept = true) },
         )
 
     /** Saves [key] as the preferred AI agent key (adding it if new) and publishes the event. */

@@ -24,8 +24,8 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
 import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
-import com.vitorpamplona.quartz.nipFAAgentKeys.agentKeys
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
+import com.vitorpamplona.quartz.nipFAAgentKeys.usableAgentKeys
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -52,9 +52,13 @@ class AgentKeyState(
 
     fun getAgentKeyEvent(): AgentKeyEvent? = agentKeyNote.event as? AgentKeyEvent
 
-    private suspend fun decrypt(event: AgentKeyEvent?): List<AgentKeyTag> = event?.let { decryptionCache.privateTags(it)?.agentKeys() } ?: emptyList()
+    private suspend fun decrypt(event: AgentKeyEvent?): List<AgentKeyTag> = event?.let { decryptionCache.privateTags(it)?.usableAgentKeys() } ?: emptyList()
 
-    /** Every key, in the user's order of preference: the first one is what apps use. */
+    /**
+     * Every key NIP-FA's readers use, in the user's order of preference: the first one is what
+     * apps use. A key over plain `http` to another machine is left out wherever it stands (it
+     * stays in the event: rewrites keep what they read).
+     */
     val flow: StateFlow<List<AgentKeyTag>> =
         agentKeyNote
             .flow()
@@ -78,5 +82,14 @@ class AgentKeyState(
     suspend fun remove(key: AgentKeyTag): AgentKeyEvent? = getAgentKeyEvent()?.let { earlier -> rewriteAgentKeys(earlier, signer) { keys -> keys.filter { it != key } }?.let { signer.sign(it) } }
 }
 
-/** No outbox relay answered and nothing is cached: an edit would start from nothing and delete the other keys. */
-class AgentKeysUnreadableException : IllegalStateException("Couldn't reach your relays to read your AI keys, so nothing was changed")
+/**
+ * Not more than half of the user's [asked] write relays answered the read before a rewrite
+ * ([answered] did): NIP-FA writes nothing then, since the edit could start from an old list.
+ */
+class AgentKeysNoQuorumException(
+    val asked: Int,
+    val answered: Int,
+) : IllegalStateException("Only $answered of your $asked write relays answered, so your AI keys weren't changed")
+
+/** The user has no NIP-65 write relays (or no relay list could be found): there is nowhere to keep the keys. */
+class AgentKeysNoWriteRelaysException : IllegalStateException("You have no write relays to keep your AI keys on")

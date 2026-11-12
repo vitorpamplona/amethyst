@@ -22,16 +22,20 @@ package com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys
 
 import com.vitorpamplona.amethyst.commons.agents.AgentProviderPresets
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DONE_REASON_EOSE
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.agentKeys
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
+import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskClaims
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /** Why a key can't be saved for a URL. */
@@ -99,17 +103,6 @@ object AgentKeyEdits {
         return keys.filterNot { sameUrl(it.url, url) }
     }
 
-    /**
-     * Where to read kind 12000 before rewriting it: the user's NIP-65 write relays, as NIP-FA
-     * says. Never the app's default relays beside them: one of those answering "nothing here"
-     * would count as a read and let an edit start from nothing. [outbox], where this app
-     * publishes, only when the user has no NIP-65 list at all.
-     */
-    fun readRelays(
-        writeRelays: Set<NormalizedRelayUrl>,
-        outbox: Set<NormalizedRelayUrl>,
-    ): Set<NormalizedRelayUrl> = writeRelays.ifEmpty { outbox }
-
     /** What stops [key] being saved for [url] (both trimmed), or null when it can be. */
     fun problem(
         url: String,
@@ -123,12 +116,16 @@ object AgentKeyEdits {
 }
 
 /**
- * NIP-FA's Editing, first step: the newest kind 12000 of [author] on [relays] (the user's write
- * relays), or [known], what this device already holds, when it is newer. Each event read is
- * verified and handed to [onRead]. Null when the relays answered and nobody has one.
+ * NIP-FA's Editing, first step: the newest kind 12000 of [author] on [relays], the user's NIP-65
+ * write relays and nothing else (never a default or bootstrap relay: one that never saw the
+ * event answers "none" just as fast), or [known], what this device already holds, when it is
+ * newer. More than half of [relays] must answer (reach EOSE), as NIP-FA asks; a copy on this
+ * device doesn't make up for the ones that didn't. Each event read is verified and handed to
+ * [onRead]. Null when the relays answered and nobody has one.
  *
- * @throws AgentKeysUnreadableException when no relay answered and nothing is known: an edit
- *   would start from nothing and delete the user's other keys.
+ * @throws AgentKeysNoWriteRelaysException when [relays] is empty: there is nowhere to read or write.
+ * @throws AgentKeysNoQuorumException when not more than half of [relays] answered: an edit could
+ *   start from an old list, or from nothing, and delete the user's other keys.
  */
 suspend fun INostrClient.readAgentKeysForRewrite(
     relays: Set<NormalizedRelayUrl>,
@@ -137,19 +134,45 @@ suspend fun INostrClient.readAgentKeysForRewrite(
     idleTimeoutMs: Long = 8_000,
     onRead: suspend (AgentKeyEvent, NormalizedRelayUrl) -> Unit = { _, _ -> },
 ): AgentKeyEvent? {
+    if (relays.isEmpty()) throw AgentKeysNoWriteRelaysException()
     val filter = Filter(kinds = listOf(AgentKeyEvent.KIND), authors = listOf(author))
     val read = mutableListOf<AgentKeyEvent>()
-    val served =
-        relays.isNotEmpty() &&
-            fetchAllWithHooks(relays.associateWith { listOf(filter) }, idleTimeoutMs = idleTimeoutMs) { relay, event ->
-                if (event is AgentKeyEvent && event.pubKey == author && event.verify()) {
-                    onRead(event, relay)
-                    read += event
-                }
-                true
-            }.anyRelayServed
-    if (!served && known == null) throw AgentKeysUnreadableException()
+    val result =
+        fetchAllWithHooks(relays.associateWith { listOf(filter) }, idleTimeoutMs = idleTimeoutMs) { relay, event ->
+            if (event is AgentKeyEvent && event.pubKey == author && event.verify()) {
+                onRead(event, relay)
+                read += event
+            }
+            true
+        }
+    val answered = result.doneReasons.values.count { it == DONE_REASON_EOSE }
+    if (!ScheduledTaskClaims.hasQuorum(relays.size, answered)) throw AgentKeysNoQuorumException(relays.size, answered)
     return (read + listOfNotNull(known)).newest()
+}
+
+/**
+ * The user's own NIP-65 list (kind 10002), for a device that doesn't hold one yet: a fresh login,
+ * where "no list" and "not loaded yet" look the same. Asked of [relays] (bootstrap relays: where
+ * lists are found, never where NIP-FA's keys are read); each verified copy goes to [onRead].
+ * Null when none of them has one.
+ */
+suspend fun INostrClient.fetchOwnRelayList(
+    relays: Set<NormalizedRelayUrl>,
+    author: HexKey,
+    idleTimeoutMs: Long = 8_000,
+    onRead: suspend (AdvertisedRelayListEvent, NormalizedRelayUrl) -> Unit = { _, _ -> },
+): AdvertisedRelayListEvent? {
+    if (relays.isEmpty()) return null
+    val filter = Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), authors = listOf(author), limit = 1)
+    val read = mutableListOf<AdvertisedRelayListEvent>()
+    fetchAllWithHooks(relays.associateWith { listOf(filter) }, idleTimeoutMs = idleTimeoutMs) { relay, event ->
+        if (event is AdvertisedRelayListEvent && event.pubKey == author && event.verify()) {
+            onRead(event, relay)
+            read += event
+        }
+        true
+    }
+    return read.minWithOrNull(compareByDescending<AdvertisedRelayListEvent> { it.createdAt }.thenBy { it.id })
 }
 
 /** The highest `created_at`, then the lowest id. */
@@ -168,13 +191,15 @@ suspend fun rewriteAgentKeys(
     earlier: AgentKeyEvent?,
     signer: NostrSigner,
     now: Long = TimeUtils.now(),
+    /** [earlier]'s private tags when the caller already decrypted them ([AgentKeyEvent.readForRewrite]): not asked again. */
+    earlierPrivate: TagArray? = null,
     transform: (List<AgentKeyTag>) -> List<AgentKeyTag>?,
 ): EventTemplate<AgentKeyEvent>? {
     if (earlier == null) {
         val keys = transform(emptyList())?.takeIf { it.isNotEmpty() } ?: return null
         return AgentKeyEvent.build(keys, signer, now)
     }
-    val private = AgentKeyEvent.readForRewrite(earlier, signer)
+    val private = earlierPrivate ?: AgentKeyEvent.readForRewrite(earlier, signer)
     val current = private.agentKeys()
     val next = transform(current) ?: return null
     if (next == current) return null

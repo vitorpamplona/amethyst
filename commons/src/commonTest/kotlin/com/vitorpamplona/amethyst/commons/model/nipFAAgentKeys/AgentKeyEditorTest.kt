@@ -32,6 +32,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -53,6 +54,8 @@ class AgentKeyEditorTest {
         rewrite: suspend (AgentKeyEditKind, AgentKeyTag) -> AgentKeyEvent? = { _, key -> signed(key) },
         current: () -> AgentKeyEvent? = { null },
         accepted: suspend () -> Boolean = { true },
+        /** A screen shows the editor's state. */
+        watched: Boolean = true,
     ) = AgentKeyEditor(
         scope = backgroundScope,
         readBeforeWriting = read,
@@ -63,7 +66,7 @@ class AgentKeyEditorTest {
             recorder.sent += it
             accepted()
         },
-    )
+    ).also { if (watched) it.attach() }
 
     @Test
     fun busyFromTheTapUntilARelayTakesIt() =
@@ -94,11 +97,65 @@ class AgentKeyEditorTest {
     fun relaysThatDidNotAnswerChangeNothing() =
         runTest {
             val recorder = Recorder()
-            val editor = editor(recorder, read = { throw AgentKeysUnreadableException() })
+            val editor = editor(recorder, read = { throw AgentKeysNoQuorumException(3, 1) })
             val ended = editor.run(AgentKeyEditKind.SAVE, claude)
-            assertEquals(AgentKeyEditState.Failed(AgentKeyEditKind.SAVE, claude.url, AgentKeyEditFailure.RELAYS_UNREACHABLE), ended)
+            assertEquals(AgentKeyEditState.Failed(AgentKeyEditKind.SAVE, claude.url, AgentKeyEditFailure.NO_QUORUM), ended)
             assertTrue(recorder.kept.isEmpty())
             assertTrue(recorder.sent.isEmpty())
+        }
+
+    @Test
+    fun noWriteRelaysIsSaidSo() =
+        runTest {
+            val recorder = Recorder()
+            val editor = editor(recorder, read = { throw AgentKeysNoWriteRelaysException() })
+            assertEquals(AgentKeyEditState.Failed(AgentKeyEditKind.REMOVE, claude.url, AgentKeyEditFailure.NO_WRITE_RELAYS), editor.run(AgentKeyEditKind.REMOVE, claude))
+            assertTrue(recorder.sent.isEmpty())
+        }
+
+    @Test
+    fun anyFailedEditCanBeTriedAgain() =
+        runTest {
+            val recorder = Recorder()
+            var accept = false
+            val existing = signed(claude)
+            var calls = 0
+            // The first make-default is kept here but no relay takes it; the retry changes nothing more and re-sends it.
+            val editor = editor(recorder, rewrite = { _, key -> if (calls++ == 0) signed(key) else null }, current = { existing }, accepted = { accept })
+            assertIs<AgentKeyEditState.Failed>(editor.run(AgentKeyEditKind.MAKE_DEFAULT, claude))
+            accept = true
+            val again = editor.retry()!!
+            assertEquals(AgentKeyEditState.Done(AgentKeyEditKind.MAKE_DEFAULT, claude.url), again.await())
+            assertEquals(listOf<Event>(existing), recorder.sent.drop(1))
+            // Nothing failed: nothing to retry.
+            assertNull(editor.retry())
+        }
+
+    @Test
+    fun theBusyStateSaysWhichEdit() =
+        runTest {
+            val hold = CompletableDeferred<Unit>()
+            val editor = editor(Recorder(), read = { hold.await() })
+            editor.submit(AgentKeyEditKind.REMOVE, claude)
+            // The Save button doesn't say "Saving" while a removal is on its way.
+            assertTrue(editor.state.value.isBusyWith(AgentKeyEditKind.REMOVE))
+            assertFalse(editor.state.value.isBusyWith(AgentKeyEditKind.SAVE))
+            hold.complete(Unit)
+        }
+
+    @Test
+    fun anEditThatEndsAfterItsScreenWentLeavesNothingStale() =
+        runTest {
+            val hold = CompletableDeferred<Unit>()
+            val editor = editor(Recorder(), read = { hold.await() }, accepted = { false }, watched = false)
+            val release = editor.attach()
+            val result = editor.submit(AgentKeyEditKind.SAVE, claude)!!
+            // The screen goes while the edit is on its way.
+            release()
+            hold.complete(Unit)
+            assertIs<AgentKeyEditState.Failed>(result.await())
+            // The next time the screen opens it doesn't show a failure it never saw.
+            assertEquals(AgentKeyEditState.Idle, editor.state.value)
         }
 
     @Test

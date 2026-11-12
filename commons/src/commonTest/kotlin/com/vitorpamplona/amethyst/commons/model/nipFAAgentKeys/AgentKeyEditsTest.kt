@@ -22,13 +22,23 @@ package com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
+import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.UnreadableAgentKeysException
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -122,13 +132,61 @@ class AgentKeyEditsTest {
             assertFailsWith<UnreadableAgentKeysException> { rewriteAgentKeys(odd, signer) { emptyList() } }
         }
 
-    @Test
-    fun keysAreReadFromTheWriteRelaysAndTheOutboxOnlyWithoutAList() {
-        val mine = setOf(RelayUrlNormalizer.normalizeOrNull("wss://mine.example")!!)
-        val defaults = setOf(RelayUrlNormalizer.normalizeOrNull("wss://default.example")!!)
-        // A default relay answering "nothing here" must not stand in for the user's own relays.
-        assertEquals(mine, AgentKeyEdits.readRelays(writeRelays = mine, outbox = mine + defaults))
-        // No NIP-65 list yet: where this app publishes is all there is.
-        assertEquals(defaults, AgentKeyEdits.readRelays(writeRelays = emptySet(), outbox = defaults))
+    /** Relays in memory: [answering] reach EOSE with whatever [held] they hold; the rest never answer. */
+    private class Relays(
+        val scope: CoroutineScope,
+        val answering: Set<NormalizedRelayUrl>,
+        val held: Map<NormalizedRelayUrl, List<Event>> = emptyMap(),
+    ) : INostrClient by EmptyNostrClient() {
+        override fun subscribe(
+            subId: String,
+            filters: Map<NormalizedRelayUrl, List<Filter>>,
+            listener: SubscriptionListener?,
+        ) {
+            filters.keys.filter { it in answering }.forEach { relay ->
+                scope.launch {
+                    held[relay].orEmpty().forEach { listener?.onEvent(it, false, relay, null) }
+                    listener?.onEose(relay, null)
+                }
+            }
+        }
     }
+
+    private val write = (1..3).map { RelayUrlNormalizer.normalizeOrNull("wss://write$it.example")!! }.toSet()
+
+    @Test
+    fun aRewriteReadsMoreThanHalfOfTheWriteRelays() =
+        runTest {
+            val earlier = signed(AgentKeyEvent.build(listOf(openRouter), signer, 1_000))
+            val one = write.first()
+            // One of three answered: no quorum, even with a copy on this device.
+            val minority = Relays(backgroundScope, setOf(one), mapOf(one to listOf(earlier)))
+            val failed = assertFailsWith<AgentKeysNoQuorumException> { minority.readAgentKeysForRewrite(write, signer.pubKey, known = earlier) }
+            assertEquals(3, failed.asked)
+            assertEquals(1, failed.answered)
+            // Two of three: read, the newest of what they and this device hold.
+            val majority = Relays(backgroundScope, write.take(2).toSet(), mapOf(one to listOf(earlier)))
+            assertEquals(earlier.id, majority.readAgentKeysForRewrite(write, signer.pubKey, known = null)?.id)
+            // They answered and hold nothing: a first list.
+            assertNull(Relays(backgroundScope, write).readAgentKeysForRewrite(write, signer.pubKey, known = null))
+            // Two of four is not more than half.
+            val four = write + RelayUrlNormalizer.normalizeOrNull("wss://write4.example")!!
+            assertFailsWith<AgentKeysNoQuorumException> { Relays(backgroundScope, write.take(2).toSet()).readAgentKeysForRewrite(four, signer.pubKey, known = null) }
+        }
+
+    @Test
+    fun noWriteRelaysIsNowhereToWrite() =
+        runTest {
+            assertFailsWith<AgentKeysNoWriteRelaysException> { Relays(backgroundScope, write).readAgentKeysForRewrite(emptySet(), signer.pubKey, known = null) }
+        }
+
+    @Test
+    fun theUsersOwnRelayListIsFetchedWhenNotHeld() =
+        runTest {
+            val list = AdvertisedRelayListEvent.create(listOf(AdvertisedRelayInfo(write.first(), AdvertisedRelayType.BOTH)), signer, 1_000)
+            val bootstrap = RelayUrlNormalizer.normalizeOrNull("wss://bootstrap.example")!!
+            val found = Relays(backgroundScope, setOf(bootstrap), mapOf(bootstrap to listOf(list))).fetchOwnRelayList(setOf(bootstrap), signer.pubKey)
+            assertEquals(list.id, found?.id)
+            assertNull(Relays(backgroundScope, setOf(bootstrap)).fetchOwnRelayList(setOf(bootstrap), signer.pubKey))
+        }
 }

@@ -130,11 +130,21 @@ object AgentProviderPresets {
         return AgentKeyTag.isUrlAllowed(key, trimmed)
     }
 
-    /** `sk-or-…a1b2`: enough to tell keys apart, never enough to use one. */
+    /**
+     * `sk-or-v1-…a1b2`: enough to tell keys apart, never enough to use one. At most the
+     * provider's prefix (`sk-`, `sk-or-v1-`, `sk-ant-`: the dash-ended start, up to 9
+     * characters) and the last 4, and never more than a third of the key in all: a short key
+     * shows less, down to nothing but the ellipsis.
+     */
     fun maskKey(key: String): String {
         if (key.isEmpty()) return ""
-        if (key.length <= 10) return "…" + key.takeLast(2)
-        val prefix = key.substringBeforeLast('-', "").let { if (it.isNotEmpty() && it.length <= 8) "$it-" else key.take(3) }
-        return prefix + "…" + key.takeLast(4)
+        val budget = key.length / 3
+        val prefix = key.take(MASK_PREFIX_MAX).substringBeforeLast('-', "").let { if (it.isEmpty()) "" else "$it-" }
+        val tail = minOf(MASK_TAIL, budget)
+        val shownPrefix = prefix.takeIf { it.length + tail <= budget }.orEmpty()
+        return shownPrefix + "…" + key.takeLast(tail)
     }
+
+    private const val MASK_PREFIX_MAX = 10
+    private const val MASK_TAIL = 4
 }

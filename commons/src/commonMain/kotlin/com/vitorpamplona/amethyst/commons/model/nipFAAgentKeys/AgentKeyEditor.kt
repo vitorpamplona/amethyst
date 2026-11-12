@@ -41,8 +41,11 @@ enum class AgentKeyEditKind { SAVE, MAKE_DEFAULT, REMOVE }
 
 /** Why an edit to the AI keys didn't go through, for the screen to put in words. */
 enum class AgentKeyEditFailure {
-    /** None of the write relays answered and nothing is known here: nothing was changed. */
-    RELAYS_UNREACHABLE,
+    /** Not more than half of the write relays answered the read (NIP-FA): nothing was changed. */
+    NO_QUORUM,
+
+    /** The account has no NIP-65 write relays, or no relay list could be found: nothing was changed. */
+    NO_WRITE_RELAYS,
 
     /** The signer refused, or couldn't sign or decrypt. Nothing was changed. */
     SIGNER_REFUSED,
@@ -84,6 +87,9 @@ sealed interface AgentKeyEditState {
     ) : AgentKeyEditState
 
     val isBusy: Boolean get() = this is Busy
+
+    /** Whether an edit of [kind] is on its way: what a control for that kind shows. */
+    fun isBusyWith(kind: AgentKeyEditKind): Boolean = this is Busy && this.kind == kind
 }
 
 /**
@@ -103,6 +109,38 @@ class AgentKeyEditor(
 ) {
     private val _state = MutableStateFlow<AgentKeyEditState>(AgentKeyEditState.Idle)
     val state: StateFlow<AgentKeyEditState> = _state.asStateFlow()
+
+    /** The last edit that failed, to try again; the key stays here, never in [state]. */
+    private var failed: Pair<AgentKeyEditKind, AgentKeyTag>? = null
+
+    /** How many screens show [state]: an edit that ends with none leaves no Done or Failed for the next one. */
+    private val watching = MutableStateFlow(0)
+
+    /**
+     * A screen showing [state] calls this, and the returned call when it goes: then how the last
+     * edit ended is forgotten, and an edit still on its way ends quietly.
+     */
+    fun attach(): () -> Unit {
+        watching.update { it + 1 }
+        var released = false
+        return {
+            if (!released) {
+                released = true
+                watching.update { (it - 1).coerceAtLeast(0) }
+                clearResult()
+            }
+        }
+    }
+
+    /**
+     * The failed edit, again: the same change from the newest read (a list this device already
+     * holds is sent again as it is). Null when nothing failed, or an edit is on its way.
+     */
+    fun retry(): Deferred<AgentKeyEditState>? {
+        if (_state.value !is AgentKeyEditState.Failed) return null
+        val (kind, key) = failed ?: return null
+        return submit(kind, key)
+    }
 
     /** Starts [kind] for [key]; null when another edit is still on its way (nothing started). */
     fun submit(
@@ -162,8 +200,10 @@ class AgentKeyEditor(
             } catch (e: CancellationException) {
                 _state.value = AgentKeyEditState.Idle
                 throw e
-            } catch (e: AgentKeysUnreadableException) {
-                AgentKeyEditState.Failed(kind, key.url, AgentKeyEditFailure.RELAYS_UNREACHABLE)
+            } catch (e: AgentKeysNoQuorumException) {
+                AgentKeyEditState.Failed(kind, key.url, AgentKeyEditFailure.NO_QUORUM)
+            } catch (e: AgentKeysNoWriteRelaysException) {
+                AgentKeyEditState.Failed(kind, key.url, AgentKeyEditFailure.NO_WRITE_RELAYS)
             } catch (e: SignerExceptions) {
                 Log.w(TAG, "The signer didn't save the AI keys", e)
                 AgentKeyEditState.Failed(kind, key.url, AgentKeyEditFailure.SIGNER_REFUSED)
@@ -173,7 +213,9 @@ class AgentKeyEditor(
                 Log.w(TAG, "Could not save the AI keys", e)
                 AgentKeyEditState.Failed(kind, key.url, AgentKeyEditFailure.FAILED)
             }
-        _state.value = ended
+        failed = if (ended is AgentKeyEditState.Failed) kind to key else null
+        // Nobody watching: the next screen starts clean, not on an edit it never saw.
+        _state.value = if (watching.value > 0) ended else AgentKeyEditState.Idle
         return ended
     }
 

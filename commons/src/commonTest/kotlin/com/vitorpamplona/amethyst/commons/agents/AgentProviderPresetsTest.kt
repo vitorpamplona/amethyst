@@ -86,10 +86,26 @@ class AgentProviderPresetsTest {
 
     @Test
     fun maskingNeverShowsTheKey() {
-        assertEquals("sk-or-v1-…a1b2", AgentProviderPresets.maskKey("sk-or-v1-0123456789abcdefa1b2"))
-        assertEquals("sk-…cdef", AgentProviderPresets.maskKey("sk-0123456789abcdef"))
-        assertEquals("AIz…wxyz", AgentProviderPresets.maskKey("AIzaSyD0123456789abcdefwxyz"))
+        // A real OpenRouter key: its prefix and the last 4.
+        val openRouter = "sk-or-v1-" + "0123456789abcdef".repeat(4) + "a1b2"
+        assertEquals("sk-or-v1-…a1b2", AgentProviderPresets.maskKey(openRouter))
+        assertEquals("sk-ant-…wxyz", AgentProviderPresets.maskKey("sk-ant-api03-0123456789abcdef0123456789abcdefwxyz"))
+        // Shorter keys show less: never more than a third of the key.
+        assertEquals("…a1b2", AgentProviderPresets.maskKey("sk-or-v1-0123456789abcdefa1b2"))
+        assertEquals("…cdef", AgentProviderPresets.maskKey("sk-0123456789abcdef"))
+        // No prefix to show: nothing of the secret's start.
+        assertEquals("…wxyz", AgentProviderPresets.maskKey("AIzaSyD0123456789abcdefwxyz"))
         assertEquals("…ab", AgentProviderPresets.maskKey("short-ab"))
+        assertEquals("…", AgentProviderPresets.maskKey("ab"))
         assertEquals("", AgentProviderPresets.maskKey(""))
+    }
+
+    @Test
+    fun aMaskNeverShowsMoreThanAThird() {
+        for (length in 1..80) {
+            val key = "sk-or-v1-" + "x".repeat(length)
+            val shown = AgentProviderPresets.maskKey(key).replace("…", "")
+            assertTrue(shown.length <= key.length / 3, "$length: ${shown.length} of ${key.length}")
+        }
     }
 }

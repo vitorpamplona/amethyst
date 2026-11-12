@@ -79,6 +79,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -133,6 +136,7 @@ import com.vitorpamplona.amethyst.commons.resources.agent_keys_remove_body
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_remove_title
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_runs_locally
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_save_failed
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_save_no_write_relays
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_save_not_accepted
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_save_signer
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_save_unreachable
@@ -156,6 +160,7 @@ import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.resources.hide_password
 import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.resources.retry
 import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.resources.show_password
 import com.vitorpamplona.amethyst.commons.ui.components.PillGood
@@ -187,7 +192,10 @@ fun AgentKeysSettingsScreen(
     val editor = accountViewModel.account.agentKeyEditor
     // The save runs on the account, so it finishes after the screen goes; only its outcome is forgotten.
     val edit by editor.state.collectAsStateWithLifecycle()
-    DisposableEffect(editor) { onDispose { editor.clearResult() } }
+    DisposableEffect(editor) {
+        val release = editor.attach()
+        onDispose { release() }
+    }
     var adding by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -202,7 +210,7 @@ fun AgentKeysSettingsScreen(
                 .animateContentSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            AgentHero(using = usingNow(keys, edit), edit = edit)
+            AgentHero(using = usingNow(keys, edit), edit = edit, onRetry = { editor.retry() })
 
             if (keys.isNotEmpty()) {
                 SavedKeys(
@@ -222,7 +230,8 @@ fun AgentKeysSettingsScreen(
                 onConnectOpenRouter = { donePage, openBrowser -> accountViewModel.httpClientBuilder.connectOpenRouter(donePage, openBrowser = openBrowser) },
                 onSave = { key -> editor.submit(AgentKeyEditKind.SAVE, key) },
                 onSaved = { adding = false },
-                saving = edit.isBusy,
+                saving = edit.isBusyWith(AgentKeyEditKind.SAVE),
+                busy = edit.isBusy,
                 compactStart = keys.isEmpty() && !adding,
             )
             Spacer(Modifier.height(24.dp))
@@ -248,6 +257,7 @@ private fun usingNow(
 private fun AgentHero(
     using: String?,
     edit: AgentKeyEditState,
+    onRetry: () -> Unit,
 ) {
     var showTip by remember { mutableStateOf(false) }
     val scheme = MaterialTheme.colorScheme
@@ -316,10 +326,15 @@ private fun AgentHero(
             }
 
             (edit as? AgentKeyEditState.Failed)?.let { failed ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Read out when it appears: the edit the reader started didn't go through.
+                Row(Modifier.semantics { liveRegion = LiveRegionMode.Polite }, verticalAlignment = Alignment.CenterVertically) {
                     Icon(MaterialSymbols.Error, contentDescription = null, tint = scheme.error, modifier = Modifier.size(18.dp), filled = true)
                     Spacer(Modifier.width(8.dp))
-                    Text(editFailureText(failed.failure), style = MaterialTheme.typography.bodyMedium, color = scheme.error)
+                    Text(editFailureText(failed.failure), style = MaterialTheme.typography.bodyMedium, color = scheme.error, modifier = Modifier.weight(1f))
+                    // Any failed edit, not just a save: the same change again, from a fresh read.
+                    if (failed.failure != AgentKeyEditFailure.UNREADABLE && failed.failure != AgentKeyEditFailure.NO_WRITE_RELAYS) {
+                        TextButton(onClick = onRetry) { Text(stringRes(Res.string.retry)) }
+                    }
                 }
             }
 
@@ -334,7 +349,8 @@ private fun AgentHero(
 @Composable
 private fun editFailureText(failure: AgentKeyEditFailure): String =
     when (failure) {
-        AgentKeyEditFailure.RELAYS_UNREACHABLE -> stringRes(Res.string.agent_keys_save_unreachable)
+        AgentKeyEditFailure.NO_QUORUM -> stringRes(Res.string.agent_keys_save_unreachable)
+        AgentKeyEditFailure.NO_WRITE_RELAYS -> stringRes(Res.string.agent_keys_save_no_write_relays)
         AgentKeyEditFailure.SIGNER_REFUSED -> stringRes(Res.string.agent_keys_save_signer)
         AgentKeyEditFailure.NOT_ACCEPTED -> stringRes(Res.string.agent_keys_save_not_accepted)
         AgentKeyEditFailure.UNREADABLE -> stringRes(Res.string.agent_keys_save_unreadable)
@@ -467,7 +483,10 @@ private fun AddAgentKey(
     onConnectOpenRouter: suspend (donePageText: String, openBrowser: (String) -> Unit) -> OpenRouterConnectResult,
     onSave: (AgentKeyTag) -> Deferred<AgentKeyEditState>?,
     onSaved: () -> Unit,
+    /** A save is on its way: the button says "Saving…". */
     saving: Boolean,
+    /** Any edit is on its way (one at a time): the button waits. */
+    busy: Boolean,
     compactStart: Boolean,
 ) {
     val scope = rememberCoroutineScope()
@@ -493,7 +512,7 @@ private fun AddAgentKey(
     // key to every half-typed host on the way (https://api.ex, https://api.exa, …).
     val isCustom = selected == AgentProviderPresets.CUSTOM
     var testNow by remember { mutableStateOf(false) }
-    val canSave = canCheck && !testing && result != null && result !is AgentKeyProbeResult.Rejected && !saving
+    val canSave = canCheck && !testing && result != null && result !is AgentKeyProbeResult.Rejected && !busy
 
     fun select(next: AgentProviderPreset) {
         preset = next
