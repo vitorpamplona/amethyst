@@ -648,7 +648,8 @@ class AndroidMediaUploader(
             val compressionRequested = compressionQuality != CompressorQuality.UNCOMPRESSED
             val compressionApplied = compressionRequested && compressed.uri != originalUri
 
-            // A compression fallback (timeout, not smaller, encoder failure) is the original: stripped.
+            // A fallback to the original (timeout, not smaller, encoder failure) is not compressionApplied,
+            // so it reaches the stripper below.
             if (!StripDecision.shouldStrip(stripMetadata, isVideo, compressionApplied)) return compressed.uri
 
             // AvifMetadataNotVerifiableException is allowed to propagate so the caller
