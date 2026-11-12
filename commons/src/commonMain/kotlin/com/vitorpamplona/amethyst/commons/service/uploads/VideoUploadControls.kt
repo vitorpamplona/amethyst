@@ -39,9 +39,10 @@ class VideoUploadControls(
     val needsFfmpeg: Boolean = hasVideo && support == VideoCompressionSupport.NeedsFfmpeg
 
     /**
-     * The video will really be compressed, which strips its metadata: the H.265 switch applies and the
-     * strip toggle is hidden. Hidden, not moot: the chosen value must still reach the uploader, because
-     * an encode that fails or comes out larger uploads the original, which only the stripper cleans.
+     * The video will really be re-encoded, which strips its metadata: the H.265 switch applies. A dialog
+     * may hide the strip toggle then, but the toggle is not moot: its value must still reach the
+     * uploader, because an encode that fails or comes out larger uploads the original, which only the
+     * stripper cleans.
      */
     val videoWillBeCompressed: Boolean = compressesVideo && sliderPosition != CompressorQuality.uncompressedSliderPosition
 
