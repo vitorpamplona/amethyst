@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ScheduleEdit
 import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ScheduledTaskEdits
 import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ScheduledTaskRelays
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverSchedule
 import com.vitorpamplona.quartz.nipFBScheduledTasks.CronExpression
@@ -110,20 +111,28 @@ object ScheduleCommands {
             )
     }
 
+    /** What the last send reported: where it went and who refused it, for the `--json` output. */
+    private class Sent {
+        var ack: Map<NormalizedRelayUrl, PublishResult> = emptyMap()
+        var event: ScheduledTaskEvent? = null
+
+        fun fields(): Map<String, Any?> = if (ack.isEmpty()) emptyMap() else RawEventSupport.ackFields(ack)
+    }
+
     /** Runs [body] with this account's write relays and the editor for task [dTag] over them. */
     private suspend fun withTask(
         dataDir: DataDir,
         dTag: String,
         write: Boolean,
-        body: suspend (ScheduledTaskRelays, Set<NormalizedRelayUrl>, () -> ScheduledTaskEvent?) -> Int,
+        body: suspend (ScheduledTaskRelays, Set<NormalizedRelayUrl>, Sent) -> Int,
     ): Int {
         Context.open(dataDir).use { ctx ->
             if (write && !ctx.signer.isWriteable()) return Output.error("read_only", "this account can't sign (npub-only login)")
             ctx.prepare()
-            val relays = ctx.nip65WriteRelays()
-            if (relays.isEmpty()) return Output.error("no_relays", "no NIP-65 write relays; add one with `amy relay outbox add URL`")
+            val relays = ctx.ownWriteRelays()
+            if (relays.isEmpty()) return Output.error("no_relays", "no NIP-65 write relays (none found on this machine or the bootstrap relays); add one with `amy relay outbox add URL`")
             val known = ctx.store.query<Event>(ScheduledTaskEvent.filter(ctx.identity.pubKeyHex, dTag)).filterIsInstance<ScheduledTaskEvent>()
-            var signed: ScheduledTaskEvent? = null
+            val sent = Sent()
             val editor =
                 ScheduledTaskRelays(
                     signer = ctx.signer,
@@ -132,12 +141,17 @@ object ScheduleCommands {
                     writeRelays = { relays },
                     known = { ScheduledTaskClaims.winner(known) },
                     onRead = { event, _ -> ctx.verifyAndStore(event) },
-                    onSigned = { event ->
-                        ctx.verifyAndStore(event)
-                        if (event is ScheduledTaskEvent) signed = event
+                    onSigned = { event -> if (event is ScheduledTaskEvent) sent.event = event },
+                    // amy's own publish: it stores the event, answers NIP-42 challenges and says where it went.
+                    sender = { event, to ->
+                        ctx
+                            .publish(event, to)
+                            .also { sent.ack = it }
+                            .filterValues { it.accepted }
+                            .keys
                     },
                 )
-            return body(editor, relays) { signed }
+            return body(editor, relays, sent)
         }
     }
 
@@ -153,8 +167,8 @@ object ScheduleCommands {
         Args(rest).rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val relays = ctx.nip65WriteRelays()
-            if (relays.isEmpty()) return Output.error("no_relays", "no NIP-65 write relays; add one with `amy relay outbox add URL`")
+            val relays = ctx.ownWriteRelays()
+            if (relays.isEmpty()) return Output.error("no_relays", "no NIP-65 write relays (none found on this machine or the bootstrap relays); add one with `amy relay outbox add URL`")
             val listing = ScheduledTaskRelays.readAll(ctx.client, ctx.signer, relays, onRead = { event, _ -> ctx.verifyAndStore(event) })
             if (!listing.quorum) System.err.println("[amy] warning: not more than half of your write relays answered; the list may be stale")
             val now = TimeUtils.now()
@@ -182,7 +196,8 @@ object ScheduleCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val args = Args(rest)
+        // `--paused` takes no value: `set --paused weekly --cron …` edits `weekly`.
+        val args = Args(rest, booleanFlags = setOf("paused"))
         val dTag = args.positionalOrNull(0) ?: ObserverSchedule.D_TAG
         val cronText = args.requireFlag("cron")
         val zone = args.flag("tz")
@@ -192,7 +207,7 @@ object ScheduleCommands {
         val cron = CronExpression.parse(cronText) ?: return Output.error("bad_args", "not a NIP-FB cron (minute hour day-of-month month day-of-week): $cronText")
         if (zone != null && FrontPageClock.cronZone(zone) == null) return Output.error("bad_args", "not an IANA time zone name: $zone")
         val localZone = FrontPageClock.localZone()
-        return withTask(dataDir, dTag, write = true) { editor, relays, signed ->
+        return withTask(dataDir, dTag, write = true) { editor, relays, sent ->
             val now = TimeUtils.now()
             var noZone = false
             var seen: ScheduledTask? = null
@@ -208,7 +223,7 @@ object ScheduleCommands {
                     }
                 }
             if (noZone) return@withTask Output.error("bad_args", "this machine's time zone has no IANA name; pass --tz ZONE")
-            report(dTag, outcome, signed(), relays, now, seen)
+            report(dTag, outcome, sent, relays, now, seen)
         }
     }
 
@@ -220,7 +235,7 @@ object ScheduleCommands {
         val args = Args(rest)
         val dTag = args.positionalOrNull(0) ?: ObserverSchedule.D_TAG
         args.rejectUnknown()
-        return withTask(dataDir, dTag, write = true) { editor, relays, signed ->
+        return withTask(dataDir, dTag, write = true) { editor, relays, sent ->
             val now = TimeUtils.now()
             var missing = false
             var current: ScheduledTask? = null
@@ -231,21 +246,21 @@ object ScheduleCommands {
                     task?.withEnabled(on, now)
                 }
             if (missing && outcome == ScheduleEdit.Unchanged) return@withTask Output.error("not_found", "no task $dTag")
-            report(dTag, outcome, signed(), relays, now, current)
+            report(dTag, outcome, sent, relays, now, current)
         }
     }
 
     private fun report(
         dTag: String,
         outcome: ScheduleEdit,
-        signed: ScheduledTaskEvent?,
+        sent: Sent,
         relays: Set<NormalizedRelayUrl>,
         now: Long,
         current: ScheduledTask? = null,
     ): Int =
         when (outcome) {
             is ScheduleEdit.Saved -> {
-                Output.emit(row(dTag, signed, outcome.task, now) + ("changed" to true))
+                Output.emit(row(dTag, sent.event, outcome.task, now) + ("changed" to true) + sent.fields())
                 0
             }
             ScheduleEdit.Unchanged -> {
@@ -253,7 +268,7 @@ object ScheduleCommands {
                 0
             }
             ScheduleEdit.Unreachable -> noQuorum(relays, "answered; nothing was written")
-            ScheduleEdit.NotAccepted -> noQuorum(relays, "accepted the edit; other devices may not see it")
+            ScheduleEdit.NotAccepted -> Output.error("no_quorum", "not more than half of your ${relays.size} write relay(s) accepted the edit; other devices may not see it", sent.fields())
             ScheduleEdit.Unreadable -> Output.error("decrypt_failed", "task $dTag holds content this signer can't read; not overwriting it")
             ScheduleEdit.CannotSign -> Output.error("signer_error", "the signer refused or failed")
             ScheduleEdit.NoWriteRelays -> Output.error("no_relays", "no NIP-65 write relays")
@@ -267,10 +282,10 @@ object ScheduleCommands {
         val args = Args(rest)
         val dTag = args.positionalOrNull(0) ?: ObserverSchedule.D_TAG
         args.rejectUnknown()
-        return withTask(dataDir, dTag, write = true) { editor, relays, _ ->
+        return withTask(dataDir, dTag, write = true) { editor, relays, sent ->
             when (val outcome = editor.delete()) {
                 is ScheduleDeletion.Deleted -> {
-                    Output.emit(mapOf("d" to dTag, "deleted" to true, "event_id" to outcome.deletion.id, "target" to outcome.target.id, "address" to outcome.target.address().toValue()))
+                    Output.emit(mapOf("d" to dTag, "deleted" to true, "event_id" to outcome.deletion.id, "target" to outcome.target.id, "address" to outcome.target.address().toValue()) + sent.fields())
                     0
                 }
                 ScheduleDeletion.NotFound -> Output.error("not_found", "no task $dTag")

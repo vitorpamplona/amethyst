@@ -521,6 +521,21 @@ class Context(
     suspend fun nip65WriteRelays(): Set<NormalizedRelayUrl> = relaysOf(identity.pubKeyHex)?.allWriteRelaysNorm()?.toSet().orEmpty()
 
     /**
+     * [nip65WriteRelays], after looking for this account's own kind:10002 through
+     * [bootstrapRelays] when none is stored here: on a fresh machine "no list" and "not
+     * fetched yet" look the same, and a NIP-FA or NIP-FB edit must read the user's real write
+     * relays. Only the list is looked for there; the edit itself never uses those relays.
+     */
+    suspend fun ownWriteRelays(): Set<NormalizedRelayUrl> {
+        val me = identity.pubKeyHex
+        if (relaysOf(me) == null) {
+            val filter = Filter(authors = listOf(me), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1)
+            drain(bootstrapRelays().associateWith { listOf(filter) })
+        }
+        return nip65WriteRelays()
+    }
+
+    /**
      * NIP-65 *read* (inbox) relays for this account — "where others reach me".
      * Mirrors the Android app's NIP-65 inbox set (the `notificationRelays`
      * flow). Used as the default `relay` tags advertised in a kind:10019
@@ -589,13 +604,24 @@ class Context(
      * relays include the NIP-65 read set: replies and mentions of us land
      * there, so a bare event id someone hands us is often only there.
      */
-    suspend fun bootstrapRelays(): Set<NormalizedRelayUrl> =
-        buildSet {
+    suspend fun bootstrapRelays(): Set<NormalizedRelayUrl> {
+        // `AMY_BOOTSTRAP_RELAYS=wss://a,wss://b` replaces the whole seed set: an offline harness
+        // (or an air-gapped setup) never reaches the public defaults through it.
+        bootstrapOverride()?.let { return it }
+        return buildSet {
             addAll(anyRelays())
             addAll(nip65ReadRelays())
             addAll(DefaultNIP65RelaySet)
             addAll(DefaultDMRelayList)
         }
+    }
+
+    private fun bootstrapOverride(): Set<NormalizedRelayUrl>? =
+        System
+            .getenv(BOOTSTRAP_ENV)
+            ?.split(',')
+            ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
+            ?.toSet()
 
     /**
      * Publish an event to the given relays and wait for OK confirmations.
@@ -1030,6 +1056,9 @@ class Context(
     }
 
     companion object {
+        /** Replaces [bootstrapRelays]' seed set, comma-separated. */
+        const val BOOTSTRAP_ENV = "AMY_BOOTSTRAP_RELAYS"
+
         /** How often a bunker account asks its signer `switch_relays`: once a day. */
         private const val SWITCH_RELAYS_INTERVAL_SECONDS = 24 * 60 * 60L
 

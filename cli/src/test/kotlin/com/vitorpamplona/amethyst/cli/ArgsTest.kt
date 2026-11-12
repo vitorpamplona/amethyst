@@ -45,6 +45,31 @@ class ArgsTest {
     }
 
     @Test
+    fun aKnownBooleanNeverSwallowsThePositionalAfterIt() {
+        // `schedule set --paused weekly --cron …` edits `weekly`, not the default task.
+        val args = Args(arrayOf("--paused", "weekly", "--cron", "0 10 * * 1"), booleanFlags = setOf("paused"))
+        assertTrue(args.bool("paused"))
+        assertEquals(listOf("weekly"), args.positional)
+        assertEquals("0 10 * * 1", args.flag("cron"))
+    }
+
+    @Test
+    fun aKnownBooleanGivenAValueIsBadArgsWithoutEchoingIt() {
+        val args = Args(arrayOf("--key-stdin=sk-secret"), booleanFlags = setOf("key-stdin"))
+        val failure = assertFailsWith<IllegalArgumentException> { args.bool("key-stdin") }
+        assertFalse(failure.message!!.contains("sk-secret"))
+    }
+
+    @Test
+    fun aKnownValueFlagGivenBareIsBadArgs() {
+        // `agent set URL --key-file` with no path must not fall back to "no key".
+        val args = Args(arrayOf("https://x.example/v1", "--key-file"), valueFlags = setOf("key-file"))
+        assertFailsWith<IllegalArgumentException> { args.flag("key-file") }
+        // Unknown to the command, the old reading stays: a bare flag is a boolean.
+        assertEquals(null, Args(arrayOf("--key-file")).flag("key-file"))
+    }
+
+    @Test
     fun doubleDashEndsFlagParsing() {
         val args = Args(arrayOf("--relay", "wss://a", "--", "--not-a-flag", "-x"))
         assertEquals("wss://a", args.flag("relay"))

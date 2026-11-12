@@ -33,6 +33,14 @@ package com.vitorpamplona.amethyst.cli
  */
 class Args(
     argv: Array<String>,
+    /**
+     * Flags this command knows take no value: one never swallows the token after it, so
+     * `--paused weekly` is the flag and then the positional `weekly`, and `--paused=x` is a
+     * `bad_args` when read ([bool]).
+     */
+    private val booleanFlags: Set<String> = emptySet(),
+    /** Flags this command knows need a value: given bare (`--key-file` and nothing after), [flag] fails. */
+    private val valueFlags: Set<String> = emptySet(),
 ) {
     val flags: Map<String, String>
     val booleans: Set<String>
@@ -60,7 +68,7 @@ class Args(
                 } else {
                     val key = a.substring(2)
                     val next = argv.getOrNull(i + 1)
-                    if (next == null || next.startsWith("--")) {
+                    if (next == null || next.startsWith("--") || key in booleanFlags) {
                         b.add(key)
                         i++
                     } else {
@@ -86,6 +94,8 @@ class Args(
         default: String? = null,
     ): String? {
         consumed.add(name)
+        // Never echoes what followed: it may be a secret in the wrong place.
+        if (name in valueFlags && name in booleans) throw IllegalArgumentException("--$name needs a value")
         return flags[name] ?: default
     }
 
@@ -129,6 +139,8 @@ class Args(
 
     fun bool(name: String): Boolean {
         consumed.add(name)
+        // `--key-stdin=x`: a flag that takes no value was given one. Not echoed (it may be a secret).
+        if (name in booleanFlags && name in flags) throw IllegalArgumentException("--$name takes no value")
         return name in booleans
     }
 

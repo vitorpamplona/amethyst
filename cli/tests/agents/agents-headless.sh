@@ -50,6 +50,8 @@ while [[ $# -gt 0 ]]; do
 done
 RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
 STUB_URL="http://127.0.0.1:$STUB_PORT/v1"
+# Where amy looks for an account's own relay list when it has none stored: the local relay only.
+export AMY_BOOTSTRAP_RELAYS="$RELAY_URL"
 
 # A fresh world each run: the relay's store is in memory, and so is nothing else.
 rm -rf "$STATE_DIR"
@@ -90,6 +92,14 @@ run_as() {
   printf '$ amy %s  (exit %s)\n%s\n%s\n' "$(shown "$@")" "$RC" "$OUT" "$ERR" >>"$LOG_FILE"
 }
 run() { run_as A "$@"; }
+
+# Same, with --verbose: its progress logs land in $ALL_OUT for the key scan too.
+run_verbose() {
+  OUT=$(HOME="$STATE_DIR" TZ=Europe/Lisbon "$AMY_BIN" --account A --secret-backend plaintext --verbose --json "$@" 2>"$ERR_FILE" </dev/null); RC=$?
+  ERR=$(cat "$ERR_FILE")
+  printf '%s\n%s\n' "$OUT" "$ERR" >>"$ALL_OUT"
+  printf '$ amy --verbose %s  (exit %s)\n%s\n%s\n' "$(shown "$@")" "$RC" "$OUT" "$ERR" >>"$LOG_FILE"
+}
 
 # Same, with stdin from a file.
 run_stdin() {
@@ -161,7 +171,7 @@ run agent set "$STUB_URL" --key-file "$STATE_DIR/good.key"
 check A3.set.rc "$RC" 0
 check A3.set.changed "$(out .changed)" true
 check A3.set.default "$(out '.keys[0].default')" true
-check A3.set.masked "$(out '.keys[0].key_masked')" "sk-…${GOOD_KEY: -4}"
+check A3.set.masked "$(out '.keys[0].key_masked')" "sk-stub-…${GOOD_KEY: -4}" "its prefix and the last 4, a third of the key at most"
 check A3.set.published "$(out '.published_to | length')" 1
 
 run_stdin "$STATE_DIR/or.key" agent set https://openrouter.ai/api/v1 --key-stdin
@@ -169,7 +179,7 @@ check A4.stdin.rc "$RC" 0
 check A4.stdin.order "$(out '[.keys[].provider] | join(",")')" "127.0.0.1:$STUB_PORT,OpenRouter" "a new key goes last"
 check A4.stdin.masked "$(out '.keys[1].key_masked')" "sk-or-v1-…${OR_KEY: -4}"
 
-run agent set http://localhost:11434/v1
+run agent set http://localhost:11434/v1 --no-key
 check A5.nokey.rc "$RC" 0
 check A5.nokey.has_key "$(out '.keys[2].has_key')" false
 check A5.nokey.local "$(out '.keys[2].local')" true
@@ -181,13 +191,40 @@ check A6.https.code "$(err .error)" bad_args
 run agent set https://openrouter.ai/api/v1 "$OR_KEY"
 check A6.positional_key.rc "$RC" 2
 run agent set https://openrouter.ai/api/v1
+check A6.no_key_flag.rc "$RC" 2 "an empty key only with --no-key"
+run agent set https://openrouter.ai/api/v1 --no-key
 check A6.needs_key.rc "$RC" 2
 run agent set "$STUB_URL" --key-file "$STATE_DIR/good.key" --key-stdin
 check A6.both.rc "$RC" 2
 run agent set "$STUB_URL" --key-file "$STATE_DIR/missing.key"
 check A6.unreadable_file.rc "$RC" 2
+# A value-less --key-file must never fall back to "no key" and wipe the saved one.
+run agent set "$STUB_URL" --key-file
+check A6.bare_key_file.rc "$RC" 2
+check A6.bare_key_file.code "$(err .error)" bad_args
+run agent set "$STUB_URL" --key-stdin=x
+check A6.key_stdin_value.rc "$RC" 2
+run agent set --key-stdin "$STUB_URL" extra
+check A6.key_stdin_then_value.rc "$RC" 2
+: >"$STATE_DIR/empty.key"
+run agent set "$STUB_URL" --key-file "$STATE_DIR/empty.key"
+check A6.empty_key_file.rc "$RC" 2
+# A key typed where a URL or a path goes is never printed back (the K scan checks every byte).
+run agent set "$OR_KEY" --key-file "$STATE_DIR/good.key"
+check A6.key_as_url.rc "$RC" 2
+run agent set "http://$OR_KEY@runner.example/v1" --key-file "$STATE_DIR/good.key"
+check A6.key_in_userinfo.rc "$RC" 2
+run agent set "$STUB_URL" --key-file "$OR_KEY"
+check A6.key_as_path.rc "$RC" 2
+run agent default "$OR_KEY"
+check A6.key_as_default.code "$(err .error)" not_found
+run agent remove "$OR_KEY"
+check A6.key_as_remove.code "$(err .error)" not_found
+run agent test "$OR_KEY"
+check A6.key_as_test.code "$(err .error)" not_found
 run agent show
 check A6.unchanged "$(out .count)" 3
+check A6.key_kept "$(out '.keys[0].key_masked')" "sk-stub-…${GOOD_KEY: -4}"
 
 run agent test
 check A7.ok.rc "$RC" 0
@@ -203,7 +240,7 @@ check A8.rejected.code "$(err .error)" key_rejected
 check A8.rejected.result "$(err .result)" rejected
 check A8.rejected.status "$(err .status)" 401
 
-run agent set http://127.0.0.1:1/v1
+run agent set http://127.0.0.1:1/v1 --no-key
 run agent test http://127.0.0.1:1/v1
 check A9.unreachable.rc "$RC" 1
 check A9.unreachable.code "$(err .error)" provider_unreachable
@@ -225,8 +262,16 @@ check A11.remove_again.rc "$RC" 1
 check A11.remove_again.code "$(err .error)" not_found
 
 run agent show
-check A12.show.json "$(out '[.keys[0] | keys[]] | join(",")')" "default,has_key,key_masked,local,provider,url"
+check A12.show.json "$(out '[.keys[0] | keys[]] | join(",")')" "default,has_key,key_masked,local,provider,url,usable"
 check A12.show.order "$(out '[.keys[].provider] | join(",")')" "OpenRouter,127.0.0.1:$STUB_PORT,Ollama"
+
+# The same runs with --verbose: their progress logs are scanned for the key too (K1).
+run_verbose agent show
+check A12.verbose.rc "$RC" 0
+run_verbose agent test "$STUB_URL"
+run_verbose agent default "$STUB_URL"
+check A12.verbose_default.rc "$RC" 0
+run_verbose agent default https://openrouter.ai/api/v1
 
 # The kind 12000 the relay holds is ciphertext.
 HOME="$STATE_DIR" "$AMY_BIN" --account A --secret-backend plaintext --json fetch --kind 12000 --author "$A_HEX" --relay "$RELAY_URL" >>"$ALL_OUT" 2>&1
@@ -243,6 +288,38 @@ run agent frobnicate
 check A15.unknown_verb.rc "$RC" 2
 run agent
 check A15.no_verb.rc "$RC" 2
+
+# Another client wrote a key over plain http to another machine, first. NIP-FA's readers ignore
+# it: amy lists it, never as the default, and never sends it.
+CLEAR_KEY="sk-cleartext-$(rand)"
+KEYS_JSON='[["key","'"$CLEAR_KEY"'","http://evil.example/v1"],["key","","http://localhost:11434/v1"]]'
+CT=$(HOME="$STATE_DIR" "$AMY_BIN" --account A --secret-backend plaintext --json encrypt --to "$A_HEX" "$KEYS_JSON" 2>>"$LOG_FILE" | jq -r .ciphertext)
+EV=$(HOME="$STATE_DIR" "$AMY_BIN" --account A --secret-backend plaintext --json event --kind 12000 --content "$CT" --created-at $(( $(date +%s) + 5 )) 2>>"$LOG_FILE" | jq -c .event)
+printf '%s\n' "$EV" | HOME="$STATE_DIR" "$AMY_BIN" --account A --secret-backend plaintext --json publish --file - --relay "$RELAY_URL" >>"$LOG_FILE" 2>&1
+run agent show
+check A16.ignored.listed "$(out .count)" 2
+check A16.ignored.not_default "$(out '.keys[0].default')" false
+check A16.ignored.usable "$(out '.keys[0].usable')" false
+check A16.ignored.default_is_local "$(out '.keys[1].default')" true
+run agent test
+check A16.test_skips_it.provider "$(err .provider)" Ollama "the default is the local runner (not running here), never the cleartext key"
+# The rewrite keeps the tag as read.
+run agent remove http://localhost:11434/v1
+check A16.kept_on_rewrite "$(out '.keys[0].url')" http://evil.example/v1
+run agent clear
+
+# More than half of the write relays must answer the read: with a dead one beside the local
+# relay, 1 of 2 isn't enough, and amy says so at once (not a timeout).
+HOME="$STATE_DIR" "$AMY_BIN" --account A --secret-backend plaintext --json relay outbox add ws://127.0.0.1:1 >>"$LOG_FILE" 2>&1
+STARTED=$(date +%s)
+run agent set "$STUB_URL" --key-file "$STATE_DIR/good.key"
+check A17.no_quorum.rc "$RC" 1
+check A17.no_quorum.code "$(err .error)" no_quorum
+check A17.no_quorum.answered "$(err .answered)" 1
+check A17.no_quorum.fast "$(( $(date +%s) - STARTED < 20 ))" 1 "an error, not the 23 s timeout"
+HOME="$STATE_DIR" "$AMY_BIN" --account A --secret-backend plaintext --json relay outbox remove ws://127.0.0.1:1 >>"$LOG_FILE" 2>&1
+run agent show
+check A17.nothing_written "$(out .count)" 0
 
 # ============================================================================================
 banner "S — amy schedule"
@@ -329,15 +406,71 @@ check S12.no_relays.code "$(err .error)" no_relays
 run schedule frobnicate
 check S12.unknown_verb.rc "$RC" 2
 
+# --paused on a task that already runs pauses it.
+run schedule set --cron "0 9 * * *" --paused
+check S14.paused_existing.rc "$RC" 0
+check S14.paused_existing.paused "$(out .paused)" true
+check S14.paused_existing.published "$(out '.published_to | length')" 1
+run schedule resume
+# A boolean before the positional doesn't swallow it: this edits `weekly`, not `observer`.
+run schedule set --paused weekly --cron "0 10 * * 1" --tz UTC
+check S15.flag_first.d "$(out .d)" weekly
+check S15.flag_first.paused "$(out .paused)" true
+run schedule show observer
+check S15.observer_untouched.cron "$(out .cron)" "0 9 * * *"
+check S15.observer_untouched.paused "$(out .paused)" false
+run schedule set weekly --cron "0 10 * * 1" --paused=yes
+check S15.paused_value.rc "$RC" 2
+
+# Deleted and set again in the same second: the new task is newer than the deletion (NIP-09).
+run schedule delete weekly
+check S16.deleted.rc "$RC" 0
+run schedule set weekly --cron "0 11 * * 1" --tz UTC
+check S16.again.rc "$RC" 0
+run schedule show weekly
+check S16.again.shown "$(out .cron)" "0 11 * * 1"
+run schedule list
+check S16.again.listed "$(out '[.tasks[].d] | join(",")')" "observer,weekly"
+
 # The default output is text, not JSON.
 TEXT=$(HOME="$STATE_DIR" "$AMY_BIN" --account A --secret-backend plaintext schedule show 2>>"$ALL_OUT")
 printf '%s\n' "$TEXT" >>"$ALL_OUT"
 check S13.text "$([[ "$TEXT" == *"cron"* && "$TEXT" != "{"* ]] && echo yes)" yes
 
 # ============================================================================================
-banner "K — no full key anywhere"
+banner "K — no key anywhere, not even in part"
+# Every place a key could leak to: stdout and stderr (--verbose runs included), the run log, the
+# stub's and the relay's logs, and everything amy keeps under $HOME/.amy. A file that should be
+# there and isn't fails the check: an empty scan proves nothing.
+SCANNED=("$ALL_OUT" "$LOG_FILE" "$LOG_DIR/stub.log" "$RELAY_DATA/logs/stdout.log" "$RELAY_DATA/logs/stderr.log")
+MISSING=0
+for f in "${SCANNED[@]}"; do [[ -f "$f" ]] || { fail_msg "missing $f"; MISSING=$((MISSING + 1)); }; done
+[[ -d "$STATE_DIR/.amy" ]] || { fail_msg "missing $STATE_DIR/.amy"; MISSING=$((MISSING + 1)); }
+check K0.files_scanned "$MISSING" 0
+# The secret part of each key (after its provider prefix): no 8 characters of it in a row may
+# show anywhere; a mask shows the last 4 only.
+leaks_of() {
+  local key="$1" secret="${1#sk-or-v1-}"
+  secret="${secret#sk-stub-good-}"; secret="${secret#sk-stub-bad-}"; secret="${secret#sk-cleartext-}"
+  local found=0 i
+  for (( i = 0; i + 8 <= ${#secret}; i++ )); do
+    local part="${secret:i:8}"
+    if grep -qaF -- "$part" "${SCANNED[@]}" 2>/dev/null || grep -rqaF -- "$part" "$STATE_DIR/.amy" 2>/dev/null; then found=$((found + 1)); fi
+  done
+  printf '%s' "$found"
+}
 LEAKS=0
-for key in "$GOOD_KEY" "$BAD_KEY" "$OR_KEY"; do
-  if grep -qF -- "$key" "$ALL_OUT" "$LOG_FILE" "$LOG_DIR/stub.log" "$RELAY_DATA"/logs/*.log; then LEAKS=$((LEAKS + 1)); fi
+for key in "$GOOD_KEY" "$BAD_KEY" "$OR_KEY" "$CLEAR_KEY"; do
+  n=$(leaks_of "$key")
+  [[ "$n" != 0 ]] && fail_msg "a key leaked: $n of its 8-character windows found"
+  LEAKS=$((LEAKS + n))
 done
-check K1.no_key_in_output "$LEAKS" 0 "stdout, stderr, the stub's and the relay's logs"
+check K1.no_key_in_output "$LEAKS" 0 "stdout, stderr, --verbose, the logs and ~/.amy, in part or whole"
+# Masks show at most a third of a key.
+MASKS_OK=1
+while read -r mask; do
+  [[ -z "$mask" ]] && continue
+  shown="${mask//…/}"
+  (( ${#shown} > 13 )) && MASKS_OK=0
+done < <(grep -ahoE '"key_masked":"[^"]*"' "$ALL_OUT" | sed -E 's/.*:"([^"]*)"/\1/' | sort -u)
+check K2.masks_short "$MASKS_OK" 1

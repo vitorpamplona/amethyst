@@ -328,7 +328,7 @@ contract.
 - **Agent keys / scheduled tasks:** `key_rejected` (the provider refused the
   key: 401/403, or a 400 that blames it), `provider_unreachable` (no answer
   from the key's URL), `no_quorum` (not more than half of the NIP-65 write
-  relays answered a NIP-FB read or accepted its write).
+  relays answered a NIP-FA or NIP-FB read, or accepted a NIP-FB write).
 - **Misc:** `no_follows` (fof), `invalid_identifier` (namecoin),
   `no_tty` (`bunker --interactive` without a terminal).
 
