@@ -705,6 +705,10 @@ class AndroidMediaUploader(
                     return error(UploadError.AVIF_METADATA_STRIP_FAILED, e.message ?: e.javaClass.simpleName).also {
                         deleteTempUri(compressed.uri, uri)
                     }
+                } catch (e: CancellationException) {
+                    // Cancelled mid-strip or at the strip-failed prompt: the compressed temp file goes too.
+                    deleteTempUri(compressed.uri, uri)
+                    throw e
                 } ?: return error(UploadError.UPLOAD_CANCELLED).also {
                     deleteTempUri(compressed.uri, uri)
                 }
@@ -761,6 +765,10 @@ class AndroidMediaUploader(
                     return error(UploadError.AVIF_METADATA_STRIP_FAILED, e.message ?: e.javaClass.simpleName).also {
                         deleteTempUri(compressed.uri, uri)
                     }
+                } catch (e: CancellationException) {
+                    // Cancelled mid-strip or at the strip-failed prompt: the compressed temp file goes too.
+                    deleteTempUri(compressed.uri, uri)
+                    throw e
                 } ?: return error(UploadError.UPLOAD_CANCELLED).also {
                     deleteTempUri(compressed.uri, uri)
                 }

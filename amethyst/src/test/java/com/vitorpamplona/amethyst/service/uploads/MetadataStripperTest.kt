@@ -173,15 +173,30 @@ class MetadataStripperTest {
         runTest {
             every { resolver.openInputStream(uri) } returns ByteArrayInputStream(ByteArray(0))
 
-            MetadataStripper.strip(uri, "audio/mpeg", context)
+            val result = MetadataStripper.strip(uri, "audio/mpeg", context)
 
             verify(exactly = 0) { Mp4Sanitizer.sanitize(any(), any(), any()) }
+            // An empty MP3 has no ID3 tags: already clean, passed through as is.
+            assertSame(uri, result.uri)
+            assertTrue(result.stripped)
         }
 
     @Test
     fun `a track MP4 cannot hold returns the original unstripped and leaves no temp file`() =
         runTest {
             every { Mp4Sanitizer.sanitize(context, uri, any()) } throws IOException("track 1 (audio/opus) cannot be written to MP4")
+
+            val result = MetadataStripper.strip(uri, "video/mp4", context)
+
+            assertSame(uri, result.uri)
+            assertFalse(result.stripped)
+            assertEquals(emptyList<String>(), tempFolder.root.list()!!.toList())
+        }
+
+    @Test
+    fun `an unexpected sanitizer exception returns the original unstripped and leaves no temp file`() =
+        runTest {
+            every { Mp4Sanitizer.sanitize(context, uri, any()) } throws IllegalStateException("muxer state")
 
             val result = MetadataStripper.strip(uri, "video/mp4", context)
 
@@ -203,12 +218,30 @@ class MetadataStripperTest {
         }
 
     @Test
-    fun `a cancelled upload interrupts the remux and does not report a failed strip`() =
+    fun `an upload cancelled during the remux ends cancelled, not as a failed strip`() =
         runTest {
             lateinit var upload: Job
             every { Mp4Sanitizer.sanitize(context, uri, any()) } answers {
                 upload.cancel()
                 throw InterruptedIOException("sample copy interrupted")
+            }
+            var result: StrippingResult? = null
+
+            upload = launch { result = MetadataStripper.strip(uri, "video/mp4", context) }
+            upload.join()
+
+            assertTrue(upload.isCancelled)
+            assertNull(result)
+            assertEquals(emptyList<String>(), tempFolder.root.list()!!.toList())
+        }
+
+    @Test
+    fun `an upload cancelled just as the remux finishes deletes the stripped file`() =
+        runTest {
+            lateinit var upload: Job
+            every { Mp4Sanitizer.sanitize(context, uri, any()) } answers {
+                upload.cancel()
+                SanitizeResult(thirdArg(), fastStart = true)
             }
             var result: StrippingResult? = null
 
