@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.WeakReference
 import com.vitorpamplona.amethyst.commons.util.withLock
@@ -30,15 +32,32 @@ import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlin.concurrent.Volatile
 
 @Stable
-abstract class Channel : NotesGatherer {
+abstract class Channel :
+    NotesGatherer,
+    RelayCursorHolder {
     companion object {
         val DefaultFeedOrder: Comparator<Note> =
             compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex }
     }
 
     val notes = LargeCache<HexKey, Note>()
+
+    /**
+     * How far each relay has been asked for this channel's messages, metadata and state (the tails
+     * and watchers that load them). It lives here because this object holds what they load
+     * ([notes], the metadata fields); the pruner rewinds it when it drops messages. Created on first
+     * watch: most channels are never opened.
+     */
+    @Volatile
+    private var cursors: RelayCursors? = null
+
+    fun relayCursorsOrNull(): RelayCursors? = cursors
+
+    // Two threads racing here each make one and one is kept: the other's answer is asked again.
+    override val relayCursors: RelayCursors get() = cursors ?: RelayCursors().also { cursors = it }
     var lastNote: Note? = null
 
     private var relays = mapOf<NormalizedRelayUrl, Counter>()

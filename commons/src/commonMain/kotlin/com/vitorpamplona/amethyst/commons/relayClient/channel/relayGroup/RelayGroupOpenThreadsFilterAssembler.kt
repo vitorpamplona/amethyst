@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -68,4 +69,7 @@ class RelayGroupOpenThreadsSubAssembler(
     }
 
     override fun id(key: RelayGroupOpenThreadsQueryState) = key.channel.groupId
+
+    /** The channel holds what this loads, so its cursors set the windows. */
+    override fun cursorHoldersOf(key: RelayGroupOpenThreadsQueryState): List<RelayCursorHolder> = listOf(key.channel)
 }

@@ -58,6 +58,20 @@ class SingleSubPerEntityCursorTest {
         override fun cursorHoldersOf(key: Community) = key.feeds
     }
 
+    /** Builds one filter for every community, as the channel and profile watchers batch theirs. */
+    private inner class BatchingManager(
+        keys: () -> Set<Community>,
+    ) : SingleSubEoseManager<Community>(EmptyNostrClient(), keys) {
+        override fun updateFilter(
+            keys: List<Community>,
+            since: SincePerRelayMap?,
+        ) = listOf(RelayBasedFilter(relay, Filter(kinds = listOf(1111), tags = mapOf("A" to keys.map { it.id }), since = since?.get(relay)?.time)))
+
+        override fun distinct(key: Community) = key.id
+
+        override fun cursorHoldersOf(key: Community) = key.feeds
+    }
+
     private fun Manager.sinceFor(id: String) =
         sub
             .filters()
@@ -101,5 +115,37 @@ class SingleSubPerEntityCursorTest {
         manager.updateSubscriptions(setOf(Community("a", listOf(screen1)), Community("a", listOf(Feed()))))
 
         assertNull(manager.sinceFor("a"), "the second screen holds nothing yet")
+    }
+
+    @Test
+    fun entitiesWithTheSameWindowShareOneFilter() {
+        val a = Community("a", listOf(Feed()))
+        val b = Community("b", listOf(Feed()))
+        val manager = BatchingManager { emptySet() }
+
+        manager.updateSubscriptions(setOf(a, b))
+        val first = manager.sub.filters()?.get(relay)
+        assertEquals(listOf(listOf("a", "b")), first?.map { it.tags?.get("A") }, "two new ones are asked together")
+        manager.sub.listener.onEose(relay, first)
+
+        manager.updateSubscriptions(setOf(a, b))
+        val caughtUp = manager.sub.filters()?.get(relay)
+        assertEquals(1, caughtUp?.size, "the same EOSE gave both the same window")
+        assertEquals(
+            a.feeds
+                .single()
+                .relayCursors
+                .since(relay),
+            caughtUp?.single()?.since,
+        )
+
+        val c = Community("c", listOf(Feed()))
+        manager.updateSubscriptions(setOf(a, b, c))
+        val windows =
+            manager.sub
+                .filters()
+                ?.get(relay)
+                ?.associate { it.tags?.get("A") to it.since }
+        assertEquals<Map<List<String>?, Long?>?>(mapOf(listOf("a", "b") to caughtUp?.single()?.since, listOf("c") to null), windows)
     }
 }

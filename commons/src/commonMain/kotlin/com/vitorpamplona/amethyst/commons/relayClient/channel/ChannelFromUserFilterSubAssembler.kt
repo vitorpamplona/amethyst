@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -55,4 +56,7 @@ class ChannelFromUserFilterSubAssembler(
     override fun user(key: ChannelQueryState) = key.account.userProfile()
 
     override fun list(key: ChannelQueryState) = key.channel
+
+    /** The channel holds what this loads, so its cursors set the windows. */
+    override fun cursorHoldersOf(key: ChannelQueryState): List<RelayCursorHolder> = listOf(key.channel)
 }

@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.commons.relayClient.user.watchers
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.FilterShape
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
-import com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
@@ -41,24 +41,31 @@ class UserWatcherSubAssembler(
     allKeys: () -> Set<UserFinderQueryState>,
 ) : BaseEoseManager<UserFinderQueryState>(client, allKeys) {
     /**
-     * This assembler saves the EOSE per user key. That EOSE includes their metadata, etc
-     * and reports, but only from trusted accounts (follows of all logged in users).
-     *
-     * Fitted to the watched users on every pass ([EOSEAccountFast.fitTo]): a feed hands over whole
-     * lists (see [UserFinderQueryState.isFeedAuthor]), and an evicted user loses its `since` and is
-     * downloaded again in full.
+     * How far each relay has been asked for a user's metadata (and reports from trusted accounts)
+     * is kept on that [User] ([User.relayCursors]), which holds what they load: a user the GC took
+     * is built again with no cursor and is downloaded in full, and this manager keeps no user alive.
      */
-    var latestEOSEs: EOSEAccountFast<User> = EOSEAccountFast(200)
+    private fun since(
+        user: User,
+        relay: NormalizedRelayUrl,
+    ): Long? = user.relayCursorsOrNull()?.since(relay, cursorSource)
 
     fun newEose(
         relay: NormalizedRelayUrl,
         time: Long,
         filters: List<Filter>? = null,
     ) {
-        filters?.forEach {
-            it.authors?.forEach {
+        filters?.forEach { filter ->
+            if (filter.until != null) return@forEach
+            val asked = filter.since
+            val shapes = listOf(FilterShape.of(filter))
+            filter.authors?.forEach {
                 cache.getUserIfExists(it)?.let { user ->
-                    latestEOSEs.newEose(user, relay, time)
+                    // A user asked from later than its own cursor has a gap this answer did not fill.
+                    val own = since(user, relay)
+                    if (asked == null || (own != null && own >= asked)) {
+                        user.relayCursors.newEose(relay, shapes, time, cursorSource)
+                    }
                 }
             }
         }
@@ -92,8 +99,6 @@ class UserWatcherSubAssembler(
 
     override fun updateSubscriptions(keys: Set<UserFinderQueryState>) {
         val users = keys.mapTo(mutableSetOf()) { it.user }
-        latestEOSEs.fitTo(users.size)
-
         if (users.isEmpty()) {
             sub.updateFilters(null)
             return
@@ -118,7 +123,7 @@ class UserWatcherSubAssembler(
                 cache.relayHints,
                 indexRelays,
                 failureTracker.cannotConnectRelays,
-                latestEOSEs,
+                ::since,
                 soleAccountPubKey,
             ).ifEmpty { null }
 

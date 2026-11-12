@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_G
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.isRelayGroupJoined
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -109,4 +110,7 @@ class RelayGroupCardWarmupSubAssembler(
     }
 
     override fun id(key: RelayGroupCardWarmupQueryState) = key.channel.groupId
+
+    /** The channel holds what this loads, so its cursors set the windows. */
+    override fun cursorHoldersOf(key: RelayGroupCardWarmupQueryState): List<RelayCursorHolder> = listOf(key.channel)
 }

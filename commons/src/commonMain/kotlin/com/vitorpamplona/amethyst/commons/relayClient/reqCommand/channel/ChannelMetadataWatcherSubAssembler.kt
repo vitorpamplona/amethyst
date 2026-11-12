@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.relayClient.channel.nip28PublicChats.filterChannelMetadataUpdatesById
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -50,4 +51,7 @@ class ChannelMetadataWatcherSubAssembler(
      * Only one key per channel.
      */
     override fun id(key: ChannelFinderQueryState) = key.channel
+
+    /** The channel holds what this loads, so its cursors set the windows. */
+    override fun cursorHoldersOf(key: ChannelFinderQueryState): List<RelayCursorHolder> = listOf(key.channel)
 }

@@ -170,7 +170,8 @@ class CachePruner(
      * Realigns the history windows of [channel] for the messages just dropped from it, as
      * [pruneOldMessages] does for DMs: a relay that already paged past (or finished below) the
      * dropped band asks for it again on the next scroll instead of leaving a hole. Only bands below
-     * a window's floor are its own; newer ones belong to the live tail. Relay groups page their chat
+     * a window's floor are its own; newer ones belong to the live tail, whose cursors on the channel
+     * go back to the oldest message dropped so it asks for them again. Relay groups page their chat
      * and their Threads tab apart; Concord channels page one history.
      */
     private fun rewindHistoryFor(
@@ -178,6 +179,7 @@ class CachePruner(
         removed: Set<Note>,
     ) {
         if (removed.isEmpty()) return
+        removed.mapNotNull { it.createdAt() }.minOrNull()?.let { oldest -> channel.relayCursorsOrNull()?.rewindTo(oldest) }
         when (channel) {
             is RelayGroupChannel -> {
                 val (threads, chat) = removed.partition { it.event?.kind in RELAY_GROUP_THREAD_KINDS }

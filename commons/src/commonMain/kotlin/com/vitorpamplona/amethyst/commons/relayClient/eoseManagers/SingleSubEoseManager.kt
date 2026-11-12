@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.relays.EOSERelayList
+import com.vitorpamplona.amethyst.commons.relays.MutableTime
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -123,7 +124,7 @@ abstract class SingleSubEoseManager<T>(
         )
 
     override fun updateSubscriptions(keys: Set<T>) {
-        val groups = keys.groupBy { distinct(it) }.values
+        val groups = keys.groupBy { distinct(it) }.values.toList()
         val holders = groups.map { cursorsNamedBy(it) }
 
         if (holders.all { it.isEmpty() }) {
@@ -133,14 +134,33 @@ abstract class SingleSubEoseManager<T>(
             return
         }
 
-        // The keys name the holders of what they load: each entity (a community, a follow pack) is
-        // windowed by its own holders' cursors, so one opened later is asked from scratch without
-        // making the others refetch, and closing one takes its cursors with it. An entity whose keys
-        // name none asks from scratch.
+        // The keys name the holders of what they load: each entity (a community, a channel, a
+        // profile) is windowed by its own holders' cursors, so one opened later is asked from scratch
+        // without making the others refetch, and closing one takes its cursors with it. An entity
+        // whose keys name none asks from scratch. Entities whose cursors agree on every relay are
+        // built together, so the builder's batching (one filter per relay for every channel on it)
+        // survives: in the steady state every entity on a relay got the same EOSE and shares a filter.
+        val bySignature = LinkedHashMap<Map<NormalizedRelayUrl, Long>, MutableList<Int>>()
+        groups.forEachIndexed { index, group ->
+            val signature =
+                if (holders[index].isEmpty()) {
+                    emptyMap()
+                } else {
+                    CursorPlanner.cursorsByRelay(updateFilter(listOf(group.first()), null).orEmpty(), holders[index], cursorSource)
+                }
+            bySignature.getOrPut(signature) { mutableListOf() }.add(index)
+        }
+
         val filters =
-            groups.flatMapIndexed { index, group ->
-                val own = updateFilter(listOf(group.first()), null).orEmpty()
-                if (holders[index].isEmpty()) own else CursorPlanner.window(own, holders[index], cursorSource)
+            bySignature.flatMap { (signature, members) ->
+                val since: SincePerRelayMap = signature.mapValuesTo(mutableMapOf()) { MutableTime(it.value) }
+                val built = updateFilter(members.map { groups[it].first() }, since).orEmpty()
+                // Each holder accepts answers to the windows sent for it (see [RelayCursors.accepts]).
+                val windows = built.filter { it.filter.until == null }.groupBy({ it.relay }, { it.filter.since })
+                members.flatMap { holders[it] }.distinct().forEach { holder ->
+                    windows.forEach { (relay, sinces) -> holder.planned(relay, cursorSource, sinces.filterNotNullTo(mutableSetOf())) }
+                }
+                built
             }
         serve(sub.id, holders.flatten().distinct())
         sub.updateFilters(filters.ifEmpty { null }?.groupByRelay())

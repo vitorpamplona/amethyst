@@ -128,6 +128,30 @@ object CursorPlanner {
         return shared.map { (slot, ids) -> build(ids, slot.second)[slot.first] } + unshared
     }
 
+    /**
+     * How far [holders] have each relay of [filters]: the oldest window any live filter on it is
+     * planned from, and no entry for a relay that one of them asks from scratch. Two entities with
+     * the same answer can share one request built from it.
+     */
+    fun cursorsByRelay(
+        filters: List<RelayBasedFilter>,
+        holders: List<RelayCursors>,
+        source: CursorSource = CursorSource.DEFAULT,
+    ): Map<NormalizedRelayUrl, Long> {
+        val byRelay = mutableMapOf<NormalizedRelayUrl, Long>()
+        val fromScratch = mutableSetOf<NormalizedRelayUrl>()
+        filters.forEach { relayFilter ->
+            if (relayFilter.filter.until != null) return@forEach
+            val since = oldest(plan(relayFilter.relay, FilterShape.of(relayFilter.filter), holders, source).map { it.since })
+            if (since == null) {
+                fromScratch.add(relayFilter.relay)
+            } else {
+                byRelay[relayFilter.relay] = byRelay[relayFilter.relay]?.let { minOf(it, since) } ?: since
+            }
+        }
+        return byRelay - fromScratch
+    }
+
     /** One member of a merged request: [floor] is its own lower bound, [holders] its own cursors. */
     class Member<M>(
         val id: M,

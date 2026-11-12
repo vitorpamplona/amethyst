@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.datas
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.filterGroupNotificationsToPubkey
@@ -31,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.buildRe
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.buildRelayGroupPreviewFilter
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -114,6 +116,9 @@ class BuzzDmJoinedChatTailSubAssembler(
     }
 
     override fun id(key: BuzzDmJoinedChatTailQueryState) = key.groupId
+
+    /** The group's channel holds what this loads, so its cursors set the windows. */
+    override fun cursorHoldersOf(key: BuzzDmJoinedChatTailQueryState): List<RelayCursorHolder> = listOf(LocalCache.getOrCreateRelayGroupChannel(key.groupId))
 
     override fun newSub(key: BuzzDmJoinedChatTailQueryState): Subscription {
         windowLoad.startLoading(key.account.scope)
