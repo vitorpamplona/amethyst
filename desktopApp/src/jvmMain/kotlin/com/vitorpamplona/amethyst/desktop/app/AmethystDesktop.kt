@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.desktop.platform.PlatformIconWeight
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.platform.ProvideTitleBarInsets
 import com.vitorpamplona.amethyst.desktop.platform.SavedWindowBounds
+import com.vitorpamplona.amethyst.desktop.platform.TakeOverTitleBar
 import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.platform.boundsToSave
@@ -87,6 +88,7 @@ import com.vitorpamplona.amethyst.desktop.platform.clickToActivate
 import com.vitorpamplona.amethyst.desktop.platform.defaultWindowSize
 import com.vitorpamplona.amethyst.desktop.platform.rememberSystemDark
 import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
+import com.vitorpamplona.amethyst.desktop.platform.titleBarWindowDrag
 import com.vitorpamplona.amethyst.desktop.platform.trackWheelScrolling
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
@@ -363,13 +365,23 @@ fun main(args: Array<String>) {
                                 // handoff that goes nowhere can say so.
                                 LocalUriHandler provides DesktopUriHandler,
                             ) {
+                                // Under macOS's transparent title bar the screens draw their own top
+                                // bars, padded past the traffic lights by the caption-bar inset, as on
+                                // Android under the status bar. Full screen has no title bar.
+                                val titleBar = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else titleBarInsetTop
+                                // The app moves the window from that band once AppKit no longer does, so its
+                                // tabs can be dragged to a new place.
+                                var titleBarTakenOver by remember { mutableStateOf(false) }
+                                TakeOverTitleBar(window) { titleBarTakenOver = true }
                                 // A click on the window in the background only brings it forward.
-                                Box(Modifier.fillMaxSize().clickToActivate(window, LocalWindowInfo.current).trackWheelScrolling(wheelScrolling)) {
+                                Box(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .clickToActivate(window, LocalWindowInfo.current)
+                                        .trackWheelScrolling(wheelScrolling)
+                                        .titleBarWindowDrag(window, if (titleBarTakenOver) titleBar else 0.dp),
+                                ) {
                                     Column(Modifier.fillMaxSize()) {
-                                        // Under macOS's transparent title bar the screens draw their own top
-                                        // bars, padded past the traffic lights by the caption-bar inset, as on
-                                        // Android under the status bar. Full screen has no title bar.
-                                        val titleBar = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else titleBarInsetTop
                                         ProvideTitleBarInsets(titleBar) {
                                             // The window's size reads 0 x 0 until its first layout. Composed before
                                             // then, the app picked the phone layout, composed all of it and threw it

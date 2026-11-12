@@ -24,7 +24,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -76,6 +77,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.isTertiaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
@@ -112,10 +114,14 @@ import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 private val StripHeight = 40.dp
 private val TabHeight = 32.dp
 private val TabGap = 2.dp
+
+// How far a press goes sideways before it drags its tab instead of opening it: about a finger's slop.
+private val ReorderSlop = 8.dp
 private val PinnedTabWidth = 40.dp
 private val MinTabWidth = 120.dp
 private val MaxTabWidth = 220.dp
@@ -237,7 +243,6 @@ private fun ScreenTab(
     val background = colors.primary.copy(alpha = 0.35f * glow.value).compositeOver(base.compositeOver(colors.surfaceContainerLow))
     val accent = colors.primary
     val currentWidth by rememberUpdatedState(width)
-    val density = LocalDensity.current
 
     Box(
         Modifier
@@ -262,18 +267,39 @@ private fun ScreenTab(
                     }
                 }
             }.pointerInput(entry.id) {
-                // Dragging sideways moves the tab a place each time it crosses half a tab.
-                var dragged = 0f
-                detectHorizontalDragGestures(onDragEnd = { dragged = 0f }, onDragCancel = { dragged = 0f }) { change, amount ->
-                    change.consume()
-                    dragged += amount
-                    val step = with(density) { (currentWidth + TabGap).toPx() }
-                    if (dragged > step / 2) {
-                        stacks.move(entry.id, 1)
-                        dragged -= step
-                    } else if (dragged < -step / 2) {
-                        stacks.move(entry.id, -1)
-                        dragged += step
+                // Dragging sideways moves the tab a place each time it crosses half a tab, once the
+                // press has gone [ReorderSlop] sideways. Not Compose's horizontal drag: its slop for a
+                // mouse is an eighth of a finger's, about 2 px, so a click that wobbled became a drag
+                // and the tab showed its ripple but never opened (measured: still 0 px opened it,
+                // 2 px and more never did).
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val slop = ReorderSlop.toPx()
+                    var sideways = 0f
+                    var dragging = false
+                    var dragged = 0f
+                    while (true) {
+                        val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) break
+                        val dx = change.positionChange().x
+                        if (!dragging) {
+                            sideways += dx
+                            if (abs(sideways) < slop) continue
+                            dragging = true
+                            dragged = sideways
+                        } else {
+                            dragged += dx
+                        }
+                        // From here the gesture is a drag: the click it started as is cancelled.
+                        change.consume()
+                        val step = (currentWidth + TabGap).toPx()
+                        if (dragged > step / 2) {
+                            stacks.move(entry.id, 1)
+                            dragged -= step
+                        } else if (dragged < -step / 2) {
+                            stacks.move(entry.id, -1)
+                            dragged += step
+                        }
                     }
                 }
             }.clickable { stacks.activate(entry.id) },
