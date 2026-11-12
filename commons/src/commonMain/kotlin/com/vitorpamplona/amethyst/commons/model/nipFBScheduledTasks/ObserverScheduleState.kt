@@ -267,16 +267,26 @@ class ObserverScheduleState(
 
     private suspend fun decryptNow(event: ScheduledTaskEvent): Decrypted {
         if (!signer.isWriteable()) return Decrypted.SignerFailed(retryable = false)
-        val plain =
+        // NIP-FB, Runner: with a runner named in a public `p`, the private tags are NIP-44 between
+        // the reader and that runner; else the reader's to themselves. Each candidate is tried.
+        val peers = event.privateTagsPeers(signer.pubKey).ifEmpty { listOf(signer.pubKey) }
+        var plain: String? = null
+        var failure: Exception? = null
+        for (peer in peers) {
             try {
-                signer.nip44Decrypt(event.content, signer.pubKey)
+                plain = signer.nip44Decrypt(event.content, peer)
+                break
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // A key on the device that can't open it: the content is bad. A remote signer: it refused, or timed out.
-                Log.w(TAG, "Could not decrypt the morning schedule", e)
-                return if (decryptsAlone) Decrypted.BadContent else Decrypted.SignerFailed(retryable = true)
+                failure = e
             }
+        }
+        if (plain == null) {
+            // A key on the device that can't open it: the content is bad. A remote signer: it refused, or timed out.
+            Log.w(TAG, "Could not decrypt the morning schedule", failure)
+            return if (decryptsAlone) Decrypted.BadContent else Decrypted.SignerFailed(retryable = true)
+        }
         return try {
             Decrypted.Task(ScheduledTask(event.tags, PrivateTagsInContent.decode(plain)))
         } catch (e: CancellationException) {

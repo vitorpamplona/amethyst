@@ -26,16 +26,21 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.agents.AgentProviderPresets
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ScheduleEdit
+import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.SyncedSchedule
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverParams
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
+import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTask
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -50,6 +55,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** What stands between the reader and a paper, one thing at a time. */
 enum class FrontPageGate {
@@ -155,10 +161,24 @@ class FrontPageViewModel(
     private val morning: FrontPageMorning,
     initialDay: String? = null,
 ) : ViewModel() {
+    /** The reader's schedule, when this device has read it: the Observer's settings live there. */
+    private val task: StateFlow<ScheduledTask?> =
+        account.observerSchedule.flow
+            .map { (it as? SyncedSchedule.Readable)?.task }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, (account.observerSchedule.flow.value as? SyncedSchedule.Readable)?.task)
+
+    /** The key to print with: the schedule's `key` param, else NIP-FA's default (the first usable key). */
     val key: StateFlow<AgentKeyTag?> =
-        account.agentKeys.flow
-            .map { it.firstOrNull() }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, account.agentKeys.preferred())
+        combine(account.agentKeys.flow, task) { keys, task -> scheduledKey(task, keys) }
+            .distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, scheduledKey(task.value, account.agentKeys.flow.value))
+
+    /** The model the schedule names (its `model` param), shared by every app; null leaves the app's default. */
+    private val namedModel: StateFlow<String?> =
+        task
+            .map { it?.let(ObserverParams::model) }
+            .distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, task.value?.let(ObserverParams::model))
 
     val gate: StateFlow<FrontPageGate> =
         combine(key, account.trustProviderList.liveUserRankProvider) { key, rank -> gateOf(key, rank != null, printer.boundary) }
@@ -200,12 +220,13 @@ class FrontPageViewModel(
      * clock ticks only while the screen collects it (and five seconds after, across a rotation).
      */
     val schedule: StateFlow<MorningScheduleView> =
-        combine(morning.view(account), _schedulePending, draft) { view, pending, draft ->
+        combine(morning.view(account, printer.sites), _schedulePending, draft) { view, pending, draft ->
             var shown = view
             if (draft != null && draft.cron == view.cron) shown = shown.withTime(draft.time)
             if (pending != null) {
                 shown = shown.copy(enabled = pending.enabled ?: shown.enabled, printsHere = pending.printsHere ?: shown.printsHere)
                 pending.time?.let { shown = shown.withTime(it) }
+                pending.runner?.let { shown = shown.copy(runner = it.key, runners = listOfNotNull(it.key)) }
             }
             shown
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MorningScheduleView())
@@ -319,9 +340,31 @@ class FrontPageViewModel(
     private var modelsFor: AgentKeyTag? = null
     private var modelsJob: Job? = null
 
+    /** The pending write of the model and key into the schedule: a typed model id writes once the reader stops typing. */
+    private var settingsJob: Job? = null
+
     init {
         viewModelScope.launch { key.collect { it?.let { loadModels(it) } } }
+        // Another app or device picked a model: the schedule's choice shows here too.
+        viewModelScope.launch {
+            namedModel.collect { named ->
+                if (named != null && settingsJob?.isActive != true) _models.update { FrontPageModels(it.loading, it.ids, named, it.failure, it.byId) }
+            }
+        }
     }
+
+    /**
+     * Who prints on schedule: the reader's Assistant (the key their kind 10040 names as the
+     * `30382:rank` provider, the same lens the setup checklist shows) when they have one, and
+     * the runner the schedule names, with their names as this device knows them.
+     */
+    val whoPrints: StateFlow<WhoPrints> =
+        combine(setup, schedule) { setup, schedule -> WhoPrints(setup.lens, setup.lensName, schedule.runner, schedule.runners) }
+            .distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WhoPrints())
+
+    /** Who prints: [runner] (the reader's Assistant), or the reader's own devices when null. */
+    fun setRunner(runner: HexKey?) = editSchedule(PendingSchedule(runner = Runner(runner))) { morning.setRunner(account, runner) }
 
     /**
      * The models of [key]'s endpoint. Keyed on the whole key, not its URL: a new key at the same
@@ -335,27 +378,57 @@ class FrontPageViewModel(
         _models.value = FrontPageModels(loading = true)
         modelsJob =
             viewModelScope.launch {
+                // The schedule's `model` first (every app's shared choice, kept even when the endpoint
+                // doesn't list it: the reader chose that price), else this install's old choice.
+                val named = namedModel.value
                 val remembered = runCatching { printer.memory.get(key.url) }.getOrNull()
                 try {
                     val listed = http.listAgentModels(key)
                     val ranked = rankModels(listed.map { it.id })
-                    val selected = remembered?.takeIf { it in ranked } ?: ranked.firstOrNull() ?: remembered
+                    val selected = named ?: remembered?.takeIf { it in ranked } ?: ranked.firstOrNull() ?: remembered
                     _models.value = FrontPageModels(ids = ranked, selected = selected, byId = listed.associateBy { it.id })
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: WriterException) {
-                    _models.value = FrontPageModels(selected = remembered, failure = e.failure)
+                    _models.value = FrontPageModels(selected = named ?: remembered, failure = e.failure)
                 } catch (e: Exception) {
                     // Never left loading: the reader can still type a model id.
-                    _models.value = FrontPageModels(selected = remembered, failure = WriterFailure.UNREACHABLE)
+                    _models.value = FrontPageModels(selected = named ?: remembered, failure = WriterFailure.UNREACHABLE)
                 }
             }
     }
 
+    /**
+     * The model picked in the print view: shown now, remembered on this install as the fallback,
+     * and written into the schedule as its `model` param, with the key it prints with as `key`
+     * ([FrontPageMorning.setSettings]), so every app and the Assistant print with it. A typed id
+     * is written once the reader pauses ([SETTINGS_PAUSE_MS]); the write runs on the account's
+     * scope, so leaving the screen doesn't lose it.
+     */
     fun selectModel(model: String) {
-        _models.update { FrontPageModels(it.loading, it.ids, model.trim().ifEmpty { null }, it.failure, it.byId) }
-        val url = key.value?.url ?: return
-        if (model.isNotBlank()) viewModelScope.launch { runCatching { printer.memory.set(url, model.trim()) } }
+        val picked = model.trim()
+        _models.update { FrontPageModels(it.loading, it.ids, picked.ifEmpty { null }, it.failure, it.byId) }
+        val key = key.value ?: return
+        if (picked.isEmpty()) return
+        viewModelScope.launch { runCatching { printer.memory.set(key.url, picked) } }
+        if (picked == namedModel.value && task.value?.let { ObserverParams.keyChoice(it)?.matches(key) } == true) return
+        settingsJob?.cancel()
+        settingsJob =
+            account.scope.launch {
+                delay(SETTINGS_PAUSE_MS)
+                val outcome =
+                    withContext(NonCancellable) {
+                        try {
+                            morning.setSettings(account, picked, key)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Log.w("FrontPageViewModel", "Could not save the Observer's settings", e)
+                            ScheduleEdit.Unreachable
+                        }
+                    }
+                if (outcome !is ScheduleEdit.Saved && outcome != ScheduleEdit.Unchanged) _scheduleProblem.value = outcome
+            }
     }
 
     private val _printRefused = MutableStateFlow(false)
@@ -431,7 +504,40 @@ data class PendingSchedule(
     val enabled: Boolean? = null,
     val printsHere: Boolean? = null,
     val time: Pair<Int, Int>? = null,
+    val runner: Runner? = null,
 )
+
+/** A who-prints choice on its way: [key] the runner, or null for the reader's own devices. */
+@Immutable
+data class Runner(
+    val key: HexKey?,
+)
+
+/**
+ * The "Who prints" choice: the reader's Brainstorm [assistant] (their kind 10040 `30382:rank`
+ * provider) and its [assistantName], and the runner the schedule names ([runner], or several in
+ * [runners]: a conflict, nobody prints). Shown only when there is an Assistant, or a runner to clear.
+ */
+@Immutable
+data class WhoPrints(
+    val assistant: HexKey? = null,
+    val assistantName: String? = null,
+    val runner: HexKey? = null,
+    val runners: List<HexKey> = emptyList(),
+) {
+    val shown: Boolean get() = assistant != null || runners.isNotEmpty()
+
+    val conflict: Boolean get() = runners.size > 1
+
+    /** The Assistant prints on schedule. */
+    val byAssistant: Boolean get() = runner != null && runner == assistant
+
+    /** The schedule names a runner that isn't the reader's Assistant (an old one, or another app's). */
+    val byOther: Boolean get() = runner != null && runner != assistant
+}
+
+/** How long a typed model id waits for the reader to stop typing before it is written into the schedule. */
+const val SETTINGS_PAUSE_MS = 1_500L
 
 /** A [time] that failed to save, picked on the schedule [cron]. */
 private data class DraftTime(

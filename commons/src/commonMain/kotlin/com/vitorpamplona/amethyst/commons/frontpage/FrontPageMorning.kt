@@ -28,7 +28,12 @@ import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.SyncedSchedu
 import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
+import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverEdition
+import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverParams
 import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverSchedule
+import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverSite
+import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 import com.vitorpamplona.quartz.nipFBScheduledTasks.CronExpression
 import com.vitorpamplona.quartz.nipFBScheduledTasks.CronZone
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTask
@@ -36,6 +41,7 @@ import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskClaims
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskClaims.Decision
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskEvent
 import com.vitorpamplona.quartz.nipFBScheduledTasks.SimpleCron
+import com.vitorpamplona.quartz.nipFBScheduledTasks.tags.TaskTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -53,6 +59,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -152,10 +159,112 @@ data class MorningScheduleView(
     val lastRanAgo: Long? = null,
     /** When the last run was, when a due one hasn't happened (NIP-FB's warning); null when fine. */
     val missedSince: Long? = null,
+    /**
+     * The occurrence a named runner didn't print ([ObserverSite.missedRun] over both sites), when
+     * nothing printed before it either, so [missedSince] has no day to name; null when fine.
+     */
+    val missedDue: Long? = null,
+    /** True when [lastRan] is the newest edition on the runner's site (NIP-FB, Runner): "Last printed by your Assistant". */
+    val lastByRunner: Boolean = false,
+    /** Every key the schedule's public `p` names (NIP-FB, Runner); more than one is a conflict. */
+    val runners: List<HexKey> = emptyList(),
+    /** The one runner that prints for the reader, or null (none, or a conflict). */
+    val runner: HexKey? = null,
+    /** The event holds only settings: no `cron`, so it never runs on its own (NIP-FB, `param`). */
+    val settingsOnly: Boolean = false,
+    /** Params this app doesn't understand: it lists and edits the schedule, but never runs it on schedule. */
+    val unknownParams: List<String> = emptyList(),
+) {
+    /** The schedule names a runner (one, or several in conflict): no device of the reader prints it on schedule. */
+    val namesRunner: Boolean get() = runners.isNotEmpty()
+
+    /** More than one public `p`: nobody prints it until the reader picks one. */
+    val runnerConflict: Boolean get() = runners.size > 1
+}
+
+/**
+ * The editions on the reader's own Observer site (and kept on this device) and on the site of the
+ * runner their schedule names, for the status line and the missed-run warning
+ * ([ObserverSite.lastPrinted], [ObserverSite.missedRun]).
+ */
+@Immutable
+data class ObserverSites(
+    val reader: List<ObserverEdition> = emptyList(),
+    val runner: List<ObserverEdition> = emptyList(),
+    /** The runner's site was read (or there is no runner): until then a missing paper isn't a missed one. */
+    val runnerRead: Boolean = true,
 )
 
 /** Whether [task] is a morning schedule this app runs: the Observer task, a cron it reads, a zone this platform knows. */
 fun runsHereAtAll(task: ScheduledTask) = task.task == ObserverSchedule.TASK && task.expression() != null && FrontPageClock.cronZone(task.tz) != null
+
+/**
+ * Whether the reader's own devices print [task] on schedule: it [runsHereAtAll], names no runner
+ * (NIP-FB, Runner: then only that runner does, and a conflict runs nowhere), and holds no param
+ * this app doesn't understand (NIP-FB, `param`: such a task is never run).
+ */
+fun devicesPrint(task: ScheduledTask) = runsHereAtAll(task) && !task.namesRunner && ObserverParams.understands(task)
+
+/** An Observer schedule holding only settings: no `cron`, so it never runs (NIP-FB, `param`). */
+fun observerSettingsOnly(): ScheduledTask = ScheduledTask(arrayOf(DTag.assemble(ObserverSchedule.D_TAG)), arrayOf(TaskTag.assemble(ObserverSchedule.TASK)))
+
+/** [task] holds the Observer's settings but no schedule: it never runs on its own. */
+fun isSettingsOnly(task: ScheduledTask) = task.cronTag == null && task.task == ObserverSchedule.TASK
+
+/**
+ * [task] with the model the reader picked in the print view ([model], blank leaves it) and the
+ * key it prints with ([key], null leaves it): written as the Observer's `model` and `key` params
+ * ([ObserverParams]); every other param stays as read. With no schedule yet, a settings-only one
+ * ([observerSettingsOnly]): it holds the choice for every app and never runs.
+ */
+fun withObserverSettings(
+    current: ScheduledTask?,
+    model: String?,
+    key: AgentKeyTag?,
+): ScheduledTask {
+    var next = current ?: observerSettingsOnly()
+    if (!model.isNullOrBlank()) next = ObserverParams.withModel(next, model)
+    if (key != null) next = ObserverParams.withKey(next, key)
+    return next
+}
+
+/**
+ * The per-install remembered model ([remembered], from [FrontPageModelMemory]) moved into [task]
+ * as its `model` param, unless the schedule already names one: the migration this install makes
+ * on its first edit of the event.
+ */
+fun withMigratedModel(
+    task: ScheduledTask,
+    remembered: String?,
+): ScheduledTask = if (remembered.isNullOrBlank() || ObserverParams.model(task) != null) task else ObserverParams.withModel(task, remembered)
+
+/**
+ * [current] turned on with [seed]'s schedule when it has none (a settings-only event): its params,
+ * runner and every other tag stay; else as [ScheduledTask.withEnabled].
+ */
+fun withScheduleOn(
+    current: ScheduledTask,
+    seed: ScheduledTask?,
+    on: Boolean,
+    at: Long,
+): ScheduledTask? {
+    if (current.cronTag != null) return current.withEnabled(on, at)
+    if (!on) return null
+    val cron = seed?.cronTag ?: return null
+    return current.withCron(cron.expression, cron.zone ?: return null, at).withEnabled(true, at)
+}
+
+/**
+ * A read-modify-write of the schedule through [state] with [transform], and this install's model
+ * migration ([withMigratedModel]) folded into whatever it writes: [remembered] is null once this
+ * install has migrated, or when it remembers no model.
+ */
+suspend fun editMigrating(
+    state: ScheduleRelays,
+    at: Long,
+    remembered: String?,
+    transform: (ScheduledTask?) -> ScheduledTask?,
+): ScheduleEdit = state.edit(at) { current -> transform(current)?.let { withMigratedModel(it, remembered) } }
 
 /**
  * The schedule this device keeps, or null when there is nothing to decide on yet (no synced
@@ -171,7 +280,7 @@ fun scheduleForThisDevice(
     when (synced) {
         is SyncedSchedule.Readable -> {
             val task = synced.task
-            FrontPageSchedule(task.enabled && optedIn.enabled && canPrintHere && hasWriteRelays && runsHereAtAll(task), task.cron.orEmpty(), task.tz)
+            FrontPageSchedule(task.enabled && optedIn.enabled && canPrintHere && hasWriteRelays && devicesPrint(task), task.cron.orEmpty(), task.tz)
         }
         SyncedSchedule.Unknown -> null
         else -> FrontPageSchedule()
@@ -307,6 +416,7 @@ fun viewOf(
     hasWriteRelays: Boolean = true,
     now: Long = TimeUtils.now(),
     deviceId: String? = FrontPageClock.localZone(),
+    sites: ObserverSites = ObserverSites(),
 ): MorningScheduleView {
     val base = MorningScheduleView(printsHere = optedIn.enabled, canPrintHere = canPrintHere, hasWriteRelays = hasWriteRelays)
     return when (synced) {
@@ -319,25 +429,45 @@ fun viewOf(
             val zone = FrontPageClock.cronZone(task.tz)
             val expression = task.expression()
             val device = FrontPageClock.cronZone(deviceId)
+            val withRunner =
+                base.copy(
+                    runners = task.runners,
+                    runner = task.runner,
+                    unknownParams = ObserverParams.unknownParams(task),
+                )
+            // Settings and no schedule: nothing runs, the switch is off, the settings are kept.
+            if (isSettingsOnly(task)) return withRunner.copy(state = ScheduleState.NOT_SET_UP, settingsOnly = true)
             // NIP-FB: the claim's name only for the claim `ran` finished; an older `ran` has no name here.
             val lastBy = task.claim?.by?.takeIf { ScheduledTaskClaims.isFinished(task) }
+            // With a runner, it can't write `ran`: its site and the reader's say when it last printed.
+            val last = if (task.namesRunner) ObserverSite.lastPrinted(sites.reader, sites.runner)?.takeIf { it.printedAt >= (task.ran ?: 0) } else null
+            val lastRan = last?.printedAt ?: task.ran
             val shown =
-                base.copy(
+                withRunner.copy(
                     enabled = task.enabled,
                     cron = task.cron,
                     zone = task.tz,
-                    lastBy = lastBy,
-                    lastRan = task.ran,
-                    lastRanAgo = task.ran?.let { agoBucket(now - it) },
+                    lastBy = if (last != null) null else lastBy,
+                    lastByRunner = last?.byRunner == true,
+                    lastRan = lastRan,
+                    lastRanAgo = lastRan?.let { agoBucket(now - it) },
                 )
             if (task.task != ObserverSchedule.TASK || expression == null || zone == null || task.tz == null) {
                 shown.copy(state = ScheduleState.UNREADABLE, words = task.cron?.let { CronWords.Raw(it) })
             } else {
+                val missed =
+                    when {
+                        !task.namesRunner -> task.missedRun(zone, now)
+                        // Not read yet: say nothing rather than warn about a paper that may be there.
+                        !sites.runnerRead -> null
+                        else -> ObserverSite.missedRun(task, sites.reader, sites.runner, zone, now)
+                    }
                 shown.copy(
                     state = ScheduleState.READY,
                     words = describeCron(expression, task.tz!!, zone, deviceId, device, now),
                     editableTime = editableTime(task, deviceId, device, now),
-                    missedSince = task.ran?.takeIf { task.missedRun(zone, now) != null },
+                    missedSince = lastRan?.takeIf { missed != null },
+                    missedDue = missed?.takeIf { lastRan == null && task.namesRunner },
                 )
             }
         }
@@ -358,6 +488,8 @@ class FrontPageMorning(
     private val info: FrontPageInstallInfo?,
     private val now: () -> Long = { TimeUtils.now() },
     private val pause: suspend (Long) -> Unit = { delay(it) },
+    /** The model this install remembered per endpoint before settings moved into the schedule: migrated once, on the first edit. */
+    private val memory: FrontPageModelMemory? = null,
 ) {
     suspend fun installId(account: Account) = installs.id(account.signer.pubKey)
 
@@ -379,9 +511,12 @@ class FrontPageMorning(
      * new view goes out only when what it says changed ("2 hours ago", a missed morning, the
      * next run's time on this clock).
      */
-    fun view(account: Account): Flow<MorningScheduleView> =
-        combine(account.observerSchedule.flow, optIns.flow(account.signer.pubKey), account.observerSchedule.writeRelays, minutes()) { synced, mine, relays, at ->
-            viewOf(synced, mine, canPrintHere(account), hasWriteRelays(relays), at)
+    fun view(
+        account: Account,
+        sites: Flow<ObserverSites> = flowOf(ObserverSites()),
+    ): Flow<MorningScheduleView> =
+        combine(account.observerSchedule.flow, optIns.flow(account.signer.pubKey), account.observerSchedule.writeRelays, minutes(), sites) { synced, mine, relays, at, both ->
+            viewOf(synced, mine, canPrintHere(account), hasWriteRelays(relays), at, sites = both)
         }.distinctUntilChanged()
 
     /**
@@ -425,6 +560,7 @@ class FrontPageMorning(
         val at = now()
         val occurrence = ScheduledTaskClaims.occurrence(task, zone, at) ?: return false
         val id = installId(account)
+        if (!devicesPrint(task)) return false
         return ScheduledTaskClaims.decide(task, ObserverSchedule.TASK, occurrence, at, id, ownRun(id, occurrence)) == Decision.CLAIM
     }
 
@@ -476,7 +612,7 @@ class FrontPageMorning(
             return
         }
         if (optIns.isMigrated(pubKey)) return
-        if (account.observerSchedule.flow.value is SyncedSchedule.Readable) {
+        if ((account.observerSchedule.flow.value as? SyncedSchedule.Readable)?.task?.let(::isSettingsOnly) == false) {
             optIns.setMigrated(pubKey)
             return
         }
@@ -485,7 +621,14 @@ class FrontPageMorning(
             editQueue.withLock {
                 val at = now()
                 // Set now: the mornings this device missed before it moved aren't anyone's to catch up.
-                account.observerSchedule.edit(at) { current -> if (current == null) ObserverSchedule.new(zone, at).withEnabled(true, at).withCron(mine.cron, zone, at) else null }
+                val local = ObserverSchedule.new(zone, at).withEnabled(true, at).withCron(mine.cron, zone, at)
+                edit(account, at) { current ->
+                    when {
+                        current == null -> local
+                        isSettingsOnly(current) -> withScheduleOn(current, local, on = true, at)
+                        else -> null
+                    }
+                }
             }
         if (outcome is ScheduleEdit.Saved || outcome is ScheduleEdit.Unchanged || outcome is ScheduleEdit.Unreadable) optIns.setMigrated(pubKey)
     }
@@ -509,8 +652,9 @@ class FrontPageMorning(
         editQueue.withLock {
             val at = now()
             val seed = if (on) seed(account, at) else null
-            if (on && seed == null && account.observerSchedule.flow.value !is SyncedSchedule.Readable) return@withLock ScheduleEdit.NoZone
-            val outcome = account.observerSchedule.edit(at) { current -> current?.withEnabled(on, at) ?: seed }
+            val known = (account.observerSchedule.flow.value as? SyncedSchedule.Readable)?.task
+            if (on && seed == null && (known == null || isSettingsOnly(known))) return@withLock ScheduleEdit.NoZone
+            val outcome = edit(account, at) { current -> if (current == null) seed else withScheduleOn(current, seed, on, at) }
             if (on && (outcome is ScheduleEdit.Saved || outcome is ScheduleEdit.Unchanged) && canPrintHere(account)) setOptIn(account, true)
             outcome
         }
@@ -527,7 +671,7 @@ class FrontPageMorning(
             val at = now()
             var refused: ScheduleEdit? = null
             val outcome =
-                account.observerSchedule.edit(at) { current ->
+                edit(account, at) { current ->
                     when (val plan = current?.let { planTimeEdit(it, hour, minute, deviceId, device, at) }) {
                         is TimeEdit.Change -> plan.task
                         TimeEdit.NotExpressible -> null.also { refused = ScheduleEdit.NotExpressible }
@@ -551,8 +695,88 @@ class FrontPageMorning(
             if (!on || account.observerSchedule.flow.value != SyncedSchedule.Unknown) return@withLock null
             val at = now()
             val seed = seed(account, at) ?: return@withLock ScheduleEdit.NoZone
-            account.observerSchedule.edit(at) { current -> if (current == null) seed else null }
+            edit(account, at) { current -> if (current == null) seed else null }
         }
+
+    /**
+     * Who prints on schedule (NIP-FB, Runner): [runner] (the reader's Brainstorm Assistant) or,
+     * when null, the reader's own devices. Rewritten through the schedule's edit rules: every other
+     * tag stays, and the private tags are encrypted to the runner, or back to the reader when it is
+     * cleared ([ScheduledTaskEvent.rewrite]). While a runner is named this device's job goes
+     * ([devicesPrint]); its own "Print from this device" stays as it was, for when it is cleared.
+     */
+    suspend fun setRunner(
+        account: Account,
+        runner: HexKey?,
+    ): ScheduleEdit =
+        editQueue.withLock {
+            edit(account, now()) { current -> current?.withRunner(runner) }
+        }
+
+    /**
+     * The model the reader picked in the print view and the key it prints with, written into the
+     * schedule as the Observer's `model` and `key` params (every app prints with them); with no
+     * schedule yet, as a settings-only event that never runs ([withObserverSettings]).
+     */
+    suspend fun setSettings(
+        account: Account,
+        model: String?,
+        key: AgentKeyTag?,
+    ): ScheduleEdit =
+        editQueue.withLock {
+            edit(account, now()) { current -> withObserverSettings(current, model, key) }
+        }
+
+    /**
+     * Every edit this install makes of the schedule for the reader: the first one that writes also
+     * moves the model this install remembered for the key's endpoint into the event, unless it
+     * names one already ([withMigratedModel]), once.
+     */
+    private suspend fun edit(
+        account: Account,
+        at: Long,
+        transform: (ScheduledTask?) -> ScheduledTask?,
+    ): ScheduleEdit {
+        val pubKey = account.signer.pubKey
+        val migrating = memory != null && !memoryMigrated(pubKey)
+        val remembered = if (migrating) rememberedModel(account) else null
+        val outcome = editMigrating(account.observerSchedule, at, remembered, transform)
+        if (migrating && outcome is ScheduleEdit.Saved) {
+            try {
+                memory.setMigrated(pubKey)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not record the model's move into the schedule", e)
+            }
+        }
+        return outcome
+    }
+
+    private suspend fun memoryMigrated(pubKey: HexKey): Boolean =
+        try {
+            memory?.isMigrated(pubKey) ?: true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not read whether the model moved into the schedule", e)
+            true
+        }
+
+    /** The model this install remembers for the endpoint the schedule prints with ([ObserverParams.key]). */
+    private suspend fun rememberedModel(account: Account): String? {
+        val keys = account.agentKeys.flow.value
+        val task = (account.observerSchedule.flow.value as? SyncedSchedule.Readable)?.task
+        val url = (task?.let { ObserverParams.key(it, keys) } ?: keys.firstOrNull())?.url ?: return null
+        return try {
+            memory?.get(url)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not read the remembered model", e)
+            null
+        }
+    }
 
     private suspend fun setOptIn(
         account: Account,
@@ -622,6 +846,8 @@ class FrontPageMorning(
             // No schedule, or one this signer can't decrypt: never run, never write.
             val event = read.event ?: return ScheduledOutcome.NOT_RUNNER
             val task = read.task ?: return ScheduledOutcome.NOT_RUNNER
+            // NIP-FB, `param`: a task with a param this app doesn't understand is never run.
+            if (!ObserverParams.understands(task)) return ScheduledOutcome.NOT_RUNNER
             val zone = FrontPageClock.cronZone(task.tz) ?: return ScheduledOutcome.NOT_RUNNER
             val at = now()
             val occurrence = ScheduledTaskClaims.occurrence(task, zone, at) ?: return ScheduledOutcome.NOT_DUE
@@ -630,6 +856,9 @@ class FrontPageMorning(
             first = occurrence
             when (ScheduledTaskClaims.decide(task, ObserverSchedule.TASK, occurrence, at, id, ownRun(id, occurrence))) {
                 Decision.NOT_RUNNABLE -> return ScheduledOutcome.NOT_RUNNER
+                // NIP-FB, Runner: the reader named a runner (their Assistant) to print on schedule;
+                // no device of theirs claims or prints it. Printing by hand still works here.
+                Decision.RUNNER_NAMED -> return ScheduledOutcome.NOT_RUNNER
                 Decision.ALREADY_CLAIMED -> return ScheduledOutcome.ALREADY_CLAIMED
                 Decision.ATTEMPTED_HERE -> return ScheduledOutcome.ALREADY_ATTEMPTED
                 Decision.CLAIM -> {}
@@ -862,19 +1091,33 @@ class FrontPageScheduleWatcher(
                 Log.w(TAG, "Could not move the morning schedule", e)
             }
         }
-        var first = true
-        morning
-            .here(account)
-            .filterNotNull()
-            .distinctUntilChanged()
-            .collect { schedule ->
-                scheduler.reschedule(pubKey, schedule)
-                if (first && schedule.enabled && morning.catchUpWanted(account)) scheduler.runNow(pubKey)
-                first = false
-            }
+        follow(pubKey, morning.here(account), scheduler) { morning.catchUpWanted(account) }
     }
 
     companion object {
         private const val TAG = "FrontPageScheduleWatcher"
+
+        /**
+         * Keeps [pubKey]'s platform job in step with [schedules] (the schedule this device keeps,
+         * null while undecided): every change reschedules it, so a schedule that comes to name a
+         * runner, or turns off, cancels the job, and one whose runner is cleared brings it back. The
+         * first enabled one also runs a morning missed while the app was closed, when [catchUp] says so.
+         */
+        suspend fun follow(
+            pubKey: HexKey,
+            schedules: Flow<FrontPageSchedule?>,
+            scheduler: FrontPageScheduler,
+            catchUp: suspend () -> Boolean,
+        ) {
+            var first = true
+            schedules
+                .filterNotNull()
+                .distinctUntilChanged()
+                .collect { schedule ->
+                    scheduler.reschedule(pubKey, schedule)
+                    if (first && schedule.enabled && catchUp()) scheduler.runNow(pubKey)
+                    first = false
+                }
+        }
     }
 }

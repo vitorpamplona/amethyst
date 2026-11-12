@@ -25,12 +25,15 @@ import com.vitorpamplona.amethyst.commons.agents.AgentProviderPresets
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.localPrivKeyOrNull
+import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.SyncedSchedule
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverEdition
+import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverParams
 import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverSite
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
@@ -53,6 +56,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -227,12 +231,44 @@ class FrontPagePrinter(
     private val siteView = MutableStateFlow<ObserverSiteView?>(null)
 
     /**
+     * The Observer site of the runner the reader's schedule names (NIP-FB, Runner: their
+     * Assistant prints there, signed by itself, tagging the reader), as last read; null when the
+     * schedule names none, or it has none yet.
+     */
+    private val runnerSiteView = MutableStateFlow<RunnerSiteView?>(null)
+
+    /** The runner whose site was last read (found or not); null before any read. */
+    private val runnerReadFor = MutableStateFlow<HexKey?>(null)
+
+    /** The one runner the reader's own signed schedule names, or null. */
+    private fun scheduleRunner(): HexKey? = (account.observerSchedule.flow.value as? SyncedSchedule.Readable)?.task?.runner
+
+    /** The runner's site, only while it is still the runner the schedule names. */
+    private fun runnerEditions(): List<ObserverEdition> =
+        runnerSiteView.value
+            ?.takeIf { it.runner == scheduleRunner() }
+            ?.view
+            ?.editions
+            .orEmpty()
+
+    /**
      * The history: editions kept on this device plus the ones on the reader's Observer site this
-     * device doesn't have (printed in another app or on another device), newest first.
+     * device doesn't have (printed in another app or on another device), plus the ones on their
+     * runner's site (marked [SavedEdition.byRunner]), newest first.
      */
     val editions: StateFlow<List<SavedEdition>> =
-        combine(localEditions, siteView) { local, site -> mergeHistory(local, site?.editions.orEmpty()) }
+        combine(localEditions, siteView, runnerSiteView) { local, site, runner -> mergeHistory(local, site?.editions.orEmpty(), runner?.view?.editions.orEmpty()) }
             .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    /**
+     * What the two sites hold, for the schedule's status line and missed-run warning: the reader's
+     * own (their site and the editions kept here) and the runner's.
+     */
+    val sites: StateFlow<ObserverSites> =
+        combine(localEditions, siteView, runnerSiteView, runnerReadFor, account.observerSchedule.flow) { local, site, runner, readFor, synced ->
+            val named = (synced as? SyncedSchedule.Readable)?.task?.runner
+            observerSitesOf(local, site?.editions.orEmpty(), runner?.view?.editions.orEmpty()).copy(runnerRead = named == null || readFor == named)
+        }.stateIn(scope, SharingStarted.Eagerly, ObserverSites())
 
     /** The reader's Observer site event, for Open and Share. */
     val site: StateFlow<NamedSiteEvent?> =
@@ -270,6 +306,14 @@ class FrontPagePrinter(
         scope.launch {
             refresh()
             refreshSite()
+        }
+        // The runner's site is read whenever the schedule comes to name one (or another), and
+        // dropped when it names none: a site by any other key is never read.
+        scope.launch {
+            account.observerSchedule.flow
+                .map { (it as? SyncedSchedule.Readable)?.task?.runner }
+                .distinctUntilChanged()
+                .collect { runner -> refreshRunnerSite(runner) }
         }
     }
 
@@ -316,16 +360,35 @@ class FrontPagePrinter(
         }
     }
 
+    /** Reads the Observer site [runner] publishes for the reader; clears it when [runner] is null. */
+    suspend fun refreshRunnerSite(runner: HexKey? = scheduleRunner()) {
+        if (runner == null) {
+            runnerSiteView.value = null
+            return
+        }
+        val publisher = publisher ?: return
+        try {
+            val view = publisher.readRunner(runner)
+            runnerSiteView.value = view?.let { RunnerSiteView(runner, it) } ?: runnerSiteView.value?.takeIf { it.runner == runner }
+            runnerReadFor.value = runner
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not read the runner's Observer site", e)
+        }
+    }
+
     /**
-     * [day]'s page: from this device, else from the reader's Observer site by its hash (verified),
-     * then kept here so it opens offline next time.
+     * [day]'s page: from this device, else from the reader's Observer site (or their runner's) by
+     * its hash (verified), then kept here so it opens offline next time.
      */
     suspend fun html(day: String): String? {
         store.html(pubKey, day)?.let { return it }
-        val view = siteView.value ?: return null
-        val edition = view.editions.firstOrNull { it.day == day } ?: return null
-        val page = publisher?.page(edition, view.servers) ?: return null
-        mergeHistory(emptyList(), listOf(edition)).firstOrNull()?.let { kept ->
+        val own = siteView.value?.let { view -> view.editions.firstOrNull { it.day == day }?.let { Triple(it, view.servers, false) } }
+        val byRunner = runnerSiteView.value?.view?.let { view -> view.editions.firstOrNull { it.day == day }?.let { Triple(it, view.servers, true) } }
+        val (edition, servers, fromRunner) = own ?: byRunner ?: return null
+        val page = publisher?.page(edition, servers) ?: return null
+        savedFromSite(edition, fromRunner).let { kept ->
             try {
                 store.save(pubKey, kept, page)
                 refresh()
@@ -572,8 +635,15 @@ class FrontPagePrinter(
         if (_observer.value == ObserverStatus.AwaitingConsent) _observer.value = ObserverStatus.Idle
     }
 
-    /** The model the reader picked for this endpoint, else the best-ranked one it lists. */
-    suspend fun chooseModel(key: AgentKeyTag): AgentModel? {
+    /**
+     * The model to print with: the schedule's `model` param ([named]) as written (a printer that
+     * can't use it fails, it never picks another: the reader chose that price), else the one this
+     * install remembers for the endpoint, else the best-ranked one it lists.
+     */
+    suspend fun chooseModel(
+        key: AgentKeyTag,
+        named: String? = null,
+    ): AgentModel? {
         val listed =
             try {
                 http.listAgentModels(key)
@@ -582,9 +652,12 @@ class FrontPagePrinter(
             }
         val remembered = runCatching { memory.get(key.url) }.getOrNull()
         val byId = listed.associateBy { it.id }
-        val pick = remembered ?: rankModels(listed.map { it.id }).firstOrNull() ?: return null
+        val pick = named ?: remembered ?: rankModels(listed.map { it.id }).firstOrNull() ?: return null
         return byId[pick] ?: AgentModel(pick)
     }
+
+    /** The reader's schedule, when this device has read it. */
+    private fun scheduledTask(): ScheduledTask? = (account.observerSchedule.flow.value as? SyncedSchedule.Readable)?.task
 
     /** The cost estimate for one print with [model]: the last edition's digest size, or the budget. */
     fun estimate(model: AgentModel?): Double? =
@@ -634,7 +707,7 @@ class FrontPagePrinter(
         val (key, hasLens) = awaitOwnLists(waitMs)
         if (key == null) return ScheduledOutcome.NO_KEY.also { notifier.needsYou(pubKey) }
         if (!hasLens) return ScheduledOutcome.NO_LENS.also { notifier.needsYou(pubKey) }
-        val model = chooseModel(key) ?: return ScheduledOutcome.FAILED
+        val model = chooseModel(key, scheduledTask()?.let(ObserverParams::model)) ?: return ScheduledOutcome.FAILED
         val ended =
             if (budgetSeconds == null) {
                 printHolding(key, model, boundary, PrintTrigger.SCHEDULED, keep)
@@ -677,9 +750,11 @@ class FrontPagePrinter(
             } catch (e: Exception) {
                 Log.w(TAG, "Could not read the Observer site before a scheduled print", e)
                 null
-            } ?: return false
-        siteView.value = site
-        return ObserverSite.alreadyPrinted(site.editions, occurrence, zone)
+            }
+        site?.let { siteView.value = it }
+        // NIP-FB, Runner: the runner's site counts too, and only the runner the schedule names.
+        scheduleRunner()?.let { refreshRunnerSite(it) }
+        return ObserverSite.alreadyPrinted(site?.editions.orEmpty(), runnerEditions(), occurrence, zone)
     }
 
     /**
@@ -688,7 +763,8 @@ class FrontPagePrinter(
      * search relay, which mirrors replaceables) for both, then waits for them to decrypt.
      */
     private suspend fun awaitOwnLists(waitMs: Long): Pair<AgentKeyTag?, Boolean> {
-        val ready = combine(account.agentKeys.flow, account.trustProviderList.liveUserRankProvider) { keys, rank -> keys.firstOrNull() to (rank != null) }
+        // The schedule's `key` param picks among the usable keys; NIP-FA's default (the first) without one.
+        val ready = combine(account.agentKeys.flow, account.trustProviderList.liveUserRankProvider) { keys, rank -> scheduledKey(scheduledTask(), keys) to (rank != null) }
         val now = ready.first()
         if (now.first != null && now.second) return now
         fetchOwnLists()
@@ -735,6 +811,35 @@ class FrontPagePrinter(
         private const val TAG = "FrontPagePrinter"
     }
 }
+
+/**
+ * What the two Observer sites hold, for the status line and the missed-run warning: the reader's
+ * own site plus the editions kept on this device, and the runner's site. A runner's edition kept
+ * here (opened once, so it reads offline) is still the runner's print.
+ */
+fun observerSitesOf(
+    kept: List<SavedEdition>,
+    site: List<ObserverEdition>,
+    runnerSite: List<ObserverEdition>,
+): ObserverSites {
+    val (keptByRunner, keptOwn) = kept.filter { it.printedAt > 0 }.partition { it.byRunner }
+    return ObserverSites(
+        reader = site + keptOwn.map { ObserverPublisher.entryFor(it, it.sha256 ?: "") },
+        runner = runnerSite + keptByRunner.map { ObserverPublisher.entryFor(it, it.sha256 ?: "") },
+    )
+}
+
+/** The site the runner [runner] publishes for the reader, as last read. */
+class RunnerSiteView(
+    val runner: HexKey,
+    val view: ObserverSiteView,
+)
+
+/** The key to print with: the schedule's `key` param among [keys] ([ObserverParams.key]), else NIP-FA's default (the first). */
+fun scheduledKey(
+    task: ScheduledTask?,
+    keys: List<AgentKeyTag>,
+): AgentKeyTag? = task?.let { ObserverParams.key(it, keys) } ?: keys.firstOrNull()
 
 /** How the last publish to the reader's Observer site went. */
 sealed interface ObserverStatus {
@@ -905,7 +1010,7 @@ class FrontPagePrinters(
     private val host: FrontPagePrintHost = FrontPagePrintHost.None,
 ) {
     /** The synced morning schedule of every account, and this install's place in it. */
-    val morning = FrontPageMorning(schedules, installs, installInfo)
+    val morning = FrontPageMorning(schedules, installs, installInfo, memory = memory)
 
     private val printers = MutableStateFlow<Map<HexKey, FrontPagePrinter>>(emptyMap())
 

@@ -63,6 +63,8 @@ data class SavedEdition(
     val sha256: String? = null,
     /** On the reader's Observer site: published from here, or read back from it. */
     val published: Boolean = false,
+    /** Printed by the runner the reader's schedule names (their Assistant), read from its own Observer site. */
+    val byRunner: Boolean = false,
 )
 
 /**

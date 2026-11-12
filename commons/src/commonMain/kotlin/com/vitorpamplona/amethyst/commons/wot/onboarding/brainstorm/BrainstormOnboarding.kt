@@ -226,5 +226,11 @@ class BrainstormOnboarding(
         const val API = "https://api.brainstorm.world"
         const val SCORES_RELAY = "wss://scores.brainstorm.world"
         const val LOGIN_KIND = 22242
+
+        /**
+         * Brainstorm's Settings › Assistants › AI model: where the reader gives their Assistant an
+         * AI key of its own (its NIP-FA list), which it prints the reader's Observer with.
+         */
+        const val AI_MODEL_SETTINGS = "https://brainstorm.world/settings?tab=assistants&view=ai"
     }
 }

@@ -80,6 +80,44 @@ class AccountObserverSiteIO(
         }
     }
 
+    /**
+     * The runner's site for this reader, from the reader's outbox relays and the runner's own (its
+     * NIP-65, when this device has it), through the same read as the reader's own site. Only a
+     * site [ObserverSite.isRunnerSiteFor] accepts counts: by [runner], `d=observer`, tagging [reader].
+     */
+    override suspend fun latestRunnerSite(
+        runner: HexKey,
+        reader: HexKey,
+    ): SiteRead {
+        val filter = ObserverSite.runnerSiteFilter(runner, reader)
+        val relays =
+            account.outboxRelays.flow.first() +
+                account.cache
+                    .getUserIfExists(runner)
+                    ?.outboxRelays()
+                    .orEmpty()
+        val result =
+            try {
+                account.client.fetchAllWithHooks(relays.associateWith { listOf(filter) }, idleTimeoutMs = 10_000) { relay, event ->
+                    account.cache.justConsume(event, relay, wasVerified = false)
+                    true
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not read the runner's Observer site", e)
+                null
+            }
+        val fetched = result?.events?.map { it.second }.orEmpty()
+        val cached = account.cache.getAddressableNoteIfExists(ObserverSite.address(runner))?.event
+        val newest = ObserverSite.runnerSite(fetched + listOfNotNull(cached), runner, reader)
+        return when {
+            newest != null -> SiteRead.Found(newest)
+            result?.anyRelayServed == true -> SiteRead.None
+            else -> SiteRead.Unreadable
+        }
+    }
+
     // Only the servers the reader chose: no kind 10063 means nothing is uploaded anywhere.
     override suspend fun servers(): List<String> = account.blossomServers.flow.value
 

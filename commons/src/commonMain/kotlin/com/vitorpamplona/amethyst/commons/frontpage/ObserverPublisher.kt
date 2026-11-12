@@ -78,6 +78,17 @@ interface ObserverSiteIO {
 
     /** Signs [template] as the author and sends it to their write relays. */
     suspend fun publish(template: EventTemplate<NamedSiteEvent>): NamedSiteEvent
+
+    /**
+     * The newest Observer site [runner] publishes for [reader] (NIP-FB, Runner: kind 35128 by
+     * [runner], `d=observer`, tagging [reader]; [ObserverSite.runnerSiteFilter]), checked with
+     * [ObserverSite.isRunnerSiteFor]: a site by any other key that tags the reader is never read.
+     * [SiteRead.None] where the platform reads no runner sites.
+     */
+    suspend fun latestRunnerSite(
+        runner: HexKey,
+        reader: HexKey,
+    ): SiteRead = SiteRead.None
 }
 
 /** One page to put on the site: its index entry and its HTML. */
@@ -202,6 +213,19 @@ class ObserverPublisher(
         return ObserverSiteView(site, editionsOf(site, servers), servers)
     }
 
+    /**
+     * The site the runner the reader's schedule names publishes for them ([ObserverSiteIO.latestRunnerSite])
+     * and its editions, newest first; null when it has none, or it can't be read. Only [runner],
+     * and only its site that tags this reader, ever counts.
+     */
+    suspend fun readRunner(runner: HexKey): ObserverSiteView? {
+        val site = (io.latestRunnerSite(runner, author) as? SiteRead.Found)?.site ?: return null
+        if (!ObserverSite.isRunnerSiteFor(site, runner, author)) return null
+        // Its files are on the reader's own Blossom servers (the plan's rule for the runner), and on any it names.
+        val servers = (site.servers() + io.servers()).distinct()
+        return ObserverSiteView(site, editionsOf(site, servers), servers)
+    }
+
     /** [edition]'s page, by hash, from [servers]; null when no server has the right bytes. */
     suspend fun page(
         edition: ObserverEdition,
@@ -263,30 +287,41 @@ class ObserverSiteView(
 
 /**
  * The history the front page shows: the editions kept on this device, plus the site's editions
- * this device doesn't have. An edition is the same one when its hash matches; a site day this
- * device also printed (by its own local day) stays the local one.
+ * this device doesn't have, plus the editions on the site of the runner the reader's schedule
+ * names ([runnerSite], NIP-FB, Runner) that neither has, marked [SavedEdition.byRunner]. An edition
+ * is the same one when its hash matches; a day this device also printed (by its own local day)
+ * stays the local one, and a day on the reader's own site stays the reader's.
  */
 fun mergeHistory(
     local: List<SavedEdition>,
     site: List<ObserverEdition>,
+    runnerSite: List<ObserverEdition> = emptyList(),
 ): List<SavedEdition> {
     val localShas = local.mapNotNull { it.sha256 }.toSet()
     val localDays = local.map { it.day }.toSet()
-    val fromSite =
-        site
-            .filter { it.sha256 !in localShas && it.day !in localDays }
-            .map {
-                SavedEdition(
-                    day = it.day,
-                    code = it.code.orEmpty(),
-                    printedAt = it.printedAt ?: 0,
-                    model = it.model.orEmpty(),
-                    posts = it.posts ?: 0,
-                    quotes = it.quotesVerified ?: 0,
-                    headline = it.headline,
-                    sha256 = it.sha256,
-                    published = true,
-                )
-            }
-    return (local + fromSite).sortedByDescending { it.day }
+    val fromSite = site.filter { it.sha256 !in localShas && it.day !in localDays }.map { savedFromSite(it, byRunner = false) }
+    val siteShas = site.map { it.sha256 }.toSet()
+    val siteDays = site.map { it.day }.toSet()
+    val fromRunner =
+        runnerSite
+            .filter { it.sha256 !in localShas && it.sha256 !in siteShas && it.day !in localDays && it.day !in siteDays }
+            .map { savedFromSite(it, byRunner = true) }
+    return (local + fromSite + fromRunner).sortedByDescending { it.day }
 }
+
+/** A site's [edition] as a kept one: published, by the reader or by their runner. */
+fun savedFromSite(
+    edition: ObserverEdition,
+    byRunner: Boolean,
+) = SavedEdition(
+    day = edition.day,
+    code = edition.code.orEmpty(),
+    printedAt = edition.printedAt ?: 0,
+    model = edition.model.orEmpty(),
+    posts = edition.posts ?: 0,
+    quotes = edition.quotesVerified ?: 0,
+    headline = edition.headline,
+    sha256 = edition.sha256,
+    published = true,
+    byRunner = byRunner,
+)
