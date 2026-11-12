@@ -201,6 +201,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.util.logTime
+import com.vitorpamplona.amethyst.commons.viewmodels.FeedsKeptCurrent.Companion.onlyHidesMoreThan
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.commons.wot.network.RelayTrustNetworkSource
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkState
@@ -398,6 +399,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -4329,6 +4331,19 @@ class Account(
         // Observed rather than hooked onto the local block action because the kind-10006 list is
         // shared: a block published by another client arrives as a flow update with no call of ours
         // behind it.
+        // Showing what was hidden: what the feeds and the pruner dropped for it is wanted again.
+        // Hiding more only removes notes, so it keeps the cursors (see [HiddenSetWidenings]).
+        scope.launch(Dispatchers.IO) {
+            var applied = hiddenUsers.flow.value
+            hiddenUsers.flow.drop(1).collect { now ->
+                if (!now.onlyHidesMoreThan(applied)) {
+                    cache.pruner.restoreHiddenPrunes()
+                    HiddenSetWidenings.widened()
+                }
+                applied = now
+            }
+        }
+
         scope.launch {
             blockedRelayList.flow.collect { blocked ->
                 relayAuthLedger.revokeSessionGrantsFor(blocked.map { it.url })

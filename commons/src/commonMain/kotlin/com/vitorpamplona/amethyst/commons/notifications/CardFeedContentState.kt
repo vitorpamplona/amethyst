@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.feeds.LoadedFeedState
 import com.vitorpamplona.amethyst.commons.feeds.NotificationFeedOrderCard
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.CombinedZap
+import com.vitorpamplona.amethyst.commons.model.HiddenSetWidenings
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvite
@@ -645,6 +646,9 @@ class CardFeedContentState(
                 activate()
             }
         }
+        // A feed rejects what an account hides, and nothing holds a rejected note: when an account
+        // shows it again, it may be gone while these cursors still vouch for it.
+        viewModelScope.launch(Dispatchers.IO) { HiddenSetWidenings.flow.collect { relayCursors.clear() } }
     }
 }
 

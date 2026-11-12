@@ -217,8 +217,11 @@ class AccountNotificationsEoseFromInboxRelaysManager(
 
         // One key per account; every account's holders get what the REQ answers.
         val accounts = wanted.values.toList()
+        // Built first: it wakes the split tabs, which are holders only once awake, and the holders
+        // served must be the ones it planned for, or the woken tabs miss this pass's EOSE.
+        val filters = updateFilter(accounts, null)
         serve(sub.id, cursorsNamedBy(accounts))
-        sub.updateFilters(updateFilter(accounts, null).ifEmpty { null }?.groupByRelay())
+        sub.updateFilters(filters.ifEmpty { null }?.groupByRelay())
     }
 
     override fun destroy() {

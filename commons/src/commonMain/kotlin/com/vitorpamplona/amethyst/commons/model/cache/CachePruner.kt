@@ -28,6 +28,8 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_GROUP_THREAD_KINDS
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
@@ -86,8 +88,10 @@ class CachePruner(
         channel: Channel,
         account: IAccount,
     ) {
+        // No rewind: these are hidden, and asking for them again would only bring them back to be
+        // pruned. Showing more again (an unmute) asks again: see [restoreHiddenPrunes].
         val toBeRemoved = channel.pruneHiddenMessages(account)
-        rewindHistoryFor(channel, toBeRemoved)
+        if (toBeRemoved.isNotEmpty()) hiddenPrunesLock.withLock { prunedHidden.add(channel) }
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -103,6 +107,35 @@ class CachePruner(
             println(
                 "PRUNE: ${toBeRemoved.size} hidden messages removed from ${channel.toBestDisplayName()}. ${channel.notes.size()} kept",
             )
+        }
+    }
+
+    private val hiddenPrunesLock = KmpLock()
+
+    // Channels that lost hidden messages here, until an account shows them again.
+    private val prunedHidden = mutableSetOf<Channel>()
+
+    /**
+     * An account shows what it hid: the channels this pruned hidden messages from ask their relays
+     * again, the live tail from scratch and the history from the top, since nothing remembers which
+     * bands those messages were in.
+     */
+    fun restoreHiddenPrunes() {
+        val channels = hiddenPrunesLock.withLock { prunedHidden.toList().also { prunedHidden.clear() } }
+        channels.forEach { channel ->
+            when (channel) {
+                is RelayGroupChannel -> {
+                    channel.history.reset()
+                    channel.threadsHistory.reset()
+                }
+
+                is ConcordChannel -> {
+                    channel.history.reset()
+                }
+
+                else -> {}
+            }
+            channel.relayCursorsOrNull()?.clear()
         }
     }
 
@@ -170,16 +203,16 @@ class CachePruner(
      * Realigns the history windows of [channel] for the messages just dropped from it, as
      * [pruneOldMessages] does for DMs: a relay that already paged past (or finished below) the
      * dropped band asks for it again on the next scroll instead of leaving a hole. Only bands below
-     * a window's floor are its own; newer ones belong to the live tail, whose cursors on the channel
-     * go back to the oldest message dropped so it asks for them again. Relay groups page their chat
-     * and their Threads tab apart; Concord channels page one history.
+     * a window's floor are its own. The live tail's cursors on the channel stay: the prune keeps
+     * the newest messages, so what it dropped is older than everything kept, and asking for it
+     * again would only refill what the prune freed (as `trimFeedsToSize` leaves a feed's cursors).
+     * Relay groups page their chat and their Threads tab apart; Concord channels page one history.
      */
     private fun rewindHistoryFor(
         channel: Channel,
         removed: Set<Note>,
     ) {
         if (removed.isEmpty()) return
-        removed.mapNotNull { it.createdAt() }.minOrNull()?.let { oldest -> channel.relayCursorsOrNull()?.rewindTo(oldest) }
         when (channel) {
             is RelayGroupChannel -> {
                 val (threads, chat) = removed.partition { it.event?.kind in RELAY_GROUP_THREAD_KINDS }

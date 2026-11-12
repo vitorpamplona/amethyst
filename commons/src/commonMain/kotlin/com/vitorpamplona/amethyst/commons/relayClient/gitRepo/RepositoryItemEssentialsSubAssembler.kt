@@ -87,6 +87,8 @@ class RepositoryItemEssentialsSubAssembler(
         filters: List<Filter>?,
     ) {
         val answered = mutableMapOf<Note, MutableList<Filter>>()
+        // One shape per filter, shared by every item it names.
+        val shapes = HashMap<Filter, FilterShape>()
         val refused = mutableSetOf<Note>()
         filters.orEmpty().forEach { filter ->
             if (filter.until != null) return@forEach
@@ -102,7 +104,7 @@ class RepositoryItemEssentialsSubAssembler(
             }
         }
         answered.forEach { (note, asked) ->
-            if (note !in refused) note.childCursors().newEose(relay, asked.map { FilterShape.of(it) }, time, cursorSource)
+            if (note !in refused) note.childCursors().newEose(relay, asked.map { shapes.getOrPut(it) { FilterShape.of(it) } }, time, cursorSource)
         }
         super.newEose(relay, time, filters)
     }

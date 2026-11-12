@@ -36,7 +36,8 @@ import kotlinx.coroutines.CoroutineScope
  * The rule here is only "could this reach me", which does not change with mutes, the Web of Trust
  * or the list picked at the top. Those stay in [NotificationFeedFilter.acceptableEvent], applied
  * over the set, so changing them costs a pass over the candidates, not a walk over the cache.
- * Held strongly: these are the notes that reach this account, a small part of the cache.
+ * Held strongly: these are the notes that reach this account, a small part of the cache (chat in
+ * a group channel, the one broad case, is held by its channel anyway).
  */
 object NotificationCandidates {
     fun create(
@@ -113,5 +114,8 @@ object NotificationCandidates {
     }
 
     private const val CHAT_CHAIN_DEPTH = 30
+
+    // Walked on the cache's insert path, for every note of mine that arrives: a bound on the work.
+    // Collecting them is cheap; the set skips the filter for those it already has.
     private const val MAX_DEPENDENTS = 2_000
 }

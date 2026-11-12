@@ -20,6 +20,26 @@
  */
 package com.vitorpamplona.amethyst.commons.moderation.notifications
 
+import io.github.kdroidfilter.nucleus.notification.AuthorizationOption
+import io.github.kdroidfilter.nucleus.notification.AuthorizationStatus
+import io.github.kdroidfilter.nucleus.notification.DeliveredNotification
+import io.github.kdroidfilter.nucleus.notification.NotificationCenter
+import io.github.kdroidfilter.nucleus.notification.NotificationCenterDelegate
+import io.github.kdroidfilter.nucleus.notification.NotificationContent
+import io.github.kdroidfilter.nucleus.notification.NotificationRequest
+import io.github.kdroidfilter.nucleus.notification.NotificationResponse
+import io.github.kdroidfilter.nucleus.notification.NotificationSound
+import io.github.kdroidfilter.nucleus.notification.PresentationOption
+import io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationCenter
+import io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationListener
+import io.github.kdroidfilter.nucleus.notification.linux.NotificationAction
+import io.github.kdroidfilter.nucleus.notification.windows.AdaptiveText
+import io.github.kdroidfilter.nucleus.notification.windows.DismissalReason
+import io.github.kdroidfilter.nucleus.notification.windows.ToastBindingGeneric
+import io.github.kdroidfilter.nucleus.notification.windows.ToastContent
+import io.github.kdroidfilter.nucleus.notification.windows.ToastNotificationListener
+import io.github.kdroidfilter.nucleus.notification.windows.ToastVisual
+import io.github.kdroidfilter.nucleus.notification.windows.WindowsNotificationCenter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +53,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.coroutines.resume
+import io.github.kdroidfilter.nucleus.notification.linux.Notification as LinuxNotification
 
 /**
  * Native-backed [NotificationDispatcher] using Nucleus (kdroidfilter/Nucleus).
@@ -143,31 +164,31 @@ class NucleusNotificationDispatcher(
     private fun listenForClicks() {
         when (host) {
             HostOs.MAC ->
-                io.github.kdroidfilter.nucleus.notification.NotificationCenter.setDelegate(
-                    object : io.github.kdroidfilter.nucleus.notification.NotificationCenterDelegate {
+                NotificationCenter.setDelegate(
+                    object : NotificationCenterDelegate {
                         // Shown while the app is in front too: a toast for an account that is not
                         // on screen is the only sign of it. The on-screen account's are held back
                         // before they get here.
-                        override fun willPresent(notification: io.github.kdroidfilter.nucleus.notification.DeliveredNotification) =
+                        override fun willPresent(notification: DeliveredNotification) =
                             setOf(
-                                io.github.kdroidfilter.nucleus.notification.PresentationOption.BANNER,
-                                io.github.kdroidfilter.nucleus.notification.PresentationOption.LIST,
-                                io.github.kdroidfilter.nucleus.notification.PresentationOption.SOUND,
+                                PresentationOption.BANNER,
+                                PresentationOption.LIST,
+                                PresentationOption.SOUND,
                             )
 
-                        override fun didReceive(response: io.github.kdroidfilter.nucleus.notification.NotificationResponse) {
+                        override fun didReceive(response: NotificationResponse) {
                             if (response.actionIdentifier != MAC_DISMISS_ACTION) clicked(response.notification.identifier)
                         }
                     },
                 )
             HostOs.LINUX ->
-                io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationCenter.addListener(
-                    object : io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationListener {
+                LinuxNotificationCenter.addListener(
+                    object : LinuxNotificationListener {
                         override fun onActionInvoked(
                             notificationId: Int,
                             actionKey: String,
                         ) {
-                            if (actionKey == io.github.kdroidfilter.nucleus.notification.linux.NotificationAction.DEFAULT_KEY) {
+                            if (actionKey == NotificationAction.DEFAULT_KEY) {
                                 clicked(notificationId.toString())
                             }
                         }
@@ -206,13 +227,13 @@ class NucleusNotificationDispatcher(
                 withTimeoutOrNull(PERMISSION_REQUEST_TIMEOUT_MS) {
                     suspendCancellableCoroutine<Pair<Boolean, String?>> { cont ->
                         try {
-                            io.github.kdroidfilter.nucleus.notification.NotificationCenter
+                            NotificationCenter
                                 .requestAuthorization(
                                     options =
                                         setOf(
-                                            io.github.kdroidfilter.nucleus.notification.AuthorizationOption.ALERT,
-                                            io.github.kdroidfilter.nucleus.notification.AuthorizationOption.SOUND,
-                                            io.github.kdroidfilter.nucleus.notification.AuthorizationOption.BADGE,
+                                            AuthorizationOption.ALERT,
+                                            AuthorizationOption.SOUND,
+                                            AuthorizationOption.BADGE,
                                         ),
                                     callback = { granted, error -> cont.resume(granted to error) },
                                 )
@@ -247,15 +268,15 @@ class NucleusNotificationDispatcher(
                 try {
                     suspendCancellableCoroutine<PermissionState> { cont ->
                         try {
-                            io.github.kdroidfilter.nucleus.notification.NotificationCenter.getNotificationSettings { settings ->
+                            NotificationCenter.getNotificationSettings { settings ->
                                 val mapped =
                                     when (settings.authorizationStatus) {
-                                        io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.AUTHORIZED,
-                                        io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.PROVISIONAL,
-                                        io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.EPHEMERAL,
+                                        AuthorizationStatus.AUTHORIZED,
+                                        AuthorizationStatus.PROVISIONAL,
+                                        AuthorizationStatus.EPHEMERAL,
                                         -> PermissionState.Granted
-                                        io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.DENIED -> PermissionState.Denied
-                                        io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.NOT_DETERMINED -> PermissionState.NotRequested
+                                        AuthorizationStatus.DENIED -> PermissionState.Denied
+                                        AuthorizationStatus.NOT_DETERMINED -> PermissionState.NotRequested
                                     }
                                 if (cont.isActive) cont.resume(mapped)
                             }
@@ -305,25 +326,25 @@ class NucleusNotificationDispatcher(
     // ---------- macOS ----------
 
     private fun refreshMacPermissionState() {
-        io.github.kdroidfilter.nucleus.notification.NotificationCenter.getNotificationSettings { settings ->
+        NotificationCenter.getNotificationSettings { settings ->
             _permission.value =
                 when (settings.authorizationStatus) {
-                    io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.AUTHORIZED,
-                    io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.PROVISIONAL,
-                    io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.EPHEMERAL,
+                    AuthorizationStatus.AUTHORIZED,
+                    AuthorizationStatus.PROVISIONAL,
+                    AuthorizationStatus.EPHEMERAL,
                     -> PermissionState.Granted
-                    io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.DENIED -> PermissionState.Denied
-                    io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.NOT_DETERMINED -> PermissionState.NotRequested
+                    AuthorizationStatus.DENIED -> PermissionState.Denied
+                    AuthorizationStatus.NOT_DETERMINED -> PermissionState.NotRequested
                 }
         }
     }
 
     private suspend fun sendMac(spec: NotificationSpec): SendResult {
         val content =
-            io.github.kdroidfilter.nucleus.notification.NotificationContent(
+            NotificationContent(
                 title = spec.title,
                 body = spec.body,
-                sound = io.github.kdroidfilter.nucleus.notification.NotificationSound.Default,
+                sound = NotificationSound.Default,
                 userInfo =
                     buildMap {
                         spec.deepLinkNoteId?.let { put("noteId", it) }
@@ -332,7 +353,7 @@ class NucleusNotificationDispatcher(
                 threadIdentifier = spec.threadId.orEmpty(),
             )
         val request =
-            io.github.kdroidfilter.nucleus.notification.NotificationRequest(
+            NotificationRequest(
                 identifier = UUID.randomUUID().toString(),
                 content = content,
             )
@@ -348,7 +369,7 @@ class NucleusNotificationDispatcher(
             withTimeoutOrNull(SEND_ACK_TIMEOUT_MS) {
                 suspendCancellableCoroutine<Result<String?>> { cont ->
                     try {
-                        io.github.kdroidfilter.nucleus.notification.NotificationCenter
+                        NotificationCenter
                             .add(request) { error -> cont.resume(Result.success(error)) }
                     } catch (t: Throwable) {
                         cont.resume(Result.success(t.message ?: t::class.simpleName))
@@ -368,10 +389,10 @@ class NucleusNotificationDispatcher(
     private fun ensureWindowsInitialized() {
         if (winInitialized) return
         try {
-            io.github.kdroidfilter.nucleus.notification.windows.WindowsNotificationCenter
+            WindowsNotificationCenter
                 .initialize(aumid = bundleId, appName = appLabel)
-            io.github.kdroidfilter.nucleus.notification.windows.WindowsNotificationCenter.addListener(
-                object : io.github.kdroidfilter.nucleus.notification.windows.ToastNotificationListener {
+            WindowsNotificationCenter.addListener(
+                object : ToastNotificationListener {
                     // A click on the toast body hands back its launch arguments: the link itself.
                     override fun onActivated(
                         tag: String,
@@ -385,7 +406,7 @@ class NucleusNotificationDispatcher(
                     override fun onDismissed(
                         tag: String,
                         group: String,
-                        reason: io.github.kdroidfilter.nucleus.notification.windows.DismissalReason,
+                        reason: DismissalReason,
                     ) = Unit
 
                     override fun onFailed(
@@ -405,21 +426,18 @@ class NucleusNotificationDispatcher(
         ensureWindowsInitialized()
         val text =
             listOfNotNull(
-                io.github.kdroidfilter.nucleus.notification.windows
-                    .AdaptiveText(spec.title),
+                AdaptiveText(spec.title),
                 spec.body.takeIf { it.isNotEmpty() }?.let {
-                    io.github.kdroidfilter.nucleus.notification.windows
-                        .AdaptiveText(it)
+                    AdaptiveText(it)
                 },
             )
-        io.github.kdroidfilter.nucleus.notification.windows.WindowsNotificationCenter.show(
+        WindowsNotificationCenter.show(
             content =
-                io.github.kdroidfilter.nucleus.notification.windows.ToastContent(
+                ToastContent(
                     visual =
-                        io.github.kdroidfilter.nucleus.notification.windows.ToastVisual(
+                        ToastVisual(
                             binding =
-                                io.github.kdroidfilter.nucleus.notification.windows
-                                    .ToastBindingGeneric(children = text),
+                                ToastBindingGeneric(children = text),
                         ),
                     launch = spec.openUri.orEmpty(),
                 ),
@@ -432,7 +450,7 @@ class NucleusNotificationDispatcher(
 
     private fun sendLinux(spec: NotificationSpec): SendResult {
         val notification =
-            io.github.kdroidfilter.nucleus.notification.linux.Notification(
+            LinuxNotification(
                 appName = appLabel,
                 summary = spec.title,
                 body = spec.body,
@@ -441,8 +459,8 @@ class NucleusNotificationDispatcher(
                 actions =
                     if (spec.openUri != null) {
                         listOf(
-                            io.github.kdroidfilter.nucleus.notification.linux.NotificationAction(
-                                io.github.kdroidfilter.nucleus.notification.linux.NotificationAction.DEFAULT_KEY,
+                            NotificationAction(
+                                NotificationAction.DEFAULT_KEY,
                                 appLabel,
                             ),
                         )
@@ -451,7 +469,7 @@ class NucleusNotificationDispatcher(
                     },
             )
         val id =
-            io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationCenter
+            LinuxNotificationCenter
                 .notify(notification)
         if (id > 0) rememberOpenUri(id.toString(), spec.openUri)
         return if (id > 0) SendResult.Delivered else SendResult.Failed(IllegalStateException("libnotify returned id=0"))
@@ -476,11 +494,11 @@ class NucleusNotificationDispatcher(
         try {
             when (host) {
                 HostOs.MAC ->
-                    io.github.kdroidfilter.nucleus.notification.NotificationCenter.isAvailable
+                    NotificationCenter.isAvailable
                 HostOs.WINDOWS ->
-                    io.github.kdroidfilter.nucleus.notification.windows.WindowsNotificationCenter.isAvailable
+                    WindowsNotificationCenter.isAvailable
                 HostOs.LINUX ->
-                    io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationCenter.isAvailable
+                    LinuxNotificationCenter.isAvailable
                 HostOs.UNKNOWN -> false
             }
         } catch (_: Throwable) {

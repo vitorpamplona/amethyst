@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.feeds
 
+import com.vitorpamplona.amethyst.commons.model.HiddenSetWidenings
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.StubCache
 import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
@@ -245,5 +246,21 @@ class LazyFeedContentStateTest {
         filter.key = "another list"
         state.checkKeysInvalidateDataAndSendToTop()
         waitUntil("the rebuild for the new key") { state.relayCursors.isEmpty() }
+    }
+
+    @Test
+    fun aFeedForgetsItsCursorsWhenAnAccountShowsWhatItHid() {
+        val relay = NormalizedRelayUrl("wss://relay.example.com/")
+        val before = HiddenSetWidenings.listeners.value
+        val feed = FeedContentState(CountingFilter(listOf(a)), scope, StubCache())
+        val cards = CardFeedContentState(CountingFilter(listOf(a)), scope)
+        feed.relayCursors.newEose(relay, listOf(FilterShape(kinds = setOf(1))), 1_000)
+        cards.relayCursors.newEose(relay, listOf(FilterShape(kinds = setOf(1))), 1_000)
+        // The collectors start on the scope's threads.
+        waitUntil("the feeds to listen") { HiddenSetWidenings.listeners.value >= before + 2 }
+
+        HiddenSetWidenings.widened()
+
+        waitUntil("the cursors to clear") { feed.relayCursors.isEmpty() && cards.relayCursors.isEmpty() }
     }
 }

@@ -148,4 +148,59 @@ class SingleSubPerEntityCursorTest {
                 ?.associate { it.tags?.get("A") to it.since }
         assertEquals<Map<List<String>?, Long?>?>(mapOf(listOf("a", "b") to caughtUp?.single()?.since, listOf("c") to null), windows)
     }
+
+    /** Builds one filter per relay for every community on it, as the channel watchers do. */
+    private class Placed(
+        val id: String,
+        val relays: List<NormalizedRelayUrl>,
+        val feeds: List<RelayCursorHolder> = listOf(Feed()),
+    )
+
+    private inner class PerRelayBatchingManager(
+        keys: () -> Set<Placed>,
+    ) : SingleSubEoseManager<Placed>(EmptyNostrClient(), keys) {
+        override fun updateFilter(
+            keys: List<Placed>,
+            since: SincePerRelayMap?,
+        ) = keys
+            .flatMap { key -> key.relays.map { it to key.id } }
+            .groupBy({ it.first }, { it.second })
+            .map { (relay, ids) -> RelayBasedFilter(relay, Filter(kinds = listOf(40), tags = mapOf("e" to ids), since = since?.get(relay)?.time)) }
+
+        override fun distinct(key: Placed) = key.id
+
+        override fun cursorHoldersOf(key: Placed) = key.feeds
+    }
+
+    @Test
+    fun entitiesThatShareOnlySomeRelaysStillShareAFilterOnThem() {
+        val r1 = NormalizedRelayUrl("wss://r1.example.com/")
+        val r2 = NormalizedRelayUrl("wss://r2.example.com/")
+        val r3 = NormalizedRelayUrl("wss://r3.example.com/")
+        val a = Placed("a", listOf(r1, r2))
+        val b = Placed("b", listOf(r2, r3))
+        val manager = PerRelayBatchingManager { emptySet() }
+
+        manager.updateSubscriptions(setOf(a, b))
+        listOf(r1, r2, r3).forEach { manager.sub.listener.onEose(it, manager.sub.filters()?.get(it)) }
+        manager.updateSubscriptions(setOf(a, b))
+
+        val onShared = manager.sub.filters()?.get(r2)
+        assertEquals(1, onShared?.size, "one filter for both on the relay they share")
+        assertEquals(
+            setOf("a", "b"),
+            onShared
+                ?.single()
+                ?.tags
+                ?.get("e")
+                ?.toSet(),
+        )
+        assertEquals(
+            a.feeds
+                .single()
+                .relayCursors
+                .since(r2),
+            onShared?.single()?.since,
+        )
+    }
 }

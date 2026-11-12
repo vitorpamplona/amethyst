@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.buzz.BuzzMembershipEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.drafts.AccountDraftsEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.marmot.MarmotGroupEventsEoseManager
@@ -70,15 +69,10 @@ open class AccountQueryState(
     /**
      * What the live notification tail's relay cursors are kept on: the feeds that hold those notes
      * when a screen is attached. A background account renders nothing, so its tail only vouches that
-     * everything up to the cursor was seen (and notified): the cursor lives with this key, which the
-     * background registry keeps for as long as the account stays mounted.
+     * everything up to the cursor was seen (and notified): that cursor lives on the [Account], which
+     * a screen's key serves too, so it is current when the screen leaves.
      */
-    open val notificationCursorHolders: List<RelayCursorHolder> get() = listOf(backgroundTail)
-
-    private val backgroundTail =
-        object : RelayCursorHolder {
-            override val relayCursors = RelayCursors()
-        }
+    open val notificationCursorHolders: List<RelayCursorHolder> get() = listOf(account)
 }
 
 /**
@@ -103,13 +97,15 @@ class AccountUiQueryState(
 
     /**
      * The notification feeds being built: they hold what the tail loads. A lazy split tab joins when
-     * it wakes, with empty cursors, so the account's tail is asked from scratch once. None once the
-     * screen's feed set is gone: nothing holds the notes, so nothing vouches for them.
+     * it wakes, with empty cursors, so the account's tail is asked from scratch once. With them, the
+     * account's own "seen up to" cursor, kept current for when the screen leaves; only it once the
+     * screen's feed set is gone.
      */
     override val notificationCursorHolders: List<RelayCursorHolder>
         get() {
-            val feeds = feedContentStates ?: return emptyList()
-            return listOf(feeds.notifications, feeds.notificationsFollowing, feeds.notificationsEveryone).filter { it.isActive() }
+            val feeds = feedContentStates ?: return listOf(account)
+            // The account's own tail cursor rides along, so it stays current for when the screen leaves.
+            return listOf(feeds.notifications, feeds.notificationsFollowing, feeds.notificationsEveryone).filter { it.isActive() } + account
         }
 }
 

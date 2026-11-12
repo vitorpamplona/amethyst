@@ -31,12 +31,21 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlin.concurrent.Volatile
 
 class EventWatcherSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<EventFinderQueryState>,
 ) : SingleSubEoseManager<EventFinderQueryState>(client, allKeys) {
     var lastNotesOnFilter = emptyList<Note>()
+        private set(value) {
+            field = value
+            watchedById = value.associateBy { it.idHex }
+        }
+
+    // By id, made once per pass rather than on every answer.
+    @Volatile
+    private var watchedById = emptyMap<String, Note>()
 
     /**
      * Each watched note keeps its own cursors ([Note.childCursors]), because it holds the replies,
@@ -56,7 +65,9 @@ class EventWatcherSubAssembler(
     ) {
         val live = filters?.filter { it.until == null }
         if (!live.isNullOrEmpty()) {
-            val watched = lastNotesOnFilter.associateBy { it.idHex }
+            val watched = watchedById
+            // One shape per filter, shared by every note it names: a filter of 300 ids is not copied 300 times.
+            val shapes = HashMap<Filter, FilterShape>()
             val answered = mutableMapOf<Note, MutableList<Filter>>()
             val refused = mutableSetOf<Note>()
             live.forEach { filter ->
@@ -75,7 +86,7 @@ class EventWatcherSubAssembler(
                 }
             }
             answered.forEach { (note, asked) ->
-                if (note !in refused) note.childCursors().newEose(relay, asked.map { FilterShape.of(it) }, time, cursorSource)
+                if (note !in refused) note.childCursors().newEose(relay, asked.map { shapes.getOrPut(it) { FilterShape.of(it) } }, time, cursorSource)
             }
         }
         super.newEose(relay, time, filters)

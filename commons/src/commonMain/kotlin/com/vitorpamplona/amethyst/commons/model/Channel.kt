@@ -56,8 +56,10 @@ abstract class Channel :
 
     fun relayCursorsOrNull(): RelayCursors? = cursors
 
-    // Two threads racing here each make one and one is kept: the other's answer is asked again.
-    override val relayCursors: RelayCursors get() = cursors ?: RelayCursors().also { cursors = it }
+    // Under the lock: a second instance made by a racing thread would take EOSEs (and the managers
+    // serving it) that the kept one never sees.
+    override val relayCursors: RelayCursors
+        get() = cursors ?: syncLock.withLock { cursors ?: RelayCursors().also { cursors = it } }
     var lastNote: Note? = null
 
     private var relays = mapOf<NormalizedRelayUrl, Counter>()

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -203,14 +205,41 @@ object CursorPlanner {
         source: CursorSource = CursorSource.DEFAULT,
     ) {
         if (holders.isEmpty() || sent.isNullOrEmpty()) return
-        val live = sent.filter { it.until == null }
-        if (live.isEmpty()) return
-        val shapes = live.map { FilterShape.of(it) }
+        record(holders, relay, LiveShapes.of(sent) ?: return, time, source)
+    }
+
+    /** [record] with the shapes already made: a listener keeps them for as long as its request lasts. */
+    fun record(
+        holders: List<RelayCursors>,
+        relay: NormalizedRelayUrl,
+        live: LiveShapes,
+        time: Long,
+        source: CursorSource = CursorSource.DEFAULT,
+    ) {
         holders.forEach { holder ->
             // Only what was asked for this holder: an answer planned for another (the feed it
             // replaced, another account in a merged REQ) fetched only what that one lacked.
-            val accepted = shapes.filterIndexed { i, shape -> holder.accepts(relay, source, shape, live[i].since) }
-            if (accepted.isNotEmpty()) holder.newEose(relay, accepted, time, source)
+            var all = true
+            val accepted =
+                live.shapes.filterIndexed { i, shape ->
+                    holder.accepts(relay, source, shape, live.filters[i].since).also { if (!it) all = false }
+                }
+            // The same list when all of it is accepted, so the holder sees the same request again.
+            if (accepted.isNotEmpty()) holder.newEose(relay, if (all) live.shapes else accepted, time, source)
+        }
+    }
+
+    /** The live filters (no `until`) of a request, with their shapes. */
+    class LiveShapes(
+        val filters: List<Filter>,
+        val shapes: List<FilterShape>,
+    ) {
+        companion object {
+            fun of(sent: List<Filter>): LiveShapes? {
+                val live = sent.filter { it.until == null }
+                if (live.isEmpty()) return null
+                return LiveShapes(live, live.map { FilterShape.of(it) })
+            }
         }
     }
 }
@@ -223,13 +252,15 @@ object CursorPlanner {
 class CursorRoutingListener(
     private val listener: SubscriptionListener,
     private val source: CursorSource = CursorSource.DEFAULT,
+    /** What the subscription asks [NormalizedRelayUrl] for, before the pool narrows it. */
+    private val asked: (NormalizedRelayUrl) -> List<Filter>? = { null },
     private val holders: () -> List<RelayCursors>,
 ) : SubscriptionListener by listener {
     override fun onEose(
         relay: NormalizedRelayUrl,
         forFilters: List<Filter>?,
     ) {
-        CursorPlanner.record(holders(), relay, forFilters, TimeUtils.now(), source)
+        onAnswered(relay, forFilters)
         listener.onEose(relay, forFilters)
     }
 
@@ -238,8 +269,40 @@ class CursorRoutingListener(
         forFilters: List<Filter>?,
         eventIds: List<String>?,
     ) {
-        CursorPlanner.record(holders(), relay, forFilters, TimeUtils.now(), source)
+        onAnswered(relay, forFilters)
         listener.onEose(relay, forFilters, eventIds)
+    }
+
+    private fun onAnswered(
+        relay: NormalizedRelayUrl,
+        forFilters: List<Filter>?,
+    ) {
+        RefusedKinds.shared.learn(relay, asked(relay), forFilters)
+        record(relay, forFilters)
+    }
+
+    private val shapesLock = KmpLock()
+
+    // The pool reports the same filter list for every answer to a request: its shapes are made once.
+    private val shapesByRelay = mutableMapOf<NormalizedRelayUrl, Pair<List<Filter>, CursorPlanner.LiveShapes?>>()
+
+    private fun record(
+        relay: NormalizedRelayUrl,
+        forFilters: List<Filter>?,
+    ) {
+        if (forFilters.isNullOrEmpty()) return
+        val holders = holders()
+        if (holders.isEmpty()) return
+        val live =
+            shapesLock.withLock {
+                val cached = shapesByRelay[relay]
+                if (cached != null && cached.first === forFilters) {
+                    cached.second
+                } else {
+                    CursorPlanner.LiveShapes.of(forFilters).also { shapesByRelay[relay] = forFilters to it }
+                }
+            } ?: return
+        CursorPlanner.record(holders, relay, live, TimeUtils.now(), source)
     }
 
     override suspend fun onEvent(
@@ -248,7 +311,7 @@ class CursorRoutingListener(
         relay: NormalizedRelayUrl,
         forFilters: List<Filter>?,
     ) {
-        if (isLive) CursorPlanner.record(holders(), relay, forFilters, TimeUtils.now(), source)
+        if (isLive) record(relay, forFilters)
         listener.onEvent(event, isLive, relay, forFilters)
     }
 }

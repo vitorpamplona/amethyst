@@ -72,6 +72,21 @@ class CursorPlannerTest {
     }
 
     @Test
+    fun aRewindIsNotUndoneByAnAnswerToTheRequestStillOnTheWire() {
+        val cursors = RelayCursors()
+        val asked = notes(alice).copy(since = 1_000)
+        cursors.planned(relay, CursorSource.DEFAULT, setOf(1_000))
+        cursors.newEose(relay, listOf(shape(alice)), 2_000)
+
+        // The pruner dropped notes from 500 on.
+        cursors.rewindTo(500)
+        // A live event arrives on the REQ still asking since 1_000, before the re-plan goes out.
+        CursorPlanner.record(listOf(cursors), relay, listOf(asked), 3_000)
+
+        assertEquals(500L, cursors.since(relay), "the band from 500 to 1_000 was never asked again")
+    }
+
+    @Test
     fun anOlderPageIsNotTouched() {
         val cursors = RelayCursors()
         cursors.newEose(relay, listOf(shape(alice)), 1_000)
@@ -127,6 +142,21 @@ class CursorPlannerTest {
         val parts = CursorPlanner.plan(relay, shape(*authors.toTypedArray()), holders)
 
         assertEquals(listOf(CursorPart(shape(*authors.take(2).toTypedArray()), 100), CursorPart(shape(*authors.drop(2).toTypedArray()), null)), parts)
+    }
+
+    @Test
+    fun aKindTheRelayRefusedDoesNotLeaveTheRequestUncovered() {
+        val refusing = NormalizedRelayUrl("wss://refuses-long-form.example.com/")
+        val asked = Filter(authors = listOf(alice), kinds = listOf(1, 30023))
+        // The pool took 30023 out of what it sent, and its EOSE reports what it sent.
+        val sent = Filter(authors = listOf(alice), kinds = listOf(1))
+        val cursors = RelayCursors()
+        val listener = CursorRoutingListener(RecordingListener(), asked = { listOf(asked) }) { listOf(cursors) }
+
+        listener.onEose(refusing, listOf(sent))
+
+        val again = cursors.plan(refusing, FilterShape.of(asked)).single()
+        assertEquals(cursors.since(refusing), again.since, "asked again from the cursor, not from scratch")
     }
 
     @Test

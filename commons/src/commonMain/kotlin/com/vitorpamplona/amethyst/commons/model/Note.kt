@@ -211,8 +211,9 @@ open class Note(
 
     fun childCursorsOrNull(): RelayCursors? = childCursors
 
-    // Two threads racing here each make one and one is kept: the other's answer is asked again.
-    fun childCursors(): RelayCursors = childCursors ?: RelayCursors().also { childCursors = it }
+    // Under the lock: a second instance made by a racing thread would take EOSEs (and the managers
+    // serving it) that the kept one never sees.
+    fun childCursors(): RelayCursors = childCursors ?: syncLock.withLock { childCursors ?: RelayCursors().also { childCursors = it } }
 
     /** A note holds its children, so a subscription for them (a thread, a poll's votes) keeps its cursors here. */
     override val relayCursors: RelayCursors get() = childCursors()

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.feeds
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.commons.model.HiddenSetWidenings
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
@@ -44,6 +45,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -101,10 +103,27 @@ class FeedContentState(
 
     private var lastFeedKey: Any? = null
 
+    // Set by [keyChanging] until the next build: the cursors were already cleared for it.
+    @Volatile
+    private var clearedForNextKey = false
+
     /** Records the key this build used; another list or filter makes the cursors vouch for nothing. */
     private fun builtWithKey(key: Any?) {
-        if (lastFeedKey != null && lastFeedKey != key) relayCursors.clear()
+        val alreadyCleared = clearedForNextKey
+        clearedForNextKey = false
+        if (lastFeedKey != null && lastFeedKey != key && !alreadyCleared) relayCursors.clear()
         lastFeedKey = key
+    }
+
+    /**
+     * The feed is about to be built for another key (the user picked another list). Clears the
+     * cursors now, before the subscription that fills it plans the new list: clearing them only when
+     * the rebuild runs had that subscription plan once from the old cursors and then again from
+     * scratch, and could wipe the new list's first answer if it came before the rebuild.
+     */
+    fun keyChanging() {
+        clearedForNextKey = true
+        relayCursors.clear()
     }
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
@@ -376,5 +395,8 @@ class FeedContentState(
                 activate()
             }
         }
+        // A feed rejects what an account hides, and nothing holds a rejected note: when an account
+        // shows it again, it may be gone while these cursors still vouch for it.
+        viewModelScope.launch(Dispatchers.IO) { HiddenSetWidenings.flow.collect { relayCursors.clear() } }
     }
 }

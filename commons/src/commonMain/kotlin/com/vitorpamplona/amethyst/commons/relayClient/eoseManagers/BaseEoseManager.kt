@@ -52,7 +52,7 @@ abstract class BaseEoseManager<T>(
      */
     fun requestNewSubscription(listener: SubscriptionListener): Subscription {
         val subId = newSubId()
-        return orchestrator.requestNewSubscription(subId, CursorRoutingListener(listener, cursorSource) { cursorsServedBy(subId) })
+        return orchestrator.requestNewSubscription(subId, CursorRoutingListener(listener, cursorSource, { relay -> getSubscription(subId)?.filters()?.get(relay) }) { cursorsServedBy(subId) })
     }
 
     fun dismissSubscription(subId: String) {

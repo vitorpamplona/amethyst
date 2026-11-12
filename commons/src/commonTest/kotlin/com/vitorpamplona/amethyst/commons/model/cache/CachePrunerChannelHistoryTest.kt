@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.cache
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.FilterShape
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -67,6 +68,21 @@ class CachePrunerChannelHistoryTest {
         assertFalse(history.isDone(relay), "the dropped band is below the floor: page it again")
         assertEquals(101L, history.reachedUntilFor(relay, 0), "from just above the newest dropped message")
         // Kept alive until here: the cache holds notes weakly.
+        assertEquals(600, messages.size)
+    }
+
+    @Test
+    fun thePruneLeavesTheLiveTailsCursorAlone() {
+        val cache = EventCache()
+        val group = cache.getOrCreateRelayGroupChannel(GroupId("t", relay))
+        val messages = (1..600).map { message(it) }
+        messages.forEach { group.addNote(it, relay) }
+        group.relayCursors.newEose(relay, listOf(FilterShape(kinds = setOf(9))), 5_000)
+
+        cache.pruner.pruneOldMessages()
+
+        // The dropped messages are older than every one kept: asking again would only refill them.
+        assertEquals(5_000L, group.relayCursors.since(relay))
         assertEquals(600, messages.size)
     }
 }

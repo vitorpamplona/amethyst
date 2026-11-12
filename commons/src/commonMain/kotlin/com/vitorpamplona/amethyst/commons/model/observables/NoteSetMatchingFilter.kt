@@ -105,8 +105,10 @@ class NoteSetMatchingFilter(
         note: Note,
     ) {
         if (!(event is AddressableEvent && note !is AddressableNote) && filter.matches(note)) add(note)
+        // Runs on the insert path: what is already in the set (most of a note's reactions tag their
+        // author) skips the filter.
         dependents(note).forEach { dependent ->
-            if (filter.matches(dependent)) add(dependent)
+            if (!contains(dependent) && filter.matches(dependent)) add(dependent)
         }
     }
 
@@ -121,6 +123,8 @@ class NoteSetMatchingFilter(
     }
 
     private var addsSinceSweep = 0
+
+    private fun contains(note: Note): Boolean = lock.withLock { if (weak) weakRefs[note.idHex]?.get() === note else note in strong }
 
     private fun add(note: Note) {
         lock.withLock {

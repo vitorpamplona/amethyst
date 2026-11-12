@@ -38,6 +38,22 @@ data class FilterShape(
     val tagsAll: Map<String, Set<String>>? = null,
     val search: String? = null,
 ) {
+    // Shapes are hashed on every answer and can carry hundreds of ids: hash once (they never change).
+    private var hash = 0
+
+    override fun hashCode(): Int {
+        if (hash == 0) {
+            var h = ids.hashCode()
+            h = 31 * h + authors.hashCode()
+            h = 31 * h + kinds.hashCode()
+            h = 31 * h + tags.hashCode()
+            h = 31 * h + tagsAll.hashCode()
+            h = 31 * h + search.hashCode()
+            hash = if (h == 0) 1 else h
+        }
+        return hash
+    }
+
     /** Whether everything [other] asks for was asked for by this one too. */
     fun covers(other: FilterShape): Boolean = coversExceptAuthors(other) && within(other.authors, authors)
 
@@ -120,6 +136,8 @@ class RelayCursors {
     private class Entry(
         val time: Long,
         val shapes: List<FilterShape>,
+        /** What [newEose] was given, by identity: the same request answered again only moves [time]. */
+        val sent: List<FilterShape>,
     )
 
     private class Slot(
@@ -174,7 +192,10 @@ class RelayCursors {
         val slot = Slot(relay, source)
         return lock.withLock {
             planned[slot]?.any { window -> since <= window } == true ||
-                byRelay[slot]?.let { it.time >= since && it.shapes.any { stored -> stored.covers(shape) } } == true
+                byRelay[slot]?.let { entry ->
+                    val askable = RefusedKinds.shared.askable(relay, shape)
+                    entry.time >= since && entry.shapes.any { stored -> stored.covers(askable) }
+                } == true
         }
     }
 
@@ -209,9 +230,11 @@ class RelayCursors {
      */
     fun plan(
         relay: NormalizedRelayUrl,
-        requested: FilterShape,
+        asked: FilterShape,
         source: CursorSource = CursorSource.DEFAULT,
     ): List<CursorPart> {
+        // The kinds this relay refused are never sent, so no cursor can have vouched for them.
+        val requested = RefusedKinds.shared.askable(relay, asked)
         val entry = lock.withLock { byRelay[Slot(relay, source)] } ?: return listOf(CursorPart(requested, null))
         if (entry.shapes.any { it.covers(requested) }) return listOf(CursorPart(requested, entry.time))
 
@@ -242,7 +265,10 @@ class RelayCursors {
         time: Long,
         source: CursorSource = CursorSource.DEFAULT,
     ) = lock.withLock {
-        byRelay[Slot(relay, source)] = Entry(time, mergeByAuthors(sent))
+        val slot = Slot(relay, source)
+        val before = byRelay[slot]
+        // Every live event re-reports the request on the wire: the same list, nothing to merge again.
+        byRelay[slot] = if (before != null && before.sent === sent) Entry(time, before.shapes, sent) else Entry(time, mergeByAuthors(sent), sent)
     }
 
     /**
@@ -264,13 +290,18 @@ class RelayCursors {
         return merged.values.toList()
     }
 
-    /** Notes created at [createdAt] or later were dropped: every relay asks again from there. */
+    /**
+     * Notes created at [createdAt] or later were dropped: every relay asks again from there. The
+     * windows planned later than that go too: an answer to a REQ still on the wire that asks from
+     * after [createdAt] did not fetch the dropped band, and accepting it would undo the rewind.
+     */
     fun rewindTo(createdAt: Long) {
         lock.withLock {
             byRelay.keys.toList().forEach { slot ->
                 val entry = byRelay.getValue(slot)
-                if (entry.time > createdAt) byRelay[slot] = Entry(createdAt, entry.shapes)
+                if (entry.time > createdAt) byRelay[slot] = Entry(createdAt, entry.shapes, entry.sent)
             }
+            planned.values.forEach { windows -> windows.removeAll { it > createdAt } }
         }
         replanServers()
     }

@@ -420,10 +420,19 @@ class NotificationFeedFilter(
         ): Boolean {
             if (note.inGatherers?.any { it is MarmotGroupChatroom } == true) return true
             val event = note.event ?: return false
-            if (event is JobResultEvent || event is JobErrorEvent) return true
+            // Agent jobs and approvals reach me by naming me, which the full check then confirms.
+            // Letting every one through kept other people's job results in the candidate set.
+            if (event is JobResultEvent) return event.requester() == me
+            if (event is JobErrorEvent) return event.requester() == me
             if (event.kind !in NOTIFICATION_KINDS) return false
-            if (event is MemberAddedNotificationEvent || event is WorkflowApprovalRequestedEvent) return true
-            if (event is ChatEvent || event is StreamMessageV2Event) return true
+            if (event is MemberAddedNotificationEvent) return true
+            if (event is WorkflowApprovalRequestedEvent) return event.approver() == me
+            // Buzz chat reaches me without a tag only inside a group channel (a DM, a thread reply to my
+            // message), which holds those messages anyway. Chat outside one must tag me.
+            if (event is ChatEvent || event is StreamMessageV2Event) {
+                if (note.replyTo?.any { it.author?.pubkeyHex == me } == true) return true
+                if (LocalCache.getRelayGroupChannelForContent(note) != null) return true
+            }
             return event.isTaggedUser(me) || isNotifiablePublicChatReply(note, me) || isReactionToMyEvent(note, me)
         }
 

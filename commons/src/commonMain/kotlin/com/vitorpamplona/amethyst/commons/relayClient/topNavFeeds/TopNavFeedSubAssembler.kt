@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -94,7 +95,11 @@ abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
             buildList {
                 add(
                     key.scope.launch(Dispatchers.IO) {
-                        key.listName.collectLatest {
+                        var previous: TopFilter? = null
+                        key.listName.collectLatest { list ->
+                            // Another list: the feeds forget their cursors before this plans it.
+                            if (previous != null && previous != list) cursorFeeds(key).forEach { it.keyChanging() }
+                            previous = list
                             onListChanged(key)
                             invalidateFilters()
                         }

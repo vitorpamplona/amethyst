@@ -95,30 +95,34 @@ abstract class SingleSubEoseManager<T>(
         // The keys name the holders of what they load: each entity (a community, a channel, a
         // profile) is windowed by its own holders' cursors, so one opened later is asked from scratch
         // without making the others refetch, and closing one takes its cursors with it. An entity
-        // whose keys name none asks from scratch. Entities whose cursors agree on every relay are
-        // built together, so the builder's batching (one filter per relay for every channel on it)
-        // survives: in the steady state every entity on a relay got the same EOSE and shares a filter.
-        val bySignature = LinkedHashMap<Map<NormalizedRelayUrl, Long>, MutableList<Int>>()
-        groups.forEachIndexed { index, group ->
-            val signature =
-                if (holders[index].isEmpty()) {
-                    emptyMap()
-                } else {
-                    CursorPlanner.cursorsByRelay(updateFilter(listOf(group.first()), null).orEmpty(), holders[index], cursorSource)
-                }
-            bySignature.getOrPut(signature) { mutableListOf() }.add(index)
+        // whose keys name none asks from scratch. On each relay, the entities asked from the same
+        // point are built together, so the builder's batching (one filter per relay for every
+        // channel on it) survives even when their relay sets differ elsewhere.
+        val entities = groups.map { it.first() }
+        val windowsPerRelay = mutableMapOf<NormalizedRelayUrl, MutableMap<Long?, MutableSet<Int>>>()
+        entities.forEachIndexed { index, key ->
+            val own = updateFilter(listOf(key), null).orEmpty()
+            val cursors = if (holders[index].isEmpty()) emptyMap() else CursorPlanner.cursorsByRelay(own, holders[index], cursorSource)
+            own.mapTo(mutableSetOf()) { it.relay }.forEach { relay ->
+                windowsPerRelay.getOrPut(relay) { mutableMapOf() }.getOrPut(cursors[relay]) { mutableSetOf() }.add(index)
+            }
         }
 
+        // Relays split the same way share their builder calls: one per window, for all of them.
+        val relaysPerSplit = windowsPerRelay.entries.groupBy({ it.value }, { it.key })
         val filters =
-            bySignature.flatMap { (signature, members) ->
-                val since: SincePerRelayMap = signature.mapValuesTo(mutableMapOf()) { MutableTime(it.value) }
-                val built = updateFilter(members.map { groups[it].first() }, since).orEmpty()
-                // Each holder accepts answers to the windows sent for it (see [RelayCursors.accepts]).
-                val windows = built.filter { it.filter.until == null }.groupBy({ it.relay }, { it.filter.since })
-                members.flatMap { holders[it] }.distinct().forEach { holder ->
-                    windows.forEach { (relay, sinces) -> holder.planned(relay, cursorSource, sinces.filterNotNullTo(mutableSetOf())) }
+            relaysPerSplit.flatMap { (split, relays) ->
+                val onTheseRelays = relays.toSet()
+                split.flatMap { (since, members) ->
+                    val sinceMap: SincePerRelayMap? = since?.let { time -> relays.associateWithTo(mutableMapOf()) { MutableTime(time) } }
+                    val built = updateFilter(members.map { entities[it] }, sinceMap).orEmpty().filter { it.relay in onTheseRelays }
+                    // Each holder accepts answers to the windows sent for it (see [RelayCursors.accepts]).
+                    val windows = built.filter { it.filter.until == null }.groupBy({ it.relay }, { it.filter.since })
+                    members.flatMap { holders[it] }.distinct().forEach { holder ->
+                        windows.forEach { (relay, sinces) -> holder.planned(relay, cursorSource, sinces.filterNotNullTo(mutableSetOf())) }
+                    }
+                    built
                 }
-                built
             }
         serve(sub.id, holders.flatten().distinct())
         sub.updateFilters(filters.ifEmpty { null }?.groupByRelay())

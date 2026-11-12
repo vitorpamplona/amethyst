@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.viewmodels
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.logTime
@@ -46,7 +47,8 @@ import kotlin.time.Duration.Companion.minutes
  *
  * - **Active** while some view model holds a lease: event bundles reach the feeds.
  * - **Warm** for [warmFor] after the last lease ends: the feeds keep their notes and cursors and stop
- *   taking events. A lease taken now refreshes the built feeds from the cache, and their cursors ask
+ *   taking events, which are set aside instead. A lease taken now hands the feeds what was set aside
+ *   (or, past [MAX_MISSED] of them, refreshes the built feeds from the cache), and their cursors ask
  *   the relays for exactly what came since.
  * - **Cold** after that, on memory pressure while warm, or when the account's scope ends (a
  *   logout): the feeds are released with their cursors, and the next lease builds new ones.
@@ -69,6 +71,37 @@ class AccountFeeds private constructor(
     private var updates: Job? = null
     private var coldTimer: Job? = null
     private var cold = false
+
+    // What arrives while warm, for the next lease: cheaper than a rebuild, which walks the cache.
+    private class Missed {
+        val added = LinkedHashSet<Note>()
+        val deleted = LinkedHashSet<Note>()
+        var overflowed = false
+
+        fun onAdded(notes: Set<Note>) = take { added.addAll(notes) }
+
+        // A note deleted after it arrived is not handed to the feeds at all.
+        fun onDeleted(notes: Set<Note>) =
+            take {
+                added.removeAll(notes)
+                deleted.addAll(notes)
+            }
+
+        private inline fun take(block: () -> Unit) {
+            if (overflowed) return
+            block()
+            // Past this, a rebuild is cheaper than holding them all, and the set is let go.
+            if (added.size + deleted.size > MAX_MISSED) {
+                overflowed = true
+                added.clear()
+                deleted.clear()
+            }
+        }
+    }
+
+    private var missed: Missed? = null
+    private var setAside: Job? = null
+    private var initialized = false
 
     init {
         // Under memory pressure a warm set is the first thing to give back.
@@ -96,7 +129,7 @@ class AccountFeeds private constructor(
                 coldTimer?.cancel()
                 coldTimer = null
                 leases++
-                (leases == 1).also { first -> if (first) startUpdates(rebuild = everLeased) }.also { everLeased = true }
+                (leases == 1).also { first -> if (first) startUpdates(replay = if (everLeased) takeMissed() else null) }.also { everLeased = true }
             }
         if (warm) Log.d(TAG) { "${account.userProfile().pubkeyHex.take(8)}: active" }
         return Lease()
@@ -108,6 +141,7 @@ class AccountFeeds private constructor(
             if (leases > 0) return
             updates?.cancel()
             updates = null
+            setAsideWhileWarm()
             coldTimer =
                 scope.launch {
                     delay(warmFor)
@@ -117,12 +151,47 @@ class AccountFeeds private constructor(
         Log.d(TAG) { "${account.userProfile().pubkeyHex.take(8)}: warm for $warmFor" }
     }
 
-    // Under [lock]. The bundles a warm set misses are what [rebuild] reads back from the cache.
-    private fun startUpdates(rebuild: Boolean) {
+    // Under [lock]. Collects what the feeds miss while warm, until the next lease takes it.
+    private fun setAsideWhileWarm() {
+        val into = Missed().also { missed = it }
+        setAside =
+            scope.launch(Dispatchers.IO) {
+                // Once a lease took the set, whatever is still in flight goes to the feeds instead.
+                launch {
+                    LocalCache.live.deletedEventBundles
+                        .coalesced()
+                        .collect { notes -> lock.withLock { if (missed === into) into.onDeleted(notes) } }
+                }
+                LocalCache.live.newEventBundles
+                    .coalesced()
+                    .collect { notes -> lock.withLock { if (missed === into) into.onAdded(notes) } }
+            }
+    }
+
+    // Under [lock].
+    private fun takeMissed(): Missed? {
+        setAside?.cancel()
+        setAside = null
+        return missed.also { missed = null }
+    }
+
+    // Under [lock]. [replay] is what a warm set missed; null on the first lease.
+    private fun startUpdates(replay: Missed?) {
         updates =
             scope.launch(Dispatchers.IO) {
-                states.init()
-                if (rebuild) states.refreshBuiltFeeds()
+                if (!initialized) {
+                    states.init()
+                    initialized = true
+                }
+                if (replay != null) {
+                    // Never collected (a lease right after a release): nothing was missed but the race.
+                    if (replay.overflowed) {
+                        states.refreshBuiltFeeds()
+                    } else {
+                        if (replay.deleted.isNotEmpty()) states.deleteNotes(replay.deleted)
+                        if (replay.added.isNotEmpty()) states.updateFeedsWith(replay.added)
+                    }
+                }
                 // Coalesced, not dropped: the shared flow drops a slow collector's oldest bundles, and
                 // the feeds would never learn of those notes (Home no longer rebuilds on every resume
                 // to cover for it). Bundles that arrive while the feeds are busy merge into one.
@@ -165,6 +234,9 @@ class AccountFeeds private constructor(
         /** How long an account's feeds stay warm after the last view model lets go of them. */
         val WARM_FOR = 15.minutes
 
+        /** How many missed notes a warm set keeps for its next lease before it settles for a rebuild. */
+        const val MAX_MISSED = 5_000
+
         private val registryLock = KmpLock()
 
         // By identity: a new Account object for the same key (a log out and back in) gets new feeds.
@@ -179,6 +251,12 @@ class AccountFeeds private constructor(
             warmFor: Duration = WARM_FOR,
         ): Lease {
             while (true) {
+                // An account whose scope already ended (a logout racing a screen): its feeds' job is
+                // born complete and would go cold before the registry kept them, so every retry here
+                // built another set. It gets feeds of its own that take no events and are never shared.
+                if (account.scope.coroutineContext[Job]?.isActive == false) {
+                    return AccountFeeds(account, memoryPressure, warmFor).acquire() ?: error("unreachable: not registered, never cold")
+                }
                 val feeds =
                     registryLock.withLock {
                         registry.getOrPut(account) {
