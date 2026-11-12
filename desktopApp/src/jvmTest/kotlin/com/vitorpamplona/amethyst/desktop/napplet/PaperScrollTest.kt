@@ -49,6 +49,21 @@ class PaperScrollTest {
     }
 
     @Test
+    fun aClickedLinkIsReportedOnlyByTheExtension() {
+        val note = "https://jumble.social/notes/nevent1qqsx6x6c8xn8ljtft8pa7p68j5zw9hflvs87xwnpd6atz8aymxjt7zc3mcfvu"
+        assertEquals(note, PaperScrollReports.parseLink("amethyst-paper-link $note", extension))
+        // The page's own address, or another script, can't open a link in the reader's name.
+        assertNull(PaperScrollReports.parseLink("amethyst-paper-link $note", "https://n1.napplet.local/index.html"))
+        assertNull(PaperScrollReports.parseLink("amethyst-paper-link $note", "chrome-extension://aaccccgoblfpahcmdninbacclepgppci/guard.js"))
+        // Only web addresses, whole.
+        assertNull(PaperScrollReports.parseLink("amethyst-paper-link javascript:alert(1)", extension))
+        assertNull(PaperScrollReports.parseLink("amethyst-paper-link https://a.example/ b", extension))
+        assertNull(PaperScrollReports.parseLink("amethyst-paper-scroll 1.0 2.0", extension))
+        // Only a real click on the main button, and never one the page already handled.
+        assertTrue(PaperScrollReports.SCRIPT.contains("!ev.isTrusted||ev.defaultPrevented||ev.button!==0"))
+    }
+
+    @Test
     fun theReaderStaysOnlyInAPapersFrame() {
         // Its guard is the first thing it runs: a frame with an opaque origin at an https address.
         assertTrue(PaperScrollReports.SCRIPT.contains("window===top||window.origin!=='null'||location.protocol!=='https:'"))

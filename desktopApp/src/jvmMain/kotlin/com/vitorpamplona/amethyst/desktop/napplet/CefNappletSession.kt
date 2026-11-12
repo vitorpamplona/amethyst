@@ -435,6 +435,9 @@ class CefNappletSession(
                     when {
                         isLocal(request.url) -> null
                         isInternal(request.url) -> internalHandler
+                        // A front page's pictures come from the app's cache: Chromium keeps nothing an
+                        // opaque-origin page loads, so each return to the paper fetched them all again.
+                        launch.paper != null && request.resourceType == CefRequest.ResourceType.RT_IMAGE && isWebLink(request.url) -> paperArtHandler
                         // A website (and a front page's art) talks to the web through the router's route;
                         // a napplet has no network.
                         usesNetwork -> null
@@ -527,6 +530,13 @@ class CefNappletSession(
                             return true
                         }
                     }
+                    // A link the reader clicked in a front page, which Chromium would not open itself.
+                    if (launch.profile == HostProfile.PAPER) {
+                        PaperScrollReports.parseLink(message, source)?.let { url ->
+                            if (launch.profile.opensLinks) openLink(url)
+                            return true
+                        }
+                    }
                     Log.d(TAG) { "${launch.identity.coordinate} console [$level] $message ($source:$line)" }
                     if (message.contains(WEBRTC_PRESENT)) {
                         Log.w(TAG) { "The napplet guard did not load; not starting ${launch.identity.coordinate}" }
@@ -564,6 +574,64 @@ class CefNappletSession(
                 return ServerResourceHandler(request.method, request.url, acceptsHtml)
             }
         }
+
+    /** Serves a front page's picture from [DesktopNappletRuntime.paperArt], downloading it on a miss. */
+    private val paperArtHandler =
+        object : CefResourceRequestHandlerAdapter() {
+            override fun getResourceHandler(
+                browser: CefBrowser,
+                frame: CefFrame,
+                request: CefRequest,
+            ): CefResourceHandler = PaperArtResourceHandler(request.url)
+        }
+
+    /**
+     * A front page's picture, read or downloaded off the IO thread CEF asks on. With Tor on it is
+     * fetched only while Tor runs, the way the page's own traffic was: never around it.
+     */
+    private inner class PaperArtResourceHandler(
+        private val url: String,
+    ) : CefResourceHandlerAdapter() {
+        private var response = BytesResourceHandler(NappletSiteServer.notFound())
+
+        override fun processRequest(
+            request: CefRequest,
+            callback: CefCallback,
+        ): Boolean {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    val bytes =
+                        runtime.paperArt.get(url)
+                            ?: if (useTor && !runtime.routes.torRunning) null else runtime.paperArt.load(url, runtime.httpClient(useTor))
+                    if (bytes != null) {
+                        // The app keeps it; Chromium wouldn't anyway.
+                        response = BytesResourceHandler(NappletSiteServer.Response(200, "OK", PaperArtCache.mimeOf(bytes), null, mapOf("Cache-Control" to "no-store"), bytes))
+                    }
+                } catch (e: Throwable) {
+                    if (e is CancellationException) throw e
+                    Log.w(TAG, "Could not serve the paper's $url", e)
+                } finally {
+                    callback.Continue()
+                }
+            }
+            return true
+        }
+
+        override fun getResponseHeaders(
+            response: CefResponse,
+            responseLength: IntRef,
+            redirectUrl: StringRef,
+        ) = this.response.getResponseHeaders(response, responseLength, redirectUrl)
+
+        override fun readResponse(
+            dataOut: ByteArray,
+            bytesToRead: Int,
+            bytesRead: IntRef,
+            callback: CefCallback,
+        ): Boolean = response.readResponse(dataOut, bytesToRead, bytesRead, callback)
+
+        override fun cancel() = response.cancel()
+    }
 
     /**
      * One response from [server], produced off the IO thread CEF asks on (a miss downloads). A

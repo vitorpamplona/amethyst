@@ -26,16 +26,19 @@ package com.vitorpamplona.amethyst.desktop.napplet
  * A paper's frame is sandboxed without `allow-scripts` and served under a CSP with no script
  * source, so nothing in its own world runs, and the host's `executeJavaScript` is refused there too
  * ("Blocked script execution ... the document's frame is sandboxed"). The engine's guard extension
- * runs [SCRIPT] in its isolated world instead: the page can neither see nor reach it, and it only
- * reads two numbers, the document's scroll offset and how far it can scroll, and logs them when they
- * change. Chromium hands that log line to the session's console handler, from the extension's
- * address, which [parse] requires.
+ * runs [SCRIPT] in its isolated world instead: the page can neither see nor reach it. It reads two
+ * numbers, the document's scroll offset and how far it can scroll, and logs them when they change,
+ * and it reports a link the reader clicks ([parseLink]), which would otherwise do nothing. Chromium
+ * hands each log line to the session's console handler, from the extension's address, which [parse]
+ * and [parseLink] require.
  */
 object PaperScrollReports {
     /** The file the guard extension serves [SCRIPT] from. */
     const val FILE = "paper-scroll.js"
 
     private const val PREFIX = "amethyst-paper-scroll "
+
+    private const val LINK_PREFIX = "amethyst-paper-link "
 
     /**
      * Runs at document start in every frame under `napplet.local`, and stays only in a paper's: a
@@ -57,8 +60,31 @@ object PaperScrollReports {
         if(document.documentElement)ro.observe(document.documentElement);
         addEventListener('DOMContentLoaded',function(){if(document.body)ro.observe(document.body);queue();});
         queue();
+        addEventListener('click',function(ev){
+        if(!ev.isTrusted||ev.defaultPrevented||ev.button!==0||!ev.target||!ev.target.closest)return;
+        var a=ev.target.closest('a[href]');if(!a)return;var u=a.href;
+        if(u.indexOf('https://')!==0&&u.indexOf('http://')!==0)return;
+        ev.preventDefault();console.log('$LINK_PREFIX'+u);},true);
         })();
         """.trimIndent()
+
+    /**
+     * The web address of the link the reader clicked, if [message] is the guard extension's report
+     * of one ([source] is where it was logged from); null otherwise. Chromium refuses an off-screen
+     * page's own new windows before the host hears of them, and every link a paper carries opens
+     * one (`target="_blank"`), so [SCRIPT] takes the click itself: a real one (`isTrusted`), on the
+     * main button.
+     */
+    fun parseLink(
+        message: String,
+        source: String,
+    ): String? {
+        if (!fromExtension(source) || !message.startsWith(LINK_PREFIX)) return null
+        val url = message.substring(LINK_PREFIX.length)
+        return url.takeIf { (it.startsWith("https://") || it.startsWith("http://")) && it.none(Char::isWhitespace) }
+    }
+
+    private fun fromExtension(source: String) = source.startsWith("chrome-extension://") && source.endsWith("/$FILE")
 
     /**
      * The page's scroll offset and its furthest offset, in CSS pixels, if [message] is a report
@@ -68,7 +94,7 @@ object PaperScrollReports {
         message: String,
         source: String,
     ): Pair<Double, Double>? {
-        if (!source.startsWith("chrome-extension://") || !source.endsWith("/$FILE")) return null
+        if (!fromExtension(source)) return null
         if (!message.startsWith(PREFIX)) return null
         val parts = message.substring(PREFIX.length).split(' ')
         if (parts.size != 2) return null

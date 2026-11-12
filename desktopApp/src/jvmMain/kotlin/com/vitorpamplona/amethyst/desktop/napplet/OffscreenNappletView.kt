@@ -201,7 +201,7 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         y: Int,
     ) {
         val browser = browser ?: return
-        val delta = -(source.preciseWheelRotation * WHEEL_DELTA).roundToInt()
+        val delta = -(source.preciseWheelRotation * UNIT_PIXELS).roundToInt()
         if (delta == 0) return
         browser.forwardWheel(wheelEvent(source.`when`, source.modifiersEx, x, y, delta))
     }
@@ -216,7 +216,7 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
     ) = MouseWheelEvent(EVENT_SOURCE, MouseEvent.MOUSE_WHEEL, time, modifiers, x, y, x, y, 0, false, MouseWheelEvent.WHEEL_BLOCK_SCROLL, 1, delta, delta.toDouble())
 
     /** A turn of [rotation] notches (positive down, as AWT counts) in CSS pixels, as [wheel] sends it. */
-    fun notchPixels(rotation: Double): Double = rotation * WHEEL_DELTA
+    fun notchPixels(rotation: Double): Double = rotation * UNIT_PIXELS
 
     /**
      * Forwards a key event as AWT delivered it, so Chromium reads the platform's own key codes. A
@@ -391,6 +391,11 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
 
         // Chromium's wheel delta for one notch, as Windows reports it and CEF's own sample sends.
         const val WHEEL_DELTA = 120
+
+        // What one unit of AWT's wheel rotation scrolls. On macOS a trackpad or a Magic Mouse reports
+        // fractions of a unit, many a second, and the rest of the app (Compose's MacOSCocoaConfig) moves
+        // 10 dp for each: at a notch's 120 the paper ran twelve times faster than the screen around it.
+        val UNIT_PIXELS: Double = if (OS.isMacintosh()) 10.0 else WHEEL_DELTA.toDouble()
 
         // Every forwarded event needs a source; Chromium reads only its fields.
         val EVENT_SOURCE = Canvas()

@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.awtEventOrNull
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -150,8 +151,16 @@ fun OffscreenPage(
                         }
                     }
                 }
-            }.drawBehind {
-                frame.value?.let { drawImage(it, dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt())) }
+            }.clipToBounds()
+            .drawBehind {
+                // Scaled to the box's width only, from the top: a frame Chromium painted for the
+                // box's last size (the paper grows from its loading height to its page height) is
+                // shown in its own proportions until the next one comes, never stretched to fit.
+                frame.value?.let {
+                    val width = size.width.roundToInt()
+                    val height = (it.height.toFloat() * width / it.width.coerceAtLeast(1)).roundToInt()
+                    drawImage(it, dstSize = IntSize(width, height))
+                }
             },
     )
 }

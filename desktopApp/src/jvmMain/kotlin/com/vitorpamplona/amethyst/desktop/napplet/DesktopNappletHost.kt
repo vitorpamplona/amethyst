@@ -90,6 +90,7 @@ class DesktopNappletHost(
             torPort = modules.torManager.activePortOrNull,
             nappletBlobsUseTor = { torEnabled() },
             webxdcBundles = WebxdcBundles(WebxdcBundles.dirFor(modules.filesDir)),
+            paperArt = PaperArtCache(PaperArtCache.dirFor(modules.filesDir)),
         )
 
     val engine get() = runtime.engine
