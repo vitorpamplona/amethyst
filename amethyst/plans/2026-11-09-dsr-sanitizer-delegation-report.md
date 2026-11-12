@@ -184,8 +184,28 @@ same results.
 - Rows 1 and 4 carry AAC and were stripped without a refusal, so `1e4c3bd` brought no regression on
   these clips. They do not test its priming rule, though: in both, the audio edit list is an empty
   edit followed by media time 0, so neither has audio samples before its edit list
-  (`ffprobe -v trace`). An ffmpeg file whose AAC priming sits before the edit list, the case
-  `a697ec2` refused, has not been run on the device.
+  (`ffprobe -v trace`). Run 2b covers that case.
+
+#### Run 2b: AAC priming before the edit list
+
+Same build, library and setup as run 2, uploaded at UNCOMPRESSED with strip on.
+
+- **Source** `priming_aac_5s.mp4`: a synthetic ffmpeg clip (`testsrc2` 320x240 H.264 plus a 440 Hz
+  AAC tone), 5 s, 300,256 bytes, sha256 `ff294406e2bd7d41…`. Top level `ftyp 32, free 8, mdat 293234,
+  moov 6982` (`moov` last). The audio edit list starts at media time 1024 and the first AAC packet
+  is at -0.021333 s, the shape `a697ec2` refused. Tags: `location`, `location-eng`,
+  `com.android.model`.
+- **Result:** no strip-failed dialog. Blob `9c668e0453db02c0…`: 301,237 bytes, top level `ftyp 24,
+  moov 4779, free 3192, mdat 293234` (fast-start). No `udta`; the only tag is
+  `com.android.version=17`.
+  - Audio: 236 of 236 packets, edit list still at media time 1024, the first packet still at
+    -0.021333 s, duration 5.013 s.
+  - Video: 150 of 150 frames, starting at pts 0. `MediaMuxer` writes its own edit list for the
+    B-frame offset (media time 9018 at 90 kHz) and reports 4.967 s instead of 5.000 s. That is
+    `MediaMuxer` leaving out the last frame's duration on any passthrough remux, not something the
+    sanitizer does, and the old in-app remux did the same.
+- So the `1e4c3bd` priming rule is verified on the device from Amethyst, in addition to the library's
+  own device test.
 
 Commands: `ffprobe -v trace <f> 2>&1 | grep -o "type:'[a-z0-9]\{4\}' parent:'root' sz: [0-9]* [0-9]*"`,
 `ffprobe -v error -show_entries format_tags:stream_tags -of flat <f>`, `cmp -l source.mp4 <blob>`,
