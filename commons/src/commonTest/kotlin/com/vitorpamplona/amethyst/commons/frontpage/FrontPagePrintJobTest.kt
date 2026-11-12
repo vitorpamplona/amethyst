@@ -134,4 +134,32 @@ class FrontPagePrintJobTest {
     }
 
     private fun printed() = PrintResult.Printed("<html></html>", Fixtures.corpus(emptyMap()), emptyList(), 0, null, 1)
+
+    @Test
+    fun theXHidesARunningPrintWithoutStoppingIt() {
+        val tracker = FrontPagePrintJobTracker("reader", now = { 100 })
+        tracker.started(PrintTrigger.SCHEDULED)
+        tracker.hide()
+        assertTrue(tracker.job.value!!.hidden)
+        assertTrue(tracker.job.value!!.running)
+        // Opening The Observer brings it back.
+        tracker.unhide()
+        assertFalse(tracker.job.value!!.hidden)
+        // Hidden, then ended: the end shows.
+        tracker.hide()
+        tracker.ended(FrontPageRun.Failed(WriterFailure.UNREACHABLE), null)
+        assertFalse(tracker.job.value!!.hidden)
+        // An ended print isn't hidden: × dismisses it.
+        tracker.hide()
+        assertFalse(tracker.job.value!!.hidden)
+    }
+
+    @Test
+    fun aKeptPageStaysRunningWhilePublishing() {
+        val tracker = FrontPagePrintJobTracker("reader", now = { 100 })
+        tracker.started(PrintTrigger.MANUAL)
+        tracker.publishing()
+        assertEquals(PrintJobStage.Publishing, tracker.job.value!!.stage)
+        assertTrue(tracker.job.value!!.runningManual)
+    }
 }

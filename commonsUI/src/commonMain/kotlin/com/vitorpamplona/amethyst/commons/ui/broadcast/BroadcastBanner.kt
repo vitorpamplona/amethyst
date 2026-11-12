@@ -161,10 +161,11 @@ fun BroadcastBanner(
             tonalElevation = 3.dp,
             shadowElevation = 6.dp,
             shape = RoundedCornerShape(20.dp),
+            // Tappable only for what a tap opens (the posts' details): a print's own row opens The Observer.
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onTap),
+                    .then(if (broadcasts.isNotEmpty()) Modifier.clickable(onClick = onTap) else Modifier),
         ) {
             Column(
                 modifier =

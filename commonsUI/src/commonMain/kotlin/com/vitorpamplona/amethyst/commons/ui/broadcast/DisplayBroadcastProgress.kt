@@ -44,6 +44,8 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.commons.service.broadcast.canAutoDismiss
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.FrontPagePrintJobContent
@@ -106,7 +108,7 @@ fun DisplayBroadcastProgress(
                                 if (!job.running) printer.dismissJob()
                                 nav.nav(Route.FrontPage((job.end as? PrintJobEnd.Ready)?.day))
                             },
-                            onCancel = printer::cancel,
+                            onHide = printer::hideJob,
                             onDismiss = printer::dismissJob,
                         )
                     }
@@ -165,6 +167,8 @@ fun DisplaySnack(
     backgroundWork: (@Composable () -> Unit)? = null,
 ) {
     val powQueue = LocalAppServices.current.powPublishQueue
+    // Above the screen's FAB (and the bottom bar under it, on a phone), never over it.
+    val clearance = if (LocalScreenLayout.current.navigationStyle == NavigationStyle.BOTTOM_BAR) 152.dp else 128.dp
     Box(modifier = Modifier.fillMaxSize()) {
         BroadcastBanner(
             broadcasts = activeBroadcasts,
@@ -189,9 +193,10 @@ fun DisplaySnack(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(start = 12.dp, end = 12.dp, bottom = 58.dp)
-                    .fillMaxWidth(0.94f)
-                    .widthIn(max = 560.dp),
+                    .padding(start = 12.dp, end = 12.dp, bottom = clearance)
+                    // Capped first, then a share of what is left: the other order never caps.
+                    .widthIn(max = 560.dp)
+                    .fillMaxWidth(0.94f),
             backgroundWork = backgroundWork,
         )
     }

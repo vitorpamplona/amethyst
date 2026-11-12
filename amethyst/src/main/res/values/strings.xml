@@ -485,6 +485,7 @@
     <string name="front_page_print_step_write">Writing</string>
     <string name="front_page_print_step_fix">Fixing what the check found</string>
     <string name="front_page_print_step_check">Checking quotes, pictures and links</string>
+    <string name="front_page_print_step_publish">Publishing your Observer</string>
     <string name="pow_time_left">≈ %1$s left</string>
     <string name="pow_time_left_soon">any moment now</string>
     <string name="pow_estimate_instant">&lt;1 s</string>

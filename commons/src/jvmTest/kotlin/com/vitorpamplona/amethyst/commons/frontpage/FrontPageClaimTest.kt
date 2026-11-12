@@ -32,10 +32,12 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverSchedule
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTask
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskClaims
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskEvent
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -135,9 +137,127 @@ class FrontPageClaimTest {
         override suspend fun forget(account: HexKey) {}
     }
 
+    /** This install's settings, kept across launches: each launch is a new [FrontPageMorning] on the same store. */
+    private class MemoryInstalls : FrontPageInstallStore {
+        val runs = HashMap<String, OwnRunRecord>()
+
+        override suspend fun id(account: HexKey) = "desk"
+
+        override suspend fun forget(account: HexKey) {}
+
+        override suspend fun lastRun(installId: String) = runs[installId]
+
+        override suspend fun setLastRun(
+            installId: String,
+            record: OwnRunRecord?,
+        ) {
+            if (record == null) runs.remove(installId) else runs[installId] = record
+        }
+    }
+
     private val daily = ObserverSchedule.new("America/New_York", 0).withEnabled(true, 0).withCron("0 6 * * *", "America/New_York", 0)
 
-    private fun TestScope.morning(clock: () -> Long) = FrontPageMorning(NoStore(), NoInstalls(), FrontPageInstallInfo("Desktop (Linux)", "test"), now = clock)
+    private fun TestScope.morning(
+        clock: () -> Long,
+        installs: FrontPageInstallStore = NoInstalls(),
+    ) = FrontPageMorning(NoStore(), installs, FrontPageInstallInfo("Desktop (Linux)", "test"), now = clock)
+
+    @Test
+    fun aFailedPrintIsNotPaidForAgainOnTheNextLaunchTheSameMorning() =
+        runTest {
+            val clock = clock()
+            val relays = Relays(daily, clock)
+            val installs = MemoryInstalls()
+            var prints = 0
+            val failing: suspend (Long?, suspend () -> Boolean) -> ScheduledOutcome = { _, _ ->
+                prints++
+                ScheduledOutcome.FAILED
+            }
+            val first = morning(clock, installs).claimRun(relays, "desk", "Desktop (Linux)", alreadyDone = { _, _ -> false }, print = failing)
+            assertEquals(ScheduledOutcome.FAILED, first)
+            assertEquals(OwnRunRecord(six, ScheduledOutcome.FAILED), installs.runs["desk"])
+            // Launches minutes later (catch-ups): this install's run ended, so nothing is claimed or paid again.
+            val second = morning(clock, installs).claimRun(relays, "desk", "Desktop (Linux)", alreadyDone = { _, _ -> false }, print = failing)
+            val third = morning(clock, installs).claimRun(relays, "desk", "Desktop (Linux)", alreadyDone = { _, _ -> false }, print = failing)
+            assertEquals(ScheduledOutcome.ALREADY_ATTEMPTED, second)
+            assertEquals(ScheduledOutcome.ALREADY_ATTEMPTED, third)
+            assertEquals(1, prints)
+            assertEquals(2, relays.events.value.size, "the schedule and the one claim, nothing after")
+            // Another device waits for the hour-long stale rule, as NIP-FB says.
+            val other = morning(clock).claimRun(relays, "phone", "Pixel", alreadyDone = { _, _ -> false }, print = failing)
+            assertEquals(ScheduledOutcome.ALREADY_CLAIMED, other)
+            assertEquals(1, prints)
+        }
+
+    @Test
+    fun withNoRecordItsOwnClaimWaitsTheHourLikeAnyonesInstead() =
+        runTest {
+            val clock = clock()
+            val relays = Relays(daily, clock)
+            var prints = 0
+            morning(clock).claimRun(relays, "desk", "Desktop (Linux)", alreadyDone = { _, _ -> false }) { _, _ -> ScheduledOutcome.FAILED.also { prints++ } }
+            assertEquals(ScheduledOutcome.ALREADY_CLAIMED, morning(clock).claimRun(relays, "desk", "Desktop (Linux)", alreadyDone = { _, _ -> false }) { _, _ -> ScheduledOutcome.FAILED.also { prints++ } })
+            assertEquals(1, prints)
+        }
+
+    @Test
+    fun aRunTheProcessDidNotLiveThroughIsTakenUpAgainAtOnce() =
+        runTest {
+            val clock = clock()
+            // Claimed by this install a minute ago, then the process died mid-print: the record is still open.
+            val relays = Relays(ScheduledTaskClaims.claimed(daily, six, "desk", "Desktop (Linux)", six + 5), clock)
+            val installs = MemoryInstalls().apply { runs["desk"] = OwnRunRecord(six) }
+            val outcome = morning(clock, installs).claimRun(relays, "desk", "Desktop (Linux)", alreadyDone = { _, _ -> false }) { _, keep -> if (keep()) ScheduledOutcome.PRINTED else ScheduledOutcome.LOST_CLAIM }
+            assertEquals(ScheduledOutcome.PRINTED, outcome)
+            assertEquals(OwnRunRecord(six, ScheduledOutcome.PRINTED), installs.runs["desk"])
+            assertTrue(ScheduledTaskClaims.isFinished(relays.newest()!!))
+        }
+
+    @Test
+    fun aRunStoppedMidPrintIsRecordedAsEnded() =
+        runTest {
+            val clock = clock()
+            val relays = Relays(daily, clock)
+            val installs = MemoryInstalls()
+            var started = false
+            val run =
+                launch {
+                    morning(clock, installs).claimRun(relays, "desk", "Desktop (Linux)", alreadyDone = { _, _ -> false }) { _, _ ->
+                        started = true
+                        awaitCancellation()
+                    }
+                }
+            // The platform stops the run (its time is up, or the reader cancelled) once the print began.
+            while (!started) testScheduler.advanceTimeBy(1_000)
+            run.cancel()
+            run.join()
+            assertEquals(OwnRunRecord(six, ScheduledOutcome.CANCELLED), installs.runs["desk"])
+            assertEquals(ScheduledOutcome.ALREADY_ATTEMPTED, morning(clock, installs).claimRun(relays, "desk", "Desktop (Linux)", alreadyDone = { _, _ -> false }) { _, _ -> ScheduledOutcome.PRINTED })
+        }
+
+    @Test
+    fun aClaimThatLostLeavesNoRecord() =
+        runTest {
+            val clock = clock()
+            val relays = Relays(daily, clock)
+            val installs = MemoryInstalls()
+            // The phone claims right after this install does, and its claim is newer.
+            relays.afterPublish = { relays.put(ScheduledTaskClaims.claimed(daily, six, "phone", "Pixel 8", six + 30)) }
+            val outcome = morning(clock, installs).claimRun(relays, "desk", "Desktop (Linux)", alreadyDone = { _, _ -> false }) { _, _ -> ScheduledOutcome.PRINTED }
+            assertEquals(ScheduledOutcome.LOST_CLAIM, outcome)
+            assertNull(installs.runs["desk"])
+        }
+
+    @Test
+    fun theRecordRoundTrips() {
+        assertEquals(OwnRunRecord(six), OwnRunRecord.decode(OwnRunRecord(six).encode()))
+        assertEquals(OwnRunRecord(six, ScheduledOutcome.NO_KEY), OwnRunRecord.decode(OwnRunRecord(six, ScheduledOutcome.NO_KEY).encode()))
+        assertEquals(OwnRunRecord(six, ScheduledOutcome.FAILED), OwnRunRecord.decode("$six|ended|SOMETHING_NEW"))
+        assertNull(OwnRunRecord.decode("garbage"))
+        assertEquals(ScheduledTaskClaims.OwnRun.NONE, OwnRunRecord(six - 86_400, ScheduledOutcome.FAILED).of(six))
+        assertEquals(ScheduledTaskClaims.OwnRun.DIED, OwnRunRecord(six).of(six))
+        assertEquals(ScheduledTaskClaims.OwnRun.ENDED, OwnRunRecord(six, ScheduledOutcome.FAILED).of(six))
+    }
 
     /** The clock moves with the test's virtual time, from 06:00:10. */
     private fun TestScope.clock(): () -> Long = { six + 10 + testScheduler.currentTime / 1000 }
@@ -198,17 +318,6 @@ class FrontPageClaimTest {
             val outcome = morning(clock).claimRun(relays, "desk", "Desktop (Linux)", alreadyDone = { _, _ -> false }) { _, keep -> if (keep()) ScheduledOutcome.PRINTED else ScheduledOutcome.LOST_CLAIM }
             assertEquals(ScheduledOutcome.PRINTED, outcome)
             assertEquals(3, relays.edits)
-            assertTrue(ScheduledTaskClaims.isFinished(relays.newest()!!))
-        }
-
-    @Test
-    fun anInstallTakesUpItsOwnUnfinishedClaimAfterDying() =
-        runTest {
-            val clock = clock()
-            // This desktop claimed this morning, then the process died mid-print.
-            val relays = Relays(ScheduledTaskClaims.claimed(daily, six, "desk", "Desktop (Linux)", six + 5), clock)
-            val outcome = morning(clock).claimRun(relays, "desk", "Desktop (Linux)", alreadyDone = { _, _ -> false }) { _, keep -> if (keep()) ScheduledOutcome.PRINTED else ScheduledOutcome.LOST_CLAIM }
-            assertEquals(ScheduledOutcome.PRINTED, outcome)
             assertTrue(ScheduledTaskClaims.isFinished(relays.newest()!!))
         }
 

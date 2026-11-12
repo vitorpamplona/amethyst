@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.frontpage
 
 import androidx.work.WorkInfo
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSchedule
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -50,5 +51,14 @@ class FrontPageJobActionTest {
         assertEquals(JobAction.CANCEL, jobAction(listOf(waiting), null))
         assertEquals(JobAction.LEAVE, jobAction(listOf(WorkInfo.State.SUCCEEDED to emptySet()), null))
         assertEquals(JobAction.LEAVE, jobAction(emptyList(), null))
+    }
+
+    @Test
+    fun aJobCarriesTheScheduleItWasMadeFor() {
+        // A run that learns nothing of the synced schedule (NO_QUORUM) schedules this one again.
+        assertEquals(FrontPageSchedule(true, "0 6 * * 1-5", "America/New_York"), FrontPageWorker.madeFor("0 6 * * 1-5", "America/New_York"))
+        // A job queued before it carried one: off, as before.
+        assertEquals(FrontPageSchedule(), FrontPageWorker.madeFor(null, null))
+        assertEquals(FrontPageSchedule(), FrontPageWorker.madeFor("0 6 * * *", null))
     }
 }

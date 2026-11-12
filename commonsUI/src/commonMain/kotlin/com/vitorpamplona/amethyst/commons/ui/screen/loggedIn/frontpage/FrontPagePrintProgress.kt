@@ -36,13 +36,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrintJob
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinter
@@ -51,14 +57,15 @@ import com.vitorpamplona.amethyst.commons.frontpage.PrintJobStage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.resources.front_page_banner_check
 import com.vitorpamplona.amethyst.commons.resources.front_page_banner_fix
 import com.vitorpamplona.amethyst.commons.resources.front_page_banner_probe
+import com.vitorpamplona.amethyst.commons.resources.front_page_banner_publish
 import com.vitorpamplona.amethyst.commons.resources.front_page_banner_pull
 import com.vitorpamplona.amethyst.commons.resources.front_page_banner_write
 import com.vitorpamplona.amethyst.commons.resources.front_page_job_failed
+import com.vitorpamplona.amethyst.commons.resources.front_page_job_hide
 import com.vitorpamplona.amethyst.commons.resources.front_page_job_tap_to_open
 import com.vitorpamplona.amethyst.commons.resources.front_page_ready_title
 import com.vitorpamplona.amethyst.commons.ui.broadcast.formatElapsedTime
@@ -90,19 +97,21 @@ fun rememberBackgroundPrint(accountViewModel: AccountViewModel): Pair<FrontPageP
         if (watched == 0) delay(END_SHOWN_MS)
         printer.dismissJob()
     }
-    return job?.takeIf { watched == 0 }?.let { printer to it }
+    // Hidden by its ×: out of sight until The Observer is opened, or the print ends.
+    return job?.takeIf { watched == 0 && !it.hidden }?.let { printer to it }
 }
 
 /**
  * One print in the background-work popup: its step and how long it has run (a bar that fills while
- * the desks are read), or how it ended. Tapping it opens the front page; × cancels a running
- * print, or puts away an ended one.
+ * the desks are read), or how it ended. Tapping it opens the front page. × only puts the popup
+ * away (a running print goes on, and comes back on The Observer, where it can be cancelled with a
+ * confirmation): a paid print is never one tap from being thrown away.
  */
 @Composable
 fun FrontPagePrintJobContent(
     job: FrontPagePrintJob,
     onOpen: () -> Unit,
-    onCancel: () -> Unit,
+    onHide: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -110,6 +119,7 @@ fun FrontPagePrintJobContent(
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Box(Modifier.size(18.dp), contentAlignment = Alignment.Center) {
                 when (val end = job.end) {
+                    // The one moving indicator while it runs: the bar below only fills while the desks are read.
                     null -> CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = scheme.primary)
                     is PrintJobEnd.Ready -> Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = scheme.allGoodColor, modifier = Modifier.size(18.dp), filled = true)
                     else -> Icon(MaterialSymbols.Error, contentDescription = null, tint = scheme.error, modifier = Modifier.size(18.dp), filled = true)
@@ -122,39 +132,61 @@ fun FrontPagePrintJobContent(
                     color = scheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    // Ready or failed is read out when it lands; the steps aren't.
+                    modifier = if (job.running) Modifier else Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
-                val detail =
-                    when (val end = job.end) {
-                        null -> {
-                            val elapsed by rememberElapsed(job.startedAt)
-                            "${formatElapsedTime(elapsed)} • ${stringRes(Res.string.front_page_job_tap_to_open)}"
-                        }
-                        is PrintJobEnd.Ready -> end.headline?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.front_page_job_tap_to_open)
-                        else -> stringRes(Res.string.front_page_job_tap_to_open)
-                    }
-                Text(detail, style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                when (val end = job.end) {
+                    null -> ElapsedText(job.startedAt, stringRes(Res.string.front_page_job_tap_to_open))
+                    is PrintJobEnd.Ready -> DetailText(end.headline?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.front_page_job_tap_to_open))
+                    // Why, in a sentence of its own: never a fragment glued into the headline.
+                    else -> DetailText(printEndShort(end) ?: stringRes(Res.string.front_page_job_tap_to_open))
+                }
             }
             val running = job.running
-            IconButton(onClick = if (running) onCancel else onDismiss, modifier = Modifier.size(22.dp)) {
+            IconButton(onClick = if (running) onHide else onDismiss, modifier = Modifier.size(22.dp)) {
                 Icon(
                     MaterialSymbols.Close,
-                    contentDescription = stringRes(if (running) Res.string.cancel else Res.string.dismiss),
+                    contentDescription = stringRes(if (running) Res.string.front_page_job_hide else Res.string.dismiss),
                     tint = scheme.onSurfaceVariant,
                     modifier = Modifier.size(14.dp),
                 )
             }
         }
-        if (job.running) {
+        val stage = job.stage
+        if (job.running && stage is PrintJobStage.Reading && stage.total > 0) {
             Spacer(Modifier.height(6.dp))
-            val stage = job.stage
-            if (stage is PrintJobStage.Reading && stage.total > 0) {
-                LinearProgressIndicator(progress = { stage.fraction }, modifier = Modifier.fillMaxWidth(), color = scheme.primary, trackColor = scheme.surfaceVariant)
-            } else {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = scheme.primary, trackColor = scheme.surfaceVariant)
-            }
+            LinearProgressIndicator(progress = { stage.fraction }, modifier = Modifier.fillMaxWidth(), color = scheme.primary, trackColor = scheme.surfaceVariant)
             Spacer(Modifier.height(4.dp))
         }
     }
+}
+
+@Composable
+private fun DetailText(text: String) {
+    Text(text, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
+
+/**
+ * "1:23 • [suffix]": the only part of the popup that changes each second, so only it recomposes,
+ * and only while the screen is started (a stopped app doesn't wake every second for it).
+ */
+@Composable
+private fun ElapsedText(
+    startedAt: Long,
+    suffix: String,
+) {
+    var started by remember { mutableStateOf(true) }
+    LifecycleStartEffect(Unit) {
+        started = true
+        onStopOrDispose { started = false }
+    }
+    val elapsed by produceState((TimeUtils.now() - startedAt).coerceAtLeast(0), startedAt, started) {
+        while (started) {
+            value = (TimeUtils.now() - startedAt).coerceAtLeast(0)
+            delay(1_000)
+        }
+    }
+    DetailText("${formatElapsedTime(elapsed)} • $suffix")
 }
 
 @Composable
@@ -162,7 +194,7 @@ private fun headline(job: FrontPagePrintJob): String =
     when (val end = job.end) {
         null -> printStageText(job.stage)
         is PrintJobEnd.Ready -> stringRes(Res.string.front_page_ready_title)
-        else -> stringRes(Res.string.front_page_job_failed, printEndShort(end).orEmpty())
+        else -> stringRes(Res.string.front_page_job_failed)
     }
 
 /** "Writing your Observer…": a print's step in the words the popup and the screen share. */
@@ -173,14 +205,5 @@ fun printStageText(stage: PrintJobStage): String =
         is PrintJobStage.Reading -> stringRes(Res.string.front_page_banner_pull, stage.done, stage.total)
         is PrintJobStage.Writing -> stringRes(if (stage.round > 1) Res.string.front_page_banner_fix else Res.string.front_page_banner_write)
         PrintJobStage.Checking -> stringRes(Res.string.front_page_banner_check)
-    }
-
-/** Seconds since [startedAt] (unix seconds), ticking once a second while shown. */
-@Composable
-private fun rememberElapsed(startedAt: Long): State<Long> =
-    produceState((TimeUtils.now() - startedAt).coerceAtLeast(0), startedAt) {
-        while (true) {
-            value = (TimeUtils.now() - startedAt).coerceAtLeast(0)
-            delay(1_000)
-        }
+        PrintJobStage.Publishing -> stringRes(Res.string.front_page_banner_publish)
     }

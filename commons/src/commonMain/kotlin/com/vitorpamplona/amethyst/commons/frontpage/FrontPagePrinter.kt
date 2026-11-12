@@ -56,9 +56,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.concurrent.Volatile
 
 /** Who asked for a print: the reader, or their morning schedule. */
 enum class PrintTrigger { MANUAL, SCHEDULED }
@@ -90,6 +92,16 @@ enum class ScheduledOutcome {
 
     /** Not enough of the reader's relays answered to claim safely. */
     NO_QUORUM,
+
+    /**
+     * This install already ran this occurrence and the run ended (it failed, or was stopped): it
+     * isn't run again on its own, since the failed run may have been paid for. The reader can
+     * still print by hand.
+     */
+    ALREADY_ATTEMPTED,
+
+    /** The reader cancelled the print, or the platform stopped the run. */
+    CANCELLED,
 }
 
 /** What a platform shows outside the app when a paper is ready, or needs the reader. */
@@ -194,6 +206,9 @@ class FrontPagePrinter(
     /** The popup showed how the print ended: it goes. A print still running stays. */
     fun dismissJob() = jobs.dismiss()
 
+    /** The popup's ×: hides a running print from the popup without stopping it (Cancel is on The Observer). */
+    fun hideJob() = jobs.hide()
+
     private val localEditions = MutableStateFlow<List<SavedEdition>>(emptyList())
 
     /** The reader's own Observer site, as last read or published; null until read, or when there is none. */
@@ -235,7 +250,9 @@ class FrontPagePrinter(
     val watched: StateFlow<Int> = _watched.asStateFlow()
 
     private var printing: Job? = null
-    private val running = Mutex()
+
+    /** The press: one print at a time, a scheduled run holding it from before its claim to its end; Cancel stops either. */
+    private val slot = PrintSlot()
 
     init {
         scope.launch {
@@ -247,6 +264,8 @@ class FrontPagePrinter(
     /** A screen showing the paper calls this, and the returned function when it goes. */
     fun watch(): () -> Unit {
         _watched.update { it + 1 }
+        // Opening The Observer is how a hidden popup comes back.
+        jobs.unhide()
         var released = false
         return {
             if (!released) {
@@ -304,18 +323,30 @@ class FrontPagePrinter(
         return page
     }
 
-    /** Starts a print on the account's scope; false when one is already running. */
+    /** Whether a print holds the press: one the reader started, or a scheduled run (claiming or printing). */
+    val isBusy: Boolean get() = printing?.isActive == true || slot.isHeld
+
+    /**
+     * Starts a print on the account's scope; false when one is already running (the reader's, or
+     * the morning's on this device), and nothing was started.
+     */
     fun print(
         key: AgentKeyTag,
         model: AgentModel,
         trigger: PrintTrigger = PrintTrigger.MANUAL,
     ): Boolean {
-        if (printing?.isActive == true) return false
+        if (isBusy) return false
         printing = scope.launch { printNow(key, model, trigger) }
         return true
     }
 
+    /**
+     * Stops the print that is running, whoever started it: a scheduled one ends
+     * [ScheduledOutcome.CANCELLED], and its morning isn't printed again on its own (NIP-FB's
+     * claim stays unfinished; this install's record says the run ended).
+     */
     fun cancel() {
+        slot.cancel()
         printing?.cancel()
         printing = null
         _run.value = FrontPageRun.Idle
@@ -336,7 +367,33 @@ class FrontPagePrinter(
         keep: suspend () -> Boolean = { true },
     ): FrontPageRun? {
         val boundary = boundary ?: return FrontPageRun.Failed(WriterFailure.UNSUPPORTED).also { _run.value = it }
-        if (!running.tryLock()) return null
+        if (!slot.tryHold()) return null
+        try {
+            return printHolding(key, model, boundary, trigger, keep)
+        } finally {
+            slot.release()
+        }
+    }
+
+    /**
+     * The print, with the press already held, as its own job so [cancel] stops it alone: the
+     * caller (a scheduled run) carries on to say it was cancelled. [FrontPageRun.Cancelled] then.
+     */
+    private suspend fun printHolding(
+        key: AgentKeyTag,
+        model: AgentModel,
+        boundary: PaperBoundary,
+        trigger: PrintTrigger,
+        keep: suspend () -> Boolean,
+    ): FrontPageRun = slot.runCancellable(FrontPageRun.Cancelled) { printBody(key, model, boundary, trigger, keep) }
+
+    private suspend fun printBody(
+        key: AgentKeyTag,
+        model: AgentModel,
+        boundary: PaperBoundary,
+        trigger: PrintTrigger,
+        keep: suspend () -> Boolean,
+    ): FrontPageRun {
         jobs.started(trigger)
         var kept: SavedEdition? = null
         try {
@@ -377,7 +434,6 @@ class FrontPagePrinter(
             jobs.dropped()
             throw e
         } finally {
-            running.unlock()
             jobs.finished(trigger)
         }
     }
@@ -433,8 +489,9 @@ class FrontPagePrinter(
             Log.w(TAG, "Could not keep the edition", e)
         }
         if (trigger == PrintTrigger.SCHEDULED || _watched.value == 0) notifier.paperReady(pubKey, edition)
-        // A scheduled run publishes before it returns: the platform may end its job right after.
-        if (trigger == PrintTrigger.SCHEDULED) publishPending(trigger) else scope.launch { publishPending(trigger) }
+        // Published before the print ends, so the job (and Android's foreground service, and the
+        // platform's scheduled run) lives until it is out, the popup saying so.
+        publishPending(trigger, onPublishing = jobs::publishing)
         return edition
     }
 
@@ -445,7 +502,10 @@ class FrontPagePrinter(
      * and nothing is uploaded. A scheduled print publishes only with a signer that signs on its
      * own. Never anything that wasn't printed (and checked) here.
      */
-    suspend fun publishPending(trigger: PrintTrigger = PrintTrigger.MANUAL) {
+    suspend fun publishPending(
+        trigger: PrintTrigger = PrintTrigger.MANUAL,
+        onPublishing: () -> Unit = {},
+    ) {
         val publisher = publisher ?: return
         // Read now, not when the print started: turning it off mid-print keeps that paper private.
         val prefs = observerPrefs.get(pubKey)
@@ -465,6 +525,7 @@ class FrontPagePrinter(
                     .filter { (kept, html) -> ObserverPublisher.sha256Hex(html.encodeToByteArray()).equals(kept.sha256, ignoreCase = true) }
             if (pending.isEmpty()) return
             _observer.value = ObserverStatus.Publishing
+            onPublishing()
             val result = publisher.publish(pending.map { (kept, html) -> ObserverPage(ObserverPublisher.entryFor(kept, kept.sha256!!.lowercase()), html) })
             _observer.value =
                 when (result) {
@@ -525,40 +586,44 @@ class FrontPagePrinter(
         /** When the platform stops this run (unix seconds); null when it doesn't. */
         deadline: Long? = null,
     ): ScheduledOutcome {
-        unattendedBlocker(account.signer, boundary, busy = printing?.isActive == true || running.isLocked)?.let { blocked ->
+        unattendedBlocker(account.signer, boundary, busy = isBusy)?.let { blocked ->
             if (blocked == ScheduledOutcome.NEEDS_SIGNER) notifier.needsYou(pubKey)
             return blocked
         }
-
-        val morning = morning ?: return printOccurrence(waitMs, null) { true }
-        // NIP-FB: only a device the reader turned on, and only the one whose claim wins; a paper
-        // that already exists for the occurrence is marked done without printing.
-        return morning.runOccurrence(account, alreadyDone = { occurrence, zone -> alreadyPrinted(occurrence, zone) }, deadline) { budget, keep -> printOccurrence(waitMs, budget, keep) }
+        // The press is held from before the claim to the end: a print the reader starts meanwhile
+        // is refused (and says so), so a won claim never meets a busy press, and a busy press
+        // never leaves a claim behind.
+        if (!slot.tryHold()) return ScheduledOutcome.BUSY
+        try {
+            val morning = morning ?: return printOccurrence(waitMs, null) { true }
+            // NIP-FB: only a device the reader turned on, and only the one whose claim wins; a paper
+            // that already exists for the occurrence is marked done without printing.
+            return morning.runOccurrence(account, alreadyDone = { occurrence, zone -> alreadyPrinted(occurrence, zone) }, deadline) { budget, keep -> printOccurrence(waitMs, budget, keep) }
+        } finally {
+            slot.release()
+        }
     }
 
-    /** The print itself, once the occurrence is this device's, in [budgetSeconds] at most (null: no limit). */
+    /** The print itself, once the occurrence is this device's, in [budgetSeconds] at most (null: no limit). The press is held. */
     private suspend fun printOccurrence(
         waitMs: Long,
         budgetSeconds: Long?,
         keep: suspend () -> Boolean,
     ): ScheduledOutcome {
+        val boundary = boundary ?: return ScheduledOutcome.UNSUPPORTED
         val (key, hasLens) = awaitOwnLists(waitMs)
         if (key == null) return ScheduledOutcome.NO_KEY.also { notifier.needsYou(pubKey) }
         if (!hasLens) return ScheduledOutcome.NO_LENS.also { notifier.needsYou(pubKey) }
         val model = chooseModel(key) ?: return ScheduledOutcome.FAILED
         val ended =
             if (budgetSeconds == null) {
-                printNow(key, model, PrintTrigger.SCHEDULED, keep) ?: return ScheduledOutcome.BUSY
+                printHolding(key, model, boundary, PrintTrigger.SCHEDULED, keep)
             } else {
                 // Out of time: stopped before the platform kills it, so `ran` can still be written for a paper that made it.
-                withTimeoutOrNull(budgetSeconds * 1000) { printNow(key, model, PrintTrigger.SCHEDULED, keep) ?: FrontPageRun.Idle }
+                withTimeoutOrNull(budgetSeconds * 1000) { printHolding(key, model, boundary, PrintTrigger.SCHEDULED, keep) }
                     ?: return ScheduledOutcome.FAILED
             }
-        return when {
-            ended is FrontPageRun.Done && ended.result is PrintResult.Printed -> ScheduledOutcome.PRINTED
-            ended == FrontPageRun.Idle -> ScheduledOutcome.LOST_CLAIM
-            else -> ScheduledOutcome.FAILED
-        }
+        return scheduledOutcomeOf(ended)
     }
 
     fun canPrintUnattended() = account.signer.localPrivKeyOrNull() != null
@@ -667,6 +732,66 @@ sealed interface ObserverStatus {
     data class Failed(
         val reason: ObserverFailure,
     ) : ObserverStatus
+}
+
+/** How a scheduled print's [ended] run reads as a [ScheduledOutcome]. */
+fun scheduledOutcomeOf(ended: FrontPageRun?): ScheduledOutcome =
+    when {
+        // The press was taken: nothing was started.
+        ended == null -> ScheduledOutcome.BUSY
+        ended is FrontPageRun.Done && ended.result is PrintResult.Printed -> ScheduledOutcome.PRINTED
+        ended == FrontPageRun.Cancelled -> ScheduledOutcome.CANCELLED
+        // The page was dropped: another device's claim won before it was kept.
+        ended == FrontPageRun.Idle -> ScheduledOutcome.LOST_CLAIM
+        else -> ScheduledOutcome.FAILED
+    }
+
+/** The reader's Cancel, as the print's cancellation cause. */
+class PrintCancelled : CancellationException("The reader cancelled the print")
+
+/**
+ * One print at a time ([tryHold], [release]), and a Cancel that stops whichever print is running
+ * ([runCancellable]): the reader's, or the morning's that a scheduled run holds the slot for from
+ * before its claim to its end.
+ */
+class PrintSlot {
+    private val mutex = Mutex()
+
+    @Volatile
+    private var current: Job? = null
+
+    /** Whether a print (or a scheduled run on its way to one) holds the slot. */
+    val isHeld: Boolean get() = mutex.isLocked
+
+    fun tryHold(): Boolean = mutex.tryLock()
+
+    fun release() = mutex.unlock()
+
+    /**
+     * [body] as its own job, so [cancel] stops it alone: then [cancelled] comes back and the
+     * caller (a scheduled run) carries on to record and say how it ended. A caller that is
+     * itself cancelled (the platform stopping its run) is cancelled as usual.
+     */
+    suspend fun <T> runCancellable(
+        cancelled: T,
+        body: suspend () -> T,
+    ): T =
+        coroutineScope {
+            val work = async { body() }
+            current = work
+            try {
+                work.await()
+            } catch (e: CancellationException) {
+                if (work.isCancelled && isActive) cancelled else throw e
+            } finally {
+                if (current === work) current = null
+            }
+        }
+
+    /** Stops the print running now, if any. */
+    fun cancel() {
+        current?.cancel(PrintCancelled())
+    }
 }
 
 /** The hash an edition is published under: its bytes once the paper's CSP is in ([withPaperCsp]). */

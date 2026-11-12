@@ -54,7 +54,7 @@ import org.jetbrains.compose.resources.StringResource
 
 /**
  * A print that gave no paper, in words: a full sentence for the screen and the notification
- * ([sentenceRes]), a few words for the popup ([shortRes], "key rejected"). One table for every
+ * ([sentenceRes]), a short one for the popup ([shortRes], "The provider rejected the key."). One table for every
  * place that says it, so the screen, the popup and both platforms' notifications agree.
  */
 fun WriterFailure.sentenceRes(): StringResource =
@@ -107,7 +107,7 @@ suspend fun loadPrintEndSentence(end: PrintJobEnd): String? {
     return if (res == Res.string.front_page_fail_http) loadStringRes(res, status ?: 0) else loadStringRes(res)
 }
 
-/** "key rejected": why a print gave no paper in a few words, for the popup; null for a paper. */
+/** "The provider rejected the key.": why a print gave no paper, a short sentence for the popup; null for a paper. */
 @Composable
 fun printEndShort(end: PrintJobEnd): String? {
     val (res, status) = end.short() ?: return null

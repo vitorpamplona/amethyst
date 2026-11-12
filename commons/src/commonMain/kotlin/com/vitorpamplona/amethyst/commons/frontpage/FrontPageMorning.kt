@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -56,6 +57,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
 
@@ -389,8 +391,15 @@ class FrontPageMorning(
             }
         }
 
-    /** The schedule this device keeps, from what is known now: for the platform's next job. */
-    suspend fun scheduleHere(account: Account): FrontPageSchedule = scheduleForThisDevice(account.observerSchedule.flow.value, optIns.get(account.signer.pubKey), canPrintHere(account), hasWriteRelays(account.observerSchedule.writeRelays.value)) ?: FrontPageSchedule()
+    /**
+     * The schedule this device keeps, from what is known now: for the platform's next job. While
+     * nothing is known of the synced schedule (a cold process whose relays didn't answer), the
+     * job keeps [fallback], the schedule it was made for, so one bad morning doesn't end the chain.
+     */
+    suspend fun scheduleHere(
+        account: Account,
+        fallback: FrontPageSchedule = FrontPageSchedule(),
+    ): FrontPageSchedule = scheduleForThisDevice(account.observerSchedule.flow.value, optIns.get(account.signer.pubKey), canPrintHere(account), hasWriteRelays(account.observerSchedule.writeRelays.value)) ?: fallback
 
     /**
      * Whether a launch should try the last due morning: this device prints, and the schedule it
@@ -403,7 +412,38 @@ class FrontPageMorning(
         val zone = FrontPageClock.cronZone(task.tz) ?: return false
         val at = now()
         val occurrence = ScheduledTaskClaims.occurrence(task, zone, at) ?: return false
-        return ScheduledTaskClaims.decide(task, ObserverSchedule.TASK, occurrence, at, installId(account)) == Decision.CLAIM
+        val id = installId(account)
+        return ScheduledTaskClaims.decide(task, ObserverSchedule.TASK, occurrence, at, id, ownRun(id, occurrence)) == Decision.CLAIM
+    }
+
+    /**
+     * What this install's own record says of its run of [occurrence] (NIP-FB keeps none): a run
+     * still open is one the process didn't live through, which resumes; one that ended, however,
+     * is never run again on its own. A record that can't be read is no record.
+     */
+    private suspend fun ownRun(
+        id: String,
+        occurrence: Long,
+    ): ScheduledTaskClaims.OwnRun =
+        try {
+            installs.lastRun(id)?.of(occurrence) ?: ScheduledTaskClaims.OwnRun.NONE
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not read this install's last morning", e)
+            ScheduledTaskClaims.OwnRun.NONE
+        }
+
+    /** Writes [record] for [id], even while the run is being cancelled: a stopped run must say it ended. */
+    private suspend fun recordRun(
+        id: String,
+        record: OwnRunRecord?,
+    ) = withContext(NonCancellable) {
+        try {
+            installs.setLastRun(id, record)
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not record this install's morning", e)
+        }
     }
 
     /** One edit at a time, this device's settings read inside it: two quick taps land in order. */
@@ -542,7 +582,9 @@ class FrontPageMorning(
     /**
      * NIP-FB's claim protocol ([ScheduledTaskClaims]) on [state]: a random wait; a read that more
      * than half of the write relays answer; stop unless the occurrence is unclaimed, stale, or
-     * this install's own unfinished claim; claim (watching first, more than half must accept),
+     * this install's own unfinished claim on a run its process didn't live through (this install's
+     * own record, [OwnRunRecord]: a run that ended, failed or not, is never run again on its own,
+     * since it may have been paid for); claim (watching first, more than half must accept),
      * listen [ScheduledTaskClaims.SETTLE_SECONDS] and go on only if this install's claim is the
      * newest (an edit that overwrote it unseen sends this back to the read, a few times at most).
      * Then a paper that already exists for the occurrence ([alreadyDone]) only sets `ran`; else
@@ -574,9 +616,10 @@ class FrontPageMorning(
             // Back for another round only while it is still the same occurrence.
             if (first != null && first != occurrence) return ScheduledOutcome.NOT_DUE
             first = occurrence
-            when (ScheduledTaskClaims.decide(task, ObserverSchedule.TASK, occurrence, at, id)) {
+            when (ScheduledTaskClaims.decide(task, ObserverSchedule.TASK, occurrence, at, id, ownRun(id, occurrence))) {
                 Decision.NOT_RUNNABLE -> return ScheduledOutcome.NOT_RUNNER
                 Decision.ALREADY_CLAIMED -> return ScheduledOutcome.ALREADY_CLAIMED
+                Decision.ATTEMPTED_HERE -> return ScheduledOutcome.ALREADY_ATTEMPTED
                 Decision.CLAIM -> {}
             }
             claimAndRun(state, read.relays, read.floor ?: event, task, occurrence, zone, id, by, alreadyDone, deadline, print)?.let { return it }
@@ -609,6 +652,11 @@ class FrontPageMorning(
                         seen.update { (it + incoming).distinctBy { e -> e.id } }
                     }
                 }
+            // Open from before the claim goes out until the run ends: a process that dies anywhere
+            // in between leaves it open, and the next launch takes its own claim up again.
+            recordRun(id, OwnRunRecord(occurrence))
+            var running = false
+            var ended: ScheduledOutcome? = null
             try {
                 // Watch before claiming, so a competing claim published meanwhile is seen.
                 withTimeoutOrNull(SUBSCRIBE_WAIT_MS) { subscribed.first { it.containsAll(relays) } }
@@ -623,63 +671,82 @@ class FrontPageMorning(
                     ScheduledTaskClaims.Settled.AGAIN -> return@coroutineScope null
                     ScheduledTaskClaims.Settled.OURS -> {}
                 }
-
-                // The occurrence's paper exists (a manual print, another app): done, without printing.
-                // Claimed first, so a skip never takes a morning from a device printing it.
-                val done =
-                    try {
-                        alreadyDone(occurrence, zone)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Could not tell whether the paper exists", e)
-                        false
-                    }
-                if (done) {
-                    markRan(state, occurrence, id)
-                    return@coroutineScope ScheduledOutcome.ALREADY_PRINTED
-                }
-
-                suspend fun lostTo(events: List<ScheduledTaskEvent>): Boolean {
-                    val latest = ScheduledTaskClaims.winner(events)?.let { state.taskOf(it) } ?: return false
-                    return ScheduledTaskClaims.claimsForAnother(latest, occurrence, id)
-                }
-                val phase = MutableStateFlow(Phase.PRINTING)
-                val budget = deadline?.let { it - now() - RAN_RESERVE_SECONDS }
-                val printing =
-                    async {
-                        print(budget) {
-                            // The last word before the paper is kept: a claim seen by now stops it.
-                            yield()
-                            if (lostTo(seen.value)) {
-                                phase.compareAndSet(Phase.PRINTING, Phase.LOST)
-                                false
-                            } else {
-                                phase.compareAndSet(Phase.PRINTING, Phase.KEEPING)
-                            }
-                        }
-                    }
-                val guard =
-                    launch {
-                        seen.collect { events ->
-                            if (lostTo(events) && phase.compareAndSet(Phase.PRINTING, Phase.LOST)) printing.cancel()
-                        }
-                    }
-                val outcome =
-                    try {
-                        printing.await()
-                    } catch (e: CancellationException) {
-                        if (phase.value != Phase.LOST) throw e
-                        ScheduledOutcome.LOST_CLAIM
-                    } finally {
-                        guard.cancel()
-                    }
-                if (phase.value == Phase.LOST) return@coroutineScope ScheduledOutcome.LOST_CLAIM
-                if (outcome == ScheduledOutcome.PRINTED) markRan(state, occurrence, id)
-                outcome
+                // From here the occurrence is this install's to run, and running may cost money.
+                running = true
+                ended = runClaimed(state, occurrence, zone, id, seen, alreadyDone, deadline, print)
+                ended
             } finally {
                 watching.cancel()
+                // A claim that didn't win ran nothing: the occurrence stays open to this install.
+                recordRun(id, if (running) OwnRunRecord(occurrence, ended ?: ScheduledOutcome.CANCELLED) else null)
             }
+        }
+
+    /** Steps 5 and 6, once the claim is this install's: the paper (or the skip), under watch, then `ran`. */
+    private suspend fun runClaimed(
+        state: ScheduleRelays,
+        occurrence: Long,
+        zone: CronZone,
+        id: String,
+        seen: MutableStateFlow<List<ScheduledTaskEvent>>,
+        alreadyDone: suspend (occurrence: Long, zone: CronZone) -> Boolean,
+        deadline: Long?,
+        print: suspend (budgetSeconds: Long?, keep: suspend () -> Boolean) -> ScheduledOutcome,
+    ): ScheduledOutcome =
+        coroutineScope {
+            // The occurrence's paper exists (a manual print, another app): done, without printing.
+            // Claimed first, so a skip never takes a morning from a device printing it.
+            val done =
+                try {
+                    alreadyDone(occurrence, zone)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not tell whether the paper exists", e)
+                    false
+                }
+            if (done) {
+                markRan(state, occurrence, id)
+                return@coroutineScope ScheduledOutcome.ALREADY_PRINTED
+            }
+
+            suspend fun lostTo(events: List<ScheduledTaskEvent>): Boolean {
+                val latest = ScheduledTaskClaims.winner(events)?.let { state.taskOf(it) } ?: return false
+                return ScheduledTaskClaims.claimsForAnother(latest, occurrence, id)
+            }
+            val phase = MutableStateFlow(Phase.PRINTING)
+            val budget = deadline?.let { it - now() - RAN_RESERVE_SECONDS }
+            val printing =
+                async {
+                    print(budget) {
+                        // The last word before the paper is kept: a claim seen by now stops it.
+                        yield()
+                        if (lostTo(seen.value)) {
+                            phase.compareAndSet(Phase.PRINTING, Phase.LOST)
+                            false
+                        } else {
+                            phase.compareAndSet(Phase.PRINTING, Phase.KEEPING)
+                        }
+                    }
+                }
+            val guard =
+                launch {
+                    seen.collect { events ->
+                        if (lostTo(events) && phase.compareAndSet(Phase.PRINTING, Phase.LOST)) printing.cancel()
+                    }
+                }
+            val outcome =
+                try {
+                    printing.await()
+                } catch (e: CancellationException) {
+                    if (phase.value != Phase.LOST) throw e
+                    ScheduledOutcome.LOST_CLAIM
+                } finally {
+                    guard.cancel()
+                }
+            if (phase.value == Phase.LOST) return@coroutineScope ScheduledOutcome.LOST_CLAIM
+            if (outcome == ScheduledOutcome.PRINTED) markRan(state, occurrence, id)
+            outcome
         }
 
     /**

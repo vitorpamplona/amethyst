@@ -32,7 +32,6 @@ import com.vitorpamplona.amethyst.service.foreground.FlowProgressForegroundServi
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -66,8 +65,8 @@ class FrontPagePrintingForegroundService : FlowProgressForegroundService<Map<Hex
     override val cancelAction = ACTION_CANCEL
     override val cancelLabelRes = R.string.front_page_print_cancel
 
-    // The elapsed time in the text moves once a second; the steps themselves come as emissions.
-    override val refreshMs: Long = REFRESH_MS
+    // No clock in the text: the notification's chronometer counts up on its own, so the card is
+    // re-sent only when the step changes (the jobs' emissions), never once a second.
 
     private var wakeLock: PowerManager.WakeLock? = null
 
@@ -112,6 +111,12 @@ class FrontPagePrintingForegroundService : FlowProgressForegroundService<Map<Hex
 
     override fun cancelAll() = Amethyst.instance.frontPagePrinters.cancelManualPrints()
 
+    /**
+     * Android 15 ended dataSync's budget: the print can't go on unprotected (frozen, or killed
+     * after the model was paid), so it is cancelled like the reader's Cancel, and ends as one.
+     */
+    override fun onBudgetExhausted() = Amethyst.instance.frontPagePrinters.cancelManualPrints()
+
     override fun render(value: Map<HexKey, FrontPagePrintJob>): Content {
         val job = value.values.firstOrNull { it.runningManual } ?: return Content(stringRes(this, R.string.front_page_print_title), null, Bar.Indeterminate)
         val step =
@@ -120,11 +125,11 @@ class FrontPagePrintingForegroundService : FlowProgressForegroundService<Map<Hex
                 is PrintJobStage.Reading -> stringRes(this, R.string.front_page_print_step_pull, stage.done, stage.total)
                 is PrintJobStage.Writing -> stringRes(this, if (stage.round > 1) R.string.front_page_print_step_fix else R.string.front_page_print_step_write)
                 PrintJobStage.Checking -> stringRes(this, R.string.front_page_print_step_check)
+                PrintJobStage.Publishing -> stringRes(this, R.string.front_page_print_step_publish)
             }
-        val elapsed = (TimeUtils.now() - job.startedAt).coerceAtLeast(0)
         val stage = job.stage
         val bar = if (stage is PrintJobStage.Reading && stage.total > 0) Bar.Segmented(stage.total, stage.done) else Bar.Indeterminate
-        return Content(stringRes(this, R.string.front_page_print_title), "$step · ${elapsed / 60}:${(elapsed % 60).toString().padStart(2, '0')}", bar)
+        return Content(stringRes(this, R.string.front_page_print_title), step, bar, chronometerSince = job.startedAt * 1000)
     }
 
     companion object {
@@ -132,7 +137,6 @@ class FrontPagePrintingForegroundService : FlowProgressForegroundService<Map<Hex
         private const val CHANNEL_ID = "front_page_printing"
         private const val NOTIFICATION_ID = 0x4F4253 // "OBS"
         private const val ACTION_CANCEL = "com.vitorpamplona.amethyst.frontpage.PRINT_CANCEL"
-        private const val REFRESH_MS = 1_000L
         private const val WAKE_LOCK_TIMEOUT_MS = 10 * 60 * 1000L
 
         fun start(context: Context) {

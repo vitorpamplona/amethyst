@@ -79,7 +79,7 @@ class AndroidFrontPageScheduler(
             JobAction.CANCEL -> manager.cancelUniqueWork(name)
             JobAction.REPLACE -> {
                 val at = next ?: return
-                manager.enqueueUniqueWork(name, ExistingWorkPolicy.REPLACE, request(account, at - now, dueTag(at)))
+                manager.enqueueUniqueWork(name, ExistingWorkPolicy.REPLACE, request(account, at - now, dueTag(at), schedule = schedule))
                 Log.d(TAG) { "Next front page for ${account.take(8)} in ${(at - now) / 60} min" }
             }
         }
@@ -92,7 +92,7 @@ class AndroidFrontPageScheduler(
     ) {
         val now = TimeUtils.now()
         val next = (if (schedule.enabled) schedule.nextRun(now) else null) ?: return
-        WorkManager.getInstance(context).enqueueUniqueWork(workName(account), ExistingWorkPolicy.APPEND_OR_REPLACE, request(account, next - now, dueTag(next)))
+        WorkManager.getInstance(context).enqueueUniqueWork(workName(account), ExistingWorkPolicy.APPEND_OR_REPLACE, request(account, next - now, dueTag(next), schedule = schedule))
         Log.d(TAG) { "Next front page for ${account.take(8)} in ${(next - now) / 60} min" }
     }
 
@@ -113,11 +113,19 @@ class AndroidFrontPageScheduler(
         delaySec: Long,
         due: String?,
         catchUp: Boolean = false,
+        schedule: FrontPageSchedule? = null,
     ) = OneTimeWorkRequestBuilder<FrontPageWorker>()
         .setInitialDelay(delaySec.coerceAtLeast(0), TimeUnit.SECONDS)
         .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-        .setInputData(workDataOf(FrontPageWorker.KEY_ACCOUNT to account, FrontPageWorker.KEY_CATCH_UP to catchUp))
-        .addTag(TAG)
+        .setInputData(
+            workDataOf(
+                FrontPageWorker.KEY_ACCOUNT to account,
+                FrontPageWorker.KEY_CATCH_UP to catchUp,
+                // The schedule this job was made for: the next job keeps it when the run learns nothing new.
+                FrontPageWorker.KEY_CRON to schedule?.takeIf { it.enabled }?.cron,
+                FrontPageWorker.KEY_ZONE to schedule?.takeIf { it.enabled }?.zone,
+            ),
+        ).addTag(TAG)
         .apply { if (due != null) addTag(due) }
         .build()
 
@@ -196,7 +204,10 @@ class FrontPageWorker(
             // A catch-up run leaves the regular job alone.
             if (!catchUp) {
                 try {
-                    val next = loaded?.let { printers.morning.scheduleHere(it) } ?: FrontPageSchedule()
+                    // Nothing known of the synced schedule (its relays didn't answer, NO_QUORUM): the
+                    // next job keeps the schedule this one was made for, so the chain goes on.
+                    val made = madeFor(inputData.getString(KEY_CRON), inputData.getString(KEY_ZONE))
+                    val next = loaded?.let { printers.morning.scheduleHere(it, fallback = made) } ?: FrontPageSchedule()
                     app.frontPageScheduler.scheduleAfterRun(account, next)
                 } catch (e: Exception) {
                     Log.w(TAG, "Could not schedule the next front page", e)
@@ -208,6 +219,15 @@ class FrontPageWorker(
     companion object {
         const val KEY_ACCOUNT = "account"
         const val KEY_CATCH_UP = "catch_up"
+        const val KEY_CRON = "cron"
+        const val KEY_ZONE = "zone"
+
+        /** The schedule a job was made for, from its data; off when it carries none (a job from before). */
+        fun madeFor(
+            cron: String?,
+            zone: String?,
+        ): FrontPageSchedule = if (cron == null || zone == null) FrontPageSchedule() else FrontPageSchedule(true, cron, zone)
+
         private const val TAG = "FrontPageWorker"
 
         /**

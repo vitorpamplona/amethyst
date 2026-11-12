@@ -58,11 +58,15 @@ class AndroidFrontPageNotifier(
         account: HexKey,
         edition: SavedEdition,
     ) {
-        post(idFor(account), loadStringRes(Res.string.front_page_ready_title), edition.headline.orEmpty(), frontPageUri(edition.day, npubOf(account)))
+        post(notificationId(account, Kind.READY), loadStringRes(Res.string.front_page_ready_title), edition.headline.orEmpty(), frontPageUri(edition.day, npubOf(account)))
+        // A paper resolves what came before it: the failure and the "waiting" go.
+        val manager = NotificationManagerCompat.from(context)
+        manager.cancel(notificationId(account, Kind.FAILED))
+        manager.cancel(notificationId(account, Kind.NEEDS_YOU))
     }
 
     override suspend fun needsYou(account: HexKey) {
-        post(idFor(account), loadStringRes(Res.string.front_page_needs_you_title), loadStringRes(Res.string.front_page_needs_you_body), frontPageUri(accountNpub = npubOf(account)))
+        post(notificationId(account, Kind.NEEDS_YOU), loadStringRes(Res.string.front_page_needs_you_title), loadStringRes(Res.string.front_page_needs_you_body), frontPageUri(accountNpub = npubOf(account)))
     }
 
     /** A print the reader started gave no paper while they were away: why, with a tap back to the front page. */
@@ -70,7 +74,8 @@ class AndroidFrontPageNotifier(
         account: HexKey,
         end: PrintJobEnd,
     ) {
-        post(idFor(account), loadStringRes(Res.string.front_page_failed_title), loadPrintEndSentence(end).orEmpty(), frontPageUri(accountNpub = npubOf(account)))
+        // Its own row: a failed print never replaces a paper the reader hasn't opened yet.
+        post(notificationId(account, Kind.FAILED), loadStringRes(Res.string.front_page_failed_title), loadPrintEndSentence(end).orEmpty(), frontPageUri(accountNpub = npubOf(account)))
     }
 
     private suspend fun post(
@@ -106,11 +111,20 @@ class AndroidFrontPageNotifier(
         }
     }
 
-    // One row per account: today's paper replaces "waiting", and tomorrow's replaces today's.
-    private fun idFor(account: HexKey) = NOT_ID_BASE xor account.hashCode()
+    /** What a notification says: each has its own row per account. */
+    enum class Kind { READY, FAILED, NEEDS_YOU }
 
     companion object {
         private const val NOT_ID_BASE = 0x7A000
+
+        /**
+         * One row per account and [kind]: tomorrow's paper replaces today's, a new failure the
+         * last failure, and none of them another kind.
+         */
+        fun notificationId(
+            account: HexKey,
+            kind: Kind,
+        ): Int = (NOT_ID_BASE xor account.hashCode()) * 3 + kind.ordinal
 
         @Volatile
         private var channel: NotificationChannel? = null

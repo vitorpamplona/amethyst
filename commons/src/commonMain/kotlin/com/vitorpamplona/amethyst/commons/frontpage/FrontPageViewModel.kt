@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -99,6 +100,9 @@ fun frontPageSetupOf(
 sealed interface FrontPageRun {
     data object Idle : FrontPageRun
 
+    /** What [FrontPagePrinter.printNow] returns for a print the reader cancelled; [FrontPagePrinter.run] shows [Idle]. */
+    data object Cancelled : FrontPageRun
+
     class Running(
         val step: PrintStep,
     ) : FrontPageRun
@@ -132,7 +136,7 @@ class FrontPageModels(
  * read (gone from this device and not on any server): the screen says so and keeps the history.
  */
 @Immutable
-class ShownEdition(
+data class ShownEdition(
     val edition: SavedEdition,
     val html: String?,
 )
@@ -168,8 +172,12 @@ class FrontPageViewModel(
             frontPageSetupOf(key, rank, name)
         }.stateIn(viewModelScope, SharingStarted.Eagerly, frontPageSetupOf(key.value, account.trustProviderList.liveUserRankProvider.value))
 
+    /**
+     * The lens's name as its profile arrives: a provider this device has never seen gets a cache
+     * entry now, so the name shows once the screen's subscription loads it ([lensPubKey]).
+     */
     private fun withLensName(rank: ServiceProviderTag?): Flow<Pair<ServiceProviderTag?, String?>> {
-        val user = rank?.let { account.cache.getUserIfExists(it.pubkey) } ?: return flowOf(rank to null)
+        val user = rank?.let { account.cache.checkGetOrCreateUser(it.pubkey) } ?: return flowOf(rank to null)
         return user.metadata().flow.map { rank to it?.info?.bestName() }
     }
 
@@ -186,6 +194,8 @@ class FrontPageViewModel(
 
     val shown: StateFlow<ShownEdition?> =
         combine(_selectedDay, printer.editions) { day, kept -> kept.firstOrNull { it.day == day } ?: kept.firstOrNull() }
+            // The page is read again only when it is another page: a history refresh isn't one.
+            .distinctUntilChanged { a, b -> a?.day == b?.day && a?.code == b?.code && a?.sha256 == b?.sha256 && a?.published == b?.published }
             .flatMapLatest { edition ->
                 if (edition == null) {
                     flowOf<ShownEdition?>(null)
@@ -221,13 +231,11 @@ class FrontPageViewModel(
             shown
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MorningScheduleView())
 
-    /** While this screen exists, a signer that needs the reader may be asked to open the schedule. */
-    private val releaseSchedule = account.observerSchedule.opened()
-
-    override fun onCleared() {
-        releaseSchedule()
-        super.onCleared()
-    }
+    /**
+     * The screen is started (on screen, not just in the back stack): a signer that needs the
+     * reader may be asked to open the schedule until the returned call says it stopped.
+     */
+    fun scheduleOpened(): () -> Unit = account.observerSchedule.opened()
 
     /** The signer didn't open the schedule: ask it again. */
     fun retryScheduleDecrypt() = account.observerSchedule.retryDecrypt()
@@ -324,13 +332,23 @@ class FrontPageViewModel(
         _selectedDay.value = day
     }
 
+    private val _printRefused = MutableStateFlow(false)
+
+    /** A Print tap found another print running (the morning's, on this device): the screen says so, then [printRefusedShown]. */
+    val printRefused = _printRefused.asStateFlow()
+
+    fun printRefusedShown() {
+        _printRefused.value = false
+    }
+
     fun print() {
         val key = key.value ?: return
         val model = _models.value.selectedModel ?: return
         // The new edition is today's, which is the newest: open it when it lands.
-        if (printer.print(key, model)) _selectedDay.value = null
+        if (printer.print(key, model)) _selectedDay.value = null else _printRefused.value = true
     }
 
+    /** Stops the print running now, the reader's or the morning's (the screen confirms first: it may have cost money). */
     fun cancel() = printer.cancel()
 
     /** On or off for every device; switched on, this device prints too when it can. */

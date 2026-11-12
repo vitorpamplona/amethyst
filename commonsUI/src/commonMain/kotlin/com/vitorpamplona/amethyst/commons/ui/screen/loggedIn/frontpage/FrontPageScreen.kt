@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
@@ -70,6 +71,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -82,6 +84,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -92,6 +96,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -124,6 +129,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ScheduleEdit
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_a_blossom_server
 import com.vitorpamplona.amethyst.commons.resources.cancel
@@ -138,6 +144,9 @@ import com.vitorpamplona.amethyst.commons.resources.dlist_day_wednesday
 import com.vitorpamplona.amethyst.commons.resources.front_page_add_to_bar
 import com.vitorpamplona.amethyst.commons.resources.front_page_added_to_bar
 import com.vitorpamplona.amethyst.commons.resources.front_page_can_leave
+import com.vitorpamplona.amethyst.commons.resources.front_page_cancel_confirm_text
+import com.vitorpamplona.amethyst.commons.resources.front_page_cancel_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.front_page_cancel_printing
 import com.vitorpamplona.amethyst.commons.resources.front_page_cannot_show
 import com.vitorpamplona.amethyst.commons.resources.front_page_changes_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_connect
@@ -147,6 +156,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_download
 import com.vitorpamplona.amethyst.commons.resources.front_page_edition_label
 import com.vitorpamplona.amethyst.commons.resources.front_page_edition_unreadable
 import com.vitorpamplona.amethyst.commons.resources.front_page_fixed_once
+import com.vitorpamplona.amethyst.commons.resources.front_page_keep_printing
 import com.vitorpamplona.amethyst.commons.resources.front_page_last_printed
 import com.vitorpamplona.amethyst.commons.resources.front_page_last_printed_ago
 import com.vitorpamplona.amethyst.commons.resources.front_page_model
@@ -171,6 +181,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_pick_time
 import com.vitorpamplona.amethyst.commons.resources.front_page_posts_label
 import com.vitorpamplona.amethyst.commons.resources.front_page_print
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_again
+import com.vitorpamplona.amethyst.commons.resources.front_page_print_busy
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_estimate
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_from_device
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish
@@ -248,10 +259,13 @@ import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
 import com.vitorpamplona.amethyst.commons.ui.components.rememberFileBytesAccess
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.layouts.FeedContentMaxWidth
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.DateSkeletonFormatter
+import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.calendarYearAndDay
 import com.vitorpamplona.amethyst.commons.ui.note.durationPhrase
 import com.vitorpamplona.amethyst.commons.ui.note.rememberIs24HourClock
@@ -274,6 +288,12 @@ import kotlinx.coroutines.launch
 
 /** The house stylesheet's `--paper`: the newsprint the paper sits on, whatever the app's theme. */
 private val Newsprint = Color(0xFFFAF8F3)
+
+/** Everything but the paper: at the feed's reading width, centred, however wide the pane. */
+private val readable = Modifier.widthIn(max = FeedContentMaxWidth).fillMaxWidth()
+
+/** Below this, the top bar keeps Print and Details and moves Download and full screen into its menu. */
+private val COMPACT_BAR_WIDTH = 480.dp
 
 /** Ink on newsprint: the paper's frame is always light, whatever the app's theme. */
 private val Ink = Color(0xFF1A1A1A)
@@ -333,6 +353,16 @@ fun FrontPageScreen(
         val release = printer.watch()
         onStopOrDispose { release() }
     }
+    // A signer that needs the reader is asked to open the schedule only while this screen is on
+    // screen: never for a screen left in the back stack.
+    LifecycleStartEffect(viewModel) {
+        val release = viewModel.scheduleOpened()
+        onStopOrDispose { release() }
+    }
+    val printRefused by viewModel.printRefused.collectAsStateWithLifecycle()
+    // Cancelling throws away a print that may already be paid for: always confirmed first.
+    var confirmCancel by remember { mutableStateOf(false) }
+    val askCancel: () -> Unit = { confirmCancel = true }
     val gate by viewModel.gate.collectAsStateWithLifecycle()
     val setup by viewModel.setup.collectAsStateWithLifecycle()
     val models by viewModel.models.collectAsStateWithLifecycle()
@@ -366,9 +396,18 @@ fun FrontPageScreen(
     val favorites by favoriteApps.favorites.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val busyText = stringRes(Res.string.front_page_print_busy)
+    LaunchedEffect(printRefused) {
+        if (printRefused) {
+            viewModel.printRefusedShown()
+            snackbar.showSnackbar(busyText)
+        }
+    }
     val addedToBar = stringRes(Res.string.front_page_added_to_bar)
+    // Only where there is a bottom bar to add it to: not beside the permanent drawer.
+    val hasBottomBar = LocalScreenLayout.current.navigationStyle == NavigationStyle.BOTTOM_BAR
     val addToBar: (() -> Unit)? =
-        if (FrontPageShortcuts.offersBottomBar(bottomBar)) {
+        if (hasBottomBar && FrontPageShortcuts.offersBottomBar(bottomBar)) {
             {
                 accountViewModel.changeBottomBarItems(FrontPageShortcuts.withFrontPage(bottomBar))
                 scope.launch { snackbar.showSnackbar(addedToBar) }
@@ -397,9 +436,13 @@ fun FrontPageScreen(
     }
 
     val current = shown
-    // On a phone the bar holds the frequent actions; Download and full screen go in the menu.
-    val compactBar = !LocalScreenLayout.current.isLargeScreen
+    // A narrow pane (a phone, a deck column) holds the frequent actions; Download and full screen
+    // go in the menu, so the title keeps its room. Decided by the pane's own width, not the window's.
+    var paneWidth by remember { mutableStateOf(Dp.Unspecified) }
+    val density = LocalDensity.current
+    val compactBar = paneWidth == Dp.Unspecified || paneWidth < COMPACT_BAR_WIDTH
     Scaffold(
+        modifier = Modifier.onSizeChanged { paneWidth = with(density) { it.width.toDp() } },
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             if (current == null) {
@@ -462,13 +505,15 @@ fun FrontPageScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             val firstRun = current == null
             if (firstRun || gate != FrontPageGate.READY) {
-                Hero {
+                Hero(readable) {
                     // First run: the print controls stay inline, in the card.
                     if (gate == FrontPageGate.NO_KEY || gate == FrontPageGate.NO_LENS) {
                         SetupChecklist(
+                            accountViewModel,
                             setup,
                             hasEditions = editions.isNotEmpty(),
                             onKey = { nav.nav(Route.AgentKeysSettings) },
@@ -486,7 +531,7 @@ fun FrontPageScreen(
                             scheduleActions,
                             onModel = viewModel::selectModel,
                             onPrint = requestPrint,
-                            onCancel = viewModel::cancel,
+                            onCancel = askCancel,
                             publish = publishPrefs,
                             onPublish = viewModel::setPublish,
                         )
@@ -495,11 +540,12 @@ fun FrontPageScreen(
             }
             when (gate) {
                 FrontPageGate.NO_KEY, FrontPageGate.NO_LENS -> {}
-                FrontPageGate.UNSUPPORTED -> Notice(stringRes(Res.string.front_page_unsupported))
-                FrontPageGate.READY -> RunStatus(run, onCancel = viewModel::cancel)
+                FrontPageGate.UNSUPPORTED -> Box(readable) { Notice(stringRes(Res.string.front_page_unsupported)) }
+                FrontPageGate.READY -> RunStatus(run, onCancel = askCancel, modifier = readable)
             }
             if (current != null) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Only the paper fills a wide pane: the lines about it stay at a reading width.
+                Column(readable, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (editions.size > 1) History(editions, current.edition.day, viewModel::selectDay)
                     if (schedule.enabled) ScheduleLine(schedule) { printSheet = true }
                     ScheduleWarnings(schedule)
@@ -515,7 +561,7 @@ fun FrontPageScreen(
                     Paper(current, "front-page", fill = false, Modifier.fillMaxWidth())
                 } else {
                     // The history stays above, so the reader can open another day.
-                    Notice(stringRes(Res.string.front_page_edition_unreadable), error = true)
+                    Box(readable) { Notice(stringRes(Res.string.front_page_edition_unreadable), error = true) }
                 }
             }
             Spacer(Modifier.height(24.dp))
@@ -543,12 +589,26 @@ fun FrontPageScreen(
                         printSheet = false
                         requestPrint()
                     },
-                    onCancel = viewModel::cancel,
+                    onCancel = askCancel,
                     publish = publishPrefs,
                     onPublish = viewModel::setPublish,
                 )
             }
         }
+    }
+    if (confirmCancel) {
+        AlertDialog(
+            onDismissRequest = { confirmCancel = false },
+            title = { Text(stringRes(Res.string.front_page_cancel_confirm_title)) },
+            text = { Text(stringRes(Res.string.front_page_cancel_confirm_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmCancel = false
+                    viewModel.cancel()
+                }) { Text(stringRes(Res.string.front_page_cancel_printing)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmCancel = false }) { Text(stringRes(Res.string.front_page_keep_printing)) } },
+        )
     }
     if (detailsSheet && current != null) {
         val sharer = rememberTextSharer()
@@ -557,6 +617,8 @@ fun FrontPageScreen(
         ModalBottomSheet(onDismissRequest = { detailsSheet = false }) {
             Details(
                 current.edition,
+                printing = run is FrontPageRun.Running,
+                onCancelPrint = askCancel,
                 site,
                 sitePinned = sitePinned,
                 onPinSite = togglePin,
@@ -592,8 +654,16 @@ fun FrontPageReaderScreen(
     val printer = printers?.of(accountViewModel.account)
     val editions by (printer?.editions ?: remember { MutableStateFlow(emptyList()) }).collectAsStateWithLifecycle()
     val edition = editions.firstOrNull { it.day == day }
+    // The reader is reading: no popup over the paper, no "ready" notification meanwhile.
+    if (printer != null) {
+        LifecycleStartEffect(printer) {
+            val release = printer.watch()
+            onStopOrDispose { release() }
+        }
+    }
     // Reset first: the last day's page must never show (or download) under this day's title.
-    val html by produceState<String?>(null, printer, day, edition?.sha256) {
+    // Keyed on the edition, not its hash: a hash filled in later isn't a new page (or a new session).
+    val html by produceState<String?>(null, printer, day, edition?.code) {
         value = null
         value = printer?.html(day)
     }
@@ -636,10 +706,13 @@ private fun rememberEditionDownload(): (ShownEdition) -> Unit {
  * the app's own colours: the paper is what the page is for, not this card.
  */
 @Composable
-private fun Hero(content: @Composable ColumnScope.() -> Unit) {
+private fun Hero(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     val scheme = MaterialTheme.colorScheme
     Box(
-        Modifier
+        modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
             .background(scheme.surfaceContainerLow)
@@ -696,15 +769,7 @@ private fun PrintControls(
             )
         }
         if (run is FrontPageRun.Running) {
-            OutlinedButton(
-                onClick = onCancel,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.5.dp, ink.copy(alpha = 0.6f)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = ink),
-            ) {
-                Text(stringRes(Res.string.cancel), style = MaterialTheme.typography.titleSmall)
-            }
+            CancelPrintButton(onCancel, Modifier.fillMaxWidth().height(52.dp), ink)
         } else {
             Button(
                 onClick = onPrint,
@@ -733,12 +798,31 @@ private fun PublishRow(
     on: Boolean,
     onChange: (Boolean) -> Unit,
     ink: Color,
+) = SwitchRow(
+    label = stringRes(Res.string.front_page_publish),
+    checked = on,
+    enabled = true,
+    onChange = onChange,
+    ink = ink,
+    icon = MaterialSymbols.Public,
+    style = MaterialTheme.typography.bodyLarge,
+)
+
+/** "Cancel printing": what stops a print, after the screen's confirmation ([onCancel] opens it). */
+@Composable
+private fun CancelPrintButton(
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+    ink: Color = MaterialTheme.colorScheme.onSurface,
 ) {
-    Row(Modifier.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(MaterialSymbols.Public, contentDescription = null, tint = ink.copy(alpha = 0.85f), modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(12.dp))
-        Text(stringRes(Res.string.front_page_publish), style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.weight(1f))
-        Switch(checked = on, onCheckedChange = onChange)
+    OutlinedButton(
+        onClick = onCancel,
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.5.dp, ink.copy(alpha = 0.6f)),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = ink),
+    ) {
+        Text(stringRes(Res.string.front_page_cancel_printing), style = MaterialTheme.typography.titleSmall)
     }
 }
 
@@ -932,10 +1016,12 @@ private fun ScheduleRow(
             ScheduleNote(stringRes(Res.string.front_page_schedule_no_write_relays), note, indent)
             TextButton(onClick = actions.onRelaySettings, modifier = indent, colors = ButtonDefaults.textButtonColors(contentColor = ink)) { Text(stringRes(Res.string.relay_settings)) }
         }
+        // Off for every device, this device's part is moot: shown off and unavailable, not ON.
+        val scheduleOn = schedule.enabled
         SwitchRow(
             label = stringRes(Res.string.front_page_print_from_device),
-            checked = schedule.printsHere && schedule.canPrintHere,
-            enabled = schedule.canPrintHere && !busy && schedule.state != ScheduleState.CANT_DECRYPT && schedule.state != ScheduleState.UNREADABLE,
+            checked = schedule.printsHere && schedule.canPrintHere && scheduleOn,
+            enabled = scheduleOn && schedule.canPrintHere && !busy && schedule.state != ScheduleState.CANT_DECRYPT && schedule.state != ScheduleState.UNREADABLE,
             onChange = actions.onPrintsHere,
             ink = ink,
             modifier = indent,
@@ -1169,6 +1255,8 @@ private fun AddToBarItem(
 @Composable
 private fun Details(
     edition: SavedEdition,
+    printing: Boolean,
+    onCancelPrint: () -> Unit,
     site: NamedSiteEvent?,
     sitePinned: Boolean,
     onPinSite: (NamedSiteEvent) -> Unit,
@@ -1178,6 +1266,8 @@ private fun Details(
 ) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringRes(Res.string.front_page_details), style = MaterialTheme.typography.titleLarge)
+        // A print running now (the reader's, or the morning's) can be stopped from here too, confirmed.
+        if (printing) CancelPrintButton(onCancelPrint, Modifier.fillMaxWidth())
         // The reader's public Observer site, once there is one: open it as any nSite, or share it.
         site?.let { event ->
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1374,6 +1464,7 @@ private fun BoxScope.PaperStatus(
  */
 @Composable
 private fun SetupChecklist(
+    accountViewModel: AccountViewModel,
     setup: FrontPageSetup,
     hasEditions: Boolean,
     onKey: () -> Unit,
@@ -1392,6 +1483,11 @@ private fun SetupChecklist(
             action = stringRes(Res.string.front_page_connect),
             onClick = onKey,
         )
+        // A lens this device has never seen: its profile is asked for while the checklist shows,
+        // so the name fills in.
+        setup.lens?.takeIf { setup.lensName == null }?.let { lens ->
+            LoadUser(lens) { user -> if (user != null) UserFinderFilterAssemblerSubscription(user, accountViewModel) }
+        }
         SetupStep(
             label = stringRes(Res.string.front_page_setup_lens),
             status =
@@ -1484,17 +1580,20 @@ private fun grouped(n: Long): String = formatGrouped(n)
 private fun RunStatus(
     run: FrontPageRun,
     onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    when (run) {
-        FrontPageRun.Idle -> {}
-        is FrontPageRun.Running -> Progress(run.step, onCancel)
-        is FrontPageRun.Failed -> Notice(failureText(run), error = true)
-        is FrontPageRun.Done ->
-            when (val result = run.result) {
-                is PrintResult.NotReady -> Notice(stringRes(Res.string.front_page_not_ready))
-                is PrintResult.Refused -> Refused(result.violations)
-                is PrintResult.Printed -> {}
-            }
+    Box(modifier) {
+        when (run) {
+            FrontPageRun.Idle, FrontPageRun.Cancelled -> {}
+            is FrontPageRun.Running -> Progress(run.step, onCancel)
+            is FrontPageRun.Failed -> Notice(failureText(run), error = true)
+            is FrontPageRun.Done ->
+                when (val result = run.result) {
+                    is PrintResult.NotReady -> Notice(stringRes(Res.string.front_page_not_ready))
+                    is PrintResult.Refused -> Refused(result.violations)
+                    is PrintResult.Printed -> {}
+                }
+        }
     }
 }
 
@@ -1520,7 +1619,7 @@ private fun Progress(
                 // The print belongs to the account: the reader can go, and is told when it's ready.
                 Text(stringRes(Res.string.front_page_can_leave), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f))
             }
-            TextButton(onClick = onCancel) { Text(stringRes(Res.string.cancel)) }
+            TextButton(onClick = onCancel) { Text(stringRes(Res.string.front_page_cancel_printing)) }
         }
     }
 }

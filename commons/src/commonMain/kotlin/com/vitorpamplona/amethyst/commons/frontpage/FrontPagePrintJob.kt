@@ -48,6 +48,9 @@ sealed interface PrintJobStage {
     /** Checking quotes, pictures and links. */
     data object Checking : PrintJobStage
 
+    /** The clean page is kept; it goes out to the reader's Observer site. */
+    data object Publishing : PrintJobStage
+
     companion object {
         /** The stage of [step]: a new value only when the popup would say something new. */
         fun of(step: PrintStep): PrintJobStage =
@@ -95,6 +98,8 @@ data class FrontPagePrintJob(
     val stage: PrintJobStage = PrintJobStage.Probe,
     val end: PrintJobEnd? = null,
     val endedAt: Long? = null,
+    /** The reader put the popup away while it runs; opening The Observer brings it back, and so does its end. */
+    val hidden: Boolean = false,
 ) {
     val running: Boolean get() = end == null
 
@@ -174,8 +179,23 @@ class FrontPagePrintJobTracker(
         kept: SavedEdition?,
     ): PrintJobEnd? {
         val end = endOf(ended, kept?.day, kept?.headline)
-        publish(if (end == null) null else _job.value?.copy(end = end, endedAt = now()))
+        publish(if (end == null) null else _job.value?.copy(end = end, endedAt = now(), hidden = false))
         return end
+    }
+
+    /** The popup's ×: the print goes on, out of sight, until The Observer is opened or it ends. */
+    fun hide() {
+        _job.value?.takeIf { it.running && !it.hidden }?.let { publish(it.copy(hidden = true)) }
+    }
+
+    /** The Observer is showing: a hidden print is shown again once the reader leaves it. */
+    fun unhide() {
+        _job.value?.takeIf { it.hidden }?.let { publish(it.copy(hidden = false)) }
+    }
+
+    /** The kept page is going out to the reader's Observer site: the job lives until it is out. */
+    fun publishing() {
+        _job.value?.takeIf { it.running && it.stage != PrintJobStage.Publishing }?.let { publish(it.copy(stage = PrintJobStage.Publishing)) }
     }
 
     /** Cancelled, or a print whose page another device's claim won: no job left. */
