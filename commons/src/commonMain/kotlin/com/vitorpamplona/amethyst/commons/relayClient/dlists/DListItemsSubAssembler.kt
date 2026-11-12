@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.dlists
 
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.MergedAuthorTracker
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
@@ -35,9 +34,6 @@ class DListItemsSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<DListItemsQueryState>,
 ) : SingleSubEoseManager<DListItemsQueryState>(client, allKeys) {
-    /** Which headers each relay's filter covered last time, to spot a header joining a relay. */
-    private val headersPerRelay = MergedAuthorTracker()
-
     override fun updateFilter(
         keys: List<DListItemsQueryState>,
         since: SincePerRelayMap?,
@@ -51,16 +47,6 @@ class DListItemsSubAssembler(
             }
         val requests = planDListItemRequests(headers)
 
-        // This subscription keeps one EOSE cursor per relay. A card scrolled into view after the
-        // relay answered would otherwise inherit that cursor and never be sent its older items, so
-        // a relay whose set of headers grows is asked from scratch.
-        val gained =
-            requests
-                .groupBy({ it.relay }, { it.headerIds })
-                .filter { (relay, ids) -> headersPerRelay.gainedAuthors(relay, ids.flatten()) }
-                .keys
-        gained.forEach(::clearEoseFor)
-
         return requests.map { request ->
             RelayBasedFilter(
                 relay = request.relay,
@@ -72,7 +58,7 @@ class DListItemsSubAssembler(
                         tags = mapOf("z" to request.pointers),
                         // Each header keeps the room it had alone.
                         limit = DLIST_ITEMS_LIMIT * request.headerIds.size,
-                        since = if (request.relay in gained) null else since?.get(request.relay)?.time,
+                        since = since?.get(request.relay)?.time,
                     ),
             )
         }

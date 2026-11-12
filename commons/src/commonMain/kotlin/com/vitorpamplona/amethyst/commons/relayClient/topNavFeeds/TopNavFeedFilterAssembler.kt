@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 
@@ -32,7 +31,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFol
  */
 @Stable
 open class TopNavFeedFilterAssembler<K : TopNavFeedQueryState>(
-    subAssemblers: (allKeys: () -> Set<K>) -> List<PerUserAndFollowListEoseManager<K, TopFilter>>,
+    subAssemblers: (allKeys: () -> Set<K>) -> List<PerUserAndFollowListEoseManager<K>>,
 ) : ComposeSubscriptionManager<K>() {
     val group = subAssemblers(::allKeys)
 

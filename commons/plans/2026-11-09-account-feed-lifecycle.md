@@ -1,7 +1,7 @@
 # Account feed lifecycle: switch accounts at will
 
-Status (2026-11-12), on `claude/determined-meitner-wf8m3i`: every step is implemented; step 4's
-UI half (warm view-model stores, `AccountSession` at application scope) waits for tabs-and-windows
+Status (2026-11-12), on `claude/determined-meitner-wf8m3i`: every step is implemented, and no
+EOSE manager keeps cursors of its own any more (step 7); step 4's UI half (warm view-model stores, `AccountSession` at application scope) waits for tabs-and-windows
 Phase 2b.
 
 ## Problem
@@ -78,7 +78,10 @@ references), so the cursor lives in the holder and dies with it:
 |---|---|---|
 | A feed (`FeedContentState`, `CardFeedContentState`) | the feed | the managers' per-user, per-list and per-id maps; `FeedOwnerTracker` |
 | A note's replies, reactions and zaps (`Note.replies` and friends are strong lists) | the `Note` object | `EventWatcherSubAssembler`'s cursors by note id (the stuck-counter bug) |
-| An account's own lists; its DMs in the chatroom index | the `Account` | per-user maps |
+| An account's own lists, wallets, drafts, joined groups; its DMs in the chatroom index | the `Account` | per-user maps |
+| A channel's messages and state (`Channel.notes`, held strongly by `LocalCache`) | the `Channel` | per-channel maps |
+| A user's metadata and relay lists (the pinned notes on `User`) | the `User` | `UserWatcherSubAssembler`'s LRU of 200 users, the profile's per-relay cursor |
+| Only the screen that made the key (a composable or view model collecting the notes) | the key (`KeyHeldCursors`) | per-id and per-user maps that outlived the screen |
 
 **A cursor records what it covered, not only when.** Per relay, `RelayCursors` keeps the time T
 and the filter shape (kinds, authors, tags) that T vouches for. `plan(relay, requested)` returns
@@ -354,6 +357,36 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
    desktop. Decryption caches (`PrivateDMCache`, `PrivateZapCache`, the shared-key cache, the list
    caches) are LRU-bounded or per list and never needed the pruner; gift wraps and seals are weak
    notes, re-decrypted if collected and re-delivered.
+
+7. **Done (2026-11-12):** every remaining manager names its holders, and the managers keep no
+   cursors at all. `PerUserEoseManager`, `PerUniqueIdEoseManager`, `PerUserAndFollowListEoseManager`
+   and `SingleSubEoseManager` lost their maps, and a key that names no holder is asked from scratch
+   with nothing recorded (nothing vouches for what is in memory). Gone with them: `FeedOwnerTracker`,
+   `MergedAuthorTracker`, `sinceDroppingGrownRelays`, `clearEoseFor`, the unused `PerKeyEoseManager`,
+   `EOSEByKey`, `EOSEAccountKey` and `EOSECache`, and the dead `ReactionsFilterAssembler` and
+   `MetadataFilterAssembler`. Holders, by what keeps the notes (a survey of every manager's kinds
+   and where they land):
+   - `Channel` (strong in `LocalCache`): the public, ephemeral, geohash and live chat tails, channel
+     metadata and live-activity watchers, my messages in a channel, relay-group tails, threads and
+     card warm-ups, nests rooms and their liveness probe (with the room note). The pruner rewinds a
+     channel's cursors to the oldest message it drops.
+   - `User`: profile metadata, and `UserWatcherSubAssembler` (each user's own cursor; no LRU keeping
+     Users alive).
+   - `Note` (its children): a thread's root, a poll's responses, a chess game's moves, each
+     repository item's statuses and replies (per item, as `EventWatcherSubAssembler` does per note).
+   - `Account`: own events, drafts, Cashu wallet, NWC notifications (handled, not kept), Buzz
+     memberships, Concord planes, joined-group state, group discovery, a relay's group directory,
+     followed public, ephemeral and geohash chats.
+   - The key (`KeyHeldCursors`, remembered per screen): connected apps, the git dashboard, chess
+     lobby games, software releases, NIP-66 relay info, search, d-list items, repository content,
+     on-chain zaps, podcasts, DRSS episodes; community rules and profile followers and zaps (on
+     `CommunityQueryState` / `UserProfileQueryState`); a top-nav key with no feed (nSites, nApplets,
+     the DRSS river, the DVM heartbeat).
+   - `CashuMintDirectoryState`: the mint directory.
+   `SingleSubEoseManager` now builds entities whose cursors agree on every relay together, so a
+   watcher of many channels or profiles still sends one batched filter per relay. Left without a
+   cursor, as before: history pagers (`until`-bounded) and the DM and gift-wrap tails, which floor at
+   `recentBoundary()`.
 
 ## Feed conversion (2026-11-10)
 

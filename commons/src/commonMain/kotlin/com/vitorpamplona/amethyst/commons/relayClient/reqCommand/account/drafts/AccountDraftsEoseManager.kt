@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.drafts
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.account.drafts.filterDraftsFromKey
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -40,6 +41,9 @@ class AccountDraftsEoseManager(
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     override fun user(key: AccountQueryState) = key.account.userProfile()
+
+    /** Drafts are indexed into what they draft for (a reply, a chat) and kept with the account. */
+    override fun cursorHoldersOf(key: AccountQueryState): List<RelayCursorHolder> = listOf(key.account)
 
     fun relayFlow(query: AccountQueryState) = query.account.homeRelays.flow
 

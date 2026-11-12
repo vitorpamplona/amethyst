@@ -29,7 +29,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterFol
 import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterLastPostsFromKey
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.CursorPlanner
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -76,7 +75,7 @@ fun pickAccountDataRelays(
  * the limit is a safety bound rather than a page size, and scaling it by the number of accounts
  * keeps each one exactly the headroom it had alone.
  *
- * Each account's window comes from its own cursors ([Account.ownEventsCursors]), and accounts whose
+ * Each account's window comes from its own cursors ([Account.relayCursors]), and accounts whose
  * windows agree share the filters ([CursorPlanner.windowPerMember]): an account that joins a relay
  * this subscription already covers inherits no other account's cursor, and one logged out and back
  * in (a new `Account`) is asked from scratch without making the others refetch.
@@ -116,11 +115,7 @@ class AccountMetadataEoseManager(
             defaults = Constants.eventFinderRelays,
         )
 
-    override fun cursorHoldersOf(key: AccountQueryState): List<RelayCursorHolder> = listOf(OwnEvents(key.account.ownEventsCursors))
-
-    private class OwnEvents(
-        override val relayCursors: RelayCursors,
-    ) : RelayCursorHolder
+    override fun cursorHoldersOf(key: AccountQueryState): List<RelayCursorHolder> = listOf(key.account)
 
     private fun ownEvents(
         relay: NormalizedRelayUrl,

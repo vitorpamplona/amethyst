@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -133,4 +134,7 @@ class ChessGameSubAssembler(
     }
 
     override fun id(key: ChessGameQueryState) = key.gameId
+
+    /** The game's start note holds its moves. */
+    override fun cursorHoldersOf(key: ChessGameQueryState): List<RelayCursorHolder> = listOfNotNull(cache.getNoteIfExists(key.gameId))
 }

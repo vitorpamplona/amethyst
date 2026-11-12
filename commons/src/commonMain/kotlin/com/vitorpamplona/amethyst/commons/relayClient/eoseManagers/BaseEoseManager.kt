@@ -94,16 +94,15 @@ abstract class BaseEoseManager<T>(
 
     /**
      * The filters for a subscription serving [keys]. When the keys name holders of notes, their
-     * cursors set the windows ([CursorPlanner.window]) and [ownSince] is not read: the manager's own
-     * map stays only for keys that name none.
+     * cursors set the windows ([CursorPlanner.window]); when they name none, nothing vouches for
+     * what is in memory and the filters ask from scratch.
      */
     protected inline fun filtersFor(
         keys: Collection<T>,
-        ownSince: () -> SincePerRelayMap?,
         build: (SincePerRelayMap?) -> List<RelayBasedFilter>?,
     ): Pair<List<RelayBasedFilter>?, List<RelayCursors>> {
         val cursors = cursorsNamedBy(keys)
-        if (cursors.isEmpty()) return build(ownSince()) to cursors
+        if (cursors.isEmpty()) return build(null) to cursors
         return build(null)?.let { CursorPlanner.window(it, cursors, cursorSource) } to cursors
     }
 

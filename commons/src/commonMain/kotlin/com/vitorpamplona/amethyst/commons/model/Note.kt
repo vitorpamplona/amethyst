@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
@@ -112,7 +113,8 @@ class AddressableNote(
 @Stable
 open class Note(
     val idHex: HexKey,
-) : NotesGatherer {
+) : NotesGatherer,
+    RelayCursorHolder {
     // Per-instance lock shared by the previously @Synchronized methods (zap /
     // onchain-zap / zap-payment / relay-add / flowSet lifecycle). Replaces the
     // JVM-only @Synchronized annotation so this class compiles on iOS.
@@ -211,6 +213,9 @@ open class Note(
 
     // Two threads racing here each make one and one is kept: the other's answer is asked again.
     fun childCursors(): RelayCursors = childCursors ?: RelayCursors().also { childCursors = it }
+
+    /** A note holds its children, so a subscription for them (a thread, a poll's votes) keeps its cursors here. */
+    override val relayCursors: RelayCursors get() = childCursors()
 
     // These fields are updated every time an event related to this note is received.
     @Volatile

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.buzz
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.buzz.MembershipNotificationKinds
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
@@ -111,6 +112,9 @@ class BuzzMembershipEoseManager(
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     override fun user(key: AccountQueryState) = key.account.userProfile()
+
+    /** The account's invite and DM state holds what these verdicts left behind. */
+    override fun cursorHoldersOf(key: AccountQueryState): List<RelayCursorHolder> = listOf(key.account)
 
     override fun updateFilter(
         key: AccountQueryState,

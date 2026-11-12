@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
-import com.vitorpamplona.quartz.utils.mapOfSet
 
 class FollowPackFeedFilterSubAssembler(
     client: INostrClient,
@@ -59,19 +58,7 @@ class FollowPackFeedFilterSubAssembler(
                 }
             }
 
-        // One cursor per relay is shared by every follow pack opened on it: a relay whose set of
-        // authors grows is asked for the newcomers' history from scratch.
-        val relaySince =
-            sinceDroppingGrownRelays(
-                mapOfSet {
-                    authorSets.forEach { authorSet ->
-                        authorSet.set.forEach { (relay, filter) -> filter.authors.forEach { add(relay, it) } }
-                    }
-                },
-                since,
-            )
-
-        return authorSets.flatMap { filterHomePostsByAuthors(it, relaySince, null, null) }
+        return authorSets.flatMap { filterHomePostsByAuthors(it, since, null, null) }
     }
 
     override fun distinct(key: FollowPackFeedQueryState) = key.followPack.idHex

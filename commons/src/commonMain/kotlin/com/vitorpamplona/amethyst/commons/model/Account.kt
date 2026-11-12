@@ -182,6 +182,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionLe
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthSessionGrants
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthVenues
 import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.ChatDeliveryTracker
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyRequestsCache
@@ -511,7 +512,8 @@ class Account(
     signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
     nip46ClientStore: Nip46ClientStore = InMemoryNip46ClientStore(),
 ) : IAccount,
-    UserFinderAccount {
+    UserFinderAccount,
+    RelayCursorHolder {
     private var userProfileCache: User? = null
 
     override fun userProfile(): User = userProfileCache ?: cache.getOrCreateUser(signer.pubKey).also { userProfileCache = it }
@@ -1022,11 +1024,13 @@ class Account(
     val nwcBackup = NwcBackupState(signer, client, scope, settings, outboxRelays.flow, nip65RelayList.inboxFlowNoDefaults)
 
     /**
-     * How far each relay has been asked for this account's own profile, follows, mutes, lists and
-     * recent posts (`AccountMetadataEoseManager`). Held here because this object holds what they
-     * load: a new `Account` for the same key (a log out and back in) asks from scratch.
+     * How far each relay has been asked for what this account keeps for as long as it is loaded: its
+     * own profile, follows, mutes and lists (`AccountMetadataEoseManager`), its wallets, drafts,
+     * memberships, joined groups and communities, and the chats it follows (which their channels
+     * hold). Each manager has its own entries. A new `Account` for the same key (a log out and back
+     * in) asks from scratch.
      */
-    val ownEventsCursors = RelayCursors()
+    override val relayCursors = RelayCursors()
 
     // Per-relay backward-paging cursors for the NIP-60 spending history (kind:7376): how far back each
     // outbox relay has been paged by until+limit. Held here so paging progress survives leaving and

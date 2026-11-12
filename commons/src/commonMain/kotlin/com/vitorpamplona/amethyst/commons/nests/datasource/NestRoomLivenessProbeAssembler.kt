@@ -23,9 +23,11 @@ package com.vitorpamplona.amethyst.commons.nests.datasource
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -96,6 +98,9 @@ class NestRoomLivenessSubAssembler(
     }
 
     override fun id(key: NestRoomLivenessQueryState): String = key.note.idHex
+
+    /** The room's channel holds its presence. */
+    override fun cursorHoldersOf(key: NestRoomLivenessQueryState): List<RelayCursorHolder> = listOf(LocalCache.getOrCreateLiveChannel(key.note.address))
 }
 
 @Stable

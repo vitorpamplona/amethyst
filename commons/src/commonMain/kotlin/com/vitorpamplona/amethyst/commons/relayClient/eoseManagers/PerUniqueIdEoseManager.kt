@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.attributedTo
-import com.vitorpamplona.amethyst.commons.relays.EOSEByKey
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -39,40 +38,16 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * that is subscribed into the keys. It is ideal for screen loading that
  * can be shared among multiple logged-in users.
  *
- * This class keeps EOSEs for each SubID.id() for as long as possible and
- * shares all EOSEs among all users.
+ * The cursors live on the holders the keys name ([cursorHoldersOf]): what holds the notes the
+ * subscription loads. A key that names none is asked from scratch.
  */
 abstract class PerUniqueIdEoseManager<T, U : Any>(
     client: INostrClient,
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
-    // long term EOSE cache
-    private val latestEOSEs = EOSEByKey<U>()
-
     // map between each query Id and each subscription id
     private val userSubscriptionMap = mutableMapOf<U, String>()
-
-    /**
-     * The object that holds the notes this key's cursors vouch for: the screen's feed. Null (the
-     * default) keeps the cursors for as long as the LRU does. When a different object subscribes
-     * to the same id (the screen was closed and opened again, and the GC may have taken what the
-     * old one held), the id's cursors are dropped and the next REQ starts from scratch (see
-     * [FeedOwnerTracker]).
-     */
-    protected open fun feedOwner(key: T): Any? = null
-
-    private val feedOwners = FeedOwnerTracker<U>()
-
-    private fun dropCursorsIfFeedChanged(
-        id: U,
-        key: T,
-    ) {
-        val owner = feedOwner(key) ?: return
-        if (feedOwners.ownerChanged(id, owner)) latestEOSEs.clear(id)
-    }
-
-    fun since(key: T) = latestEOSEs.since(id(key))
 
     /** Open so a subclass can also record who answered, not just when. */
     open fun newEose(
@@ -81,7 +56,6 @@ abstract class PerUniqueIdEoseManager<T, U : Any>(
         time: Long,
         filters: List<Filter>? = null,
     ) {
-        latestEOSEs.newEose(id(key), relayUrl, time)
         if (invalidateAfterEose) {
             invalidateFilters()
         }
@@ -136,10 +110,9 @@ abstract class PerUniqueIdEoseManager<T, U : Any>(
 
         keysById.forEach { (mainKey, idKeys) ->
             val it = idKeys.first()
-            dropCursorsIfFeedChanged(mainKey, it)
             watchChatFeeds(mainKey, it)
             // Every key with this id shares the subscription, so every holder they name gets its answers.
-            val (filters, cursors) = filtersFor(idKeys, { since(it) }) { s -> updateFilter(it, s) }
+            val (filters, cursors) = filtersFor(idKeys) { s -> updateFilter(it, s) }
             val newFilters =
                 filters
                     ?.ifEmpty { null }

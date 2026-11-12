@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.chats.rooms.datasource
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.commons.service.georelay.GeohashRelays
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -61,6 +62,9 @@ class FollowingGeohashChatSubAssembler(
         }
 
     override fun user(key: ChatroomListState) = key.account.userProfile()
+
+    /** The followed channels hold their messages, for as long as the account follows them. */
+    override fun cursorHoldersOf(key: ChatroomListState): List<RelayCursorHolder> = listOf(key.account)
 
     override val watchedChatFeeds = setOf(ChatFeedType.GEOHASH)
 

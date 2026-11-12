@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.relayClient.softwareapps
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.KeyHeldCursors
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -35,7 +37,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 // Each open app page holds its own state, even when two screens show the same app.
 class SoftwareReleasesQueryState(
     val app: AddressableNote,
-)
+) : KeyHeldCursors {
+    /** Only the screen that made this key holds what it loads, so the cursors live with the key. */
+    override val relayCursors = RelayCursors()
+}
 
 /**
  * Loads the NIP-82 releases (kind 30063) of the app whose page is open. The app page reads its

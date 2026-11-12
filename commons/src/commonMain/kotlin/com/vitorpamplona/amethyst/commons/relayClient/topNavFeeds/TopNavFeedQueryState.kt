@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 
@@ -43,4 +45,11 @@ open class TopNavFeedQueryState(
     val followsPerRelay: StateFlow<IFeedTopNavPerRelayFilterSet>,
     val scope: CoroutineScope,
     val feeds: List<FeedContentState> = emptyList(),
-) : AccountScopedQuery
+) : AccountScopedQuery,
+    RelayCursorHolder {
+    /**
+     * For a key with no [feeds]: only the screen that made it holds what it loads (from the cache,
+     * while it is open), so the cursors live with the key and go with the screen.
+     */
+    override val relayCursors = RelayCursors()
+}

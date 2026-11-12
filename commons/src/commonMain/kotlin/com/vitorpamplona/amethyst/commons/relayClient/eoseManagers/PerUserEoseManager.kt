@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.attributedTo
-import com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -40,44 +39,15 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * user that is subscribed into the keys. It is ideal for screens that
  * CANNOT be shared among multiple logged-in users.
  *
- * This class keeps EOSEs for each user for as long as possible and
- * does NOT share EOSEs with other users. The EOSEs are kept even when
- * the subscription disappears and comes back later.
+ * The cursors live on the holders the keys name ([cursorHoldersOf]): what holds the notes the
+ * subscription loads. A key that names none is asked from scratch.
  */
 abstract class PerUserEoseManager<T>(
     client: INostrClient,
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
-    private val latestEOSEs = EOSEAccountFast<User>()
     private val userSubscriptionMap = mutableMapOf<User, String>()
-
-    /**
-     * The object that holds the notes this key's cursors vouch for: the feed that renders them.
-     * Null (the default) keeps the cursors for as long as the LRU does. When it returns a different
-     * object than the one that earned the user's cursors, they are dropped and the next REQ starts
-     * from scratch, since the notes they covered may already be gone (see [FeedOwnerTracker]).
-     */
-    protected open fun feedOwner(key: T): Any? = null
-
-    /** Runs after the cursors of [key]'s user were dropped for a new feed; for state kept elsewhere. */
-    protected open fun onFeedOwnerChanged(key: T) {}
-
-    // By pubkey, not User: the tracker outlives the screens and must not keep every visited User.
-    private val feedOwners = FeedOwnerTracker<String>()
-
-    private fun dropCursorsIfFeedChanged(
-        user: User,
-        key: T,
-    ) {
-        val owner = feedOwner(key) ?: return
-        if (feedOwners.ownerChanged(user.pubkeyHex, owner)) {
-            latestEOSEs.removeDataFor(user)
-            onFeedOwnerChanged(key)
-        }
-    }
-
-    fun since(key: T) = latestEOSEs.since(user(key))
 
     open fun newEose(
         key: T,
@@ -85,7 +55,6 @@ abstract class PerUserEoseManager<T>(
         time: Long,
         filters: List<Filter>? = null,
     ) {
-        latestEOSEs.newEose(user(key), relay, time)
         if (invalidateAfterEose) {
             invalidateFilters()
         }
@@ -140,10 +109,9 @@ abstract class PerUserEoseManager<T>(
 
         keysByUser.forEach { (user, userKeys) ->
             val it = userKeys.first()
-            dropCursorsIfFeedChanged(user, it)
             watchChatFeeds(user, it)
             // Every key of this user shares the subscription, so every holder they name gets its answers.
-            val (filters, cursors) = filtersFor(userKeys, { since(it) }) { s -> updateFilter(it, s) }
+            val (filters, cursors) = filtersFor(userKeys) { s -> updateFilter(it, s) }
             val newFilters =
                 filters
                     ?.ifEmpty { null }

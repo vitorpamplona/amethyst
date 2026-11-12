@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.buildRelayGroupStateFilters
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -76,6 +77,9 @@ class RelayGroupJoinedStateSubAssembler(
     }
 
     override fun id(key: RelayGroupJoinedStateQueryState) = key.account
+
+    /** The joined groups' channels hold their state, for as long as the account follows them. */
+    override fun cursorHoldersOf(key: RelayGroupJoinedStateQueryState): List<RelayCursorHolder> = listOf(key.account)
 
     override val watchedChatFeeds = setOf(ChatFeedType.NIP29)
 }

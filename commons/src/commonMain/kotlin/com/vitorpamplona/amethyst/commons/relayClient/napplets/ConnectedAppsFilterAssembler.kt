@@ -24,6 +24,8 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.KeyHeldCursors
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -40,7 +42,11 @@ class ConnectedAppsQueryState(
     override val account: IAccount,
     val authors: Set<HexKey>,
     val homeRelays: StateFlow<Set<NormalizedRelayUrl>>,
-) : AccountScopedQuery
+) : AccountScopedQuery,
+    KeyHeldCursors {
+    /** Only the screen that made this key holds what it loads, so the cursors live with the key. */
+    override val relayCursors = RelayCursors()
+}
 
 /**
  * Live subscription for NIP-5D napplet manifests (kinds 15129/35129) while the connected-apps

@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.relayClient.assemblers
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.CursorHoldingQuery
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
@@ -45,7 +47,11 @@ import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEven
 @Immutable
 data class CashuMintDirectoryQueryState(
     val relays: Set<NormalizedRelayUrl>,
-)
+    /** What keeps the announcements and recommendations this loads: its cursors set the windows. */
+    val directory: RelayCursorHolder,
+) : CursorHoldingQuery {
+    override val cursorHolders get() = listOf(directory)
+}
 
 /**
  * Subscribes to NIP-87 cashu mint announcements (kind 38172) and the

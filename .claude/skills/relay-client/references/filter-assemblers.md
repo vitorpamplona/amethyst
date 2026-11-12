@@ -38,24 +38,38 @@ a `TopNavFeedFilterAssembler` over a `SingleTopNavFeedSubAssembler` and a pure
 All extend `BaseEoseManager(client, allKeys, sampleTime = 500)`, which coalesces
 invalidations through a `BundledUpdate` and drives a `SubscriptionController`.
 
-| Manager | Subscriptions | EOSE cursor | Used by |
-|---|---|---|---|
-| `SingleSubEoseManager<T>(client, allKeys, invalidateAfterEose)` | one REQ for every key; `updateFilter(keys, since)`, `distinct(key)` | one per relay, shared by all keys; `clearEoseFor(relay)` when the key set grows | `MetadataFilterAssembler`, `UserCardsSubAssembler` |
-| `PerUniqueIdEoseManager<T, U>` | one REQ per `id(key)` | per id | `chess/ChessGameSubAssembler`, `url/UrlFeedFilterSubAssembler` |
-| `PerUserEoseManager<T>` | one REQ per `user(key)` | per user | `podcasts/MyPodcastFeedSubAssembler`, `napplets/ConnectedAppsSubAssembler` |
-| `PerKeyEoseManager<T, K>` | one REQ per `extractKey(state)` | per key | (no subclass today) |
-| `PerUserAndFollowListEoseManager` | one REQ per logged-in user and selected top-nav list | per user + list | `topNavFeeds/TopNavFeedSubAssembler` (home, video, discovery, notifications) |
-| `SingleSubNoEoseCacheEoseManager`, `AccountScopedSingleSubNoEoseCacheEoseManager` | one REQ | not cached | `event/loaders/NoteEventLoaderSubAssembler`, `reqCommand/channel/nip28PublicChats/ChannelLoaderSubAssembler` |
+| Manager | Subscriptions | Used by |
+|---|---|---|
+| `SingleSubEoseManager<T>(client, allKeys, invalidateAfterEose)` | one REQ for every key; `updateFilter(keys, since)`, `distinct(key)`; entities whose cursors agree on every relay are built together | `UserProfileMetadataFilterSubAssembler`, `CommunityFeedFilterSubAssembler` |
+| `PerUniqueIdEoseManager<T, U>` | one REQ per `id(key)` | `chess/ChessGameSubAssembler`, `url/UrlFeedFilterSubAssembler` |
+| `PerUserEoseManager<T>` | one REQ per `user(key)` | `podcasts/MyPodcastFeedSubAssembler`, `napplets/ConnectedAppsSubAssembler` |
+| `PerUserAndFollowListEoseManager<T>` | one REQ per logged-in user; wakes the key's lazy feeds | `topNavFeeds/TopNavFeedSubAssembler` (home, video, discovery, notifications) |
+| `SingleSubNoEoseCacheEoseManager`, `AccountScopedSingleSubNoEoseCacheEoseManager` | one REQ, no cursor | `event/loaders/NoteEventLoaderSubAssembler`, `reqCommand/channel/nip28PublicChats/ChannelLoaderSubAssembler` |
 
-`ReactionsFilterAssembler` and `MetadataFilterAssembler` (`assemblers/`) are the smallest
-complete `SingleSubEoseManager` examples.
+## Where the cursor lives
+
+A cursor says "everything up to T is in memory", which is true only while something holds those
+notes (`LocalCache` keeps notes and users weakly). So the cursors live on that holder
+(`RelayCursorHolder`, `RelayCursors` slots per manager), named by `cursorHoldersOf(key)`, never in
+the manager, and `CursorPlanner` turns them into windows:
+
+| What holds the notes | Holder | Example |
+|---|---|---|
+| a screen feed | its `FeedContentState` (pass it in the key's `feeds`) | top-nav feeds, hashtag, profile posts |
+| a channel (held strongly by `LocalCache`) | the `Channel`; the pruner rewinds it | `ChannelPublicFilterSubAssembler`, relay-group tails |
+| a user object | the `User` | `UserProfileMetadataFilterSubAssembler`, `UserWatcherSubAssembler` |
+| a note's children | the `Note` (`childCursors()`) | thread, poll responses, chess game, repository items |
+| the account, for as long as it is loaded | the `Account` | wallets, drafts, joined groups, followed chats |
+| only the screen that made the key | the key itself (`KeyHeldCursors`; remember it for the screen) | search, connected apps, git dashboard |
+
+A key that names none is asked from scratch, with nothing recorded.
 
 ## Gotchas
 
-- A merged single-sub filter that gains a key inherits a cursor earned by the older keys —
-  call `clearEoseFor(relay)` (see the KDoc on `SingleSubEoseManager`).
-- `limit` large author sets, and set `since` from the EOSE map so reconnects don't refetch
-  history.
+- A key whose holder is the key must be `remember`ed for the screen's lifetime, or every
+  recomposition asks from scratch.
+- Build filters with the `since` you are given (null when holders window them); `limit` large
+  author sets.
 - `ExplainedFilter.copy(since = …)` keeps the purpose; constructing a plain `Filter` loses it.
-- Tests: `commons/src/jvmTest/.../relayClient/` (`eoseManagers/MergedAuthorTrackerTest`,
+- Tests: `commons/src/jvmTest/.../relayClient/` (`eoseManagers/CursorPlannerTest`, `eoseManagers/SingleSubPerEntityCursorTest`,
   `assemblers/FeedMetadataCoordinatorTest`, …).

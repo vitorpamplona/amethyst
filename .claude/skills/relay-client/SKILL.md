@@ -15,8 +15,8 @@ extensions — see AGENTS.md › Feature Workflow ("Relay client ops already exi
   headless half: one package per feature (`chess/`, `communities/`, `home/`, `thread/`,
   `user/`, `event/`, …) holding query states, filter assemblers and sub-assemblers;
   `composeSubscriptionManagers/`, `eoseManagers/`, `subscriptions/` (`ExplainedFilter`,
-  `SubPurpose`), `assemblers/` (shared ones: `MetadataFilterAssembler`,
-  `ReactionsFilterAssembler`, `ContactCardFilters.kt`), `oneshot/`, `paging/`, `preload/`.
+  `SubPurpose`), `assemblers/` (shared ones: `FeedMetadataCoordinator`,
+  `CashuMintDirectoryFilterAssembler`, `ContactCardFilters.kt`), `oneshot/`, `paging/`, `preload/`.
 - `reqCommand/RelaySubscriptionsCoordinator.kt` — owns one instance of every assembler
   (`account`, `home`, `userFinder`, `eventFinder`, `chess`, `community`, …). Screens reach it
   as `accountViewModel.dataSources()` (`BaseAccountViewModel.dataSources`).
@@ -81,12 +81,13 @@ class ChessGameFilterAssembler(cache: ICacheProvider, client: INostrClient) : Co
 ```
 
 EOSE managers (`eoseManagers/`, all on `BaseEoseManager(client, allKeys, sampleTime = 500)`,
-which batches invalidations): `SingleSubEoseManager` (one REQ for all keys, one shared EOSE
-cursor per relay — `MetadataFilterAssembler` uses it), `PerUserEoseManager`,
-`PerKeyEoseManager`, `PerUniqueIdEoseManager`, `PerUserAndFollowListEoseManager`,
-`SingleSubNoEoseCacheEoseManager`, `AccountScopedSingleSubNoEoseCacheEoseManager`. Pick by how
-the EOSE cursor must be shared. Details and the new-screen recipe:
-`references/filter-assemblers.md`.
+which batches invalidations): `SingleSubEoseManager` (one REQ for all keys), `PerUserEoseManager`,
+`PerUniqueIdEoseManager`, `PerUserAndFollowListEoseManager`, `SingleSubNoEoseCacheEoseManager`,
+`AccountScopedSingleSubNoEoseCacheEoseManager`. Pick by how the REQs are split. The EOSE cursors
+never live in the manager: they live on the object that holds the notes (`cursorHoldersOf(key)`:
+a feed, a `Channel`, a `User`, a `Note`'s children, the `Account`, or the key itself via
+`KeyHeldCursors`). A key that names no holder is asked from scratch. Details and the new-screen
+recipe: `references/filter-assemblers.md`.
 
 ## Wiring a composable
 

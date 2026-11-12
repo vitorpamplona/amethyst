@@ -43,23 +43,12 @@ class CommunityFeedFilterSubAssembler(
 
         val plans = keys.mapNotNull { plan(it) }
 
-        // One cursor per relay is shared by every community opened on it.
-        val relaySince =
-            sinceDroppingGrownRelays(
-                mapOfSet {
-                    plans.forEach { plan ->
-                        (plan.communityRelays + plan.moderatorsOutbox.keys).forEach { add(it, plan.community.idHex) }
-                    }
-                },
-                since,
-            )
-
         return plans.flatMap { plan ->
             plan.moderatorsOutbox.map { (relay, authors) ->
-                filterCommunityPostsFromModerators(relay, authors, plan.event, relaySince?.get(relay)?.time)
+                filterCommunityPostsFromModerators(relay, authors, plan.event, since?.get(relay)?.time)
             } +
                 plan.communityRelays.map { relay ->
-                    filterCommunityPostsFromEverybody(relay, plan.event, relaySince?.get(relay)?.time)
+                    filterCommunityPostsFromEverybody(relay, plan.event, since?.get(relay)?.time)
                 }
         }
     }

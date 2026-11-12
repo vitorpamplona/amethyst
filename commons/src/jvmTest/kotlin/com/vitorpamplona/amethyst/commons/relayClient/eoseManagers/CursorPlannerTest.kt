@@ -236,7 +236,7 @@ class CursorPlannerTest {
                 ?.single()
                 ?.since,
         )
-        assertNull(manager.ownSince["feed"], "the manager's own map is not read for a key with holders")
+        assertNull(manager.ownSince["feed"], "the builder is given no since: the holders' cursors set the windows")
     }
 
     @Test
@@ -379,14 +379,23 @@ class CursorPlannerTest {
     }
 
     @Test
-    fun aKeyWithoutHoldersKeepsTheManagersOwnCursors() {
+    fun aKeyWithoutHoldersIsAskedFromScratch() {
         val key = Key("feed", null)
         val manager = Manager { setOf(key) }
 
         manager.updateSubscriptions(setOf(key))
-        manager.newEose(key, relay, 1_000)
+        val sub = manager.findOrCreateSubFor(key)
+        sub.listener.onEose(relay, sub.filters()?.get(relay))
         manager.updateSubscriptions(setOf(key))
 
-        assertEquals(1_000L, manager.ownSince["feed"]?.get(relay)?.time)
+        // Nothing vouches for what is in memory, so no cursor is kept on its behalf.
+        assertNull(manager.ownSince["feed"])
+        assertNull(
+            sub
+                .filters()
+                ?.get(relay)
+                ?.single()
+                ?.since,
+        )
     }
 }

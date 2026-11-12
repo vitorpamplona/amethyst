@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -93,6 +94,9 @@ class ConcordChannelSubAssembler(
     }
 
     override fun id(key: ConcordChannelQueryState) = key.account
+
+    /** The account's Concord sessions and its channels hold what the planes carried. */
+    override fun cursorHoldersOf(key: ConcordChannelQueryState): List<RelayCursorHolder> = listOf(key.account)
 
     override val watchedChatFeeds = setOf(ChatFeedType.CONCORD)
 }

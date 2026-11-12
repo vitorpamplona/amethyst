@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.gitRepo
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.FilterShape
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.commons.util.KmpLock
-import com.vitorpamplona.amethyst.commons.util.withLock
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -44,14 +44,13 @@ class RepositoryItemEssentialsSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<RepositoryQueryState>,
 ) : SingleSubEoseManager<RepositoryQueryState>(client, allKeys) {
-    // The items whose history each relay has already sent: their ids were in a filter the relay
-    // answered with EOSE. Those are asked only for what is newer than the relay's cursor; a newly
-    // listed item is asked for its whole history in a filter of its own. Dropping the cursor for
-    // every id instead, as a grown key set usually does, re-downloaded every listed item's
-    // statuses, labels and cover notes each time a batch of items arrived.
-    private val lock = KmpLock()
-    private val coveredPerRelay = HashMap<NormalizedRelayUrl, Set<HexKey>>()
-
+    /**
+     * Each item note keeps its own cursors ([Note.childCursors]), because it holds the statuses,
+     * labels, cover notes and replies they vouch for: an item LocalCache dropped and rebuilt has
+     * none and is asked for its whole history, and a newly listed item is asked from scratch in a
+     * filter of its own without making the others refetch. Items asked from the same point share
+     * a filter.
+     */
     override fun updateFilter(
         keys: List<RepositoryQueryState>,
         since: SincePerRelayMap?,
@@ -69,22 +68,41 @@ class RepositoryItemEssentialsSubAssembler(
             }
 
         return idsPerRelay.flatMap { (relay, ids) ->
-            val covered = lock.withLock { coveredPerRelay[relay] }.orEmpty()
-            val (known, fresh) = ids.partition { it in covered }
-            val cursor = since?.get(relay)?.time
-            filterRepositoryItemEssentials(relay, known, cursor) + filterRepositoryItemEssentials(relay, fresh, null)
+            ids
+                .groupBy { cache.getNoteIfExists(it)?.childCursorsOrNull()?.since(relay, cursorSource) }
+                .flatMap { (itemSince, group) -> filterRepositoryItemEssentials(relay, group, itemSince) }
         }
     }
 
+    /** The items' own cursors decide, not one per relay. */
+    override fun cursorHoldersOf(key: RepositoryQueryState): List<RelayCursorHolder> = emptyList()
+
+    /**
+     * An answer reaches an item only for filters that name it, and only when the filter asked from
+     * scratch or from no later than the item's own cursor.
+     */
     override fun newEose(
         relay: NormalizedRelayUrl,
         time: Long,
         filters: List<Filter>?,
     ) {
-        // Every item id in the filters this EOSE answers now has its history on this relay.
-        val answered = filters.orEmpty().flatMapTo(HashSet()) { filter -> filter.tags?.get("e").orEmpty() + filter.tags?.get("E").orEmpty() }
-        if (answered.isNotEmpty()) {
-            lock.withLock { coveredPerRelay[relay] = coveredPerRelay[relay].orEmpty() + answered }
+        val answered = mutableMapOf<Note, MutableList<Filter>>()
+        val refused = mutableSetOf<Note>()
+        filters.orEmpty().forEach { filter ->
+            if (filter.until != null) return@forEach
+            (filter.tags?.get("e").orEmpty() + filter.tags?.get("E").orEmpty()).forEach { id ->
+                val note = cache.getNoteIfExists(id) ?: return@forEach
+                val asked = filter.since
+                val own = note.childCursorsOrNull()?.since(relay, cursorSource)
+                if (asked == null || (own != null && own >= asked)) {
+                    answered.getOrPut(note) { mutableListOf() }.add(filter)
+                } else {
+                    refused.add(note)
+                }
+            }
+        }
+        answered.forEach { (note, asked) ->
+            if (note !in refused) note.childCursors().newEose(relay, asked.map { FilterShape.of(it) }, time, cursorSource)
         }
         super.newEose(relay, time, filters)
     }

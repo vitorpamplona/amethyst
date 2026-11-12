@@ -25,7 +25,9 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.KeyHeldCursors
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -46,7 +48,14 @@ class ChessLobbyGamesQueryState(
     override val account: Account,
     val watchedGames: Set<HexKey>,
     val missingStarts: Set<HexKey> = emptySet(),
-) : AccountScopedQuery
+) : AccountScopedQuery,
+    KeyHeldCursors {
+    /**
+     * The lobby holds what this loads while it is open: the user's own games are not all in its
+     * feed, so the cursors live with this key and a new key (another set of listed games) asks again.
+     */
+    override val relayCursors = RelayCursors()
+}
 
 /**
  * What the chess screen needs besides the top-bar list ([ChessFilterAssembler]):

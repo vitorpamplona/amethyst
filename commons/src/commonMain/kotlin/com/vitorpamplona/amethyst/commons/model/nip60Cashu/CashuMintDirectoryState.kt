@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryQueryState
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
@@ -94,7 +96,10 @@ class CashuMintDirectoryState(
     private val scope: CoroutineScope,
     private val assembler: CashuMintDirectoryFilterAssembler,
     private val followsFlow: StateFlow<Set<HexKey>>,
-) {
+) : RelayCursorHolder {
+    /** How far each relay has been asked for the announcements and recommendations kept below. */
+    override val relayCursors = RelayCursors()
+
     /** Mint announcements keyed by the announcement event id. */
     private val announcements = ConcurrentMap<HexKey, CashuMintEvent>()
 
@@ -166,7 +171,7 @@ class CashuMintDirectoryState(
         if (previous != null && previous.relays == relays) return
 
         previous?.let { runCatching { assembler.unsubscribe(it) } }
-        val next = CashuMintDirectoryQueryState(relays)
+        val next = CashuMintDirectoryQueryState(relays, this)
         currentSubscription = next
         assembler.subscribe(next)
     }

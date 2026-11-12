@@ -23,13 +23,18 @@ package com.vitorpamplona.amethyst.commons.relayClient.podcasts
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.KeyHeldCursors
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // Keyed by the podcast's own pubkey (each podcast is its own keypair per NIP-F4). Multiple
 // screens can subscribe to the same podcast and share the single per-user subscription.
 class OnePodcastQueryState(
     val user: User,
-)
+) : KeyHeldCursors {
+    /** Only the screen that made this key holds what it loads, so the cursors live with the key. */
+    override val relayCursors = RelayCursors()
+}
 
 class OnePodcastFilterAssembler(
     cache: ICacheProvider,

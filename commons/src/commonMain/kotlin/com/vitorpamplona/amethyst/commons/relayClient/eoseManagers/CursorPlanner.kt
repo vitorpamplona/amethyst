@@ -37,6 +37,18 @@ interface CursorHoldingQuery {
     val cursorHolders: List<RelayCursorHolder>
 }
 
+/**
+ * A query key that is itself the holder of its cursors: for what only the screen that made the key
+ * holds (a composable or view model collecting the notes), so the cursors go when the screen does.
+ * The key must be remembered for the screen's lifetime, or every recomposition asks from scratch.
+ * Implementers declare `override val relayCursors = RelayCursors()`.
+ */
+interface KeyHeldCursors :
+    CursorHoldingQuery,
+    RelayCursorHolder {
+    override val cursorHolders: List<RelayCursorHolder> get() = listOf(this)
+}
+
 object CursorPlanner {
     /**
      * The windows of a live request for [holders]: each filter without `until` is split into the

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
-import com.vitorpamplona.amethyst.commons.relays.EOSERelayList
 import com.vitorpamplona.amethyst.commons.relays.MutableTime
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -41,60 +40,19 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * It is ideal for temporary filters, including event, user finding that must be
  * disabled after the user is found.
  *
- * This class keeps EOSEs for as long as possible and
- * shares all EOSEs among all users.
+ * The cursors live on the holders each entity's keys name ([cursorHoldersOf]); an entity that
+ * names none is asked from scratch.
  */
 abstract class SingleSubEoseManager<T>(
     client: INostrClient,
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
-    // long term EOSE cache
-    private val latestEOSEs = EOSERelayList()
-
-    fun since() = latestEOSEs.since()
-
-    /**
-     * Drops one relay's EOSE cursor so the next assembly asks it from scratch.
-     *
-     * This manager keeps a single cursor per relay for the whole key set, which is right while that
-     * set is stable and wrong the moment it grows: a key that joins later inherits a cursor earned by
-     * keys that were already there, and everything older than it is never requested. Subclasses whose
-     * filters merge keys together call this when a relay's set of keys gains a member.
-     */
-    protected fun clearEoseFor(relay: NormalizedRelayUrl) {
-        latestEOSEs.remove(relay)
-    }
-
-    /** What [sinceDroppingGrownRelays] remembers each relay's filters last covered. */
-    private val keysPerRelay = MergedAuthorTracker()
-
-    /**
-     * [clearEoseFor] on every relay whose set of keys in [current] gained a member since the last
-     * assembly, and [since] without those relays, for the filters being assembled right now — the
-     * map handed in is a copy-on-write snapshot, so clearing the cursor alone would not reach them.
-     *
-     * For subclasses that serve several entities (profiles, communities, repositories, …) from this
-     * one subscription: the second one opened on a relay would otherwise be asked only for what is
-     * newer than the first one's EOSE, and its history would never be requested at all.
-     */
-    protected fun sinceDroppingGrownRelays(
-        current: Map<NormalizedRelayUrl, Collection<String>>,
-        since: SincePerRelayMap?,
-    ): SincePerRelayMap? {
-        // Every relay goes through gainedAuthors, so each one's set is recorded, grown or not.
-        val grown = current.filter { (relay, keys) -> keysPerRelay.gainedAuthors(relay, keys) }.keys
-        if (grown.isEmpty()) return since
-        grown.forEach(::clearEoseFor)
-        return since?.filterKeys { it !in grown }?.toMutableMap()
-    }
-
     open fun newEose(
         relay: NormalizedRelayUrl,
         time: Long,
         filters: List<Filter>? = null,
     ) {
-        latestEOSEs.newEose(relay, time)
         if (invalidateAfterEose) {
             invalidateFilters()
         }
@@ -130,7 +88,7 @@ abstract class SingleSubEoseManager<T>(
         if (holders.all { it.isEmpty() }) {
             val uniqueSubscribedAccounts = groups.map { it.first() }
             serve(sub.id, emptyList())
-            sub.updateFilters(updateFilter(uniqueSubscribedAccounts, since())?.ifEmpty { null }?.groupByRelay())
+            sub.updateFilters(updateFilter(uniqueSubscribedAccounts, null)?.ifEmpty { null }?.groupByRelay())
             return
         }
 

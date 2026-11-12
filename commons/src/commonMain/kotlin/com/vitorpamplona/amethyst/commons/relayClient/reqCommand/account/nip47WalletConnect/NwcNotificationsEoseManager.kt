@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip47W
 import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
@@ -71,6 +72,9 @@ class NwcNotificationsEoseManager(
     private val userJobMap = mutableMapOf<User, List<Job>>()
 
     override fun user(key: AccountQueryState) = key.account.userProfile()
+
+    /** These are handled, not kept: the cursor says how far the account has handled them. */
+    override fun cursorHoldersOf(key: AccountQueryState): List<RelayCursorHolder> = listOf(key.account)
 
     override fun updateFilter(
         key: AccountQueryState,

@@ -22,13 +22,13 @@ package com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.datas
 
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.filterRelayGroupsByAuthors
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.filterRelayGroupsDiscovery
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.relayGroupChannelsByRelay
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -50,7 +50,7 @@ import kotlinx.coroutines.launch
 class RelayGroupsDiscoverySubAssembler(
     client: INostrClient,
     allKeys: () -> Set<RelayGroupsDiscoveryQueryState>,
-) : PerUserAndFollowListEoseManager<RelayGroupsDiscoveryQueryState, TopFilter>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<RelayGroupsDiscoveryQueryState>(client, allKeys) {
     override fun updateFilter(
         key: RelayGroupsDiscoveryQueryState,
         since: SincePerRelayMap?,
@@ -107,7 +107,8 @@ class RelayGroupsDiscoverySubAssembler(
 
     override fun user(key: RelayGroupsDiscoveryQueryState) = key.account.userProfile()
 
-    override fun list(key: RelayGroupsDiscoveryQueryState) = key.listName()
+    /** The groups found are channels, which keep them; a different list asks for a different shape. */
+    override fun cursorHoldersOf(key: RelayGroupsDiscoveryQueryState): List<RelayCursorHolder> = listOf(key.account)
 
     override fun activateFeeds(key: RelayGroupsDiscoveryQueryState) = key.feedStates.relayGroupsDiscoveryFeed.activate()
 
