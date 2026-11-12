@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.frontpage.SavedEdition
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotifKind
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationSpec
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationTarget
 import com.vitorpamplona.amethyst.commons.moderation.notifications.SendResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.front_page_failed_title
@@ -86,13 +87,27 @@ class DesktopFrontPageNotifier(
     ) {
         if (!notifications.settings.enabled.value) return
         // One thread per account: one account's paper never replaces another's.
-        val result = notifications.dispatcher.send(NotificationSpec(title = title, body = body, kind = NotifKind.FRONT_PAGE, threadId = "$THREAD_ID-${account.take(16)}"))
+        val result = notifications.dispatcher.send(frontPageSpec(account, title, body))
         if (result is SendResult.Failed) Log.w(TAG, "Could not post the front page notification", result.error)
     }
 
     companion object {
         private const val TAG = "DesktopFrontPage"
         private const val THREAD_ID = "front-page"
+
+        /** A click opens The Observer, as [account]: the paper is that reader's. */
+        internal fun frontPageSpec(
+            account: HexKey,
+            title: String,
+            body: String,
+        ) = NotificationSpec(
+            title = title,
+            body = body,
+            kind = NotifKind.FRONT_PAGE,
+            threadId = "$THREAD_ID-${account.take(16)}",
+            target = NotificationTarget.FrontPage,
+            account = account,
+        )
     }
 }
 

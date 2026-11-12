@@ -20,6 +20,21 @@
  */
 package com.vitorpamplona.amethyst.commons.moderation.notifications
 
+import io.github.kdroidfilter.nucleus.notification.DeliveredNotification
+import io.github.kdroidfilter.nucleus.notification.NotificationCenter
+import io.github.kdroidfilter.nucleus.notification.NotificationCenterDelegate
+import io.github.kdroidfilter.nucleus.notification.NotificationResponse
+import io.github.kdroidfilter.nucleus.notification.PresentationOption
+import io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationCenter
+import io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationListener
+import io.github.kdroidfilter.nucleus.notification.windows.ActivationType
+import io.github.kdroidfilter.nucleus.notification.windows.AdaptiveText
+import io.github.kdroidfilter.nucleus.notification.windows.DismissalReason
+import io.github.kdroidfilter.nucleus.notification.windows.ToastBindingGeneric
+import io.github.kdroidfilter.nucleus.notification.windows.ToastContent
+import io.github.kdroidfilter.nucleus.notification.windows.ToastNotificationListener
+import io.github.kdroidfilter.nucleus.notification.windows.ToastVisual
+import io.github.kdroidfilter.nucleus.notification.windows.WindowsNotificationCenter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +48,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.coroutines.resume
+import io.github.kdroidfilter.nucleus.notification.linux.Notification as LinuxNotification
+import io.github.kdroidfilter.nucleus.notification.linux.NotificationAction as LinuxNotificationAction
 
 /**
  * Native-backed [NotificationDispatcher] using Nucleus (kdroidfilter/Nucleus).
@@ -47,18 +64,48 @@ import kotlin.coroutines.resume
  *
  * If the matching native library fails to load or the app is unbundled on
  * macOS, [send] falls back to [AwtTrayNotifier].
+ *
+ * A click on a posted notification reaches [onClick], on whatever thread the OS
+ * reports it, with the [NotificationSpec.target] and [NotificationSpec.account] it
+ * was sent with:
+ * - **macOS**: the notification-center delegate's response, matched by request
+ *   identifier (Nucleus hands back the identifier, not the `userInfo`).
+ * - **Windows**: the toast's activation, matched by its `launch` argument.
+ * - **Linux**: the server's `ActionInvoked` for the "default" action, matched by
+ *   the notification id `Notify` returned.
+ * - **AWT tray**: the tray icon's action event, which names no message, so it
+ *   opens the last one the tray showed.
  */
 class NucleusNotificationDispatcher(
     private val bundleId: String,
     private val appLabel: String,
     private val fallback: AwtTrayNotifier,
     @Suppress("unused") private val scope: CoroutineScope,
+    /** The label of the "open" action Linux servers may show; most never draw it, the click is what counts. */
+    private val openActionLabel: suspend () -> String = { appLabel },
+    private val onClick: (NotificationClick) -> Unit = {},
 ) : NotificationDispatcher {
     private val host: HostOs = detectHostOs()
+
+    /** What each notification this run posted opens, by the key its platform reports a click with. */
+    private val posted = PostedNotifications<String>()
+
+    /** The same for Linux, whose server numbers its notifications. */
+    private val postedLinux = PostedNotifications<Int>()
+
+    @Volatile
+    private var lastFallbackSpec: NotificationSpec? = null
 
     private companion object {
         const val PERMISSION_REQUEST_TIMEOUT_MS = 90_000L
         const val SEND_ACK_TIMEOUT_MS = 10_000L
+
+        /** What macOS reports when the user dismisses rather than opens (only for categories that ask for it). */
+        const val MAC_DISMISS_ACTION = "com.apple.UNNotificationDismissActionIdentifier"
+
+        /** Marks a Windows toast's launch argument as one of ours. */
+        const val WINDOWS_LAUNCH_PREFIX = "amethyst-notification:"
+
         const val TIMEOUT_ERROR_MESSAGE =
             "macOS never answered the permission request. The permission banner may have " +
                 "auto-dismissed — click again and watch the top-right of the screen for the " +
@@ -105,7 +152,14 @@ class NucleusNotificationDispatcher(
                 // BundleRequired / NotRequested. User can still trigger the
                 // request from settings.
             }
+            try {
+                installMacDelegate()
+            } catch (_: Throwable) {
+                // Without the delegate clicks only bring the app forward (the OS does that).
+            }
         }
+        // The tray names no message on a click: it opens the last one it showed.
+        fallback.onAction = { onClick(NotificationClick.of(lastFallbackSpec)) }
     }
 
     private fun initialPermissionState(): PermissionState =
@@ -248,7 +302,29 @@ class NucleusNotificationDispatcher(
         }
     }
 
+    /**
+     * Receives the user's response to a notification. Setting a delegate also makes macOS ask
+     * [NotificationCenterDelegate.willPresent] before showing one while the app is frontmost
+     * (without one it shows none then): every sender here already decided the user should see it
+     * (a print that ended under a hidden window, a reply while another app has the focus), so all
+     * of them show.
+     */
+    private fun installMacDelegate() {
+        NotificationCenter.setDelegate(
+            object : NotificationCenterDelegate {
+                override fun willPresent(notification: DeliveredNotification): Set<PresentationOption> = setOf(PresentationOption.BANNER, PresentationOption.LIST, PresentationOption.SOUND)
+
+                override fun didReceive(response: NotificationResponse) {
+                    val spec = posted.take(response.notification.identifier)
+                    if (response.actionIdentifier == MAC_DISMISS_ACTION) return
+                    onClick(NotificationClick.of(spec))
+                }
+            },
+        )
+    }
+
     private suspend fun sendMac(spec: NotificationSpec): SendResult {
+        val identifier = UUID.randomUUID().toString()
         val content =
             io.github.kdroidfilter.nucleus.notification.NotificationContent(
                 title = spec.title,
@@ -263,9 +339,10 @@ class NucleusNotificationDispatcher(
             )
         val request =
             io.github.kdroidfilter.nucleus.notification.NotificationRequest(
-                identifier = UUID.randomUUID().toString(),
+                identifier = identifier,
                 content = content,
             )
+        posted.put(identifier, spec)
         // Nucleus delivers add() asynchronously; the optional callback carries
         // the OS error string (null on success). Without it, a rejected
         // notification (e.g. unauthorized at send time) is silently swallowed
@@ -288,7 +365,10 @@ class NucleusNotificationDispatcher(
         return when {
             addOutcome == null -> SendResult.Delivered // no ack from OS; request was queued
             addError.isNullOrBlank() -> SendResult.Delivered
-            else -> SendResult.Failed(IllegalStateException("UNUserNotificationCenter.add failed: $addError"))
+            else -> {
+                posted.take(identifier)
+                SendResult.Failed(IllegalStateException("UNUserNotificationCenter.add failed: $addError"))
+            }
         }
     }
 
@@ -297,37 +377,90 @@ class NucleusNotificationDispatcher(
     private fun ensureWindowsInitialized() {
         if (winInitialized) return
         try {
-            io.github.kdroidfilter.nucleus.notification.windows.WindowsNotificationCenter
-                .initialize(aumid = bundleId, appName = appLabel)
+            WindowsNotificationCenter.initialize(aumid = bundleId, appName = appLabel)
+            WindowsNotificationCenter.addListener(
+                object : ToastNotificationListener {
+                    override fun onActivated(
+                        tag: String,
+                        group: String,
+                        arguments: String,
+                        userInputs: Map<String, String>,
+                    ) {
+                        if (!arguments.startsWith(WINDOWS_LAUNCH_PREFIX)) return
+                        onClick(NotificationClick.of(posted.take(arguments.removePrefix(WINDOWS_LAUNCH_PREFIX))))
+                    }
+
+                    override fun onDismissed(
+                        tag: String,
+                        group: String,
+                        reason: DismissalReason,
+                    ) {}
+
+                    override fun onFailed(
+                        tag: String,
+                        group: String,
+                        errorCode: Int,
+                    ) {}
+                },
+            )
             winInitialized = true
         } catch (_: Throwable) {
-            // Best-effort; showSimple will surface any hard failure.
+            // Best-effort; show will surface any hard failure.
         }
     }
 
+    /**
+     * The toast `showSimple` builds (title, then the body when there is one), plus a `launch`
+     * argument: the toast's activation hands it back, and it says which notification was clicked.
+     */
     private fun sendWindows(spec: NotificationSpec): SendResult {
         ensureWindowsInitialized()
-        io.github.kdroidfilter.nucleus.notification.windows.WindowsNotificationCenter.showSimple(
-            title = spec.title,
-            body = spec.body,
-            group = spec.threadId.orEmpty(),
-        )
+        val key = UUID.randomUUID().toString()
+        val lines = listOf(spec.title, spec.body).filter { it.isNotEmpty() }
+        val content =
+            ToastContent(
+                visual = ToastVisual(ToastBindingGeneric(children = lines.map { AdaptiveText(text = it) })),
+                launch = WINDOWS_LAUNCH_PREFIX + key,
+                activationType = ActivationType.FOREGROUND,
+            )
+        posted.put(key, spec)
+        WindowsNotificationCenter.show(content = content, group = spec.threadId.orEmpty())
         return SendResult.Delivered
     }
 
     // ---------- Linux ----------
 
-    private fun sendLinux(spec: NotificationSpec): SendResult {
+    /** Listens for the server's signals once: a click invokes the "default" action every notification carries. */
+    private val linuxListener: Unit by lazy {
+        LinuxNotificationCenter.addListener(
+            object : LinuxNotificationListener {
+                override fun onActionInvoked(
+                    notificationId: Int,
+                    actionKey: String,
+                ) {
+                    if (actionKey != LinuxNotificationAction.DEFAULT_KEY) return
+                    onClick(NotificationClick.of(postedLinux.take(notificationId)))
+                }
+                // A close is not forgotten here: some servers report one as the banner times out and
+                // still offer the notification in their history, where a click must open it.
+            },
+        )
+    }
+
+    private suspend fun sendLinux(spec: NotificationSpec): SendResult {
+        linuxListener
         val notification =
-            io.github.kdroidfilter.nucleus.notification.linux.Notification(
+            LinuxNotification(
                 appName = appLabel,
                 summary = spec.title,
                 body = spec.body,
+                // "default" is the click on the notification itself, not a button.
+                actions = listOf(LinuxNotificationAction(LinuxNotificationAction.DEFAULT_KEY, openActionLabel())),
             )
-        val id =
-            io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationCenter
-                .notify(notification)
-        return if (id > 0) SendResult.Delivered else SendResult.Failed(IllegalStateException("libnotify returned id=0"))
+        val id = LinuxNotificationCenter.notify(notification)
+        if (id <= 0) return SendResult.Failed(IllegalStateException("libnotify returned id=0"))
+        postedLinux.put(id, spec)
+        return SendResult.Delivered
     }
 
     // ---------- Fallback ----------
@@ -337,6 +470,7 @@ class NucleusNotificationDispatcher(
         reason: String,
     ): SendResult {
         val result = fallback.send(spec.title, spec.body)
+        if (result.isSuccess) lastFallbackSpec = spec
         return result.fold(
             onSuccess = { SendResult.DeliveredViaFallback },
             onFailure = { SendResult.Failed(IllegalStateException("$reason; AWT fallback also failed: ${it.message}", it)) },

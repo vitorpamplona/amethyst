@@ -125,6 +125,9 @@ internal fun desktopDataDir(): File = File(System.getProperty("amethyst.dataDir"
 /** How long a kept-going print's notification has before the app quits after it. */
 private const val QUIT_AFTER_PRINT_GRACE_MS = 3_000L
 
+/** How long a window shown for a notification click gets to reach the screen before it is raised again. */
+private const val RAISE_SETTLE_MS = 150L
+
 /**
  * The desktop window of the shared app: the same [AmethystApp] Android renders, on the desktop graph.
  * Run it with `./gradlew :desktopApp:run`. Its files live apart from the retired legacy app's
@@ -348,6 +351,19 @@ fun main(args: Array<String>) {
                     delay(QUIT_AFTER_PRINT_GRACE_MS)
                     quit()
                 }
+            }
+        }
+        // A click on one of the app's notifications brings the window back, whether it was hidden
+        // for a print, minimized or behind another app. Showing it also calls off the quit waiting
+        // above: the reader is back.
+        LaunchedEffect(windows) {
+            modules.notifications.clicks.raises.collect {
+                windowState.isMinimized = false
+                windows.showMainWindow()
+                // Raised again once the OS has it on screen: a frame shown this instant ignores toFront.
+                delay(RAISE_SETTLE_MS)
+                windows.showMainWindow()
+                DesktopDeepLinks.requestForeground()
             }
         }
         LaunchedEffect(windows) {

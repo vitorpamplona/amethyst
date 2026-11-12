@@ -67,6 +67,8 @@ import com.vitorpamplona.amethyst.desktop.napplet.NostrAppScreen
 import com.vitorpamplona.amethyst.desktop.napplet.WebPageScreen
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -276,6 +278,26 @@ class DesktopAppRoot(
                 // A link opens where it can be seen: a main window hidden (kept for a print, or closed
                 // beside screen windows) comes back.
                 navigator.windows.showMainWindow()
+            }
+        }
+
+        // A click on an OS notification (the window came forward already, NotificationClickRouter):
+        // open what it was about, in the account it was for.
+        LaunchedEffect(nav, accountViewModel) {
+            val clicks = modules.notifications.clicks
+            clicks.pending.filterNotNull().collect { click ->
+                clicks.pending.value = null
+                val account = accountViewModel.account
+                val savedNpubs = sessionManager.localPreferences.allSavedAccounts().mapTo(HashSet()) { it.npub }
+                val plan = NotificationClickRules.plan(click, account.signer.pubKey) { hex -> hex.hexToByteArray().toNpub() in savedNpubs }
+                when (plan) {
+                    is NotificationClickPlan.Open -> NotificationClickRules.routeFor(plan.target, account)?.let { nav.nav(it) }
+                    is NotificationClickPlan.SwitchAndOpen ->
+                        sessionManager.checkAndSwitchUserSync(plan.account.hexToByteArray().toNpub()) { switched ->
+                            plan.target?.let { NotificationClickRules.routeFor(it, switched) }
+                        }
+                    NotificationClickPlan.ShowOnly -> Unit
+                }
             }
         }
     }

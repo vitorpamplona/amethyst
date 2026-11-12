@@ -4972,6 +4972,7 @@
     <string name="desktop_notifications_preview">Show message text</string>
     <string name="desktop_notifications_preview_description">Include what was said in the notification, not just who said it.</string>
     <string name="desktop_notification_someone">Someone</string>
+    <string name="desktop_notification_open">Open</string>
     <string name="desktop_notification_zap">⚡ %1$s zapped you</string>
     <string name="desktop_notification_zap_amount">⚡ %1$s zapped you %2$s sats</string>
     <string name="desktop_notification_dm">New encrypted message</string>

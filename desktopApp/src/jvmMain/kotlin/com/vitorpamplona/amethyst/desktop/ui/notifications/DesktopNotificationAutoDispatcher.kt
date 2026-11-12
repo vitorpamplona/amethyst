@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationD
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationSettings
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationSpec
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationTarget
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PermissionState
 import com.vitorpamplona.amethyst.commons.moderation.notifications.nowEpochSeconds
 import com.vitorpamplona.amethyst.commons.moderation.notifications.sanitizeForToast
@@ -302,7 +303,8 @@ class DesktopNotificationAutoDispatcher(
             body = body,
             kind = kind,
             threadId = event.id,
-            deepLinkNoteId = event.id,
+            target = NotificationTarget.Note(event.id),
+            account = myPubKeyHex,
         )
     }
 }
