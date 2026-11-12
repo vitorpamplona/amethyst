@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,9 +50,9 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -58,6 +60,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecondaryScrollableTabRow
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
@@ -91,6 +95,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.frontpage.CronWords
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageClock
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageGate
@@ -99,6 +104,7 @@ import com.vitorpamplona.amethyst.commons.frontpage.FrontPageRun
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSetup
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageViewModel
 import com.vitorpamplona.amethyst.commons.frontpage.MASTHEAD
+import com.vitorpamplona.amethyst.commons.frontpage.ModelChoices
 import com.vitorpamplona.amethyst.commons.frontpage.MorningScheduleView
 import com.vitorpamplona.amethyst.commons.frontpage.ObserverFailure
 import com.vitorpamplona.amethyst.commons.frontpage.ObserverPrefs
@@ -129,6 +135,9 @@ import com.vitorpamplona.amethyst.commons.resources.dlist_day_sunday
 import com.vitorpamplona.amethyst.commons.resources.dlist_day_thursday
 import com.vitorpamplona.amethyst.commons.resources.dlist_day_tuesday
 import com.vitorpamplona.amethyst.commons.resources.dlist_day_wednesday
+import com.vitorpamplona.amethyst.commons.resources.front_page_add_to_bar
+import com.vitorpamplona.amethyst.commons.resources.front_page_added_to_bar
+import com.vitorpamplona.amethyst.commons.resources.front_page_can_leave
 import com.vitorpamplona.amethyst.commons.resources.front_page_cannot_show
 import com.vitorpamplona.amethyst.commons.resources.front_page_changes_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_connect
@@ -137,15 +146,6 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_details
 import com.vitorpamplona.amethyst.commons.resources.front_page_download
 import com.vitorpamplona.amethyst.commons.resources.front_page_edition_label
 import com.vitorpamplona.amethyst.commons.resources.front_page_edition_unreadable
-import com.vitorpamplona.amethyst.commons.resources.front_page_fail_credit
-import com.vitorpamplona.amethyst.commons.resources.front_page_fail_cut_off
-import com.vitorpamplona.amethyst.commons.resources.front_page_fail_empty
-import com.vitorpamplona.amethyst.commons.resources.front_page_fail_http
-import com.vitorpamplona.amethyst.commons.resources.front_page_fail_insecure
-import com.vitorpamplona.amethyst.commons.resources.front_page_fail_model
-import com.vitorpamplona.amethyst.commons.resources.front_page_fail_rate
-import com.vitorpamplona.amethyst.commons.resources.front_page_fail_rejected
-import com.vitorpamplona.amethyst.commons.resources.front_page_fail_unreachable
 import com.vitorpamplona.amethyst.commons.resources.front_page_fixed_once
 import com.vitorpamplona.amethyst.commons.resources.front_page_last_printed
 import com.vitorpamplona.amethyst.commons.resources.front_page_last_printed_ago
@@ -159,11 +159,16 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_no_tor
 import com.vitorpamplona.amethyst.commons.resources.front_page_not_now
 import com.vitorpamplona.amethyst.commons.resources.front_page_not_printed_since
 import com.vitorpamplona.amethyst.commons.resources.front_page_not_ready
+import com.vitorpamplona.amethyst.commons.resources.front_page_observer_app_label
 import com.vitorpamplona.amethyst.commons.resources.front_page_observer_notice_body
 import com.vitorpamplona.amethyst.commons.resources.front_page_observer_notice_title
+import com.vitorpamplona.amethyst.commons.resources.front_page_observer_pin
+import com.vitorpamplona.amethyst.commons.resources.front_page_observer_pinned
+import com.vitorpamplona.amethyst.commons.resources.front_page_observer_pinned_label
+import com.vitorpamplona.amethyst.commons.resources.front_page_observer_unpinned
 import com.vitorpamplona.amethyst.commons.resources.front_page_open_observer
 import com.vitorpamplona.amethyst.commons.resources.front_page_pick_time
-import com.vitorpamplona.amethyst.commons.resources.front_page_posts_read
+import com.vitorpamplona.amethyst.commons.resources.front_page_posts_label
 import com.vitorpamplona.amethyst.commons.resources.front_page_print
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_again
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_estimate
@@ -174,7 +179,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_publish_failed
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish_no_servers
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish_read_failed
 import com.vitorpamplona.amethyst.commons.resources.front_page_publishing
-import com.vitorpamplona.amethyst.commons.resources.front_page_quotes_verified
+import com.vitorpamplona.amethyst.commons.resources.front_page_quotes_label
 import com.vitorpamplona.amethyst.commons.resources.front_page_read_full
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_body
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_title
@@ -226,6 +231,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_violation_image
 import com.vitorpamplona.amethyst.commons.resources.front_page_violation_link
 import com.vitorpamplona.amethyst.commons.resources.front_page_violation_markup
 import com.vitorpamplona.amethyst.commons.resources.front_page_violation_quote
+import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.commons.resources.retry
@@ -236,9 +242,13 @@ import com.vitorpamplona.amethyst.commons.resources.yesterday
 import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import com.vitorpamplona.amethyst.commons.ui.components.PillColors
 import com.vitorpamplona.amethyst.commons.ui.components.PillTextField
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuItemModifier
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
 import com.vitorpamplona.amethyst.commons.ui.components.rememberFileBytesAccess
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.DateSkeletonFormatter
@@ -251,7 +261,9 @@ import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberAppLauncher
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.BottomBarEditing
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -347,26 +359,96 @@ fun FrontPageScreen(
     val platform = LocalAppPlatform.current
     val download = rememberEditionDownload()
 
+    // The bottom bar and the favorites, for the one-tap shortcuts: the front page as a tab, the
+    // reader's Observer site as a pinned app.
+    val bottomBar by accountViewModel.bottomBarItemsFlow().collectAsStateWithLifecycle()
+    val favoriteApps = services.favoriteApps
+    val favorites by favoriteApps.favorites.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val addedToBar = stringRes(Res.string.front_page_added_to_bar)
+    val addToBar: (() -> Unit)? =
+        if (FrontPageShortcuts.offersBottomBar(bottomBar)) {
+            {
+                accountViewModel.changeBottomBarItems(FrontPageShortcuts.withFrontPage(bottomBar))
+                scope.launch { snackbar.showSnackbar(addedToBar) }
+            }
+        } else {
+            null
+        }
+    val pinnedText = stringRes(Res.string.front_page_observer_pinned)
+    val unpinnedText = stringRes(Res.string.front_page_observer_unpinned)
+    val observerLabel = stringRes(Res.string.front_page_observer_app_label)
+    val siteFavoriteId = site?.let { "nostr:${favoriteCoordinateOf(it)}" }
+    val sitePinned = siteFavoriteId != null && favorites.any { it.id == siteFavoriteId }
+    val togglePin: (NamedSiteEvent) -> Unit = { event ->
+        val favorite = FrontPageShortcuts.observerFavorite(event, event.title()?.ifBlank { null } ?: observerLabel, TimeUtils.nowMillis())
+        val tab = FrontPageShortcuts.favoriteTab(favorite.id)
+        if (favoriteApps.isFavorite(favorite.id)) {
+            favoriteApps.remove(favorite.id)
+            accountViewModel.changeBottomBarItems(BottomBarEditing.unpin(bottomBar, tab))
+            scope.launch { snackbar.showSnackbar(unpinnedText) }
+        } else {
+            // Pinned as an nSite card pins it, and put in the bar, where pinned apps sit.
+            favoriteApps.add(favorite)
+            accountViewModel.changeBottomBarItems(BottomBarEditing.pin(bottomBar, tab))
+            scope.launch { snackbar.showSnackbar(pinnedText) }
+        }
+    }
+
     val current = shown
+    // On a phone the bar holds the frequent actions; Download and full screen go in the menu.
+    val compactBar = !LocalScreenLayout.current.isLargeScreen
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             if (current == null) {
-                TopBarWithBackButton(stringRes(Res.string.front_page_title), nav)
+                if (addToBar == null) {
+                    TopBarWithBackButton(stringRes(Res.string.front_page_title), nav)
+                } else {
+                    TopBarWithBackButton(stringRes(Res.string.front_page_title), nav) {
+                        OverflowMenu { close -> AddToBarItem(close, addToBar) }
+                    }
+                }
             } else {
+                val canDownload = current.html != null
+                val canReadFull = platform.showsPapersInline && current.html != null
+                val readFull = { nav.nav(Route.FrontPageReader(current.edition.day)) }
                 TopBarWithBackButton(editionTitle(current.edition.day), nav) {
                     if (gate == FrontPageGate.READY) {
                         IconButton(onClick = { printSheet = true }) {
                             Icon(MaterialSymbols.AutoAwesome, contentDescription = stringRes(Res.string.front_page_print_again))
                         }
                     }
-                    if (current.html != null) {
+                    IconButton(onClick = { detailsSheet = true }) {
+                        Icon(MaterialSymbols.Info, contentDescription = stringRes(Res.string.front_page_details))
+                    }
+                    if (!compactBar && canDownload) {
                         IconButton(onClick = { download(current) }) {
                             Icon(MaterialSymbols.Download, contentDescription = stringRes(Res.string.front_page_download))
                         }
                     }
-                    if (platform.showsPapersInline && current.html != null) {
-                        IconButton(onClick = { nav.nav(Route.FrontPageReader(current.edition.day)) }) {
+                    if (!compactBar && canReadFull) {
+                        IconButton(onClick = readFull) {
                             Icon(MaterialSymbols.Fullscreen, contentDescription = stringRes(Res.string.front_page_read_full))
+                        }
+                    }
+                    val inMenu = (compactBar && (canDownload || canReadFull)) || addToBar != null
+                    if (inMenu) {
+                        OverflowMenu { close ->
+                            if (compactBar && canReadFull) {
+                                MenuItem(MaterialSymbols.Fullscreen, stringRes(Res.string.front_page_read_full)) {
+                                    close()
+                                    readFull()
+                                }
+                            }
+                            if (compactBar && canDownload) {
+                                MenuItem(MaterialSymbols.Download, stringRes(Res.string.front_page_download)) {
+                                    close()
+                                    download(current)
+                                }
+                            }
+                            addToBar?.let { AddToBarItem(close, it) }
                         }
                     }
                 }
@@ -419,7 +501,6 @@ fun FrontPageScreen(
             if (current != null) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (editions.size > 1) History(editions, current.edition.day, viewModel::selectDay)
-                    Facts(current.edition, onDetails = { detailsSheet = true })
                     if (schedule.enabled) ScheduleLine(schedule) { printSheet = true }
                     ScheduleWarnings(schedule)
                     ObserverLine(
@@ -477,6 +558,8 @@ fun FrontPageScreen(
             Details(
                 current.edition,
                 site,
+                sitePinned = sitePinned,
+                onPinSite = togglePin,
                 onOpenSite =
                     if (launcher.opensNapplets) {
                         { event ->
@@ -741,35 +824,35 @@ private fun ModelPicker(
         )
         return
     }
-    var expanded by remember { mutableStateOf(false) }
+    var picking by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(16.dp)
-    Box {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = 54.dp)
-                .clip(shape)
-                .background(colors.container)
-                .clickable { expanded = true }
-                .padding(start = 16.dp, end = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(MaterialSymbols.AutoAwesome, contentDescription = null, tint = colors.icon, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(stringRes(Res.string.front_page_model), style = MaterialTheme.typography.labelSmall, color = colors.placeholder)
-                Text(models.selected.orEmpty(), style = MaterialTheme.typography.bodyLarge, color = colors.content, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Icon(MaterialSymbols.ExpandMore, contentDescription = null, tint = colors.icon)
+    val selected = models.selected
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 54.dp)
+            .clip(shape)
+            .background(colors.container)
+            .clickable { picking = true }
+            .padding(start = 16.dp, end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(MaterialSymbols.AutoAwesome, contentDescription = null, tint = colors.icon, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(stringRes(Res.string.front_page_model), style = MaterialTheme.typography.labelSmall, color = colors.placeholder)
+            Text(
+                selected?.let { ModelChoices.readableName(it, models.byId[it]?.name) }.orEmpty(),
+                style = MaterialTheme.typography.bodyLarge,
+                color = colors.content,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            models.ids.forEach { id ->
-                DropdownMenuItem(text = { Text(id) }, onClick = {
-                    onModel(id)
-                    expanded = false
-                })
-            }
-        }
+        Icon(MaterialSymbols.ExpandMore, contentDescription = null, tint = colors.icon)
+    }
+    if (picking) {
+        ModelPickerDialog(models.ids, models.byId, selected, onSelect = onModel, onDismiss = { picking = false })
     }
 }
 
@@ -1043,31 +1126,52 @@ private fun ScheduleLine(
     }
 }
 
-/** One quiet line: what the edition read, what it verified, what it cost. The rest is a tap away. */
+/** The top bar's ⋮: the actions that don't earn an icon of their own. */
 @Composable
-private fun Facts(
-    edition: SavedEdition,
-    onDetails: () -> Unit,
-) {
-    val facts =
-        listOfNotNull(
-            pluralStringRes(Res.plurals.front_page_posts_read, edition.posts, edition.posts),
-            pluralStringRes(Res.plurals.front_page_quotes_verified, edition.quotes, edition.quotes),
-            edition.costUsd?.let { formatUsd(it) },
-        ).joinToString(" · ")
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(facts, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-        IconButton(onClick = onDetails) {
-            Icon(MaterialSymbols.Info, contentDescription = stringRes(Res.string.front_page_details), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+private fun OverflowMenu(content: @Composable ColumnScope.(close: () -> Unit) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) {
+            Icon(MaterialSymbols.MoreVert, contentDescription = stringRes(Res.string.more_options))
+        }
+        RoundedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            RoundedMenuSection { content { open = false } }
         }
     }
 }
 
-/** The edition's particulars: code, model, tokens, and anything the check took out. */
+@Composable
+private fun MenuItem(
+    icon: MaterialSymbol,
+    text: String,
+    onClick: () -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(text) },
+        leadingIcon = { Icon(icon, contentDescription = null, modifier = Size20Modifier) },
+        modifier = RoundedMenuItemModifier,
+        onClick = onClick,
+    )
+}
+
+/** "Add to bottom bar": offered only while the front page isn't there ([FrontPageShortcuts.offersBottomBar]). */
+@Composable
+private fun AddToBarItem(
+    close: () -> Unit,
+    onAdd: () -> Unit,
+) = MenuItem(MaterialSymbols.AddToHomeScreen, stringRes(Res.string.front_page_add_to_bar)) {
+    close()
+    onAdd()
+}
+
+/** The edition's particulars: code, counts, model, tokens, cost, and anything the check took out. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Details(
     edition: SavedEdition,
     site: NamedSiteEvent?,
+    sitePinned: Boolean,
+    onPinSite: (NamedSiteEvent) -> Unit,
     onOpenSite: ((NamedSiteEvent) -> Unit)?,
     onShareSite: (NamedSiteEvent) -> Unit,
     modifier: Modifier,
@@ -1076,7 +1180,7 @@ private fun Details(
         Text(stringRes(Res.string.front_page_details), style = MaterialTheme.typography.titleLarge)
         // The reader's public Observer site, once there is one: open it as any nSite, or share it.
         site?.let { event ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 onOpenSite?.let { open ->
                     OutlinedButton(onClick = { open(event) }, shape = RoundedCornerShape(14.dp)) {
                         Icon(MaterialSymbols.Public, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -1089,9 +1193,25 @@ private fun Details(
                     Spacer(Modifier.width(6.dp))
                     Text(stringRes(Res.string.quick_action_share))
                 }
+                // A favorite app, like a pinned nSite, so the site sits in the bottom bar; tap again to unpin.
+                if (sitePinned) {
+                    FilledTonalButton(onClick = { onPinSite(event) }, shape = RoundedCornerShape(14.dp)) {
+                        Icon(MaterialSymbols.PushPin, contentDescription = null, modifier = Modifier.size(18.dp), filled = true)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringRes(Res.string.front_page_observer_pinned_label))
+                    }
+                } else {
+                    OutlinedButton(onClick = { onPinSite(event) }, shape = RoundedCornerShape(14.dp)) {
+                        Icon(MaterialSymbols.PushPin, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringRes(Res.string.front_page_observer_pin))
+                    }
+                }
             }
         }
         DetailRow(stringRes(Res.string.front_page_edition_label), edition.code)
+        DetailRow(stringRes(Res.string.front_page_posts_label), grouped(edition.posts.toLong()))
+        DetailRow(stringRes(Res.string.front_page_quotes_label), grouped(edition.quotes.toLong()))
         DetailRow(stringRes(Res.string.front_page_model), edition.model)
         edition.tokens?.let { tokens ->
             DetailRow(
@@ -1395,26 +1515,18 @@ private fun Progress(
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
             Spacer(Modifier.width(14.dp))
-            Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Column(Modifier.weight(1f)) {
+                Text(text, style = MaterialTheme.typography.bodyLarge)
+                // The print belongs to the account: the reader can go, and is told when it's ready.
+                Text(stringRes(Res.string.front_page_can_leave), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f))
+            }
             TextButton(onClick = onCancel) { Text(stringRes(Res.string.cancel)) }
         }
     }
 }
 
 @Composable
-private fun failureText(run: FrontPageRun.Failed): String =
-    when (run.failure) {
-        WriterFailure.REJECTED -> stringRes(Res.string.front_page_fail_rejected)
-        WriterFailure.NO_CREDIT -> stringRes(Res.string.front_page_fail_credit)
-        WriterFailure.RATE_LIMITED -> stringRes(Res.string.front_page_fail_rate)
-        WriterFailure.UNKNOWN_MODEL -> stringRes(Res.string.front_page_fail_model)
-        WriterFailure.EMPTY -> stringRes(Res.string.front_page_fail_empty)
-        WriterFailure.HTTP -> stringRes(Res.string.front_page_fail_http, run.status ?: 0)
-        WriterFailure.UNSUPPORTED -> stringRes(Res.string.front_page_unsupported)
-        WriterFailure.UNREACHABLE -> stringRes(Res.string.front_page_fail_unreachable)
-        WriterFailure.CUT_OFF -> stringRes(Res.string.front_page_fail_cut_off)
-        WriterFailure.INSECURE_URL -> stringRes(Res.string.front_page_fail_insecure)
-    }
+private fun failureText(run: FrontPageRun.Failed): String = if (run.failure == WriterFailure.HTTP) stringRes(run.failure.sentenceRes(), run.status ?: 0) else stringRes(run.failure.sentenceRes())
 
 /** The boundary's verdict kinds in the reader's words, never the enum's name. */
 @Composable

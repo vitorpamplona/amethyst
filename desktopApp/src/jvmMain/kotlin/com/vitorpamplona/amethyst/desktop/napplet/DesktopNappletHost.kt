@@ -414,7 +414,7 @@ class DesktopNappletHost(
         title: String,
         instanceId: String,
     ): Result<CefNappletSession> {
-        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to read your front page"))
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to read your Observer"))
         val launch = NappletLaunch.forPaper(account.pubKey, title, html).inline(instanceId)
         return runCatching { startInline(launch, account, useTor = torEnabled() && networkChoices.useTor(launch.identity.coordinate)) }
     }

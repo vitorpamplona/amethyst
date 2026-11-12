@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.launch
+import kotlin.reflect.KClass
 
 /**
  * The navigation shell around [content] at every window size: the modal drawer (phones), the rail
@@ -473,9 +474,23 @@ private fun DeckSplit(
 @Composable
 private fun notificationPanelShown(nav: Nav): Boolean {
     if (!LocalScreenLayout.current.hasRoomForNotificationPanel) return false
-    val onNotifications by remember(nav) { derivedStateOf { nav.currentRoute is Route.Notification } }
-    return !onNotifications
+    val panelFree by remember(nav) { derivedStateOf { nav.currentRoute::class in PanelFreeRoutes } }
+    return !panelFree
 }
+
+/**
+ * Screens the docked notification panel stays away from: the notifications themselves, and the
+ * screens that want the whole pane (the paper and the nSite/napplet browser). A new full-width
+ * screen is one more entry here, plus `capWidth = false` where it is registered.
+ */
+val PanelFreeRoutes: Set<KClass<out Route>> =
+    setOf(
+        Route.Notification::class,
+        Route.FrontPage::class,
+        Route.FrontPageReader::class,
+        Route.NostrApp::class,
+        Route.Browser::class,
+    )
 
 /**
  * Wide, landscape, tall windows: the drawer is permanently docked on the left, the bottom bar

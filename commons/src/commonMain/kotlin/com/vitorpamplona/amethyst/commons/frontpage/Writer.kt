@@ -318,6 +318,8 @@ class AgentModel(
     val id: String,
     val promptPerToken: Double? = null,
     val completionPerToken: Double? = null,
+    /** The endpoint's own name for it ("Anthropic: Claude Sonnet 4.5"), when it gives one beside the id. */
+    val name: String? = null,
 ) {
     val priced get() = promptPerToken != null && completionPerToken != null
 }
@@ -340,7 +342,9 @@ fun readModels(body: String): List<AgentModel> {
                 val pricing = entry["pricing"] as? JsonObject
 
                 fun price(name: String) = (pricing?.get(name) as? JsonPrimitive)?.content?.toDoubleOrNull()?.takeIf { it >= 0 && it.isFinite() }
-                id?.let { AgentModel(it, price("prompt"), price("completion")) }
+                // Gemini names its models in `name` ("models/…"): only a name beside an id is a label.
+                val label = (entry["name"] as? JsonPrimitive)?.content?.trim()?.takeIf { entry["id"] != null && it.isNotEmpty() && it != id }
+                id?.let { AgentModel(it, price("prompt"), price("completion"), label) }
             }
             else -> null
         }

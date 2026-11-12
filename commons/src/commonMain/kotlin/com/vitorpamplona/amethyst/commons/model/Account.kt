@@ -154,6 +154,8 @@ import com.vitorpamplona.amethyst.commons.model.nip89AppHandlers.AppRecommendati
 import com.vitorpamplona.amethyst.commons.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditKind
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditor
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEdits
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyState
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.readAgentKeysForRewrite
@@ -3790,21 +3792,32 @@ class Account(
         }
     }
 
+    /**
+     * Saves, re-orders and removes AI agent keys one edit at a time, with the edit's progress in
+     * its state: the settings screen shows it, and leaving the screen never drops a save halfway.
+     */
+    val agentKeyEditor =
+        AgentKeyEditor(
+            scope = scope,
+            readBeforeWriting = ::readAgentKeysBeforeWriting,
+            rewrite = { kind, key ->
+                when (kind) {
+                    AgentKeyEditKind.SAVE -> agentKeys.add(key)
+                    AgentKeyEditKind.MAKE_DEFAULT -> agentKeys.setPreferred(key)
+                    AgentKeyEditKind.REMOVE -> agentKeys.remove(key)
+                }
+            },
+            current = { agentKeys.getAgentKeyEvent() },
+            keepHere = { cache.justConsumeMyOwnEvent(it) },
+            publish = { client.publishAndConfirm(it, outboxRelays.flow.value, untilFirstAccept = true) },
+        )
+
     /** Saves [key] as the preferred AI agent key (adding it if new) and publishes the event. */
-    suspend fun addAgentKey(key: AgentKeyTag) {
-        readAgentKeysBeforeWriting()
-        agentKeys.add(key)?.let { sendMyPublicAndPrivateOutbox(it) }
-    }
+    suspend fun addAgentKey(key: AgentKeyTag) = agentKeyEditor.run(AgentKeyEditKind.SAVE, key)
 
-    suspend fun setPreferredAgentKey(key: AgentKeyTag) {
-        readAgentKeysBeforeWriting()
-        agentKeys.setPreferred(key)?.let { sendMyPublicAndPrivateOutbox(it) }
-    }
+    suspend fun setPreferredAgentKey(key: AgentKeyTag) = agentKeyEditor.run(AgentKeyEditKind.MAKE_DEFAULT, key)
 
-    suspend fun removeAgentKey(key: AgentKeyTag) {
-        readAgentKeysBeforeWriting()
-        agentKeys.remove(key)?.let { sendMyPublicAndPrivateOutbox(it) }
-    }
+    suspend fun removeAgentKey(key: AgentKeyTag) = agentKeyEditor.run(AgentKeyEditKind.REMOVE, key)
 
     suspend fun hideWord(word: String) {
         sendMyPublicAndPrivateOutbox(muteList.hideWord(word))

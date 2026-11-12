@@ -476,6 +476,15 @@
     <string name="pow_mining_title">Mining proof of work</string>
     <string name="pow_notification_sending">Sending to relays…</string>
     <string name="pow_notification_cancel_all">Cancel</string>
+    <string name="front_page_print_channel_name">The Observer, printing</string>
+    <string name="front_page_print_channel_description">Shows The Observer while it prints, so it can finish after you leave the app.</string>
+    <string name="front_page_print_cancel">Cancel</string>
+    <string name="front_page_print_title">Printing The Observer</string>
+    <string name="front_page_print_step_probe">Checking your ranking</string>
+    <string name="front_page_print_step_pull">Reading posts · %1$d of %2$d</string>
+    <string name="front_page_print_step_write">Writing</string>
+    <string name="front_page_print_step_fix">Fixing what the check found</string>
+    <string name="front_page_print_step_check">Checking quotes, pictures and links</string>
     <string name="pow_time_left">≈ %1$s left</string>
     <string name="pow_time_left_soon">any moment now</string>
     <string name="pow_estimate_instant">&lt;1 s</string>

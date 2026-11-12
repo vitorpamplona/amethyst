@@ -633,6 +633,15 @@
             android:stopWithTask="false"
             android:exported="false" />
 
+        <!-- Keeps a front page print the reader started alive after they leave the app: a print
+             can run past shortService's ~3 min, and dataSync (6 h a day on Android 15) covers it.
+             It starts when the reader presses Print, so always from the foreground. -->
+        <service
+            android:name=".service.frontpage.FrontPagePrintingForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

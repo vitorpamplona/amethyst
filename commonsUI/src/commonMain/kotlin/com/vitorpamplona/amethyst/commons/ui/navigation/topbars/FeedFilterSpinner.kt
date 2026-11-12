@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -57,11 +56,9 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.feeds.CommunityName
 import com.vitorpamplona.amethyst.commons.feeds.CustomFeedName
 import com.vitorpamplona.amethyst.commons.feeds.FavoriteAlgoFeedName
@@ -137,13 +134,15 @@ import com.vitorpamplona.amethyst.commons.resources.select_an_option
 import com.vitorpamplona.amethyst.commons.resources.unfollow_geohash
 import com.vitorpamplona.amethyst.commons.ui.components.InformationDialog
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSectionLabel
+import com.vitorpamplona.amethyst.commons.ui.components.M3LazyActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastSeverity
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.platform.AroundMeLocationLabel
 import com.vitorpamplona.amethyst.commons.ui.platform.GeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.rememberDvmHeartbeatFresh
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
@@ -589,37 +588,18 @@ private fun GroupedFeedFilterDialog(
         )
     }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        ) {
-            LazyColumn(
-                modifier = Modifier.padding(vertical = 20.dp),
-            ) {
-                item {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-                    )
-                }
-
-                grouped.forEach { (group, items) ->
-                    item(key = group) {
-                        GroupSection(
-                            label = stringRes(group.labelRes),
-                            items = items,
-                            isChipLayout = group == FeedGroup.HASHTAGS,
-                            filtersNotifications = filtersNotifications,
-                            onSelect = onSelect,
-                            onInfo = { title, text -> infoItem = title to text },
-                            onRenderItem = onRenderItem,
-                        )
-                    }
-                }
+    M3LazyActionDialog(title = title, onDismiss = onDismiss) {
+        grouped.forEach { (group, items) ->
+            item(key = group) {
+                GroupSection(
+                    label = stringRes(group.labelRes),
+                    items = items,
+                    isChipLayout = group == FeedGroup.HASHTAGS,
+                    filtersNotifications = filtersNotifications,
+                    onSelect = onSelect,
+                    onInfo = { title, text -> infoItem = title to text },
+                    onRenderItem = onRenderItem,
+                )
             }
         }
     }
@@ -638,20 +618,9 @@ private fun GroupSection(
 ) {
     val infoLabel = stringRes(Res.string.follow_list_info)
 
-    Surface(
-        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
+    M3ActionSection {
         Column {
-            Text(
-                text = label.uppercase(),
-                fontSize = Font12SP,
-                letterSpacing = 0.8.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp),
-            )
+            M3ActionSectionLabel(label)
 
             if (isChipLayout) {
                 FlowRow(

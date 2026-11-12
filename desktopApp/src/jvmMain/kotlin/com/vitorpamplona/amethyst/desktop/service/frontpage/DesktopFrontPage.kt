@@ -25,16 +25,19 @@ import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageSchedule
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduleWatcher
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduler
+import com.vitorpamplona.amethyst.commons.frontpage.PrintJobEnd
 import com.vitorpamplona.amethyst.commons.frontpage.SavedEdition
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotifKind
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationSpec
 import com.vitorpamplona.amethyst.commons.moderation.notifications.SendResult
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.front_page_failed_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_needs_you_body
 import com.vitorpamplona.amethyst.commons.resources.front_page_needs_you_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_ready_title
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.loadPrintEndSentence
 import com.vitorpamplona.amethyst.desktop.app.DesktopNotifications
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
@@ -70,6 +73,11 @@ class DesktopFrontPageNotifier(
     ) = send(account, loadStringRes(Res.string.front_page_ready_title), edition.headline.orEmpty())
 
     override suspend fun needsYou(account: HexKey) = send(account, loadStringRes(Res.string.front_page_needs_you_title), loadStringRes(Res.string.front_page_needs_you_body))
+
+    override suspend fun printFailed(
+        account: HexKey,
+        end: PrintJobEnd,
+    ) = send(account, loadStringRes(Res.string.front_page_failed_title), loadPrintEndSentence(end).orEmpty())
 
     private suspend fun send(
         account: HexKey,

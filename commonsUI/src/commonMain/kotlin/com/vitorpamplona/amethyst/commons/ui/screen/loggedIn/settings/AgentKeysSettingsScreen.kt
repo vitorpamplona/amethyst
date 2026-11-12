@@ -66,6 +66,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -95,6 +96,10 @@ import com.vitorpamplona.amethyst.commons.agents.connectOpenRouter
 import com.vitorpamplona.amethyst.commons.agents.probeAgentKey
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditFailure
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditKind
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditState
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEdits
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.action_paste
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_add
@@ -127,6 +132,12 @@ import com.vitorpamplona.amethyst.commons.resources.agent_keys_rejected
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_remove_body
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_remove_title
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_runs_locally
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_save_failed
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_save_not_accepted
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_save_signer
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_save_unreachable
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_save_unreadable
+import com.vitorpamplona.amethyst.commons.resources.agent_keys_saving
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_status_none
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_status_using
 import com.vitorpamplona.amethyst.commons.resources.agent_keys_tagline
@@ -157,6 +168,7 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -172,6 +184,10 @@ fun AgentKeysSettingsScreen(
 ) {
     val keys by accountViewModel.account.agentKeys.flow
         .collectAsStateWithLifecycle()
+    val editor = accountViewModel.account.agentKeyEditor
+    // The save runs on the account, so it finishes after the screen goes; only its outcome is forgotten.
+    val edit by editor.state.collectAsStateWithLifecycle()
+    DisposableEffect(editor) { onDispose { editor.clearResult() } }
     var adding by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -186,15 +202,16 @@ fun AgentKeysSettingsScreen(
                 .animateContentSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            AgentHero(using = keys.firstOrNull()?.let { AgentProviderPresets.displayName(it.url) })
+            AgentHero(using = usingNow(keys, edit), edit = edit)
 
             if (keys.isNotEmpty()) {
                 SavedKeys(
                     keys = keys,
                     adding = adding,
+                    edit = edit,
                     onAdd = { adding = !adding },
-                    onMakePreferred = { key -> accountViewModel.launchSigner { accountViewModel.account.setPreferredAgentKey(key) } },
-                    onRemove = { key -> accountViewModel.launchSigner { accountViewModel.account.removeAgentKey(key) } },
+                    onMakePreferred = { key -> editor.submit(AgentKeyEditKind.MAKE_DEFAULT, key) },
+                    onRemove = { key -> editor.submit(AgentKeyEditKind.REMOVE, key) },
                 )
             }
 
@@ -203,10 +220,9 @@ fun AgentKeysSettingsScreen(
                 onShowGrid = { adding = true },
                 onTest = { key -> accountViewModel.httpClientBuilder.probeAgentKey(key) },
                 onConnectOpenRouter = { donePage, openBrowser -> accountViewModel.httpClientBuilder.connectOpenRouter(donePage, openBrowser = openBrowser) },
-                onSave = { key ->
-                    accountViewModel.launchSigner { accountViewModel.account.addAgentKey(key) }
-                    adding = false
-                },
+                onSave = { key -> editor.submit(AgentKeyEditKind.SAVE, key) },
+                onSaved = { adding = false },
+                saving = edit.isBusy,
                 compactStart = keys.isEmpty() && !adding,
             )
             Spacer(Modifier.height(24.dp))
@@ -214,9 +230,25 @@ fun AgentKeysSettingsScreen(
     }
 }
 
+/**
+ * The provider the chip names: the one an edit just put first as soon as it is on this device
+ * (the key list catches up a moment later), else the first saved key.
+ */
+private fun usingNow(
+    keys: List<AgentKeyTag>,
+    edit: AgentKeyEditState,
+): String? {
+    if (edit is AgentKeyEditState.Busy && edit.savedHere && edit.kind != AgentKeyEditKind.REMOVE) return AgentProviderPresets.displayName(edit.url)
+    if (edit is AgentKeyEditState.Done && edit.kind != AgentKeyEditKind.REMOVE) return AgentProviderPresets.displayName(edit.url)
+    return keys.firstOrNull()?.let { AgentProviderPresets.displayName(it.url) }
+}
+
 /** What the screen is for and which key is in use: a quiet surface in the app's own colours, like the front page's. */
 @Composable
-private fun AgentHero(using: String?) {
+private fun AgentHero(
+    using: String?,
+    edit: AgentKeyEditState,
+) {
     var showTip by remember { mutableStateOf(false) }
     val scheme = MaterialTheme.colorScheme
 
@@ -254,20 +286,40 @@ private fun AgentHero(using: String?) {
             }
 
             // "Using", not "Connected": saving a key says nothing about whether it works right now.
+            // While an edit reads the relays and signs, the chip says so; once the new list is on
+            // this device it names the provider, with the spinner until a relay has taken it.
+            val busy = edit is AgentKeyEditState.Busy
+            val savingHere = busy && !(edit as AgentKeyEditState.Busy).savedHere
             Surface(shape = CircleShape, color = scheme.surfaceContainerHighest) {
-                Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(if (using != null) PillGood else scheme.onSurfaceVariant.copy(alpha = 0.6f)),
-                    )
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp).animateContentSize(), verticalAlignment = Alignment.CenterVertically) {
+                    if (busy) {
+                        CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 2.dp, color = scheme.primary)
+                    } else {
+                        Box(
+                            Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(if (using != null) PillGood else scheme.onSurfaceVariant.copy(alpha = 0.6f)),
+                        )
+                    }
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        if (using != null) stringRes(Res.string.agent_keys_status_using, using) else stringRes(Res.string.agent_keys_status_none),
+                        when {
+                            savingHere -> stringRes(Res.string.agent_keys_saving)
+                            using != null -> stringRes(Res.string.agent_keys_status_using, using)
+                            else -> stringRes(Res.string.agent_keys_status_none)
+                        },
                         style = MaterialTheme.typography.labelLarge,
                         color = scheme.onSurface,
                     )
+                }
+            }
+
+            (edit as? AgentKeyEditState.Failed)?.let { failed ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(MaterialSymbols.Error, contentDescription = null, tint = scheme.error, modifier = Modifier.size(18.dp), filled = true)
+                    Spacer(Modifier.width(8.dp))
+                    Text(editFailureText(failed.failure), style = MaterialTheme.typography.bodyMedium, color = scheme.error)
                 }
             }
 
@@ -278,10 +330,22 @@ private fun AgentHero(using: String?) {
     }
 }
 
+/** Why an edit didn't go through, in a sentence: what happened, and whether anything changed. */
+@Composable
+private fun editFailureText(failure: AgentKeyEditFailure): String =
+    when (failure) {
+        AgentKeyEditFailure.RELAYS_UNREACHABLE -> stringRes(Res.string.agent_keys_save_unreachable)
+        AgentKeyEditFailure.SIGNER_REFUSED -> stringRes(Res.string.agent_keys_save_signer)
+        AgentKeyEditFailure.NOT_ACCEPTED -> stringRes(Res.string.agent_keys_save_not_accepted)
+        AgentKeyEditFailure.UNREADABLE -> stringRes(Res.string.agent_keys_save_unreadable)
+        AgentKeyEditFailure.FAILED -> stringRes(Res.string.agent_keys_save_failed)
+    }
+
 @Composable
 private fun SavedKeys(
     keys: List<AgentKeyTag>,
     adding: Boolean,
+    edit: AgentKeyEditState,
     onAdd: () -> Unit,
     onMakePreferred: (AgentKeyTag) -> Unit,
     onRemove: (AgentKeyTag) -> Unit,
@@ -329,15 +393,22 @@ private fun SavedKeys(
                             )
                         }
                     }
-                    IconButton(onClick = { if (!preferred) onMakePreferred(key) }) {
-                        Icon(
-                            MaterialSymbols.Star,
-                            contentDescription = stringRes(if (preferred) Res.string.agent_keys_preferred else Res.string.agent_keys_make_preferred),
-                            tint = if (preferred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            filled = preferred,
-                        )
+                    // The row an edit is about spins; every row waits for it, as the screen saves one edit at a time.
+                    if (edit is AgentKeyEditState.Busy && AgentKeyEdits.sameUrl(edit.url, key.url)) {
+                        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        }
+                    } else {
+                        IconButton(onClick = { if (!preferred) onMakePreferred(key) }, enabled = !edit.isBusy) {
+                            Icon(
+                                MaterialSymbols.Star,
+                                contentDescription = stringRes(if (preferred) Res.string.agent_keys_preferred else Res.string.agent_keys_make_preferred),
+                                tint = if (preferred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                filled = preferred,
+                            )
+                        }
                     }
-                    IconButton(onClick = { confirmRemoval = key }) {
+                    IconButton(onClick = { confirmRemoval = key }, enabled = !edit.isBusy) {
                         Icon(MaterialSymbols.Delete, contentDescription = stringRes(Res.string.remove), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -394,7 +465,9 @@ private fun AddAgentKey(
     onShowGrid: () -> Unit,
     onTest: suspend (AgentKeyTag) -> AgentKeyProbeResult,
     onConnectOpenRouter: suspend (donePageText: String, openBrowser: (String) -> Unit) -> OpenRouterConnectResult,
-    onSave: (AgentKeyTag) -> Unit,
+    onSave: (AgentKeyTag) -> Deferred<AgentKeyEditState>?,
+    onSaved: () -> Unit,
+    saving: Boolean,
     compactStart: Boolean,
 ) {
     val scope = rememberCoroutineScope()
@@ -420,7 +493,7 @@ private fun AddAgentKey(
     // key to every half-typed host on the way (https://api.ex, https://api.exa, …).
     val isCustom = selected == AgentProviderPresets.CUSTOM
     var testNow by remember { mutableStateOf(false) }
-    val canSave = canCheck && !testing && result != null && result !is AgentKeyProbeResult.Rejected
+    val canSave = canCheck && !testing && result != null && result !is AgentKeyProbeResult.Rejected && !saving
 
     fun select(next: AgentProviderPreset) {
         preset = next
@@ -617,14 +690,26 @@ private fun AddAgentKey(
                             Button(
                                 enabled = canSave,
                                 onClick = {
-                                    onSave(AgentKeyTag(key.trim(), url.trim()))
-                                    preset = null
-                                    key = ""
-                                    showKey = false
-                                    result = null
+                                    val saved = onSave(AgentKeyTag(key.trim(), url.trim())) ?: return@Button
+                                    // The form stays until the key is saved: a failure keeps what was typed.
+                                    scope.launch {
+                                        if (saved.await() is AgentKeyEditState.Done) {
+                                            preset = null
+                                            key = ""
+                                            showKey = false
+                                            result = null
+                                            onSaved()
+                                        }
+                                    }
                                 },
                             ) {
-                                Text(stringRes(Res.string.save))
+                                if (saving) {
+                                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = LocalContentColor.current)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(stringRes(Res.string.agent_keys_saving))
+                                } else {
+                                    Text(stringRes(Res.string.save))
+                                }
                             }
                         }
                     }

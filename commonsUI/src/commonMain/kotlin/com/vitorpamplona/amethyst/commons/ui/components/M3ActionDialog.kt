@@ -28,6 +28,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -41,9 +45,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 
@@ -78,6 +84,55 @@ fun M3ActionDialog(
             }
         }
     }
+}
+
+/**
+ * [M3ActionDialog] for a long list: the same surface and title, a [header] that stays put above
+ * the rows (a search field), and the rows laid out lazily, so hundreds of them cost what is on
+ * screen. The feed selector's grouped dialog and the model picker are built on it.
+ */
+@Composable
+fun M3LazyActionDialog(
+    title: String,
+    onDismiss: () -> Unit,
+    header: (@Composable ColumnScope.() -> Unit)? = null,
+    listState: LazyListState = rememberLazyListState(),
+    content: LazyListScope.() -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ) {
+            Column(modifier = Modifier.padding(vertical = 20.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                header?.invoke(this)
+                LazyColumn(state = listState, modifier = Modifier.weight(1f, fill = false)) { content() }
+            }
+        }
+    }
+}
+
+/** A section's name over its rows, as the grouped dialogs print it: small, spaced capitals, centred. */
+@Composable
+fun M3ActionSectionLabel(label: String) {
+    Text(
+        text = label.uppercase(),
+        fontSize = Font12SP,
+        letterSpacing = 0.8.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp),
+    )
 }
 
 @Composable

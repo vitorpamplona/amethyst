@@ -154,6 +154,7 @@ import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettingsMigra
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.frontpage.AndroidFrontPageNotifier
+import com.vitorpamplona.amethyst.service.frontpage.AndroidFrontPagePrintHost
 import com.vitorpamplona.amethyst.service.frontpage.AndroidFrontPageScheduler
 import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
@@ -1247,6 +1248,8 @@ class AppModules(
             installs = DataStoreFrontPageInstallStore(appStores),
             // How this phone appears in the reader's synced schedule ("Printed each morning by Pixel 8").
             installInfo = FrontPageInstallInfo(name = Build.MODEL?.trim()?.ifEmpty { null } ?: "Android", app = "amethyst-android"),
+            // A print the reader starts runs in a foreground service, so leaving the app doesn't stop it.
+            host = AndroidFrontPagePrintHost(appContext),
         )
     }
 

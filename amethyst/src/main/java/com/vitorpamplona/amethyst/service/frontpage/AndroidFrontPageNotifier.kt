@@ -30,22 +30,25 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageNotifier
+import com.vitorpamplona.amethyst.commons.frontpage.PrintJobEnd
 import com.vitorpamplona.amethyst.commons.frontpage.SavedEdition
 import com.vitorpamplona.amethyst.commons.frontpage.npubOf
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.frontPageUri
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.front_page_channel
 import com.vitorpamplona.amethyst.commons.resources.front_page_channel_id
+import com.vitorpamplona.amethyst.commons.resources.front_page_failed_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_needs_you_body
 import com.vitorpamplona.amethyst.commons.resources.front_page_needs_you_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_ready_title
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.loadPrintEndSentence
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
- * "Your paper is ready" with the lead headline, or "Your paper is waiting" when a scheduled
- * edition needs the reader. Tapping opens the front page on that edition, through the same
+ * "Today's Observer is ready" with the lead headline, "Your Observer is waiting" when a scheduled
+ * edition needs the reader, or why a print the reader started failed. Tapping opens the front page on that edition, through the same
  * `amethyst:` route any deep link takes, switching to the account it was printed for.
  */
 class AndroidFrontPageNotifier(
@@ -60,6 +63,14 @@ class AndroidFrontPageNotifier(
 
     override suspend fun needsYou(account: HexKey) {
         post(idFor(account), loadStringRes(Res.string.front_page_needs_you_title), loadStringRes(Res.string.front_page_needs_you_body), frontPageUri(accountNpub = npubOf(account)))
+    }
+
+    /** A print the reader started gave no paper while they were away: why, with a tap back to the front page. */
+    override suspend fun printFailed(
+        account: HexKey,
+        end: PrintJobEnd,
+    ) {
+        post(idFor(account), loadStringRes(Res.string.front_page_failed_title), loadPrintEndSentence(end).orEmpty(), frontPageUri(accountNpub = npubOf(account)))
     }
 
     private suspend fun post(
