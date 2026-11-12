@@ -9550,15 +9550,13 @@
     <string name="front_page_unsupported">The Observer isn't available on this device yet.</string>
     <string name="front_page_not_ready">Your rankings are on their way. Try again in a few minutes.</string>
     <string name="front_page_step_probe">Checking your ranking</string>
-    <string name="front_page_step_pull">Reading posts · %1$d of %2$d</string>
-    <plurals name="front_page_step_write">
-        <item quantity="one">Writing · %1$s character</item>
-        <item quantity="other">Writing · %1$s characters</item>
-    </plurals>
-    <plurals name="front_page_step_fix">
-        <item quantity="one">Fixing what the check refused · %1$s character</item>
-        <item quantity="other">Fixing what the check refused · %1$s characters</item>
-    </plurals>
+    <string name="front_page_step_pull">Reading the desks · %1$d of %2$d</string>
+    <string name="front_page_step_waiting">Waiting for the model… %1$s</string>
+    <string name="front_page_step_thinking">Thinking…</string>
+    <string name="front_page_step_writing">Writing the page</string>
+    <string name="front_page_step_writing_section">Writing: %1$s</string>
+    <string name="front_page_step_fixing">Fixing the page</string>
+    <string name="front_page_step_all_at_once">Writing (this provider sends the page all at once)</string>
     <string name="front_page_step_check">Checking quotes, pictures and links</string>
     <string name="front_page_edition">No. %1$s</string>
     <string name="front_page_fixed_once">Fixed once</string>
@@ -9575,7 +9573,7 @@
     <string name="front_page_fail_empty">Your AI answered without a page. Try again.</string>
     <string name="front_page_fail_http">Your AI provider answered with an error (%1$d).</string>
     <string name="front_page_print_estimate">%1$s · ≈ %2$s</string>
-    <string name="front_page_banner_pull">Reading posts for your Observer… %1$d/%2$d</string>
+    <string name="front_page_banner_pull">Reading the desks for your Observer… %1$d/%2$d</string>
     <string name="front_page_banner_write">Writing your Observer…</string>
     <string name="front_page_banner_check">Checking your Observer…</string>
     <string name="front_page_banner_probe">Printing your Observer…</string>
@@ -9623,8 +9621,10 @@
         <item quantity="one">Every hour at :%2$s</item>
         <item quantity="other">Every %1$d hours at :%2$s</item>
     </plurals>
-    <string name="front_page_read_full">Read full screen</string>
     <string name="front_page_details">About this edition</string>
+    <string name="front_page_past_editions">Past editions</string>
+    <string name="front_page_back_to_today">Back to today</string>
+    <string name="front_page_on_observer_site">On your Observer site</string>
     <string name="front_page_edition_label">Edition</string>
     <string name="front_page_tokens_label">Tokens</string>
     <string name="front_page_cost_label">Cost</string>
@@ -9663,6 +9663,30 @@
     <string name="front_page_job_failed">Couldn't print your Observer</string>
     <string name="front_page_job_hide">Hide</string>
     <string name="front_page_banner_publish">Publishing your Observer…</string>
+    <string name="front_page_banner_waiting">Waiting for the model…</string>
+    <string name="front_page_banner_thinking">Thinking about your Observer…</string>
+    <string name="front_page_show_details">Show details</string>
+    <string name="front_page_hide_details">Hide details</string>
+    <string name="front_page_print_details">Print details</string>
+    <string name="front_page_reasoning">The model's reasoning</string>
+    <string name="front_page_log_asked">Asked %1$s</string>
+    <string name="front_page_log_read">Read the desks · desks: %1$d · posts: %2$s</string>
+    <string name="front_page_log_request_sent">Request sent · round %1$d</string>
+    <string name="front_page_log_first_byte">The provider answered</string>
+    <string name="front_page_log_thinking">The model started thinking</string>
+    <string name="front_page_log_writing">The model started writing the page</string>
+    <string name="front_page_log_all_at_once">This provider sends the page all at once</string>
+    <string name="front_page_log_section">Section: %1$s</string>
+    <string name="front_page_log_written">Writing finished · characters: %1$s</string>
+    <string name="front_page_log_quotes">Quotes checked · verified: %1$d · taken out: %2$d</string>
+    <string name="front_page_log_repair">Sent back to fix · problems: %1$d</string>
+    <string name="front_page_log_passed">The page passed the check</string>
+    <string name="front_page_log_refused">The page didn't pass the check · problems: %1$d</string>
+    <string name="front_page_log_published">Published to your Observer site</string>
+    <string name="front_page_can_leave_desktop">You can use the app meanwhile. We'll tell you when it's ready.</string>
+    <string name="front_page_quit_title">Your Observer is still printing</string>
+    <string name="front_page_quit_text">Quitting now stops the print, and your AI provider may already have charged for it. Keep printing hides the window; Amethyst stays open until the paper is ready, then tells you.</string>
+    <string name="front_page_quit_and_cancel">Quit and cancel</string>
     <string name="front_page_print_busy">A print is already running on this device. Try again once it's done.</string>
     <string name="front_page_cancel_printing">Cancel printing</string>
     <string name="front_page_cancel_confirm_title">Cancel this print?</string>

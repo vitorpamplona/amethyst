@@ -61,13 +61,14 @@ fun failureFor(status: Int): WriterFailure =
 expect suspend fun IRoleBasedHttpClientBuilder.listAgentModels(key: AgentKeyTag): List<AgentModel>
 
 /**
- * One Chat Completions call, streamed so the reader sees the page arrive ([onText] gets
- * the characters so far); non-streamed when the provider refuses a stream.
+ * One Chat Completions call, streamed so the reader sees the model think and the page arrive
+ * ([onEvent]: sent, first byte, reasoning, text); non-streamed when the provider refuses a stream,
+ * said with [WriterEvent.AllAtOnce] before the whole answer comes.
  * @throws WriterException
  */
 expect suspend fun IRoleBasedHttpClientBuilder.chatComplete(
     key: AgentKeyTag,
     model: String,
     messages: List<ChatMessage>,
-    onText: (Int) -> Unit,
+    onEvent: (WriterEvent) -> Unit,
 ): Written

@@ -30,7 +30,7 @@ actual suspend fun IRoleBasedHttpClientBuilder.chatComplete(
     key: AgentKeyTag,
     model: String,
     messages: List<ChatMessage>,
-    onText: (Int) -> Unit,
+    onEvent: (WriterEvent) -> Unit,
 ): Written = throw WriterException(WriterFailure.UNSUPPORTED)
 
 actual fun paperBoundary(): PaperBoundary? = null

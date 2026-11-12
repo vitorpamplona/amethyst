@@ -110,6 +110,7 @@ fun DisplayBroadcastProgress(
                             },
                             onHide = printer::hideJob,
                             onDismiss = printer::dismissJob,
+                            log = printer.log,
                         )
                     }
                 },

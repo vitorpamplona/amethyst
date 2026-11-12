@@ -522,17 +522,9 @@ class CefNappletSession(
                     source: String,
                     line: Int,
                 ): Boolean {
-                    // A front page's scroll, from the guard extension's reader: kept out of the log.
-                    val view = offscreen
-                    if (view != null && launch.profile == HostProfile.PAPER) {
-                        PaperScrollReports.parse(message, source)?.let { (top, max) ->
-                            view.reportScroll(top, max)
-                            return true
-                        }
-                    }
                     // A link the reader clicked in a front page, which Chromium would not open itself.
                     if (launch.profile == HostProfile.PAPER) {
-                        PaperScrollReports.parseLink(message, source)?.let { url ->
+                        PaperLinkReports.parse(message, source)?.let { url ->
                             if (launch.profile.opensLinks) openLink(url)
                             return true
                         }

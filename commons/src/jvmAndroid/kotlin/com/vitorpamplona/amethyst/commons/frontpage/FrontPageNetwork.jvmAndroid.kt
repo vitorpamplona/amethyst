@@ -86,7 +86,7 @@ actual suspend fun IRoleBasedHttpClientBuilder.chatComplete(
     key: AgentKeyTag,
     model: String,
     messages: List<ChatMessage>,
-    onText: (Int) -> Unit,
+    onEvent: (WriterEvent) -> Unit,
 ): Written =
     withContext(Dispatchers.IO) {
         val url = root(key) + "/chat/completions"
@@ -96,18 +96,25 @@ actual suspend fun IRoleBasedHttpClientBuilder.chatComplete(
         try {
             // A page takes minutes to write: no read timeout between streamed chunks of that size.
             val client = okHttpClientForMoney(url).newBuilder().readTimeout(5, TimeUnit.MINUTES).build()
+            onEvent(WriterEvent.Sent(streaming = true))
             client.newCall(call(stream = true)).executeAsync().use { response ->
                 val isStream = (response.body.contentType()?.toString() ?: response.header("Content-Type").orEmpty()).contains("text/event-stream")
                 when {
-                    response.isSuccessful && isStream -> return@withContext readStream(response, onText)
-                    response.isSuccessful -> return@withContext readCompletion(response.body.string()).also { onText(it.text.length) }
+                    response.isSuccessful && isStream -> return@withContext readStream(response, onEvent)
+                    response.isSuccessful -> {
+                        // Asked for a stream, answered whole: the page comes all at once, at the end.
+                        onEvent(WriterEvent.AllAtOnce)
+                        return@withContext readCompletion(response.body.string()).also { onEvent(WriterEvent.Text(it.text, it.text.length)) }
+                    }
                     // A provider that refuses streaming says so with one of these; try once without.
                     response.code !in setOf(400, 415, 422) -> throw failure(response)
                 }
             }
+            onEvent(WriterEvent.Sent(streaming = false))
+            onEvent(WriterEvent.AllAtOnce)
             client.newCall(call(stream = false)).executeAsync().use { response ->
                 if (!response.isSuccessful) throw failure(response)
-                readCompletion(response.body.string()).also { onText(it.text.length) }
+                readCompletion(response.body.string()).also { onEvent(WriterEvent.Text(it.text, it.text.length)) }
             }
         } catch (e: CancellationException) {
             throw e
@@ -130,9 +137,9 @@ private fun failure(response: Response): WriterException {
 
 private suspend fun readStream(
     response: Response,
-    onText: (Int) -> Unit,
+    onEvent: (WriterEvent) -> Unit,
 ): Written {
-    val reader = StreamReader(onText)
+    val reader = StreamReader(onEvent)
     val source = response.body.source()
     while (true) {
         currentCoroutineContext().ensureActive()

@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -187,28 +188,6 @@ class FrontPageViewModel(
     val run = printer.run
     val editions = printer.editions
 
-    private val _selectedDay = MutableStateFlow(initialDay)
-
-    /** The open edition's day; null opens the newest. */
-    val selectedDay = _selectedDay.asStateFlow()
-
-    val shown: StateFlow<ShownEdition?> =
-        combine(_selectedDay, printer.editions) { day, kept -> kept.firstOrNull { it.day == day } ?: kept.firstOrNull() }
-            // The page is read again only when it is another page: a history refresh isn't one.
-            .distinctUntilChanged { a, b -> a?.day == b?.day && a?.code == b?.code && a?.sha256 == b?.sha256 && a?.published == b?.published }
-            .flatMapLatest { edition ->
-                if (edition == null) {
-                    flowOf<ShownEdition?>(null)
-                } else {
-                    flow<ShownEdition?> { emit(ShownEdition(edition, printer.html(edition.day))) }
-                }
-            }.stateIn<ShownEdition?>(viewModelScope, SharingStarted.Eagerly, null)
-
-    /** One print's estimated cost with the picked model; null when the endpoint lists no prices. */
-    val estimate: StateFlow<Double?> =
-        combine(_models, printer.editions) { models, _ -> printer.estimate(models.selectedModel) }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
-
     /** The edit on its way, if any: the switches and the time show it, and every control waits for it. */
     private val _schedulePending = MutableStateFlow<PendingSchedule?>(null)
     val schedulePending = _schedulePending.asStateFlow()
@@ -230,6 +209,57 @@ class FrontPageViewModel(
             }
             shown
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MorningScheduleView())
+
+    /**
+     * Today's paper, or none, and the kept editions before it ([observerToday]): on the calendar
+     * the "already printed today" check reads (the schedule's zone, else this device's), decided
+     * again each minute so midnight turns the page while the screen is open.
+     */
+    val today: StateFlow<ObserverToday> =
+        combine(printer.editions, morning.observerNow(account)) { kept, clock -> observerToday(kept, clock.now, clock.calendar) }
+            .distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), observerToday(printer.editions.value, TimeUtils.now(), ObserverCalendar.DEVICE))
+
+    private val _pastDay = MutableStateFlow(initialDay)
+
+    /**
+     * The past edition picked (from Past editions, a notification or a link), by its day; null
+     * shows today. A day that is today's, or that isn't kept, shows today too ([viewing]).
+     */
+    val pastDay = _pastDay.asStateFlow()
+
+    /** Shows the kept edition of [day] in place of today's, until [showToday]. */
+    fun showDay(day: String) {
+        _pastDay.value = day
+    }
+
+    /** Back to today's paper, or to the view that prints it. */
+    fun showToday() {
+        _pastDay.value = null
+    }
+
+    /** The edition on screen: the past one picked, else today's paper; null for the print view. */
+    val viewing: StateFlow<SavedEdition?> =
+        combine(today, _pastDay) { today, day -> today.pastEdition(day, FrontPageClock.dayKey(TimeUtils.now()))?.edition ?: today.paper }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** The edition on screen and its page; null while there is none (or it is still being read). */
+    val shown: StateFlow<ShownEdition?> =
+        viewing
+            // The page is read again only when it is another page: a history refresh isn't one.
+            .distinctUntilChanged { a, b -> a?.day == b?.day && a?.code == b?.code && a?.sha256 == b?.sha256 && a?.published == b?.published }
+            .flatMapLatest { edition ->
+                if (edition == null) {
+                    flowOf<ShownEdition?>(null)
+                } else {
+                    flow<ShownEdition?> { emit(ShownEdition(edition, printer.html(edition.day))) }
+                }
+            }.stateIn<ShownEdition?>(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** One print's estimated cost with the picked model; null when the endpoint lists no prices. */
+    val estimate: StateFlow<Double?> =
+        combine(_models, printer.editions) { models, _ -> printer.estimate(models.selectedModel) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /**
      * The screen is started (on screen, not just in the back stack): a signer that needs the
@@ -328,10 +358,6 @@ class FrontPageViewModel(
         if (model.isNotBlank()) viewModelScope.launch { runCatching { printer.memory.set(url, model.trim()) } }
     }
 
-    fun selectDay(day: String?) {
-        _selectedDay.value = day
-    }
-
     private val _printRefused = MutableStateFlow(false)
 
     /** A Print tap found another print running (the morning's, on this device): the screen says so, then [printRefusedShown]. */
@@ -344,8 +370,8 @@ class FrontPageViewModel(
     fun print() {
         val key = key.value ?: return
         val model = _models.value.selectedModel ?: return
-        // The new edition is today's, which is the newest: open it when it lands.
-        if (printer.print(key, model)) _selectedDay.value = null else _printRefused.value = true
+        // The new edition is today's: it takes the print view's place when it lands.
+        if (printer.print(key, model)) _pastDay.value = null else _printRefused.value = true
     }
 
     /** Stops the print running now, the reader's or the morning's (the screen confirms first: it may have cost money). */

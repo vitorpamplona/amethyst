@@ -481,9 +481,9 @@
     <string name="front_page_print_cancel">Cancel</string>
     <string name="front_page_print_title">Printing The Observer</string>
     <string name="front_page_print_step_probe">Checking your ranking</string>
-    <string name="front_page_print_step_pull">Reading posts · %1$d of %2$d</string>
+    <string name="front_page_print_step_pull">Reading the desks · %1$d of %2$d</string>
     <string name="front_page_print_step_write">Writing</string>
-    <string name="front_page_print_step_fix">Fixing what the check found</string>
+    <string name="front_page_print_step_fix">Fixing the page</string>
     <string name="front_page_print_step_check">Checking quotes, pictures and links</string>
     <string name="front_page_print_step_publish">Publishing your Observer</string>
     <string name="pow_time_left">≈ %1$s left</string>

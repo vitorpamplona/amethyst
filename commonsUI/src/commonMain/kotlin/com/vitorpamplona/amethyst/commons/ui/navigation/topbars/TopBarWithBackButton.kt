@@ -25,6 +25,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
@@ -36,6 +39,8 @@ private val NoActions: @Composable RowScope.() -> Unit = {}
 fun TopBarWithBackButton(
     caption: String,
     nav: INav,
+    /** What a screen reader says for [caption] when the caption is short for more ("Today" for its full date). */
+    captionDescription: String? = null,
     actions: @Composable RowScope.() -> Unit = NoActions,
 ) {
     // In a tab or a window of its own the strip or the title bar already names the screen, and there
@@ -48,6 +53,7 @@ fun TopBarWithBackButton(
                 text = caption,
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1,
+                modifier = if (captionDescription != null) Modifier.semantics { contentDescription = captionDescription } else Modifier,
             )
         },
         actions = actions,

@@ -273,6 +273,9 @@ class DesktopAppRoot(
             DesktopDeepLinks.pending.filterNotNull().collect { uri ->
                 DesktopDeepLinks.pending.value = null
                 uriToRoute(uri, accountViewModel.account)?.let { route -> nav.nav(route) }
+                // A link opens where it can be seen: a main window hidden (kept for a print, or closed
+                // beside screen windows) comes back.
+                navigator.windows.showMainWindow()
             }
         }
     }

@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.front_page_can_leave_desktop
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_open_failed
 import com.vitorpamplona.amethyst.commons.resources.nsite_open_failed
 import com.vitorpamplona.amethyst.commons.resources.webxdc_open_failed
@@ -48,7 +49,6 @@ import com.vitorpamplona.amethyst.commons.ui.platform.DisplayServerChoice
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberDecryptedConcordImageModel
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.PaperWheel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -68,6 +68,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 import java.io.File
 import java.util.concurrent.TimeUnit
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as SharedAppBottomBar
@@ -168,6 +169,9 @@ class DesktopAppPlatform(
     // Off-screen Chromium, drawn by the note: wherever napplets can run at all.
     override val runsNappletsInline: Boolean get() = nappletHost != null
 
+    // Closing the window while a print runs asks first (AmethystDesktop), so the reader stays.
+    override val printLeaveNote: StringResource get() = Res.string.front_page_can_leave_desktop
+
     @Composable
     override fun InlineNappletSurface(
         manifest: NappletManifest,
@@ -187,11 +191,10 @@ class DesktopAppPlatform(
         onStatus: (InlineNappletStatus) -> Unit,
         modifier: Modifier,
         takesWheel: Boolean,
-        wheel: PaperWheel?,
     ) {
         val host = nappletHost ?: return
         // The bundled Chromium, off screen, as for an inline nSite: drawn by the screen, no script runs.
-        InlineNappletPane(host, posterKey = null, instanceId, onStatus, modifier, wheelNeedsFocus = !takesWheel, pageWheel = wheel) {
+        InlineNappletPane(host, posterKey = null, instanceId, onStatus, modifier, wheelNeedsFocus = !takesWheel) {
             host.openInlinePaper(html, title, instanceId)
         }
     }

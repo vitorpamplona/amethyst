@@ -57,22 +57,6 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
     private val mutableCursor = MutableStateFlow(Cursor.getDefaultCursor())
     val cursor: StateFlow<Cursor> = mutableCursor.asStateFlow()
 
-    // The document's scroll, for a front page that reports it (PaperScrollReports). Guarded by itself:
-    // reports come on Chromium's thread, the screen's wheel on the AWT thread.
-    private val scroll = PageScrollTracker()
-    private val mutableScrollKnown = MutableStateFlow(false)
-
-    /** Whether the page reports how far it scrolls, so the screen around it can share its wheel. */
-    val scrollKnown: StateFlow<Boolean> = mutableScrollKnown.asStateFlow()
-
-    // Where the pointer last was on the page (device-independent pixels), for a wheel turn the screen
-    // hands over; the middle until it moves. AWT thread.
-    private var pointerX = -1
-    private var pointerY = -1
-
-    // The part of a pixel the last turns handed over didn't send yet. AWT thread.
-    private var wheelCarry = 0.0
-
     @Volatile
     internal var browser: OffscreenCefBrowser? = null
         set(value) {
@@ -148,44 +132,7 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         y: Int,
     ) {
         val browser = browser ?: return
-        if (id == MouseEvent.MOUSE_EXITED) {
-            pointerX = -1
-            pointerY = -1
-        } else {
-            pointerX = x
-            pointerY = y
-        }
         browser.forwardMouse(MouseEvent(EVENT_SOURCE, id, source.`when`, source.modifiersEx, x, y, source.clickCount, false, source.button))
-    }
-
-    /** How far the document reports it scrolled ([top]) and could ([max]), in CSS pixels. Any thread. */
-    fun reportScroll(
-        top: Double,
-        max: Double,
-    ) {
-        synchronized(scroll) { scroll.report(top, max) }
-        mutableScrollKnown.value = true
-    }
-
-    /** How far the document can still scroll [towardEnd] or back, in CSS pixels; 0 when it never said. */
-    fun scrollRoom(towardEnd: Boolean): Double = synchronized(scroll) { scroll.room(towardEnd) }
-
-    /**
-     * Scrolls the document by up to [delta] CSS pixels (positive toward its end), as a wheel turn at
-     * the pointer, and returns how far that takes it. Chromium reads the turn's delta as pixels.
-     */
-    fun scrollBy(delta: Double): Double {
-        val taken = synchronized(scroll) { scroll.take(delta) }
-        if (taken == 0.0) return 0.0
-        wheelCarry += taken
-        val pixels = wheelCarry.roundToInt()
-        if (pixels == 0) return taken
-        wheelCarry -= pixels
-        val x = if (pointerX >= 0) pointerX else width / 2
-        val y = if (pointerY >= 0) pointerY else height / 2
-        // Chromium's positive is up, as in [wheel].
-        browser?.forwardWheel(wheelEvent(System.currentTimeMillis(), 0, x, y, -pixels))
-        return taken
     }
 
     /**
@@ -214,9 +161,6 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         y: Int,
         delta: Int,
     ) = MouseWheelEvent(EVENT_SOURCE, MouseEvent.MOUSE_WHEEL, time, modifiers, x, y, x, y, 0, false, MouseWheelEvent.WHEEL_BLOCK_SCROLL, 1, delta, delta.toDouble())
-
-    /** A turn of [rotation] notches (positive down, as AWT counts) in CSS pixels, as [wheel] sends it. */
-    fun notchPixels(rotation: Double): Double = rotation * UNIT_PIXELS
 
     /**
      * Forwards a key event as AWT delivered it, so Chromium reads the platform's own key codes. A

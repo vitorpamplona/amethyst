@@ -156,7 +156,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.membersh
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.favorites.FavoriteAppsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.feed.FollowPackFeedScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.list.FollowPacksScreen
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.FrontPageReaderScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.FrontPageScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.GeocachesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.create.NewGeocacheScreen
@@ -485,7 +484,6 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.AgentKeysSettings> { AgentKeysSettingsScreen(accountViewModel, nav) }
     // The paper's own HTML sets its measure: the screen gets the whole pane (see PanelFreeRoutes).
     composableFromEndArgs<Route.FrontPage>(capWidth = false) { FrontPageScreen(accountViewModel, nav, it.day) }
-    composableFromEndArgs<Route.FrontPageReader>(capWidth = false) { FrontPageReaderScreen(accountViewModel, nav, it.day) }
     composableFromEnd<Route.VideoPlayerSettings> { VideoPlayerSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.CallSettings> { CallSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.NotificationSettings> { NotificationSettingsScreen(accountViewModel, nav) }

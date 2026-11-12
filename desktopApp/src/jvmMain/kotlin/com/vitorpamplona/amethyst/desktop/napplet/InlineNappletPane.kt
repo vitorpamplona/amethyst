@@ -38,7 +38,6 @@ import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.napplet.NappletInlineDownloads
 import com.vitorpamplona.amethyst.commons.ui.note.InlineNappletPosters
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.PaperWheel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 
@@ -48,8 +47,8 @@ import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
  * it with the rest of the feed, which a native window could not do.
  *
  * The page gets the pointer, and the keyboard once clicked. The wheel scrolls the page only after
- * it was clicked, and the feed otherwise; the front page shares the screen's wheel ([PaperWheel]).
- * Leaving the composition closes the browser and keeps its last frame as the note's poster.
+ * it was clicked, and the feed otherwise. Leaving the composition closes the browser and keeps its
+ * last frame as the note's poster.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -76,8 +75,6 @@ fun InlineNappletPane(
     modifier: Modifier,
     // In a feed the wheel scrolls the feed until the app is clicked; a page that fills the screen takes it at once.
     wheelNeedsFocus: Boolean = true,
-    // The inline front page: the screen's wheel, which the page shares once it says how far it scrolls.
-    pageWheel: PaperWheel? = null,
     open: () -> Result<CefNappletSession>,
 ) {
     val status by rememberUpdatedState(onStatus)
@@ -109,7 +106,7 @@ fun InlineNappletPane(
     // Each session's own: a new one (Retry, another edition) must not inherit the last one's state
     // and frame. It did, and when it came up Showing and painted before the pane looked, its status
     // read just as the last one's had, so SHOWING was never said again and its frame stayed hidden.
-    key(current) { SessionPane(current, view, instanceId, onStatus, modifier, wheelNeedsFocus, pageWheel) }
+    key(current) { SessionPane(current, view, instanceId, onStatus, modifier, wheelNeedsFocus) }
 }
 
 @Composable
@@ -120,7 +117,6 @@ private fun SessionPane(
     onStatus: (InlineNappletStatus) -> Unit,
     modifier: Modifier,
     wheelNeedsFocus: Boolean,
-    pageWheel: PaperWheel?,
 ) {
     val status by rememberUpdatedState(onStatus)
     val state by session.state.collectAsState()
@@ -144,5 +140,5 @@ private fun SessionPane(
         )
     }
 
-    OffscreenPage(view, modifier, wheelNeedsFocus = wheelNeedsFocus, pageWheel = pageWheel)
+    OffscreenPage(view, modifier, wheelNeedsFocus = wheelNeedsFocus)
 }

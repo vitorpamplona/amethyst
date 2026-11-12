@@ -104,6 +104,9 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -118,6 +121,9 @@ import kotlin.system.exitProcess
 
 /** The app's own files: `~/.amethyst/app`, or `-Damethyst.dataDir=...`. */
 internal fun desktopDataDir(): File = File(System.getProperty("amethyst.dataDir") ?: File(System.getProperty("user.home"), ".amethyst/app").path)
+
+/** How long a kept-going print's notification has before the app quits after it. */
+private const val QUIT_AFTER_PRINT_GRACE_MS = 3_000L
 
 /**
  * The desktop window of the shared app: the same [AmethystApp] Android renders, on the desktop graph.
@@ -179,9 +185,18 @@ fun main(args: Array<String>) {
     // Hand it to the running instance over the instance bus and exit; on a cold start, queue it so
     // the navigation host routes it once a logged-in shell exists. macOS delivers the URI to the
     // running app as an open-URI event instead (installed below), never as argv.
-    DesktopDeepLinks.extractFromArgs(args)?.let { uri ->
+    val linked = DesktopDeepLinks.extractFromArgs(args)
+    linked?.let { uri ->
         if (DesktopDeepLinks.forwardToRunningInstance(uri, filesDir)) exitProcess(0)
         DesktopDeepLinks.offer(uri)
+    }
+    // A copy whose window was closed while a print went on is still running, unseen: launching the
+    // app again brings it back, on The Observer, instead of opening a second copy beside it.
+    val keptForPrint = KeptForPrintMarker(filesDir)
+    if (linked == null && keptForPrint.present) {
+        if (DesktopDeepLinks.forwardToRunningInstance(KeptForPrintMarker.RESTORE_URI, filesDir)) exitProcess(0)
+        // Nobody answered: a copy that died hidden left it behind.
+        keptForPrint.set(false)
     }
     DesktopDeepLinks.installOsHandlers()
     // One listener per data folder: a later copy taking over the port file sent the links meant for
@@ -289,12 +304,52 @@ fun main(args: Array<String>) {
                 }
         }
 
-        // The updater quits through here, as the Quit menu does: windows close, then the JVM exits.
-        LaunchedEffect(Unit) { modules.quitRequests.collect { exitApplication() } }
-
         // Closing the main window while screen windows are open only hides it; the app quits once
         // the last of them closes too.
         val windows = root.navigator.windows
+
+        // A print runs in this process: quitting would stop it, and it may be paid for already. Every
+        // way out (the window's close, Quit, its shortcut, the updater) asks first while one runs.
+        val printers = modules.frontPagePrinters
+        var askQuit by remember { mutableStateOf(false) }
+        val printingNow = { PrintQuitRules.printing(printers.printing.value.values) }
+        val quit: () -> Unit = {
+            keptForPrint.set(false)
+            exitApplication()
+        }
+        val requestQuit: () -> Unit = {
+            when (PrintQuitRules.onQuit(printingNow())) {
+                CloseAction.ASK -> {
+                    windows.showMainWindow()
+                    askQuit = true
+                }
+                else -> quit()
+            }
+        }
+
+        // The updater quits through here, as the Quit menu does: windows close, then the JVM exits.
+        LaunchedEffect(Unit) { modules.quitRequests.collect { requestQuit() } }
+
+        // Kept going with the window closed: nobody sees a screen, so the end is announced, and a
+        // relaunch finds this copy.
+        LaunchedEffect(windows) {
+            snapshotFlow { windows.keptForPrint }.collect { kept ->
+                printers.readerAway.value = kept
+                keptForPrint.set(kept)
+            }
+        }
+        // Once that print ends (its "ready" notification is out by then), the app quits, as the
+        // reader asked when they closed it, unless they came back meanwhile.
+        LaunchedEffect(windows) {
+            combine(snapshotFlow { windows.keptForPrint to windows.anyShowing }, printers.printing) { (kept, showing), jobs ->
+                PrintQuitRules.quitsAfterPrint(kept, PrintQuitRules.printing(jobs.values), showing)
+            }.distinctUntilChanged().collectLatest { done ->
+                if (done) {
+                    delay(QUIT_AFTER_PRINT_GRACE_MS)
+                    quit()
+                }
+            }
+        }
         LaunchedEffect(windows) {
             snapshotFlow { windows.allClosed }
                 .filter { it }
@@ -316,18 +371,18 @@ fun main(args: Array<String>) {
         CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides exceptionHandlerFactory) {
             key(windowGeneration) {
                 AppWindow(
-                    onCloseRequest = { windows.closeMainWindow(root.navigator.stacks?.arrangement, ::exitApplication) },
+                    onCloseRequest = { windows.closeMainWindow(root.navigator.stacks?.arrangement, quit, printingNow(), ask = { askQuit = true }) },
                     state = windowState,
                     title = "Amethyst",
                     icon = IconResources.adaptedBitmapPainter,
-                    onPreviewKeyEvent = { root.navigator.handleShortcut(it, onQuit = ::exitApplication) },
+                    onPreviewKeyEvent = { root.navigator.handleShortcut(it, onQuit = requestQuit) },
                     visible = windows.mainWindowVisible,
                 ) {
                     windows.MainWindowEffects(window)
                     // macOS: the title bar turns transparent over the app, which draws its own strip there.
                     frameScope?.applyNativeWindowChrome()
 
-                    frameScope?.DesktopMenuBar(root.navigator, onQuit = ::exitApplication)
+                    frameScope?.DesktopMenuBar(root.navigator, onQuit = requestQuit)
 
                     // The window's root store, the parent of the account-scoped one that AmethystApp
                     // nests under it per logged-in account.
@@ -403,6 +458,20 @@ fun main(args: Array<String>) {
                                                 // Toasts show here unless a screen window has the focus (it shows them).
                                                 if (windows.focusedScreenWindow == null) {
                                                     SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
+                                                }
+                                                if (askQuit) {
+                                                    PrintQuitDialog(
+                                                        onKeepPrinting = {
+                                                            askQuit = false
+                                                            windows.hideForPrint()
+                                                        },
+                                                        onQuit = {
+                                                            askQuit = false
+                                                            printers.cancelAll()
+                                                            quit()
+                                                        },
+                                                        onDismiss = { askQuit = false },
+                                                    )
                                                 }
                                             }
                                         }

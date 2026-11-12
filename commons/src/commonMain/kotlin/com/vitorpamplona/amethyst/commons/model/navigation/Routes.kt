@@ -654,14 +654,12 @@ sealed class Route {
 
     @Serializable object AgentKeysSettings : Route()
 
-    /** The front page; [day] (`yyyy-MM-dd`) opens that kept edition, as a "ready" notification does. */
+    /**
+     * The front page, about today; [day] (`yyyy-MM-dd`) shows that kept edition in its place, as a
+     * notification or a link does, with the way back to today.
+     */
     @Serializable data class FrontPage(
         val day: String? = null,
-    ) : Route()
-
-    /** One kept edition alone, edge to edge: the front page's "Read full screen". */
-    @Serializable data class FrontPageReader(
-        val day: String,
     ) : Route()
 
     @Serializable object VideoPlayerSettings : Route()

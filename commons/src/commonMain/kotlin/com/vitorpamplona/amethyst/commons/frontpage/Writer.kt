@@ -115,12 +115,21 @@ class Written(
 /** Anthropic's compatibility layer caps a reply far below a page unless told otherwise. */
 private const val ANTHROPIC_MAX_TOKENS = 32_000
 
-fun isAnthropic(url: String) =
+fun isAnthropic(url: String) = hostOf(url) == "api.anthropic.com"
+
+/**
+ * OpenRouter, the one provider asked to stream the model's reasoning: its Chat Completions take a
+ * `reasoning` object, where a provider that rejects unknown fields would refuse the whole call.
+ */
+fun isOpenRouter(url: String) = hostOf(url).let { it == "openrouter.ai" || it.endsWith(".openrouter.ai") }
+
+private fun hostOf(url: String) =
     url
         .substringAfter("://", "")
         .substringBefore('/')
+        .substringBefore('?')
         .substringBefore(':')
-        .lowercase() == "api.anthropic.com"
+        .lowercase()
 
 fun chatRequestBody(
     url: String,
@@ -146,6 +155,9 @@ fun chatRequestBody(
         put("stream", stream)
         if (stream) put("stream_options", buildJsonObject { put("include_usage", true) })
         if (isAnthropic(url)) put("max_tokens", ANTHROPIC_MAX_TOKENS)
+        // Returned as it streams, so the reader sees a reasoning model think rather than a stall.
+        // OpenRouter bills reasoning tokens as output whether or not they come back.
+        if (isOpenRouter(url)) put("reasoning", buildJsonObject { put("exclude", false) })
     }.toString()
 
 private val lenient = Json { ignoreUnknownKeys = true }
@@ -172,11 +184,16 @@ class StreamChunk(
     val finishReason: String? = null,
     /** An `{"error": …}` frame's message: the provider gave up mid-answer. */
     val error: String? = null,
+    /** The model's reasoning this chunk adds (OpenRouter's `reasoning`, DeepSeek's `reasoning_content`). */
+    val reasoning: String = "",
+    /** An SSE comment (OpenRouter's `: OPENROUTER PROCESSING`): nothing to read, but the provider is there. */
+    val keepAlive: Boolean = false,
 )
 
 /** One `data:` line of a Chat Completions stream: the text it adds and any usage it carried. */
 fun parseStreamLine(line: String): StreamChunk {
     val trimmed = line.trim()
+    if (trimmed.startsWith(":")) return StreamChunk("", null, false, keepAlive = true)
     if (!trimmed.startsWith("data:")) return StreamChunk("", null, false)
     val data = trimmed.removePrefix("data:").trim()
     if (data == "[DONE]") return StreamChunk("", null, true)
@@ -185,8 +202,30 @@ fun parseStreamLine(line: String): StreamChunk {
     val choice = (json["choices"] as? JsonArray)?.firstOrNull() as? JsonObject
     val delta = choice?.get("delta") as? JsonObject
     val content = (delta?.get("content") as? JsonPrimitive)?.takeIf { it.isString }?.content ?: ""
-    return StreamChunk(content, readUsage(json["usage"]), false, finishReason = finishReasonOf(choice))
+    return StreamChunk(content, readUsage(json["usage"]), false, finishReason = finishReasonOf(choice), reasoning = reasoningOf(delta))
 }
+
+/**
+ * The reasoning a stream delta carries, read once: OpenRouter sends the same text as `reasoning`
+ * and in `reasoning_details` (text or summary parts; encrypted ones say nothing), DeepSeek and
+ * others as `reasoning_content`.
+ */
+private fun reasoningOf(delta: JsonObject?): String {
+    if (delta == null) return ""
+    stringOf(delta["reasoning"])?.let { return it }
+    stringOf(delta["reasoning_content"])?.let { return it }
+    val details = delta["reasoning_details"] as? JsonArray ?: return ""
+    return details.joinToString("") { part ->
+        val obj = part as? JsonObject ?: return@joinToString ""
+        when (stringOf(obj["type"])) {
+            "reasoning.text" -> stringOf(obj["text"]).orEmpty()
+            "reasoning.summary" -> stringOf(obj["summary"]).orEmpty()
+            else -> ""
+        }
+    }
+}
+
+private fun stringOf(element: JsonElement?): String? = (element as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotEmpty() }
 
 private fun errorOf(json: JsonObject): String? {
     val error = json["error"] ?: return null
@@ -203,20 +242,27 @@ private fun finishReasonOf(choice: JsonObject?) = (choice?.get("finish_reason") 
  * paper (a cut-off page could still pass the boundary, missing its second half).
  */
 class StreamReader(
-    private val onText: (Int) -> Unit,
+    private val onEvent: (WriterEvent) -> Unit,
 ) {
     private val text = StringBuilder()
     private var usage: Usage? = null
     private var finish: String? = null
     private var done = false
+    private var heard = false
 
     /** Reads one line; true when the stream has ended. */
     fun read(line: String): Boolean {
+        if (!heard) {
+            heard = true
+            onEvent(WriterEvent.FirstByte)
+        }
         val chunk = parseStreamLine(line)
         chunk.error?.let { throw WriterException(WriterFailure.CUT_OFF, providerSaid = it) }
+        if (chunk.keepAlive) onEvent(WriterEvent.KeepAlive)
+        if (chunk.reasoning.isNotEmpty()) onEvent(WriterEvent.Reasoning(chunk.reasoning))
         if (chunk.text.isNotEmpty()) {
             text.append(chunk.text)
-            onText(text.length)
+            onEvent(WriterEvent.Text(chunk.text, text.length))
         }
         if (chunk.usage != null) usage = chunk.usage
         chunk.finishReason?.let { finish = it }

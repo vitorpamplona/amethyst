@@ -60,9 +60,17 @@ sealed interface PrintStep {
         val events: Int,
     ) : PrintStep
 
-    class Write(
+    /**
+     * The AI writes the page: round 2 fixes what the check refused. [phase] says what can be
+     * shown ([WritePhase]), [section] the heading it is on, [chars] the page's length so far,
+     * [since] when this round was sent (unix seconds), for "Waiting for the model… 0:42".
+     */
+    data class Write(
         val round: Int,
         val chars: Int,
+        val phase: WritePhase = WritePhase.WAITING,
+        val section: String? = null,
+        val since: Long = 0,
     ) : PrintStep
 
     class Check(
@@ -103,7 +111,7 @@ class FrontPagePress(
     private val client: INostrClient,
     private val relay: NormalizedRelayUrl,
     private val boundary: PaperBoundary,
-    private val write: suspend (messages: List<ChatMessage>, onText: (Int) -> Unit) -> Written,
+    private val write: suspend (messages: List<ChatMessage>, onEvent: (WriterEvent) -> Unit) -> Written,
     private val floor: Int = DEFAULT_TRUST_FLOOR,
     private val deskIdleMs: Long = 25_000,
     private val probeIdleMs: Long = 15_000,
@@ -189,14 +197,17 @@ class FrontPagePress(
         observer: HexKey,
         readerName: String,
         language: String? = null,
+        log: PrintLogger = PrintLogger.None,
         onStep: (PrintStep) -> Unit = {},
     ): PrintResult {
         val until = now()
         onStep(PrintStep.Probe)
+        log.add(PrintLogKind.PROBE)
         val verdict = probe(observer, until - FRONT_PAGE_WINDOW_SECONDS)
-        if (verdict != ProbeVerdict.READY) return PrintResult.NotReady(verdict)
+        if (verdict != ProbeVerdict.READY) return PrintResult.NotReady(verdict).also { log.add(PrintLogKind.NOT_READY) }
 
         val corpus = pull(observer, until, onStep)
+        log.add(PrintLogKind.READ, numbers = listOf(DESKS.size, corpus.events.size))
         val digest = digest(corpus)
         val messages =
             mutableListOf(
@@ -206,18 +217,23 @@ class FrontPagePress(
 
         var usage: Usage? = null
         for (round in 1..2) {
-            onStep(PrintStep.Write(round, 0))
-            val written = write(messages) { chars -> onStep(PrintStep.Write(round, chars)) }
+            val tracker = WriteTracker(round, now(), log)
+            onStep(tracker.step)
+            val written = write(messages) { event -> tracker.on(event)?.let(onStep) }
             usage = usage?.plus(written.usage) ?: written.usage
+            log.add(PrintLogKind.WRITTEN, numbers = listOf(written.text.length))
             val page = extractDocument(written.text)
             if (page.isBlank()) throw WriterException(WriterFailure.EMPTY)
 
             onStep(PrintStep.Check(round))
             val checked = boundary.resolveAndCheck(page, corpus)
+            log.add(PrintLogKind.QUOTES, numbers = listOf(checked.quotes, checked.violations.count { it.kind == Violation.Kind.QUOTE }))
             if (checked.violations.isEmpty()) {
+                log.add(PrintLogKind.PASSED)
                 return PrintResult.Printed(checked.html, corpus, checked.changes, checked.quotes, usage, round, checked.headline, digest.length)
             }
-            if (round == 2) return PrintResult.Refused(checked.violations, checked.changes, corpus, usage)
+            if (round == 2) return PrintResult.Refused(checked.violations, checked.changes, corpus, usage).also { log.add(PrintLogKind.REFUSED, numbers = listOf(checked.violations.size)) }
+            log.add(PrintLogKind.REPAIR, numbers = listOf(checked.violations.size))
             messages.add(ChatMessage("assistant", page))
             messages.add(ChatMessage("user", repairMessage(checked.violations)))
         }

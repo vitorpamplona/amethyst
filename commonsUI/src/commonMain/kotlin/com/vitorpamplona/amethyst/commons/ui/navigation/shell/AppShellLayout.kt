@@ -511,7 +511,6 @@ val PanelFreeRoutes: Set<KClass<out Route>> =
     setOf(
         Route.Notification::class,
         Route.FrontPage::class,
-        Route.FrontPageReader::class,
         Route.NostrApp::class,
         Route.Browser::class,
     )

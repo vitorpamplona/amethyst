@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -383,6 +384,17 @@ class FrontPageMorning(
             viewOf(synced, mine, canPrintHere(account), hasWriteRelays(relays), at)
         }.distinctUntilChanged()
 
+    /**
+     * The Observer's clock ([ObserverNow]): the calendar the "already printed today" check reads (a
+     * readable schedule's zone, else this device's), and the time, again each minute while
+     * collected. A new one goes out only when the day or the calendar changed: at midnight, or
+     * when the schedule's zone does.
+     */
+    fun observerNow(account: Account): Flow<ObserverNow> =
+        combine(view(account).map { ObserverCalendar.readableZone(it) }.distinctUntilChanged(), minutes()) { zone, now -> ObserverNow(zone, now) }
+            .distinctUntilChanged()
+
+    /** The time now, then again each minute, while collected. */
     private fun minutes(): Flow<Long> =
         flow {
             while (true) {

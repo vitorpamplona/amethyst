@@ -81,10 +81,10 @@ class FrontPagePressTest {
         client = client,
         relay = relay,
         boundary = JsoupPaperBoundary,
-        write = { messages, onText ->
+        write = { messages, onEvent ->
             calls.add(messages.toList())
             val text = pages.removeAt(0)
-            onText(text.length)
+            onEvent(WriterEvent.Text(text, text.length))
             Written(text, Usage(100, 50))
         },
         deskIdleMs = 2_000,

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.frontpage
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.agents.AgentProviderPresets
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.localPrivKeyOrNull
@@ -186,6 +187,8 @@ class FrontPagePrinter(
     private val host: FrontPagePrintHost = FrontPagePrintHost.None,
     /** Every change of [job], for the app-wide list of prints ([FrontPagePrinters.printing]). */
     private val onJob: (FrontPagePrintJob?) -> Unit = {},
+    /** True while no screen can be seen at all (a desktop app whose window was closed mid-print): nobody watches then. */
+    private val readerAway: () -> Boolean = { false },
 ) {
     private val pubKey get() = account.signer.pubKey
 
@@ -195,6 +198,15 @@ class FrontPagePrinter(
     val run = _run.asStateFlow()
 
     private val jobs = FrontPagePrintJobTracker(account.signer.pubKey, host, onJob, now)
+
+    private val logBook = PrintLogBook(now)
+
+    /**
+     * The print's details, newest last: what was asked of whom, when the model answered, its
+     * reasoning as it streams, each section, the checks, the publish. The current print only, in
+     * memory: the next print starts a new one.
+     */
+    val log: StateFlow<PrintLog> = logBook.log
 
     /**
      * The print as background work: its stage and start, then how it ended, until the reader has
@@ -260,6 +272,9 @@ class FrontPagePrinter(
             refreshSite()
         }
     }
+
+    /** The screens showing the paper that someone can see: none while the reader is away. */
+    private fun watchers(): Int = if (readerAway()) 0 else _watched.value
 
     /** A screen showing the paper calls this, and the returned function when it goes. */
     fun watch(): () -> Unit {
@@ -395,6 +410,7 @@ class FrontPagePrinter(
         keep: suspend () -> Boolean,
     ): FrontPageRun {
         jobs.started(trigger)
+        logBook.start(askedOf(key, model))
         var kept: SavedEdition? = null
         try {
             val ended =
@@ -402,7 +418,7 @@ class FrontPagePrinter(
                     _run.value = FrontPageRun.Running(PrintStep.Probe)
                     var shown: PrintStep = PrintStep.Probe
                     val result =
-                        press(key, model.id, boundary).print(pubKey, readerName(), readerLanguage()) { step ->
+                        press(key, model.id, boundary).print(pubKey, readerName(), readerLanguage(), logBook) { step ->
                             // The stream reports every chunk; every observer recomposing per chunk is the cost.
                             if (progressWorthShowing(shown, step)) {
                                 shown = step
@@ -421,9 +437,11 @@ class FrontPagePrinter(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: WriterException) {
+                    logBook.add(PrintLogKind.FAILED, e.failure.name, listOfNotNull(e.status))
                     FrontPageRun.Failed(e.failure, e.status, e.providerSaid)
                 } catch (e: Exception) {
                     Log.w(TAG, "Printing failed", e)
+                    logBook.add(PrintLogKind.FAILED, WriterFailure.UNREACHABLE.name)
                     FrontPageRun.Failed(WriterFailure.UNREACHABLE)
                 }
             _run.value = ended
@@ -445,7 +463,7 @@ class FrontPagePrinter(
         trigger: PrintTrigger,
     ) {
         val end = jobs.ended(ended, kept)
-        if (end != null && FrontPagePrintJobTracker.tellsReaderOfFailure(end, trigger, _watched.value)) {
+        if (end != null && FrontPagePrintJobTracker.tellsReaderOfFailure(end, trigger, watchers())) {
             try {
                 notifier.printFailed(pubKey, end)
             } catch (e: CancellationException) {
@@ -488,7 +506,7 @@ class FrontPagePrinter(
         } catch (e: Exception) {
             Log.w(TAG, "Could not keep the edition", e)
         }
-        if (trigger == PrintTrigger.SCHEDULED || _watched.value == 0) notifier.paperReady(pubKey, edition)
+        if (trigger == PrintTrigger.SCHEDULED || watchers() == 0) notifier.paperReady(pubKey, edition)
         // Published before the print ends, so the job (and Android's foreground service, and the
         // platform's scheduled run) lives until it is out, the popup saying so.
         publishPending(trigger, onPublishing = jobs::publishing)
@@ -525,8 +543,10 @@ class FrontPagePrinter(
                     .filter { (kept, html) -> ObserverPublisher.sha256Hex(html.encodeToByteArray()).equals(kept.sha256, ignoreCase = true) }
             if (pending.isEmpty()) return
             _observer.value = ObserverStatus.Publishing
+            logBook.add(PrintLogKind.PUBLISHING)
             onPublishing()
             val result = publisher.publish(pending.map { (kept, html) -> ObserverPage(ObserverPublisher.entryFor(kept, kept.sha256!!.lowercase()), html) })
+            logBook.add(if (result is ObserverPublishResult.Published) PrintLogKind.PUBLISHED else PrintLogKind.PUBLISH_FAILED)
             _observer.value =
                 when (result) {
                     is ObserverPublishResult.Published -> {
@@ -794,6 +814,18 @@ class PrintSlot {
     }
 }
 
+/**
+ * Who was asked, for the log: the provider as the reader knows it and the model id. Never the key,
+ * and never the URL's path or query (a custom endpoint may carry a token there): only its host.
+ */
+fun askedOf(
+    key: AgentKeyTag,
+    model: AgentModel,
+): String {
+    val provider = AgentProviderPresets.forUrl(key.url)?.name ?: AgentProviderPresets.hostOf(key.url)?.substringAfterLast('@') ?: "?"
+    return "$provider \u00b7 ${model.id}"
+}
+
 /** The hash an edition is published under: its bytes once the paper's CSP is in ([withPaperCsp]). */
 fun publishedSha256(html: String): String = ObserverPublisher.sha256Hex(withPaperCsp(html).encodeToByteArray())
 
@@ -806,7 +838,8 @@ fun progressWorthShowing(
     next: PrintStep,
 ): Boolean {
     if (next !is PrintStep.Write || shown !is PrintStep.Write || next.round != shown.round) return true
-    return next.chars == 0 || next.chars - shown.chars >= WRITE_PROGRESS_CHARS
+    if (next.phase != shown.phase || next.section != shown.section) return true
+    return next.chars - shown.chars >= WRITE_PROGRESS_CHARS
 }
 
 const val WRITE_PROGRESS_CHARS = 400
@@ -878,8 +911,21 @@ class FrontPagePrinters(
 
     private val _printing = MutableStateFlow<Map<HexKey, FrontPagePrintJob>>(emptyMap())
 
+    /**
+     * Set while no screen of the app can be seen (the desktop window closed with a print kept
+     * going): a print that ends then is announced as if no front page were showing.
+     */
+    val readerAway = MutableStateFlow(false)
+
     /** Every account's print as background work ([FrontPagePrinter.job]): what a foreground service shows. */
     val printing: StateFlow<Map<HexKey, FrontPagePrintJob>> = _printing.asStateFlow()
+
+    /** Stops every print running now, the reader's and the morning's: the app is quitting. */
+    fun cancelAll() {
+        _printing.value.values
+            .filter { it.running }
+            .forEach { printers.value[it.account]?.cancel() }
+    }
 
     /** Stops every print the reader started (the notification's Cancel). */
     fun cancelManualPrints() {
@@ -903,7 +949,7 @@ class FrontPagePrinters(
                 current
             } else {
                 val key = account.signer.pubKey
-                val printer = made ?: FrontPagePrinter(account, http, memory, store, notifier, observerPrefs = observerPrefs, morning = morning, host = host, onJob = { track(key, it) })
+                val printer = made ?: FrontPagePrinter(account, http, memory, store, notifier, observerPrefs = observerPrefs, morning = morning, host = host, onJob = { track(key, it) }, readerAway = { readerAway.value })
                 made = printer
                 current + (account.signer.pubKey to printer)
             }

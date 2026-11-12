@@ -40,9 +40,15 @@ sealed interface PrintJobStage {
         val fraction: Float get() = if (total <= 0) 0f else (done.toFloat() / total).coerceIn(0f, 1f)
     }
 
-    /** The AI writes the page ([round] 2 is the repair after a failed check). */
+    /**
+     * The AI writes the page ([round] 2 is the repair after a failed check): waiting for it,
+     * thinking, on [section], or all at once ([phase]); [since] is when the round was sent.
+     */
     data class Writing(
         val round: Int,
+        val phase: WritePhase = WritePhase.WAITING,
+        val section: String? = null,
+        val since: Long = 0,
     ) : PrintJobStage
 
     /** Checking quotes, pictures and links. */
@@ -57,7 +63,7 @@ sealed interface PrintJobStage {
             when (step) {
                 PrintStep.Probe -> Probe
                 is PrintStep.Pull -> Reading(step.desksDone, step.desksTotal)
-                is PrintStep.Write -> Writing(step.round)
+                is PrintStep.Write -> Writing(step.round, step.phase, step.section, step.since)
                 is PrintStep.Check -> Checking
             }
     }

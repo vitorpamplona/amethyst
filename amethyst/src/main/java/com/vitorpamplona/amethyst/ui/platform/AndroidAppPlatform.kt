@@ -51,7 +51,6 @@ import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.NostrConnectApp
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberDecryptedConcordImageModel
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.PaperWheel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -289,9 +288,8 @@ object AndroidAppPlatform : AppPlatform {
         instanceId: String,
         onStatus: (InlineNappletStatus) -> Unit,
         modifier: Modifier,
-        // Touch scrolls the WebView directly; there is no wheel to route, and no page to bind to the screen's.
+        // Touch scrolls the WebView directly; there is no wheel to route.
         takesWheel: Boolean,
-        wheel: PaperWheel?,
     ) {
         // The :napplet sandbox renders it, as it does an nSite: no WebView ever boots in this process.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

@@ -97,11 +97,27 @@ class ChatCompleteTest {
                     "data: [DONE]",
                 ).joinToString("\n\n")
             val seen = mutableListOf<Int>()
-            val written = clients(Answer(200, "text/event-stream", sse)).chatComplete(key, "m", messages) { seen.add(it) }
+            val written = clients(Answer(200, "text/event-stream", sse)).chatComplete(key, "m", messages) { (it as? WriterEvent.Text)?.let { text -> seen.add(text.total) } }
             assertEquals("<html></html>", written.text)
             assertEquals(10L, written.usage?.total)
             assertEquals(listOf(6, 13), seen)
             assertTrue(requests.single().contains("\"stream\":true"))
+            // OpenRouter is asked to return the reasoning as it streams.
+            assertTrue(requests.single().contains("\"reasoning\":{\"exclude\":false}"))
+        }
+
+    @Test
+    fun aProviderThatAnswersWholeIsSaidToSendItAllAtOnce() =
+        runBlocking {
+            val events = mutableListOf<WriterEvent>()
+            val written =
+                clients(
+                    Answer(400, "application/json", """{"error":"stream not supported"}"""),
+                    Answer(200, "application/json", """{"choices":[{"message":{"content":"<p>ok</p>"}}]}"""),
+                ).chatComplete(key, "m", messages) { events.add(it) }
+            assertEquals("<p>ok</p>", written.text)
+            assertEquals(listOf(WriterEvent.Sent(true), WriterEvent.Sent(false), WriterEvent.AllAtOnce), events.take(3))
+            assertEquals(9, (events.last() as WriterEvent.Text).total)
         }
 
     @Test

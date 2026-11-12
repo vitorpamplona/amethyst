@@ -54,6 +54,8 @@ import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrintJob
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinter
 import com.vitorpamplona.amethyst.commons.frontpage.PrintJobEnd
 import com.vitorpamplona.amethyst.commons.frontpage.PrintJobStage
+import com.vitorpamplona.amethyst.commons.frontpage.PrintLog
+import com.vitorpamplona.amethyst.commons.frontpage.WritePhase
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -63,11 +65,15 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_banner_fix
 import com.vitorpamplona.amethyst.commons.resources.front_page_banner_probe
 import com.vitorpamplona.amethyst.commons.resources.front_page_banner_publish
 import com.vitorpamplona.amethyst.commons.resources.front_page_banner_pull
+import com.vitorpamplona.amethyst.commons.resources.front_page_banner_thinking
+import com.vitorpamplona.amethyst.commons.resources.front_page_banner_waiting
 import com.vitorpamplona.amethyst.commons.resources.front_page_banner_write
 import com.vitorpamplona.amethyst.commons.resources.front_page_job_failed
 import com.vitorpamplona.amethyst.commons.resources.front_page_job_hide
 import com.vitorpamplona.amethyst.commons.resources.front_page_job_tap_to_open
 import com.vitorpamplona.amethyst.commons.resources.front_page_ready_title
+import com.vitorpamplona.amethyst.commons.resources.front_page_show_details
+import com.vitorpamplona.amethyst.commons.resources.front_page_step_writing_section
 import com.vitorpamplona.amethyst.commons.ui.broadcast.formatElapsedTime
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -75,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 
 /** How long the popup shows how a print ended before it goes on its own. */
 private const val END_SHOWN_MS = 8_000L
@@ -113,8 +120,15 @@ fun FrontPagePrintJobContent(
     onOpen: () -> Unit,
     onHide: () -> Unit,
     onDismiss: () -> Unit,
+    /** The print's details, for a sheet the popup opens: the popup itself has no room for them. */
+    log: StateFlow<PrintLog>? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
+    var details by remember { mutableStateOf(false) }
+    if (details && log != null) {
+        val shown by log.collectAsStateWithLifecycle()
+        PrintDetailsSheet(shown, onDismiss = { details = false })
+    }
     Column(Modifier.fillMaxWidth().clickable(onClick = onOpen)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Box(Modifier.size(18.dp), contentAlignment = Alignment.Center) {
@@ -140,6 +154,11 @@ fun FrontPagePrintJobContent(
                     is PrintJobEnd.Ready -> DetailText(end.headline?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.front_page_job_tap_to_open))
                     // Why, in a sentence of its own: never a fragment glued into the headline.
                     else -> DetailText(printEndShort(end) ?: stringRes(Res.string.front_page_job_tap_to_open))
+                }
+            }
+            if (log != null) {
+                IconButton(onClick = { details = true }, modifier = Modifier.size(22.dp)) {
+                    Icon(MaterialSymbols.Info, contentDescription = stringRes(Res.string.front_page_show_details), tint = scheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
                 }
             }
             val running = job.running
@@ -203,7 +222,14 @@ fun printStageText(stage: PrintJobStage): String =
     when (stage) {
         PrintJobStage.Probe -> stringRes(Res.string.front_page_banner_probe)
         is PrintJobStage.Reading -> stringRes(Res.string.front_page_banner_pull, stage.done, stage.total)
-        is PrintJobStage.Writing -> stringRes(if (stage.round > 1) Res.string.front_page_banner_fix else Res.string.front_page_banner_write)
+        is PrintJobStage.Writing ->
+            when {
+                stage.round > 1 -> stringRes(Res.string.front_page_banner_fix)
+                stage.phase == WritePhase.WAITING -> stringRes(Res.string.front_page_banner_waiting)
+                stage.phase == WritePhase.THINKING -> stringRes(Res.string.front_page_banner_thinking)
+                stage.phase == WritePhase.WRITING && stage.section != null -> stringRes(Res.string.front_page_step_writing_section, stage.section!!)
+                else -> stringRes(Res.string.front_page_banner_write)
+            }
         PrintJobStage.Checking -> stringRes(Res.string.front_page_banner_check)
         PrintJobStage.Publishing -> stringRes(Res.string.front_page_banner_publish)
     }
