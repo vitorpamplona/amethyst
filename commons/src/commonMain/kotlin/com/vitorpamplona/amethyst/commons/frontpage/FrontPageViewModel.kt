@@ -226,7 +226,7 @@ class FrontPageViewModel(
             if (pending != null) {
                 shown = shown.copy(enabled = pending.enabled ?: shown.enabled, printsHere = pending.printsHere ?: shown.printsHere)
                 pending.time?.let { shown = shown.withTime(it) }
-                pending.runner?.let { shown = shown.copy(runner = it.key, runners = listOfNotNull(it.key)) }
+                if (pending.clearsRunner) shown = shown.copy(runner = null, runners = emptyList())
             }
             shown
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MorningScheduleView())
@@ -354,17 +354,33 @@ class FrontPageViewModel(
     }
 
     /**
-     * Who prints on schedule: the reader's Assistant (the key their kind 10040 names as the
-     * `30382:rank` provider, the same lens the setup checklist shows) when they have one, and
-     * the runner the schedule names, with their names as this device knows them.
+     * Who prints the schedule, when it names one runner (NIP-FB, Runner): its key and kind-0 name,
+     * and whether it is the reader's Brainstorm Assistant (their kind 10040 `30382:rank` provider,
+     * the lens the setup checklist already reads), for the "Printed by" line only. Null with no
+     * runner: then nothing is looked up. Picking a runner is the provider's call, made in
+     * Brainstorm; this app only shows it and can hand the schedule back to the reader's devices.
      */
-    val whoPrints: StateFlow<WhoPrints> =
-        combine(setup, schedule) { setup, schedule -> WhoPrints(setup.lens, setup.lensName, schedule.runner, schedule.runners) }
+    val printedBy: StateFlow<PrintedBy?> =
+        combine(
+            schedule.map { it.runner }.distinctUntilChanged().flatMapLatest(::withRunnerName),
+            setup.map { it.lens }.distinctUntilChanged(),
+        ) { (runner, name), lens -> printedByOf(runner, name, lens) }
             .distinctUntilChanged()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WhoPrints())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    /** Who prints: [runner] (the reader's Assistant), or the reader's own devices when null. */
-    fun setRunner(runner: HexKey?) = editSchedule(PendingSchedule(runner = Runner(runner))) { morning.setRunner(account, runner) }
+    /** The runner's profile name as it arrives; no runner, no lookup. */
+    private fun withRunnerName(runner: HexKey?): Flow<Pair<HexKey?, String?>> {
+        val user = runner?.let { account.cache.checkGetOrCreateUser(it) } ?: return flowOf(runner to null)
+        return user.metadata().flow.map { runner to it?.info?.bestName() }
+    }
+
+    /**
+     * "Print from my devices instead" (and the fix for a conflict or a `p` that isn't a key): the
+     * schedule's every runner goes, its private tags are encrypted to the reader again, and their
+     * devices print it ([FrontPageMorning.printFromMyDevices]). The only runner edit this app makes:
+     * it never names one.
+     */
+    fun printFromMyDevices() = editSchedule(PendingSchedule(clearsRunner = true)) { morning.printFromMyDevices(account) }
 
     /**
      * The models of [key]'s endpoint. Keyed on the whole key, not its URL: a new key at the same
@@ -504,37 +520,28 @@ data class PendingSchedule(
     val enabled: Boolean? = null,
     val printsHere: Boolean? = null,
     val time: Pair<Int, Int>? = null,
-    val runner: Runner? = null,
-)
-
-/** A who-prints choice on its way: [key] the runner, or null for the reader's own devices. */
-@Immutable
-data class Runner(
-    val key: HexKey?,
+    /** The runner is being cleared: the reader's devices print it again. */
+    val clearsRunner: Boolean = false,
 )
 
 /**
- * The "Who prints" choice: the reader's Brainstorm [assistant] (their kind 10040 `30382:rank`
- * provider) and its [assistantName], and the runner the schedule names ([runner], or several in
- * [runners]: a conflict, nobody prints). Shown only when there is an Assistant, or a runner to clear.
+ * The one runner the schedule names ([runner], NIP-FB, Runner), its kind-0 [name] when this device
+ * has it, and whether it is the reader's Brainstorm Assistant ([isAssistant]: their kind 10040
+ * `30382:rank` provider). For the "Printed by" line; never a choice.
  */
 @Immutable
-data class WhoPrints(
-    val assistant: HexKey? = null,
-    val assistantName: String? = null,
-    val runner: HexKey? = null,
-    val runners: List<HexKey> = emptyList(),
-) {
-    val shown: Boolean get() = assistant != null || runners.isNotEmpty()
+data class PrintedBy(
+    val runner: HexKey,
+    val name: String? = null,
+    val isAssistant: Boolean = false,
+)
 
-    val conflict: Boolean get() = runners.size > 1
-
-    /** The Assistant prints on schedule. */
-    val byAssistant: Boolean get() = runner != null && runner == assistant
-
-    /** The schedule names a runner that isn't the reader's Assistant (an old one, or another app's). */
-    val byOther: Boolean get() = runner != null && runner != assistant
-}
+/** [runner] labelled for the "Printed by" line, against the reader's rank provider [lens]; null with no runner. */
+fun printedByOf(
+    runner: HexKey?,
+    name: String?,
+    lens: HexKey?,
+): PrintedBy? = runner?.let { PrintedBy(it, name?.takeIf(String::isNotBlank), isAssistant = it == lens) }
 
 /** How long a typed model id waits for the reader to stop typing before it is written into the schedule. */
 const val SETTINGS_PAUSE_MS = 1_500L

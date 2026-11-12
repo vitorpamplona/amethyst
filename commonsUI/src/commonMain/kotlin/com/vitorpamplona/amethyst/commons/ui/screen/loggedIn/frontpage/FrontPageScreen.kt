@@ -46,8 +46,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -64,7 +62,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -127,12 +124,12 @@ import com.vitorpamplona.amethyst.commons.frontpage.PastEdition
 import com.vitorpamplona.amethyst.commons.frontpage.PrintLog
 import com.vitorpamplona.amethyst.commons.frontpage.PrintResult
 import com.vitorpamplona.amethyst.commons.frontpage.PrintStep
+import com.vitorpamplona.amethyst.commons.frontpage.PrintedBy
 import com.vitorpamplona.amethyst.commons.frontpage.RelativeDay
 import com.vitorpamplona.amethyst.commons.frontpage.SavedEdition
 import com.vitorpamplona.amethyst.commons.frontpage.ScheduleState
 import com.vitorpamplona.amethyst.commons.frontpage.ShownEdition
 import com.vitorpamplona.amethyst.commons.frontpage.Violation
-import com.vitorpamplona.amethyst.commons.frontpage.WhoPrints
 import com.vitorpamplona.amethyst.commons.frontpage.WriterFailure
 import com.vitorpamplona.amethyst.commons.frontpage.dayOfWeek
 import com.vitorpamplona.amethyst.commons.frontpage.formatUsd
@@ -199,7 +196,6 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_observer_pinned_l
 import com.vitorpamplona.amethyst.commons.resources.front_page_observer_unpinned
 import com.vitorpamplona.amethyst.commons.resources.front_page_on_observer_site
 import com.vitorpamplona.amethyst.commons.resources.front_page_open_observer
-import com.vitorpamplona.amethyst.commons.resources.front_page_other_runner_prints
 import com.vitorpamplona.amethyst.commons.resources.front_page_past_editions
 import com.vitorpamplona.amethyst.commons.resources.front_page_pick_time
 import com.vitorpamplona.amethyst.commons.resources.front_page_posts_label
@@ -208,6 +204,11 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_print_again
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_busy
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_estimate
 import com.vitorpamplona.amethyst.commons.resources.front_page_print_from_device
+import com.vitorpamplona.amethyst.commons.resources.front_page_print_from_my_devices
+import com.vitorpamplona.amethyst.commons.resources.front_page_print_from_my_devices_text
+import com.vitorpamplona.amethyst.commons.resources.front_page_print_from_my_devices_title
+import com.vitorpamplona.amethyst.commons.resources.front_page_printed_by
+import com.vitorpamplona.amethyst.commons.resources.front_page_printed_by_assistant
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish_confirm
 import com.vitorpamplona.amethyst.commons.resources.front_page_publish_failed
@@ -218,8 +219,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_quotes_label
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_body
 import com.vitorpamplona.amethyst.commons.resources.front_page_refused_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_runner_conflict
-import com.vitorpamplona.amethyst.commons.resources.front_page_runner_conflict_keep_assistant
-import com.vitorpamplona.amethyst.commons.resources.front_page_runner_conflict_use_devices
+import com.vitorpamplona.amethyst.commons.resources.front_page_runner_not_a_key
 import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_cannot_sign
 import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_change_time
 import com.vitorpamplona.amethyst.commons.resources.front_page_schedule_daily
@@ -263,15 +263,11 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_too_large
 import com.vitorpamplona.amethyst.commons.resources.front_page_tor_pictures
 import com.vitorpamplona.amethyst.commons.resources.front_page_unknown_params
 import com.vitorpamplona.amethyst.commons.resources.front_page_unsupported
+import com.vitorpamplona.amethyst.commons.resources.front_page_use_my_devices
 import com.vitorpamplona.amethyst.commons.resources.front_page_violation_image
 import com.vitorpamplona.amethyst.commons.resources.front_page_violation_link
 import com.vitorpamplona.amethyst.commons.resources.front_page_violation_markup
 import com.vitorpamplona.amethyst.commons.resources.front_page_violation_quote
-import com.vitorpamplona.amethyst.commons.resources.front_page_who_prints
-import com.vitorpamplona.amethyst.commons.resources.front_page_who_prints_assistant
-import com.vitorpamplona.amethyst.commons.resources.front_page_who_prints_assistant_named
-import com.vitorpamplona.amethyst.commons.resources.front_page_who_prints_devices
-import com.vitorpamplona.amethyst.commons.resources.front_page_who_prints_other
 import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.relay_settings
@@ -313,7 +309,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.wot.onboarding.brainstorm.BrainstormOnboarding
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -414,14 +409,14 @@ fun FrontPageScreen(
     val schedule by viewModel.schedule.collectAsStateWithLifecycle()
     val scheduleProblem by viewModel.scheduleProblem.collectAsStateWithLifecycle()
     val schedulePending by viewModel.schedulePending.collectAsStateWithLifecycle()
-    val whoPrints by viewModel.whoPrints.collectAsStateWithLifecycle()
-    // The Assistant's profile, asked for while The Observer shows, so "Who prints" can name it.
-    whoPrints.assistant?.takeIf { whoPrints.assistantName == null }?.let { assistant ->
-        LoadUser(assistant) { user -> if (user != null) UserFinderFilterAssemblerSubscription(user, accountViewModel) }
+    val printedBy by viewModel.printedBy.collectAsStateWithLifecycle()
+    // The runner's profile, asked for while The Observer shows, so "Printed by" can name it.
+    printedBy?.takeIf { it.name == null && !it.isAssistant }?.let { by ->
+        LoadUser(by.runner) { user -> if (user != null) UserFinderFilterAssemblerSubscription(user, accountViewModel) }
     }
     val scheduleActions =
         remember(viewModel, nav) {
-            ScheduleActions(viewModel::setScheduleEnabled, viewModel::setScheduleTime, viewModel::setPrintsHere, viewModel::retryScheduleDecrypt, viewModel::setRunner) { nav.nav(Route.EditRelays) }
+            ScheduleActions(viewModel::setScheduleEnabled, viewModel::setScheduleTime, viewModel::setPrintsHere, viewModel::retryScheduleDecrypt, viewModel::printFromMyDevices) { nav.nav(Route.EditRelays) }
         }
     val observerPrefs by viewModel.observerPrefs.collectAsStateWithLifecycle()
     val observer by viewModel.observer.collectAsStateWithLifecycle()
@@ -588,7 +583,7 @@ fun FrontPageScreen(
                             scheduleProblem,
                             schedulePending != null,
                             scheduleActions,
-                            whoPrints,
+                            printedBy,
                             onModel = viewModel::selectModel,
                             onPrint = requestPrint,
                             onCancel = askCancel,
@@ -630,7 +625,7 @@ fun FrontPageScreen(
                             scheduleProblem,
                             schedulePending != null,
                             scheduleActions,
-                            whoPrints,
+                            printedBy,
                             onModel = viewModel::selectModel,
                             onPrint = {
                                 printSheet = false
@@ -967,7 +962,7 @@ private fun PrintControls(
     scheduleProblem: ScheduleEdit?,
     scheduleBusy: Boolean,
     scheduleActions: ScheduleActions,
-    whoPrints: WhoPrints,
+    printedBy: PrintedBy?,
     onModel: (String) -> Unit,
     onPrint: () -> Unit,
     onCancel: () -> Unit,
@@ -1005,7 +1000,7 @@ private fun PrintControls(
                 )
             }
         }
-        ScheduleRow(schedule, scheduleProblem, scheduleBusy, scheduleActions, whoPrints, ink)
+        ScheduleRow(schedule, scheduleProblem, scheduleBusy, scheduleActions, printedBy, ink)
         publish?.let { PublishRow(it.publish, onPublish, ink) }
     }
 }
@@ -1176,8 +1171,11 @@ class ScheduleActions(
     val onTime: (hour: Int, minute: Int) -> Unit,
     val onPrintsHere: (Boolean) -> Unit,
     val onRetryDecrypt: () -> Unit,
-    /** Who prints on schedule: a runner (the reader's Assistant), or null for their own devices. */
-    val onRunner: (HexKey?) -> Unit,
+    /**
+     * Hands a schedule that names a runner back to the reader's devices. Clear-only: choosing a
+     * runner is the provider's call, made in Brainstorm, never this app's.
+     */
+    val onPrintFromMyDevices: () -> Unit,
     val onRelaySettings: () -> Unit,
 )
 
@@ -1194,7 +1192,7 @@ private fun ScheduleRow(
     problem: ScheduleEdit?,
     busy: Boolean,
     actions: ScheduleActions,
-    who: WhoPrints,
+    printedBy: PrintedBy?,
     ink: Color,
 ) {
     if (schedule.state == ScheduleState.LOADING) return
@@ -1252,21 +1250,11 @@ private fun ScheduleRow(
         if (schedule.unknownParams.isNotEmpty()) {
             ScheduleNote(stringRes(Res.string.front_page_unknown_params, schedule.unknownParams.joinToString(", ")), note, indent)
         }
-        // Who prints on schedule: the reader's devices, or their Brainstorm Assistant (NIP-FB, Runner).
-        val hasEvent = schedule.state == ScheduleState.READY || schedule.settingsOnly
-        if (hasEvent && who.shown) WhoPrintsChoice(who, busy, actions.onRunner, ink, note, indent)
-        if (who.byAssistant) {
-            // The Assistant prints with its own AI key, never the reader's: it needs one from Brainstorm.
-            ScheduleNote(stringRes(Res.string.front_page_assistant_prints), note, indent)
-            val uriHandler = LocalUriHandler.current
-            TextButton(
-                onClick = { runCatching { uriHandler.openUri(BrainstormOnboarding.AI_MODEL_SETTINGS) } },
-                modifier = indent,
-                colors = ButtonDefaults.textButtonColors(contentColor = ink),
-            ) { Text(stringRes(Res.string.front_page_assistant_ai_settings)) }
-        } else if (who.byOther) {
-            ScheduleNote(stringRes(Res.string.front_page_other_runner_prints), note, indent)
-        }
+        // Who prints on schedule, when the schedule names a runner (NIP-FB, Runner). Shown, never
+        // picked here: the Assistant is chosen in Brainstorm. The reader can only take it back.
+        printedBy?.let { RunnerPrints(it, busy, actions.onPrintFromMyDevices, ink, note, indent) }
+        // A conflict, or a `p` that isn't a key: nobody prints it, and only the devices are offered.
+        if (schedule.nobodyPrints) NobodyPrints(schedule, busy, actions.onPrintFromMyDevices, ink, indent)
         // Printed by a runner (or by nobody, in a conflict): this device's part is moot and hidden;
         // the reader's choice is kept for when the devices print again.
         if (!schedule.namesRunner) {
@@ -1333,68 +1321,84 @@ private fun SwitchRow(
 }
 
 /**
- * "Who prints: My devices / My Brainstorm Assistant": a radio group under the schedule. A
- * schedule naming several printers (NIP-FB's conflict: nobody prints) selects none and says so,
- * with a fix that picks one.
+ * "Printed by …" for a schedule that names one runner: the reader's Brainstorm Assistant (with
+ * the line saying it prints with its own AI key, and the link to give it one), else the runner's
+ * profile name. "Print from my devices instead", confirmed, hands the schedule back.
  */
 @Composable
-private fun WhoPrintsChoice(
-    who: WhoPrints,
+private fun RunnerPrints(
+    by: PrintedBy,
     busy: Boolean,
-    onRunner: (HexKey?) -> Unit,
+    onPrintFromMyDevices: () -> Unit,
     ink: Color,
     note: Color,
     modifier: Modifier,
 ) {
-    Column(modifier.selectableGroup()) {
-        Text(
-            stringRes(Res.string.front_page_who_prints),
-            style = MaterialTheme.typography.labelLarge,
-            color = note,
-            modifier = Modifier.padding(top = 8.dp).semantics { heading() },
+    var confirming by remember { mutableStateOf(false) }
+    Text(
+        if (by.isAssistant) {
+            stringRes(Res.string.front_page_printed_by_assistant)
+        } else {
+            stringRes(Res.string.front_page_printed_by, by.name ?: shortNpub(by.runner))
+        },
+        style = MaterialTheme.typography.bodyMedium,
+        color = ink,
+        modifier = modifier.padding(top = 8.dp),
+    )
+    if (by.isAssistant) {
+        // The Assistant prints with its own AI key, never the reader's: it needs one from Brainstorm.
+        ScheduleNote(stringRes(Res.string.front_page_assistant_prints), note, modifier)
+        val uriHandler = LocalUriHandler.current
+        TextButton(
+            onClick = { runCatching { uriHandler.openUri(BrainstormOnboarding.AI_MODEL_SETTINGS) } },
+            modifier = modifier,
+            colors = ButtonDefaults.textButtonColors(contentColor = ink),
+        ) { Text(stringRes(Res.string.front_page_assistant_ai_settings)) }
+    }
+    TextButton(
+        onClick = { confirming = true },
+        enabled = !busy,
+        modifier = modifier,
+        colors = ButtonDefaults.textButtonColors(contentColor = ink),
+    ) { Text(stringRes(Res.string.front_page_print_from_my_devices)) }
+    if (confirming) {
+        AlertDialog(
+            onDismissRequest = { confirming = false },
+            title = { Text(stringRes(Res.string.front_page_print_from_my_devices_title)) },
+            text = { Text(stringRes(Res.string.front_page_print_from_my_devices_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirming = false
+                    onPrintFromMyDevices()
+                }) { Text(stringRes(Res.string.front_page_use_my_devices)) }
+            },
+            dismissButton = { TextButton(onClick = { confirming = false }) { Text(stringRes(Res.string.cancel)) } },
         )
-        RadioRow(stringRes(Res.string.front_page_who_prints_devices), selected = who.runners.isEmpty(), enabled = !busy, ink = ink) { onRunner(null) }
-        who.assistant?.let { assistant ->
-            val label = who.assistantName?.let { stringRes(Res.string.front_page_who_prints_assistant_named, it) } ?: stringRes(Res.string.front_page_who_prints_assistant)
-            RadioRow(label, selected = who.byAssistant, enabled = !busy, ink = ink) { onRunner(assistant) }
-        }
-        // A runner that isn't the reader's Assistant (an earlier one, another app's): shown, so it can be replaced.
-        who.runner?.takeIf { who.byOther }?.let { other ->
-            RadioRow(stringRes(Res.string.front_page_who_prints_other, shortNpub(other)), selected = true, enabled = !busy, ink = ink) { onRunner(other) }
-        }
-        if (who.conflict) {
-            ScheduleProblem(pluralStringRes(Res.plurals.front_page_runner_conflict, who.runners.size, who.runners.size))
-            val keep = who.assistant?.takeIf { it in who.runners }
-            TextButton(
-                onClick = { onRunner(keep) },
-                enabled = !busy,
-                colors = ButtonDefaults.textButtonColors(contentColor = ink),
-            ) {
-                Text(stringRes(if (keep != null) Res.string.front_page_runner_conflict_keep_assistant else Res.string.front_page_runner_conflict_use_devices))
-            }
-        }
     }
 }
 
-/** One choice of a radio group: the whole row selects it, and is one radio button to a screen reader. */
+/** A schedule that names runners but none prints (a conflict, or a `p` that isn't a key): the fix is the reader's devices. */
 @Composable
-private fun RadioRow(
-    label: String,
-    selected: Boolean,
-    enabled: Boolean,
+private fun NobodyPrints(
+    schedule: MorningScheduleView,
+    busy: Boolean,
+    onPrintFromMyDevices: () -> Unit,
     ink: Color,
-    onClick: () -> Unit,
+    modifier: Modifier,
 ) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .heightIn(min = 44.dp)
-            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null, enabled = enabled)
-        Spacer(Modifier.width(8.dp))
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    Column(modifier) {
+        ScheduleProblem(
+            if (schedule.runnerConflict) {
+                pluralStringRes(Res.plurals.front_page_runner_conflict, schedule.runners.size, schedule.runners.size)
+            } else {
+                stringRes(Res.string.front_page_runner_not_a_key)
+            },
+        )
+        TextButton(
+            onClick = onPrintFromMyDevices,
+            enabled = !busy,
+            colors = ButtonDefaults.textButtonColors(contentColor = ink),
+        ) { Text(stringRes(Res.string.front_page_use_my_devices)) }
     }
 }
 

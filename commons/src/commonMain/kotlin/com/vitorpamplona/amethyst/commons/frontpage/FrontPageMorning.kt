@@ -178,8 +178,14 @@ data class MorningScheduleView(
     /** The schedule names a runner (one, or several in conflict): no device of the reader prints it on schedule. */
     val namesRunner: Boolean get() = runners.isNotEmpty()
 
-    /** More than one public `p`: nobody prints it until the reader picks one. */
+    /** More than one public `p`: nobody prints it until the reader hands it back to their devices. */
     val runnerConflict: Boolean get() = runners.size > 1
+
+    /**
+     * The schedule names runners but none prints: a conflict, or one `p` that isn't a key. Only the
+     * reader's devices are offered as the fix ([FrontPageMorning.printFromMyDevices]).
+     */
+    val nobodyPrints: Boolean get() = namesRunner && runner == null
 }
 
 /**
@@ -204,6 +210,12 @@ fun runsHereAtAll(task: ScheduledTask) = task.task == ObserverSchedule.TASK && t
  * this app doesn't understand (NIP-FB, `param`: such a task is never run).
  */
 fun devicesPrint(task: ScheduledTask) = runsHereAtAll(task) && !task.namesRunner && ObserverParams.understands(task)
+
+/**
+ * [task] printed by the reader's own devices again: no public `p` (NIP-FB, Runner), the private
+ * tags encrypted to the reader when it is published. Null, nothing to write, when it names no runner.
+ */
+fun withoutRunner(task: ScheduledTask?): ScheduledTask? = task?.takeIf { it.namesRunner }?.withRunner(null)
 
 /** An Observer schedule holding only settings: no `cron`, so it never runs (NIP-FB, `param`). */
 fun observerSettingsOnly(): ScheduledTask = ScheduledTask(arrayOf(DTag.assemble(ObserverSchedule.D_TAG)), arrayOf(TaskTag.assemble(ObserverSchedule.TASK)))
@@ -699,18 +711,16 @@ class FrontPageMorning(
         }
 
     /**
-     * Who prints on schedule (NIP-FB, Runner): [runner] (the reader's Brainstorm Assistant) or,
-     * when null, the reader's own devices. Rewritten through the schedule's edit rules: every other
-     * tag stays, and the private tags are encrypted to the runner, or back to the reader when it is
-     * cleared ([ScheduledTaskEvent.rewrite]). While a runner is named this device's job goes
-     * ([devicesPrint]); its own "Print from this device" stays as it was, for when it is cleared.
+     * Back to the reader's own devices (NIP-FB, Runner): every public `p` goes, so a named runner,
+     * a conflict and a `p` that isn't a key all end the same way. Rewritten through the schedule's
+     * edit rules: every other tag stays, and the private tags are encrypted to the reader again
+     * ([ScheduledTaskEvent.rewrite]). The job comes back on the devices whose "Print from this
+     * device" stayed on ([devicesPrint]). The only runner edit Amethyst makes: choosing a runner is
+     * the provider's call, made in Brainstorm, so this app never writes one.
      */
-    suspend fun setRunner(
-        account: Account,
-        runner: HexKey?,
-    ): ScheduleEdit =
+    suspend fun printFromMyDevices(account: Account): ScheduleEdit =
         editQueue.withLock {
-            edit(account, now()) { current -> current?.withRunner(runner) }
+            edit(account, now(), ::withoutRunner)
         }
 
     /**

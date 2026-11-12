@@ -59,8 +59,9 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 /**
- * The reader's Brainstorm Assistant as the schedule's runner (NIP-FB, Runner): choosing it
- * rewrites the event for it, the reader's devices hold no job and never claim while it is named,
+ * The reader's Brainstorm Assistant as the schedule's runner (NIP-FB, Runner), chosen in
+ * Brainstorm, never here: Amethyst can only hand the schedule back to the reader's devices, which
+ * re-encrypts it to the reader. While a runner is named the devices hold no job and never claim,
  * and the status line and missed-run warning read both Observer sites.
  */
 class FrontPageRunnerTest {
@@ -168,29 +169,48 @@ class FrontPageRunnerTest {
     ) = ObserverEdition(day = ObserverSite.utcDay(printedAt), path = ObserverSite.dayPath(ObserverSite.utcDay(printedAt)), sha256 = sha.toString().repeat(64), printedAt = printedAt)
 
     @Test
-    fun choosingTheAssistantRewritesTheScheduleForItAndDevicesTakeItBack() =
+    fun printingFromMyDevicesDropsTheRunnerAndEncryptsToTheReaderAgain() =
         runTest {
-            val relays = Relays(task.withParam("model", "anthropic/claude-sonnet-4.5"))
-            assertIs<ScheduleEdit.Saved>(editMigrating(relays, six, null) { it?.withRunner(assistant.pubKey) })
+            // Brainstorm named the Assistant: the public `p`, the private tags NIP-44 between the reader and it.
+            val relays = Relays(task.withParam("model", "anthropic/claude-sonnet-4.5").withRunner(assistant.pubKey))
             val named = relays.newestEvent()!!
-            // The public `p` names it, and the private tags are now NIP-44 between the reader and it: both read them.
             assertEquals(listOf(assistant.pubKey), named.runners())
-            assertEquals("0 6 * * *", named.task(assistant)?.cron)
             assertEquals("anthropic/claude-sonnet-4.5", named.task(assistant)?.param("model")?.value())
-            val asRead = assertNotNull(named.task(reader))
-            assertEquals(assistant.pubKey, asRead.runner)
-            // Nobody else reads them.
-            assertNull(named.task(stranger))
 
-            // Back to the reader's devices: no `p`, encrypted to the reader alone again, everything else kept.
-            assertIs<ScheduleEdit.Saved>(editMigrating(relays, six + 1, null) { it?.withRunner(null) })
+            // "Print from my devices instead": no `p`, encrypted to the reader alone again, everything else kept.
+            assertIs<ScheduleEdit.Saved>(editMigrating(relays, six + 1, null, ::withoutRunner))
             val cleared = relays.newestEvent()!!
             assertTrue(cleared.runners().isEmpty())
             assertNull(cleared.task(assistant))
-            assertEquals("anthropic/claude-sonnet-4.5", cleared.task(reader)?.param("model")?.value())
-            // Choosing what is already chosen writes nothing.
-            assertEquals(ScheduleEdit.Unchanged, editMigrating(relays, six + 2, null) { it?.withRunner(null) })
+            assertNull(cleared.task(stranger))
+            val asRead = assertNotNull(cleared.task(reader))
+            assertNull(asRead.runner)
+            assertEquals("0 6 * * *", asRead.cron)
+            assertEquals("anthropic/claude-sonnet-4.5", asRead.param("model")?.value())
+            // Already the reader's devices: nothing to write.
+            assertEquals(ScheduleEdit.Unchanged, editMigrating(relays, six + 2, null, ::withoutRunner))
+            assertEquals(2, relays.events.value.size)
         }
+
+    @Test
+    fun amethystHasNoWayToNameARunner() {
+        // Picking the Assistant is the provider's call, made in Brainstorm: no entry point here takes a key to name.
+        for (type in listOf(FrontPageMorning::class.java, FrontPageViewModel::class.java)) {
+            assertTrue(type.methods.none { it.name == "setRunner" }, "${type.simpleName}.setRunner")
+            val naming = type.methods.filter { !it.isSynthetic && it.name.contains("runner", ignoreCase = true) && it.parameterTypes.any { p -> p == String::class.java } }
+            assertTrue(naming.isEmpty(), "${type.simpleName} can name a runner: $naming")
+        }
+        // The only runner edit: clear-only.
+        assertNotNull(FrontPageViewModel::class.java.methods.singleOrNull { it.name == "printFromMyDevices" && it.parameterCount == 0 })
+        assertNotNull(FrontPageMorning::class.java.methods.singleOrNull { it.name == "printFromMyDevices" })
+        // The rewrite it makes never adds a `p`, whatever the schedule held.
+        val conflict = ScheduledTask(task.publicTags + arrayOf(PTag.assemble(assistant.pubKey, null), PTag.assemble(stranger.pubKey, null)), task.privateTags)
+        for (named in listOf(task.withRunner(assistant.pubKey), conflict, task.withRunner("not-a-key"))) {
+            assertTrue(assertNotNull(withoutRunner(named)).runners.isEmpty())
+        }
+        assertNull(withoutRunner(task))
+        assertNull(withoutRunner(null))
+    }
 
     @Test
     fun theReadersDeviceOpensAScheduleEncryptedToTheAssistant() =
@@ -223,8 +243,8 @@ class FrontPageRunnerTest {
             runCurrent()
             assertFalse(scheduler.calls.last().enabled)
 
-            // Cleared: the job is back, at the schedule's time.
-            synced.value = readable(task.withRunner(null))
+            // Back to the reader's devices: the job is back, at the schedule's time, as this device's own choice had it.
+            synced.value = readable(withoutRunner(task.withRunner(assistant.pubKey))!!)
             runCurrent()
             assertEquals(FrontPageSchedule(true, "0 6 * * *", ny), scheduler.calls.last())
             assertEquals(listOf(true, false, true), scheduler.calls.map { it.enabled })
@@ -298,18 +318,51 @@ class FrontPageRunnerTest {
         }
 
     @Test
-    fun aConflictShowsEveryRunnerAndNoneAsTheOne() =
+    fun aConflictOffersOnlyTheReadersDevices() =
         runTest {
             val both = ScheduledTask(task.publicTags + arrayOf(PTag.assemble(assistant.pubKey, null), PTag.assemble(stranger.pubKey, null)), task.privateTags)
             val view = viewOf(readable(both), on, true, now = six, deviceId = ny)
             assertTrue(view.runnerConflict)
+            assertTrue(view.nobodyPrints)
             assertNull(view.runner)
             assertEquals(listOf(assistant.pubKey, stranger.pubKey), view.runners)
-            val who = WhoPrints(assistant.pubKey, "Brainstorm", view.runner, view.runners)
-            assertTrue(who.conflict)
-            assertFalse(who.byAssistant)
-            assertFalse(who.byOther)
-            // The fix keeps one: withRunner leaves exactly that `p`.
-            assertEquals(listOf(assistant.pubKey), both.withRunner(assistant.pubKey).runners)
+            // No runner to name, so no "Printed by" line: only the devices are offered.
+            assertNull(printedByOf(view.runner, "Brainstorm", assistant.pubKey))
+            // The fix drops every `p`; it never keeps one.
+            assertTrue(withoutRunner(both)!!.runners.isEmpty())
+        }
+
+    @Test
+    fun aPThatIsNotAKeyIsTreatedLikeAConflict() =
+        runTest {
+            val broken = task.withRunner("npub-not-hex")
+            val view = viewOf(readable(broken), on, true, now = six, deviceId = ny)
+            assertEquals(ScheduleState.READY, view.state)
+            assertTrue(view.namesRunner)
+            assertFalse(view.runnerConflict)
+            assertNull(view.runner)
+            assertTrue(view.nobodyPrints)
+            assertNull(printedByOf(view.runner, null, assistant.pubKey))
+            // The devices don't print it either, until the reader takes it back.
+            assertFalse(scheduleForThisDevice(readable(broken), on, canPrintHere = true)!!.enabled)
+            assertTrue(scheduleForThisDevice(readable(withoutRunner(broken)!!), on, canPrintHere = true)!!.enabled)
+        }
+
+    @Test
+    fun printedByNamesTheAssistantOrTheRunnersProfile() =
+        runTest {
+            // The reader's `30382:rank` provider is labelled as their Brainstorm Assistant, whatever its profile says.
+            assertEquals(PrintedBy(assistant.pubKey, "Brainstorm", isAssistant = true), printedByOf(assistant.pubKey, "Brainstorm", assistant.pubKey))
+            // Another runner: its kind-0 name, or none yet (the screen then shows a short npub).
+            assertEquals(PrintedBy(stranger.pubKey, "Bob's bot", isAssistant = false), printedByOf(stranger.pubKey, "Bob's bot", assistant.pubKey))
+            assertEquals(PrintedBy(stranger.pubKey, null, isAssistant = false), printedByOf(stranger.pubKey, "  ", assistant.pubKey))
+            // No rank provider: never the Assistant.
+            assertFalse(printedByOf(assistant.pubKey, null, null)!!.isAssistant)
+            // No runner: nothing to label.
+            assertNull(printedByOf(null, "Brainstorm", assistant.pubKey))
+            // A schedule with no runner names nobody, so nothing is shown or offered.
+            val view = viewOf(readable(task), on, true, now = six, deviceId = ny)
+            assertFalse(view.namesRunner)
+            assertFalse(view.nobodyPrints)
         }
 }
