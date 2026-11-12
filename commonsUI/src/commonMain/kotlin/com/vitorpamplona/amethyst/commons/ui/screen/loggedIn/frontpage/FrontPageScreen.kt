@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -89,6 +88,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -481,6 +481,18 @@ fun FrontPageScreen(
                             Icon(MaterialSymbols.AutoAwesome, contentDescription = stringRes(Res.string.front_page_print_again))
                         }
                     }
+                    // A past edition's way back, besides the arrow: named, in the bar, so nothing
+                    // covers the paper's dateline. The bar's title gives way to it, never the other way.
+                    if (past != null) {
+                        val backToToday = stringRes(Res.string.front_page_back_to_today)
+                        TextButton(onClick = viewModel::showToday) {
+                            Text(
+                                stringRes(Res.string.today),
+                                maxLines = 1,
+                                modifier = Modifier.clearAndSetSemantics { contentDescription = backToToday },
+                            )
+                        }
+                    }
                     IconButton(onClick = { detailsSheet = true }) {
                         Icon(MaterialSymbols.Info, contentDescription = stringRes(Res.string.front_page_details))
                     }
@@ -509,19 +521,6 @@ fun FrontPageScreen(
             // The paper fills the pane, edge to edge: today's, or the past one picked.
             Box(Modifier.padding(padding).fillMaxSize()) {
                 PaperPane(paper, page, loading = page == null, Modifier.fillMaxSize())
-                if (past != null) {
-                    // Over the paper's top edge, where a phone's reader sees it first.
-                    FilledTonalButton(
-                        onClick = viewModel::showToday,
-                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        contentPadding = PaddingValues(start = 12.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
-                    ) {
-                        Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringRes(Res.string.front_page_back_to_today))
-                    }
-                }
                 // What goes on meanwhile (a print again, a publish to confirm or that failed) floats
                 // over the foot of the paper, at a reading width.
                 Column(
