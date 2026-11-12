@@ -68,9 +68,26 @@ class PaperProfileTest {
     fun thePageIsServedAsWrittenUnderItsCsp() =
         runBlocking {
             val response = server.serve("GET", "$origin/index.html", acceptsHtml = true)!!
-            assertEquals(page, response.readBody().decodeToString())
+            // Behind a markup-only prelude that names the charset the header already promises.
+            assertEquals(NappletWebContract.PAPER_PRELUDE + page, response.readBody().decodeToString())
             assertEquals(NappletWebContract.PAPER_CSP, response.headers["Content-Security-Policy"])
             assertEquals(404, server.serve("GET", "$origin/other.js", acceptsHtml = false)?.status)
+        }
+
+    @Test
+    fun aPageWithoutItsOwnCharsetIsStillReadAsUtf8() =
+        runBlocking {
+            // JCEF drops the header's charset, so a page that names none fell back to Latin-1:
+            // "Kräftig" showed as "KrÃ¤ftig". The prelude names it first, ahead of the page.
+            val accented = "<title>The Nostr Observer</title><p>Kräftig</p>"
+            val served =
+                NappletSiteServer(PaperFiles(accented.encodeToByteArray()), shellHtml, "/*shim*/", origin, HostProfile.PAPER, emptyList())
+                    .serve("GET", "$origin/index.html", acceptsHtml = true)!!
+            val body = served.readBody().decodeToString()
+            assertTrue(body.startsWith("<!doctype html><html><head><meta charset=\"utf-8\">"))
+            assertFalse(body.contains("<script"))
+            assertTrue(body.endsWith(accented))
+            assertEquals("utf-8", served.charset)
         }
 
     @Test

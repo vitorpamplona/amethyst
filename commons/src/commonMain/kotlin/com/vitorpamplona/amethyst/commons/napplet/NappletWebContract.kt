@@ -298,6 +298,13 @@ object NappletWebContract {
             "try{if(window.CookieStore){Object.defineProperty(window,'CookieStore',{value:undefined,writable:false,configurable:false});}}catch(e){}})();"
 
     /**
+     * What a paper gets before its page: markup only, no script. It names the charset the server's
+     * header already promises, because JCEF drops the header's charset and a page that names none
+     * was read as Latin-1. A repeated doctype and head in the page are ignored by the parser.
+     */
+    const val PAPER_PRELUDE = "<!doctype html><html><head><meta charset=\"utf-8\">"
+
+    /**
      * Injects host-owned policy and the runtime prelude before any authored element in `head`.
      * [locked] is the NIP-5D posture; WEBSITE callers deliberately retain Amethyst's NIP-07 and
      * normal-origin behavior. Only syntactically valid, explicitly authorized NAP domains are

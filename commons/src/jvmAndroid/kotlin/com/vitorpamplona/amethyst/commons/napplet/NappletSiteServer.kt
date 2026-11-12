@@ -91,8 +91,9 @@ class NappletSiteServer(
     // The prelude every page of this launch gets: built once, prepended to each page's bytes.
     private val prelude by lazy {
         if (profile == HostProfile.WEBXDC) return@lazy NappletWebContract.webxdcPrelude()
-        // A paper runs no script, so it gets none: not even the guards, which are scripts too.
-        if (profile == HostProfile.PAPER) return@lazy ByteArray(0)
+        // A paper runs no script, so it gets none: not even the guards, which are scripts too. It
+        // gets only markup naming its charset, which JCEF drops from the header.
+        if (profile == HostProfile.PAPER) return@lazy NappletWebContract.PAPER_PRELUDE.encodeToByteArray()
         NappletWebContract.preludePrefix(
             shimJs = shimJs,
             declaredDomains = declaredDomains,
