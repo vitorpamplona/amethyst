@@ -40,6 +40,7 @@ class TorSettingsFlow(
     val nip05VerificationsViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val mediaUploadsViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val progressNotification: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val appletsAndWebsitesViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) {
     // emits at every change in any of the properties.
     val propertyWatchFlow =
@@ -59,6 +60,7 @@ class TorSettingsFlow(
                 nip05VerificationsViaTor,
                 mediaUploadsViaTor,
                 progressNotification,
+                appletsAndWebsitesViaTor,
             ),
         ) { flows ->
             TorSettings(
@@ -76,6 +78,7 @@ class TorSettingsFlow(
                 flows[11] as Boolean,
                 flows[12] as Boolean,
                 flows[13] as Boolean,
+                flows[14] as Boolean,
             )
         }
 
@@ -95,6 +98,7 @@ class TorSettingsFlow(
             nip05VerificationsViaTor.value,
             mediaUploadsViaTor.value,
             progressNotification.value,
+            appletsAndWebsitesViaTor.value,
         )
 
     fun update(torSettings: TorSettings): Boolean {
@@ -157,6 +161,10 @@ class TorSettingsFlow(
             progressNotification.tryEmit(torSettings.progressNotification)
             any = true
         }
+        if (appletsAndWebsitesViaTor.value != torSettings.appletsAndWebsitesViaTor) {
+            appletsAndWebsitesViaTor.tryEmit(torSettings.appletsAndWebsitesViaTor)
+            any = true
+        }
 
         return any
     }
@@ -178,6 +186,7 @@ class TorSettingsFlow(
                 MutableStateFlow(torSettings.nip05VerificationsViaTor),
                 MutableStateFlow(torSettings.mediaUploadsViaTor),
                 MutableStateFlow(torSettings.progressNotification),
+                MutableStateFlow(torSettings.appletsAndWebsitesViaTor),
             )
     }
 }

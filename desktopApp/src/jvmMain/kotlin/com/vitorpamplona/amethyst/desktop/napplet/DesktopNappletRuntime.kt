@@ -41,7 +41,7 @@ import java.io.File
  *
  * [httpClient] fetches blobs, through Tor or not; [torPort] is the Tor SOCKS port while Tor runs
  * (null otherwise); [nappletBlobsUseTor] is whether a napplet's own blob downloads go through Tor,
- * which follows the app's Tor setting as on Android.
+ * which follows the Tor settings' "Applets and Websites" switch, as on Android.
  */
 class DesktopNappletRuntime(
     val engine: DesktopCefEngine,

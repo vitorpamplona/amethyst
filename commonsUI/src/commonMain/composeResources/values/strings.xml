@@ -6242,6 +6242,8 @@
     <string name="tor_use_images_explainer">Force Tor when loading images</string>
     <string name="tor_use_media_uploads">Media Uploads</string>
     <string name="tor_use_media_uploads_explainer">Force Tor when uploading content</string>
+    <string name="tor_use_applets_and_websites">Applets and Websites</string>
+    <string name="tor_use_applets_and_websites_explainer">Force Tor when downloading applets and opening nSites and websites you haven’t set yet</string>
     <string name="tor_use_money_operations">Money Operations</string>
     <string name="tor_use_money_operations_explainer">Force Tor on zaps, lightning and cashu transfers</string>
     <string name="tor_use_new_relays">Untrusted Relays</string>
