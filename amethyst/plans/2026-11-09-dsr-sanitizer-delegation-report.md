@@ -14,8 +14,9 @@ brief's table: UNCOMPRESSED with strip on, and a compression fallback with strip
 `ftyp, moov, mdat`. A successful compression that is not fast-start is logged (row 3, "never
 silent"). Since the library can now be interrupted, a cancelled upload stops the remux instead of
 running it to the end. On the Pixel 9a, an UNCOMPRESSED upload with strip on came out fast-start with
-the location, the `mett` track, the C2PA `uuid` box and the capture tags gone (row 2). Row 4 is not
-reachable from the main media dialog, which turns strip off for any compressed video (see Findings).
+the location, the `mett` track, the C2PA `uuid` box and the capture tags gone (row 2). Row 4 was not
+reachable from the main media dialog, which turned strip off for any compressed video; 8i5 (below)
+fixed that, so a fallback from that dialog is now stripped too.
 
 | Commit | |
 |---|---|
@@ -168,14 +169,15 @@ it is temporary.
 
 ## Findings
 
-- **The main media dialog never strips a compressed video.** `ImageVideoDescription.kt:446` turns strip
-  off whenever compression is selected, so the brief's row 4 (the encode falls back, strip on) is
+- **The main media dialog never stripped a compressed video (fixed by 8i5, below).**
+  `ImageVideoDescription.kt:446` turned strip off whenever compression was selected, so the brief's row
+  4 (the encode falls back, strip on) was
   reachable only from entry points that pass the account's strip setting through unchanged, such as
   `UploadToDefaultServer` (`stripMetadata && account.settings.stripLocationOnUpload`). I did not check
-  which of those take video at a compression level. From the main dialog, a fallback uploads the original with its metadata, even though the
-  user turned stripping on. Today that is deliberate (a successful encode drops the metadata anyway),
-  but a fallback breaks that assumption. Candidate for its own bead; it is in `commonsUI`, outside
-  this brief.
+  which of those take video at a compression level. From the main dialog, a fallback uploaded the
+  original with its metadata, even though the user had stripping on. Hiding the toggle was meant to
+  be safe because a successful encode drops the metadata anyway, but a fallback breaks that
+  assumption. Filed as dkamy-8i5 and fixed on this branch; see the 8i5 section.
 - **Android redacts the location before Amethyst sees it.** Without `ACCESS_MEDIA_LOCATION`, MediaStore
   zeroes the `©xyz` payload in the stream it hands to the picker, so an UNCOMPRESSED strip-off upload
   is not byte-identical to the file on the phone (24 bytes differ). Model, manufacturer and capture
@@ -265,7 +267,144 @@ From the Kotlin review (no CRITICAL or HIGH findings):
   library is released. The branch cannot be merged before that pin.
 - Status: implementation, review and the device matrix are done. Next, the user reviews, pushes and
   opens the PR to upstream. Close bead dkamy-dsr when merged; dkamy-c8v is unblocked. Possible new
-  beads: the forced-off strip on compressed video (Findings), a clearer message in the strip-failed
-  dialog for trimmed clips, the library-side fast-start log in `Transcoder.finalizeOutput`.
+  beads: a clearer message in the strip-failed dialog for trimmed clips, the library-side fast-start
+  log in `Transcoder.finalizeOutput`.
 - `./gradlew --stop` was not run, because stopping the shared daemons kills a desktop app another
   session started with `./gradlew :desktopApp:run`. Run it when no other session is building.
+
+## 8i5: compression fallback honours the strip
+
+Brief: `amethyst/plans/2026-11-12-8i5-fallback-strip.md`. Bead dkamy-8i5 (P1, bug, found during dsr).
+Same branch and PR, on top of `cf4ee6433c`. No version change, not pushed.
+
+### Outcome
+
+The media dialog (`ImageVideoDescription`) now passes the user's strip choice to the uploader for a
+video that will be compressed, instead of `false`. When the encode falls back to the original (60 s
+timeout, output not smaller, encoder failure, cancel), the uploader now strips it: since dsr, that
+means a fast-start `Mp4Sanitizer` file. A successful encode is unchanged: the uploader still trusts it
+and skips the stripper. The rule the uploader applies is now a tested commons function,
+`StripDecision.shouldStrip`.
+
+| Commit | |
+|---|---|
+| `1b8d07635c` | fix(uploads): a compression fallback still strips the video's metadata |
+| `1e2e2de90c` | refactor(uploads): VideoUploadControls KDoc fits all three dialogs, shorter uploader comment (`/simplify`) |
+| `16523953f0` | docs(uploads): say why a compression fallback reaches the stripper (Kotlin review) |
+
+### Decisions
+
+1. **Extract `StripDecision`.** Taken as recommended. The extraction touched only the one `if` in
+   `stripAfterCompression`. I folded the `if (!stripMetadata) return compressed.uri` early exit into
+   the call; the brief left that choice to me. Kept separately, the call site would always pass
+   `true`. The Kotlin review checked every input, including a GIF converted to MP4 at UNCOMPRESSED
+   and the `AvifMetadataNotVerifiableException` path, and found the behaviour identical.
+2. **The hidden toggle keeps the last visible value.** Taken as recommended. The brief's reason, "as
+   `NewMediaView` and `ChatFileUploadDialog` do", does not hold: those two dialogs never hide the strip
+   toggle (see Divergences). The recommendation still fits on its own terms: it keeps a choice the user
+   made moments earlier in the same dialog, and otherwise the account default
+   (`stripLocationOnUpload`, which the toggle starts from).
+3. **Commit split.** As recommended: one `fix` commit for the change and its tests. `/simplify` and
+   the Kotlin review each produced a small follow-up commit.
+
+### Changes
+
+- `commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/note/creators/uploads/ImageVideoDescription.kt`:
+  the Add button passes `stripMetadata`; the `effectiveStripMetadata` local is gone. The toggle is still
+  hidden when `isVideoWithCompression`, and the comment above it says the choice is still passed
+  through because the encode can fall back.
+- `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/service/uploads/VideoUploadControls.kt`:
+  the `videoWillBeCompressed` KDoc no longer calls the strip toggle moot. It says a dialog *may* hide
+  the toggle, but its value must still reach the uploader.
+- `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/service/uploads/StripDecision.kt`
+  (new): `StripDecision.shouldStrip(stripMetadata, isVideo, compressionApplied) = stripMetadata &&
+  !(isVideo && compressionApplied)`, with the brief's KDoc. Pure, no imports, nothing for `cli` to pick up.
+- `amethyst/src/main/java/com/vitorpamplona/amethyst/service/uploads/AndroidMediaUploader.kt`:
+  `stripAfterCompression` computes the mime type, `isVideo` and `compressionApplied` as before, returns
+  `compressed.uri` when `shouldStrip` is false, and otherwise calls `MetadataStripper.strip`. The
+  `StrippingResult(compressed.uri, true)` placeholder branch is gone.
+- `commons/src/jvmTest/kotlin/com/vitorpamplona/amethyst/commons/service/uploads/StripDecisionTest.kt`
+  (new): four tests.
+
+### Divergences
+
+- **The sibling dialogs do not hide the toggle.** The brief says `NewMediaView.kt:259` and
+  `ChatFileUploadDialog.kt:270` hide the strip toggle on `controls.videoWillBeCompressed`. Those
+  lines guard the H.265 switch and the HDR hint. Both dialogs show the strip toggle unconditionally
+  (`NewMediaView.kt:273`, `ChatFileUploadDialog.kt:274`). Only `ImageVideoDescription` hides it (since
+  `127079ede3`). The fix is unaffected: passing the value through is what the siblings do. But the
+  `VideoUploadControls` KDoc the brief asked for ("the toggle is hidden") was true for only one of its
+  three callers, so `/simplify` reworded it to "a dialog may hide the strip toggle".
+- **The uploader comment** is one sentence pointing at why a fallback reaches the stripper, not a
+  restatement of the `StripDecision` KDoc.
+
+### Tests
+
+- `StripDecisionTest`: **4/4**. A re-encoded video is not stripped. A video whose encode fell back is
+  stripped (the bug's case). An image is stripped whether or not it was compressed. Strip off never
+  strips, over all four combinations. Together these cover all eight inputs.
+- `VideoUploadControlsTest`: **5/5**, unchanged (`uncompressedKeepsTheStripToggle` included).
+- `MetadataStripperTest`: **9/9**.
+- `:amethyst:testPlayDebugUnitTest`: **1,541 tests, 0 failures, 0 errors, 10 skipped** (same as dsr).
+- `:commons:jvmTest --tests "com.vitorpamplona.amethyst.commons.service.upload*"`: **253 tests, 0
+  failures**.
+- Static: `spotlessApply`, `:commonsUI:compileKotlinJvm`, `:amethyst:compilePlayDebugKotlin` and
+  `:amethyst:lintPlayDebug` pass at `16523953f0`.
+- The dialog change itself has no test: `commonsUI` has no Compose UI test harness, and the change is
+  one identifier. `stripAfterCompression` is private and needs Android types, so the wiring that feeds
+  `StripDecision` (`compressionApplied` from `compressed.uri != originalUri`) has no unit test either.
+- Device: passed. Pixel 9a, Android 17, 2026-11-12 19:13: the benchmark build at `16523953f0`
+  (2.4.0-SNAPSHOT from fork `a697ec2`), the tester account, the local haven server. The integrator
+  session ran it with the user; I re-ran the atom walk, `ffprobe` tags and `shasum` on the pulled files
+  and got the same results.
+  - Source: `lowbitrate_240p_5s.mp4`, cut with ffmpeg from the dsr Pixel clip so the HIGH encode
+    would come out larger. H.264 136x240 at about 360 kbps plus AAC, 5.017 s, 225,608 bytes, sha256
+    `7ebc79af1ea8180e…`. Top level `ftyp 32, free 8, mdat 219904, moov 5664` (`moov` last), a
+    `udta` box, and the tags `location`, `location-eng`, `com.android.model`,
+    `com.android.manufacturer`, `com.android.capture.fps`.
+  - Posted at HIGH with strip at the account default (on); the toggle was hidden. Logcat at 19:13:37
+    showed `W/VideoCompressionHelper: Compressed file larger than original. Using original.`, so the
+    fallback ran. There was no `MetadataStripper` failure and no "not fast-start" warning.
+  - Blob `a482d3fa58d1f3ae…`: 227,529 bytes, top level `ftyp 24, moov 4401, free 3192, mdat 219904`
+    (fast-start). H.264 136x240 plus AAC, 5.002 s. `moov` holds `mvhd`, two `trak` and `meta`, with
+    no `udta`. The only tags are `creation_time` (the strip time) and `com.android.version=17`;
+    location, model, manufacturer and capture fps are gone. Before `1b8d07635c` this upload would
+    have been the source as it was (`moov` last, tags intact).
+
+### Findings
+
+- **Stale compiler output in `commons`.** The first build failed with a Kotlin IR-lowering "should not
+  be called" error in `UriToRoute.kt`, a file this change does not touch. `./gradlew :commons:clean`
+  fixed it. It was leftover state in the worktree, not the change.
+- **`CordnGroupChatScreen.kt:1077-1093` has its own copy of the rule** (out of scope). It calls
+  `compressIfNeeded` and `uploader.stripMetadata` itself, because it encrypts the bytes, and strips
+  whenever the toggle is on. That is safe, but it re-strips a video the compressor already
+  re-encoded. A "compress and strip" call on `MediaUploader` for callers that encrypt would let it
+  use `StripDecision`.
+- **Long-form cover images are never stripped** (out of scope). `LongFormPostViewModel.kt:490` uploads
+  the cover with `stripMetadata = false` on purpose, so a camera photo used as a cover keeps its
+  location whatever `stripLocationOnUpload` says. It is the same class of gap as 8i5, for images.
+- **Desktop keeps its own rule.** `DesktopMediaUploader` uses `stripMetadata && !prepared`, where
+  `prepared` means "ffmpeg output", including the strip of a failed encode and a GIF converted to MP4.
+  It should not share `StripDecision`: with a source MIME of `image/gif`, a converted GIF would be
+  stripped twice.
+
+### Review findings not acted on
+
+From `/simplify`:
+- *Make `StripDecision` a top-level function, like `hdrUploadOutcome`.* Kept as the brief's `object`;
+  the integrator refers to it by that name.
+- *Drop the extended comment in `ImageVideoDescription`.* Kept: the brief asks for it, and it is the
+  one place the hidden toggle is decided.
+- *Inline `isVideoWithCompression`.* Left: it predates this change and is still used twice.
+- *The dialog regression has no test.* As the brief decided (no Compose harness).
+
+From the Kotlin review (approve; no CRITICAL, HIGH or MEDIUM findings):
+- *No uploader-level test; move `compressionApplied` into `StripDecision` someday.* Not done:
+  `compressionApplied` compares Android `Uri`s, which commons cannot hold. Noted under Tests.
+
+### Status
+
+Done, device check included. Release note (draft): "A video posted with compression on and
+'remove location' on is now stripped even when compression can't make it smaller or times out.
+Before, the original went up with its location." Close dkamy-8i5 with the dsr PR.
