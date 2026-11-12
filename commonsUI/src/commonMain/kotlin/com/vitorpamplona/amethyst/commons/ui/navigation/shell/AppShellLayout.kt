@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.ui.navigation.shell
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -323,9 +322,12 @@ private fun MultiPaneShell(
     val panelFolded by collapsePrefs.flow.collectAsStateWithLifecycle()
     val foldedAt by collapsePrefs.collapsedAt.collectAsStateWithLifecycle()
     val showFoldedStrip = showPanel && panelFolded
-    // 1 shown, 0 out of the way: the panel's width follows it, so the centre pane grows into the
-    // room smoothly rather than jumping.
-    val panelShare by animateFloatAsState(if (panelAway) 0f else 1f, tween(PANEL_FOLD_MS, easing = FastOutSlowInEasing), label = "NotificationPanelAway")
+    // 1 shown, 0 out of the way, at once: the screens that send the panel away (the paper, nSites,
+    // napplets, the browser) are pages Chromium draws off screen, and a centre pane that grew over a
+    // quarter second asked it for a new size every frame. It paints only some of them, so the page
+    // showed a stale frame stretched wider and blurrier until it caught up. A navigation swaps
+    // screens at once anyway; the panel stays composed, so it comes back as it was.
+    val panelShare = if (panelAway) 0f else 1f
     val windowWidth =
         with(LocalDensity.current) {
             LocalWindowInfo.current.containerSize.width

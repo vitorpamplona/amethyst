@@ -91,6 +91,19 @@ public final class OffscreenCefBrowser extends CefBrowser_N implements CefRender
     }
 
     /** A mouse event in the page's coordinates (device-independent pixels). */
+    /**
+     * Tells Chromium the view's size again and asks for a whole new frame. A burst of resizes (a
+     * pane that animates its width) left the page painted at a size from the start of the burst:
+     * Chromium took the first few and painted none of the rest, so the screen stretched a stale
+     * frame until something else made it paint.
+     */
+    public void settle() {
+        if (getNativeRef("CefBrowser") == 0) return;
+        Rectangle rect = viewRect;
+        wasResized(rect.width, rect.height);
+        invalidate();
+    }
+
     public void forwardMouse(MouseEvent event) {
         sendMouseEvent(event);
     }

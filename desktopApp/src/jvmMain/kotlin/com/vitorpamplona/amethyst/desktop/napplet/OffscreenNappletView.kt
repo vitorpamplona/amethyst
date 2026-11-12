@@ -41,6 +41,8 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import java.nio.ByteBuffer
 import javax.swing.SwingUtilities
+import javax.swing.Timer
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -99,11 +101,74 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         height: Int,
         scale: Double,
     ) {
-        if (width == this.width && height == this.height && scale == this.scale) return
-        this.width = width.coerceAtLeast(1)
-        this.height = height.coerceAtLeast(1)
+        val w = width.coerceAtLeast(1)
+        val h = height.coerceAtLeast(1)
+        // The first size goes at once: the page has nothing to show before it.
+        if (this.width <= 1 && this.height <= 1) {
+            apply(w, h, scale)
+            return
+        }
+        if (w == this.width && h == this.height && scale == this.scale) {
+            pending = null
+            return
+        }
+        // Held for a moment, the newest one winning: a screen that leaves takes its box with it in
+        // the same frame the layout around it changes (the notification panel snaps back as the
+        // nSite is left), and that last size, told to the page, was what it painted while away:
+        // coming back showed that frame, the wrong size, until it painted again.
+        pending = Triple(w, h, scale)
+        if (!applyPending.isRunning) applyPending.start()
+    }
+
+    /** The page's box left the screen: a size it reported on its way out is never sent. */
+    fun leave() {
+        pending = null
+        applyPending.stop()
+        settle.stop()
+    }
+
+    private fun apply(
+        width: Int,
+        height: Int,
+        scale: Double,
+    ) {
+        this.width = width
+        this.height = height
         this.scale = scale
-        browser?.resize(this.width, this.height, scale)
+        browser?.resize(width, height, scale)
+        settleChecks = 0
+        settle.restart()
+    }
+
+    // A size the box reported that the page has not been told yet. AWT thread, like [resize].
+    private var pending: Triple<Int, Int, Double>? = null
+
+    private val applyPending: Timer =
+        Timer(RESIZE_HOLD_MS) {
+            val (w, h, s) = pending ?: return@Timer
+            pending = null
+            apply(w, h, s)
+        }.apply { isRepeats = false }
+
+    // How many times the page was asked again for a frame at its size since it last resized.
+    private var settleChecks = 0
+
+    // Once a resize settles, checks the page painted at its new size and asks again when it didn't:
+    // Chromium drops resizes that come in a burst. AWT thread, like [resize].
+    private val settle: Timer =
+        Timer(SETTLE_MS) {
+            val frame = mutableFrame.value
+            val wantWidth = (width * scale).roundToInt()
+            val wantHeight = (height * scale).roundToInt()
+            if (frame == null || stopped || (abs(frame.width - wantWidth) <= 1 && abs(frame.height - wantHeight) <= 1)) return@Timer
+            if (++settleChecks > SETTLE_ATTEMPTS) return@Timer
+            Log.d(TAG) { "The page painted ${frame.width}x${frame.height}, not ${wantWidth}x$wantHeight: asking again" }
+            browser?.settle()
+            restartSettle()
+        }.apply { isRepeats = false }
+
+    private fun restartSettle() {
+        settle.restart()
     }
 
     /**
@@ -335,6 +400,13 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
 
         // Chromium's wheel delta for one notch, as Windows reports it and CEF's own sample sends.
         const val WHEEL_DELTA = 120
+
+        // How long after a resize the page should have painted at its new size, and how often it is asked again.
+        const val SETTLE_MS = 150
+        const val SETTLE_ATTEMPTS = 5
+
+        // How long a new size waits before the page is told: one frame or so of a screen leaving.
+        const val RESIZE_HOLD_MS = 60
 
         // What one unit of AWT's wheel rotation scrolls. On macOS a trackpad or a Magic Mouse reports
         // fractions of a unit, many a second, and the rest of the app (Compose's MacOSCocoaConfig) moves
