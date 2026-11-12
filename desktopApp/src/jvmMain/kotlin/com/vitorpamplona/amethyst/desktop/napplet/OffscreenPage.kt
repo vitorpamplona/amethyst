@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.napplet
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +44,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.InlinePaperScroll
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.PaperWheel
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import kotlin.math.roundToInt
@@ -55,6 +58,10 @@ import kotlin.math.roundToInt
  *
  * The page takes the keyboard once clicked. [wheelNeedsFocus] leaves the wheel to what holds the
  * page until then (a note's feed scrolls past it); a screen's page takes the wheel at once.
+ *
+ * With [pageWheel] (the inline front page), once the page reports how far it scrolls, the screen
+ * around it and the page scroll as one: the screen's scroll takes every turn and hands the page its
+ * share ([PaperWheel]), clicked or not, and only a turn the screen can't follow comes to the page.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -62,6 +69,7 @@ fun OffscreenPage(
     view: OffscreenNappletView,
     modifier: Modifier,
     wheelNeedsFocus: Boolean,
+    pageWheel: PaperWheel? = null,
     onFocusChanged: (Boolean) -> Unit = {},
 ) {
     // Read only where it is drawn, so a new frame redraws the box instead of recomposing the page.
@@ -70,6 +78,15 @@ fun OffscreenPage(
     val density = LocalDensity.current.density
     val focus = remember { FocusRequester() }
     var focused by remember { mutableStateOf(false) }
+    val scrollKnown by view.scrollKnown.collectAsState()
+    if (pageWheel != null && scrollKnown) {
+        DisposableEffect(pageWheel, view, density) {
+            val page = PageScroll(view, density)
+            pageWheel.page = page
+            onDispose { if (pageWheel.page === page) pageWheel.page = null }
+        }
+    }
+    val shared = pageWheel?.takeIf { scrollKnown }
 
     Box(
         modifier
@@ -91,7 +108,7 @@ fun OffscreenPage(
             // on, unseen, after its note scrolled away.
             .focusTarget()
             .pointerHoverIcon(PointerIcon(cursor))
-            .pointerInput(view, density) {
+            .pointerInput(view, density, shared) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
@@ -116,7 +133,17 @@ fun OffscreenPage(
                                 view.mouse(native, if (native.id == MouseEvent.MOUSE_DRAGGED) MouseEvent.MOUSE_DRAGGED else MouseEvent.MOUSE_MOVED, x, y)
                             PointerEventType.Exit -> view.mouse(native, MouseEvent.MOUSE_EXITED, x, y)
                             PointerEventType.Scroll ->
-                                if ((focused || !wheelNeedsFocus) && native is MouseWheelEvent) {
+                                if (native !is MouseWheelEvent) {
+                                    // Not a wheel: nothing to scroll.
+                                } else if (shared != null && !native.isShiftDown) {
+                                    // Left to the screen's scroll, which hands the page its share; only a
+                                    // turn the screen can't follow at all is the page's alone.
+                                    val towardEnd = native.preciseWheelRotation > 0
+                                    if (shared.pageTakesWheel(towardEnd)) {
+                                        view.scrollBy(view.notchPixels(native.preciseWheelRotation))
+                                        event.changes.forEach { it.consume() }
+                                    }
+                                } else if (focused || !wheelNeedsFocus) {
                                     view.wheel(native, x, y)
                                     event.changes.forEach { it.consume() }
                                 }
@@ -127,4 +154,14 @@ fun OffscreenPage(
                 frame.value?.let { drawImage(it, dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt())) }
             },
     )
+}
+
+/** [view]'s document for the screen's [PaperWheel], in the screen's pixels ([density] to the page's CSS pixels). */
+private class PageScroll(
+    private val view: OffscreenNappletView,
+    private val density: Float,
+) : InlinePaperScroll {
+    override fun room(towardEnd: Boolean): Float = (view.scrollRoom(towardEnd) * density).toFloat()
+
+    override fun scrollBy(px: Float): Float = (view.scrollBy(px / density.toDouble()) * density).toFloat()
 }

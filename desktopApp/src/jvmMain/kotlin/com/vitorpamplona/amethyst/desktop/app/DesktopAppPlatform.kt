@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.ui.platform.DisplayServerChoice
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberDecryptedConcordImageModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.PaperWheel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -186,10 +187,11 @@ class DesktopAppPlatform(
         onStatus: (InlineNappletStatus) -> Unit,
         modifier: Modifier,
         takesWheel: Boolean,
+        wheel: PaperWheel?,
     ) {
         val host = nappletHost ?: return
         // The bundled Chromium, off screen, as for an inline nSite: drawn by the screen, no script runs.
-        InlineNappletPane(host, posterKey = null, instanceId, onStatus, modifier, wheelNeedsFocus = !takesWheel) {
+        InlineNappletPane(host, posterKey = null, instanceId, onStatus, modifier, wheelNeedsFocus = !takesWheel, pageWheel = wheel) {
             host.openInlinePaper(html, title, instanceId)
         }
     }

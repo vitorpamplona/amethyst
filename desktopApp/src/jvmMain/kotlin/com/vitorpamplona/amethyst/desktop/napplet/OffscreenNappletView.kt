@@ -57,6 +57,22 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
     private val mutableCursor = MutableStateFlow(Cursor.getDefaultCursor())
     val cursor: StateFlow<Cursor> = mutableCursor.asStateFlow()
 
+    // The document's scroll, for a front page that reports it (PaperScrollReports). Guarded by itself:
+    // reports come on Chromium's thread, the screen's wheel on the AWT thread.
+    private val scroll = PageScrollTracker()
+    private val mutableScrollKnown = MutableStateFlow(false)
+
+    /** Whether the page reports how far it scrolls, so the screen around it can share its wheel. */
+    val scrollKnown: StateFlow<Boolean> = mutableScrollKnown.asStateFlow()
+
+    // Where the pointer last was on the page (device-independent pixels), for a wheel turn the screen
+    // hands over; the middle until it moves. AWT thread.
+    private var pointerX = -1
+    private var pointerY = -1
+
+    // The part of a pixel the last turns handed over didn't send yet. AWT thread.
+    private var wheelCarry = 0.0
+
     @Volatile
     internal var browser: OffscreenCefBrowser? = null
         set(value) {
@@ -132,7 +148,44 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         y: Int,
     ) {
         val browser = browser ?: return
+        if (id == MouseEvent.MOUSE_EXITED) {
+            pointerX = -1
+            pointerY = -1
+        } else {
+            pointerX = x
+            pointerY = y
+        }
         browser.forwardMouse(MouseEvent(EVENT_SOURCE, id, source.`when`, source.modifiersEx, x, y, source.clickCount, false, source.button))
+    }
+
+    /** How far the document reports it scrolled ([top]) and could ([max]), in CSS pixels. Any thread. */
+    fun reportScroll(
+        top: Double,
+        max: Double,
+    ) {
+        synchronized(scroll) { scroll.report(top, max) }
+        mutableScrollKnown.value = true
+    }
+
+    /** How far the document can still scroll [towardEnd] or back, in CSS pixels; 0 when it never said. */
+    fun scrollRoom(towardEnd: Boolean): Double = synchronized(scroll) { scroll.room(towardEnd) }
+
+    /**
+     * Scrolls the document by up to [delta] CSS pixels (positive toward its end), as a wheel turn at
+     * the pointer, and returns how far that takes it. Chromium reads the turn's delta as pixels.
+     */
+    fun scrollBy(delta: Double): Double {
+        val taken = synchronized(scroll) { scroll.take(delta) }
+        if (taken == 0.0) return 0.0
+        wheelCarry += taken
+        val pixels = wheelCarry.roundToInt()
+        if (pixels == 0) return taken
+        wheelCarry -= pixels
+        val x = if (pointerX >= 0) pointerX else width / 2
+        val y = if (pointerY >= 0) pointerY else height / 2
+        // Chromium's positive is up, as in [wheel].
+        browser?.forwardWheel(wheelEvent(System.currentTimeMillis(), 0, x, y, -pixels))
+        return taken
     }
 
     /**
@@ -150,25 +203,20 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         val browser = browser ?: return
         val delta = -(source.preciseWheelRotation * WHEEL_DELTA).roundToInt()
         if (delta == 0) return
-        browser.forwardWheel(
-            MouseWheelEvent(
-                EVENT_SOURCE,
-                MouseEvent.MOUSE_WHEEL,
-                source.`when`,
-                source.modifiersEx,
-                x,
-                y,
-                x,
-                y,
-                0,
-                false,
-                MouseWheelEvent.WHEEL_BLOCK_SCROLL,
-                1,
-                delta,
-                delta.toDouble(),
-            ),
-        )
+        browser.forwardWheel(wheelEvent(source.`when`, source.modifiersEx, x, y, delta))
     }
+
+    /** A wheel turn of [delta] in Chromium's terms (pixels, positive up), as a block scroll JCEF passes as it is. */
+    private fun wheelEvent(
+        time: Long,
+        modifiers: Int,
+        x: Int,
+        y: Int,
+        delta: Int,
+    ) = MouseWheelEvent(EVENT_SOURCE, MouseEvent.MOUSE_WHEEL, time, modifiers, x, y, x, y, 0, false, MouseWheelEvent.WHEEL_BLOCK_SCROLL, 1, delta, delta.toDouble())
+
+    /** A turn of [rotation] notches (positive down, as AWT counts) in CSS pixels, as [wheel] sends it. */
+    fun notchPixels(rotation: Double): Double = rotation * WHEEL_DELTA
 
     /**
      * Forwards a key event as AWT delivered it, so Chromium reads the platform's own key codes. A
@@ -184,7 +232,7 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
                 browser.forwardKey(event)
             }
             KeyEvent.KEY_PRESSED -> {
-                browser.forwardKey(event)
+                browser.forwardKey(named(event))
                 if (event.keyChar != KeyEvent.CHAR_UNDEFINED && !event.isControlDown && !event.isMetaDown) {
                     untyped = event
                     // AWT queues a press's typed event right behind it, so it has arrived by then.
@@ -195,8 +243,21 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
                     }
                 }
             }
-            else -> browser.forwardKey(event)
+            else -> browser.forwardKey(named(event))
         }
+    }
+
+    /**
+     * [event] as JCEF can name it. On Linux JCEF names only Backspace, Delete, the arrows, Enter,
+     * Escape and Tab itself, and takes every other key's X keysym from its character. A navigation
+     * key has none (`CHAR_UNDEFINED`, 0xFFFF, which is X's Delete), so Page Down, Page Up, Home and
+     * End all reached the page as Delete and scrolled nothing. Given its keysym as the character,
+     * each is read as itself. Only presses and releases carry it: no typed event follows these keys.
+     */
+    private fun named(event: KeyEvent): KeyEvent {
+        if (!IS_LINUX) return event
+        val keysym = linuxKeysym(event.keyCode) ?: return event
+        return KeyEvent(EVENT_SOURCE, event.id, event.`when`, event.modifiersEx, event.keyCode, keysym.toChar(), event.keyLocation)
     }
 
     /**
@@ -335,5 +396,17 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         val EVENT_SOURCE = Canvas()
 
         private val IS_MAC = OS.isMacintosh()
+
+        private val IS_LINUX = OS.isLinux()
     }
 }
+
+/** The X keysym of an AWT key JCEF can't name on Linux by itself (see [OffscreenNappletView.key]), or null. */
+internal fun linuxKeysym(keyCode: Int): Int? =
+    when (keyCode) {
+        KeyEvent.VK_PAGE_UP -> 0xff55
+        KeyEvent.VK_PAGE_DOWN -> 0xff56
+        KeyEvent.VK_HOME -> 0xff50
+        KeyEvent.VK_END -> 0xff57
+        else -> null
+    }

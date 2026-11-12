@@ -519,6 +519,14 @@ class CefNappletSession(
                     source: String,
                     line: Int,
                 ): Boolean {
+                    // A front page's scroll, from the guard extension's reader: kept out of the log.
+                    val view = offscreen
+                    if (view != null && launch.profile == HostProfile.PAPER) {
+                        PaperScrollReports.parse(message, source)?.let { (top, max) ->
+                            view.reportScroll(top, max)
+                            return true
+                        }
+                    }
                     Log.d(TAG) { "${launch.identity.coordinate} console [$level] $message ($source:$line)" }
                     if (message.contains(WEBRTC_PRESENT)) {
                         Log.w(TAG) { "The napplet guard did not load; not starting ${launch.identity.coordinate}" }

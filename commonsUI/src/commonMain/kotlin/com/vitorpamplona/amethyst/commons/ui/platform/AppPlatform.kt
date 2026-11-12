@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.PaperWheel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -344,7 +345,8 @@ interface AppPlatform {
      * its art loads from where it was published, and its links open in the system browser.
      *
      * [takesWheel]: the paper fills the screen, so the mouse wheel scrolls it straight away. Inline,
-     * among other content, it takes the wheel only once clicked, and the screen scrolls otherwise.
+     * among other content, the screen's [wheel] scrolls both as one page: a surface that can tell how
+     * far its page scrolls binds [PaperWheel.page]. One that can't takes the wheel only once clicked.
      */
     @Composable
     fun InlinePaperSurface(
@@ -354,6 +356,7 @@ interface AppPlatform {
         onStatus: (InlineNappletStatus) -> Unit,
         modifier: Modifier,
         takesWheel: Boolean = false,
+        wheel: PaperWheel? = null,
     ) {}
 
     /** The icon a napplet manifest by [author] / [identifier] declares, if cached. */

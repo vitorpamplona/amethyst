@@ -442,6 +442,9 @@ fun FrontPageScreen(
     var paneWidth by remember { mutableStateOf(Dp.Unspecified) }
     val density = LocalDensity.current
     val compactBar = paneWidth == Dp.Unspecified || paneWidth < COMPACT_BAR_WIDTH
+    val scroll = rememberScrollState()
+    // One wheel for the screen and the paper in it: the paper's page scrolls in its turn.
+    val paperWheel = remember(scroll) { PaperWheel(scroll) }
     Scaffold(
         modifier = Modifier.onSizeChanged { paneWidth = with(density) { it.width.toDp() } },
         snackbarHost = { SnackbarHost(snackbar) },
@@ -509,7 +512,9 @@ fun FrontPageScreen(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .then(paperWheel.screen)
+                .verticalScroll(scroll)
+                .then(paperWheel.content)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -565,7 +570,7 @@ fun FrontPageScreen(
                     )
                 }
                 if (current.html != null) {
-                    Paper(current, "front-page", fill = false, Modifier.fillMaxWidth())
+                    Paper(current, "front-page", fill = false, Modifier.fillMaxWidth(), paperWheel)
                 } else {
                     // The history stays above, so the reader can open another day.
                     Box(readable) { Notice(stringRes(Res.string.front_page_edition_unreadable), error = true) }
@@ -1375,6 +1380,7 @@ private fun Paper(
     instancePrefix: String,
     fill: Boolean,
     modifier: Modifier,
+    wheel: PaperWheel? = null,
 ) {
     val html = shown.html ?: return
     val platform = LocalAppPlatform.current
@@ -1392,6 +1398,7 @@ private fun Paper(
     Box(
         modifier
             .then(if (fill) Modifier else Modifier.clip(RoundedCornerShape(20.dp)))
+            .then(wheel?.paper ?: Modifier)
             .background(Newsprint)
             .padding(if (fill) 0.dp else 8.dp),
     ) {
@@ -1409,6 +1416,7 @@ private fun Paper(
                 },
             // Full screen there is nothing else to scroll: no click first.
             takesWheel = fill,
+            wheel = wheel,
         )
         PaperStatus(status, onRetry = {
             attempt++
