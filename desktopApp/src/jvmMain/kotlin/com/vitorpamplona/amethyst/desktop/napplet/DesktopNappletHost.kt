@@ -88,7 +88,8 @@ class DesktopNappletHost(
             httpClient = { useTor -> modules.okHttpClients.getHttpClient(useTor) },
             scope = modules.applicationIOScope,
             torPort = modules.torManager.activePortOrNull,
-            nappletBlobsUseTor = { torEnabled() },
+            // A napplet's files, as "Applets and Websites" in the Tor settings says (off by default).
+            nappletBlobsUseTor = { torEnabled() && appletsAndWebsitesViaTor() },
             webxdcBundles = WebxdcBundles(WebxdcBundles.dirFor(modules.filesDir)),
         )
 
@@ -96,7 +97,8 @@ class DesktopNappletHost(
 
     val consent = NappletPromptQueues()
 
-    val networkChoices = NsiteNetworkChoices(modules.appStores.getDataStore("napplet_network"), modules.applicationIOScope)
+    // nSites and web pages the user never set start where "Applets and Websites" says.
+    val networkChoices = NsiteNetworkChoices(modules.appStores.getDataStore("napplet_network"), modules.applicationIOScope) { appletsAndWebsitesViaTor() }
 
     private val accountScope: () -> String = { modules.sessionManager.loggedInAccount()?.pubKey ?: "" }
 
@@ -178,6 +180,8 @@ class DesktopNappletHost(
             .stateIn(modules.applicationIOScope, SharingStarted.Eagerly, torEnabled())
 
     private fun torEnabled(): Boolean = modules.torPrefs.torType.value != TorType.OFF
+
+    private fun appletsAndWebsitesViaTor(): Boolean = modules.torPrefs.value.appletsAndWebsitesViaTor.value
 
     /** Validates [manifest] and opens it in a new window, or says why it can't. */
     fun open(manifest: NappletManifest): Result<CefNappletSession> {

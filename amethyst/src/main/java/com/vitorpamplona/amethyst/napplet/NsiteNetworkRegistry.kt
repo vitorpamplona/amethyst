@@ -27,8 +27,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 /**
- * The app-wide [NsiteNetworkChoices]: whether each nSite routes through Tor (the default) or over
- * the open web, on the same `napplet_network` file as before, so nothing migrates.
+ * The app-wide [NsiteNetworkChoices]: whether each nSite routes through Tor or over the open web
+ * (a site never set follows the Tor settings' "Applets and Websites" switch), on the same `napplet_network` file as before, so nothing migrates.
  *
  * Lives only in the **main process**: the launcher reads it, and [NappletBrokerService] writes it
  * when the key-free `:napplet` sandbox relays a toggle over IPC. The sandbox never touches it, and
@@ -36,7 +36,9 @@ import kotlinx.coroutines.SupervisorJob
  */
 object NsiteNetworkRegistry {
     private val choices by lazy {
-        NsiteNetworkChoices(Amethyst.instance.appStores.getDataStore("napplet_network"), CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        NsiteNetworkChoices(Amethyst.instance.appStores.getDataStore("napplet_network"), CoroutineScope(SupervisorJob() + Dispatchers.IO)) {
+            Amethyst.instance.torPrefs.value.appletsAndWebsitesViaTor.value
+        }
     }
 
     /** Starts loading the on-disk choices ahead of the first read. Idempotent. */
@@ -52,7 +54,7 @@ object NsiteNetworkRegistry {
      */
     suspend fun awaitReady() = choices.awaitReady()
 
-    /** Whether [coordinate] routes through Tor. Defaults to true (Tor) for any site never set. */
+    /** Whether [coordinate] routes through Tor: the user's choice, else "Applets and Websites". */
     fun useTor(coordinate: String): Boolean = choices.useTor(coordinate)
 
     /** Records [useTor] for [coordinate] in memory and persists it. */

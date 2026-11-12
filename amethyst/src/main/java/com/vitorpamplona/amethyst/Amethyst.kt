@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.service.http.HttpClientEnvironment
 import com.vitorpamplona.amethyst.commons.service.http.MediaCallEventListener
 import com.vitorpamplona.amethyst.commons.util.AndroidDebugFlag
 import com.vitorpamplona.amethyst.favorites.WebShortcuts
+import com.vitorpamplona.amethyst.napplet.NsiteNetworkRegistry
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.napplet.WebSitePermissionRegistry
 import com.vitorpamplona.amethyst.service.logging.Logging
@@ -178,6 +179,9 @@ class Amethyst : Application() {
         // Hydrate the per-web-client Tor routing preferences so a site opted out of Tor (some reject Tor
         // exits) starts on the open web without first flashing a failed Tor load.
         WebAppNetworkRegistry.init(this)
+        // The same for nSites: a launch reads the choice synchronously, and one read before these have
+        // loaded falls back to Tor, whatever "Applets and Websites" says.
+        NsiteNetworkRegistry.preload()
 
         // After-background foreground recycle: when the app returns to
         // the foreground after spending more than ~5 s in the

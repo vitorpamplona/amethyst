@@ -39,6 +39,12 @@ data class TorSettings(
      * a display preference, so presets ignore it.
      */
     val progressNotification: Boolean = false,
+    /**
+     * Napplet files, and where nSites and websites in the browser start before the user picks Tor
+     * or the open web for that site (the per-site switch still wins). Off: their Blossom files and
+     * pages are megabytes, and several servers refuse Tor exits.
+     */
+    val appletsAndWebsitesViaTor: Boolean = false,
 )
 
 enum class TorType(
@@ -90,7 +96,8 @@ fun isPreset(
         torSettings.videosViaTor == preset.videosViaTor &&
         torSettings.moneyOperationsViaTor == preset.moneyOperationsViaTor &&
         torSettings.nip05VerificationsViaTor == preset.nip05VerificationsViaTor &&
-        torSettings.mediaUploadsViaTor == preset.mediaUploadsViaTor
+        torSettings.mediaUploadsViaTor == preset.mediaUploadsViaTor &&
+        torSettings.appletsAndWebsitesViaTor == preset.appletsAndWebsitesViaTor
 
 fun whichPreset(torSettings: TorSettings): TorPresetType {
     if (isPreset(torSettings, torOnlyWhenNeededPreset)) return TorPresetType.ONLY_WHEN_NEEDED
@@ -113,6 +120,7 @@ val torOnlyWhenNeededPreset =
         moneyOperationsViaTor = false,
         nip05VerificationsViaTor = false,
         mediaUploadsViaTor = false,
+        appletsAndWebsitesViaTor = false,
     )
 val torDefaultPreset =
     TorSettings(
@@ -127,6 +135,7 @@ val torDefaultPreset =
         moneyOperationsViaTor = false,
         nip05VerificationsViaTor = false,
         mediaUploadsViaTor = false,
+        appletsAndWebsitesViaTor = false,
     )
 val torSmallPayloadsPreset =
     TorSettings(
@@ -141,6 +150,7 @@ val torSmallPayloadsPreset =
         moneyOperationsViaTor = true,
         nip05VerificationsViaTor = true,
         mediaUploadsViaTor = false,
+        appletsAndWebsitesViaTor = false,
     )
 val torFullyPrivate =
     TorSettings(
@@ -155,4 +165,5 @@ val torFullyPrivate =
         moneyOperationsViaTor = true,
         nip05VerificationsViaTor = true,
         mediaUploadsViaTor = true,
+        appletsAndWebsitesViaTor = true,
     )

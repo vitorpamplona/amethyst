@@ -75,6 +75,7 @@ class TorSettingsStoreTest {
             assertFalse(settings.moneyOperationsViaTor)
             assertFalse(settings.nip05VerificationsViaTor)
             assertFalse(settings.mediaUploadsViaTor)
+            assertFalse(settings.appletsAndWebsitesViaTor)
         }
 
     /** The data class and the store must agree, or "unset" and "default" drift apart. */
@@ -103,6 +104,7 @@ class TorSettingsStoreTest {
                     moneyOperationsViaTor = true,
                     nip05VerificationsViaTor = true,
                     mediaUploadsViaTor = true,
+                    appletsAndWebsitesViaTor = true,
                     progressNotification = true,
                 )
 
@@ -153,5 +155,6 @@ class TorSettingsStoreTest {
         assertEquals("tor.lastBypassApprovalMs", TorSettingsStore.LAST_BYPASS_APPROVAL_MS_KEY.name)
         assertEquals("tor.onionRelaysViaTor", TorSettingsStore.ONION_RELAYS_VIA_TOR_KEY.name)
         assertEquals("tor.mediaUploadsViaTor", TorSettingsStore.MEDIA_UPLOADS_VIA_TOR_KEY.name)
+        assertEquals("tor.appletsAndWebsitesViaTor", TorSettingsStore.APPLETS_AND_WEBSITES_VIA_TOR_KEY.name)
     }
 }
