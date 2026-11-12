@@ -9597,6 +9597,24 @@
     <string name="front_page_last_printed_ago">Last printed %1$s ago</string>
     <string name="front_page_never_printed">Not printed yet</string>
     <string name="front_page_not_printed_since">Not printed since %1$s</string>
+    <string name="front_page_who_prints">Who prints</string>
+    <string name="front_page_who_prints_devices">My devices</string>
+    <string name="front_page_who_prints_assistant">My Brainstorm Assistant</string>
+    <string name="front_page_who_prints_assistant_named">My Brainstorm Assistant (%1$s)</string>
+    <string name="front_page_who_prints_other">Another key: %1$s</string>
+    <string name="front_page_assistant_prints">Your Brainstorm Assistant prints on schedule, using its own AI key. Give it one in Brainstorm.</string>
+    <string name="front_page_assistant_ai_settings">AI Model settings in Brainstorm</string>
+    <string name="front_page_other_runner_prints">Another key prints this schedule. Your devices don't print it on schedule.</string>
+    <plurals name="front_page_runner_conflict">
+        <item quantity="one">This schedule names %1$d printer, so nobody prints it. Pick one.</item>
+        <item quantity="other">This schedule names %1$d printers, so nobody prints it. Pick one.</item>
+    </plurals>
+    <string name="front_page_runner_conflict_keep_assistant">Keep my Assistant</string>
+    <string name="front_page_runner_conflict_use_devices">Use my devices</string>
+    <string name="front_page_last_printed_by_assistant">Last printed by your Assistant, %1$s ago</string>
+    <string name="front_page_assistant_not_printed">Your Assistant hasn't printed a morning yet</string>
+    <string name="front_page_by_assistant">By your Assistant</string>
+    <string name="front_page_unknown_params">This schedule has settings this app doesn't know (%1$s), so it won't print on schedule here.</string>
     <string name="front_page_schedule_unreadable">Your schedule was saved by an app this version can't read</string>
     <string name="front_page_schedule_unreachable">Couldn't reach your relays. Nothing was changed.</string>
     <string name="front_page_schedule_cannot_sign">Your signer couldn't save the schedule</string>
