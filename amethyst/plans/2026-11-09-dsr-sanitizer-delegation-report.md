@@ -162,6 +162,31 @@ same size and the same atom layout.
 Logcat (the benchmark build logs at INFO, so warnings and errors show): zero `Sanitized … not
 fast-start`, zero `Compressed output is not fast-start`, zero `MetadataStripper` failures.
 
+#### Run 2 at `1e4c3bd`
+
+Pixel 9a, 2026-11-12 19:53–19:54: the benchmark build at `45488f628a` (installed 19:43:52) with
+2.4.0-SNAPSHOT from fork `1e4c3bd`; the dex carries that commit's "Sanitize interrupted" string. Same
+server, tester account and source clips as run 1, plus the 8i5 fallback clip. The integrator session
+ran it with the user; I re-ran the atom walk, `ffprobe` tags and `shasum` on the pulled blobs, with the
+same results.
+
+| # | Setting | Blob sha256 | Size | Top-level atoms | Tags beyond brand and `creation_time` |
+|---|---|---|---|---|---|
+| 1 | Camera clip, UNCOMPRESSED, strip on | `ef61d2b95f574360…` | 54,393,617 | `ftyp 24, moov 8883, free 3192, mdat 54381510` | `com.android.version=17` only; no `udta` |
+| 2 | Camera clip, UNCOMPRESSED, strip off | `fbd0a6d125c31d5f…` | 54,592,421 | `ftyp 28, uuid 4980, free 55028, mdat 54496595, moov 35782` | capture fps, model, manufacturer; location zeroed by MediaStore |
+| 3 | Camera clip, MEDIUM | `cd51a58185516b2d…` | 6,155,271 | `ftyp 24, moov 8806, free 3192, mdat 6143241` | `com.android.version=17` only |
+| 4 | `lowbitrate_240p_5s`, HIGH (the 8i5 fallback) | `da0a663d41ad8ce3…` | 227,529 | `ftyp 24, moov 4401, free 3192, mdat 219904` | `com.android.version=17` only; no `udta` |
+
+- Row 2 is byte-identical to run 1 (same hash), so the unstripped path is deterministic, the OS
+  location redaction included.
+- Rows 1, 3 and 4 have run 1's sizes and atom tables. Their hashes differ only because `MediaMuxer`
+  writes the time of the strip or encode as `creation_time`.
+- Rows 1 and 4 carry AAC and were stripped without a refusal, so `1e4c3bd` brought no regression on
+  these clips. They do not test its priming rule, though: in both, the audio edit list is an empty
+  edit followed by media time 0, so neither has audio samples before its edit list
+  (`ffprobe -v trace`). An ffmpeg file whose AAC priming sits before the edit list, the case
+  `a697ec2` refused, has not been run on the device.
+
 Commands: `ffprobe -v trace <f> 2>&1 | grep -o "type:'[a-z0-9]\{4\}' parent:'root' sz: [0-9]* [0-9]*"`,
 `ffprobe -v error -show_entries format_tags:stream_tags -of flat <f>`, `cmp -l source.mp4 <blob>`,
 `shasum -a 256`. The raw notes and the blobs are in the integrator session's scratchpad
