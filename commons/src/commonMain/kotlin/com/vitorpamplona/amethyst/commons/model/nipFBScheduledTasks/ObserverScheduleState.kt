@@ -107,6 +107,11 @@ class QuorumRead(
     val quorum: Boolean,
     val relays: Set<NormalizedRelayUrl>,
     val floor: ScheduledTaskEvent? = event,
+    /**
+     * The newest NIP-09 deletion of the task that any answering relay holds, when it deletes the
+     * newest event: then there is no task ([event] null), and a new one must be newer than it.
+     */
+    val deletedAt: Long? = null,
 )
 
 /** How an edit of the schedule ended. */

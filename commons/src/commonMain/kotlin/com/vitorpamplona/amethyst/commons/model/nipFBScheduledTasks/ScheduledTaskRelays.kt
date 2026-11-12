@@ -107,6 +107,13 @@ class ScheduledTaskRelays(
     private val onRead: suspend (ScheduledTaskEvent, NormalizedRelayUrl) -> Unit = { _, _ -> },
     /** Each event this signs, before it is sent. */
     private val onSigned: suspend (Event) -> Unit = {},
+    /**
+     * Sends a signed event to the relays and says which accepted it: the client's own publish
+     * path (amy's answers NIP-42 challenges and reports where it went), by default a plain one.
+     */
+    private val sender: suspend (Event, Set<NormalizedRelayUrl>) -> Set<NormalizedRelayUrl> = { signed, relays ->
+        client.publishAndCollectResults(signed, relays, timeoutInSeconds = WRITE_CONFIRM_SECONDS).filterValues { it.accepted }.keys
+    },
 ) {
     /** The task is never signed with the account's `client` tag. */
     private val plainSigner = signer.withoutClientTag()
@@ -117,16 +124,24 @@ class ScheduledTaskRelays(
 
     private fun isThisTask(event: Event) = event is ScheduledTaskEvent && event.pubKey == signer.pubKey && event.dTag() == dTag
 
-    /** The newest event across every write relay, read to EOSE, and whether that read made quorum. */
+    /**
+     * The newest event across every write relay, read to EOSE, and whether that read made quorum.
+     * A NIP-09 deletion of the task that any answering relay holds, newer than that event, means
+     * there is no task: a relay that missed the deletion doesn't bring it back.
+     */
     suspend fun readQuorum(): QuorumRead {
         val relays = writeRelays()
         if (relays.isEmpty()) return QuorumRead(null, null, false, relays)
-        val (read, answered) = fetchToEose(client, relays, filter(), ::isThisTask, onRead)
+        val address = ScheduledTaskEvent.createAddress(signer.pubKey, dTag).toValue()
+        val deletions = Filter(kinds = listOf(DeletionRequestEvent.KIND), authors = listOf(signer.pubKey), tags = mapOf("a" to listOf(address)))
+        val (read, deleted, answered) = fetchToEose(client, relays, listOf(filter(), deletions), ::isThisTask, onRead)
         // Only what the relays returned is evidence: this device's own copy of a write they
         // didn't take is not the task. A new write still has to beat it.
-        val newest = ScheduledTaskClaims.winner(read)
-        val floor = ScheduledTaskClaims.winner(listOfNotNull(newest, known()))
-        return QuorumRead(newest, newest?.let { decrypt(it) }, ScheduledTaskClaims.hasQuorum(relays.size, answered), relays, floor)
+        val found = ScheduledTaskClaims.winner(read)
+        val deletedAt = found?.let { deletionOf(it, deleted) } ?: deleted.maxOfOrNull { it.createdAt }?.takeIf { found == null }
+        val newest = found?.takeIf { deletionOf(it, deleted) == null }
+        val floor = ScheduledTaskClaims.winner(listOfNotNull(found, known()))
+        return QuorumRead(newest, newest?.let { decrypt(it) }, ScheduledTaskClaims.hasQuorum(relays.size, answered), relays, floor, deletedAt)
     }
 
     /** Sends [signed] to [relays]; how many accepted it, 0 when the send itself failed. */
@@ -135,7 +150,7 @@ class ScheduledTaskRelays(
         relays: Set<NormalizedRelayUrl>,
     ): Int =
         try {
-            client.publishAndCollectResults(signed, relays, timeoutInSeconds = WRITE_CONFIRM_SECONDS).count { it.value.accepted }
+            sender(signed, relays).size
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -181,7 +196,9 @@ class ScheduledTaskRelays(
             }
             val signed =
                 try {
-                    plainSigner.sign<ScheduledTaskEvent>(ScheduledTaskEvent.rewrite(next, plainSigner, dTag, read.floor, now))
+                    // After a deletion, newer than it: the same second would be deleted with it (NIP-09).
+                    val at = read.deletedAt?.let { maxOf(now, it + 1) } ?: now
+                    plainSigner.sign<ScheduledTaskEvent>(ScheduledTaskEvent.rewrite(next, plainSigner, dTag, read.floor, at))
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -239,30 +256,50 @@ class ScheduledTaskRelays(
         ): ScheduledTaskListing {
             if (relays.isEmpty()) return ScheduledTaskListing(emptyList(), false, relays)
             val isMine = { event: Event -> event is ScheduledTaskEvent && event.pubKey == signer.pubKey }
-            val (read, answered) = fetchToEose(client, relays, ScheduledTaskEvent.filter(signer.pubKey), isMine, onRead)
+            // NIP-09 deletions name the kind they delete (`k`): one REQ finds them for every task.
+            val deletions = Filter(kinds = listOf(DeletionRequestEvent.KIND), authors = listOf(signer.pubKey), tags = mapOf("k" to listOf(ScheduledTaskEvent.KIND.toString())))
+            val (read, deleted, answered) = fetchToEose(client, relays, listOf(ScheduledTaskEvent.filter(signer.pubKey), deletions), isMine, onRead)
             val entries =
                 read
                     .groupBy { it.dTag() }
-                    .mapNotNull { (d, versions) -> ScheduledTaskClaims.winner(versions)?.let { ScheduledTaskEntry(d, it, decrypt(it)) } }
+                    .mapNotNull { (d, versions) -> ScheduledTaskClaims.winner(versions)?.takeIf { deletionOf(it, deleted) == null }?.let { ScheduledTaskEntry(d, it, decrypt(it)) } }
                     .sortedBy { it.dTag }
             return ScheduledTaskListing(entries, ScheduledTaskClaims.hasQuorum(relays.size, answered), relays)
         }
 
-        /** The events [relays] return for [filter] that [accept] keeps and that verify, and how many relays reached EOSE. */
+        /**
+         * When a NIP-09 deletion among [deletions] deletes [event] (its id, or its address at or
+         * after its `created_at`), the newest such deletion's `created_at`; else null.
+         */
+        fun deletionOf(
+            event: ScheduledTaskEvent,
+            deletions: List<DeletionRequestEvent>,
+        ): Long? {
+            val address = event.address().toValue()
+            return deletions
+                .filter { it.pubKey == event.pubKey && (event.id in it.deleteEventIds() || (address in it.deleteAddressIds() && it.createdAt >= event.createdAt)) }
+                .maxOfOrNull { it.createdAt }
+        }
+
+        /** What [relays] returned for [filters] to EOSE, verified: the tasks [accept] keeps, the author's deletions, and how many relays answered. */
         private suspend fun fetchToEose(
             client: INostrClient,
             relays: Set<NormalizedRelayUrl>,
-            filter: Filter,
+            filters: List<Filter>,
             accept: (Event) -> Boolean,
             onRead: suspend (ScheduledTaskEvent, NormalizedRelayUrl) -> Unit,
-        ): Pair<List<ScheduledTaskEvent>, Int> {
+        ): Triple<List<ScheduledTaskEvent>, List<DeletionRequestEvent>, Int> {
             val read = mutableListOf<ScheduledTaskEvent>()
+            val deletions = mutableListOf<DeletionRequestEvent>()
+            val author = filters.firstNotNullOfOrNull { it.authors?.firstOrNull() }
             val result =
                 try {
-                    client.fetchAllWithHooks(relays.associateWith { listOf(filter) }, idleTimeoutMs = READ_IDLE_MS) { relay, event ->
+                    client.fetchAllWithHooks(relays.associateWith { filters }, idleTimeoutMs = READ_IDLE_MS) { relay, event ->
                         if (event is ScheduledTaskEvent && accept(event) && event.verify()) {
                             onRead(event, relay)
                             read += event
+                        } else if (event is DeletionRequestEvent && event.pubKey == author && event.verify()) {
+                            deletions += event
                         }
                         true
                     }
@@ -272,7 +309,7 @@ class ScheduledTaskRelays(
                     Log.w(TAG, "Could not read the scheduled tasks", e)
                     null
                 }
-            return read to (result?.doneReasons?.values?.count { it == DONE_REASON_EOSE } ?: 0)
+            return Triple(read, deletions, result?.doneReasons?.values?.count { it == DONE_REASON_EOSE } ?: 0)
         }
     }
 }
@@ -287,7 +324,7 @@ object ScheduledTaskEdits {
      * last value to now). A new task is created under [dTag] running [taskName] (default: [dTag]),
      * in [zone] or else [localZone], and [paused] when asked. An existing one keeps its zone unless
      * [zone] names another, and keeps its `cron` tag as it was when nothing in it changes; a
-     * [taskName] replaces its `task`.
+     * [taskName] replaces its `task`; [paused] pauses it too (without it, a paused task stays paused).
      */
     fun withSchedule(
         current: ScheduledTask?,
@@ -302,7 +339,8 @@ object ScheduledTaskEdits {
         if (current == null) return ScheduledTask.create(dTag, taskName ?: dTag, cron.text, zone ?: localZone, now, paused)
         val nextZone = zone ?: current.tz ?: localZone
         val timed = if (current.cron == cron.text && current.tz == nextZone) current else current.withCron(cron.text, nextZone, now)
-        return if (taskName != null && taskName != current.task) timed.replacing(TaskTag::isTag, TaskTag.assemble(taskName)) else timed
+        val named = if (taskName != null && taskName != current.task) timed.replacing(TaskTag::isTag, TaskTag.assemble(taskName)) else timed
+        return if (paused && !named.paused) named.withEnabled(false, now) else named
     }
 
     /** The next time [task] runs after [now] in [zone]: null while paused, or when its `cron` or zone can't be read. */

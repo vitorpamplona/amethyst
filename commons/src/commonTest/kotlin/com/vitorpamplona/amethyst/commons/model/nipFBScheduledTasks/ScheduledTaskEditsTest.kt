@@ -20,9 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks
 
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nipFBScheduledTasks.CronExpression
 import com.vitorpamplona.quartz.nipFBScheduledTasks.CronZone
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTask
+import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskEvent
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -70,6 +75,37 @@ class ScheduledTaskEditsTest {
         // Another zone is a new schedule.
         assertEquals("UTC", ScheduledTaskEdits.withSchedule(current, "observer", daily, zone = "UTC", localZone = "UTC", now = 100).tz)
     }
+
+    @Test
+    fun pausedPausesAnExistingTaskToo() {
+        val current = ScheduledTask.create("digest", "digest", "0 7 * * *", "UTC", setAt = 50)
+        // `schedule set digest --cron "0 9 * * *" --paused` on a task that already runs.
+        val next = ScheduledTaskEdits.withSchedule(current, "digest", CronExpression.parse("0 9 * * *")!!, zone = null, localZone = "UTC", now = 100, paused = true)
+        assertTrue(next.paused)
+        assertEquals("0 9 * * *", next.cron)
+        // The same time, paused: still a change.
+        assertTrue(ScheduledTaskEdits.withSchedule(current, "digest", daily, zone = null, localZone = "UTC", now = 100, paused = true).paused)
+        // Without it, a paused task stays paused, and a running one runs.
+        assertTrue(ScheduledTaskEdits.withSchedule(current.withEnabled(false, 60), "digest", daily, zone = null, localZone = "UTC", now = 100).paused)
+        assertFalse(ScheduledTaskEdits.withSchedule(current, "digest", daily, zone = null, localZone = "UTC", now = 100).paused)
+    }
+
+    @Test
+    fun aDeletionNewerThanTheTaskDeletesIt() =
+        runTest {
+            val signer = NostrSignerInternal(KeyPair())
+            val task = signer.sign<ScheduledTaskEvent>(ScheduledTaskEvent.rewrite(ScheduledTask.create("digest", "digest", "0 7 * * *", "UTC", setAt = 0), signer, "digest", null, 1_000))
+            val byAddress = signer.sign(DeletionRequestEvent.buildAddressOnly(listOf(task), createdAt = 1_000))
+            // NIP-09: an address deletion deletes every version up to its own created_at, the same second included.
+            assertEquals(1_000L, ScheduledTaskRelays.deletionOf(task, listOf(byAddress)))
+            // Older than the task, by address only: the task was made again after it.
+            assertNull(ScheduledTaskRelays.deletionOf(task, listOf(signer.sign(DeletionRequestEvent.buildAddressOnly(listOf(task), createdAt = 999)))))
+            // By id, it is this very event, whenever.
+            assertEquals(999L, ScheduledTaskRelays.deletionOf(task, listOf(signer.sign(DeletionRequestEvent.build(listOf(task), createdAt = 999)))))
+            val stranger = NostrSignerInternal(KeyPair()).sign(DeletionRequestEvent.build(listOf(task), createdAt = 2_000))
+            assertNull(ScheduledTaskRelays.deletionOf(task, listOf(stranger)))
+            assertNull(ScheduledTaskRelays.deletionOf(task, emptyList()))
+        }
 
     @Test
     fun theNextRunIsInTheTasksZoneAndNeverWhilePaused() {
