@@ -43,6 +43,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -97,6 +99,8 @@ fun M3LazyActionDialog(
     onDismiss: () -> Unit,
     header: (@Composable ColumnScope.() -> Unit)? = null,
     listState: LazyListState = rememberLazyListState(),
+    /** On the list itself: `selectableGroup()` for a list of choices. */
+    listModifier: Modifier = Modifier,
     content: LazyListScope.() -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
@@ -116,7 +120,7 @@ fun M3LazyActionDialog(
                             .padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 header?.invoke(this)
-                LazyColumn(state = listState, modifier = Modifier.weight(1f, fill = false)) { content() }
+                LazyColumn(state = listState, modifier = Modifier.weight(1f, fill = false).then(listModifier)) { content() }
             }
         }
     }
@@ -131,7 +135,8 @@ fun M3ActionSectionLabel(label: String) {
         letterSpacing = 0.8.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp),
+        // A screen reader can jump between sections.
+        modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp).semantics { heading() },
     )
 }
 

@@ -101,6 +101,7 @@ object ModelChoices {
     /** Release dates in ids: "-2024-08-06", "-20250929", "-2411" (year and month). */
     private val DATE = Regex("[-_](\\d{4}-\\d{2}-\\d{2}|\\d{8}|\\d{4})(?=$|[-_])")
     private val SHORT_NUMBER = Regex("^\\d{1,2}$")
+    private val VERSION = Regex("^\\d+(\\.\\d+)*$")
     private val O_SERIES = Regex("^[oO]\\d+$")
 
     /** The vendor key of [id]: before its `/`, else read off its name; "" when it can't be told. */
@@ -139,7 +140,7 @@ object ModelChoices {
         for (word in words) {
             val last = joined.lastOrNull()
             // "4", "5" -> "4.5": versions are split by the same dash as the words.
-            if (last != null && SHORT_NUMBER.matches(word) && Regex("^\\d+(\\.\\d+)*$").matches(last)) {
+            if (last != null && SHORT_NUMBER.matches(word) && VERSION.matches(last)) {
                 joined[joined.lastIndex] = "$last.$word"
             } else {
                 joined += word
@@ -175,20 +176,20 @@ object ModelChoices {
         ids: List<String>,
         byId: Map<String, AgentModel> = emptyMap(),
         query: String = "",
-    ): List<ModelVendorGroup> {
-        val groups = LinkedHashMap<String, MutableList<ModelChoice>>()
-        val vendors = HashMap<String, String>()
-        choices(ids, byId).forEach { choice ->
-            val vendor = vendorOf(choice.id)
-            val label = vendorLabel(vendor)
-            if (!matches(choice, label, query)) return@forEach
-            vendors.getOrPut(label) { vendor }
-            groups.getOrPut(label) { mutableListOf() } += choice
-        }
-        val known = groups.filterKeys { it.isNotEmpty() }.map { (label, models) -> ModelVendorGroup(vendors.getValue(label), label, models) }
-        val unknown = groups[""]?.let { listOf(ModelVendorGroup("", "", it)) }.orEmpty()
-        return known + unknown
-    }
+    ): List<ModelVendorGroup> = catalog(ids, byId).group(query)
+
+    /** [ids] read once (names, vendors, what a search looks in), for a picker that filters them as the reader types. */
+    fun catalog(
+        ids: List<String>,
+        byId: Map<String, AgentModel> = emptyMap(),
+    ): ModelCatalog =
+        ModelCatalog(
+            choices(ids, byId).map { choice ->
+                val vendor = vendorOf(choice.id)
+                val label = vendorLabel(vendor)
+                ModelCatalog.Entry(choice, vendor, label, "${choice.id} ${choice.name} $label".lowercase())
+            },
+        )
 
     /** Every word of [query] is in the id, the name or the vendor, ignoring case. */
     fun matches(
@@ -207,6 +208,14 @@ object ModelChoices {
         return words.all { it in hay }
     }
 
+    /** [query] as the lower-case words a search must all find. */
+    internal fun words(query: String): List<String> =
+        query
+            .trim()
+            .lowercase()
+            .split(' ')
+            .filter { it.isNotEmpty() }
+
     /**
      * What the reader typed, as a model id to use when the list doesn't hold it (a provider that
      * lists only some of its models): one word, and not already one of [ids]. Null otherwise.
@@ -218,5 +227,38 @@ object ModelChoices {
         val typed = query.trim()
         if (typed.isEmpty() || typed.any { it.isWhitespace() }) return null
         return typed.takeIf { it !in ids }
+    }
+}
+
+/**
+ * One endpoint's models, read once: each choice with its vendor, the vendor's label and the
+ * lower-case text a search looks in. A keystroke only filters ([group]); nothing is named or
+ * matched against a pattern again.
+ */
+@Immutable
+class ModelCatalog(
+    val entries: List<Entry>,
+) {
+    @Immutable
+    data class Entry(
+        val choice: ModelChoice,
+        val vendor: String,
+        val label: String,
+        val haystack: String,
+    )
+
+    /** The groups [ModelChoices.group] makes, of the entries every word of [query] is found in. */
+    fun group(query: String = ""): List<ModelVendorGroup> {
+        val words = ModelChoices.words(query)
+        val groups = LinkedHashMap<String, MutableList<ModelChoice>>()
+        val vendors = HashMap<String, String>()
+        entries.forEach { entry ->
+            if (words.isNotEmpty() && !words.all { it in entry.haystack }) return@forEach
+            vendors.getOrPut(entry.label) { entry.vendor }
+            groups.getOrPut(entry.label) { mutableListOf() } += entry.choice
+        }
+        val known = groups.filterKeys { it.isNotEmpty() }.map { (label, models) -> ModelVendorGroup(vendors.getValue(label), label, models) }
+        val unknown = groups[""]?.let { listOf(ModelVendorGroup("", "", it)) }.orEmpty()
+        return known + unknown
     }
 }

@@ -89,4 +89,17 @@ class ModelChoicesTest {
         assertNull(ModelChoices.typedId("two words", openRouter))
         assertNull(ModelChoices.typedId("", openRouter))
     }
+
+    @Test
+    fun theCatalogFiltersAsTheGroupsDo() {
+        val catalog = ModelChoices.catalog(openRouter)
+        for (query in listOf("", "claude", "OPEN ai", "70b free", "nothing-like-it", "liquid")) {
+            assertEquals(ModelChoices.group(openRouter, query = query), catalog.group(query), query)
+        }
+        // Read once: the search text is the id, the name and the vendor, lower case.
+        val entry = catalog.entries.first { it.choice.id == "anthropic/claude-sonnet-4.5" }
+        assertEquals("anthropic", entry.vendor)
+        assertEquals("Anthropic", entry.label)
+        assertEquals(entry.haystack, entry.haystack.lowercase())
+    }
 }
