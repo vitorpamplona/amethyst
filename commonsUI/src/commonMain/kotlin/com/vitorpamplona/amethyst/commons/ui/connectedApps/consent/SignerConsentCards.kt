@@ -786,7 +786,7 @@ fun SignerConnectCard(
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
         ) {
             Text(
-                stringRes(Res.string.napplet_connect_block, info.domain),
+                stringRes(Res.string.napplet_connect_block, info.appletTitle),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }

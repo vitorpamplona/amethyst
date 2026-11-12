@@ -65,8 +65,10 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
@@ -132,6 +134,7 @@ import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.platform.trafficLightsInsetStart
+import java.awt.Toolkit
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import androidx.compose.material3.Icon as VectorIcon
@@ -528,23 +531,71 @@ internal fun ConsentWindows(
     }
 }
 
+/**
+ * A permission question in a window of its own, as tall as the question: at a fixed 680 the connect
+ * card's Cancel, Connect and Block buttons sat below the bottom edge, reachable only by scrolling a
+ * window that gave no sign it scrolled. It grows up to the screen's usable height; past that the card
+ * scrolls.
+ */
 @Composable
 private fun ConsentWindow(
     appTitle: String,
     onClose: () -> Unit,
     content: @Composable () -> Unit,
 ) {
+    val state = rememberDialogState(size = DpSize(CONSENT_WIDTH, CONSENT_START_HEIGHT), position = WindowPosition.Aligned(Alignment.Center))
     DialogWindow(
         onCloseRequest = onClose,
-        state = rememberDialogState(size = DpSize(460.dp, 680.dp), position = WindowPosition.Aligned(Alignment.Center)),
+        state = state,
         title = stringRes(Res.string.napplet_desktop_permission_title, appTitle),
         icon = IconResources.adaptedBitmapPainter,
     ) {
+        var contentHeight by remember { mutableStateOf<Dp?>(null) }
+        var centered by remember { mutableStateOf(false) }
+        LaunchedEffect(contentHeight) {
+            val height = contentHeight ?: return@LaunchedEffect
+            // AWT sizes are in the same units as dp; the title bar is the window's, not the content's.
+            val titleBar = (window.height - window.contentPane.height).dp
+            val screen = window.graphicsConfiguration
+            val insets = Toolkit.getDefaultToolkit().getScreenInsets(screen)
+            val usable = (screen.bounds.height - insets.top - insets.bottom).dp - CONSENT_SCREEN_MARGIN
+            state.size = DpSize(state.size.width, (height + titleBar).coerceIn(CONSENT_MIN_HEIGHT, usable.coerceAtLeast(CONSENT_MIN_HEIGHT)))
+            // Once: a question that grows later (more signatures waiting) should not jump around.
+            if (!centered) {
+                state.position = WindowPosition.Aligned(Alignment.Center)
+                centered = true
+            }
+        }
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-            ConsentInputGuard(content)
+            NaturalHeight(onHeight = { contentHeight = it }) { ConsentInputGuard(content) }
         }
     }
 }
+
+/**
+ * Lays [content] out in the space it is given, and reports the height it would take with no limit
+ * (its max intrinsic height). Content that can't answer that (a SubcomposeLayout) reports nothing,
+ * and its window keeps its size.
+ */
+@Composable
+private fun NaturalHeight(
+    onHeight: (Dp) -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Layout(content) { measurables, constraints ->
+        val natural = runCatching { measurables.maxOfOrNull { it.maxIntrinsicHeight(constraints.maxWidth) } }.getOrNull()
+        if (natural != null) onHeight(natural.toDp())
+        val placeables = measurables.map { it.measure(constraints) }
+        layout(placeables.maxOfOrNull { it.width } ?: 0, placeables.maxOfOrNull { it.height } ?: 0) {
+            placeables.forEach { it.place(0, 0) }
+        }
+    }
+}
+
+private val CONSENT_WIDTH = 460.dp
+private val CONSENT_START_HEIGHT = 680.dp
+private val CONSENT_MIN_HEIGHT = 240.dp
+private val CONSENT_SCREEN_MARGIN = 48.dp
 
 @Composable
 internal fun LoadingPane(
