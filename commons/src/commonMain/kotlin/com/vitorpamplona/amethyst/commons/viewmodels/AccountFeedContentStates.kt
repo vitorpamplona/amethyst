@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.polls.dal.PollsFeedFilter
 import com.vitorpamplona.amethyst.commons.polls.dal.pollsUniverse
 import com.vitorpamplona.amethyst.commons.products.dal.ProductsFeedFilter
 import com.vitorpamplona.amethyst.commons.publicChats.dal.PublicChatsFeedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.HeldNotes
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.shorts.dal.ShortsFeedFilter
 import com.vitorpamplona.amethyst.commons.softwareapps.dal.SoftwareAppsFeedFilter
@@ -87,11 +88,15 @@ import com.vitorpamplona.amethyst.commons.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.commons.webBookmarks.dal.WebBookmarkFeedFilter
 import com.vitorpamplona.amethyst.commons.workouts.dal.WorkoutFeedFilter
 import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
+import com.vitorpamplona.quartz.nip01Core.core.isTagged
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -201,6 +206,21 @@ class AccountFeedContentStates(
     val picturesFeed = FeedContentState(PictureFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
     val workoutsFeed = FeedContentState(WorkoutFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
     val chessLobbyFeed = FeedContentState(ChessLobbyFeedFilter(account), scope, LocalCache, lazy = true)
+
+    /**
+     * The account's own chess games (started, moved in, or challenging it), held while these feeds
+     * live: the lobby lists them whatever the top bar picked, but its feed only holds the listed
+     * ones. Holds the cursors of the lobby's own-games subscription too. Made when the lobby opens.
+     */
+    val chessMine by lazy {
+        val me = account.userProfile().pubkeyHex
+        val challengeRef = JesterProtocol.privateStartRef(me)
+        HeldNotes(LocalCache, scope) { note ->
+            val event = note.event
+            event is JesterEvent &&
+                (event.pubKey == me || event.isTaggedUser(me) || event.tags.isTagged("e", challengeRef))
+        }
+    }
     val gitRepositoriesFeed = FeedContentState(GitRepositoriesFeedFilter(account), scope, LocalCache, lazy = true, refreshOnResume = false)
     val highlightsFeed = FeedContentState(HighlightsFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
     val relayGroupsDiscoveryFeed = FeedContentState(RelayGroupDiscoveryFeedFilter(account), scope, LocalCache, lazy = true)

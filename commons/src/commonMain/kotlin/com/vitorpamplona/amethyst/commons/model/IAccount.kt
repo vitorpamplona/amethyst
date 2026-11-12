@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.CursorHoldersByKey
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
@@ -88,6 +89,9 @@ data class LiveHiddenUsers(
  * Abstracts Android-specific Account class for use in commons.
  */
 interface IAccount {
+    /** How far each relay has been asked for this account's own messages in each channel. */
+    val myChannelMessagesCursors: CursorHoldersByKey<Channel>
+
     /** NIP-47 wallet connect state for payment verification */
     val nip47SignerState: INwcSignerState
 

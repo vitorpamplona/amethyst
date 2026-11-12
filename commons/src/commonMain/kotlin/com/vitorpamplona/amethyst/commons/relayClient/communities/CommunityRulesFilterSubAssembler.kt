@@ -82,6 +82,6 @@ class CommunityRulesFilterSubAssembler(
 
     override fun distinct(key: CommunityQueryState) = key.community.idHex
 
-    /** Nothing but the screen that opened the community reads its rules. */
-    override fun cursorHoldersOf(key: CommunityQueryState): List<RelayCursorHolder> = listOf(key)
+    /** The screen that opened the community holds its rules, and these cursors with them. */
+    override fun cursorHoldersOf(key: CommunityQueryState): List<RelayCursorHolder> = listOf(key.rules)
 }

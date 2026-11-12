@@ -42,8 +42,8 @@ class AccountDraftsEoseManager(
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
-    /** Drafts are indexed into what they draft for (a reply, a chat) and kept with the account. */
-    override fun cursorHoldersOf(key: AccountQueryState): List<RelayCursorHolder> = listOf(key.account)
+    /** The account keeps its drafts (and these cursors) for as long as it is loaded. */
+    override fun cursorHoldersOf(key: AccountQueryState): List<RelayCursorHolder> = listOf(key.account.draftNotes)
 
     fun relayFlow(query: AccountQueryState) = query.account.homeRelays.flow
 

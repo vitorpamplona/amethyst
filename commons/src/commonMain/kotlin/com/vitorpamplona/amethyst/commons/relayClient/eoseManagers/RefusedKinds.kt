@@ -34,11 +34,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  * on that relay: it can never send them anyway.
  *
  * Learned by comparing a reported filter with the one the subscription asked for: the same in every
- * field and window but with fewer kinds means the pool took those out.
+ * field and window but with fewer kinds means the pool took those out. A kind counts as refused
+ * only after [CONFIRMATIONS] such answers, so one answer to an older request (asked before a kind
+ * was added) does not make the relay skip it, and an answer that carries the kind again forgets it.
+ * The pool's own list (quartz `RelayReqRefusals`) is private; exposing it would replace this.
  */
 class RefusedKinds {
     private val lock = KmpLock()
-    private val byRelay = mutableMapOf<NormalizedRelayUrl, Set<Int>>()
+    private val seenStripped = mutableMapOf<NormalizedRelayUrl, MutableMap<Int, Int>>()
+
+    private fun refused(relay: NormalizedRelayUrl): Set<Int> = lock.withLock { seenStripped[relay]?.filterValues { it >= CONFIRMATIONS }?.keys }.orEmpty()
 
     /** [requested] without the kinds [relay] refused; unchanged when it would ask for none. */
     fun askable(
@@ -46,7 +51,8 @@ class RefusedKinds {
         requested: FilterShape,
     ): FilterShape {
         val kinds = requested.kinds ?: return requested
-        val refused = lock.withLock { byRelay[relay] } ?: return requested
+        val refused = refused(relay)
+        if (refused.isEmpty()) return requested
         val kept = kinds - refused
         return if (kept.isEmpty() || kept.size == kinds.size) requested else requested.copy(kinds = kept)
     }
@@ -59,16 +65,24 @@ class RefusedKinds {
     ) {
         if (asked.isNullOrEmpty() || reported.isNullOrEmpty()) return
         val stripped = mutableSetOf<Int>()
-        reported.forEach { sent ->
-            val sentKinds = sent.kinds ?: return@forEach
+        val sent = mutableSetOf<Int>()
+        reported.forEach { filter ->
+            val sentKinds = filter.kinds ?: return@forEach
+            sent.addAll(sentKinds)
             val original =
-                asked.firstOrNull { it !== sent && it.since == sent.since && it.until == sent.until && it.limit == sent.limit && sameButKinds(it, sent) }
+                asked.firstOrNull { it !== filter && it.since == filter.since && it.until == filter.until && it.limit == filter.limit && sameButKinds(it, filter) }
                     ?: return@forEach
             val askedKinds = original.kinds ?: return@forEach
             if (askedKinds.containsAll(sentKinds)) stripped.addAll(askedKinds - sentKinds.toSet())
         }
-        if (stripped.isEmpty()) return
-        lock.withLock { byRelay[relay] = byRelay[relay].orEmpty() + stripped }
+        if (stripped.isEmpty() && sent.isEmpty()) return
+        lock.withLock {
+            val counts = seenStripped.getOrPut(relay) { mutableMapOf() }
+            // Sent again: whatever refused it no longer applies.
+            sent.forEach { counts.remove(it) }
+            stripped.forEach { counts[it] = (counts[it] ?: 0) + 1 }
+            if (counts.isEmpty()) seenStripped.remove(relay)
+        }
     }
 
     private fun sameButKinds(
@@ -77,6 +91,9 @@ class RefusedKinds {
     ) = a.ids == b.ids && a.authors == b.authors && a.tags == b.tags && a.tagsAll == b.tagsAll && a.search == b.search
 
     companion object {
+        /** Answers that must agree before a kind counts as refused. */
+        const val CONFIRMATIONS = 2
+
         /** One per app: refusals are the relay's, whoever asked. */
         val shared = RefusedKinds()
     }

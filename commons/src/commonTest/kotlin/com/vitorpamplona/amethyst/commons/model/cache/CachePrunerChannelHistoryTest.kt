@@ -85,4 +85,34 @@ class CachePrunerChannelHistoryTest {
         assertEquals(5_000L, group.relayCursors.since(relay))
         assertEquals(600, messages.size)
     }
+
+    @Test
+    fun showingHiddenMessagesAgainAsksForExactlyTheBandsTheyWereIn() {
+        val cache = EventCache()
+        val group = cache.getOrCreateRelayGroupChannel(GroupId("h", relay))
+        val messages = (1..600).map { message(it) }
+        messages.forEach { group.addNote(it, relay) }
+        group.relayCursors.newEose(relay, listOf(FilterShape(kinds = setOf(9))), 5_000)
+        val history = group.history
+        history.floor = 1_000
+        assertTrue(history.advance(relay, 1_000))
+        history.onEvent(relay, 1)
+        history.onEose(relay)
+        assertTrue(history.advance(relay, 1_000))
+        history.onEose(relay)
+        assertTrue(history.isDone(relay))
+
+        // A muted author's messages 50 to 60 were pruned; nothing is asked again while they stay hidden.
+        cache.pruner.recordHiddenPrune(group, messages.subList(49, 60).toSet())
+        assertTrue(history.isDone(relay))
+        assertEquals(5_000L, group.relayCursors.since(relay))
+
+        // The author is unmuted.
+        cache.pruner.restoreHiddenPrunes()
+
+        assertFalse(history.isDone(relay), "the band is paged again")
+        assertEquals(61L, history.reachedUntilFor(relay, 0), "from just above the newest dropped message, not from the top")
+        assertEquals(50L, group.relayCursors.since(relay), "the tail asks again from the oldest dropped message")
+        assertEquals(600, messages.size)
+    }
 }

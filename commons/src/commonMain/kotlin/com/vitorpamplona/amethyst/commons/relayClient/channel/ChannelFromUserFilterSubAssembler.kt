@@ -54,6 +54,6 @@ class ChannelFromUserFilterSubAssembler(
 
     override fun user(key: ChannelQueryState) = key.account.userProfile()
 
-    /** The channel holds what this loads, so its cursors set the windows. */
-    override fun cursorHoldersOf(key: ChannelQueryState): List<RelayCursorHolder> = listOf(key.channel)
+    /** The channel holds these messages, but each account asks for its own: its own cursors. */
+    override fun cursorHoldersOf(key: ChannelQueryState): List<RelayCursorHolder> = listOf(key.account.myChannelMessagesCursors.of(key.channel))
 }

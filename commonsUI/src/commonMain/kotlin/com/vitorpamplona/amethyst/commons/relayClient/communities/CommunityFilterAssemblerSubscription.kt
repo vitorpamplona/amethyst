@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.communities
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
@@ -35,9 +36,12 @@ fun CommunityFilterAssemblerSubscription(
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
+    val scope = rememberCoroutineScope()
+    // Held while this screen is: nothing else keeps a community's rules.
+    val rules = remember(channel) { communityRulesHolder(channel, scope) }
     val state =
-        remember(channel, feeds) {
-            CommunityQueryState(channel, feeds)
+        remember(channel, feeds, rules) {
+            CommunityQueryState(channel, feeds, rules)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, filterAssembler)

@@ -22,19 +22,33 @@ package com.vitorpamplona.amethyst.commons.relayClient.communities
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.HeldNotes
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
+import kotlinx.coroutines.CoroutineScope
 
 // This allows multiple screen to be listening to tags, even the same tag
 class CommunityQueryState(
     var community: AddressableNote,
     /** The community's feeds (posts, moderation), which hold what its posts REQ loads. */
     val feeds: List<RelayCursorHolder> = emptyList(),
-) : RelayCursorHolder {
-    /** The rules, which only the screen that made this key reads; the feeds keep their own. */
-    override val relayCursors = RelayCursors()
+    /**
+     * What holds the community's rules (see [communityRulesHolder]) while the screen is open:
+     * nothing else keeps them, and the feeds read them back from the cache on every rebuild.
+     */
+    val rules: RelayCursorHolder,
+)
+
+/** The community's rules events, held for as long as [scope] (the screen showing it) runs. */
+fun communityRulesHolder(
+    community: AddressableNote,
+    scope: CoroutineScope,
+): HeldNotes {
+    val address = community.idHex
+    return HeldNotes(LocalCache, scope) { note -> (note.event as? CommunityRulesEvent)?.communityAddress() == address }
 }
 
 class CommunityFilterAssembler(

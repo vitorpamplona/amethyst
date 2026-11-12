@@ -182,6 +182,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionLe
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthSessionGrants
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthVenues
 import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.ChatDeliveryTracker
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.CursorHoldersByKey
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.HeldNotes
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
@@ -1033,6 +1035,23 @@ class Account(
      * in) asks from scratch.
      */
     override val relayCursors = RelayCursors()
+
+    /**
+     * How far each relay has been asked for this account's own messages in each channel: the
+     * channel holds them (strongly, as it does every message), but each account asks for its own,
+     * so they cannot share the channel's cursors.
+     */
+    override val myChannelMessagesCursors = CursorHoldersByKey<Channel>()
+
+    /**
+     * This account's drafts, held for as long as it is loaded: `LocalCache` keeps them weakly, and a
+     * draft no screen happens to show would otherwise go while the drafts subscription's cursors
+     * (kept here too) said it was loaded. Made when that subscription first runs.
+     */
+    val draftNotes by lazy {
+        val me = signer.pubKey
+        HeldNotes(cache, scope) { note -> (note.event as? DraftWrapEvent)?.pubKey == me }
+    }
 
     // Per-relay backward-paging cursors for the NIP-60 spending history (kind:7376): how far back each
     // outbox relay has been paged by until+limit. Held here so paging progress survives leaving and

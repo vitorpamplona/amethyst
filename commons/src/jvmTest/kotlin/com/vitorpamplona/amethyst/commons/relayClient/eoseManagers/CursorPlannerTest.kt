@@ -154,9 +154,16 @@ class CursorPlannerTest {
         val listener = CursorRoutingListener(RecordingListener(), asked = { listOf(asked) }) { listOf(cursors) }
 
         listener.onEose(refusing, listOf(sent))
+        assertNull(cursors.plan(refusing, FilterShape.of(asked)).single().since, "one answer could be an older request's")
 
+        listener.onEose(refusing, listOf(sent))
         val again = cursors.plan(refusing, FilterShape.of(asked)).single()
         assertEquals(cursors.since(refusing), again.since, "asked again from the cursor, not from scratch")
+
+        // The relay takes the kind again: it is asked for in full.
+        listener.onEose(refusing, listOf(asked))
+        cursors.newEose(refusing, listOf(FilterShape.of(sent)), 1)
+        assertNull(cursors.plan(refusing, FilterShape.of(asked)).single().since)
     }
 
     @Test

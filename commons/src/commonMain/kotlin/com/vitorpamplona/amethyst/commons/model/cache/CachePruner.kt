@@ -91,7 +91,7 @@ class CachePruner(
         // No rewind: these are hidden, and asking for them again would only bring them back to be
         // pruned. Showing more again (an unmute) asks again: see [restoreHiddenPrunes].
         val toBeRemoved = channel.pruneHiddenMessages(account)
-        if (toBeRemoved.isNotEmpty()) hiddenPrunesLock.withLock { prunedHidden.add(channel) }
+        recordHiddenPrune(channel, toBeRemoved)
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -112,30 +112,66 @@ class CachePruner(
 
     private val hiddenPrunesLock = KmpLock()
 
-    // Channels that lost hidden messages here, until an account shows them again.
-    private val prunedHidden = mutableSetOf<Channel>()
+    /** Where a channel lost hidden messages: what to ask again once they are shown. */
+    private class HiddenBands {
+        /** The oldest dropped message: the live tail asks again from there. */
+        var tailFrom: Long = Long.MAX_VALUE
 
-    /**
-     * An account shows what it hid: the channels this pruned hidden messages from ask their relays
-     * again, the live tail from scratch and the history from the top, since nothing remembers which
-     * bands those messages were in.
-     */
-    fun restoreHiddenPrunes() {
-        val channels = hiddenPrunesLock.withLock { prunedHidden.toList().also { prunedHidden.clear() } }
-        channels.forEach { channel ->
+        /** Per relay, the newest dropped message below each history's floor. */
+        val chat = HashMap<NormalizedRelayUrl, Long>()
+        val threads = HashMap<NormalizedRelayUrl, Long>()
+    }
+
+    // Channels that lost hidden messages here, until an account shows them again.
+    private val prunedHidden = mutableMapOf<Channel, HiddenBands>()
+
+    /** Remembers what [removed], hidden messages of [channel], took out of its windows. */
+    internal fun recordHiddenPrune(
+        channel: Channel,
+        removed: Set<Note>,
+    ) {
+        if (removed.isEmpty()) return
+        val oldest = removed.mapNotNull { it.createdAt() }.minOrNull() ?: return
+        hiddenPrunesLock.withLock {
+            val bands = prunedHidden.getOrPut(channel) { HiddenBands() }
+            bands.tailFrom = minOf(bands.tailFrom, oldest)
             when (channel) {
                 is RelayGroupChannel -> {
-                    channel.history.reset()
-                    channel.threadsHistory.reset()
+                    val (threads, chat) = removed.partition { it.event?.kind in RELAY_GROUP_THREAD_KINDS }
+                    bandsBelowFloor(channel.history, chat).forEach { (relay, at) -> bands.chat.mergeMax(relay, at) }
+                    bandsBelowFloor(channel.threadsHistory, threads).forEach { (relay, at) -> bands.threads.mergeMax(relay, at) }
                 }
 
                 is ConcordChannel -> {
-                    channel.history.reset()
+                    bandsBelowFloor(channel.history, removed).forEach { (relay, at) -> bands.chat.mergeMax(relay, at) }
                 }
 
                 else -> {}
             }
-            channel.relayCursorsOrNull()?.clear()
+        }
+    }
+
+    /**
+     * An account shows what it hid: the channels this pruned hidden messages from ask their relays
+     * again for exactly what was dropped, the live tail from the oldest of it and each history
+     * from the newest of it below its floor.
+     */
+    fun restoreHiddenPrunes() {
+        val pruned = hiddenPrunesLock.withLock { prunedHidden.toList().also { prunedHidden.clear() } }
+        pruned.forEach { (channel, bands) ->
+            when (channel) {
+                is RelayGroupChannel -> {
+                    if (bands.chat.isNotEmpty()) channel.history.rewindTo(bands.chat)
+                    if (bands.threads.isNotEmpty()) channel.threadsHistory.rewindTo(bands.threads)
+                }
+
+                is ConcordChannel -> {
+                    if (bands.chat.isNotEmpty()) channel.history.rewindTo(bands.chat)
+                }
+
+                else -> {}
+            }
+            channel.relayCursorsOrNull()?.rewindTo(bands.tailFrom)
         }
     }
 
@@ -232,13 +268,22 @@ class CachePruner(
         history: RelayLoadingCursors,
         removed: Collection<Note>,
     ) {
-        val floor = history.floor ?: return
+        val bands = bandsBelowFloor(history, removed)
+        if (bands.isNotEmpty()) history.rewindTo(bands)
+    }
+
+    /** Per relay, the newest of [removed] below [history]'s floor; empty when it never paged. */
+    private fun bandsBelowFloor(
+        history: RelayLoadingCursors,
+        removed: Collection<Note>,
+    ): Map<NormalizedRelayUrl, Long> {
+        val floor = history.floor ?: return emptyMap()
         val newestPrunedPerRelay = HashMap<NormalizedRelayUrl, Long>()
         removed.forEach { note ->
             val createdAt = note.createdAt() ?: return@forEach
             if (createdAt < floor) note.relays.forEach { newestPrunedPerRelay.mergeMax(it, createdAt) }
         }
-        if (newestPrunedPerRelay.isNotEmpty()) history.rewindTo(newestPrunedPerRelay)
+        return newestPrunedPerRelay
     }
 
     fun pruneOldMessages() {

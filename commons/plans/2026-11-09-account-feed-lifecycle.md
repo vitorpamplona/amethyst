@@ -388,6 +388,18 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
    cursor, as before: history pagers (`until`-bounded) and the DM and gift-wrap tails, which floor at
    `recentBoundary()`.
 
+8. **Done (2026-11-12):** an audit of steps 1-7, and the limits it left. Holders for what nothing
+   held: `HeldNotes` (a strong candidate set with the cursors that vouch for it) keeps an account's
+   drafts (`Account.draftNotes`), its own chess games (`AccountFeedContentStates.chessMine`, not the
+   lobby key, which changes with every listed set) and a community's rules while its screen is open.
+   Each account keeps its own "my messages in this channel" cursors (`IAccount.myChannelMessagesCursors`).
+   The pruner leaves the live tail alone (it keeps the newest messages, so a rewind only refilled
+   what it freed), remembers the bands it dropped hidden messages from, and an unmute rewinds exactly
+   those. An unmute (`HiddenSetWidenings`) clears every feed's cursors, screen feeds included. Kinds a
+   relay refused are learned from its answers (`RefusedKinds`, two agreeing answers; quartz's own
+   list is private, and exposing it would replace this) and ignored when planning. A warm account
+   replays what it missed instead of walking the cache; `SingleSubEoseManager` batches per relay.
+
 ## Feed conversion (2026-11-10)
 
 Done on the branch, each step its own commit:
