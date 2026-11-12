@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
+import com.vitorpamplona.amethyst.commons.service.uploads.StripDecision
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
@@ -642,23 +643,18 @@ class AndroidMediaUploader(
             onStrippingFailed: suspend () -> Boolean,
             context: Context,
         ): Uri? {
-            if (!stripMetadata) return compressed.uri
-
             val effectiveMimeType = compressed.contentType ?: mimeType
             val isVideo = effectiveMimeType?.startsWith("video/", ignoreCase = true) == true
             val compressionRequested = compressionQuality != CompressorQuality.UNCOMPRESSED
             val compressionApplied = compressionRequested && compressed.uri != originalUri
 
-            val strippingResult =
-                if (isVideo && compressionApplied) {
-                    // Compression was requested and actually applied to a video;
-                    // assume it stripped metadata successfully.
-                    StrippingResult(compressed.uri, true)
-                } else {
-                    // AvifMetadataNotVerifiableException is allowed to propagate so the caller
-                    // can emit a specific error rather than the generic "Upload cancelled".
-                    MetadataStripper.strip(compressed.uri, effectiveMimeType, context.applicationContext)
-                }
+            // A video the compressor re-encoded already lost its metadata. A fallback to the original
+            // (timeout, not smaller, encoder failure) did not, so it is stripped like any other file.
+            if (!StripDecision.shouldStrip(stripMetadata, isVideo, compressionApplied)) return compressed.uri
+
+            // AvifMetadataNotVerifiableException is allowed to propagate so the caller
+            // can emit a specific error rather than the generic "Upload cancelled".
+            val strippingResult = MetadataStripper.strip(compressed.uri, effectiveMimeType, context.applicationContext)
 
             if (!strippingResult.stripped && !onStrippingFailed()) return null
 
