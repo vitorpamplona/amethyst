@@ -680,6 +680,20 @@ class AccountFeedContentStates(
         clearCursorsWhenTheHiddenSetWidens()
     }
 
+    /**
+     * Rebuilds, from the cache, every feed already built: after a warm spell (see [AccountFeeds])
+     * they missed the event bundles that arrived meanwhile. Feeds never built stay that way.
+     */
+    fun refreshBuiltFeeds() {
+        homeLive.invalidateData()
+        cursorHolders.forEach { feed ->
+            when (feed) {
+                is FeedContentState -> if (feed.isActive()) feed.invalidateData()
+                is CardFeedContentState -> if (feed.isActive()) feed.invalidateData()
+            }
+        }
+    }
+
     fun updateFeedsWith(newNotes: Set<Note>) {
         // See FeedsKeptCurrent: a future-dated note shows when its time comes, without a new event.
         FeedsKeptCurrent.hiddenFuture(newNotes).let { future -> if (future.isNotEmpty()) keptCurrent.forEach { it.rebuildWhenVisible(future) } }

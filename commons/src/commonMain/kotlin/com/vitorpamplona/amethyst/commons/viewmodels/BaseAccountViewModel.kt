@@ -96,7 +96,6 @@ import com.vitorpamplona.amethyst.commons.util.DebouncedPublisher
 import com.vitorpamplona.amethyst.commons.util.cache.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.util.cache.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.commons.util.logSignerErrors
-import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.util.logUnusableData
 import com.vitorpamplona.amethyst.commons.util.notifySignerErrors
 import com.vitorpamplona.amethyst.commons.util.showAmount
@@ -250,7 +249,11 @@ open class BaseAccountViewModel(
                     .filterNotTo(HashSet()) { host.relayStats.get(it).hasNeverConnected }
             },
         )
-    val feedStates = AccountFeedContentStates(account, viewModelScope, host.memoryPressure)
+
+    // The account's feeds outlive this view model: switching away and back finds them warm, with
+    // their notes and relay cursors (see AccountFeeds). Released in onCleared.
+    private val feedsLease = AccountFeeds.lease(account, host.memoryPressure)
+    val feedStates = feedsLease.states
 
     /**
      * `true` when the local Blossom cache is enabled and the probe sees it up. Only drives the
@@ -2373,27 +2376,7 @@ open class BaseAccountViewModel(
 
     init {
         Log.d("AccountViewModel", "Init")
-        viewModelScope.launch(Dispatchers.IO) {
-            feedStates.init()
-            // awaits for init to finish before starting to capture new events.
-            // Coalesced, not dropped: the shared flow drops a slow collector's oldest bundles, and
-            // the feeds would never learn of those notes (Home no longer rebuilds on every resume
-            // to cover for it). Bundles that arrive while the feeds are busy merge into one, so
-            // what waits is at most one set of distinct notes, never a queue of them.
-            LocalCache.live.newEventBundles.coalesced().collect { newNotes ->
-                logTime("AccountViewModel newEventBundle Update with ${newNotes.size} new notes") {
-                    feedStates.updateFeedsWith(newNotes)
-                }
-            }
-        }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.deletedEventBundles.coalesced().collect { newNotes ->
-                logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
-                    feedStates.deleteNotes(newNotes)
-                }
-            }
-        }
+        // Event bundles reach the feeds through AccountFeeds while any view model leases them.
     }
 
     /**
@@ -2883,7 +2866,7 @@ open class BaseAccountViewModel(
         // Real logout / account switch tears the call down via CallSessionBridge.clear(),
         // called from AccountSessionManager alongside NestBridge.clear(). The UI subclass drops
         // its references from both bridges.
-        feedStates.destroy()
+        feedsLease.release()
     }
 
     fun loadMentions(

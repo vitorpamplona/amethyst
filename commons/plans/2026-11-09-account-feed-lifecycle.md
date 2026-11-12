@@ -1,7 +1,8 @@
 # Account feed lifecycle: switch accounts at will
 
-Status (2026-11-11), on `claude/determined-meitner-wf8m3i`: steps 1, 2, 3 (all eight), 5 and 6
-are implemented; step 4 (warm accounts) remains.
+Status (2026-11-12), on `claude/determined-meitner-wf8m3i`: every step is implemented; step 4's
+UI half (warm view-model stores, `AccountSession` at application scope) waits for tabs-and-windows
+Phase 2b.
 
 ## Problem
 
@@ -302,8 +303,22 @@ Each step ships on its own and is checked with the desktop switch test (A → B 
       one left open in the back stack across an unmute keeps its cursors), Web of Trust verdicts
       and the report settings, which also widen what feeds accept.
    Each ends with the desktop switch test and a heap check.
-4. `AccountFeeds` with Active / Warm (15 min) / Cold, notification feeds account-lifetime;
-   with tabs-and-windows Phase 2b.
+4. **Done (2026-11-12), the data half:** `AccountFeeds` owns an account's feed set on a child of
+   the account's scope; `BaseAccountViewModel` leases it instead of building one, and releases it
+   in `onCleared`. Active while leased (the event-bundle collectors moved here from the view
+   model, so two view models of one account do not apply each bundle twice); warm for 15 minutes
+   after the last lease, keeping notes and cursors and taking no events; cold after that, at once
+   on memory pressure while warm, or when the account's scope ends (logout), when the set is
+   destroyed and forgotten. A lease on a warm set rebuilds its built feeds from the cache, and the
+   cursors ask the relays for what came since. Notification feeds go cold with the rest: the
+   background tail keeps its own cursor (step 3.3), so they need no live holder. Desktop, warm
+   period shortened to 1 minute for the check: switching away and back reused jack's feeds and
+   Home's first REQ already had 167 of 559 relays caught up (it started from 0 before); the other
+   account's set went cold one minute after its last lease and the heap went from two feed sets
+   to one. Not done: the per-account `ViewModelStore` (scroll positions, open screens) still
+   clears on a switch, and `AccountSession` at application scope is still tabs-and-windows Phase
+   2b. Open: how many warm sets Android should allow at once (memory pressure releases them
+   now).
 5. **Done (2026-11-11):** every account notified on desktop, labelled on both platforms.
    `DesktopAccountsNotified` keeps each saved account that signs without asking (a key the vault
    keeps, or a remote signer) loaded, mounts its loaders through `AccountSubscriptionRegistry`,
