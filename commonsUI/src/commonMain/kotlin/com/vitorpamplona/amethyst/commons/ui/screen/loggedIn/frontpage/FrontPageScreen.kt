@@ -270,6 +270,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.calendarYearAndDay
 import com.vitorpamplona.amethyst.commons.ui.note.durationPhrase
 import com.vitorpamplona.amethyst.commons.ui.note.rememberIs24HourClock
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
+import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
@@ -444,6 +445,12 @@ fun FrontPageScreen(
     Scaffold(
         modifier = Modifier.onSizeChanged { paneWidth = with(density) { it.width.toDp() } },
         snackbarHost = { SnackbarHost(snackbar) },
+        // As every screen the drawer opens: the bar stays (it hides itself on wide windows and pushes).
+        bottomBar = {
+            AppBottomBar(Route.FrontPage(), nav, accountViewModel) { route ->
+                if (route != Route.FrontPage()) nav.navBottomBar(route)
+            }
+        },
         topBar = {
             if (current == null) {
                 if (addToBar == null) {
