@@ -64,6 +64,7 @@ import com.vitorpamplona.quartz.nip99Classifieds.review.ProductReviewEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.routstr.node.RoutstrNodeEvent
 
 data class ContentPreset(
     val kinds: List<Int> = emptyList(),
@@ -108,6 +109,7 @@ object KindRegistry {
             "live" to listOf(LiveActivitiesEvent.KIND, MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
             "community" to listOf(CommunityDefinitionEvent.KIND),
             "wiki" to listOf(WikiArticleEvent.KIND),
+            "routstr" to listOf(RoutstrNodeEvent.KIND),
             "ebook" to listOf(EbookEvent.KIND),
             "magazine" to listOf(MagazineEvent.KIND, MagazineIssueEvent.KIND),
             "classified" to listOf(ClassifiedsEvent.KIND),
