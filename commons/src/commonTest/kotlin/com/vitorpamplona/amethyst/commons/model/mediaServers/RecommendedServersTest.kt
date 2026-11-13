@@ -39,7 +39,7 @@ class RecommendedServersTest {
 
     @Test
     fun `with every default added nothing is missing`() {
-        val added = DEFAULT_MEDIA_SERVERS.mapTo(HashSet()) { Rfc3986.host(it.baseUrl) } + "fertschnigfotography.com"
+        val added = hostsOf(*DEFAULT_MEDIA_SERVERS.map { it.baseUrl }.toTypedArray(), "https://fertschnigfotography.com/")
         assertTrue(missingRecommendedServers(added).isEmpty())
     }
 
@@ -56,17 +56,12 @@ class RecommendedServersTest {
     fun `a trailing slash does not change the match`() {
         // Default is written without the slash, the list entry with it, and the other way round.
         val added = hostsOf("https://cdn.nostrcheck.me/", "https://blossom.band")
-        val missing = missingRecommendedServers(added).map { it.name }
-        assertTrue("Nostrcheck.me" !in missing)
-        assertTrue("Nostr.Build" !in missing)
-        assertEquals(DEFAULT_MEDIA_SERVERS.size - 2, missing.size)
+        assertEquals(DEFAULT_MEDIA_SERVERS - named("Nostrcheck.me", "Nostr.Build"), missingRecommendedServers(added))
     }
 
     @Test
     fun `host case does not change the match`() {
-        val missing = missingRecommendedServers(hostsOf("https://Blossom.Band/")).map { it.name }
-        assertTrue("Nostr.Build" !in missing)
-        assertEquals(DEFAULT_MEDIA_SERVERS.size - 1, missing.size)
+        assertEquals(DEFAULT_MEDIA_SERVERS - named("Nostr.Build"), missingRecommendedServers(hostsOf("https://Blossom.Band/")))
     }
 
     @Test

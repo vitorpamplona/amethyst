@@ -69,10 +69,10 @@ val DEFAULT_MEDIA_SERVERS: List<ServerName> =
         ServerName("NostrMedia (Paid)", "https://nostrmedia.com", ServerType.Blossom),
     )
 
-// Declared after DEFAULT_MEDIA_SERVERS on purpose: top-level properties of one file initialize in
-// the order written, so a map above the list would read it as null and throw.
-
-/** Recommended servers keyed by host, which is what a list row's `name` holds. Keeps default order. */
+/**
+ * Recommended servers keyed by host, which is what a list row's `name` holds. Keeps default order.
+ * Must stay below [DEFAULT_MEDIA_SERVERS]: top-level properties initialize in the order written.
+ */
 private val RECOMMENDED_BY_HOST: Map<String, ServerName> =
     DEFAULT_MEDIA_SERVERS.associateBy { Rfc3986.host(it.baseUrl) }
 

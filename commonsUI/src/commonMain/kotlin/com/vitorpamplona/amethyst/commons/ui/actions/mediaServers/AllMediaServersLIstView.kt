@@ -176,8 +176,7 @@ fun AllMediaBody(
         }
 
         item {
-            // Server entries carry their host in `name`; match recommended servers by host so a
-            // URL written with or without a trailing slash still counts as added.
+            // Server entries carry their host in `name`.
             val missing = missingRecommendedServers(blossomServersState.mapTo(HashSet()) { it.name })
             AddServerSection(
                 missing = missing,
@@ -492,7 +491,7 @@ private fun RecommendedChip(
     ) {
         ServerMonogram(name = serverEntry.name, size = 24.dp)
         Text(
-            text = serverEntry.name.replaceFirstChar(Char::titlecase),
+            text = serverEntry.name,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
         )
