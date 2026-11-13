@@ -97,6 +97,12 @@ object NotificationClickRules {
     }
 
     /**
+     * Whether [target] is about today's paper: an Observer screen showing a past edition goes back
+     * to today ([com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinter.showToday]), since navigating to the screen on top does nothing.
+     */
+    fun showsToday(target: NotificationTarget): Boolean = target == NotificationTarget.FrontPage
+
+    /**
      * The screen [target] opens for [account]: The Observer on today's paper, a link as the OS
      * would route it, or a note where a tap on it in the app goes (its thread, its chat...), or the
      * screen that finds it while the cache does not hold it.

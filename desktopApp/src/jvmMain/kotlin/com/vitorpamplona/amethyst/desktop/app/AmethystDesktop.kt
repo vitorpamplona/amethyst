@@ -34,6 +34,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -112,6 +113,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Taskbar
 import java.awt.Toolkit
@@ -315,17 +317,20 @@ fun main(args: Array<String>) {
         // way out (the window's close, Quit, its shortcut, the updater) asks first while one runs.
         val printers = modules.frontPagePrinters
         var askQuit by remember { mutableStateOf(false) }
-        val printingNow = { PrintQuitRules.printing(printers.printing.value.values) }
+        val printingNow = { PrintQuitRules.printing(printers.printing.value.values, printers.pressHeld.value) }
+        val quitScope = rememberCoroutineScope()
         val quit: () -> Unit = {
             keptForPrint.set(false)
             exitApplication()
         }
+        // The question shows in the main window, brought back for it.
+        val askInMainWindow: () -> Unit = {
+            windows.showMainWindow()
+            askQuit = true
+        }
         val requestQuit: () -> Unit = {
             when (PrintQuitRules.onQuit(printingNow())) {
-                CloseAction.ASK -> {
-                    windows.showMainWindow()
-                    askQuit = true
-                }
+                CloseAction.ASK -> askInMainWindow()
                 else -> quit()
             }
         }
@@ -344,8 +349,9 @@ fun main(args: Array<String>) {
         // Once that print ends (its "ready" notification is out by then), the app quits, as the
         // reader asked when they closed it, unless they came back meanwhile.
         LaunchedEffect(windows) {
-            combine(snapshotFlow { windows.keptForPrint to windows.anyShowing }, printers.printing) { (kept, showing), jobs ->
-                PrintQuitRules.quitsAfterPrint(kept, PrintQuitRules.printing(jobs.values), showing)
+            // Not until the press is let go: a scheduled run still writes its `ran` after the print.
+            combine(snapshotFlow { windows.keptForPrint to windows.anyShowing }, printers.printing, printers.pressHeld) { (kept, showing), jobs, held ->
+                PrintQuitRules.quitsAfterPrint(kept, PrintQuitRules.printing(jobs.values, held), showing)
             }.distinctUntilChanged().collectLatest { done ->
                 if (done) {
                     delay(QUIT_AFTER_PRINT_GRACE_MS)
@@ -369,7 +375,8 @@ fun main(args: Array<String>) {
         LaunchedEffect(windows) {
             snapshotFlow { windows.allClosed }
                 .filter { it }
-                .collect { windows.onAllClosed(root.navigator.stacks?.arrangement, ::exitApplication) }
+                // The last screen window closed with the main one hidden: a print running asks first.
+                .collect { windows.onAllClosed(root.navigator.stacks?.arrangement, quit, printingNow(), ask = askInMainWindow) }
         }
 
         // Bumped to rebuild the window after a crash the user reports from the crash window: the
@@ -483,8 +490,13 @@ fun main(args: Array<String>) {
                                                         },
                                                         onQuit = {
                                                             askQuit = false
-                                                            printers.cancelAll()
-                                                            quit()
+                                                            // Quit once the cancelled runs have recorded it (or a few
+                                                            // seconds passed): a morning cancelled unrecorded resumes
+                                                            // at the next launch.
+                                                            quitScope.launch {
+                                                                printers.cancelAllAndSettle()
+                                                                quit()
+                                                            }
                                                         },
                                                         onDismiss = { askQuit = false },
                                                     )

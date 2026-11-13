@@ -33,7 +33,9 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class NotificationClickRouterTest {
     private val me = "a".repeat(64)
@@ -79,6 +81,9 @@ class NotificationClickRouterTest {
     @Test
     fun theFrontPageOpensOnToday() {
         assertEquals(Route.FrontPage(), NotificationClickRules.routeFor(NotificationTarget.FrontPage, mockk<Account>(relaxed = true)))
+        // And an Observer already on top, on a past edition, is told to go back to today.
+        assertTrue(NotificationClickRules.showsToday(NotificationTarget.FrontPage))
+        assertFalse(NotificationClickRules.showsToday(note))
     }
 
     @Test

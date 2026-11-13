@@ -312,6 +312,9 @@ import com.vitorpamplona.amethyst.commons.wot.onboarding.brainstorm.BrainstormOn
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /** The house stylesheet's `--paper`: the newsprint the paper sits on, whatever the app's theme. */
@@ -402,7 +405,8 @@ fun FrontPageScreen(
     val setup by viewModel.setup.collectAsStateWithLifecycle()
     val models by viewModel.models.collectAsStateWithLifecycle()
     val run by viewModel.run.collectAsStateWithLifecycle()
-    val log by printer.log.collectAsStateWithLifecycle()
+    // The log changes per streamed reasoning step: collected only where it is drawn, not here.
+    val log = printer.log
     val today by viewModel.today.collectAsStateWithLifecycle()
     val shown by viewModel.shown.collectAsStateWithLifecycle()
     val estimate by viewModel.estimate.collectAsStateWithLifecycle()
@@ -424,7 +428,7 @@ fun FrontPageScreen(
     val pastDay by viewModel.pastDay.collectAsStateWithLifecycle()
     // A past edition (Past editions, a notification, a link) shows in place of today's; back
     // from it, by the arrow or the system's back, is today.
-    val past = today.pastEdition(pastDay, FrontPageClock.dayKey(TimeUtils.now()))
+    val past = today.pastEdition(pastDay)
     PlatformBackHandler(enabled = past != null) { viewModel.showToday() }
     val barNav = remember(nav, viewModel, past != null) { if (past != null) BackToToday(nav, viewModel::showToday) else nav }
 
@@ -660,7 +664,7 @@ fun FrontPageScreen(
             today,
             onOpen = { edition ->
                 pastSheet = false
-                viewModel.showDay(edition.day)
+                viewModel.showEdition(edition)
             },
             onDismiss = { pastSheet = false },
         )
@@ -1881,7 +1885,7 @@ private fun grouped(n: Long): String = formatGrouped(n)
 @Composable
 private fun RunStatus(
     run: FrontPageRun,
-    log: PrintLog,
+    log: StateFlow<PrintLog>,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1899,11 +1903,17 @@ private fun RunStatus(
         }
         // How an ended print went, step by step, for the reader who wants to know why.
         val ended = run is FrontPageRun.Failed || (run is FrontPageRun.Done && run.result !is PrintResult.Printed)
-        if (ended && log.entries.isNotEmpty()) {
-            Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
-                PrintDetailsToggle(log, Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp))
-            }
-        }
+        if (ended) EndedDetails(log)
+    }
+}
+
+/** An ended print's log, for the reader who wants to know why: read only once the print ended. */
+@Composable
+private fun EndedDetails(log: StateFlow<PrintLog>) {
+    val entries by remember(log) { log.map { it.entries.isNotEmpty() }.distinctUntilChanged() }.collectAsStateWithLifecycle(log.value.entries.isNotEmpty())
+    if (!entries) return
+    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+        PrintDetailsToggle(log, Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp))
     }
 }
 
@@ -1914,7 +1924,7 @@ private fun RunStatus(
 @Composable
 private fun DismissibleRunStatus(
     run: FrontPageRun,
-    log: PrintLog,
+    log: StateFlow<PrintLog>,
     onCancel: () -> Unit,
 ) {
     var dismissed by remember { mutableStateOf<FrontPageRun?>(null) }
@@ -1938,7 +1948,7 @@ private fun DismissibleRunStatus(
 @Composable
 private fun Progress(
     step: PrintStep,
-    log: PrintLog,
+    log: StateFlow<PrintLog>,
     onCancel: () -> Unit,
 ) {
     val text =

@@ -212,10 +212,22 @@ fun runsHereAtAll(task: ScheduledTask) = task.task == ObserverSchedule.TASK && t
 fun devicesPrint(task: ScheduledTask) = runsHereAtAll(task) && !task.namesRunner && ObserverParams.understands(task)
 
 /**
- * [task] printed by the reader's own devices again: no public `p` (NIP-FB, Runner), the private
- * tags encrypted to the reader when it is published. Null, nothing to write, when it names no runner.
+ * The one runner the schedule names for its author (NIP-FB, Runner): a lowercase hex key that
+ * isn't the author's own ([ScheduledTask.runnerFor]); null with none, a conflict, or a `p` that
+ * names nobody. Only this runner's Observer site is ever read.
  */
-fun withoutRunner(task: ScheduledTask?): ScheduledTask? = task?.takeIf { it.namesRunner }?.withRunner(null)
+fun SyncedSchedule.runner(): HexKey? = (this as? SyncedSchedule.Readable)?.let { it.task.runnerFor(it.event.pubKey) }
+
+/**
+ * [task] printed by the reader's own devices again, changed at [now]: no public `p` (NIP-FB,
+ * Runner), the private tags encrypted to the reader when it is published, and the schedule
+ * restarted from [now] ([ScheduledTask.withRunner]), so no device claims a morning the runner was
+ * due to print before it was cleared. Null, nothing to write, when it names no runner.
+ */
+fun withoutRunner(
+    task: ScheduledTask?,
+    now: Long,
+): ScheduledTask? = task?.takeIf { it.namesRunner }?.withRunner(null, now)
 
 /** An Observer schedule holding only settings: no `cron`, so it never runs (NIP-FB, `param`). */
 fun observerSettingsOnly(): ScheduledTask = ScheduledTask(arrayOf(DTag.assemble(ObserverSchedule.D_TAG)), arrayOf(TaskTag.assemble(ObserverSchedule.TASK)))
@@ -444,7 +456,7 @@ fun viewOf(
             val withRunner =
                 base.copy(
                     runners = task.runners,
-                    runner = task.runner,
+                    runner = synced.runner(),
                     unknownParams = ObserverParams.unknownParams(task),
                 )
             // Settings and no schedule: nothing runs, the switch is off, the settings are kept.
@@ -535,10 +547,11 @@ class FrontPageMorning(
      * The Observer's clock ([ObserverNow]): the calendar the "already printed today" check reads (a
      * readable schedule's zone, else this device's), and the time, again each minute while
      * collected. A new one goes out only when the day or the calendar changed: at midnight, or
-     * when the schedule's zone does.
+     * when the schedule's zone does. The zone comes from the [schedule] view the screen already
+     * collects ([view]), not a second one.
      */
-    fun observerNow(account: Account): Flow<ObserverNow> =
-        combine(view(account).map { ObserverCalendar.readableZone(it) }.distinctUntilChanged(), minutes()) { zone, now -> ObserverNow(zone, now) }
+    fun observerNow(schedule: Flow<MorningScheduleView>): Flow<ObserverNow> =
+        combine(schedule.map { ObserverCalendar.readableZone(it) }.distinctUntilChanged(), minutes()) { zone, now -> ObserverNow(zone, now) }
             .distinctUntilChanged()
 
     /** The time now, then again each minute, while collected. */
@@ -720,7 +733,8 @@ class FrontPageMorning(
      */
     suspend fun printFromMyDevices(account: Account): ScheduleEdit =
         editQueue.withLock {
-            edit(account, now(), ::withoutRunner)
+            val at = now()
+            edit(account, at) { withoutRunner(it, at) }
         }
 
     /**

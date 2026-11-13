@@ -90,21 +90,30 @@ data class ObserverToday(
     val hasEditions: Boolean get() = paper != null || past.isNotEmpty()
 
     /**
-     * Whether a past edition picked by [day] (Past editions, a notification, `Route.FrontPage(day)`)
-     * names another day than today's. Today is today on this calendar, on the device's
-     * ([deviceToday], which is what an edition's day and its "ready" notification are named on),
-     * or today's paper's own day.
+     * The past edition [pick] names (Past editions, a notification, `Route.FrontPage(day)`); null
+     * shows today. Picked by identity, not by comparing days: an edition's day is named on the
+     * device's calendar and today on the schedule's, so a device in Los Angeles reading a Tokyo
+     * schedule lists, as past, an edition named with the device's own today. A pick with its
+     * [EditionPick.code] is that edition when it is a past one; one by day alone is today's paper
+     * when that is the day's, else the past edition kept for it.
      */
-    fun isPast(
-        day: String,
-        deviceToday: String,
-    ): Boolean = day != this.day && day != deviceToday && day != paper?.day
+    fun pastEdition(pick: EditionPick?): PastEdition? {
+        if (pick == null) return null
+        if (pick.code != null) return past.firstOrNull { it.edition.day == pick.day && it.edition.code == pick.code }
+        if (paper?.day == pick.day) return null
+        return past.firstOrNull { it.edition.day == pick.day }
+    }
+}
 
-    /** The kept edition [day] names, when it is a past one ([isPast]); null shows today. */
-    fun pastEdition(
-        day: String?,
-        deviceToday: String,
-    ): PastEdition? = day?.takeIf { isPast(it, deviceToday) }?.let { picked -> past.firstOrNull { it.edition.day == picked } }
+/** An edition picked to read in place of today's: its [day] (`yyyy-MM-dd`, as kept) and, from the list, its [code]. */
+@Immutable
+data class EditionPick(
+    val day: String,
+    val code: String? = null,
+) {
+    companion object {
+        fun of(edition: SavedEdition) = EditionPick(edition.day, edition.code)
+    }
 }
 
 /** The decision for [editions] (newest first) at [now] on [calendar]. Pure: the screen recomputes it each minute. */

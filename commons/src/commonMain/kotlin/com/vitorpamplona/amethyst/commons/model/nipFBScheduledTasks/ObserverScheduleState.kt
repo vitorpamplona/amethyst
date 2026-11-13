@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverSchedule
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTask
@@ -280,6 +281,11 @@ class ObserverScheduleState(
                 throw e
             } catch (e: Exception) {
                 failure = e
+                // As Quartz's PrivateTagArrayEvent.decrypt: only a failed decryption means "try the
+                // next peer". The signer's own answer (the reader refused, it timed out, it needs the
+                // foreground) holds for every peer: asking again would prompt them once per peer.
+                // Not kept ([decrypt]): the next open asks again.
+                if (!mayBeWrongPeer(e)) break
             }
         }
         if (plain == null) {
@@ -297,6 +303,15 @@ class ObserverScheduleState(
     }
 
     override suspend fun taskOf(event: ScheduledTaskEvent): ScheduledTask? = (decrypt(event) as? Decrypted.Task)?.task
+
+    /**
+     * Whether [e], thrown decrypting with one peer, may only mean the content was encrypted to
+     * another: the signer couldn't decrypt it, or it isn't a signer's answer at all.
+     */
+    private fun mayBeWrongPeer(e: Exception): Boolean =
+        e !is SignerExceptions ||
+            e is SignerExceptions.CouldNotPerformException ||
+            e is SignerExceptions.UnauthorizedDecryptionException
 
     /** What is known without asking the signer: a decrypt already done, or nothing. */
     private fun known(event: ScheduledTaskEvent): Decrypted? {

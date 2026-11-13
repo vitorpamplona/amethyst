@@ -42,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -51,6 +52,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.frontpage.PrintLog
 import com.vitorpamplona.amethyst.commons.frontpage.PrintLogEntry
 import com.vitorpamplona.amethyst.commons.frontpage.PrintLogKind
@@ -93,6 +95,9 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * The writing step in words: "Waiting for the model… 0:42" until the first byte, "Thinking…" while
@@ -127,13 +132,17 @@ fun rememberElapsed(since: Long): Long {
     return elapsed
 }
 
-/** "Show details": the print's log, collapsed until asked for. */
+/**
+ * "Show details": the print's log, collapsed until asked for. Collected here, and in full only
+ * while open: a closed toggle redraws only when the log starts or stops having lines.
+ */
 @Composable
 fun PrintDetailsToggle(
-    log: PrintLog,
+    log: StateFlow<PrintLog>,
     modifier: Modifier = Modifier,
 ) {
-    if (log.entries.isEmpty()) return
+    val hasEntries by remember(log) { log.map { it.entries.isNotEmpty() }.distinctUntilChanged() }.collectAsStateWithLifecycle(log.value.entries.isNotEmpty())
+    if (!hasEntries) return
     var open by rememberSaveable { mutableStateOf(false) }
     Column(modifier) {
         TextButton(onClick = { open = !open }) {
@@ -141,7 +150,10 @@ fun PrintDetailsToggle(
             Icon(if (open) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore, contentDescription = null)
         }
         // A long print's log scrolls in its place rather than pushing the page away.
-        if (open) PrintDetails(log, Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 4.dp, bottom = 8.dp))
+        if (open) {
+            val shown by log.collectAsStateWithLifecycle()
+            PrintDetails(shown, Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 4.dp, bottom = 8.dp))
+        }
     }
 }
 
@@ -191,7 +203,8 @@ fun PrintDetails(
             Text(stringRes(Res.string.front_page_reasoning), style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
             val scroll = rememberScrollState()
             // Follows the newest reasoning, as a terminal does.
-            LaunchedEffect(log.reasoning.length) { scroll.scrollTo(scroll.maxValue) }
+            // Keyed on how much has arrived, not the length shown: that stops growing once capped.
+            LaunchedEffect(log.reasoningReceived) { scroll.scrollTo(scroll.maxValue) }
             Text(
                 log.reasoning,
                 style = MaterialTheme.typography.bodySmall,

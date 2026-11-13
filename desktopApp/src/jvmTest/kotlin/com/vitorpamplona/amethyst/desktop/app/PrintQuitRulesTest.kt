@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.desktop.app
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrintJob
 import com.vitorpamplona.amethyst.commons.frontpage.PrintJobEnd
 import com.vitorpamplona.amethyst.commons.frontpage.PrintTrigger
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -40,6 +41,30 @@ class PrintQuitRulesTest {
         assertTrue(PrintQuitRules.printing(listOf(scheduled)))
         assertFalse(PrintQuitRules.printing(listOf(ended)))
         assertFalse(PrintQuitRules.printing(emptyList()))
+    }
+
+    @Test
+    fun aPressStillHeldCounts() {
+        // The print ended, but its scheduled run is still writing `ran`: quitting now would leave the claim unfinished.
+        assertTrue(PrintQuitRules.printing(listOf(ended), pressHeld = setOf(ended.account)))
+        // A scheduled run claiming, before any print started.
+        assertTrue(PrintQuitRules.printing(emptyList(), pressHeld = setOf("b".repeat(64))))
+        assertFalse(PrintQuitRules.printing(listOf(ended), pressHeld = emptySet()))
+        // So "Keep printing" quits only once the press is let go.
+        assertFalse(PrintQuitRules.quitsAfterPrint(keptForPrint = true, printing = PrintQuitRules.printing(listOf(ended), setOf(ended.account)), anyWindowShowing = false))
+    }
+
+    @Test
+    fun closingTheLastScreenWindowAsksWhileAPrintRuns() {
+        val windows = DesktopWindowManager { File.createTempFile("sizes", ".properties").also { it.deleteOnExit() } }
+        var asked = 0
+        var exited = 0
+        // The main window hidden beside screen windows, the last of them closed: a print running asks.
+        windows.onAllClosed(layout = null, exit = { exited++ }, printing = true, ask = { asked++ })
+        assertEquals(1 to 0, asked to exited)
+        // Nothing running: it quits, as before.
+        windows.onAllClosed(layout = null, exit = { exited++ }, printing = false, ask = { asked++ })
+        assertEquals(1 to 1, asked to exited)
     }
 
     @Test

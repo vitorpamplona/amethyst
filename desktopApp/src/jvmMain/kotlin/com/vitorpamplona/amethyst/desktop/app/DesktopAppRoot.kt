@@ -291,7 +291,12 @@ class DesktopAppRoot(
                 val savedNpubs = sessionManager.localPreferences.allSavedAccounts().mapTo(HashSet()) { it.npub }
                 val plan = NotificationClickRules.plan(click, account.signer.pubKey) { hex -> hex.hexToByteArray().toNpub() in savedNpubs }
                 when (plan) {
-                    is NotificationClickPlan.Open -> NotificationClickRules.routeFor(plan.target, account)?.let { nav.nav(it) }
+                    is NotificationClickPlan.Open -> {
+                        // The Observer already on top, on a past edition: opening its route again does
+                        // nothing, so it is told to show today, the paper the notification is about.
+                        if (NotificationClickRules.showsToday(plan.target)) modules.frontPagePrinters.existing(account.signer.pubKey)?.showToday()
+                        NotificationClickRules.routeFor(plan.target, account)?.let { nav.nav(it) }
+                    }
                     is NotificationClickPlan.SwitchAndOpen ->
                         sessionManager.checkAndSwitchUserSync(plan.account.hexToByteArray().toNpub()) { switched ->
                             plan.target?.let { NotificationClickRules.routeFor(it, switched) }

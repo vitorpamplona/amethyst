@@ -243,7 +243,7 @@ class FrontPageSettingsTest {
             assertEquals(listOf("size", "extra"), view.unknownParams)
             // The runner choice keeps them too.
             val runner = NostrSignerInternal(KeyPair()).pubKey
-            assertEquals(written.params, written.withRunner(runner).params)
+            assertEquals(written.params, written.withRunner(runner, 0).params)
             assertNotNull(ScheduledTaskClaims.winner(listOfNotNull(relays.newest)))
         }
 }

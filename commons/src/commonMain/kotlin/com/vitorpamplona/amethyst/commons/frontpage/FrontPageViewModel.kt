@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTask
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -237,21 +238,22 @@ class FrontPageViewModel(
      * again each minute so midnight turns the page while the screen is open.
      */
     val today: StateFlow<ObserverToday> =
-        combine(printer.editions, morning.observerNow(account)) { kept, clock -> observerToday(kept, clock.now, clock.calendar) }
+        combine(printer.editions, morning.observerNow(schedule)) { kept, clock -> observerToday(kept, clock.now, clock.calendar) }
             .distinctUntilChanged()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), observerToday(printer.editions.value, TimeUtils.now(), ObserverCalendar.DEVICE))
 
-    private val _pastDay = MutableStateFlow(initialDay)
+    private val _pastDay = MutableStateFlow(initialDay?.let { EditionPick(it) })
 
     /**
-     * The past edition picked (from Past editions, a notification or a link), by its day; null
-     * shows today. A day that is today's, or that isn't kept, shows today too ([viewing]).
+     * The past edition picked (from Past editions, by itself; from a notification or a link, by its
+     * day); null shows today. One that is today's paper, or that isn't kept, shows today too
+     * ([ObserverToday.pastEdition]).
      */
     val pastDay = _pastDay.asStateFlow()
 
-    /** Shows the kept edition of [day] in place of today's, until [showToday]. */
-    fun showDay(day: String) {
-        _pastDay.value = day
+    /** Shows the kept [edition] in place of today's, until [showToday]. */
+    fun showEdition(edition: SavedEdition) {
+        _pastDay.value = EditionPick.of(edition)
     }
 
     /** Back to today's paper, or to the view that prints it. */
@@ -261,7 +263,7 @@ class FrontPageViewModel(
 
     /** The edition on screen: the past one picked, else today's paper; null for the print view. */
     val viewing: StateFlow<SavedEdition?> =
-        combine(today, _pastDay) { today, day -> today.pastEdition(day, FrontPageClock.dayKey(TimeUtils.now()))?.edition ?: today.paper }
+        combine(today, _pastDay) { today, pick -> today.pastEdition(pick)?.edition ?: today.paper }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** The edition on screen and its page; null while there is none (or it is still being read). */
@@ -341,14 +343,16 @@ class FrontPageViewModel(
     private var modelsJob: Job? = null
 
     /** The pending write of the model and key into the schedule: a typed model id writes once the reader stops typing. */
-    private var settingsJob: Job? = null
+    private val settingsWrite = DebouncedWrite(account.scope, SETTINGS_PAUSE_MS)
 
     init {
         viewModelScope.launch { key.collect { it?.let { loadModels(it) } } }
+        // Today's paper asked for again (a "ready" notification) while this screen shows a past one.
+        viewModelScope.launch { printer.todayRequests.collect { showToday() } }
         // Another app or device picked a model: the schedule's choice shows here too.
         viewModelScope.launch {
             namedModel.collect { named ->
-                if (named != null && settingsJob?.isActive != true) _models.update { FrontPageModels(it.loading, it.ids, named, it.failure, it.byId) }
+                if (named != null && !settingsWrite.pending) _models.update { FrontPageModels(it.loading, it.ids, named, it.failure, it.byId) }
             }
         }
     }
@@ -424,27 +428,24 @@ class FrontPageViewModel(
     fun selectModel(model: String) {
         val picked = model.trim()
         _models.update { FrontPageModels(it.loading, it.ids, picked.ifEmpty { null }, it.failure, it.byId) }
-        val key = key.value ?: return
-        if (picked.isEmpty()) return
+        val key = key.value
+        // Every pick replaces the write still waiting, including one that needs no write: typing a
+        // character and deleting it within the pause must not save the character.
+        if (key == null || picked.isEmpty()) return settingsWrite.submit(null)
         viewModelScope.launch { runCatching { printer.memory.set(key.url, picked) } }
-        if (picked == namedModel.value && task.value?.let { ObserverParams.keyChoice(it)?.matches(key) } == true) return
-        settingsJob?.cancel()
-        settingsJob =
-            account.scope.launch {
-                delay(SETTINGS_PAUSE_MS)
-                val outcome =
-                    withContext(NonCancellable) {
-                        try {
-                            morning.setSettings(account, picked, key)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            Log.w("FrontPageViewModel", "Could not save the Observer's settings", e)
-                            ScheduleEdit.Unreachable
-                        }
-                    }
-                if (outcome !is ScheduleEdit.Saved && outcome != ScheduleEdit.Unchanged) _scheduleProblem.value = outcome
-            }
+        if (picked == namedModel.value && task.value?.let { ObserverParams.keyChoice(it)?.matches(key) } == true) return settingsWrite.submit(null)
+        settingsWrite.submit {
+            val outcome =
+                try {
+                    morning.setSettings(account, picked, key)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w("FrontPageViewModel", "Could not save the Observer's settings", e)
+                    ScheduleEdit.Unreachable
+                }
+            if (outcome !is ScheduleEdit.Saved && outcome != ScheduleEdit.Unchanged) _scheduleProblem.value = outcome
+        }
     }
 
     private val _printRefused = MutableStateFlow(false)
@@ -545,6 +546,32 @@ fun printedByOf(
 
 /** How long a typed model id waits for the reader to stop typing before it is written into the schedule. */
 const val SETTINGS_PAUSE_MS = 1_500L
+
+/**
+ * A write made once the reader pauses for [pauseMs], on [scope]: each [submit] replaces the one
+ * still waiting, a null one included (a pick that needs no write), so only the last pick is ever
+ * written. Once it starts, a write runs to its end: neither a newer pick nor a closed screen stops it.
+ */
+class DebouncedWrite(
+    private val scope: CoroutineScope,
+    private val pauseMs: Long,
+) {
+    private var job: Job? = null
+
+    /** A write is waiting, or running. */
+    val pending: Boolean get() = job?.isActive == true
+
+    fun submit(write: (suspend () -> Unit)?) {
+        job?.cancel()
+        job =
+            write?.let {
+                scope.launch {
+                    delay(pauseMs)
+                    withContext(NonCancellable) { it() }
+                }
+            }
+    }
+}
 
 /** A [time] that failed to save, picked on the schedule [cron]. */
 private data class DraftTime(

@@ -49,12 +49,18 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -193,6 +199,8 @@ class FrontPagePrinter(
     private val onJob: (FrontPagePrintJob?) -> Unit = {},
     /** True while no screen can be seen at all (a desktop app whose window was closed mid-print): nobody watches then. */
     private val readerAway: () -> Boolean = { false },
+    /** Every time the press is taken (true) or let go (false), for the app-wide list ([FrontPagePrinters.pressHeld]). */
+    onPress: (Boolean) -> Unit = {},
 ) {
     private val pubKey get() = account.signer.pubKey
 
@@ -241,7 +249,9 @@ class FrontPagePrinter(
     private val runnerReadFor = MutableStateFlow<HexKey?>(null)
 
     /** The one runner the reader's own signed schedule names, or null. */
-    private fun scheduleRunner(): HexKey? = (account.observerSchedule.flow.value as? SyncedSchedule.Readable)?.task?.runner
+    private fun scheduleRunner(): HexKey? =
+        account.observerSchedule.flow.value
+            .runner()
 
     /** The runner's site, only while it is still the runner the schedule names. */
     private fun runnerEditions(): List<ObserverEdition> =
@@ -266,7 +276,7 @@ class FrontPagePrinter(
      */
     val sites: StateFlow<ObserverSites> =
         combine(localEditions, siteView, runnerSiteView, runnerReadFor, account.observerSchedule.flow) { local, site, runner, readFor, synced ->
-            val named = (synced as? SyncedSchedule.Readable)?.task?.runner
+            val named = synced.runner()
             observerSitesOf(local, site?.editions.orEmpty(), runner?.view?.editions.orEmpty()).copy(runnerRead = named == null || readFor == named)
         }.stateIn(scope, SharingStarted.Eagerly, ObserverSites())
 
@@ -300,31 +310,92 @@ class FrontPagePrinter(
     private var printing: Job? = null
 
     /** The press: one print at a time, a scheduled run holding it from before its claim to its end; Cancel stops either. */
-    private val slot = PrintSlot()
+    private val slot = PrintSlot(onPress)
+
+    /** One read of both sites at a time ([refreshSites]), and when the last began. Before `init`, which starts the reads. */
+    private val siteReads = Mutex()
+
+    @Volatile
+    private var sitesReadAt = 0L
 
     init {
         scope.launch {
             refresh()
-            refreshSite()
+            refreshSites()
         }
         // The runner's site is read whenever the schedule comes to name one (or another), and
         // dropped when it names none: a site by any other key is never read.
         scope.launch {
             account.observerSchedule.flow
-                .map { (it as? SyncedSchedule.Readable)?.task?.runner }
+                .map { it.runner() }
                 .distinctUntilChanged()
                 .collect { runner -> refreshRunnerSite(runner) }
+        }
+        // While the app is open, both sites are read again after each due occurrence: the paper
+        // another device or the runner printed meanwhile shows, instead of an offer to print it
+        // again (and pay twice) and, three hours on, a missed-run warning for a paper that exists.
+        scope.launch {
+            account.observerSchedule.flow
+                .map { (it as? SyncedSchedule.Readable)?.task }
+                .distinctUntilChanged()
+                .collectLatest { task -> rereadAfterOccurrences(task) }
+        }
+    }
+
+    /** Sleeps until each of [task]'s site re-reads ([nextSiteReread]) and reads both sites then; returns when it has none. */
+    private suspend fun rereadAfterOccurrences(task: ScheduledTask?) {
+        if (task == null || !task.enabled) return
+        val expression = task.expression() ?: return
+        val zone = FrontPageClock.cronZone(task.tz) ?: return
+        while (true) {
+            val at = now()
+            val next = nextSiteReread(expression, zone, at) ?: return
+            // In steps: a computer that sleeps overnight wakes to a wall clock past the re-read.
+            delay((next - at).coerceIn(1, SITE_REREAD_STEP_SECONDS) * 1000)
+            if (now() >= next) refreshSites()
+        }
+    }
+
+    /**
+     * Reads both Observer sites again, the reader's and their runner's, unless they were read
+     * less than [minAgeSeconds] ago or are being read now.
+     */
+    suspend fun refreshSites(minAgeSeconds: Long = 0) {
+        if (!siteReads.tryLock()) return
+        try {
+            if (minAgeSeconds > 0 && now() - sitesReadAt < minAgeSeconds) return
+            sitesReadAt = now()
+            refreshSite()
+            refreshRunnerSite()
+        } finally {
+            siteReads.unlock()
         }
     }
 
     /** The screens showing the paper that someone can see: none while the reader is away. */
     private fun watchers(): Int = if (readerAway()) 0 else _watched.value
 
+    private val _todayRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    /**
+     * Today's paper was asked for again ([showToday]): a front page screen showing a past edition
+     * goes back to today. Navigating to the screen that is already on top does nothing, so a
+     * "paper ready" click needs this to leave a past edition.
+     */
+    val todayRequests: SharedFlow<Unit> = _todayRequests.asSharedFlow()
+
+    /** Every front page screen of this account shows today ([todayRequests]). */
+    fun showToday() {
+        _todayRequests.tryEmit(Unit)
+    }
+
     /** A screen showing the paper calls this, and the returned function when it goes. */
     fun watch(): () -> Unit {
         _watched.update { it + 1 }
         // Opening The Observer is how a hidden popup comes back.
         jobs.unhide()
+        // And how it learns what was printed since it last looked: another device, or the runner.
+        scope.launch { refreshSites(minAgeSeconds = SITE_REREAD_ON_OPEN_SECONDS) }
         var released = false
         return {
             if (!released) {
@@ -463,7 +534,9 @@ class FrontPagePrinter(
         boundary: PaperBoundary,
         trigger: PrintTrigger,
         keep: suspend () -> Boolean,
-    ): FrontPageRun = slot.runCancellable(FrontPageRun.Cancelled) { printBody(key, model, boundary, trigger, keep) }
+        /** What the paper is dated (its `printedAt`): the occurrence a scheduled print is for; null, when the print starts. */
+        printedAt: Long? = null,
+    ): FrontPageRun = slot.runCancellable(FrontPageRun.Cancelled) { printBody(key, model, boundary, trigger, keep, printedAt ?: now()) }
 
     private suspend fun printBody(
         key: AgentKeyTag,
@@ -471,6 +544,7 @@ class FrontPagePrinter(
         boundary: PaperBoundary,
         trigger: PrintTrigger,
         keep: suspend () -> Boolean,
+        printedAt: Long,
     ): FrontPageRun {
         jobs.started(trigger)
         logBook.start(askedOf(key, model))
@@ -494,7 +568,7 @@ class FrontPagePrinter(
                             jobs.dropped()
                             return FrontPageRun.Idle.also { _run.value = it }
                         }
-                        kept = keep(result, model, trigger)
+                        kept = keep(result, model, trigger, printedAt)
                     }
                     FrontPageRun.Done(result)
                 } catch (e: CancellationException) {
@@ -537,12 +611,18 @@ class FrontPagePrinter(
         }
     }
 
+    /**
+     * Keeps a clean page dated [at]: when the print started, or the occurrence a scheduled one is
+     * for, never when it finished. A paper begun at 23:55 and done at 00:03 is that evening's: dated
+     * by its finish, it would count as the next day's ([ObserverSite.printedFor]), and the next
+     * day's 23:55 run would skip as already printed.
+     */
     private suspend fun keep(
         printed: PrintResult.Printed,
         model: AgentModel,
         trigger: PrintTrigger,
+        at: Long,
     ): SavedEdition {
-        val at = now()
         // The page as it leaves the app (the Download, the Observer site): with the paper's CSP.
         val html = withPaperCsp(printed.html)
         val edition =
@@ -688,19 +768,33 @@ class FrontPagePrinter(
         // never leaves a claim behind.
         if (!slot.tryHold()) return ScheduledOutcome.BUSY
         try {
-            val morning = morning ?: return printOccurrence(waitMs, null) { true }
+            val morning = morning ?: return printOccurrence(waitMs, null, null) { true }
+            // The occurrence the claim won: the claim asks whether its paper exists right before it
+            // prints ([FrontPageMorning.runOccurrence]), and the paper is dated by it.
+            var due: Long? = null
             // NIP-FB: only a device the reader turned on, and only the one whose claim wins; a paper
             // that already exists for the occurrence is marked done without printing.
-            return morning.runOccurrence(account, alreadyDone = { occurrence, zone -> alreadyPrinted(occurrence, zone) }, deadline) { budget, keep -> printOccurrence(waitMs, budget, keep) }
+            return morning.runOccurrence(
+                account,
+                alreadyDone = { occurrence, zone ->
+                    due = occurrence
+                    alreadyPrinted(occurrence, zone)
+                },
+                deadline,
+            ) { budget, keep -> printOccurrence(waitMs, budget, due, keep) }
         } finally {
             slot.release()
         }
     }
 
-    /** The print itself, once the occurrence is this device's, in [budgetSeconds] at most (null: no limit). The press is held. */
+    /**
+     * The print itself, once the occurrence due at [due] is this device's, in [budgetSeconds] at
+     * most (null: no limit), its paper dated [due] (null: when it starts). The press is held.
+     */
     private suspend fun printOccurrence(
         waitMs: Long,
         budgetSeconds: Long?,
+        due: Long?,
         keep: suspend () -> Boolean,
     ): ScheduledOutcome {
         val boundary = boundary ?: return ScheduledOutcome.UNSUPPORTED
@@ -710,10 +804,10 @@ class FrontPagePrinter(
         val model = chooseModel(key, scheduledTask()?.let(ObserverParams::model)) ?: return ScheduledOutcome.FAILED
         val ended =
             if (budgetSeconds == null) {
-                printHolding(key, model, boundary, PrintTrigger.SCHEDULED, keep)
+                printHolding(key, model, boundary, PrintTrigger.SCHEDULED, keep, due)
             } else {
                 // Out of time: stopped before the platform kills it, so `ran` can still be written for a paper that made it.
-                withTimeoutOrNull(budgetSeconds * 1000) { printHolding(key, model, boundary, PrintTrigger.SCHEDULED, keep) }
+                withTimeoutOrNull(budgetSeconds * 1000) { printHolding(key, model, boundary, PrintTrigger.SCHEDULED, keep, due) }
                     ?: return ScheduledOutcome.FAILED
             }
         return scheduledOutcomeOf(ended)
@@ -812,6 +906,36 @@ class FrontPagePrinter(
     }
 }
 
+/** Opening The Observer reads both sites again, unless they were read less than this long ago (seconds): a rotation or a tab switch isn't news. */
+const val SITE_REREAD_ON_OPEN_SECONDS = 60L
+
+/** After an occurrence is due, the open app reads both sites again this long after (seconds): the paper of a print that went well is out by then. */
+const val SITE_REREAD_AFTER_DUE_SECONDS = 20 * 60L
+
+/** And once more this long before a missing paper is called missed ([ScheduledTask.GRACE_SECONDS]), so the warning reads what is there. */
+const val SITE_REREAD_BEFORE_MISSED_SECONDS = 10 * 60L
+
+/** The longest single sleep before a re-read: the wall clock is looked at again after it. */
+const val SITE_REREAD_STEP_SECONDS = 10 * 60L
+
+/**
+ * When, strictly after [now], the open app next reads both Observer sites again for [expression]
+ * on [zone]'s clock: [SITE_REREAD_AFTER_DUE_SECONDS] after an occurrence, and
+ * [SITE_REREAD_BEFORE_MISSED_SECONDS] before its missed-run warning could show. Null when the
+ * schedule has no occurrence around [now].
+ */
+fun nextSiteReread(
+    expression: CronExpression,
+    zone: CronZone,
+    now: Long,
+): Long? {
+    val occurrences = listOfNotNull(expression.lastAtOrBefore(now, zone), expression.nextAfter(now, zone))
+    return occurrences
+        .flatMap { due -> listOf(due + SITE_REREAD_AFTER_DUE_SECONDS, due + ScheduledTask.GRACE_SECONDS - SITE_REREAD_BEFORE_MISSED_SECONDS) }
+        .filter { it > now }
+        .minOrNull()
+}
+
 /**
  * What the two Observer sites hold, for the status line and the missed-run warning: the reader's
  * own site plus the editions kept on this device, and the runner's site. A runner's edition kept
@@ -879,7 +1003,10 @@ class PrintCancelled : CancellationException("The reader cancelled the print")
  * ([runCancellable]): the reader's, or the morning's that a scheduled run holds the slot for from
  * before its claim to its end.
  */
-class PrintSlot {
+class PrintSlot(
+    /** Told each time the slot is taken (true) and let go (false), in that order. */
+    private val onHeld: (Boolean) -> Unit = {},
+) {
     private val mutex = Mutex()
 
     @Volatile
@@ -888,9 +1015,17 @@ class PrintSlot {
     /** Whether a print (or a scheduled run on its way to one) holds the slot. */
     val isHeld: Boolean get() = mutex.isLocked
 
-    fun tryHold(): Boolean = mutex.tryLock()
+    fun tryHold(): Boolean {
+        if (!mutex.tryLock()) return false
+        onHeld(true)
+        return true
+    }
 
-    fun release() = mutex.unlock()
+    fun release() {
+        // Said before the unlock, so the next holder's true always comes after this false.
+        onHeld(false)
+        mutex.unlock()
+    }
 
     /**
      * [body] as its own job, so [cancel] stops it alone: then [cancelled] comes back and the
@@ -1025,11 +1160,34 @@ class FrontPagePrinters(
     /** Every account's print as background work ([FrontPagePrinter.job]): what a foreground service shows. */
     val printing: StateFlow<Map<HexKey, FrontPagePrintJob>> = _printing.asStateFlow()
 
+    private val _pressHeld = MutableStateFlow<Set<HexKey>>(emptySet())
+
+    /**
+     * The accounts whose press is held ([FrontPagePrinter.isBusy]): a print, or a scheduled run
+     * from before its claim until its `ran` is written, which goes on after [printing] says the
+     * print ended. Quitting before then leaves the claim unfinished, for another device to pay for again.
+     */
+    val pressHeld: StateFlow<Set<HexKey>> = _pressHeld.asStateFlow()
+
     /** Stops every print running now, the reader's and the morning's: the app is quitting. */
     fun cancelAll() {
-        _printing.value.values
-            .filter { it.running }
-            .forEach { printers.value[it.account]?.cancel() }
+        val accounts =
+            _printing.value.values
+                .filter { it.running }
+                .map { it.account } + _pressHeld.value
+        accounts.distinct().forEach { printers.value[it]?.cancel() }
+    }
+
+    /**
+     * [cancelAll], then waits for every press to be let go, [timeoutMs] at most: a scheduled run
+     * records that its morning was cancelled before it lets go, so the next launch doesn't resume
+     * it. True when they all settled in time.
+     */
+    suspend fun cancelAllAndSettle(timeoutMs: Long = CANCEL_SETTLE_MS): Boolean {
+        cancelAll()
+        return withTimeoutOrNull(timeoutMs) {
+            combine(_pressHeld, _printing) { held, jobs -> held.isEmpty() && jobs.values.none { it.running } }.first { it }
+        } != null
     }
 
     /** Stops every print the reader started (the notification's Cancel). */
@@ -1054,7 +1212,20 @@ class FrontPagePrinters(
                 current
             } else {
                 val key = account.signer.pubKey
-                val printer = made ?: FrontPagePrinter(account, http, memory, store, notifier, observerPrefs = observerPrefs, morning = morning, host = host, onJob = { track(key, it) }, readerAway = { readerAway.value })
+                val printer =
+                    made ?: FrontPagePrinter(
+                        account,
+                        http,
+                        memory,
+                        store,
+                        notifier,
+                        observerPrefs = observerPrefs,
+                        morning = morning,
+                        host = host,
+                        onJob = { track(key, it) },
+                        readerAway = { readerAway.value },
+                        onPress = { held -> _pressHeld.update { if (held) it + key else it - key } },
+                    )
                 made = printer
                 current + (account.signer.pubKey to printer)
             }
@@ -1074,8 +1245,14 @@ class FrontPagePrinters(
         printers.value[account]?.cancel()
         printers.update { it - account }
         _printing.update { it - account }
+        _pressHeld.update { it - account }
         store.removeAccount(account)
         morning.forget(account)
         observerPrefs.set(account, ObserverPrefs())
+    }
+
+    companion object {
+        /** How long Quit waits for cancelled prints to record it before the app exits. */
+        const val CANCEL_SETTLE_MS = 5_000L
     }
 }

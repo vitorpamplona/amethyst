@@ -28,12 +28,17 @@ import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ScheduleEdit
 import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ScheduleRelays
 import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.SyncedSchedule
 import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.planScheduleEdit
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverEdition
 import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverSchedule
 import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverSite
@@ -172,13 +177,13 @@ class FrontPageRunnerTest {
     fun printingFromMyDevicesDropsTheRunnerAndEncryptsToTheReaderAgain() =
         runTest {
             // Brainstorm named the Assistant: the public `p`, the private tags NIP-44 between the reader and it.
-            val relays = Relays(task.withParam("model", "anthropic/claude-sonnet-4.5").withRunner(assistant.pubKey))
+            val relays = Relays(task.withParam("model", "anthropic/claude-sonnet-4.5").withRunner(assistant.pubKey, 0))
             val named = relays.newestEvent()!!
             assertEquals(listOf(assistant.pubKey), named.runners())
             assertEquals("anthropic/claude-sonnet-4.5", named.task(assistant)?.param("model")?.value())
 
             // "Print from my devices instead": no `p`, encrypted to the reader alone again, everything else kept.
-            assertIs<ScheduleEdit.Saved>(editMigrating(relays, six + 1, null, ::withoutRunner))
+            assertIs<ScheduleEdit.Saved>(editMigrating(relays, six + 1, null) { withoutRunner(it, six + 1) })
             val cleared = relays.newestEvent()!!
             assertTrue(cleared.runners().isEmpty())
             assertNull(cleared.task(assistant))
@@ -186,9 +191,13 @@ class FrontPageRunnerTest {
             val asRead = assertNotNull(cleared.task(reader))
             assertNull(asRead.runner)
             assertEquals("0 6 * * *", asRead.cron)
+            // The schedule restarts at the change (Quartz's withRunner): no device claims a morning
+            // that was the Assistant's to print before it was cleared.
+            assertEquals(six + 1, asRead.cronSetAt)
+            assertNull(ScheduledTaskClaims.occurrence(asRead, assertNotNull(FrontPageClock.cronZone(ny)), six + 60))
             assertEquals("anthropic/claude-sonnet-4.5", asRead.param("model")?.value())
             // Already the reader's devices: nothing to write.
-            assertEquals(ScheduleEdit.Unchanged, editMigrating(relays, six + 2, null, ::withoutRunner))
+            assertEquals(ScheduleEdit.Unchanged, editMigrating(relays, six + 2, null) { withoutRunner(it, six + 2) })
             assertEquals(2, relays.events.value.size)
         }
 
@@ -205,21 +214,84 @@ class FrontPageRunnerTest {
         assertNotNull(FrontPageMorning::class.java.methods.singleOrNull { it.name == "printFromMyDevices" })
         // The rewrite it makes never adds a `p`, whatever the schedule held.
         val conflict = ScheduledTask(task.publicTags + arrayOf(PTag.assemble(assistant.pubKey, null), PTag.assemble(stranger.pubKey, null)), task.privateTags)
-        for (named in listOf(task.withRunner(assistant.pubKey), conflict, task.withRunner("not-a-key"))) {
-            assertTrue(assertNotNull(withoutRunner(named)).runners.isEmpty())
+        for (named in listOf(task.withRunner(assistant.pubKey, 0), conflict, task.withRunner("not-a-key", 0))) {
+            assertTrue(assertNotNull(withoutRunner(named, six)).runners.isEmpty())
         }
-        assertNull(withoutRunner(task))
-        assertNull(withoutRunner(null))
+        assertNull(withoutRunner(task, six))
+        assertNull(withoutRunner(null, six))
     }
 
     @Test
     fun theReadersDeviceOpensAScheduleEncryptedToTheAssistant() =
         runTest {
             val state = ObserverScheduleState(reader, LocalCache, backgroundScope, EmptyNostrClient(), MutableStateFlow(emptySet()))
-            val named = readable(task.withRunner(assistant.pubKey)).event
+            val named = readable(task.withRunner(assistant.pubKey, 0)).event
             val opened = assertIs<Decrypted.Task>(state.decrypt(named))
             assertEquals(assistant.pubKey, opened.task.runner)
             assertEquals("0 6 * * *", opened.task.cron)
+        }
+
+    /** A remote signer whose reader says no to every decryption, counting how often they were asked. */
+    private class RefusingSigner(
+        private val inner: NostrSignerInternal,
+    ) : NostrSigner(inner.pubKey) {
+        var asked = 0
+
+        override fun isWriteable() = true
+
+        override suspend fun <T : Event> sign(
+            createdAt: Long,
+            kind: Int,
+            tags: Array<Array<String>>,
+            content: String,
+        ): T = inner.sign(createdAt, kind, tags, content)
+
+        override suspend fun nip04Encrypt(
+            plaintext: String,
+            toPublicKey: HexKey,
+        ) = inner.nip04Encrypt(plaintext, toPublicKey)
+
+        override suspend fun nip04Decrypt(
+            ciphertext: String,
+            fromPublicKey: HexKey,
+        ) = inner.nip04Decrypt(ciphertext, fromPublicKey)
+
+        override suspend fun nip44Encrypt(
+            plaintext: String,
+            toPublicKey: HexKey,
+        ) = inner.nip44Encrypt(plaintext, toPublicKey)
+
+        override suspend fun nip44Decrypt(
+            ciphertext: String,
+            fromPublicKey: HexKey,
+        ): String {
+            asked++
+            throw SignerExceptions.ManuallyUnauthorizedException("The reader said no")
+        }
+
+        override suspend fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent = inner.decryptZapEvent(event)
+
+        override suspend fun deriveKey(nonce: HexKey) = inner.deriveKey(nonce)
+
+        override suspend fun signPsbt(psbtHex: String) = inner.signPsbt(psbtHex)
+
+        override fun hasForegroundSupport() = false
+    }
+
+    @Test
+    fun aSignerThatRefusesIsAskedOnceNotOncePerPeer() =
+        runTest {
+            // A conflict: the reader's device would try the reader and both keys in a public `p`.
+            val conflict = ScheduledTask(task.publicTags + arrayOf(PTag.assemble(assistant.pubKey, null), PTag.assemble(stranger.pubKey, null)), task.privateTags)
+            val event = readable(conflict).event
+            assertEquals(3, event.privateTagsPeers(reader.pubKey).size)
+            val refusing = RefusingSigner(reader)
+            val state = ObserverScheduleState(refusing, LocalCache, backgroundScope, EmptyNostrClient(), MutableStateFlow(emptySet()))
+            assertEquals(Decrypted.SignerFailed(retryable = true), state.decrypt(event))
+            assertEquals(1, refusing.asked)
+            // Not kept: the next open asks again, once.
+            assertEquals(Decrypted.SignerFailed(retryable = true), state.decrypt(event))
+            assertEquals(2, refusing.asked)
         }
 
     @Test
@@ -234,7 +306,7 @@ class FrontPageRunnerTest {
             assertTrue(scheduler.calls.last().enabled)
 
             // The Assistant prints: this device's timer or WorkManager job is cancelled.
-            synced.value = readable(task.withRunner(assistant.pubKey))
+            synced.value = readable(task.withRunner(assistant.pubKey, 0))
             runCurrent()
             assertFalse(scheduler.calls.last().enabled)
 
@@ -244,7 +316,7 @@ class FrontPageRunnerTest {
             assertFalse(scheduler.calls.last().enabled)
 
             // Back to the reader's devices: the job is back, at the schedule's time, as this device's own choice had it.
-            synced.value = readable(withoutRunner(task.withRunner(assistant.pubKey))!!)
+            synced.value = readable(withoutRunner(task.withRunner(assistant.pubKey, 0), six)!!)
             runCurrent()
             assertEquals(FrontPageSchedule(true, "0 6 * * *", ny), scheduler.calls.last())
             assertEquals(listOf(true, false, true), scheduler.calls.map { it.enabled })
@@ -254,7 +326,7 @@ class FrontPageRunnerTest {
     fun aDeviceNeverClaimsWhileARunnerIsNamedOrAParamIsUnknown() =
         runTest {
             val morning = FrontPageMorning(NoStore(), NoInstalls(), FrontPageInstallInfo("Desktop (Linux)", "test"), now = { six + 30 }, pause = {})
-            for (blocked in listOf(task.withRunner(assistant.pubKey), task.withParam("size", "large"))) {
+            for (blocked in listOf(task.withRunner(assistant.pubKey, 0), task.withParam("size", "large"))) {
                 val relays = Relays(blocked)
                 val outcome =
                     morning.claimRun(relays, "here", "Desktop (Linux)", alreadyDone = { _, _ -> false }) { _, _ -> fail("printed on schedule") }
@@ -271,7 +343,7 @@ class FrontPageRunnerTest {
     @Test
     fun theStatusLineSaysTheAssistantPrintedFromItsSite() =
         runTest {
-            val named = readable(task.withRunner(assistant.pubKey))
+            val named = readable(task.withRunner(assistant.pubKey, 0))
             val sites = ObserverSites(reader = listOf(edition(six - 86_400, 'b')), runner = listOf(edition(six + 120)))
             val view = viewOf(named, on, canPrintHere = true, now = six + 3_600, deviceId = ny, sites = sites)
             assertEquals(ScheduleState.READY, view.state)
@@ -293,7 +365,7 @@ class FrontPageRunnerTest {
     @Test
     fun theMissedRunWarningReadsBothSitesWithARunner() =
         runTest {
-            val named = readable(task.withRunner(assistant.pubKey))
+            val named = readable(task.withRunner(assistant.pubKey, 0))
             val later = six + 4 * 3_600
             // Yesterday's paper by the Assistant, nothing today, more than three hours after six: missed.
             val yesterday = ObserverSites(runner = listOf(edition(six - 86_400 + 60)))
@@ -329,13 +401,13 @@ class FrontPageRunnerTest {
             // No runner to name, so no "Printed by" line: only the devices are offered.
             assertNull(printedByOf(view.runner, "Brainstorm", assistant.pubKey))
             // The fix drops every `p`; it never keeps one.
-            assertTrue(withoutRunner(both)!!.runners.isEmpty())
+            assertTrue(withoutRunner(both, six)!!.runners.isEmpty())
         }
 
     @Test
     fun aPThatIsNotAKeyIsTreatedLikeAConflict() =
         runTest {
-            val broken = task.withRunner("npub-not-hex")
+            val broken = task.withRunner("npub-not-hex", 0)
             val view = viewOf(readable(broken), on, true, now = six, deviceId = ny)
             assertEquals(ScheduleState.READY, view.state)
             assertTrue(view.namesRunner)
@@ -345,7 +417,7 @@ class FrontPageRunnerTest {
             assertNull(printedByOf(view.runner, null, assistant.pubKey))
             // The devices don't print it either, until the reader takes it back.
             assertFalse(scheduleForThisDevice(readable(broken), on, canPrintHere = true)!!.enabled)
-            assertTrue(scheduleForThisDevice(readable(withoutRunner(broken)!!), on, canPrintHere = true)!!.enabled)
+            assertTrue(scheduleForThisDevice(readable(withoutRunner(broken, six)!!), on, canPrintHere = true)!!.enabled)
         }
 
     @Test

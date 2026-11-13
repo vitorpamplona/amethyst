@@ -117,15 +117,26 @@ class DesktopWindowManager(
 
     /**
      * Called once [allClosed] holds, with the [layout] the app is in now. The user closed the last
-     * window: quit. A layout switch closed them instead (it drops the screen windows in the same
-     * frame): bring the main window back. Telling the two apart by the layout, rather than by which
-     * effect runs first, keeps a settings change from quitting the app.
+     * window: quit, but while a print runs ([printing]) ask first ([ask]), as closing the main
+     * window does: quitting would stop a print that may be paid for. A layout switch closed them
+     * instead (it drops the screen windows in the same frame): bring the main window back. Telling
+     * the two apart by the layout, rather than by which effect runs first, keeps a settings change
+     * from quitting the app.
      */
     fun onAllClosed(
         layout: NavArrangement?,
         exit: () -> Unit,
+        printing: Boolean = false,
+        ask: () -> Unit = exit,
     ) {
-        if (layout == hiddenIn) exit() else showMainWindow(raise = false)
+        if (layout != hiddenIn) {
+            showMainWindow(raise = false)
+            return
+        }
+        when (PrintQuitRules.onQuit(printing)) {
+            CloseAction.ASK -> ask()
+            else -> exit()
+        }
     }
 
     /** Brings the main window back, and to the front when [raise]. */

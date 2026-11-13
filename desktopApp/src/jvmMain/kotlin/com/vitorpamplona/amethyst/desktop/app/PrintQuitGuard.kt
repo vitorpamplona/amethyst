@@ -25,12 +25,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrintJob
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.front_page_keep_printing
 import com.vitorpamplona.amethyst.commons.resources.front_page_quit_and_cancel
 import com.vitorpamplona.amethyst.commons.resources.front_page_quit_text
 import com.vitorpamplona.amethyst.commons.resources.front_page_quit_title
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 
@@ -53,8 +55,16 @@ enum class CloseAction {
  * and the app runs until the print ends) or quit and cancel.
  */
 object PrintQuitRules {
-    /** Whether any print is running, the reader's or the morning's: either may have cost money. */
-    fun printing(jobs: Collection<FrontPagePrintJob>): Boolean = jobs.any { it.running }
+    /**
+     * Whether any print is running, the reader's or the morning's: either may have cost money. A
+     * press still held ([pressHeld], [FrontPagePrinters.pressHeld]) counts too: a scheduled run
+     * holds it until its `ran` is written, after its job says the print ended, and quitting before
+     * then leaves its claim unfinished, for another device to claim and pay for again.
+     */
+    fun printing(
+        jobs: Collection<FrontPagePrintJob>,
+        pressHeld: Collection<HexKey> = emptyList(),
+    ): Boolean = pressHeld.isNotEmpty() || jobs.any { it.running }
 
     /** Closing the main window: hides while screen windows stay open, else quits, asking first while a print runs. */
     fun onClose(

@@ -149,16 +149,36 @@ class ObserverTodayTest {
     @Test
     fun aLinkToAnotherDayShowsThatPastEdition() {
         val today = observerToday(listOf(nov12, nov11), nyNoon(0), device)
-        assertFalse(today.isPast("2026-11-12", deviceToday = "2026-11-12"))
-        assertNull(today.pastEdition("2026-11-12", deviceToday = "2026-11-12"))
-        assertTrue(today.isPast("2026-11-11", deviceToday = "2026-11-12"))
-        assertSame(nov11, today.pastEdition("2026-11-11", deviceToday = "2026-11-12")?.edition)
-        // A day no longer kept, or none picked: today.
-        assertNull(today.pastEdition("2026-10-01", deviceToday = "2026-11-12"))
-        assertNull(today.pastEdition(null, deviceToday = "2026-11-12"))
+        assertNull(today.pastEdition(EditionPick("2026-11-12")))
+        assertSame(nov11, today.pastEdition(EditionPick("2026-11-11"))?.edition)
+        assertSame(nov11, today.pastEdition(EditionPick.of(nov11))?.edition)
+        // Today's paper picked from anywhere is today, not a past edition.
+        assertNull(today.pastEdition(EditionPick.of(nov12)))
+        // A day no longer kept, another paper of that day, or none picked: today.
+        assertNull(today.pastEdition(EditionPick("2026-10-01")))
+        assertNull(today.pastEdition(EditionPick("2026-11-11", code = "other")))
+        assertNull(today.pastEdition(null))
         // Today's "ready" notification, named on the device's calendar, while none is kept yet.
         val none = observerToday(emptyList(), nov12Utc + 2 * hour, ObserverCalendar.of(tokyo))
-        assertFalse(none.isPast("2026-11-11", deviceToday = "2026-11-11"))
+        assertNull(none.pastEdition(EditionPick("2026-11-11")))
+    }
+
+    @Test
+    fun aPastEditionNamedWithTheDevicesTodayOpensUnderAnotherZonesSchedule() {
+        // A device in Los Angeles names its editions on its own clock; the schedule reads Tokyo's.
+        val losAngeles = ObserverCalendar.of(CronZone.fixed(-8 * 3_600))
+        // Printed at 06:00 in Los Angeles on the 13th: 23:00 in Tokyo, the 13th there too.
+        val morning = edition("2026-11-13", nov12Utc + 38 * hour)
+        // 18:00 in Los Angeles, still the 13th on the device; 11:00 on the 14th in Tokyo.
+        val now = nov12Utc + 50 * hour
+        assertEquals("2026-11-13", losAngeles.dayOf(now))
+        val today = observerToday(listOf(morning), now, ObserverCalendar.of(tokyo))
+        assertEquals("2026-11-14", today.day)
+        assertNull(today.paper)
+        assertEquals(listOf(morning), today.past.map { it.edition })
+        // Tapped in Past editions, it opens, though its day is the device's today.
+        assertSame(morning, today.pastEdition(EditionPick.of(morning))?.edition)
+        assertSame(morning, today.pastEdition(EditionPick("2026-11-13"))?.edition)
     }
 
     @Test
