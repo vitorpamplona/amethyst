@@ -46,7 +46,12 @@ import kotlin.math.round
 /** The paper's standing name. There is no continuity: it is the same every day. */
 const val MASTHEAD = "The Nostr Observer"
 
-fun systemPrompt(): String = "$EDITORIAL_BRIEF\n\n## The house stylesheet\n\nInline this in a <style> block, as given:\n\n```css\n$HOUSE_CSS\n```"
+/**
+ * The system message, the same in every call of a print (the plan, the page, each repair), so a
+ * provider that caches a prefix reads it once: the brief, then the house stylesheet for reference.
+ * The page carries an empty `<style id="house">` that [insertHouseCss] fills.
+ */
+fun systemPrompt(): String = "$EDITORIAL_BRIEF\n\n## The house stylesheet\n\nFor reference: the app puts this into your page's `<style id=\"house\">`. Do not copy it.\n\n```css\n$HOUSE_CSS\n```"
 
 /**
  * The digest in a delimited block; the reader's name and language go outside it, because they

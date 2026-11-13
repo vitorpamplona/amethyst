@@ -34,7 +34,7 @@ class FrontPageScheduleTest {
         assertFalse(userMessage("DIGEST", "Alice", null).contains("Language:"))
         assertFalse(userMessage("DIGEST", "Alice", "  ").contains("Language:"))
         // The brief says what to do with it; the brief itself names no language.
-        assertTrue(systemPrompt().contains("WRITE IN THE READER'S LANGUAGE"))
+        assertTrue(systemPrompt().contains("## The reader's language"))
     }
 
     @Test
