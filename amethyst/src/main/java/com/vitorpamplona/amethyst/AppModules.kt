@@ -1122,6 +1122,7 @@ class AppModules(
             // Its morning edition must not wake for an account that is gone, nor its papers stay.
             frontPageScheduler.forget(pubkey)
             frontPagePrinters.forget(pubkey)
+            routstr.forget(pubkey)
         }
 
         override fun cashuCountersFor(npub: String) = CashuPreferences.forAccount(npub)

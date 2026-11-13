@@ -257,11 +257,16 @@ class RoutstrAccount(
 
     // --- Wallets -------------------------------------------------------------------------
 
-    /** Whether the account has a Lightning wallet connected (NWC, the one zaps use). */
-    val hasLightningWallet: StateFlow<Boolean> =
+    /**
+     * Whether the account has a Lightning wallet connected (NWC, the one zaps use). Started on
+     * first use, so making a [RoutstrAccount] starts nothing ([RoutstrService.of] may make one it
+     * then drops).
+     */
+    val hasLightningWallet: StateFlow<Boolean> by lazy {
         account.nip47SignerState.defaultWalletUri
             .map { it != null }
             .stateIn(scope, SharingStarted.Eagerly, account.nip47SignerState.defaultWalletUri.value != null)
+    }
 
     /** Pays [bolt11] from the account's NWC wallet; throws when it can't, never pretends it paid. */
     suspend fun payWithLightningWallet(bolt11: String) {
@@ -338,11 +343,18 @@ class RoutstrService(
 ) {
     private val accounts = MutableStateFlow<Map<HexKey, RoutstrAccount>>(emptyMap())
 
+    /**
+     * The [RoutstrAccount] of [account]: one per account, however many callers race for it
+     * (compute-if-absent; a losing candidate started nothing and is dropped).
+     */
     fun of(account: Account): RoutstrAccount {
-        accounts.value[account.signer.pubKey]?.takeIf { it.account === account }?.let { return it }
-        val made = RoutstrAccount(account, api, store, torEnabled, account.scope)
-        accounts.update { it + (account.signer.pubKey to made) }
-        return made
+        val key = account.signer.pubKey
+        while (true) {
+            val current = accounts.value
+            current[key]?.takeIf { it.account === account }?.let { return it }
+            val made = RoutstrAccount(account, api, store, torEnabled, account.scope)
+            if (accounts.compareAndSet(current, current + (key to made))) return made
+        }
     }
 
     fun existing(pubKey: HexKey): RoutstrAccount? = accounts.value[pubKey]
@@ -352,6 +364,10 @@ class RoutstrService(
         scope.launch {
             val started = HashSet<Account>()
             loaded.collect { map ->
+                // An account no longer loaded (logged off, removed) is let go: the next login
+                // makes it again and resumes its purchases, which stay on this device.
+                started.retainAll { map[it.signer.pubKey] === it }
+                accounts.update { held -> held.filter { (key, routstr) -> map[key] === routstr.account } }
                 map.values.forEach { account ->
                     if (started.add(account)) {
                         account.scope.launch {
@@ -369,7 +385,10 @@ class RoutstrService(
         }
     }
 
-    /** A removed account's pending purchases stay on this device: one may hold money, and the next login resumes it. */
+    /**
+     * Lets go of a removed account ([com.vitorpamplona.amethyst.commons.account.AccountSessionStore.onAccountRemoved]).
+     * Its pending purchases stay on this device: one may hold money, and the next login resumes it.
+     */
     fun forget(pubKey: HexKey) {
         accounts.update { it - pubKey }
     }

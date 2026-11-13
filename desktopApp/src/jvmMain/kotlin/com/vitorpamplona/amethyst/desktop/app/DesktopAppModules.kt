@@ -776,6 +776,7 @@ class DesktopAppModules(
             powJobStore.removeForAccount(pubkey)
             frontPageScheduler.forget(pubkey)
             frontPagePrinters.forget(pubkey)
+            routstr.forget(pubkey)
             // A login imported from the legacy app may still own a bunker transport key in the keyring.
             try {
                 keyStorage.deletePrivateKey(LegacyDesktopAccountImport.bunkerTransportKeyAlias(pubkey.hexToByteArray().toNpub()))
