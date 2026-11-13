@@ -65,6 +65,17 @@ class NotificationClickTargetTest {
     }
 
     @Test
+    fun theTraysLastMessageOpensOnceAndANewerOneReplacesIt() {
+        // As NucleusNotificationDispatcher keeps it: the tray's listener also fires on a plain icon click.
+        val last = PostedNotifications<Unit>(capacity = 1)
+        last.put(Unit, spec(account = "old"))
+        last.put(Unit, spec(account = "new"))
+        assertEquals("new", NotificationClick.of(last.take(Unit)).account)
+        // A later click on the tray icon opens nothing.
+        assertEquals(NotificationClick(null, null), NotificationClick.of(last.take(Unit)))
+    }
+
+    @Test
     fun theOldestPostedNotificationsAreForgottenFirst() {
         val posted = PostedNotifications<Int>(capacity = 2)
         posted.put(1, spec(account = "1"))

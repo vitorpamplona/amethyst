@@ -20,10 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.moderation.notifications
 
+import io.github.kdroidfilter.nucleus.notification.AuthorizationOption
+import io.github.kdroidfilter.nucleus.notification.AuthorizationStatus
 import io.github.kdroidfilter.nucleus.notification.DeliveredNotification
 import io.github.kdroidfilter.nucleus.notification.NotificationCenter
 import io.github.kdroidfilter.nucleus.notification.NotificationCenterDelegate
+import io.github.kdroidfilter.nucleus.notification.NotificationContent
+import io.github.kdroidfilter.nucleus.notification.NotificationRequest
 import io.github.kdroidfilter.nucleus.notification.NotificationResponse
+import io.github.kdroidfilter.nucleus.notification.NotificationSound
 import io.github.kdroidfilter.nucleus.notification.PresentationOption
 import io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationCenter
 import io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationListener
@@ -93,8 +98,11 @@ class NucleusNotificationDispatcher(
     /** The same for Linux, whose server numbers its notifications. */
     private val postedLinux = PostedNotifications<Int>()
 
-    @Volatile
-    private var lastFallbackSpec: NotificationSpec? = null
+    /**
+     * The last message the tray showed, opened once: the tray's listener also fires on a plain
+     * click on its icon, which must not replay a message from hours ago.
+     */
+    private val lastFallback = PostedNotifications<Unit>(capacity = 1)
 
     private companion object {
         const val PERMISSION_REQUEST_TIMEOUT_MS = 90_000L
@@ -159,7 +167,7 @@ class NucleusNotificationDispatcher(
             }
         }
         // The tray names no message on a click: it opens the last one it showed.
-        fallback.onAction = { onClick(NotificationClick.of(lastFallbackSpec)) }
+        fallback.onAction = { onClick(NotificationClick.of(lastFallback.take(Unit))) }
     }
 
     private fun initialPermissionState(): PermissionState =
@@ -190,13 +198,13 @@ class NucleusNotificationDispatcher(
                 withTimeoutOrNull(PERMISSION_REQUEST_TIMEOUT_MS) {
                     suspendCancellableCoroutine<Pair<Boolean, String?>> { cont ->
                         try {
-                            io.github.kdroidfilter.nucleus.notification.NotificationCenter
+                            NotificationCenter
                                 .requestAuthorization(
                                     options =
                                         setOf(
-                                            io.github.kdroidfilter.nucleus.notification.AuthorizationOption.ALERT,
-                                            io.github.kdroidfilter.nucleus.notification.AuthorizationOption.SOUND,
-                                            io.github.kdroidfilter.nucleus.notification.AuthorizationOption.BADGE,
+                                            AuthorizationOption.ALERT,
+                                            AuthorizationOption.SOUND,
+                                            AuthorizationOption.BADGE,
                                         ),
                                     callback = { granted, error -> cont.resume(granted to error) },
                                 )
@@ -231,15 +239,15 @@ class NucleusNotificationDispatcher(
                 try {
                     suspendCancellableCoroutine<PermissionState> { cont ->
                         try {
-                            io.github.kdroidfilter.nucleus.notification.NotificationCenter.getNotificationSettings { settings ->
+                            NotificationCenter.getNotificationSettings { settings ->
                                 val mapped =
                                     when (settings.authorizationStatus) {
-                                        io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.AUTHORIZED,
-                                        io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.PROVISIONAL,
-                                        io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.EPHEMERAL,
+                                        AuthorizationStatus.AUTHORIZED,
+                                        AuthorizationStatus.PROVISIONAL,
+                                        AuthorizationStatus.EPHEMERAL,
                                         -> PermissionState.Granted
-                                        io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.DENIED -> PermissionState.Denied
-                                        io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.NOT_DETERMINED -> PermissionState.NotRequested
+                                        AuthorizationStatus.DENIED -> PermissionState.Denied
+                                        AuthorizationStatus.NOT_DETERMINED -> PermissionState.NotRequested
                                     }
                                 if (cont.isActive) cont.resume(mapped)
                             }
@@ -289,15 +297,15 @@ class NucleusNotificationDispatcher(
     // ---------- macOS ----------
 
     private fun refreshMacPermissionState() {
-        io.github.kdroidfilter.nucleus.notification.NotificationCenter.getNotificationSettings { settings ->
+        NotificationCenter.getNotificationSettings { settings ->
             _permission.value =
                 when (settings.authorizationStatus) {
-                    io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.AUTHORIZED,
-                    io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.PROVISIONAL,
-                    io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.EPHEMERAL,
+                    AuthorizationStatus.AUTHORIZED,
+                    AuthorizationStatus.PROVISIONAL,
+                    AuthorizationStatus.EPHEMERAL,
                     -> PermissionState.Granted
-                    io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.DENIED -> PermissionState.Denied
-                    io.github.kdroidfilter.nucleus.notification.AuthorizationStatus.NOT_DETERMINED -> PermissionState.NotRequested
+                    AuthorizationStatus.DENIED -> PermissionState.Denied
+                    AuthorizationStatus.NOT_DETERMINED -> PermissionState.NotRequested
                 }
         }
     }
@@ -326,10 +334,10 @@ class NucleusNotificationDispatcher(
     private suspend fun sendMac(spec: NotificationSpec): SendResult {
         val identifier = UUID.randomUUID().toString()
         val content =
-            io.github.kdroidfilter.nucleus.notification.NotificationContent(
+            NotificationContent(
                 title = spec.title,
                 body = spec.body,
-                sound = io.github.kdroidfilter.nucleus.notification.NotificationSound.Default,
+                sound = NotificationSound.Default,
                 userInfo =
                     buildMap {
                         spec.deepLinkNoteId?.let { put("noteId", it) }
@@ -338,7 +346,7 @@ class NucleusNotificationDispatcher(
                 threadIdentifier = spec.threadId.orEmpty(),
             )
         val request =
-            io.github.kdroidfilter.nucleus.notification.NotificationRequest(
+            NotificationRequest(
                 identifier = identifier,
                 content = content,
             )
@@ -354,7 +362,7 @@ class NucleusNotificationDispatcher(
             withTimeoutOrNull(SEND_ACK_TIMEOUT_MS) {
                 suspendCancellableCoroutine<Result<String?>> { cont ->
                     try {
-                        io.github.kdroidfilter.nucleus.notification.NotificationCenter
+                        NotificationCenter
                             .add(request) { error -> cont.resume(Result.success(error)) }
                     } catch (t: Throwable) {
                         cont.resume(Result.success(t.message ?: t::class.simpleName))
@@ -470,7 +478,7 @@ class NucleusNotificationDispatcher(
         reason: String,
     ): SendResult {
         val result = fallback.send(spec.title, spec.body)
-        if (result.isSuccess) lastFallbackSpec = spec
+        if (result.isSuccess) lastFallback.put(Unit, spec)
         return result.fold(
             onSuccess = { SendResult.DeliveredViaFallback },
             onFailure = { SendResult.Failed(IllegalStateException("$reason; AWT fallback also failed: ${it.message}", it)) },
@@ -483,11 +491,11 @@ class NucleusNotificationDispatcher(
         try {
             when (host) {
                 HostOs.MAC ->
-                    io.github.kdroidfilter.nucleus.notification.NotificationCenter.isAvailable
+                    NotificationCenter.isAvailable
                 HostOs.WINDOWS ->
-                    io.github.kdroidfilter.nucleus.notification.windows.WindowsNotificationCenter.isAvailable
+                    WindowsNotificationCenter.isAvailable
                 HostOs.LINUX ->
-                    io.github.kdroidfilter.nucleus.notification.linux.LinuxNotificationCenter.isAvailable
+                    LinuxNotificationCenter.isAvailable
                 HostOs.UNKNOWN -> false
             }
         } catch (_: Throwable) {
