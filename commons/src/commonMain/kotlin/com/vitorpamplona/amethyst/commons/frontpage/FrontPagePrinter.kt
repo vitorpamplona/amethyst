@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.localPrivKeyOrNull
 import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.SyncedSchedule
+import com.vitorpamplona.amethyst.commons.routstr.RoutstrPricing
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
@@ -575,7 +576,7 @@ class FrontPagePrinter(
                     throw e
                 } catch (e: WriterException) {
                     logBook.add(PrintLogKind.FAILED, e.failure.name, listOfNotNull(e.status))
-                    FrontPageRun.Failed(e.failure, e.status, e.providerSaid)
+                    FrontPageRun.Failed(e.failure, e.status, e.providerSaid, e.shortfallSats)
                 } catch (e: Exception) {
                     Log.w(TAG, "Printing failed", e)
                     logBook.add(PrintLogKind.FAILED, WriterFailure.UNREACHABLE.name)
@@ -739,15 +740,18 @@ class FrontPagePrinter(
     /** The reader's schedule, when this device has read it. */
     private fun scheduledTask(): ScheduledTask? = (account.observerSchedule.flow.value as? SyncedSchedule.Readable)?.task
 
+    /** The digest size a print is estimated with: the last edition's, or the budget. */
+    private fun estimateDigestChars(): Int =
+        localEditions.value
+            .firstOrNull()
+            ?.digestChars
+            ?.takeIf { it > 0 } ?: DEFAULT_DIGEST_BUDGET
+
     /** The cost estimate for one print with [model]: the last edition's digest size, or the budget. */
-    fun estimate(model: AgentModel?): Double? =
-        estimateCost(
-            model,
-            localEditions.value
-                .firstOrNull()
-                ?.digestChars
-                ?.takeIf { it > 0 } ?: DEFAULT_DIGEST_BUDGET,
-        )
+    fun estimate(model: AgentModel?): Double? = estimateCost(model, estimateDigestChars())
+
+    /** The same estimate in sats, for a model a Routstr node prices in sats; null otherwise. */
+    fun estimateSats(model: AgentModel?): Long? = RoutstrPricing.editionSats(model?.sats, estimateDigestChars())
 
     /**
      * The morning edition, with nobody there: only a signer that can decrypt on its own (a key

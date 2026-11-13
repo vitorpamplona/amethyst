@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Retriever
+import com.vitorpamplona.amethyst.commons.routstr.RoutstrService
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
@@ -84,6 +85,8 @@ class DesktopAppServices(
     override val scheduledPostStore: ScheduledPostStore get() = modules.scheduledPostStore
 
     override val frontPagePrinters: FrontPagePrinters get() = modules.frontPagePrinters
+
+    override val routstr: RoutstrService get() = modules.routstr
 
     override val frontPageScheduler: FrontPageScheduler get() = modules.frontPageScheduler
 

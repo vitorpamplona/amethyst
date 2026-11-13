@@ -86,6 +86,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.health.FileRelayHealthPersistence
 import com.vitorpamplona.amethyst.commons.relays.health.RelayLatencyMonitor
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.commons.routstr.DataStoreRoutstrPurchaseStore
+import com.vitorpamplona.amethyst.commons.routstr.RoutstrService
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.commons.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.commons.service.crashreports.ReportAssembler
@@ -531,6 +533,16 @@ class DesktopAppModules(
 
     val frontPageScheduler by lazy { DesktopFrontPageScheduler(frontPagePrinters, accountsCache.accounts, applicationIOScope) }
 
+    /** Routstr: each account's purchases, kept in DataStore until the key is saved, and followed again on launch. */
+    val routstr by lazy {
+        RoutstrService(
+            http = roleBasedHttpClientBuilder,
+            store = DataStoreRoutstrPurchaseStore(appStores),
+            torEnabled = { RoutstrService.onionsViaTor(torPrefs.value) },
+            scope = applicationIOScope,
+        )
+    }
+
     /** "Starting soon" notifications for the appointments the user is attending. */
     val calendarReminders by lazy { DesktopCalendarReminders(appStores, notifications, { accountsCache.accounts.value.keys }, applicationIOScope) }
 
@@ -860,6 +872,7 @@ class DesktopAppModules(
 
         calendarReminders.start()
         frontPageScheduler.start()
+        routstr.start(accountsCache.accounts)
 
         // Web of Trust: Android brings the active account's network index up to date each time
         // the app comes to the foreground, and once a day from a worker. A desktop window stays

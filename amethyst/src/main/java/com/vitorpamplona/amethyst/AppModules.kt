@@ -98,6 +98,8 @@ import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetri
 import com.vitorpamplona.amethyst.commons.richtext.CachedAsciiDocToMarkdown
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
+import com.vitorpamplona.amethyst.commons.routstr.DataStoreRoutstrPurchaseStore
+import com.vitorpamplona.amethyst.commons.routstr.RoutstrService
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostWorkGate
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
@@ -1253,6 +1255,17 @@ class AppModules(
         )
     }
 
+    // Routstr, the sats-paid AI nodes: each account's purchases, kept in DataStore until the key is
+    // saved to kind 12000, and followed again on launch.
+    val routstr by lazy {
+        RoutstrService(
+            http = roleBasedHttpClientBuilder,
+            store = DataStoreRoutstrPurchaseStore(appStores),
+            torEnabled = { RoutstrService.onionsViaTor(torPrefs.value) },
+            scope = applicationIOScope,
+        )
+    }
+
     // Organizes cache clearing
     val trimmingService by
         lazy {
@@ -1440,6 +1453,9 @@ class AppModules(
 
         // Keeps each account's morning edition job on the one device the synced schedule names.
         FrontPageScheduleWatcher(frontPagePrinters.morning, accountsCache.accounts, frontPageScheduler, applicationIOScope).start()
+
+        // A Routstr purchase left on its way (an invoice out, a key not saved yet) is picked up again.
+        routstr.start(accountsCache.accounts)
 
         // Keep the scheduled-posts worker (15-min periodic + one-time catch-up)
         // enqueued exactly while the store holds a PENDING post — see

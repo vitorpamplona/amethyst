@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.frontpage
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.routstr.RoutstrJson
+import com.vitorpamplona.amethyst.commons.routstr.SatsPricing
 import com.vitorpamplona.amethyst.commons.util.formatDecimal
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -361,8 +363,13 @@ class AgentModel(
     val completionPerToken: Double? = null,
     /** The endpoint's own name for it ("Anthropic: Claude Sonnet 4.5"), when it gives one beside the id. */
     val name: String? = null,
+    /** A Routstr node's `sats_pricing`: what the model costs in sats, which is what that key pays in. */
+    val sats: SatsPricing? = null,
 ) {
     val priced get() = promptPerToken != null && completionPerToken != null
+
+    /** Priced in sats (a Routstr node): the screen shows sats, not dollars. */
+    val pricedInSats get() = sats?.priced == true
 }
 
 /** `GET {url}/models` to models, with OpenRouter's `pricing` read where it is there. */
@@ -385,7 +392,7 @@ fun readModels(body: String): List<AgentModel> {
                 fun price(name: String) = (pricing?.get(name) as? JsonPrimitive)?.content?.toDoubleOrNull()?.takeIf { it >= 0 && it.isFinite() }
                 // Gemini names its models in `name` ("models/…"): only a name beside an id is a label.
                 val label = (entry["name"] as? JsonPrimitive)?.content?.trim()?.takeIf { entry["id"] != null && it.isNotEmpty() && it != id }
-                id?.let { AgentModel(it, price("prompt"), price("completion"), label) }
+                id?.let { AgentModel(it, price("prompt"), price("completion"), label, RoutstrJson.satsPricing(entry["sats_pricing"])?.takeIf { sats -> sats.priced || sats.maxCost != null }) }
             }
             else -> null
         }

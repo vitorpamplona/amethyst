@@ -82,6 +82,8 @@ sealed interface PrintJobEnd {
     data class Failed(
         val failure: WriterFailure,
         val status: Int? = null,
+        /** For [WriterFailure.LOW_BALANCE]: the sats a Routstr key is short, when the node said. */
+        val shortfallSats: Long? = null,
     ) : PrintJobEnd
 
     /** The reader's rankings aren't ready yet. */
@@ -120,7 +122,7 @@ fun endOf(
     headline: String?,
 ): PrintJobEnd? =
     when (run) {
-        is FrontPageRun.Failed -> PrintJobEnd.Failed(run.failure, run.status)
+        is FrontPageRun.Failed -> PrintJobEnd.Failed(run.failure, run.status, run.shortfallSats)
         is FrontPageRun.Done ->
             when (run.result) {
                 is PrintResult.Printed -> day?.let { PrintJobEnd.Ready(it, headline) }

@@ -522,6 +522,7 @@ import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEve
 import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
 import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
 import com.vitorpamplona.quartz.openagents.nipExtExtensions.release.ExtensionReleaseEvent
+import com.vitorpamplona.quartz.routstr.node.RoutstrNodeEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -4243,6 +4244,8 @@ open class EventCache :
                 is CashuWalletEvent,
                 is NutzapInfoEvent,
                 is AgentKeyEvent,
+                // Routstr node announcements (38421): the AI-key screen lists them; newest per address.
+                is RoutstrNodeEvent,
                 is ScheduledTaskEvent,
                 is PublicChatListEvent,
                 is DmRelayListEvent,

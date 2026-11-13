@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
+import com.vitorpamplona.amethyst.commons.routstr.RoutstrService
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
@@ -106,6 +107,9 @@ interface AppServices {
 
     /** Each account's front page printer, shared by its screen, the shell banner and the schedule. Null where there is none. */
     val frontPagePrinters: FrontPagePrinters? get() = null
+
+    /** Routstr, the sats-paid AI nodes: each account's node list, key balances and purchases. Null where there is none. */
+    val routstr: RoutstrService? get() = null
 
     /** Starts and stops the morning front page on this platform. */
     val frontPageScheduler: FrontPageScheduler get() = FrontPageScheduler.None

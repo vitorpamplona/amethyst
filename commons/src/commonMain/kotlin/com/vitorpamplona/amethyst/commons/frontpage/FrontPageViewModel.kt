@@ -123,6 +123,8 @@ sealed interface FrontPageRun {
         val failure: WriterFailure,
         val status: Int? = null,
         val providerSaid: String = "",
+        /** For [WriterFailure.LOW_BALANCE]: the sats a Routstr key is short, when the node said. */
+        val shortfallSats: Long? = null,
     ) : FrontPageRun
 }
 
@@ -283,6 +285,14 @@ class FrontPageViewModel(
     val estimate: StateFlow<Double?> =
         combine(_models, printer.editions) { models, _ -> printer.estimate(models.selectedModel) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** The same in sats, for a model a Routstr node prices in sats: what that key pays in. */
+    val estimateSats: StateFlow<Long?> =
+        combine(_models, printer.editions) { models, _ -> printer.estimateSats(models.selectedModel) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** One edition with [model] in sats, for the model picker; null when it isn't priced in sats. */
+    fun editionSats(model: AgentModel?): Long? = printer.estimateSats(model)
 
     /**
      * The screen is started (on screen, not just in the back stack): a signer that needs the

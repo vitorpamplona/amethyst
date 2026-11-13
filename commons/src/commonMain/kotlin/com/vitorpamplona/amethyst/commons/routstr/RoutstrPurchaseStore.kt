@@ -1,0 +1,182 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.routstr
+
+import androidx.compose.runtime.Immutable
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.flow.first
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+
+/** How a purchase is paid. */
+@Serializable
+enum class RoutstrPayment {
+    @SerialName("lightning")
+    LIGHTNING,
+
+    @SerialName("cashu")
+    CASHU,
+}
+
+/** Where a purchase stands. Every stage but [AWAITING_PAYMENT] holds money the user has already spent. */
+@Serializable
+enum class RoutstrStage {
+    /** An invoice is out and not paid yet. Dropped once it expires unpaid. */
+    @SerialName("awaiting_payment")
+    AWAITING_PAYMENT,
+
+    /** Paid, and the node hasn't handed the key over yet: recovered by bolt11, never bought again. */
+    @SerialName("paid")
+    PAID,
+
+    /** The key arrived and isn't in the user's kind 12000 yet: it is held here until it is. */
+    @SerialName("key_unsaved")
+    KEY_UNSAVED,
+
+    /** A Cashu token taken from the user's wallet (or pasted) that no node has accepted yet. */
+    @SerialName("token_unspent")
+    TOKEN_UNSPENT,
+
+    /** Change the node gave back that the user's wallet hasn't taken: shown until it does, or they copy it. */
+    @SerialName("change_unclaimed")
+    CHANGE_UNCLAIMED,
+}
+
+/**
+ * A Routstr purchase on its way, kept on this device only (never in an event) from before the
+ * invoice is shown until the key is in the user's kind 12000. The `toString` never shows the key
+ * or a token.
+ */
+@Immutable
+@Serializable
+data class RoutstrPendingPurchase(
+    val id: String,
+    val payment: RoutstrPayment,
+    val purpose: RoutstrPurpose,
+    val stage: RoutstrStage,
+    /** The node's https root: where the key is saved (`…/v1`). */
+    val nodeRoot: String,
+    /** The node's onion root, used for the calls when Tor is on. */
+    val onionRoot: String? = null,
+    val nodeName: String? = null,
+    val amountSats: Long,
+    val createdAt: Long,
+    val invoiceId: String? = null,
+    val bolt11: String? = null,
+    val expiresAt: Long? = null,
+    /** For a top-up: the masked key it adds to, to tell the user which one. */
+    val topupKeyMask: String? = null,
+    /** [RoutstrStage.KEY_UNSAVED]: the key bought. */
+    val apiKey: String? = null,
+    /** [RoutstrStage.TOKEN_UNSPENT] or [RoutstrStage.CHANGE_UNCLAIMED]: the token. */
+    val token: String? = null,
+    /** A top-up paid with [token] needs the key it tops up; held only until the node answers. */
+    val topupKey: String? = null,
+    /** How many times the status was checked after payment without a key. */
+    val recoverAttempts: Int = 0,
+) {
+    val keyUrl: String get() = RoutstrNodes.keyUrl(nodeRoot)
+
+    fun callBase(torEnabled: Boolean): String = if (torEnabled && onionRoot != null) onionRoot else nodeRoot
+
+    /** Whether the user's money is in this record (anything past an unpaid invoice). */
+    val holdsMoney: Boolean get() = stage != RoutstrStage.AWAITING_PAYMENT
+
+    override fun toString() = "RoutstrPendingPurchase(id=$id, $payment, $purpose, $stage, node=$nodeRoot, $amountSats sats)"
+}
+
+/** Each account's pending purchases on this device. */
+interface RoutstrPurchaseStore {
+    suspend fun load(account: HexKey): List<RoutstrPendingPurchase>
+
+    suspend fun save(
+        account: HexKey,
+        purchases: List<RoutstrPendingPurchase>,
+    )
+}
+
+class InMemoryRoutstrPurchaseStore : RoutstrPurchaseStore {
+    val saved = HashMap<HexKey, List<RoutstrPendingPurchase>>()
+
+    /** When set, the next [save] throws it: a disk that is full or gone. */
+    var failNextSave: Exception? = null
+
+    override suspend fun load(account: HexKey): List<RoutstrPendingPurchase> = saved[account].orEmpty()
+
+    override suspend fun save(
+        account: HexKey,
+        purchases: List<RoutstrPendingPurchase>,
+    ) {
+        failNextSave?.let {
+            failNextSave = null
+            throw it
+        }
+        saved[account] = purchases
+    }
+}
+
+/**
+ * In its own preferences file, `routstr_purchases`, one JSON list per account: DataStore on
+ * Android and on the desktop alike ([AppPreferenceStores]), in the app's private files.
+ */
+class DataStoreRoutstrPurchaseStore(
+    private val stores: AppPreferenceStores,
+) : RoutstrPurchaseStore {
+    private val store get() = stores.getDataStore(FILE_NAME)
+
+    private fun keyFor(account: HexKey) = stringPreferencesKey("pending." + account.lowercase())
+
+    override suspend fun load(account: HexKey): List<RoutstrPendingPurchase> {
+        val raw = store.data.first()[keyFor(account)] ?: return emptyList()
+        return try {
+            JSON.decodeFromString(LIST, raw)
+        } catch (e: SerializationException) {
+            Log.w(TAG, "Unreadable pending Routstr purchases", e)
+            emptyList()
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Unreadable pending Routstr purchases", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun save(
+        account: HexKey,
+        purchases: List<RoutstrPendingPurchase>,
+    ) {
+        store.edit {
+            if (purchases.isEmpty()) it.remove(keyFor(account)) else it[keyFor(account)] = JSON.encodeToString(LIST, purchases)
+        }
+    }
+
+    companion object {
+        const val FILE_NAME = "routstr_purchases"
+        private const val TAG = "RoutstrPurchaseStore"
+        private val JSON = Json { ignoreUnknownKeys = true }
+        private val LIST = ListSerializer(RoutstrPendingPurchase.serializer())
+    }
+}
