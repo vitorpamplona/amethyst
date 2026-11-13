@@ -78,9 +78,11 @@ class WriteProgressTest {
     }
 
     @Test
-    fun onlyOpenRouterIsAskedForReasoning() {
+    fun noProviderIsAskedForReasoning() {
+        // A `reasoning` object may turn thinking on, and bill it, where a model makes it optional.
         val messages = listOf(ChatMessage("user", "hi"))
-        assertTrue(chatRequestBody("https://openrouter.ai/api/v1", "m", messages, stream = true).contains("\"reasoning\":{\"exclude\":false}"))
+        assertFalse(chatRequestBody("https://openrouter.ai/api/v1", "m", messages, stream = true).contains("reasoning"))
+        assertFalse(chatRequestBody("https://openrouter.ai/api/v1", "anthropic/claude-sonnet-4.5", messages, stream = false).contains("reasoning"))
         assertFalse(chatRequestBody("https://api.openai.com/v1", "m", messages, stream = true).contains("reasoning"))
         assertFalse(chatRequestBody("https://api.deepseek.com", "m", messages, stream = true).contains("reasoning"))
         assertFalse(chatRequestBody("https://openrouter.ai.evil.example/v1", "m", messages, stream = true).contains("reasoning"))
@@ -113,13 +115,39 @@ class WriteProgressTest {
         val writing = tracker.on(WriterEvent.Text("<h1>The Nostr Observer</h1>", 27))
         assertEquals(WritePhase.WRITING, writing?.phase)
         assertNull(writing?.section)
-        assertEquals("Relays go quiet", tracker.on(WriterEvent.Text("<h2>Relays go quiet</h2>", 51))?.section)
+        // The section is looked for once enough page has come since the last look.
+        val body = "<p>" + "x".repeat(SECTION_SCAN_CHARS) + "</p>"
+        assertEquals("Relays go quiet", tracker.on(WriterEvent.Text("<h2>Relays go quiet</h2>$body", 51 + body.length))?.section)
         assertEquals(
             listOf(PrintLogKind.REQUEST_SENT, PrintLogKind.FIRST_BYTE, PrintLogKind.THINKING, PrintLogKind.WRITING, PrintLogKind.SECTION),
             log.log.value.entries
                 .map { it.kind },
         )
         assertEquals("Let me think.", log.log.value.reasoning)
+    }
+
+    @Test
+    fun theSectionIsLookedForOncePerStretchOfPage() {
+        val tracker = WriteTracker(round = 1, since = 0)
+        tracker.on(WriterEvent.Text("<h1>The Nostr Observer</h1>", 27))
+        // Closed, but too soon after the last look: not yet.
+        assertNull(tracker.on(WriterEvent.Text("<h2>Lead</h2>", 40))?.section)
+        // More page, no '>' in it: the closed heading is still found once enough has come.
+        val filler = "y".repeat(SECTION_SCAN_CHARS)
+        assertEquals("Lead", tracker.on(WriterEvent.Text(filler, 40 + filler.length))?.section)
+    }
+
+    @Test
+    fun followingTheReasoningKeepsCountingPastTheCap() {
+        val log = PrintLogBook { 0L }
+        log.start("OpenRouter · m")
+        repeat(100) { log.reasoning("x".repeat(100)) }
+        val capped = log.log.value
+        repeat(10) { log.reasoning("y".repeat(100)) }
+        val later = log.log.value
+        assertEquals(PrintLogBook.REASONING_KEPT, later.reasoning.length)
+        assertTrue(later.reasoningReceived > capped.reasoningReceived)
+        assertEquals(11_000L, later.reasoningReceived)
     }
 
     @Test

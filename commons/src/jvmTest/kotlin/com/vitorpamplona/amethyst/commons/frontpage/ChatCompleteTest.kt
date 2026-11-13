@@ -33,6 +33,7 @@ import okio.Buffer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /** The Chat Completions call against a faked provider: stream, fallback, and failures. */
@@ -102,8 +103,8 @@ class ChatCompleteTest {
             assertEquals(10L, written.usage?.total)
             assertEquals(listOf(6, 13), seen)
             assertTrue(requests.single().contains("\"stream\":true"))
-            // OpenRouter is asked to return the reasoning as it streams.
-            assertTrue(requests.single().contains("\"reasoning\":{\"exclude\":false}"))
+            // Nothing asks OpenRouter for reasoning: a `reasoning` object may turn (paid) thinking on.
+            assertFalse(requests.single().contains("\"reasoning\""))
         }
 
     @Test

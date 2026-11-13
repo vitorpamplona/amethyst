@@ -117,12 +117,6 @@ private const val ANTHROPIC_MAX_TOKENS = 32_000
 
 fun isAnthropic(url: String) = hostOf(url) == "api.anthropic.com"
 
-/**
- * OpenRouter, the one provider asked to stream the model's reasoning: its Chat Completions take a
- * `reasoning` object, where a provider that rejects unknown fields would refuse the whole call.
- */
-fun isOpenRouter(url: String) = hostOf(url).let { it == "openrouter.ai" || it.endsWith(".openrouter.ai") }
-
 private fun hostOf(url: String) =
     url
         .substringAfter("://", "")
@@ -155,9 +149,10 @@ fun chatRequestBody(
         put("stream", stream)
         if (stream) put("stream_options", buildJsonObject { put("include_usage", true) })
         if (isAnthropic(url)) put("max_tokens", ANTHROPIC_MAX_TOKENS)
-        // Returned as it streams, so the reader sees a reasoning model think rather than a stall.
-        // OpenRouter bills reasoning tokens as output whether or not they come back.
-        if (isOpenRouter(url)) put("reasoning", buildJsonObject { put("exclude", false) })
+        // No `reasoning` object, on any provider: on OpenRouter one may turn thinking on (and bill
+        // it) for a model where it is optional, and a model that reasons anyway streams it unasked
+        // ("included in the response by default if the model decides to output them"), which
+        // [reasoningOf] reads when it comes.
     }.toString()
 
 private val lenient = Json { ignoreUnknownKeys = true }
