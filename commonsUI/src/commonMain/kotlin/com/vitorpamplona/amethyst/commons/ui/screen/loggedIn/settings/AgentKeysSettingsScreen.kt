@@ -180,6 +180,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.rememberRoutstr
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.rememberRoutstrBalance
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.rememberRoutstrNodeName
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.routstrErrorText
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.satsText
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -409,7 +410,7 @@ private fun SavedKeys(
                     ProviderAvatar(preset?.id ?: key.url, AgentProviderPresets.monogramFor(key.url), size = 40)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(AgentProviderPresets.displayName(key.url), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(rememberRoutstrNodeName(routstr, key.url) ?: AgentProviderPresets.displayName(key.url), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (key.hasKey()) {
                             Text(
                                 AgentProviderPresets.maskKey(key.key),

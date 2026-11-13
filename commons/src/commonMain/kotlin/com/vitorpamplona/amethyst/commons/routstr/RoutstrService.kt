@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.routstr
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.agents.AgentProviderPresets
+import com.vitorpamplona.amethyst.commons.frontpage.rankModels
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditKind
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditState
@@ -169,6 +170,9 @@ class RoutstrAccount(
             ?.map(RoutstrNode::from)
             ?.firstOrNull { it.owns(keyUrl) }
 
+    /** The name of the node a key URL names: from its announcement, else its `/v1/info`. */
+    fun nodeName(keyUrl: String): String? = nodeForKey(keyUrl)?.name ?: _info.value[RoutstrNodes.root(keyUrl).lowercase()]?.name
+
     // --- What a node says about itself -------------------------------------------------
 
     private val _info = MutableStateFlow<Map<String, RoutstrInfo?>>(emptyMap())
@@ -261,15 +265,17 @@ class RoutstrAccount(
     fun observerModel(): String? = (account.observerSchedule.flow.value as? SyncedSchedule.Readable)?.task?.let(ObserverParams::model)
 
     /**
-     * Whether [balance] may not cover one edition with the Observer's model at [key]'s node: under
+     * Whether [balance] may not cover one edition with the Observer's model (the schedule's, else
+     * the best-ranked text model, which the print picks by default) at [key]'s node: under
      * its `max_cost` reserve or its edition estimate. Unknown model, unknown answer: false.
      */
     suspend fun isLow(
         key: AgentKeyTag,
         balance: RoutstrBalance,
     ): Boolean {
-        val wanted = observerModel()
         val models = cachedModels(key) ?: return false
+        // The schedule's model, else the one the print picks by default.
+        val wanted = observerModel() ?: rankModels(models.filter { it.textOutput && it.enabled }.map { it.id }).firstOrNull()
         val model = models.firstOrNull { it.id == wanted } ?: return false
         return RoutstrPricing.isLow(balance.balanceMsats, model.sats, RoutstrSetupViewModel.editionSats(model))
     }

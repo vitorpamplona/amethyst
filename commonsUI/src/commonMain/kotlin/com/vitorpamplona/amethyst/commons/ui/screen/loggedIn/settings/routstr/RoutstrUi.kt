@@ -152,3 +152,15 @@ fun rememberRoutstrPrintNote(
         onTopUp = if (balance != null) ({ nav.nav(Route.RoutstrSetup(topUpUrl = key.url, topUpMask = AgentProviderPresets.maskKey(key.key))) }) else null,
     )
 }
+
+/** The Routstr node's name for a key at [keyUrl], once its announcement or `/v1/info` is read; null otherwise. */
+@Composable
+fun rememberRoutstrNodeName(
+    routstr: RoutstrAccount?,
+    keyUrl: String,
+): String? {
+    if (routstr == null) return null
+    val nodes by routstr.nodes.collectAsStateWithLifecycle()
+    val info by routstr.info.collectAsStateWithLifecycle()
+    return remember(nodes, info, keyUrl) { routstr.nodeName(keyUrl) }
+}

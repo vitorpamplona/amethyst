@@ -248,7 +248,11 @@ fun RoutstrSetupScreen(
     Scaffold(
         topBar = {
             TopBarWithBackButton(
-                if (topUpKey != null) stringRes(Res.string.routstr_top_up_title, AgentProviderPresets.maskKey(topUpKey.key)) else stringRes(Res.string.routstr_title),
+                if (topUpKey != null) {
+                    stringRes(Res.string.routstr_top_up_title, routstr.nodeName(topUpKey.url) ?: AgentProviderPresets.hostOf(topUpKey.url) ?: topUpKey.url)
+                } else {
+                    stringRes(Res.string.routstr_title)
+                },
                 nav,
             )
         },
@@ -268,6 +272,7 @@ fun RoutstrSetupScreen(
                 topUpKey != null -> {
                     val node = routstr.nodeForKey(topUpKey.url)
                     val target = RoutstrTarget(RoutstrNodes.root(topUpKey.url), node?.onionUrl, node?.displayName ?: AgentProviderPresets.hostOf(topUpKey.url))
+                    Text(AgentProviderPresets.maskKey(topUpKey.key), style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     BuyPanel(viewModel, target, topUpKey, node?.mints.orEmpty(), reserve = null, nav = nav)
                 }
                 shown == null -> {
