@@ -111,9 +111,37 @@ fun mapOutcomeToResolveState(outcome: NamecoinResolveOutcome): NamecoinResolveSt
         is NamecoinResolveOutcome.InvalidIdentifier ->
             NamecoinResolveState.Error(NamecoinResolveState.Reason.InvalidIdentifier)
 
+        // The record sent the lookup on to another name (an import or a delegate) and that one
+        // failed: say why it did, the reason the user can act on.
+        is NamecoinResolveOutcome.ImportFailed -> causeOf(outcome.cause, outcome.name)
+
+        is NamecoinResolveOutcome.DelegationFailed -> causeOf(outcome.cause, outcome.name)
+
+        // How the record is built (references that loop, or nest too deep or too wide), not the
+        // network: the publisher has to fix it, so it reads as a malformed record.
+        is NamecoinResolveOutcome.CyclicReference ->
+            malformed(outcome.name, "references loop: ${outcome.path.joinToString(" → ")}")
+
+        is NamecoinResolveOutcome.LookupBudgetExhausted ->
+            malformed(outcome.name, "references need more than ${outcome.limit} lookups")
+
+        is NamecoinResolveOutcome.DepthLimitExceeded ->
+            malformed(outcome.name, "references nest deeper than ${outcome.limit}")
+
         NamecoinResolveOutcome.Timeout ->
             NamecoinResolveState.Error(NamecoinResolveState.Reason.Timeout)
     }
+
+private fun malformed(
+    name: String,
+    detail: String,
+) = NamecoinResolveState.Error(NamecoinResolveState.Reason.MalformedRecord(name, detail))
+
+/** A failed import's or delegation's [cause]; a cause that reads as success is still a failure of [name]. */
+private fun causeOf(
+    cause: NamecoinResolveOutcome,
+    name: String,
+): NamecoinResolveState = if (cause is NamecoinResolveOutcome.Success) malformed(name, "a reference failed") else mapOutcomeToResolveState(cause)
 
 @Composable
 private fun NamecoinResolveState.Reason.text(): String =
