@@ -57,6 +57,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.concurrent.Volatile
 
 /** What stands between the reader and a paper, one thing at a time. */
 enum class FrontPageGate {
