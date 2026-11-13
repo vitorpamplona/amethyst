@@ -145,15 +145,18 @@ fun rememberRoutstrPrintNote(
 ): RoutstrPrintNote? {
     val routstr = rememberRoutstr(accountViewModel)
     val balance = rememberRoutstrBalance(routstr, key)
-    if (key == null) return null
-    val known = balance as? RoutstrKeyBalance.Known
-    val low = known != null && RoutstrPricing.isLow(known.balance.balanceMsats, model?.sats, estimateSats)
-    if (estimateSats == null && !low) return null
-    return RoutstrPrintNote(
-        estimateSats = estimateSats,
-        lowBalance = low,
-        onTopUp = if (balance != null) ({ nav.nav(Route.RoutstrSetup(topUpUrl = key.url, topUpMask = AgentProviderPresets.maskKey(key.key))) }) else null,
-    )
+    // Worked out when its inputs change, not on every recomposition of the screen that shows it.
+    return remember(key, balance, model?.sats, estimateSats, nav) {
+        if (key == null) return@remember null
+        val known = balance as? RoutstrKeyBalance.Known
+        val low = known != null && RoutstrPricing.isLow(known.balance.balanceMsats, model?.sats, estimateSats)
+        if (estimateSats == null && !low) return@remember null
+        RoutstrPrintNote(
+            estimateSats = estimateSats,
+            lowBalance = low,
+            onTopUp = if (balance != null) ({ nav.nav(Route.RoutstrSetup(topUpUrl = key.url, topUpMask = AgentProviderPresets.maskKey(key.key))) }) else null,
+        )
+    }
 }
 
 /** Where a top-up of the key at [keyUrl] goes, and the mints its node takes. */
