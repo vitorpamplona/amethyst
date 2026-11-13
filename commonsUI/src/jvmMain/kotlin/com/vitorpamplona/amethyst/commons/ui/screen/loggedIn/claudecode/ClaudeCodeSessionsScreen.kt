@@ -153,6 +153,9 @@ fun ClaudeCodeSessionsScreen(nav: INav) {
     val loaded by viewModel.loaded.collectAsStateWithLifecycle()
     val executable by viewModel.executable.collectAsStateWithLifecycle()
 
+    // Polls while the list is on screen; a chat opened on top stops it.
+    LaunchedEffect(viewModel) { viewModel.poll() }
+
     var searching by remember { mutableStateOf(false) }
     var showNew by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<ClaudeSessionRow?>(null) }

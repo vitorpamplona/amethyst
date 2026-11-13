@@ -74,7 +74,10 @@ class ClaudeCodeConnection(
                     output.send(message)
                 }
             } finally {
-                pending.values.forEach { it.cancel() }
+                // Fail, not cancel: a cancelled answer would cancel whoever waits on it (the
+                // handshake while starting, an interrupt) instead of letting them see the end.
+                val ended = IOException("Claude Code ended")
+                pending.values.forEach { it.completeExceptionally(ended) }
                 pending.clear()
                 output.close()
             }

@@ -80,12 +80,13 @@ object ToolViews {
 
     /**
      * Views already worked out, by call: a chat row that scrolls back into view would otherwise
-     * read its file, diff it and parse the diff again.
+     * read its file, diff it and parse the diff again. Least recently used first; bounded by
+     * count and by the size of the diffs it holds ([cachedChars]).
      */
-    private val cache =
-        object : LinkedHashMap<String, ToolView>(64, 0.75f, true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ToolView>) = size > CACHE_SIZE
-        }
+    private val cache = LinkedHashMap<String, ToolView>(64, 0.75f, true)
+    private var cachedChars = 0L
+
+    private fun weight(view: ToolView) = (view as? ToolView.FileChange)?.diff?.length?.toLong() ?: 0L
 
     /**
      * [of], remembered: the same call in the same folder, in the same state, gives the same
@@ -101,7 +102,15 @@ object ToolViews {
         synchronized(cache) { cache[key] }?.let { return it }
         val view = of(name, input, cwd, pending)
         (view as? ToolView.FileChange)?.patch
-        synchronized(cache) { cache[key] = view }
+        synchronized(cache) {
+            cache.put(key, view)?.let { cachedChars -= weight(it) }
+            cachedChars += weight(view)
+            val oldest = cache.entries.iterator()
+            while ((cache.size > CACHE_SIZE || cachedChars > CACHE_CHARS) && cache.size > 1 && oldest.hasNext()) {
+                cachedChars -= weight(oldest.next().value)
+                oldest.remove()
+            }
+        }
         return view
     }
 
@@ -113,12 +122,16 @@ object ToolViews {
         pending: Boolean,
     ): ToolView? = synchronized(cache) { cache[cacheKey(name, input, cwd, pending)] }
 
+    /**
+     * A key that doesn't hold the input itself (a write's input is the whole file): its length,
+     * its hash (which a string computes once and keeps) and its two ends.
+     */
     private fun cacheKey(
         name: String,
         input: String,
         cwd: File?,
         pending: Boolean,
-    ) = "$pending\u0000$name\u0000${cwd?.path}\u0000$input"
+    ) = "$pending\u0000$name\u0000${cwd?.path}\u0000${input.length}\u0000${input.hashCode()}\u0000${input.take(KEY_ENDS)}\u0000${input.takeLast(KEY_ENDS)}"
 
     fun cached(
         name: String,
@@ -254,6 +267,8 @@ object ToolViews {
 
     private const val MAX_READ = 2_000_000L
     private const val CACHE_SIZE = 256
+    private const val CACHE_CHARS = 8_000_000L
+    private const val KEY_ENDS = 64
 }
 
 /** A line diff, written as unified-diff hunks with three lines of context. */

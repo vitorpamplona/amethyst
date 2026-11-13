@@ -80,6 +80,9 @@ sealed interface ChatError {
 
     /** The session's folder is gone (a removed worktree): it can be read, not continued. */
     data object FolderGone : ChatError
+
+    /** Another Claude Code has the session open: a second process would mix its turns in. */
+    data object HeldElsewhere : ChatError
 }
 
 @Immutable
@@ -137,6 +140,8 @@ class ClaudeChat internal constructor(
     private val inspectGit: suspend (File) -> GitWorkInfo? = { GitWorkspace.inspect(it) },
     /** Starts as a copy of [resumeSessionId]: its history, and a session of its own from the first message. */
     fork: Boolean = false,
+    /** Whether another Claude Code process has this session open now. Called off the main thread. */
+    private val heldElsewhere: (sessionId: String) -> Boolean = { false },
 ) {
     private val workDir = cwd
     private val transcript = ChatTranscript()
@@ -229,6 +234,14 @@ class ClaudeChat internal constructor(
         if (trimmed.isEmpty()) return
         scope.launch {
             historyReady.await()
+            // Every way of sending lands here (the composer, review comments, questions from the
+            // Changes screen), so this is where a session held elsewhere is kept read-only.
+            val current = _state.value
+            val id = current.sessionId
+            if (id != null && !current.forking && connection == null && heldElsewhere(id)) {
+                publish { it.copy(error = ChatError.HeldElsewhere) }
+                return@launch
+            }
             lock.withLock {
                 transcript.addPrompt(trimmed)
                 publish { it.copy(status = ChatStatus.WORKING, error = null, activity = null, turnStartedAt = it.turnStartedAt ?: System.currentTimeMillis()) }
@@ -316,6 +329,7 @@ class ClaudeChat internal constructor(
             }
             publish { it.copy(status = ChatStatus.STARTING) }
             val current = _state.value
+            val nostrCheckout = (current.git ?: inspectGit(workDir))?.repo != null
             val options =
                 ClaudeCodeOptions(
                     cwd = workDir,
@@ -324,7 +338,8 @@ class ClaudeChat internal constructor(
                     model = model,
                     permissionMode = current.permissionMode,
                     // A NIP-34 checkout: publishing is the user's step (CONTRIBUTING-WITH-AI.md), never the agent's.
-                    disallowedTools = if ((current.git ?: inspectGit(workDir))?.repo != null) NO_PUBLISHING else emptyList(),
+                    disallowedTools = if (nostrCheckout) NO_PUBLISHING else emptyList(),
+                    environment = if (nostrCheckout) noPushEnvironment() else emptyMap(),
                 )
             val started =
                 try {
@@ -476,5 +491,24 @@ class ClaudeChat internal constructor(
                 "Bash(amy git pr-update:*)",
             )
         private const val STDERR_SHOWN = 2_000
+
+        /**
+         * Git config, through the environment, that sends every push from the session's process
+         * tree to a transport that doesn't exist: an empty `pushInsteadOf` prefix matches every
+         * URL. Unlike [NO_PUBLISHING]'s command rules, `git -C . push`, `/usr/bin/git push`, a
+         * script or `--no-verify` don't get around it. The app's own push runs in its own
+         * process and is untouched. Fetching still works.
+         *
+         * Added after any config [parent] already passes this way (a proxy's URL rewrites,
+         * credential settings), which a fresh count would drop.
+         */
+        fun noPushEnvironment(parent: Map<String, String> = System.getenv()): Map<String, String> {
+            val n = parent["GIT_CONFIG_COUNT"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+            return mapOf(
+                "GIT_CONFIG_COUNT" to (n + 1).toString(),
+                "GIT_CONFIG_KEY_$n" to "url.publishing-is-the-users-step-in-amethyst://.pushInsteadOf",
+                "GIT_CONFIG_VALUE_$n" to "",
+            )
+        }
     }
 }

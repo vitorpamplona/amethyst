@@ -157,4 +157,53 @@ class LocalGitObjectsTest {
         assertEquals(-1, result.code)
         assertTrue(System.currentTimeMillis() - started < 10_000, "took ${System.currentTimeMillis() - started} ms")
     }
+
+    @Test
+    fun aSessionOnANostrCheckoutCannotPushHoweverItTries() {
+        val remote = Files.createTempDirectory("remote").toFile()
+        try {
+            git("init", "-q", "--bare", remote.absolutePath)
+            git("remote", "add", "origin", remote.absolutePath)
+
+            fun asTheSession(command: String): Int {
+                val p =
+                    ProcessBuilder("sh", "-c", command)
+                        .directory(dir)
+                        .redirectErrorStream(true)
+                        .apply { environment().putAll(ClaudeChat.noPushEnvironment()) }
+                        .start()
+                p.inputStream.readBytes()
+                return p.waitFor()
+            }
+            listOf(
+                "git push origin HEAD",
+                "git -C . push origin HEAD",
+                "git push --no-verify ${remote.absolutePath} HEAD",
+                "git push file://${remote.absolutePath} HEAD",
+                "sh -c 'git push origin HEAD:refs/heads/x'",
+            ).forEach { assertTrue(asTheSession(it) != 0, "pushed with: $it") }
+            assertEquals(0, asTheSession("git fetch -q origin"), "fetching must still work")
+            // Nothing reached the remote.
+            assertTrue(GitWorkspace.git(remote, "for-each-ref").orEmpty().isBlank())
+        } finally {
+            remote.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun theNoPushConfigKeepsConfigTheEnvironmentAlreadyPasses() {
+        val env = ClaudeChat.noPushEnvironment(mapOf("GIT_CONFIG_COUNT" to "2", "GIT_CONFIG_KEY_0" to "a.b", "GIT_CONFIG_KEY_1" to "c.d"))
+        assertEquals("3", env["GIT_CONFIG_COUNT"])
+        assertEquals("url.publishing-is-the-users-step-in-amethyst://.pushInsteadOf", env["GIT_CONFIG_KEY_2"])
+        assertTrue("GIT_CONFIG_KEY_0" !in env && "GIT_CONFIG_KEY_1" !in env)
+        assertEquals("1", ClaudeChat.noPushEnvironment(emptyMap())["GIT_CONFIG_COUNT"])
+    }
+
+    @Test
+    fun onlyHostsFromEventsGoWithoutALoginWindow() {
+        val probe = listOf("sh", "-c", "echo \"[${'$'}GCM_INTERACTIVE]\"")
+        // By default the variable is whatever the app was started with, not set by the app.
+        assertEquals("[${System.getenv("GCM_INTERACTIVE").orEmpty()}]", GitWorkspace.run(dir, probe).output.trim())
+        assertEquals("[never]", GitWorkspace.run(dir, probe, noLoginWindow = true).output.trim())
+    }
 }

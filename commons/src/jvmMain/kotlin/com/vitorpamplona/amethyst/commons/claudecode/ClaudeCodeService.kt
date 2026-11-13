@@ -249,7 +249,21 @@ class ClaudeCodeService(
         model: String?,
         fork: Boolean = false,
     ): ClaudeChat {
-        val chat = ClaudeChat(key, sessionId, cwd, title, mode, model, store, launcher, scope, onSessionChanged = { refreshInBackground() }, fork = fork)
+        val chat =
+            ClaudeChat(
+                key,
+                sessionId,
+                cwd,
+                title,
+                mode,
+                model,
+                store,
+                launcher,
+                scope,
+                onSessionChanged = { refreshInBackground() },
+                fork = fork,
+                heldElsewhere = ::isHeldElsewhere,
+            )
         chats.update { it + (key to chat) }
         watchers[key] =
             scope.launch {
@@ -272,10 +286,46 @@ class ClaudeCodeService(
                             else -> null
                         }?.let { _attention.tryEmit(ChatAttention(chat.key, titleOf(chat.state.value), it)) }
                         last = status
-                        _needsYou.value = chats.value.values.count { it.state.value.status == ChatStatus.NEEDS_APPROVAL }
+                        recountNeedsYou()
                     }
             }
         return chat
+    }
+
+    private fun recountNeedsYou() {
+        _needsYou.value = chats.value.values.count { it.state.value.status == ChatStatus.NEEDS_APPROVAL }
+    }
+
+    /**
+     * Whether a Claude Code process other than this app's own has [sessionId] open, read from the
+     * CLI's registry now rather than from the last [refresh]: a terminal may have just opened it.
+     */
+    private fun isHeldElsewhere(sessionId: String): Boolean {
+        val live =
+            try {
+                store.liveSessions()[sessionId]
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not read the running Claude Code sessions", e)
+                null
+            } ?: return false
+        return ProcessHandle.current().descendants().noneMatch { it.pid() == live.pid }
+    }
+
+    /**
+     * Re-reads only which sessions other processes hold: cheap (a few small files), for the
+     * screens that show a session's read-only state while the full [refresh] isn't running.
+     */
+    suspend fun refreshLive() {
+        withContext(Dispatchers.IO) {
+            elsewhere.value =
+                try {
+                    store.liveSessions()
+                } catch (e: IOException) {
+                    Log.w(TAG, "Could not read the running Claude Code sessions", e)
+                    emptyMap()
+                }
+        }
+        rebuildRows()
     }
 
     private fun titleOf(state: ClaudeChatState): String =
@@ -305,6 +355,8 @@ class ClaudeCodeService(
             withContext(Dispatchers.IO) { chat.kill() }
             watchers.remove(row.key)?.cancel()
             chats.update { it - row.key }
+            // Its own status watcher is gone: a chat deleted while waiting must leave the count.
+            recountNeedsYou()
             rebuildRows()
         }
         val sessionId = row.sessionId

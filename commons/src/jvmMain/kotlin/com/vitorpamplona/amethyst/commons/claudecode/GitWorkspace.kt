@@ -379,12 +379,15 @@ object GitWorkspace {
      * Runs [command] in [dir] and gives its exit code and output. The output is read on a
      * thread of its own, so [timeoutSeconds] holds even for a command that keeps its output open
      * (a fetch from a slow host); past it the command and what it started are stopped. Git never
-     * waits on a password prompt here: there is no terminal to answer it.
+     * waits on a terminal password prompt here: there is no terminal to answer it. With
+     * [noLoginWindow] it opens no login window either (Git Credential Manager): for hosts named
+     * in events, which anyone can publish. The user's own push keeps it.
      */
     internal fun run(
         dir: File,
         command: List<String>,
         timeoutSeconds: Long = 60,
+        noLoginWindow: Boolean = false,
     ): Result {
         val process =
             try {
@@ -393,7 +396,7 @@ object GitWorkspace {
                     .redirectErrorStream(true)
                     .apply {
                         environment()["GIT_TERMINAL_PROMPT"] = "0"
-                        environment()["GCM_INTERACTIVE"] = "never"
+                        if (noLoginWindow) environment()["GCM_INTERACTIVE"] = "never"
                     }.start()
             } catch (e: IOException) {
                 return Result(-1, e.message ?: "${command.first()} could not run")

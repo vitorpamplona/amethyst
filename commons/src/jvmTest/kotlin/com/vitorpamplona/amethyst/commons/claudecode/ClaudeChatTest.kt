@@ -202,4 +202,48 @@ class ClaudeChatTest {
             assertEquals("Fix the relay list", chat.state.value.title)
             chatScope.cancel()
         }
+
+    @Test
+    fun aSessionAnotherClaudeCodeHoldsTakesNoMessage() =
+        runTest {
+            val cli = ScriptedCli()
+            chatScope = CoroutineScope(StandardTestDispatcher(testScheduler) + SupervisorJob())
+            val config = Files.createTempDirectory("claude-config").toFile()
+            val chat =
+                ClaudeChat(
+                    key = "s-held",
+                    resumeSessionId = "s-held",
+                    cwd = File("."),
+                    title = null,
+                    permissionMode = PermissionMode.DEFAULT,
+                    model = null,
+                    store = ClaudeSessionStore(config),
+                    launcher = ClaudeCodeStarter { _, scope -> ClaudeCodeConnection(cli, scope).also { it.initialize() } },
+                    scope = chatScope,
+                    onSessionChanged = {},
+                    inspectGit = { null },
+                    heldElsewhere = { it == "s-held" },
+                )
+            // The history loads on the IO dispatcher, which the test clock doesn't drive.
+            repeat(200) {
+                advanceUntilIdle()
+                if (chat.state.value.historyLoaded) return@repeat
+                Thread.sleep(10)
+            }
+
+            // From anywhere that sends: here, as the Changes screen's question would.
+            chat.send("why this line?")
+            repeat(50) {
+                advanceUntilIdle()
+                Thread.sleep(5)
+            }
+
+            assertEquals(ChatError.HeldElsewhere, chat.state.value.error)
+            assertTrue(
+                chat.state.value.items
+                    .none { it is ChatItem.UserText },
+            )
+            assertTrue(cli.written.isEmpty(), "a second process was started: ${cli.written}")
+            chatScope.cancel()
+        }
 }

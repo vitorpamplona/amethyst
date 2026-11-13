@@ -20,13 +20,18 @@
  */
 package com.vitorpamplona.amethyst.commons.claudecode
 
+import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
+import com.vitorpamplona.claudecode.process.ClaudeTransport
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import java.io.File
@@ -120,4 +125,56 @@ class ClaudeCodeServiceTest {
             assertEquals("new question", texts.last())
             assertEquals("old question 1", texts.first())
         }
+
+    @Test
+    fun deletingAChatThatWaitsOnTheUserClearsTheCount() =
+        runBlocking {
+            // A CLI that asks to write a file as soon as it gets a message.
+            val asking =
+                ClaudeCodeService(
+                    store = ClaudeSessionStore(config),
+                    launcher =
+                        ClaudeCodeStarter { _, scope ->
+                            ClaudeCodeConnection(AskingTransport(), scope).also { it.initialize() }
+                        },
+                    scope = scope,
+                    findExecutable = { null },
+                )
+            val chat = asking.newChat(work)
+            chat.send("write it")
+            waitFor { asking.needsYou.value == 1 }
+            waitFor { asking.rows.value.any { it.key == chat.key } }
+
+            asking.delete(asking.rows.value.single { it.key == chat.key })
+            assertEquals(0, asking.needsYou.value)
+        }
+
+    private class AskingTransport : ClaudeTransport {
+        private val out = Channel<String>(Channel.UNLIMITED)
+        override val lines: Flow<String> = out.receiveAsFlow()
+
+        override suspend fun write(line: String) {
+            val id = Regex("\"request_id\":\"([^\"]+)\"").find(line)?.groupValues?.get(1)
+            when {
+                line.contains("\"subtype\":\"initialize\"") ->
+                    out.trySend("""{"type":"control_response","response":{"subtype":"success","request_id":"$id","response":{}}}""")
+                line.contains("\"type\":\"user\"") -> {
+                    out.trySend("""{"type":"system","subtype":"init","cwd":"/work","session_id":"s-ask","permissionMode":"default","tools":["Write"]}""")
+                    out.trySend("""{"type":"control_request","request_id":"p1","request":{"subtype":"can_use_tool","tool_name":"Write","input":{"file_path":"/work/a.txt","content":"hi"},"tool_use_id":"t1"}}""")
+                }
+            }
+        }
+
+        override fun closeInput() {
+            out.close()
+        }
+
+        override fun kill() {
+            out.close()
+        }
+
+        override suspend fun awaitExit(): Int = 0
+
+        override fun stderrTail(): String = ""
+    }
 }

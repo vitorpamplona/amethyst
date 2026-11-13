@@ -141,6 +141,31 @@ class ClaudeSessionStoreTest {
     }
 
     @Test
+    fun aGrowingSessionIsReadOnlyFromWhereTheLastScanStopped() {
+        val project = File(config, "projects/-work")
+        val id = "22222222-2222-3333-4444-555555555555"
+        val file = File(project, "$id.jsonl")
+        file.writeText("""{"type":"user","uuid":"u1","parentUuid":null,"cwd":"/work","message":{"role":"user","content":"first question"}}""" + "\n")
+        assertEquals("first question", store.session(id)?.title)
+
+        // A half-written line: read again once it is whole.
+        file.appendText("""{"type":"custom-title","customTitle":"Half""")
+        file.setLastModified(file.lastModified() + 2_000)
+        assertEquals("first question", store.session(id)?.title)
+        file.appendText("""way"}""" + "\n")
+        file.setLastModified(file.lastModified() + 2_000)
+        assertEquals("Halfway", store.session(id)?.title)
+
+        // What was read before stays: the first prompt; what comes later wins: the folder.
+        file.appendText("""{"type":"assistant","uuid":"a1","parentUuid":"u1","cwd":"/elsewhere","message":{"role":"assistant","content":[{"type":"text","text":"ok"}]}}""" + "\n")
+        file.setLastModified(file.lastModified() + 2_000)
+        val info = store.session(id)!!
+        assertEquals("first question", info.firstPrompt)
+        assertEquals("/elsewhere", info.cwd)
+        assertEquals("Halfway", info.title)
+    }
+
+    @Test
     fun renameAppendsATitleTheListPicksUp() {
         store.listSessions()
         store.rename(Fixtures.SESSION_WRITE, "Hello file")

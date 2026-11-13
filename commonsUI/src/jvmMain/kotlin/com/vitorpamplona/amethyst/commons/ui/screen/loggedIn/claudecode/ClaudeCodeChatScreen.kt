@@ -226,6 +226,8 @@ import java.io.File
 /** The widest a chat column gets: past this, lines are too long to read. */
 internal val ChatColumnMaxWidth = 760.dp
 
+private const val LIVE_REFRESH_MS = 5_000L
+
 /** How many rows from the end the view may be and still follow new ones. */
 private const val FOLLOW_SLACK = 3
 
@@ -257,6 +259,13 @@ fun ClaudeCodeChatScreen(
     val folderGone = remember(state.cwd, state.status) { !File(state.cwd).isDirectory }
 
     LaunchedEffect(Unit) { chat.refreshGit() }
+    // Whether a terminal holds the session decides the read-only bar: kept current while shown.
+    LaunchedEffect(Unit) {
+        while (true) {
+            ClaudeCodeService.shared.refreshLive()
+            delay(LIVE_REFRESH_MS)
+        }
+    }
 
     val composerText = rememberTextFieldState()
     val composerFocus = remember { FocusRequester() }
@@ -1246,6 +1255,7 @@ private fun ErrorBanner(error: ChatError) {
         ChatError.NotInstalled -> Banner(stringRes(Res.string.claude_code_not_installed))
         is ChatError.StartFailed -> Banner(stringRes(Res.string.claude_code_error_start_failed, error.message ?: ""))
         ChatError.FolderGone -> Banner(stringRes(Res.string.claude_code_folder_gone))
+        ChatError.HeldElsewhere -> Banner(stringRes(Res.string.claude_code_open_elsewhere_readonly))
         is ChatError.Exited ->
             Column {
                 Banner(stringRes(Res.string.claude_code_error_exited, error.code?.toString() ?: "?"))

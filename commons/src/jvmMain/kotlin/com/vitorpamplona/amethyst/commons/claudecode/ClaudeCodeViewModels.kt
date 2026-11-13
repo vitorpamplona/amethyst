@@ -26,6 +26,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.claudecode.protocol.PermissionMode
 import com.vitorpamplona.claudecode.protocol.PermissionRequest
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -96,13 +97,14 @@ class ClaudeCodeSessionsViewModel(
     private val _creating = MutableStateFlow(false)
     val creating: StateFlow<Boolean> = _creating.asStateFlow()
 
-    init {
-        // Sessions started in a terminal show up while the list is open.
-        viewModelScope.launch {
-            while (isActive) {
-                service.refresh()
-                delay(REFRESH_MS)
-            }
+    /**
+     * Re-reads the sessions every few seconds, so ones started in a terminal show up, for as
+     * long as the caller runs it: the screen, while it is shown, not while a chat covers it.
+     */
+    suspend fun poll() {
+        while (currentCoroutineContext().isActive) {
+            service.refresh()
+            delay(REFRESH_MS)
         }
     }
 

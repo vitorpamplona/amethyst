@@ -30,12 +30,14 @@ import com.vitorpamplona.quartz.nip34Git.patch.UnifiedDiffParser
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -341,7 +343,34 @@ class ClaudeCodeProposeViewModel(
     private fun gateScript(dir: File) = File(GitWorkspace.git(dir, "rev-parse", "--show-toplevel")?.trim() ?: dir.path, ".git-hooks/pre-push")
 
     private var gateProcess: Process? = null
-    private val gateLog = StringBuilder()
+
+    /**
+     * The last [GATE_LOG_MAX] characters of the run, as lines. Old lines drop off the front one
+     * at a time, where trimming one big string moved all of it on every line.
+     */
+    private val gateLog = ArrayDeque<String>()
+    private var gateLogChars = 0
+
+    private fun appendGateLine(line: String) =
+        synchronized(gateLog) {
+            gateLog.addLast(line)
+            gateLogChars += line.length + 1
+            while (gateLogChars > GATE_LOG_MAX && gateLog.size > 1) gateLogChars -= gateLog.removeFirst().length + 1
+        }
+
+    /** The last [GATE_TAIL] characters, for the screen. */
+    private fun gateTail(): String =
+        synchronized(gateLog) {
+            val lines = ArrayList<String>()
+            var chars = 0
+            for (i in gateLog.indices.reversed()) {
+                val line = gateLog[i]
+                if (chars + line.length + 1 > GATE_TAIL && lines.isNotEmpty()) break
+                lines.add(line)
+                chars += line.length + 1
+            }
+            lines.asReversed().joinToString("\n", postfix = "\n")
+        }
 
     private val _gateLogFile = MutableStateFlow<File?>(null)
 
@@ -349,13 +378,16 @@ class ClaudeCodeProposeViewModel(
     val gateLogFile: StateFlow<File?> = _gateLogFile.asStateFlow()
 
     /** The last run's output, up to the last [GATE_LOG_MAX] characters. */
-    fun fullGateLog(): String = synchronized(gateLog) { gateLog.toString() }
+    fun fullGateLog(): String = synchronized(gateLog) { gateLog.joinToString("\n", postfix = "\n") }
 
     fun runGate() {
         val dir = dir ?: return
         if (gateJob?.isActive == true) return
         _gate.value = GateState.Running("")
-        synchronized(gateLog) { gateLog.setLength(0) }
+        synchronized(gateLog) {
+            gateLog.clear()
+            gateLogChars = 0
+        }
         gateJob =
             viewModelScope.launch(Dispatchers.IO) {
                 val script = gateScript(dir)
@@ -377,27 +409,28 @@ class ClaudeCodeProposeViewModel(
                         process.outputStream.close()
                         logFile.bufferedWriter().use { log ->
                             process.inputStream.bufferedReader().useLines { lines ->
+                                // A build prints thousands of lines a second: the screen gets the tail every so often.
+                                var shownAt = 0L
                                 lines.forEach { line ->
                                     log.write(line)
                                     log.newLine()
-                                    val tail =
-                                        synchronized(gateLog) {
-                                            gateLog.appendLine(line)
-                                            if (gateLog.length > GATE_LOG_MAX) gateLog.delete(0, gateLog.length - GATE_LOG_MAX)
-                                            gateLog.takeLast(GATE_TAIL).toString()
-                                        }
-                                    if (_gate.value is GateState.Running) _gate.value = GateState.Running(tail)
+                                    appendGateLine(line)
+                                    val now = System.currentTimeMillis()
+                                    if (now - shownAt >= GATE_SHOW_MS && _gate.value is GateState.Running) {
+                                        shownAt = now
+                                        _gate.value = GateState.Running(gateTail())
+                                    }
                                 }
                             }
                         }
                         runInterruptible { process.waitFor() }
                     } catch (e: IOException) {
-                        synchronized(gateLog) { gateLog.appendLine(e.message) }
+                        appendGateLine(e.message ?: "the checks could not run")
                         -1
                     } finally {
                         gateProcess = null
                     }
-                val tail = synchronized(gateLog) { gateLog.takeLast(GATE_TAIL).toString() }
+                val tail = gateTail()
                 _gate.value =
                     when {
                         _gate.value is GateState.Cancelled -> GateState.Cancelled(tail)
@@ -451,16 +484,27 @@ class ClaudeCodeProposeViewModel(
                     Diff (may be cut short):
                     $diff
                     """.trimIndent()
+                // The prompt goes in on stdin: as an argument, a large diff passes Windows' 32k
+                // command-line limit and the start fails.
                 val process =
-                    ProcessBuilder(exe.absolutePath, "-p", prompt, "--output-format", "json", "--tools", "", "--no-session-persistence")
+                    ProcessBuilder(exe.absolutePath, "-p", "--output-format", "json", "--tools", "", "--no-session-persistence")
                         .directory(dir)
                         .redirectError(ProcessBuilder.Redirect.DISCARD)
                         .start()
-                val out = process.inputStream.bufferedReader().readText()
-                runInterruptible { process.waitFor() }
+                val out =
+                    try {
+                        withTimeout(DRAFT_TIMEOUT_MS) {
+                            process.outputStream.bufferedWriter().use { it.write(prompt) }
+                            runInterruptible { process.inputStream.bufferedReader().readText() }
+                        }
+                    } finally {
+                        process.destroy()
+                    }
                 parseDraft(out)?.let { _draft.value = it }
             } catch (e: IOException) {
                 Log.w(TAG, "Could not draft the description", e)
+            } catch (e: TimeoutCancellationException) {
+                Log.w(TAG, "Drafting the description took too long", e)
             } finally {
                 _drafting.value = false
             }
@@ -542,7 +586,9 @@ class ClaudeCodeProposeViewModel(
         private const val TAG = "ClaudeCodePropose"
         private const val GATE_TAIL = 6_000
         private const val GATE_LOG_MAX = 2_000_000
+        private const val GATE_SHOW_MS = 100L
         private const val DRAFT_DIFF_CHARS = 60_000
+        private const val DRAFT_TIMEOUT_MS = 180_000L
 
         fun draftFromCommits(info: GitWorkInfo): ProposalDraft {
             val first = info.commits.lastOrNull()

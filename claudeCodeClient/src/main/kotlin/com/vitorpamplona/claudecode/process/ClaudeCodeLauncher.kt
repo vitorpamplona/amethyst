@@ -44,6 +44,8 @@ data class ClaudeCodeOptions(
     val disallowedTools: List<String> = emptyList(),
     /** Any other CLI flags, appended last. */
     val extraArgs: List<String> = emptyList(),
+    /** Variables added to the process's environment, which every command it runs inherits. */
+    val environment: Map<String, String> = emptyMap(),
 )
 
 /** Starts sessions; [ClaudeCodeLauncher] in the app, a scripted one in tests. */
@@ -113,6 +115,7 @@ class ClaudeCodeLauncher(
                 .apply {
                     environment().clear()
                     environment().putAll(childEnvironment(exe))
+                    environment().putAll(options.environment)
                 }.start()
         val connection = ClaudeCodeConnection(ProcessTransport(process), scope)
         connection.initialize()

@@ -77,7 +77,7 @@ object LocalGitObjects {
                 // From the repository's events: only plain transports, and after `--`.
                 val ref = branch?.takeIf(GitWorkspace::isSafeBranchName) ?: head
                 for (url in cloneUrls.filter(GitWorkspace::isSafeRemoteUrl)) {
-                    GitWorkspace.run(dir, listOf("git", "fetch", "--no-tags", "--", url, ref), timeoutSeconds = 300)
+                    GitWorkspace.run(dir, listOf("git", "fetch", "--no-tags", "--", url, ref), timeoutSeconds = 300, noLoginWindow = true)
                     if (GitWorkspace.git(dir, "cat-file", "-e", "$head^{commit}") != null) break
                 }
             }

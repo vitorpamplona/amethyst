@@ -125,7 +125,7 @@ class NostrWorkspaces(
             var lastError = "no clone URL"
             // The URLs come from a nostr event anyone can publish: only plain transports, and after `--`.
             for (url in cloneUrls.filter(GitWorkspace::isSafeRemoteUrl)) {
-                val result = GitWorkspace.run(parent ?: File("."), listOf("git", "clone", "--", url, into.absolutePath), timeoutSeconds = 1800)
+                val result = GitWorkspace.run(parent ?: File("."), listOf("git", "clone", "--", url, into.absolutePath), timeoutSeconds = 1800, noLoginWindow = true)
                 if (result.code == 0) {
                     remember(repo, into)
                     return@withContext into
@@ -157,7 +157,7 @@ class NostrWorkspaces(
             val base = "nostr/$mainBranch"
             val fetched =
                 target.cloneUrls.filter(GitWorkspace::isSafeRemoteUrl).any { url ->
-                    GitWorkspace.run(root, listOf("git", "fetch", "--no-tags", "--", url, "+refs/heads/$mainBranch:refs/remotes/$base"), timeoutSeconds = 600).code == 0
+                    GitWorkspace.run(root, listOf("git", "fetch", "--no-tags", "--", url, "+refs/heads/$mainBranch:refs/remotes/$base"), timeoutSeconds = 600, noLoginWindow = true).code == 0
                 }
             val baseRef =
                 if (fetched) {
@@ -199,19 +199,19 @@ class NostrWorkspaces(
         fun has() = GitWorkspace.git(root, "cat-file", "-e", "$commit^{commit}") != null
         if (has()) return
         for (url in urls.distinct().filter(GitWorkspace::isSafeRemoteUrl)) {
-            GitWorkspace.run(root, listOf("git", "fetch", "--no-tags", "--", url, commit), timeoutSeconds = 600)
+            GitWorkspace.run(root, listOf("git", "fetch", "--no-tags", "--", url, commit), timeoutSeconds = 600, noLoginWindow = true)
             if (has()) return
             // Every refs/nostr/* that points at the commit (the proposal's, or one of its updates').
             val refs =
                 GitWorkspace
-                    .git(root, "ls-remote", "--", url, "refs/nostr/*")
-                    .orEmpty()
+                    .run(root, listOf("git", "ls-remote", "--", url, "refs/nostr/*"), timeoutSeconds = 120, noLoginWindow = true)
+                    .let { if (it.code == 0) it.output else "" }
                     .lines()
                     .mapNotNull { line -> line.split('\t').takeIf { it.size == 2 && it[0] == commit }?.get(1) }
             val wanted = refs.ifEmpty { listOfNotNull(proposalId?.let { "refs/nostr/$it" }) }
             wanted
                 .filter { it.startsWith("refs/nostr/") && GitWorkspace.isSafeBranchName(it) }
-                .forEach { ref -> GitWorkspace.run(root, listOf("git", "fetch", "--no-tags", "--", url, ref), timeoutSeconds = 600) }
+                .forEach { ref -> GitWorkspace.run(root, listOf("git", "fetch", "--no-tags", "--", url, ref), timeoutSeconds = 600, noLoginWindow = true) }
             if (has()) return
         }
         throw IOException("Could not fetch the proposal's commit ${commit.take(8)}")

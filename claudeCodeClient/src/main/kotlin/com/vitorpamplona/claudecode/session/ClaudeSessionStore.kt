@@ -29,6 +29,7 @@ import com.vitorpamplona.claudecode.protocol.string
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
@@ -93,6 +94,24 @@ class ClaudeSessionStore(
         val length: Long,
         val modified: Long,
         val info: ClaudeSessionInfo?,
+        val scanned: Scan,
+    )
+
+    /**
+     * What a scan found so far, and how far into the file it got. A session file only grows,
+     * so the next scan of a busy session starts here instead of at the beginning.
+     */
+    private data class Scan(
+        val offset: Long = 0,
+        val customTitle: String? = null,
+        val aiTitle: String? = null,
+        val summary: String? = null,
+        val firstPrompt: String? = null,
+        val lastPrompt: String? = null,
+        val cwd: String? = null,
+        val gitBranch: String? = null,
+        val createdAt: Long? = null,
+        val hasMessages: Boolean = false,
     )
 
     private val cache = ConcurrentHashMap<String, Cached>()
@@ -183,68 +202,104 @@ class ClaudeSessionStore(
     private fun info(file: File): ClaudeSessionInfo? {
         val length = file.length()
         val modified = file.lastModified()
-        cache[file.absolutePath]?.let { if (it.length == length && it.modified == modified) return it.info }
-        val info =
+        val cached = cache[file.absolutePath]
+        if (cached != null && cached.length == length && cached.modified == modified) return cached.info
+        // Grown since the last look (a session at work): read only what was added.
+        val from = cached?.scanned?.takeIf { length >= cached.length && it.offset <= length } ?: Scan()
+        val scanned =
             try {
-                scan(file, length, modified)
+                scan(file, from)
             } catch (_: IOException) {
-                null
+                return null
             }
-        cache[file.absolutePath] = Cached(length, modified, info)
+        val info = toInfo(file, scanned.shown, length, modified)
+        cache[file.absolutePath] = Cached(length, modified, info, scanned.committed)
         return info
     }
 
     /**
-     * Reads what the list needs without parsing every message: most lines are only checked for
-     * a marker, and parsed when they carry a title, a prompt or the folder.
+     * Reads what the list needs from [from]'s offset on, without parsing every message: most
+     * lines are only checked for a marker, and parsed when they carry a title, a prompt or the
+     * folder. A last line still being written is left for the next scan.
      */
     private fun scan(
         file: File,
+        from: Scan,
+    ): ScanResult {
+        var state = from
+        val line = ByteArrayOutputStream()
+        RandomAccessFile(file, "r").use { raf ->
+            raf.seek(from.offset)
+            val buffer = ByteArray(64 * 1024)
+            var offset = from.offset
+            while (true) {
+                val n = raf.read(buffer)
+                if (n < 0) break
+                var start = 0
+                for (i in 0 until n) {
+                    if (buffer[i] == NEWLINE) {
+                        line.write(buffer, start, i - start)
+                        state = scanLine(line.toString(Charsets.UTF_8), state).copy(offset = offset + i + 1)
+                        line.reset()
+                        start = i + 1
+                    }
+                }
+                line.write(buffer, start, n - start)
+                offset += n
+            }
+        }
+        // A last line with no newline yet counts now, but is read again next time: it may still grow.
+        val shown = if (line.size() > 0) scanLine(line.toString(Charsets.UTF_8), state) else state
+        return ScanResult(state, shown)
+    }
+
+    private class ScanResult(
+        /** Up to the last whole line: where the next scan starts. */
+        val committed: Scan,
+        /** With the unfinished last line too: what the list shows now. */
+        val shown: Scan,
+    )
+
+    private fun scanLine(
+        line: String,
+        state: Scan,
+    ): Scan =
+        when {
+            line.contains("\"type\":\"custom-title\"") -> parseObject(line)?.string("customTitle")?.let { state.copy(customTitle = it) } ?: state
+            line.contains("\"type\":\"ai-title\"") -> parseObject(line)?.string("aiTitle")?.let { state.copy(aiTitle = it) } ?: state
+            line.contains("\"type\":\"summary\"") -> parseObject(line)?.string("summary")?.let { state.copy(summary = it) } ?: state
+            line.contains("\"type\":\"last-prompt\"") -> parseObject(line)?.string("lastPrompt")?.let { state.copy(lastPrompt = it) } ?: state
+            line.contains("\"type\":\"user\"") || line.contains("\"type\":\"assistant\"") ->
+                state.copy(
+                    hasMessages = true,
+                    cwd = CWD.find(line)?.let { unescape(it.groupValues[1]) } ?: state.cwd,
+                    gitBranch = BRANCH.find(line)?.let { unescape(it.groupValues[1]) } ?: state.gitBranch,
+                    createdAt = state.createdAt ?: TIMESTAMP.find(line)?.let { parseInstant(it.groupValues[1]) },
+                    firstPrompt =
+                        state.firstPrompt
+                            ?: if (line.contains("\"type\":\"user\"")) parseObject(line)?.let(::promptText) else null,
+                )
+            else -> state
+        }
+
+    private fun toInfo(
+        file: File,
+        scan: Scan,
         length: Long,
         modified: Long,
     ): ClaudeSessionInfo? {
+        if (!scan.hasMessages && scan.customTitle == null) return null
         val sessionId = file.name.removeSuffix(".jsonl")
-        var customTitle: String? = null
-        var aiTitle: String? = null
-        var summary: String? = null
-        var firstPrompt: String? = null
-        var lastPrompt: String? = null
-        var cwd: String? = null
-        var gitBranch: String? = null
-        var createdAt: Long? = null
-        var hasMessages = false
-
-        file.bufferedReader(Charsets.UTF_8).useLines { lines ->
-            lines.forEach { line ->
-                when {
-                    line.contains("\"type\":\"custom-title\"") -> parseObject(line)?.string("customTitle")?.let { customTitle = it }
-                    line.contains("\"type\":\"ai-title\"") -> parseObject(line)?.string("aiTitle")?.let { aiTitle = it }
-                    line.contains("\"type\":\"summary\"") -> parseObject(line)?.string("summary")?.let { summary = it }
-                    line.contains("\"type\":\"last-prompt\"") -> parseObject(line)?.string("lastPrompt")?.let { lastPrompt = it }
-                    line.contains("\"type\":\"user\"") || line.contains("\"type\":\"assistant\"") -> {
-                        hasMessages = true
-                        CWD.find(line)?.let { cwd = unescape(it.groupValues[1]) }
-                        BRANCH.find(line)?.let { gitBranch = unescape(it.groupValues[1]) }
-                        if (createdAt == null) TIMESTAMP.find(line)?.let { createdAt = parseInstant(it.groupValues[1]) }
-                        if (firstPrompt == null && line.contains("\"type\":\"user\"")) {
-                            firstPrompt = parseObject(line)?.let(::promptText)
-                        }
-                    }
-                }
-            }
-        }
-        if (!hasMessages && customTitle == null) return null
-
-        val title = customTitle ?: aiTitle ?: summary ?: firstPrompt?.let(::oneLine) ?: sessionId
+        val title = scan.customTitle ?: scan.aiTitle ?: scan.summary ?: scan.firstPrompt?.let(::oneLine) ?: sessionId
         return ClaudeSessionInfo(
             sessionId = sessionId,
             title = title,
-            customTitle = customTitle,
-            firstPrompt = firstPrompt,
-            lastPrompt = lastPrompt,
-            cwd = cwd,
-            gitBranch = gitBranch?.takeIf { it.isNotBlank() && it != "HEAD" },
-            createdAt = createdAt,
+            customTitle = scan.customTitle,
+            firstPrompt = scan.firstPrompt,
+            lastPrompt = scan.lastPrompt,
+            cwd = scan.cwd,
+            gitBranch = scan.gitBranch?.takeIf { it.isNotBlank() && it != "HEAD" },
+            createdAt = scan.createdAt,
             lastModified = modified,
             fileSize = length,
             file = file,
@@ -370,6 +425,7 @@ class ClaudeSessionStore(
 
     companion object {
         private const val TITLE_MAX = 120
+        private const val NEWLINE = '\n'.code.toByte()
         private val CWD = Regex("\"cwd\":\"((?:[^\"\\\\]|\\\\.)*)\"")
         private val BRANCH = Regex("\"gitBranch\":\"((?:[^\"\\\\]|\\\\.)*)\"")
         private val TIMESTAMP = Regex("\"timestamp\":\"([^\"]*)\"")

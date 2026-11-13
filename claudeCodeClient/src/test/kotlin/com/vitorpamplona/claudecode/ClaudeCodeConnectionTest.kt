@@ -140,4 +140,19 @@ class ClaudeCodeConnectionTest {
             assertEquals("user", sent["type"]!!.jsonPrimitive.content)
             assertEquals("hello", sent["message"]!!.jsonObject["content"]!!.jsonPrimitive.content)
         }
+
+    @Test
+    fun aProcessThatEndsBeforeAnsweringGivesNoAnswerInsteadOfCancellingTheCaller() =
+        runTest {
+            val transport = FakeTransport()
+            val connection = ClaudeCodeConnection(transport, backgroundScope)
+            // The CLI exits during the handshake (not logged in, an unknown session id).
+            transport.onWrite = { transport.end() }
+
+            val answer = connection.initialize()
+
+            assertEquals(null, answer)
+            // The caller goes on: it can see the process ended and report it.
+            assertTrue(connection.reader.isCompleted)
+        }
 }
