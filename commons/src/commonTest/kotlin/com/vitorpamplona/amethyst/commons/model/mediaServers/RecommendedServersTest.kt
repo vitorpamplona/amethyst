@@ -33,7 +33,7 @@ class RecommendedServersTest {
     private fun named(vararg names: String): List<ServerName> = names.map { name -> DEFAULT_MEDIA_SERVERS.first { it.name == name } }
 
     @Test
-    fun `with nothing added every default is missing, in default order`() {
+    fun `with nothing added every default is missing in default order`() {
         assertEquals(DEFAULT_MEDIA_SERVERS, missingRecommendedServers(emptySet()))
     }
 
@@ -44,7 +44,7 @@ class RecommendedServersTest {
     }
 
     @Test
-    fun `a partial list leaves only the missing defaults, still in default order`() {
+    fun `a partial list leaves only the missing defaults still in default order`() {
         val added = hostsOf("https://blossom.primal.net/", "https://24242.io/", "https://nostrmedia.com", "https://example.com")
         assertEquals(
             named("Nostr.Build", "Nostrcheck.me", "Azzamo", "YakiHonne", "Sovbit", "Nostr.Download", "Satellite (Paid)"),
