@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -42,6 +43,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,7 +52,9 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -80,7 +84,14 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -211,7 +222,8 @@ private fun ScreenTab(
     val colors = MaterialTheme.colorScheme
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    var menu by remember { mutableStateOf(false) }
+    // Where the right click landed, in the tab: the menu opens there, not at the tab's corner.
+    var menuAt by remember { mutableStateOf<IntOffset?>(null) }
 
     // A flash when the tab is asked for again while open, or opens in the background.
     val glow = remember { Animatable(0f) }
@@ -258,7 +270,10 @@ private fun ScreenTab(
                         val event = awaitPointerEvent()
                         if (event.type != PointerEventType.Press) continue
                         if (event.buttons.isTertiaryPressed) stacks.close(entry.id)
-                        if (event.buttons.isSecondaryPressed) menu = true
+                        if (event.buttons.isSecondaryPressed) {
+                            val at = event.changes.first().position
+                            menuAt = IntOffset(at.x.toInt(), at.y.toInt())
+                        }
                     }
                 }
             }.pointerInput(entry.id) {
@@ -314,7 +329,7 @@ private fun ScreenTab(
                     .background(colors.primary),
             )
         }
-        TabMenu(entry, stacks, expanded = menu, onDismiss = { menu = false })
+        menuAt?.let { at -> TabMenu(entry, stacks, at, onDismiss = { menuAt = null }) }
     }
 }
 
@@ -365,43 +380,90 @@ private fun SymbolIcon(
     Icon(symbol, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (selected) colors.primary else colors.onSurfaceVariant)
 }
 
-/** A tab's right-click menu. */
+/** A tab's right-click menu, opened at [at]: where the click landed in the tab. */
 @Composable
 private fun TabMenu(
     entry: NavStackEntry,
     stacks: TabsModel,
-    expanded: Boolean,
+    at: IntOffset,
     onDismiss: () -> Unit,
 ) {
-    if (!expanded) return
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val canMoveToWindow = NavigationLayoutType.WINDOWS in LocalAppPlatform.current.navigationLayouts
     val link = remember(entry.route) { routeLink(entry.route) }
     val opened = stacks.openedBy(entry.id)
 
-    DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
-        MenuItem(MaterialSymbols.Add, stringRes(Res.string.navigation_tab_duplicate), onDismiss) { stacks.duplicate(entry.id) }
-        MenuItem(MaterialSymbols.PushPin, stringRes(if (stacks.isPinned(entry)) Res.string.navigation_tab_unpin else Res.string.navigation_tab_pin), onDismiss) {
-            stacks.setPinned(entry.id, !stacks.isPinned(entry))
-        }
-        if (link != null) {
-            MenuItem(MaterialSymbols.Link, stringRes(Res.string.navigation_tab_copy_link), onDismiss) { scope.launch { clipboard.setText(link) } }
-        }
-        if (canMoveToWindow) {
-            MenuItem(MaterialSymbols.AutoMirrored.OpenInNew, stringRes(Res.string.navigation_tab_to_window), onDismiss) { stacks.setDetached(entry.id, true) }
-        }
-        HorizontalDivider()
-        MenuItem(MaterialSymbols.Close, stringRes(Res.string.navigation_close_tab), onDismiss) { stacks.close(entry.id) }
-        MenuItem(null, stringRes(Res.string.navigation_tab_close_others), onDismiss) { stacks.closeOthers(entry.id) }
-        MenuItem(null, stringRes(Res.string.navigation_tab_close_right), onDismiss) { stacks.closeToTheRight(entry.id) }
-        if (opened > 0) {
-            MenuItem(null, stringRes(Res.string.navigation_tab_close_opened, opened), onDismiss) { stacks.closeOpenedBy(entry.id) }
-        }
-        if (stacks.canReopen) {
+    // Material's DropdownMenu would open at the tab's corner and keep 48dp off the window's top
+    // edge, which the strip sits on: a long way from the cursor. This opens at the cursor itself.
+    val position = remember(at) { CursorMenuPositionProvider(at) }
+    Popup(popupPositionProvider = position, onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
+        CursorMenuSurface {
+            MenuItem(MaterialSymbols.Add, stringRes(Res.string.navigation_tab_duplicate), onDismiss) { stacks.duplicate(entry.id) }
+            MenuItem(MaterialSymbols.PushPin, stringRes(if (stacks.isPinned(entry)) Res.string.navigation_tab_unpin else Res.string.navigation_tab_pin), onDismiss) {
+                stacks.setPinned(entry.id, !stacks.isPinned(entry))
+            }
+            if (link != null) {
+                MenuItem(MaterialSymbols.Link, stringRes(Res.string.navigation_tab_copy_link), onDismiss) { scope.launch { clipboard.setText(link) } }
+            }
+            if (canMoveToWindow) {
+                MenuItem(MaterialSymbols.AutoMirrored.OpenInNew, stringRes(Res.string.navigation_tab_to_window), onDismiss) { stacks.setDetached(entry.id, true) }
+            }
             HorizontalDivider()
-            MenuItem(MaterialSymbols.History, stringRes(Res.string.navigation_reopen_closed), onDismiss) { stacks.reopenClosed() }
+            MenuItem(MaterialSymbols.Close, stringRes(Res.string.navigation_close_tab), onDismiss) { stacks.close(entry.id) }
+            MenuItem(null, stringRes(Res.string.navigation_tab_close_others), onDismiss) { stacks.closeOthers(entry.id) }
+            MenuItem(null, stringRes(Res.string.navigation_tab_close_right), onDismiss) { stacks.closeToTheRight(entry.id) }
+            if (opened > 0) {
+                MenuItem(null, stringRes(Res.string.navigation_tab_close_opened, opened), onDismiss) { stacks.closeOpenedBy(entry.id) }
+            }
+            if (stacks.canReopen) {
+                HorizontalDivider()
+                MenuItem(MaterialSymbols.History, stringRes(Res.string.navigation_reopen_closed), onDismiss) { stacks.reopenClosed() }
+            }
         }
+    }
+}
+
+/** Material's menu container (its colors, elevation, 112–280dp width and 8dp ends), for a menu in its own Popup. */
+@Composable
+private fun CursorMenuSurface(content: @Composable () -> Unit) {
+    Surface(
+        shape = MenuDefaults.shape,
+        color = MenuDefaults.containerColor,
+        tonalElevation = MenuDefaults.TonalElevation,
+        shadowElevation = MenuDefaults.ShadowElevation,
+    ) {
+        Column(Modifier.widthIn(min = 112.dp, max = 280.dp).width(IntrinsicSize.Max).padding(vertical = 8.dp)) {
+            content()
+        }
+    }
+}
+
+/**
+ * Places a context menu with its corner on the cursor, [at] from the anchor's top-left: below and
+ * after it when it fits, else above or before it, and always inside the window.
+ */
+private class CursorMenuPositionProvider(
+    private val at: IntOffset,
+) : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+    ): IntOffset {
+        val x = anchorBounds.left + at.x
+        val y = anchorBounds.top + at.y
+        val width = popupContentSize.width
+        val height = popupContentSize.height
+        val after = if (layoutDirection == LayoutDirection.Ltr) x else x - width
+        val before = if (layoutDirection == LayoutDirection.Ltr) x - width else x
+        val left = if (after >= 0 && after + width <= windowSize.width) after else before
+        val top = if (y + height <= windowSize.height) y else y - height
+        return IntOffset(
+            left.coerceAtMost(windowSize.width - width).coerceAtLeast(0),
+            top.coerceAtMost(windowSize.height - height).coerceAtLeast(0),
+        )
     }
 }
 
