@@ -443,8 +443,10 @@ class FrontPageViewModel(
         // character and deleting it within the pause must not save the character.
         if (key == null || picked.isEmpty()) return settingsWrite.submit(null)
         viewModelScope.launch { runCatching { printer.memory.set(key.url, picked) } }
-        if (picked == namedModel.value && task.value?.let { ObserverParams.keyChoice(it)?.matches(key) } == true) return settingsWrite.submit(null)
-        settingsWrite.submit {
+        // A pick the schedule already names needs no write, unless an older pick is being written
+        // now: then this one is written after it, so the older one doesn't stay.
+        val needed = !(picked == namedModel.value && task.value?.let { ObserverParams.keyChoice(it)?.matches(key) } == true)
+        settingsWrite.submit(needed = needed) {
             val outcome =
                 try {
                     morning.setSettings(account, picked, key)
@@ -559,26 +561,46 @@ const val SETTINGS_PAUSE_MS = 1_500L
 
 /**
  * A write made once the reader pauses for [pauseMs], on [scope]: each [submit] replaces the one
- * still waiting, a null one included (a pick that needs no write), so only the last pick is ever
- * written. Once it starts, a write runs to its end: neither a newer pick nor a closed screen stops it.
+ * still waiting, a pick that needs no write included, so only the last pick is ever written. Once
+ * it starts, a write runs to its end: neither a newer pick nor a closed screen stops it, and the
+ * next write waits for it.
  */
 class DebouncedWrite(
     private val scope: CoroutineScope,
     private val pauseMs: Long,
 ) {
-    private var job: Job? = null
+    /** The write waiting for the pause (or for [running] to end). */
+    @Volatile
+    private var waiting: Job? = null
+
+    /** The write in progress: never cancelled, so it stays active until it ends. */
+    @Volatile
+    private var running: Job? = null
 
     /** A write is waiting, or running. */
-    val pending: Boolean get() = job?.isActive == true
+    val pending: Boolean get() = waiting?.isActive == true || running?.isActive == true
 
-    fun submit(write: (suspend () -> Unit)?) {
-        job?.cancel()
-        job =
-            write?.let {
-                scope.launch {
-                    delay(pauseMs)
-                    withContext(NonCancellable) { it() }
-                }
+    /** A pick to write ([write]), or one with nothing to write (null). */
+    fun submit(write: (suspend () -> Unit)?) = submit(write != null, write)
+
+    /**
+     * The reader's latest pick: [write] saves it, and [needed] says whether it differs from what
+     * is saved. A pick that needs no write only cancels the one waiting, unless a write is
+     * running: that one saves an older pick, so this one is written after it.
+     */
+    fun submit(
+        needed: Boolean,
+        write: (suspend () -> Unit)?,
+    ) {
+        waiting?.cancel()
+        waiting = null
+        if (write == null) return
+        if (!needed && running?.isActive != true) return
+        waiting =
+            scope.launch {
+                if (needed) delay(pauseMs)
+                running?.join()
+                running = scope.launch { withContext(NonCancellable) { write() } }
             }
     }
 }

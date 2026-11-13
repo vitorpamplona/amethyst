@@ -773,6 +773,8 @@ class FrontPagePrinter(
         if (!slot.tryHold()) return ScheduledOutcome.BUSY
         try {
             val morning = morning ?: return printOccurrence(waitMs, null, null) { true }
+            // "Quit and cancel" while the run waited for the press: nothing claimed, nothing to record.
+            if (slot.isCancelRequested) return ScheduledOutcome.CANCELLED
             // The occurrence the claim won: the claim asks whether its paper exists right before it
             // prints ([FrontPageMorning.runOccurrence]), and the paper is dated by it.
             var due: Long? = null
@@ -785,7 +787,11 @@ class FrontPagePrinter(
                     alreadyPrinted(occurrence, zone)
                 },
                 deadline,
-            ) { budget, keep -> printOccurrence(waitMs, budget, due, keep) }
+            ) { budget, keep ->
+                // Cancelled during the claim and its settle: the claim is this install's, and it
+                // ends CANCELLED (recorded as ended), never printed.
+                if (slot.isCancelRequested) ScheduledOutcome.CANCELLED else printOccurrence(waitMs, budget, due, keep)
+            }
         } finally {
             slot.release()
         }
@@ -1016,11 +1022,23 @@ class PrintSlot(
     @Volatile
     private var current: Job? = null
 
+    /**
+     * Cancel was asked while the slot was held: a scheduled run holds it through its wait, claim,
+     * settle and list reads, when no print is [current] to stop. Cleared when the slot is taken
+     * again.
+     */
+    @Volatile
+    private var cancelAsked = false
+
     /** Whether a print (or a scheduled run on its way to one) holds the slot. */
     val isHeld: Boolean get() = mutex.isLocked
 
+    /** Whether the holder was asked to stop ([cancel]): a scheduled run checks it before it claims and before it prints. */
+    val isCancelRequested: Boolean get() = cancelAsked
+
     fun tryHold(): Boolean {
         if (!mutex.tryLock()) return false
+        cancelAsked = false
         onHeld(true)
         return true
     }
@@ -1039,10 +1057,14 @@ class PrintSlot(
     suspend fun <T> runCancellable(
         cancelled: T,
         body: suspend () -> T,
-    ): T =
-        coroutineScope {
+    ): T {
+        // Asked to stop before the print began: it never begins.
+        if (cancelAsked) return cancelled
+        return coroutineScope {
             val work = async { body() }
             current = work
+            // A cancel that came between the check above and this line: the print stops at once.
+            if (cancelAsked) work.cancel(PrintCancelled())
             try {
                 work.await()
             } catch (e: CancellationException) {
@@ -1051,9 +1073,14 @@ class PrintSlot(
                 if (current === work) current = null
             }
         }
+    }
 
-    /** Stops the print running now, if any. */
+    /**
+     * Stops the print running now, if any, and tells the holder to stop: a scheduled run that
+     * hasn't printed yet ends cancelled instead of claiming or printing.
+     */
     fun cancel() {
+        if (mutex.isLocked) cancelAsked = true
         current?.cancel(PrintCancelled())
     }
 }

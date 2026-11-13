@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.frontpage
 import com.vitorpamplona.quartz.nipFBScheduledTasks.CronExpression
 import com.vitorpamplona.quartz.nipFBScheduledTasks.CronZone
 import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTask
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -82,6 +83,82 @@ class FrontPageStaleViewTest {
             advanceTimeBy(SETTINGS_PAUSE_MS * 2)
             runCurrent()
             assertEquals(listOf("ab"), written)
+        }
+
+    @Test
+    fun aWriteThatIsRunningIsStillPending() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            val write = DebouncedWrite(backgroundScope, SETTINGS_PAUSE_MS)
+            write.submit { gate.await() }
+            advanceTimeBy(SETTINGS_PAUSE_MS + 1)
+            runCurrent()
+            // Running now: a newer pick doesn't stop it, and it is still pending.
+            write.submit(null)
+            assertTrue(write.pending)
+            gate.complete(Unit)
+            runCurrent()
+            assertFalse(write.pending)
+        }
+
+    @Test
+    fun aPickBackDuringARunningWriteIsWrittenAfterIt() =
+        runTest {
+            val written = mutableListOf<String>()
+            val gate = CompletableDeferred<Unit>()
+            val write = DebouncedWrite(backgroundScope, SETTINGS_PAUSE_MS)
+            write.submit {
+                gate.await()
+                written += "b"
+            }
+            advanceTimeBy(SETTINGS_PAUSE_MS + 1)
+            runCurrent()
+            // The reader picks the saved model back while "b" is being written: no write of its
+            // own is needed, but "b" would stay, so "a" is written after it.
+            write.submit(needed = false) { written += "a" }
+            assertTrue(write.pending)
+            gate.complete(Unit)
+            runCurrent()
+            assertEquals(listOf("b", "a"), written)
+            assertFalse(write.pending)
+        }
+
+    @Test
+    fun aPickThatNeedsNoWriteWritesNothingWhenNothingRuns() =
+        runTest {
+            val written = mutableListOf<String>()
+            val write = DebouncedWrite(backgroundScope, SETTINGS_PAUSE_MS)
+            write.submit { written += "x" }
+            write.submit(needed = false) { written += "saved" }
+            assertFalse(write.pending)
+            advanceTimeBy(SETTINGS_PAUSE_MS * 2)
+            runCurrent()
+            assertEquals(emptyList(), written)
+        }
+
+    @Test
+    fun aCancelBeforeThePrintStartsEndsItCancelled() =
+        runTest {
+            val slot = PrintSlot()
+            assertTrue(slot.tryHold())
+            // A scheduled run holds the press through its claim; no print is running yet.
+            slot.cancel()
+            assertTrue(slot.isCancelRequested)
+            var printed = false
+            val ended = slot.runCancellable("cancelled") { "printed".also { printed = true } }
+            assertEquals("cancelled", ended)
+            assertFalse(printed)
+            slot.release()
+            // The next holder starts clean.
+            assertTrue(slot.tryHold())
+            assertFalse(slot.isCancelRequested)
+            assertEquals("printed", slot.runCancellable("cancelled") { "printed" })
+            slot.release()
+            // A cancel with nobody holding the press leaves nothing behind.
+            slot.cancel()
+            assertTrue(slot.tryHold())
+            assertFalse(slot.isCancelRequested)
+            slot.release()
         }
 
     @Test

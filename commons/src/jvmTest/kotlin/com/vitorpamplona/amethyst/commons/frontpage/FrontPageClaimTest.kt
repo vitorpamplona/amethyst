@@ -190,6 +190,27 @@ class FrontPageClaimTest {
         }
 
     @Test
+    fun aSettlementFailureIsAnEndedRunNeverRetried() =
+        runTest {
+            // A Routstr node's 503 payment_settlement_failed: it charged and withheld the page.
+            val settlement = scheduledOutcomeOf(FrontPageRun.Failed(WriterFailure.SETTLEMENT_FAILED, 503))
+            assertEquals(ScheduledOutcome.FAILED, settlement)
+            val clock = clock()
+            val relays = Relays(daily, clock)
+            val installs = MemoryInstalls()
+            var prints = 0
+            val charged: suspend (Long?, suspend () -> Boolean) -> ScheduledOutcome = { _, _ ->
+                prints++
+                settlement
+            }
+            assertEquals(ScheduledOutcome.FAILED, morning(clock, installs).claimRun(relays, "desk", "Desktop (Linux)", alreadyDone = { _, _ -> false }, print = charged))
+            assertEquals(OwnRunRecord(six, ScheduledOutcome.FAILED), installs.runs["desk"])
+            // Every later launch that morning sees an ended run: it is never paid for again.
+            assertEquals(ScheduledOutcome.ALREADY_ATTEMPTED, morning(clock, installs).claimRun(relays, "desk", "Desktop (Linux)", alreadyDone = { _, _ -> false }, print = charged))
+            assertEquals(1, prints)
+        }
+
+    @Test
     fun withNoRecordItsOwnClaimWaitsTheHourLikeAnyonesInstead() =
         runTest {
             val clock = clock()
