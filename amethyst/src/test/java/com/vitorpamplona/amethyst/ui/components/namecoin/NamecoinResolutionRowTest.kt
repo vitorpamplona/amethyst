@@ -275,4 +275,32 @@ class NamecoinResolutionRowTest {
             ),
         )
     }
+
+    @Test
+    fun `a reference that loops or reaches too far is reported as such`() {
+        assertEquals(
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.ReferenceLoop("d/a", listOf("d/a", "d/b", "d/a"))),
+            mapOutcomeToResolveState(NamecoinResolveOutcome.CyclicReference("d/a", listOf("d/a", "d/b", "d/a"))),
+        )
+        assertEquals(
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.TooManyLookups("d/a", 8)),
+            mapOutcomeToResolveState(NamecoinResolveOutcome.LookupBudgetExhausted("d/a", 8)),
+        )
+        assertEquals(
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.TooDeep("d/a", 4)),
+            mapOutcomeToResolveState(NamecoinResolveOutcome.DepthLimitExceeded("d/a", 4)),
+        )
+    }
+
+    @Test
+    fun `a failed import or delegation reports what failed underneath it`() {
+        assertSame(
+            NamecoinResolveState.NotFound,
+            mapOutcomeToResolveState(NamecoinResolveOutcome.ImportFailed("d/a", "d/b", NamecoinResolveOutcome.NameNotFound("d/b"))),
+        )
+        assertEquals(
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.Timeout),
+            mapOutcomeToResolveState(NamecoinResolveOutcome.DelegationFailed("d/a", "d/b", NamecoinResolveOutcome.Timeout)),
+        )
+    }
 }

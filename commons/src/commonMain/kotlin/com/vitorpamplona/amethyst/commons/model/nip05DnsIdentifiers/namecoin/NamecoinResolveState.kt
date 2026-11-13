@@ -50,6 +50,24 @@ sealed class NamecoinResolveState {
             val detail: String,
         ) : Reason
 
+        /** The record's imports or delegations come back to a name already being resolved: [path], in order. */
+        data class ReferenceLoop(
+            val name: String,
+            val path: List<String>,
+        ) : Reason
+
+        /** Resolving the record needed more than [limit] blockchain lookups. */
+        data class TooManyLookups(
+            val name: String,
+            val limit: Int,
+        ) : Reason
+
+        /** The record's imports and delegations nest deeper than [limit]. */
+        data class TooDeep(
+            val name: String,
+            val limit: Int,
+        ) : Reason
+
         data object ServersUnreachable : Reason
 
         data object InvalidIdentifier : Reason

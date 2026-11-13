@@ -9047,6 +9047,15 @@
     <string name="namecoin_resolution_malformed_record">%1$s record is malformed: %2$s</string>
     <string name="namecoin_resolution_servers_unreachable">ElectrumX servers unreachable — check your connection or try again</string>
     <string name="namecoin_resolution_invalid_identifier">Invalid Namecoin identifier</string>
+    <string name="namecoin_resolution_reference_loop">%1$s refers back to itself: %2$s</string>
+    <plurals name="namecoin_resolution_too_many_lookups">
+        <item quantity="one">%1$s needs more than %2$d lookup to resolve</item>
+        <item quantity="other">%1$s needs more than %2$d lookups to resolve</item>
+    </plurals>
+    <plurals name="namecoin_resolution_too_deep">
+        <item quantity="one">%1$s nests its references deeper than %2$d level</item>
+        <item quantity="other">%1$s nests its references deeper than %2$d levels</item>
+    </plurals>
     <string name="namecoin_resolution_timeout">Resolution timed out — servers may be slow, try again</string>
     <string name="namecoin_resolution_unknown_error">Unknown error</string>
     <string name="chess_sync_tap_to_retry">Tap to retry</string>

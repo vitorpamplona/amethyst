@@ -175,6 +175,36 @@ object NamecoinCommand {
                     outcome.error,
                     extra = mapOf("namecoin_name" to outcome.name),
                 )
+            is NamecoinResolveOutcome.ImportFailed ->
+                Output.error(
+                    "import_failed",
+                    "Namecoin name ${outcome.name} imports ${outcome.target}, which did not resolve",
+                    extra = mapOf("namecoin_name" to outcome.name, "target" to outcome.target, "cause" to (outcome.cause::class.simpleName ?: "")),
+                )
+            is NamecoinResolveOutcome.DelegationFailed ->
+                Output.error(
+                    "delegation_failed",
+                    "Namecoin name ${outcome.name} delegates to ${outcome.target}, which did not resolve",
+                    extra = mapOf("namecoin_name" to outcome.name, "target" to outcome.target, "cause" to (outcome.cause::class.simpleName ?: "")),
+                )
+            is NamecoinResolveOutcome.CyclicReference ->
+                Output.error(
+                    "cyclic_reference",
+                    "Namecoin name ${outcome.name} refers back to itself: ${outcome.path.joinToString(" -> ")}",
+                    extra = mapOf("namecoin_name" to outcome.name, "path" to outcome.path),
+                )
+            is NamecoinResolveOutcome.LookupBudgetExhausted ->
+                Output.error(
+                    "lookup_budget_exhausted",
+                    "Namecoin name ${outcome.name} needed more than ${outcome.limit} lookups",
+                    extra = mapOf("namecoin_name" to outcome.name, "limit" to outcome.limit),
+                )
+            is NamecoinResolveOutcome.DepthLimitExceeded ->
+                Output.error(
+                    "depth_limit_exceeded",
+                    "Namecoin name ${outcome.name} nests deeper than ${outcome.limit}",
+                    extra = mapOf("namecoin_name" to outcome.name, "limit" to outcome.limit),
+                )
             is NamecoinResolveOutcome.ServersUnreachable ->
                 Output.error("servers_unreachable", outcome.message)
             is NamecoinResolveOutcome.InvalidIdentifier ->

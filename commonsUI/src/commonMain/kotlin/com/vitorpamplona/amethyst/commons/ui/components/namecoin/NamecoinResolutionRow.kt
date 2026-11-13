@@ -57,15 +57,19 @@ import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_malforme
 import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_malformed_record
 import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_no_nostr_field
 import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_no_record
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_reference_loop
 import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_resolving
 import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_servers_unreachable
 import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_timeout
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_too_deep
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_too_many_lookups
 import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_unknown_error
 import com.vitorpamplona.amethyst.commons.search.SearchSegment
 import com.vitorpamplona.amethyst.commons.search.SearchTokenizer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
@@ -105,6 +109,21 @@ fun mapOutcomeToResolveState(outcome: NamecoinResolveOutcome): NamecoinResolveSt
             // (kotlinx.serialization includes a column number).
             NamecoinResolveState.Error(NamecoinResolveState.Reason.MalformedRecord(outcome.name, outcome.error))
 
+        // An import or delegation that failed is reported as what failed underneath it.
+        is NamecoinResolveOutcome.ImportFailed -> referenceFailed(outcome.name, outcome.target, outcome.cause)
+
+        is NamecoinResolveOutcome.DelegationFailed -> referenceFailed(outcome.name, outcome.target, outcome.cause)
+
+        // A record whose references loop, or reach too far, can't be resolved.
+        is NamecoinResolveOutcome.CyclicReference ->
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.ReferenceLoop(outcome.name, outcome.path))
+
+        is NamecoinResolveOutcome.LookupBudgetExhausted ->
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.TooManyLookups(outcome.name, outcome.limit))
+
+        is NamecoinResolveOutcome.DepthLimitExceeded ->
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.TooDeep(outcome.name, outcome.limit))
+
         is NamecoinResolveOutcome.ServersUnreachable ->
             NamecoinResolveState.Error(NamecoinResolveState.Reason.ServersUnreachable)
 
@@ -115,11 +134,26 @@ fun mapOutcomeToResolveState(outcome: NamecoinResolveOutcome): NamecoinResolveSt
             NamecoinResolveState.Error(NamecoinResolveState.Reason.Timeout)
     }
 
+/** An import or delegation of [target] by [name] that failed: reported as what failed underneath it. */
+private fun referenceFailed(
+    name: String,
+    target: String,
+    cause: NamecoinResolveOutcome,
+): NamecoinResolveState =
+    if (cause is NamecoinResolveOutcome.Success) {
+        NamecoinResolveState.Error(NamecoinResolveState.Reason.Other(null))
+    } else {
+        mapOutcomeToResolveState(cause)
+    }
+
 @Composable
 private fun NamecoinResolveState.Reason.text(): String =
     when (this) {
         is NamecoinResolveState.Reason.NoNostrField -> stringRes(Res.string.namecoin_resolution_no_nostr_field, name)
         is NamecoinResolveState.Reason.MalformedRecord -> stringRes(Res.string.namecoin_resolution_malformed_record, name, detail)
+        is NamecoinResolveState.Reason.ReferenceLoop -> stringRes(Res.string.namecoin_resolution_reference_loop, name, path.joinToString(" → "))
+        is NamecoinResolveState.Reason.TooManyLookups -> pluralStringRes(Res.plurals.namecoin_resolution_too_many_lookups, limit, name, limit)
+        is NamecoinResolveState.Reason.TooDeep -> pluralStringRes(Res.plurals.namecoin_resolution_too_deep, limit, name, limit)
         NamecoinResolveState.Reason.ServersUnreachable -> stringRes(Res.string.namecoin_resolution_servers_unreachable)
         NamecoinResolveState.Reason.InvalidIdentifier -> stringRes(Res.string.namecoin_resolution_invalid_identifier)
         NamecoinResolveState.Reason.Timeout -> stringRes(Res.string.namecoin_resolution_timeout)
