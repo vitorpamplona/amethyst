@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.commons.routstr
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.agents.AgentProviderPresets
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -33,10 +35,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -94,13 +98,18 @@ sealed interface RoutstrPurchaseOutcome {
 
     data object ToppedUp : RoutstrPurchaseOutcome
 
-    /** The invoice expired unpaid: dropped a day later (nodes settle late ones), or now when the user gave up. */
+    /**
+     * The invoice expired unpaid, as far as the node says now. Not final: nodes settle a late
+     * payment for a day, so it is kept and checked until then, then dropped.
+     */
     data object Expired : RoutstrPurchaseOutcome
 
     /**
      * The node didn't take the Cashu token, or its answer was lost. [token] is the user's to send
      * again (the same token returns the same key) or copy; null when it went back to the wallet.
-     * It is held only here, in memory, never stored.
+     * It is held only here, in memory, never stored: a lost answer leaves a record holding the
+     * key the token would make instead ([RoutstrStage.CASHU_SENT]), which is checked until the
+     * node says.
      */
     class TokenNotTaken(
         val error: RoutstrError,
@@ -154,14 +163,31 @@ class RoutstrPurchases(
     private val torEnabled: () -> Boolean = { false },
     private val now: () -> Long = { TimeUtils.now() },
     private val newId: () -> String = { Uuid.random().toString() },
+    /** How often an invoice on screen is checked. */
     private val pollMs: Long = POLL_MS,
+    /** How often an invoice no screen shows is checked. */
+    private val idleMs: Long = IDLE_MS,
+    /** The first wait after a paid invoice without a key, or a node out of reach; doubled each time up to [maxBackoffMs]. */
     private val recoverMs: Long = RECOVER_MS,
+    private val maxBackoffMs: Long = MAX_BACKOFF_MS,
 ) {
     private val mutex = Mutex()
 
     /** One step at a time, so the launch's follow and the screen's tap never save the same key twice. */
     private val steps = Mutex()
     private var loaded = false
+
+    /** The ids of the invoices a screen shows now: those are checked every [pollMs], the rest every [idleMs]. */
+    private val shown = MutableStateFlow<Set<String>>(emptySet())
+
+    /** A screen shows invoice [id] ([on]), or stopped showing it. */
+    fun setShown(
+        id: String,
+        on: Boolean,
+    ) {
+        shown.update { if (on) it + id else it - id }
+    }
+
     private val _pending = MutableStateFlow<List<RoutstrPendingPurchase>>(emptyList())
 
     /** What is on its way, as this device holds it. */
@@ -190,27 +216,54 @@ class RoutstrPurchases(
             _pending.value
         }
 
-    private suspend fun ensureLoaded() {
-        if (loaded) return
-        _pending.value =
+    /**
+     * Reads the list once. When it can't be read it stays unloaded: nothing is written over it
+     * (the store set it aside), and it is read again next time. What this run added in the
+     * meantime is kept in memory and joined to the list once it reads.
+     */
+    private suspend fun ensureLoaded(): Boolean {
+        if (loaded) return true
+        val read =
             try {
                 store.load(account)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "Couldn't read the pending Routstr purchases", e)
-                emptyList()
+                Log.w(TAG, "Couldn't read the pending Routstr purchases; nothing is written until they read", e)
+                return false
             }
+        val held = _pending.value.filter { mine -> read.none { it.id == mine.id } }
+        _pending.value = read + held
         loaded = true
+        return true
     }
 
-    /** Changes the list here and on disk; the change stays here even if the disk refuses it, and that is rethrown. */
+    /**
+     * Changes the list here and on disk; the change stays here even if the disk refuses it, and
+     * that is rethrown. A list that couldn't be read is never written over
+     * ([RoutstrStoreUnreadableException]).
+     */
     private suspend fun write(change: (List<RoutstrPendingPurchase>) -> List<RoutstrPendingPurchase>) {
         mutex.withLock {
-            ensureLoaded()
+            val readable = ensureLoaded()
             val next = change(_pending.value)
             _pending.value = next
+            if (!readable) throw RoutstrStoreUnreadableException()
             store.save(account, next)
+        }
+    }
+
+    /** Changes the list in memory only: for a counter, which isn't worth a write. */
+    private suspend fun touch(change: (List<RoutstrPendingPurchase>) -> List<RoutstrPendingPurchase>) {
+        mutex.withLock { _pending.update(change) }
+    }
+
+    /** A paid invoice without a key yet: written when it becomes paid, counted in memory after that. */
+    private suspend fun stillPaid(p: RoutstrPendingPurchase) {
+        if (p.stage == RoutstrStage.PAID) {
+            touch { list -> list.map { if (it.id == p.id) it.copy(recoverAttempts = it.recoverAttempts + 1) else it } }
+        } else {
+            replace(p.copy(stage = RoutstrStage.PAID, recoverAttempts = p.recoverAttempts + 1))
         }
     }
 
@@ -285,6 +338,12 @@ class RoutstrPurchases(
         return now() > expiry + LATE_SETTLEMENT_SECONDS
     }
 
+    /** This app is about to ask its wallet to pay [id]'s invoice: kept before the request goes, so Pay is never offered twice. */
+    suspend fun markPayRequested(id: String) {
+        val p = get(id) ?: return
+        if (!p.walletPayRequested) replace(p.copy(walletPayRequested = true))
+    }
+
     /** This app's wallet paid [id]'s invoice: from now on it is never dropped, only recovered. */
     suspend fun markWalletPaid(id: String) {
         val p = get(id) ?: return
@@ -312,7 +371,7 @@ class RoutstrPurchases(
         if (status != null && status.isPaid) return paid(p, status)
         if (status != null && status.isSettling) {
             // The money reached the node: kept as paid until the key comes.
-            replace(p.copy(stage = RoutstrStage.PAID, recoverAttempts = p.recoverAttempts + 1))
+            stillPaid(p)
             return RoutstrPurchaseOutcome.PaidNoKeyYet
         }
         if (p.stage == RoutstrStage.PAID || p.walletPaid) {
@@ -327,7 +386,7 @@ class RoutstrPurchases(
                     }
                 }
             if (recovered != null) return paid(p, recovered)
-            replace(p.copy(stage = RoutstrStage.PAID, recoverAttempts = p.recoverAttempts + 1))
+            stillPaid(p)
             return RoutstrPurchaseOutcome.PaidNoKeyYet
         }
         if (droppable(p)) {
@@ -356,7 +415,7 @@ class RoutstrPurchases(
                 }
         }
         if (key == null) {
-            replace(p.copy(stage = RoutstrStage.PAID, recoverAttempts = p.recoverAttempts + 1))
+            stillPaid(p)
             return RoutstrPurchaseOutcome.PaidNoKeyYet
         }
         val held = p.copy(stage = RoutstrStage.KEY_UNSAVED, apiKey = key)
@@ -384,9 +443,11 @@ class RoutstrPurchases(
 
     /**
      * Pays the node at [target] with a Cashu [token]: a new key, or a top-up of [topupKey]. The
-     * token is never stored: a Cashu-made key is `sk-` + sha256(token), so after a lost answer
-     * the same token, sent again, returns the same key ([RoutstrPurchaseOutcome.TokenNotTaken]
-     * hands it back for that). Change, on either call, goes to the wallet.
+     * token is never stored. A new key is `sk-` + sha256(token), so before the token goes, a
+     * record holding that key is kept ([RoutstrStage.CASHU_SENT]); after a lost answer
+     * `/v1/balance/info` with it tells whether the node made the key, now or on a later launch.
+     * The token is also handed back ([RoutstrPurchaseOutcome.TokenNotTaken]) to send again (the
+     * same token returns the same key) or copy. Change, on either call, goes to the wallet.
      */
     suspend fun buyWithCashu(
         target: RoutstrTarget,
@@ -397,14 +458,15 @@ class RoutstrPurchases(
         val trimmed = token.trim()
         require(isCashuToken(trimmed)) { "not a Cashu token" }
         require(purpose == RoutstrPurpose.CREATE || topupKey != null) { "a top-up needs its key" }
-        val id = "cashu-" + newId()
+        val id = cashuId(trimmed, purpose)
         return steps.withLock { record(id, spendToken(id, target, trimmed, purpose, topupKey)) }
     }
 
     /**
      * [buyWithCashu] with a token of [amountSats] taken from the wallet's proofs at [mint]. A
-     * token no node took goes back to the wallet; if the wallet won't take it either, it is in
-     * the [RoutstrPurchaseOutcome.TokenNotTaken] to send again or copy.
+     * token the node refused, or never got, goes back to the wallet: the mint decides, since it
+     * takes the proofs back only if the node didn't spend them. If the wallet won't take it
+     * either, it is in the [RoutstrPurchaseOutcome.TokenNotTaken] to send again or copy.
      */
     suspend fun buyFromWallet(
         target: RoutstrTarget,
@@ -415,10 +477,12 @@ class RoutstrPurchases(
     ): RoutstrPurchaseOutcome {
         val cashu = wallet() ?: throw IllegalStateException("No Cashu wallet")
         val token = cashu.mintToken(mint, amountSats)
+        val id = cashuId(token, purpose)
         val outcome = buyWithCashu(target, token, purpose, topupKey)
-        if (outcome is RoutstrPurchaseOutcome.TokenNotTaken && outcome.error.failure != RoutstrFailure.UNREACHABLE && giveToWallet(token)) {
-            // Refused for sure (not lost on the way): the money is back where it was.
-            return RoutstrPurchaseOutcome.TokenNotTaken(outcome.error, token = null)
+        if (outcome is RoutstrPurchaseOutcome.TokenNotTaken && outcome.token != null && giveToWallet(token)) {
+            // The mint took the proofs back, so the node can't have spent them: nothing was bought.
+            if (get(id)?.stage == RoutstrStage.CASHU_SENT) remove(id)
+            return record(id, RoutstrPurchaseOutcome.TokenNotTaken(outcome.error, token = null))
         }
         return outcome
     }
@@ -431,34 +495,88 @@ class RoutstrPurchases(
         topupKey: AgentKeyTag?,
     ): RoutstrPurchaseOutcome {
         val base = target.callBase(torEnabled())
-        val result =
-            try {
-                if (purpose == RoutstrPurpose.TOPUP) {
-                    api.topupWithCashu(base, topupKey?.key ?: return RoutstrPurchaseOutcome.Gone, token)
-                } else {
-                    api.createWithCashu(base, token)
+        if (purpose == RoutstrPurpose.TOPUP) {
+            val key = topupKey?.key ?: return RoutstrPurchaseOutcome.Gone
+            val result =
+                try {
+                    api.topupWithCashu(base, key, token)
+                } catch (e: RoutstrException) {
+                    return RoutstrPurchaseOutcome.TokenNotTaken(e.error, token)
                 }
-            } catch (e: RoutstrException) {
-                return RoutstrPurchaseOutcome.TokenNotTaken(e.error, token)
-            }
-        // The token is spent now: whatever comes next, it is not offered again.
-        handleChange(target, purpose, result)
-        if (purpose == RoutstrPurpose.TOPUP) return RoutstrPurchaseOutcome.ToppedUp
-        val key = result.apiKey ?: return RoutstrPurchaseOutcome.Failed(RoutstrError(200, RoutstrFailure.UNEXPECTED))
-        val held =
+            handleChange(target, purpose, result)
+            return RoutstrPurchaseOutcome.ToppedUp
+        }
+
+        val sent =
             RoutstrPendingPurchase(
                 id = id,
                 payment = RoutstrPayment.CASHU,
                 purpose = purpose,
-                stage = RoutstrStage.KEY_UNSAVED,
+                stage = RoutstrStage.CASHU_SENT,
                 nodeRoot = RoutstrNodes.root(target.root),
                 onionRoot = RoutstrNodes.onionRoot(target.onionRoot),
                 nodeName = target.name,
-                amountSats = result.balanceMsats?.let { it / 1000 } ?: 0,
+                amountSats = 0,
                 createdAt = now(),
-                apiKey = key,
+                apiKey = cashuKey(token),
             )
-        keep { it + held }
+        try {
+            write { list -> list.filterNot { it.id == id } + sent }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Not kept, so not sent: a token nobody sent costs nothing.
+            Log.w(TAG, "Couldn't keep the Cashu purchase on this device; the token wasn't sent", e)
+            touch { list -> list.filterNot { it.id == id } }
+            return RoutstrPurchaseOutcome.TokenNotTaken(RoutstrError(null, RoutstrFailure.UNEXPECTED), token)
+        }
+
+        val result =
+            try {
+                api.createWithCashu(base, token)
+            } catch (e: RoutstrException) {
+                if (!isAmbiguous(e)) {
+                    // The node answered that it didn't take it.
+                    remove(id)
+                    return RoutstrPurchaseOutcome.TokenNotTaken(e.error, token)
+                }
+                // The answer was lost: the key the token makes says whether the node took it.
+                return when (val probed = probeCashu(sent)) {
+                    is RoutstrPurchaseOutcome.KeySaved, RoutstrPurchaseOutcome.KeyNotSaved -> probed
+                    else -> RoutstrPurchaseOutcome.TokenNotTaken(e.error, token)
+                }
+            }
+        // The token is spent now: whatever comes next, it is not offered again.
+        handleChange(target, purpose, result)
+        val key = result.apiKey ?: sent.apiKey
+        val held = sent.copy(stage = RoutstrStage.KEY_UNSAVED, apiKey = key, amountSats = result.balanceMsats?.let { it / 1000 } ?: 0)
+        replace(held)
+        return saveHeldKey(held)
+    }
+
+    /** No answer, or the node's side failed (5xx): the token may or may not have been taken. */
+    private fun isAmbiguous(e: RoutstrException): Boolean = e.failure == RoutstrFailure.UNREACHABLE || (e.error.status ?: 0) >= 500
+
+    /**
+     * Asks the node whether a [RoutstrStage.CASHU_SENT] token made its key: a balance means it
+     * did, and the key is saved. A key the node doesn't know means it didn't: the record goes once
+     * it is [CASHU_PROBE_WINDOW_SECONDS] old (a slow node may still be making it). No answer: kept.
+     */
+    private suspend fun probeCashu(p: RoutstrPendingPurchase): RoutstrPurchaseOutcome {
+        val key = p.apiKey ?: return RoutstrPurchaseOutcome.Gone
+        val balance =
+            try {
+                api.balance(p.callBase(torEnabled()), key)
+            } catch (e: RoutstrException) {
+                val unknownKey = e.failure == RoutstrFailure.KEY_NOT_FOUND || e.failure == RoutstrFailure.INVALID_KEY
+                if (unknownKey && now() - p.createdAt >= CASHU_PROBE_WINDOW_SECONDS) {
+                    remove(p.id)
+                    return RoutstrPurchaseOutcome.Gone
+                }
+                return RoutstrPurchaseOutcome.Failed(e.error)
+            }
+        val held = p.copy(stage = RoutstrStage.KEY_UNSAVED, amountSats = balance.balanceSats)
+        replace(held)
         return saveHeldKey(held)
     }
 
@@ -518,32 +636,55 @@ class RoutstrPurchases(
             RoutstrStage.AWAITING_PAYMENT, RoutstrStage.PAID -> checkInvoice(p)
             RoutstrStage.KEY_UNSAVED -> saveHeldKey(p)
             RoutstrStage.CHANGE_UNCLAIMED -> claimChange(p)
+            RoutstrStage.CASHU_SENT -> probeCashu(p)
         }
     }
 
     /**
-     * [check]s purchase [id] until it settles: every [pollMs] while the invoice waits, every
-     * [recoverMs] while a paid one has no key (or the node can't be reached). Stops when it is
-     * done, needs the user (a key not saved, a token not taken, change unclaimed), or an unpaid
-     * invoice is past its expiry with the node out of reach: it stays kept, and the next launch
-     * checks it again.
+     * [check]s purchase [id] until it settles: every [pollMs] while a screen shows the invoice
+     * and every [idleMs] while none does; a paid one without a key, a node out of reach, an
+     * expired or cancelled invoice that may still settle, and a Cashu answer that was lost back
+     * off from [recoverMs], doubling up to [maxBackoffMs]. Stops when it is done, needs the user
+     * (a key not saved, a token not taken, change unclaimed), or an unpaid invoice is past its
+     * late-settlement day with the node out of reach: it stays kept, and the next launch checks
+     * it again.
      */
     suspend fun watch(id: String): RoutstrPurchaseOutcome {
+        var quiet = 0
         while (true) {
             val outcome = check(id)
             when (outcome) {
-                RoutstrPurchaseOutcome.Waiting -> delay(pollMs)
-                RoutstrPurchaseOutcome.PaidNoKeyYet -> delay(recoverMs)
+                RoutstrPurchaseOutcome.Waiting -> {
+                    quiet = 0
+                    if (get(id)?.hiddenByUser == true) delay(backoff(quiet++)) else pause(id)
+                }
+                RoutstrPurchaseOutcome.PaidNoKeyYet -> delay(backoff((get(id)?.recoverAttempts ?: 1) - 1))
                 // Past its expiry and still kept: a late settlement may still come, for a day.
-                RoutstrPurchaseOutcome.Expired -> if (get(id) == null) return outcome else delay(recoverMs)
+                RoutstrPurchaseOutcome.Expired -> if (get(id) == null) return outcome else delay(backoff(quiet++))
                 is RoutstrPurchaseOutcome.Failed -> {
                     val p = get(id) ?: return outcome
                     if (p.stage == RoutstrStage.AWAITING_PAYMENT && !p.walletPaid && p.expiresAt != null && now() > p.expiresAt + LATE_SETTLEMENT_SECONDS) return outcome
-                    if (p.stage != RoutstrStage.AWAITING_PAYMENT && p.stage != RoutstrStage.PAID) return outcome
-                    delay(recoverMs)
+                    if (p.stage != RoutstrStage.AWAITING_PAYMENT && p.stage != RoutstrStage.PAID && p.stage != RoutstrStage.CASHU_SENT) return outcome
+                    delay(backoff(quiet++))
                 }
                 else -> return outcome
             }
+        }
+    }
+
+    /** The wait after [attempt] tries that changed nothing: [recoverMs], doubled each time, at most [maxBackoffMs]. */
+    private fun backoff(attempt: Int): Long {
+        var ms = recoverMs
+        repeat(attempt.coerceIn(0, 30)) { ms = (ms * 2).coerceAtMost(maxBackoffMs) }
+        return ms.coerceAtMost(maxBackoffMs)
+    }
+
+    /** Waits [pollMs] while a screen shows [id], else up to [idleMs]: cut short when a screen opens it. */
+    private suspend fun pause(id: String) {
+        if (id in shown.value) {
+            delay(pollMs)
+        } else {
+            withTimeoutOrNull(idleMs) { shown.first { id in it } }
         }
     }
 
@@ -565,26 +706,16 @@ class RoutstrPurchases(
     }
 
     /**
-     * Drops an unpaid invoice the user gave up on, after asking the node: one it says is paid is
-     * kept (and followed). True when it was dropped.
+     * Hides an unpaid invoice the user gave up on. It isn't dropped: it may still be paid from
+     * another wallet, and nodes settle late payments for a day, so it is kept and checked slowly
+     * until a day past its expiry, like any unpaid invoice. One this app's wallet was asked to pay
+     * is never hidden. True when it was hidden.
      */
     suspend fun abandon(id: String): Boolean {
         val p = get(id) ?: return true
-        if (p.stage != RoutstrStage.AWAITING_PAYMENT || p.walletPaid) return false
-        return when (steps.withLock { checkInvoice(p) }) {
-            RoutstrPurchaseOutcome.Waiting -> {
-                watching.value[id]?.cancel()
-                remove(id)
-                true
-            }
-            // Expired and not paid: the user gave up on it, so it goes now rather than in a day.
-            RoutstrPurchaseOutcome.Expired -> {
-                watching.value[id]?.cancel()
-                remove(id)
-                true
-            }
-            else -> false
-        }
+        if (p.stage != RoutstrStage.AWAITING_PAYMENT || p.walletPaid || p.walletPayRequested) return false
+        if (!p.hiddenByUser) replace(p.copy(hiddenByUser = true))
+        return true
     }
 
     /** Forgets unclaimed change the user copied out themselves. Never a key or a paid invoice. */
@@ -598,13 +729,27 @@ class RoutstrPurchases(
     companion object {
         private const val TAG = "RoutstrPurchases"
         const val POLL_MS = 3_000L
+        const val IDLE_MS = 60_000L
         const val RECOVER_MS = 30_000L
+        const val MAX_BACKOFF_MS = 60 * 60_000L
+
+        /** A key a sent Cashu token would make, unknown to the node for this long, was never made. */
+        const val CASHU_PROBE_WINDOW_SECONDS = 60 * 60L
 
         /** Nodes keep settling an expired invoice for this long (routstr-core): only then is an unpaid one dropped. */
         const val LATE_SETTLEMENT_SECONDS = 24 * 60 * 60L
 
         /** An invoice that names no expiry is taken to last an hour. */
         const val DEFAULT_INVOICE_LIFETIME_SECONDS = 60 * 60L
+
+        /** The key a node makes from a Cashu [token]: `sk-` + its sha256, as routstr-core does. */
+        fun cashuKey(token: String): String = "sk-" + sha256(token.trim().encodeToByteArray()).toHexKey()
+
+        /** One id per token, so sending the same token again finds the same record; never the key itself. */
+        private fun cashuId(
+            token: String,
+            purpose: RoutstrPurpose,
+        ): String = "cashu-" + purpose.wire + "-" + sha256(("id:" + cashuKey(token)).encodeToByteArray()).toHexKey().take(16)
 
         fun isCashuToken(text: String): Boolean {
             val t = text.trim()

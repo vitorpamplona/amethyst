@@ -9792,13 +9792,16 @@
     <string name="routstr_pay_with_wallet">Pay with your wallet</string>
     <string name="routstr_paying">Paying…</string>
     <string name="routstr_paid_by_wallet">Your wallet paid. Waiting for the node…</string>
+    <string name="routstr_check_payment">Check payment</string>
+    <string name="routstr_pay_no_answer">Your wallet didn't answer in time. It may still pay, so Pay isn't offered again: check the payment instead.</string>
+    <string name="routstr_pay_requested">Your wallet was asked to pay. Waiting for the node…</string>
     <string name="routstr_pay_failed">Your wallet didn't pay: %1$s</string>
     <string name="routstr_open_wallet">Open in wallet</string>
     <string name="routstr_copy_invoice">Copy invoice</string>
     <string name="routstr_waiting_payment">Waiting for the payment…</string>
     <string name="routstr_key_saved">Your key is saved. The Observer can print with it.</string>
     <string name="routstr_topped_up">Topped up.</string>
-    <string name="routstr_expired">The invoice expired before it was paid. Nothing was spent.</string>
+    <string name="routstr_expired">This invoice expired. If you paid it from another wallet, it may still settle: we'll keep checking.</string>
     <string name="routstr_paid_no_key">Paid. Waiting for the node to hand over the key…</string>
     <string name="routstr_key_not_saved">Your key was bought but not saved yet.</string>
     <string name="routstr_show_key">Show key</string>
@@ -9835,6 +9838,7 @@
     </plurals>
     <string name="routstr_pending_paid">Paid at %1$s: waiting for the key</string>
     <string name="routstr_pending_key">A key from %1$s was bought but not saved yet</string>
+    <string name="routstr_pending_cashu">A Cashu payment to %1$s got no answer: checking whether it made a key</string>
     <string name="routstr_show_invoice">Show</string>
     <string name="routstr_card_use">Use for The Observer</string>
     <string name="routstr_done">Done</string>

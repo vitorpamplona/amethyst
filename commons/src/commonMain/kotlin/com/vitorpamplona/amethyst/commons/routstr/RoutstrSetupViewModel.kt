@@ -26,21 +26,25 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.frontpage.DEFAULT_DIGEST_BUDGET
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditKind
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditState
+import com.vitorpamplona.amethyst.commons.napplet.gateways.WalletNoAnswerException
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** The node list as the picker draws it. */
 @Immutable
@@ -112,14 +116,23 @@ sealed interface RoutstrBuyUi {
     /** Asking the node for an invoice, or sending a Cashu token. */
     data object Working : RoutstrBuyUi
 
-    /** The invoice to pay: [paying] while the app's wallet pays it; [payError] when it didn't. */
+    /**
+     * The invoice to pay: [paying] while the app's wallet pays it; [payError] when it said it
+     * didn't; [payNoAnswer] when it didn't answer in time and may still pay. Once the wallet was
+     * asked ([payRequested]) Pay is never offered again for this invoice: "Check payment" is.
+     */
     data class Invoice(
         val purchase: RoutstrPendingPurchase,
         val paying: Boolean = false,
         val payError: String? = null,
-        val paidByWallet: Boolean = false,
+        val paidByWallet: Boolean = purchase.walletPaid,
+        val payRequested: Boolean = purchase.walletPayRequested,
+        val payNoAnswer: Boolean = false,
         val outcome: RoutstrPurchaseOutcome? = null,
-    ) : RoutstrBuyUi
+    ) : RoutstrBuyUi {
+        /** Whether to offer Pay from the app's wallet: never while a request may be in flight, or after one was sent. */
+        val canPay: Boolean get() = !paying && !paidByWallet && !payRequested
+    }
 
     /** How it ended (or where it stopped for the user). */
     data class Finished(
@@ -190,11 +203,28 @@ class RoutstrSetupViewModel(
             }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, RoutstrNodesUi())
 
-    val pending: StateFlow<List<RoutstrPendingPurchase>> = routstr.purchases.pending
+    /** What is on its way, but an unpaid invoice the user cancelled: that one is kept out of sight until it can't settle. */
+    val pending: StateFlow<List<RoutstrPendingPurchase>> =
+        routstr.purchases.pending
+            .map { list -> list.filterNot { it.hiddenByUser && it.stage == RoutstrStage.AWAITING_PAYMENT } }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     init {
         routstr.refreshNodes()
         viewModelScope.launch { routstr.purchases.load() }
+        // The invoice on screen is checked every few seconds; the others, every minute.
+        viewModelScope.launch {
+            var showing: String? = null
+            try {
+                _buy.map { (it as? RoutstrBuyUi.Invoice)?.purchase?.id }.distinctUntilChanged().collect { id ->
+                    showing?.let { routstr.purchases.setShown(it, false) }
+                    id?.let { routstr.purchases.setShown(it, true) }
+                    showing = id
+                }
+            } finally {
+                showing?.let { routstr.purchases.setShown(it, false) }
+            }
+        }
     }
 
     fun refresh() = routstr.refreshNodes(maxAgeSeconds = 0)
@@ -342,6 +372,7 @@ class RoutstrSetupViewModel(
     fun showInvoice(id: String) {
         val purchase = routstr.purchases.get(id) ?: return
         if (purchase.bolt11 == null) return
+        // Paid by the wallet, or asked to be: Pay isn't offered again.
         _buy.value = RoutstrBuyUi.Invoice(purchase)
         follow(id)
     }
@@ -363,43 +394,70 @@ class RoutstrSetupViewModel(
         }
     }
 
+    // Not Expired: an expired invoice may still settle for a day, and stays on screen, checked.
     private fun RoutstrPurchaseOutcome.settles(): Boolean =
         this is RoutstrPurchaseOutcome.KeySaved ||
             this == RoutstrPurchaseOutcome.KeyNotSaved ||
-            this == RoutstrPurchaseOutcome.ToppedUp ||
-            (this == RoutstrPurchaseOutcome.Expired)
+            this == RoutstrPurchaseOutcome.ToppedUp
 
-    /** Pays the invoice on screen from the account's NWC wallet. */
+    /**
+     * Pays the invoice on screen from the account's NWC wallet, once: the request is kept on this
+     * device before it goes, and from then on only "Check payment" is offered, whatever the
+     * wallet answers (or doesn't). Runs on the account's scope, so leaving the screen doesn't
+     * lose its answer.
+     */
     fun payWithWallet() {
         val shown = _buy.value as? RoutstrBuyUi.Invoice ?: return
         val bolt11 = shown.purchase.bolt11 ?: return
-        if (shown.paying || shown.paidByWallet) return
-        _buy.value = shown.copy(paying = true, payError = null)
-        viewModelScope.launch {
+        if (!shown.canPay) return
+        val id = shown.purchase.id
+        _buy.value = shown.copy(paying = true, payError = null, payNoAnswer = false)
+
+        fun update(change: (RoutstrBuyUi.Invoice) -> RoutstrBuyUi.Invoice) = _buy.update { if (it is RoutstrBuyUi.Invoice && it.purchase.id == id) change(it) else it }
+        routstr.account.scope.launch {
             try {
+                routstr.purchases.markPayRequested(id)
                 routstr.payWithLightningWallet(bolt11)
-                routstr.purchases.markWalletPaid(shown.purchase.id)
-                _buy.update { if (it is RoutstrBuyUi.Invoice && it.purchase.id == shown.purchase.id) it.copy(paying = false, paidByWallet = true) else it }
+                routstr.purchases.markWalletPaid(id)
+                update { it.copy(paying = false, payRequested = true, paidByWallet = true) }
                 // Ask now rather than at the next poll.
-                routstr.purchases.check(shown.purchase.id)
+                routstr.purchases.check(id)
+            } catch (e: WalletNoAnswerException) {
+                // It may still pay: never offered again, checked instead.
+                update { it.copy(paying = false, payRequested = true, payNoAnswer = true) }
+                routstr.purchases.check(id)
             } catch (e: CancellationException) {
+                update { it.copy(paying = false, payRequested = true) }
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "The wallet didn't pay the Routstr invoice", e)
-                _buy.update { if (it is RoutstrBuyUi.Invoice && it.purchase.id == shown.purchase.id) it.copy(paying = false, payError = e.message ?: "") else it }
+                update { it.copy(paying = false, payRequested = true, payError = e.message ?: "") }
             }
         }
     }
 
-    /** Gives up on the invoice on screen: dropped only when the node says it isn't paid. */
+    /** "Check payment": asks the node about the invoice on screen now. */
+    fun checkPayment() {
+        val shown = _buy.value as? RoutstrBuyUi.Invoice ?: return
+        retry(shown.purchase.id)
+    }
+
+    /**
+     * Cancels the invoice on screen: hidden, but kept and checked slowly until it can't settle,
+     * since it may have been paid from another wallet. One the app's wallet was asked to pay can't
+     * be cancelled.
+     */
     fun abandonInvoice() {
         val shown = _buy.value as? RoutstrBuyUi.Invoice ?: return
-        viewModelScope.launch {
-            if (routstr.purchases.abandon(shown.purchase.id)) _buy.value = RoutstrBuyUi.Idle
+        routstr.account.scope.launch {
+            if (routstr.purchases.abandon(shown.purchase.id)) _buy.update { if (it == shown || (it as? RoutstrBuyUi.Invoice)?.purchase?.id == shown.purchase.id) RoutstrBuyUi.Idle else it }
         }
     }
 
-    /** A pasted Cashu token, for a new key or a top-up of [topupKey]. */
+    /**
+     * A pasted Cashu token, for a new key or a top-up of [topupKey]. The spend runs on the
+     * account's scope and can't be cancelled halfway: a token sent is followed to its answer.
+     */
     fun payWithToken(
         target: RoutstrTarget,
         token: String,
@@ -407,13 +465,14 @@ class RoutstrSetupViewModel(
     ) {
         if (_buy.value is RoutstrBuyUi.Working) return
         _buy.value = RoutstrBuyUi.Working
-        viewModelScope.launch {
+        routstr.account.scope.launch {
             val purpose = if (topupKey != null) RoutstrPurpose.TOPUP else RoutstrPurpose.CREATE
-            _buy.value = RoutstrBuyUi.Finished(routstr.purchases.buyWithCashu(target, token, purpose, topupKey))
+            val outcome = withContext(NonCancellable) { routstr.purchases.buyWithCashu(target, token, purpose, topupKey) }
+            _buy.value = RoutstrBuyUi.Finished(outcome)
         }
     }
 
-    /** [amountSats] from the Cashu wallet's proofs at [mint], a mint the node takes. */
+    /** [amountSats] from the Cashu wallet's proofs at [mint], a mint the node takes; on the account's scope, never cancelled halfway. */
     fun payFromCashuWallet(
         target: RoutstrTarget,
         mint: String,
@@ -422,16 +481,18 @@ class RoutstrSetupViewModel(
     ) {
         if (_buy.value is RoutstrBuyUi.Working) return
         _buy.value = RoutstrBuyUi.Working
-        viewModelScope.launch {
+        routstr.account.scope.launch {
             val purpose = if (topupKey != null) RoutstrPurpose.TOPUP else RoutstrPurpose.CREATE
             _buy.value =
-                try {
-                    RoutstrBuyUi.Finished(routstr.purchases.buyFromWallet(target, mint, amountSats, purpose, topupKey))
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.w(TAG, "The Cashu wallet couldn't pay", e)
-                    RoutstrBuyUi.Error(RoutstrError(null, RoutstrFailure.TOKEN_REJECTED, message = e.message))
+                withContext(NonCancellable) {
+                    try {
+                        RoutstrBuyUi.Finished(routstr.purchases.buyFromWallet(target, mint, amountSats, purpose, topupKey))
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "The Cashu wallet couldn't pay", e)
+                        RoutstrBuyUi.Error(RoutstrError(null, RoutstrFailure.TOKEN_REJECTED, message = e.message))
+                    }
                 }
         }
     }

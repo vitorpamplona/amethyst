@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.resources.routstr_badge_onion
 import com.vitorpamplona.amethyst.commons.resources.routstr_cashu_placeholder
 import com.vitorpamplona.amethyst.commons.resources.routstr_cashu_use
 import com.vitorpamplona.amethyst.commons.resources.routstr_change_unclaimed
+import com.vitorpamplona.amethyst.commons.resources.routstr_check_payment
 import com.vitorpamplona.amethyst.commons.resources.routstr_checking_key
 import com.vitorpamplona.amethyst.commons.resources.routstr_copy_invoice
 import com.vitorpamplona.amethyst.commons.resources.routstr_copy_token
@@ -135,8 +136,11 @@ import com.vitorpamplona.amethyst.commons.resources.routstr_paid_by_wallet
 import com.vitorpamplona.amethyst.commons.resources.routstr_paid_no_key
 import com.vitorpamplona.amethyst.commons.resources.routstr_pay_cashu_wallet
 import com.vitorpamplona.amethyst.commons.resources.routstr_pay_failed
+import com.vitorpamplona.amethyst.commons.resources.routstr_pay_no_answer
+import com.vitorpamplona.amethyst.commons.resources.routstr_pay_requested
 import com.vitorpamplona.amethyst.commons.resources.routstr_pay_with_wallet
 import com.vitorpamplona.amethyst.commons.resources.routstr_paying
+import com.vitorpamplona.amethyst.commons.resources.routstr_pending_cashu
 import com.vitorpamplona.amethyst.commons.resources.routstr_pending_invoice
 import com.vitorpamplona.amethyst.commons.resources.routstr_pending_key
 import com.vitorpamplona.amethyst.commons.resources.routstr_pending_paid
@@ -692,8 +696,15 @@ private fun InvoiceView(
     var launchError by remember(bolt11) { mutableStateOf<String?>(null) }
 
     Text(satsText(state.purchase.amountSats), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-    if (hasWallet && !state.paidByWallet) {
-        Button(onClick = viewModel::payWithWallet, enabled = !state.paying, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) {
+    if (hasWallet && !state.paidByWallet && state.payRequested && !state.paying) {
+        // The wallet was asked once: it may still pay, so it is never asked again. The node is.
+        OutlinedButton(onClick = viewModel::checkPayment, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) {
+            Icon(MaterialSymbols.Refresh, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringRes(Res.string.routstr_check_payment))
+        }
+    } else if (hasWallet && !state.paidByWallet) {
+        Button(onClick = viewModel::payWithWallet, enabled = state.canPay, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) {
             if (state.paying) {
                 CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = LocalContentColor.current)
                 Spacer(Modifier.width(8.dp))
@@ -730,15 +741,19 @@ private fun InvoiceView(
     }
     launchError?.let { ProblemLine(it) }
     state.payError?.let { ProblemLine(stringRes(Res.string.routstr_pay_failed, it)) }
+    if (state.payNoAnswer) ProblemLine(stringRes(Res.string.routstr_pay_no_answer))
     val waiting =
         when {
             state.outcome == RoutstrPurchaseOutcome.PaidNoKeyYet -> stringRes(Res.string.routstr_paid_no_key)
             state.paidByWallet -> stringRes(Res.string.routstr_paid_by_wallet)
+            // Not final: a late payment still settles for a day, and it is still checked.
+            state.outcome == RoutstrPurchaseOutcome.Expired -> stringRes(Res.string.routstr_expired)
             state.outcome is RoutstrPurchaseOutcome.Failed -> routstrErrorText((state.outcome as RoutstrPurchaseOutcome.Failed).error)
+            state.payRequested -> stringRes(Res.string.routstr_pay_requested)
             else -> stringRes(Res.string.routstr_waiting_payment)
         }
     LoadingLine(waiting)
-    if (!state.paidByWallet && state.outcome != RoutstrPurchaseOutcome.PaidNoKeyYet) {
+    if (!state.paidByWallet && !state.payRequested && !state.paying && state.outcome != RoutstrPurchaseOutcome.PaidNoKeyYet) {
         TextButton(onClick = viewModel::abandonInvoice) { Text(stringRes(Res.string.cancel)) }
     }
 }
@@ -912,6 +927,7 @@ private fun PendingPurchases(viewModel: RoutstrSetupViewModel) {
                             RoutstrStage.PAID -> stringRes(Res.string.routstr_pending_paid, node)
                             RoutstrStage.KEY_UNSAVED -> stringRes(Res.string.routstr_pending_key, node)
                             RoutstrStage.CHANGE_UNCLAIMED -> pluralStringRes(Res.plurals.routstr_change_unclaimed, p.amountSats.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), formatGrouped(p.amountSats))
+                            RoutstrStage.CASHU_SENT -> stringRes(Res.string.routstr_pending_cashu, node)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -928,6 +944,7 @@ private fun PendingPurchases(viewModel: RoutstrSetupViewModel) {
                                 TextButton(onClick = { viewModel.retry(p.id) }) { Text(stringRes(Res.string.retry)) }
                                 TextButton(onClick = { viewModel.forgetChange(p.id) }) { Text(stringRes(Res.string.routstr_forget_change)) }
                             }
+                            RoutstrStage.CASHU_SENT -> TextButton(onClick = { viewModel.retry(p.id) }) { Text(stringRes(Res.string.retry)) }
                         }
                     }
                 }

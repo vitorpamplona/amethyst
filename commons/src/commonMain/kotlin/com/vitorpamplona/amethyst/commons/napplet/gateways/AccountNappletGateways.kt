@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -118,10 +118,22 @@ class AccountNappletWalletGateway(
                 else -> result.completeExceptionally(RuntimeException("Unexpected wallet response."))
             }
         }
-        return withTimeout(WALLET_TIMEOUT) { result.await() }
+        // A timeout is not a cancellation of the caller: it is "no answer", which may still pay.
+        val answer = withTimeoutOrNull(WALLET_TIMEOUT) { Answered(result.await()) } ?: throw WalletNoAnswerException()
+        return answer.preimage
     }
+
+    private class Answered(
+        val preimage: String?,
+    )
 
     private companion object {
         val WALLET_TIMEOUT = 60.seconds
     }
 }
+
+/**
+ * The NWC wallet didn't answer a pay request in time. It may still pay: the caller must not
+ * offer to pay the same invoice again, only to check it.
+ */
+class WalletNoAnswerException : Exception("The wallet didn't answer in time; it may still pay.")
