@@ -743,8 +743,22 @@ class CefNappletSession(
      */
     fun setVisible(visible: Boolean) {
         this.visible = visible
-        if (offscreen != null) browser?.setWindowlessFrameRate(if (visible) frameRate else HIDDEN_FRAME_RATE)
+        if (offscreen == null) return
+        if (visible) {
+            slowDown.stop()
+            browser?.setWindowlessFrameRate(frameRate)
+            offscreen.shown()
+        } else {
+            slowDown.restart()
+        }
     }
+
+    // Out of sight, the page slows to [HIDDEN_FRAME_RATE] a moment later, not at once: what it was
+    // told as it left (its size put back, see [OffscreenNappletView.leave]) is painted at full rate,
+    // so the frame waiting for the reader's return is the right one. At once, that frame came up to
+    // two seconds later, and a quick return showed the one before it. AWT thread, like [setVisible].
+    private val slowDown: Timer =
+        Timer(HIDE_SLOWDOWN_MS) { if (!visible && !closed) browser?.setWindowlessFrameRate(HIDDEN_FRAME_RATE) }.apply { isRepeats = false }
 
     fun stop() {
         browser?.stopLoad()
@@ -997,6 +1011,9 @@ class CefNappletSession(
         /** What an [offscreen] app paints as a screen of its own, like any app screen. */
         const val SCREEN_FRAME_RATE = 60
         private const val HIDDEN_FRAME_RATE = 1
+
+        /** How long a hidden page keeps its full frame rate: see [slowDown]. */
+        private const val HIDE_SLOWDOWN_MS = 1000
         private const val QUERY_FUNCTION_PREFIX = "__amethystNappletQuery_"
         const val MIN_ZOOM = 50
         const val MAX_ZOOM = 300

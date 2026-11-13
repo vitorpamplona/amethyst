@@ -125,6 +125,28 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         pending = null
         applyPending.stop()
         settle.stop()
+        // A size applied just before leaving came with the leaving: the tab switch docks the
+        // notification panel a frame or more before the screen goes, and the hold above is not
+        // always long enough. Told to a page that stays alive out of sight, it was what that page
+        // painted, and what showed (on the left, or stuck there) when the reader came back.
+        val before = previous ?: return
+        if (System.currentTimeMillis() - appliedAtMs > LEAVE_REVERT_MS) return
+        previous = null
+        this.width = before.first
+        this.height = before.second
+        this.scale = before.third
+        browser?.resize(before.first, before.second, before.third)
+    }
+
+    /**
+     * The page is in sight again after being hidden: asks for a frame at its size now, rather than
+     * at the hidden page's next frame (up to a second away), and keeps checking until one comes.
+     */
+    fun shown() {
+        if (stopped) return
+        browser?.settle()
+        settleChecks = 0
+        settle.restart()
     }
 
     private fun apply(
@@ -132,6 +154,8 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         height: Int,
         scale: Double,
     ) {
+        previous = if (this.width > 1 || this.height > 1) Triple(this.width, this.height, this.scale) else null
+        appliedAtMs = System.currentTimeMillis()
         this.width = width
         this.height = height
         this.scale = scale
@@ -142,6 +166,10 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
 
     // A size the box reported that the page has not been told yet. AWT thread, like [resize].
     private var pending: Triple<Int, Int, Double>? = null
+
+    // The size before the last one applied, and when that was: see [leave]. AWT thread.
+    private var previous: Triple<Int, Int, Double>? = null
+    private var appliedAtMs = 0L
 
     private val applyPending: Timer =
         Timer(RESIZE_HOLD_MS) {
@@ -403,10 +431,13 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
 
         // How long after a resize the page should have painted at its new size, and how often it is asked again.
         const val SETTLE_MS = 150
-        const val SETTLE_ATTEMPTS = 5
+        const val SETTLE_ATTEMPTS = 20
 
         // How long a new size waits before the page is told: one frame or so of a screen leaving.
         const val RESIZE_HOLD_MS = 60
+
+        /** How soon before leaving a resize counts as part of the leaving: see [leave]. */
+        const val LEAVE_REVERT_MS = 300L
 
         // What one unit of AWT's wheel rotation scrolls. On macOS a trackpad or a Magic Mouse reports
         // fractions of a unit, many a second, and the rest of the app (Compose's MacOSCocoaConfig) moves
