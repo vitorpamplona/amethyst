@@ -57,7 +57,7 @@ interface RoutstrApi {
         apiKey: String,
     ): RoutstrBalance
 
-    /** `POST /v2/lightning/invoice`; a top-up sends [apiKey] as the Bearer and in `api_key`. */
+    /** `POST /v2/lightning/invoice`; a top-up sends [apiKey] as the Bearer (the body's `api_key` is deprecated). */
     suspend fun createInvoice(
         base: String,
         amountSats: Long,

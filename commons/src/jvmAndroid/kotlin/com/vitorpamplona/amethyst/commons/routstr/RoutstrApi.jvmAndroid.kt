@@ -104,7 +104,7 @@ class OkHttpRoutstrApi(
             buildJsonObject {
                 put("amount_sats", amountSats)
                 put("purpose", purpose.wire)
-                if (purpose == RoutstrPurpose.TOPUP && apiKey != null) put("api_key", apiKey)
+                // A top-up's key goes in Authorization only: the body's `api_key` is deprecated.
             }.toString()
         return call(root(base) + "/v2/lightning/invoice", { postJson(body).bearer(apiKey.takeIf { purpose == RoutstrPurpose.TOPUP }) }, RoutstrJson::invoice)
     }

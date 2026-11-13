@@ -64,6 +64,7 @@ data class RoutstrNode(
                 ?: onionUrl?.let { AgentProviderPresets.hostOf(it)?.take(16) + "…" }
                 ?: dTag
 
+    /** Announced this week ([RoutstrNodeEvent.MAX_AGE]): nodes re-announce daily, but live ones have been seen a week late. */
     fun isFresh(now: Long = TimeUtils.now()): Boolean = lastSeen >= now - RoutstrNodeEvent.MAX_AGE
 
     /**
@@ -97,6 +98,15 @@ data class RoutstrNode(
     }
 }
 
+/** The picker's nodes: [fresh] (seen this week) first, [stale] (seen this month) behind a button. */
+@Immutable
+data class RoutstrNodePicks(
+    val fresh: List<RoutstrNode>,
+    val stale: List<RoutstrNode>,
+) {
+    fun all(includeStale: Boolean): List<RoutstrNode> = if (includeStale) fresh + stale else fresh
+}
+
 object RoutstrNodes {
     /** A node's root: no trailing slash, no `/v1`. */
     fun root(url: String): String =
@@ -117,16 +127,17 @@ object RoutstrNodes {
     }
 
     /**
-     * The picker's list from the announcements: the newest per address, only nodes with an
-     * endpoint this client may call ([torEnabled] admits onion-only ones), stale ones (no
-     * announcement for a week) left out unless [includeStale], fresh first, then by name.
+     * The picker's nodes from the announcements: the newest per address, only nodes with an
+     * endpoint this client may call ([torEnabled] admits onion-only ones), none older than
+     * [LISTED_MAX_AGE] (a month), the freshest first, then by name. [RoutstrNodePicks.stale] are
+     * the ones not seen this week, which the picker keeps behind "Show N not seen this week": live
+     * nodes that still answer have announced 7.6 days ago.
      */
     fun list(
         events: List<Event>,
         torEnabled: Boolean,
         now: Long = TimeUtils.now(),
-        includeStale: Boolean = false,
-    ): List<RoutstrNode> {
+    ): RoutstrNodePicks {
         val newest = HashMap<String, RoutstrNodeEvent>()
         events.forEach { event ->
             if (event !is RoutstrNodeEvent) return@forEach
@@ -134,14 +145,20 @@ object RoutstrNodes {
             val held = newest[address]
             if (held == null || event.createdAt > held.createdAt) newest[address] = event
         }
-        return newest.values
-            .asSequence()
-            .filter { it.usableEndpoints(torEnabled).isNotEmpty() }
-            .map(RoutstrNode::from)
-            .filter { includeStale || it.isFresh(now) }
-            .sortedWith(compareByDescending<RoutstrNode> { it.lastSeen / DAY }.thenBy { it.displayName.lowercase() })
-            .toList()
+        val listed =
+            newest.values
+                .asSequence()
+                .filter { it.isFresh(now, LISTED_MAX_AGE) }
+                .filter { it.usableEndpoints(torEnabled).isNotEmpty() }
+                .map(RoutstrNode::from)
+                .sortedWith(compareByDescending<RoutstrNode> { it.lastSeen / DAY }.thenBy { it.displayName.lowercase() })
+                .toList()
+        val (fresh, stale) = listed.partition { it.isFresh(now) }
+        return RoutstrNodePicks(fresh, stale)
     }
+
+    /** Nodes not seen for longer than this are not listed at all: a month, in seconds. */
+    const val LISTED_MAX_AGE: Long = 30 * 24 * 60 * 60L
 
     /** Every word of [query] in the node's name, about or address, ignoring case. */
     fun matches(

@@ -46,21 +46,17 @@ enum class RoutstrPayment {
 /** Where a purchase stands. Every stage but [AWAITING_PAYMENT] holds money the user has already spent. */
 @Serializable
 enum class RoutstrStage {
-    /** An invoice is out and not paid yet. Dropped once it expires unpaid. */
+    /** An invoice is out and not paid yet. Dropped a day after it expires unpaid: nodes settle late ones for 24 hours. */
     @SerialName("awaiting_payment")
     AWAITING_PAYMENT,
 
-    /** Paid, and the node hasn't handed the key over yet: recovered by bolt11, never bought again. */
+    /** Paid (or settling), and the node hasn't handed the key over yet: recovered by bolt11, never bought again. */
     @SerialName("paid")
     PAID,
 
     /** The key arrived and isn't in the user's kind 12000 yet: it is held here until it is. */
     @SerialName("key_unsaved")
     KEY_UNSAVED,
-
-    /** A Cashu token taken from the user's wallet (or pasted) that no node has accepted yet. */
-    @SerialName("token_unspent")
-    TOKEN_UNSPENT,
 
     /** Change the node gave back that the user's wallet hasn't taken: shown until it does, or they copy it. */
     @SerialName("change_unclaimed")
@@ -93,10 +89,13 @@ data class RoutstrPendingPurchase(
     val topupKeyMask: String? = null,
     /** [RoutstrStage.KEY_UNSAVED]: the key bought. */
     val apiKey: String? = null,
-    /** [RoutstrStage.TOKEN_UNSPENT] or [RoutstrStage.CHANGE_UNCLAIMED]: the token. */
+    /**
+     * [RoutstrStage.CHANGE_UNCLAIMED] only: change the node handed back that the wallet didn't
+     * take. A token paid to a node is never stored: resending it returns the same key.
+     */
     val token: String? = null,
-    /** A top-up paid with [token] needs the key it tops up; held only until the node answers. */
-    val topupKey: String? = null,
+    /** This app's wallet paid the invoice: it is never dropped, whatever the node says. */
+    val walletPaid: Boolean = false,
     /** How many times the status was checked after payment without a key. */
     val recoverAttempts: Int = 0,
 ) {

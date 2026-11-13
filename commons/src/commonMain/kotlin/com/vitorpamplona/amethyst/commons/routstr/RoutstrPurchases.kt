@@ -86,13 +86,20 @@ sealed interface RoutstrPurchaseOutcome {
 
     data object ToppedUp : RoutstrPurchaseOutcome
 
-    /** The invoice expired unpaid, and was dropped. */
+    /** The invoice expired unpaid: dropped a day later (nodes settle late ones), or now when the user gave up. */
     data object Expired : RoutstrPurchaseOutcome
 
-    /** The node didn't take the Cashu token: it is still the user's, kept here to retry or copy. */
-    data class TokenNotTaken(
+    /**
+     * The node didn't take the Cashu token, or its answer was lost. [token] is the user's to send
+     * again (the same token returns the same key) or copy; null when it went back to the wallet.
+     * It is held only here, in memory, never stored.
+     */
+    class TokenNotTaken(
         val error: RoutstrError,
-    ) : RoutstrPurchaseOutcome
+        val token: String?,
+    ) : RoutstrPurchaseOutcome {
+        override fun toString() = "TokenNotTaken(${error.failure}, token=${if (token != null) "<held>" else "<none>"})"
+    }
 
     /** The change is back in the user's wallet. */
     data object ChangeReturned : RoutstrPurchaseOutcome
@@ -153,6 +160,19 @@ class RoutstrPurchases(
     val pending: StateFlow<List<RoutstrPendingPurchase>> = _pending.asStateFlow()
 
     private val watching = MutableStateFlow<Map<String, Job>>(emptyMap())
+
+    private val _outcomes = MutableStateFlow<Map<String, RoutstrPurchaseOutcome>>(emptyMap())
+
+    /** How the last step of each purchase ended, for a screen that comes back to one. */
+    val outcomes: StateFlow<Map<String, RoutstrPurchaseOutcome>> = _outcomes.asStateFlow()
+
+    private fun record(
+        id: String,
+        outcome: RoutstrPurchaseOutcome,
+    ): RoutstrPurchaseOutcome {
+        _outcomes.update { it + (id to outcome) }
+        return outcome
+    }
 
     fun get(id: String): RoutstrPendingPurchase? = _pending.value.firstOrNull { it.id == id }
 
@@ -247,7 +267,21 @@ class RoutstrPurchases(
         return record
     }
 
-    private fun expired(p: RoutstrPendingPurchase): Boolean = p.expiresAt != null && now() > p.expiresAt + EXPIRY_GRACE_SECONDS
+    /**
+     * Whether an unpaid invoice may be dropped: a day past its expiry (nodes keep settling an
+     * expired invoice for 24 hours), and never one this app's wallet paid.
+     */
+    private fun droppable(p: RoutstrPendingPurchase): Boolean {
+        if (p.walletPaid || p.stage != RoutstrStage.AWAITING_PAYMENT) return false
+        val expiry = p.expiresAt ?: (p.createdAt + DEFAULT_INVOICE_LIFETIME_SECONDS)
+        return now() > expiry + LATE_SETTLEMENT_SECONDS
+    }
+
+    /** This app's wallet paid [id]'s invoice: from now on it is never dropped, only recovered. */
+    suspend fun markWalletPaid(id: String) {
+        val p = get(id) ?: return
+        if (!p.walletPaid) replace(p.copy(walletPaid = true))
+    }
 
     private suspend fun checkInvoice(p: RoutstrPendingPurchase): RoutstrPurchaseOutcome {
         val base = p.callBase(torEnabled())
@@ -268,16 +302,32 @@ class RoutstrPurchases(
             }
 
         if (status != null && status.isPaid) return paid(p, status)
-        if (p.stage == RoutstrStage.PAID) {
-            // Seen paid once: it stays paid, whatever a later answer says.
-            replace(p.copy(recoverAttempts = p.recoverAttempts + 1))
+        if (status != null && status.isSettling) {
+            // The money reached the node: kept as paid until the key comes.
+            replace(p.copy(stage = RoutstrStage.PAID, recoverAttempts = p.recoverAttempts + 1))
             return RoutstrPurchaseOutcome.PaidNoKeyYet
         }
-        if (status?.isExpired == true || expired(p)) {
+        if (p.stage == RoutstrStage.PAID || p.walletPaid) {
+            // Seen paid once, or paid by this app's wallet: it stays paid, whatever a later answer
+            // says, and the key is asked for by its bolt11.
+            val recovered =
+                p.bolt11?.let { bolt11 ->
+                    try {
+                        api.recover(base, bolt11).takeIf { it.apiKey != null }
+                    } catch (e: RoutstrException) {
+                        null
+                    }
+                }
+            if (recovered != null) return paid(p, recovered)
+            replace(p.copy(stage = RoutstrStage.PAID, recoverAttempts = p.recoverAttempts + 1))
+            return RoutstrPurchaseOutcome.PaidNoKeyYet
+        }
+        if (droppable(p)) {
             remove(p.id)
             return RoutstrPurchaseOutcome.Expired
         }
-        return RoutstrPurchaseOutcome.Waiting
+        // `expired` isn't final: the node still settles it for a day.
+        return if (status?.isExpired == true) RoutstrPurchaseOutcome.Expired else RoutstrPurchaseOutcome.Waiting
     }
 
     private suspend fun paid(
@@ -326,38 +376,28 @@ class RoutstrPurchases(
 
     /**
      * Pays the node at [target] with a Cashu [token]: a new key, or a top-up of [topupKey]. The
-     * token is kept on this device until the node takes it; change goes back to the wallet.
+     * token is never stored: a Cashu-made key is `sk-` + sha256(token), so after a lost answer
+     * the same token, sent again, returns the same key ([RoutstrPurchaseOutcome.TokenNotTaken]
+     * hands it back for that). Change, on either call, goes to the wallet.
      */
     suspend fun buyWithCashu(
         target: RoutstrTarget,
         token: String,
         purpose: RoutstrPurpose,
         topupKey: AgentKeyTag? = null,
-        amountSats: Long = 0,
     ): RoutstrPurchaseOutcome {
         val trimmed = token.trim()
         require(isCashuToken(trimmed)) { "not a Cashu token" }
         require(purpose == RoutstrPurpose.CREATE || topupKey != null) { "a top-up needs its key" }
-        val record =
-            RoutstrPendingPurchase(
-                id = "cashu-" + newId(),
-                payment = RoutstrPayment.CASHU,
-                purpose = purpose,
-                stage = RoutstrStage.TOKEN_UNSPENT,
-                nodeRoot = RoutstrNodes.root(target.root),
-                onionRoot = target.onionRoot?.let(RoutstrNodes::root),
-                nodeName = target.name,
-                amountSats = amountSats,
-                createdAt = now(),
-                token = trimmed,
-                topupKey = topupKey?.key,
-                topupKeyMask = topupKey?.let { AgentProviderPresets.maskKey(it.key) },
-            )
-        keep { it + record }
-        return steps.withLock { spendToken(record) }
+        val id = "cashu-" + newId()
+        return steps.withLock { record(id, spendToken(id, target, trimmed, purpose, topupKey)) }
     }
 
-    /** [buyWithCashu] with a token of [amountSats] taken from the wallet's proofs at [mint]. */
+    /**
+     * [buyWithCashu] with a token of [amountSats] taken from the wallet's proofs at [mint]. A
+     * token no node took goes back to the wallet; if the wallet won't take it either, it is in
+     * the [RoutstrPurchaseOutcome.TokenNotTaken] to send again or copy.
+     */
     suspend fun buyFromWallet(
         target: RoutstrTarget,
         mint: String,
@@ -367,40 +407,56 @@ class RoutstrPurchases(
     ): RoutstrPurchaseOutcome {
         val cashu = wallet() ?: throw IllegalStateException("No Cashu wallet")
         val token = cashu.mintToken(mint, amountSats)
-        return buyWithCashu(target, token, purpose, topupKey, amountSats)
+        val outcome = buyWithCashu(target, token, purpose, topupKey)
+        if (outcome is RoutstrPurchaseOutcome.TokenNotTaken && outcome.error.failure != RoutstrFailure.UNREACHABLE && giveToWallet(token)) {
+            // Refused for sure (not lost on the way): the money is back where it was.
+            return RoutstrPurchaseOutcome.TokenNotTaken(outcome.error, token = null)
+        }
+        return outcome
     }
 
-    private suspend fun spendToken(p: RoutstrPendingPurchase): RoutstrPurchaseOutcome {
-        val token = p.token ?: return RoutstrPurchaseOutcome.Gone
-        val base = p.callBase(torEnabled())
+    private suspend fun spendToken(
+        id: String,
+        target: RoutstrTarget,
+        token: String,
+        purpose: RoutstrPurpose,
+        topupKey: AgentKeyTag?,
+    ): RoutstrPurchaseOutcome {
+        val base = if (torEnabled() && target.onionRoot != null) target.onionRoot else target.root
         val result =
             try {
-                if (p.purpose == RoutstrPurpose.TOPUP) {
-                    api.topupWithCashu(base, p.topupKey ?: return RoutstrPurchaseOutcome.Gone, token)
+                if (purpose == RoutstrPurpose.TOPUP) {
+                    api.topupWithCashu(base, topupKey?.key ?: return RoutstrPurchaseOutcome.Gone, token)
                 } else {
                     api.createWithCashu(base, token)
                 }
             } catch (e: RoutstrException) {
-                return RoutstrPurchaseOutcome.TokenNotTaken(e.error)
+                return RoutstrPurchaseOutcome.TokenNotTaken(e.error, token)
             }
-        // The token is spent now: it is never offered again, whatever comes next.
-        handleChange(p, result)
-        if (p.purpose == RoutstrPurpose.TOPUP) {
-            remove(p.id)
-            return RoutstrPurchaseOutcome.ToppedUp
-        }
-        val key = result.apiKey
-        if (key == null) {
-            remove(p.id)
-            return RoutstrPurchaseOutcome.Failed(RoutstrError(200, RoutstrFailure.UNEXPECTED))
-        }
-        val held = p.copy(stage = RoutstrStage.KEY_UNSAVED, apiKey = key, token = null, topupKey = null)
-        replace(held)
+        // The token is spent now: whatever comes next, it is not offered again.
+        handleChange(target, purpose, result)
+        if (purpose == RoutstrPurpose.TOPUP) return RoutstrPurchaseOutcome.ToppedUp
+        val key = result.apiKey ?: return RoutstrPurchaseOutcome.Failed(RoutstrError(200, RoutstrFailure.UNEXPECTED))
+        val held =
+            RoutstrPendingPurchase(
+                id = id,
+                payment = RoutstrPayment.CASHU,
+                purpose = purpose,
+                stage = RoutstrStage.KEY_UNSAVED,
+                nodeRoot = RoutstrNodes.root(target.root),
+                onionRoot = target.onionRoot?.let(RoutstrNodes::root),
+                nodeName = target.name,
+                amountSats = result.balanceMsats?.let { it / 1000 } ?: 0,
+                createdAt = now(),
+                apiKey = key,
+            )
+        keep { it + held }
         return saveHeldKey(held)
     }
 
     private suspend fun handleChange(
-        p: RoutstrPendingPurchase,
+        target: RoutstrTarget,
+        purpose: RoutstrPurpose,
         result: RoutstrCashuResult,
     ) {
         val change = result.changeToken?.takeIf { it.isNotBlank() } ?: return
@@ -410,11 +466,11 @@ class RoutstrPurchases(
                 RoutstrPendingPurchase(
                     id = "change-" + newId(),
                     payment = RoutstrPayment.CASHU,
-                    purpose = p.purpose,
+                    purpose = purpose,
                     stage = RoutstrStage.CHANGE_UNCLAIMED,
-                    nodeRoot = p.nodeRoot,
-                    onionRoot = p.onionRoot,
-                    nodeName = p.nodeName,
+                    nodeRoot = RoutstrNodes.root(target.root),
+                    onionRoot = target.onionRoot?.let(RoutstrNodes::root),
+                    nodeName = target.name,
                     amountSats = result.changeAmount ?: 0,
                     createdAt = now(),
                     token = change,
@@ -442,7 +498,7 @@ class RoutstrPurchases(
     // --- Driving them --------------------------------------------------------------
 
     /** One step for purchase [id]: check the invoice, save the key, spend the token or return the change. */
-    suspend fun check(id: String): RoutstrPurchaseOutcome = steps.withLock { step(id) }
+    suspend fun check(id: String): RoutstrPurchaseOutcome = steps.withLock { record(id, step(id)) }
 
     private suspend fun step(id: String): RoutstrPurchaseOutcome {
         val p =
@@ -453,7 +509,6 @@ class RoutstrPurchases(
         return when (p.stage) {
             RoutstrStage.AWAITING_PAYMENT, RoutstrStage.PAID -> checkInvoice(p)
             RoutstrStage.KEY_UNSAVED -> saveHeldKey(p)
-            RoutstrStage.TOKEN_UNSPENT -> spendToken(p)
             RoutstrStage.CHANGE_UNCLAIMED -> claimChange(p)
         }
     }
@@ -471,9 +526,11 @@ class RoutstrPurchases(
             when (outcome) {
                 RoutstrPurchaseOutcome.Waiting -> delay(pollMs)
                 RoutstrPurchaseOutcome.PaidNoKeyYet -> delay(recoverMs)
+                // Past its expiry and still kept: a late settlement may still come, for a day.
+                RoutstrPurchaseOutcome.Expired -> if (get(id) == null) return outcome else delay(recoverMs)
                 is RoutstrPurchaseOutcome.Failed -> {
                     val p = get(id) ?: return outcome
-                    if (p.stage == RoutstrStage.AWAITING_PAYMENT && expired(p)) return outcome
+                    if (p.stage == RoutstrStage.AWAITING_PAYMENT && !p.walletPaid && p.expiresAt != null && now() > p.expiresAt + LATE_SETTLEMENT_SECONDS) return outcome
                     if (p.stage != RoutstrStage.AWAITING_PAYMENT && p.stage != RoutstrStage.PAID) return outcome
                     delay(recoverMs)
                 }
@@ -505,25 +562,27 @@ class RoutstrPurchases(
      */
     suspend fun abandon(id: String): Boolean {
         val p = get(id) ?: return true
-        if (p.stage != RoutstrStage.AWAITING_PAYMENT) return false
+        if (p.stage != RoutstrStage.AWAITING_PAYMENT || p.walletPaid) return false
         return when (steps.withLock { checkInvoice(p) }) {
             RoutstrPurchaseOutcome.Waiting -> {
                 watching.value[id]?.cancel()
                 remove(id)
                 true
             }
-            RoutstrPurchaseOutcome.Expired -> true
+            // Expired and not paid: the user gave up on it, so it goes now rather than in a day.
+            RoutstrPurchaseOutcome.Expired -> {
+                watching.value[id]?.cancel()
+                remove(id)
+                true
+            }
             else -> false
         }
     }
 
-    /**
-     * Forgets a token the user copied out themselves (an unclaimed change, a token no node took).
-     * Never a key or a paid invoice.
-     */
+    /** Forgets unclaimed change the user copied out themselves. Never a key or a paid invoice. */
     suspend fun forgetToken(id: String): Boolean {
         val p = get(id) ?: return true
-        if (p.stage != RoutstrStage.CHANGE_UNCLAIMED && p.stage != RoutstrStage.TOKEN_UNSPENT) return false
+        if (p.stage != RoutstrStage.CHANGE_UNCLAIMED) return false
         remove(id)
         return true
     }
@@ -533,8 +592,11 @@ class RoutstrPurchases(
         const val POLL_MS = 3_000L
         const val RECOVER_MS = 30_000L
 
-        /** A minute past the node's expiry, for clocks that disagree. */
-        const val EXPIRY_GRACE_SECONDS = 60L
+        /** Nodes keep settling an expired invoice for this long (routstr-core): only then is an unpaid one dropped. */
+        const val LATE_SETTLEMENT_SECONDS = 24 * 60 * 60L
+
+        /** An invoice that names no expiry is taken to last an hour. */
+        const val DEFAULT_INVOICE_LIFETIME_SECONDS = 60 * 60L
 
         fun isCashuToken(text: String): Boolean {
             val t = text.trim()

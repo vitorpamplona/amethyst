@@ -114,9 +114,17 @@ data class RoutstrInvoiceStatus(
     val paidAt: Long?,
     val expiresAt: Long?,
 ) {
-    val isPaid: Boolean get() = status.equals("paid", ignoreCase = true) || status.equals("settled", ignoreCase = true) || paidAt != null
+    /** `paid`: the node has the money. */
+    val isPaid: Boolean get() = status.equals("paid", ignoreCase = true) || paidAt != null
 
-    val isExpired: Boolean get() = status.equals("expired", ignoreCase = true) || status.equals("cancelled", ignoreCase = true) || status.equals("canceled", ignoreCase = true)
+    /**
+     * `settlement_pending` or `reconciliation_required`: the payment reached the node, which is
+     * still settling it. Kept as paid: never dropped, never bought again.
+     */
+    val isSettling: Boolean get() = status.equals("settlement_pending", ignoreCase = true) || status.equals("reconciliation_required", ignoreCase = true)
+
+    /** `expired`: not final, a node keeps settling an expired invoice for 24 hours. */
+    val isExpired: Boolean get() = status.equals("expired", ignoreCase = true)
 
     override fun toString() = "RoutstrInvoiceStatus(status=$status, apiKey=${if (apiKey != null) "<redacted>" else "<none>"}, amountSats=$amountSats)"
 }
