@@ -89,7 +89,7 @@ class ChatRowsTest {
 
     @Test
     fun runsOfToolCallsFoldIntoOneRow() {
-        val items = listOf(text("a"), call("Bash"), call("Read"), call("Bash"), text("b"), call("Edit"), call("Bash", done = false))
+        val items = listOf(text("a"), call("Bash"), call("Read"), call("Bash"), text("b"), call("Grep"), call("Bash", done = false))
         val rows = items.toChatRows()
 
         assertEquals(4, rows.size)
@@ -97,6 +97,13 @@ class ChatRowsTest {
         assertEquals(listOf(ToolKind.COMMAND to 2, ToolKind.READ to 1), first.counts)
         val last = rows[3] as ChatRow.ToolGroup
         assertEquals("Bash", last.running?.name)
+    }
+
+    @Test
+    fun editsKeepTheirOwnRows() {
+        val rows = listOf(call("Read"), call("Grep"), call("Edit"), call("Read"), call("Write"), call("Bash")).toChatRows()
+        // Read+Grep fold; the edit stands alone; the lone Read stays single; the write stands alone; then Bash.
+        assertEquals(listOf("group", "Edit", "Read", "Write", "Bash"), rows.map { (it as? ChatRow.Single)?.let { s -> (s.item as ChatItem.ToolCall).name } ?: "group" })
     }
 
     @Test

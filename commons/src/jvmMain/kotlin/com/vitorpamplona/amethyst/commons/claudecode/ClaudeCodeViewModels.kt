@@ -224,6 +224,12 @@ class ClaudeCodeChatViewModel(
 
     fun endSession() = chat?.close()
 
+    /** Opens a copy of this session to go on with, while another Claude Code holds this one. */
+    fun fork(onReady: (String) -> Unit) {
+        val key = chat?.key ?: return
+        service.fork(key)?.let { onReady(it.key) }
+    }
+
     private val _cleanupError = MutableStateFlow<String?>(null)
 
     /** Why removing the worktree failed, as git said it. */

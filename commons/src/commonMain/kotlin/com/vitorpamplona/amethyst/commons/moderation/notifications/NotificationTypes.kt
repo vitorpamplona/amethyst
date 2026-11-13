@@ -34,6 +34,9 @@ enum class NotifKind {
 
     /** A calendar reminder. Its switch is in the calendar settings, not among these toggles. */
     CALENDAR,
+
+    /** A Claude Code session that needs an approval or finished its turn. On with the OS notifications switch. */
+    AGENT,
 }
 
 @Immutable
@@ -57,6 +60,7 @@ data class KindToggles(
             NotifKind.REACTION -> reaction
             NotifKind.FOLLOW -> follow
             NotifKind.CALENDAR -> true
+            NotifKind.AGENT -> true
         }
 
     fun with(
@@ -72,6 +76,7 @@ data class KindToggles(
             NotifKind.REACTION -> copy(reaction = v)
             NotifKind.FOLLOW -> copy(follow = v)
             NotifKind.CALENDAR -> this
+            NotifKind.AGENT -> this
         }
 }
 

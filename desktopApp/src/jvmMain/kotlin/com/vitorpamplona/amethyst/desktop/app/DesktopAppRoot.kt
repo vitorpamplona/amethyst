@@ -146,6 +146,10 @@ class DesktopAppRoot(
             val job = modules.notifications.watch(accountViewModel.account, modules.cache, focused)
             onDispose { job.cancel() }
         }
+        DisposableEffect(Unit) {
+            val job = modules.notifications.watchClaudeCode(focused)
+            onDispose { job.cancel() }
+        }
 
         // Each account publishes only its own scheduled posts, to its outbox relays.
         DisposableEffect(accountViewModel.account) {

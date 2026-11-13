@@ -116,6 +116,31 @@ class ClaudeSessionStoreTest {
     }
 
     @Test
+    fun parallelToolResultsOffTheChainStillReachTheirCalls() {
+        // Two calls in one turn: the CLI chains the second call to the first and hangs the first
+        // call's result off it, beside the chain, as Claude Code 2.1 wrote it.
+        val project = File(config, "projects/-work")
+        val id = "11111111-2222-3333-4444-555555555555"
+        File(project, "$id.jsonl").writeText(
+            listOf(
+                """{"type":"user","uuid":"u1","parentUuid":null,"message":{"role":"user","content":"edit then run"}}""",
+                """{"type":"assistant","uuid":"a1","parentUuid":"u1","message":{"role":"assistant","content":[{"type":"tool_use","id":"t-edit","name":"Edit","input":{}}]}}""",
+                """{"type":"assistant","uuid":"a2","parentUuid":"a1","message":{"role":"assistant","content":[{"type":"tool_use","id":"t-bash","name":"Bash","input":{}}]}}""",
+                """{"type":"user","uuid":"r1","parentUuid":"a1","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t-edit","content":"edited"}]}}""",
+                """{"type":"user","uuid":"r2","parentUuid":"a2","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t-bash","content":"ran"}]}}""",
+                """{"type":"assistant","uuid":"a3","parentUuid":"r2","message":{"role":"assistant","content":[{"type":"text","text":"done"}]}}""",
+            ).joinToString("\n", postfix = "\n"),
+        )
+        val results =
+            store
+                .transcript(id)
+                .flatMap { it.content }
+                .filterIsInstance<ContentBlock.ToolResult>()
+                .map { it.toolUseId }
+        assertEquals(listOf("t-edit", "t-bash"), results)
+    }
+
+    @Test
     fun renameAppendsATitleTheListPicksUp() {
         store.listSessions()
         store.rename(Fixtures.SESSION_WRITE, "Hello file")

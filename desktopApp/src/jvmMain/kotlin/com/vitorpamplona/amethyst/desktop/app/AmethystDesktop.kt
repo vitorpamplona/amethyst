@@ -51,10 +51,13 @@ import androidx.compose.ui.window.application
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.service.QuicLogBridge
 import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
 import com.vitorpamplona.amethyst.commons.ui.components.DefaultInlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.LocalDrawerBadges
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.LocalDrawerMetrics
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
@@ -386,7 +389,10 @@ fun main(args: Array<String>) {
                                             }
                                             Box(Modifier.weight(1f).fillMaxWidth()) {
                                                 if (windowSized) {
-                                                    AmethystApp(modules.sessionManager, root)
+                                                    // Claude Code sessions waiting on the user, beside their drawer item.
+                                                    CompositionLocalProvider(LocalDrawerBadges provides mapOf(NavBarItem.CLAUDE_CODE to ClaudeCodeService.shared.needsYou)) {
+                                                        AmethystApp(modules.sessionManager, root)
+                                                    }
                                                 }
                                                 // Toasts show here unless a screen window has the focus (it shows them).
                                                 if (windows.focusedScreenWindow == null) {

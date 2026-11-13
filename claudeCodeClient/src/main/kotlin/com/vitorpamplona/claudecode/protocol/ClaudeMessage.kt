@@ -71,7 +71,18 @@ sealed interface ClaudeMessage {
         val content: List<ContentBlock>,
         val parentToolUseId: String?,
         override val raw: JsonObject,
-    ) : ClaudeMessage
+    ) : ClaudeMessage {
+        /**
+         * How much of the context window the conversation fills after this message: its input
+         * (fresh, cached and written to the cache) plus what it wrote. Null when the CLI didn't say.
+         */
+        val contextTokens: Long?
+            get() {
+                val usage = raw.obj("message")?.obj("usage") ?: return null
+                val parts = listOf("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens").mapNotNull { usage.long(it) }
+                return if (parts.isEmpty()) null else parts.sum()
+            }
+    }
 
     /** A user-side message: tool results, the CLI's own notes, or an echo of a typed prompt. */
     data class User(
@@ -95,7 +106,14 @@ sealed interface ClaudeMessage {
         val stopReason: String?,
         val terminalReason: String?,
         override val raw: JsonObject,
-    ) : ClaudeMessage
+    ) : ClaudeMessage {
+        /** The model's context window, from the turn's per-model usage. */
+        val contextWindow: Long?
+            get() =
+                (raw.obj("model_usage_since_last_result") ?: raw.obj("modelUsage"))
+                    ?.values
+                    ?.firstNotNullOfOrNull { (it as? JsonObject)?.long("contextWindow") }
+    }
 
     /** A raw API streaming event (`--include-partial-messages`): text arriving as it is written. */
     data class StreamEvent(

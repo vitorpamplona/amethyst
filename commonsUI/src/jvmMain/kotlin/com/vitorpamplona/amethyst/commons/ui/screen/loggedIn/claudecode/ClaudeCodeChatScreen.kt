@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,8 +45,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -71,9 +74,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -99,9 +106,10 @@ import com.vitorpamplona.amethyst.commons.claudecode.ReviewItem
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewLocation
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewPrompt
 import com.vitorpamplona.amethyst.commons.claudecode.ToolKind
+import com.vitorpamplona.amethyst.commons.claudecode.ToolView
+import com.vitorpamplona.amethyst.commons.claudecode.ToolViews
 import com.vitorpamplona.amethyst.commons.claudecode.toChatRows
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -117,11 +125,15 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_allow_rule_proje
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow_rule_session
 import com.vitorpamplona.amethyst.commons.resources.claude_code_app_running
 import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
-import com.vitorpamplona.amethyst.commons.resources.claude_code_cost
+import com.vitorpamplona.amethyst.commons.resources.claude_code_context_tooltip
+import com.vitorpamplona.amethyst.commons.resources.claude_code_context_used
 import com.vitorpamplona.amethyst.commons.resources.claude_code_deny
 import com.vitorpamplona.amethyst.commons.resources.claude_code_end_session
 import com.vitorpamplona.amethyst.commons.resources.claude_code_error_exited
 import com.vitorpamplona.amethyst.commons.resources.claude_code_error_start_failed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_fork
+import com.vitorpamplona.amethyst.commons.resources.claude_code_fork_hint
+import com.vitorpamplona.amethyst.commons.resources.claude_code_intro_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_loading_history
 import com.vitorpamplona.amethyst.commons.resources.claude_code_message_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_mode_accept_edits
@@ -137,8 +149,12 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_not_installed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notice_interrupted
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notice_process_ended
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notice_turn_failed
-import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_short
-import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_warning
+import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_readonly
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_create
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_edit
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_keys
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_keys_deny
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_run
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_merged
@@ -156,6 +172,10 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_review_verdict
 import com.vitorpamplona.amethyst.commons.resources.claude_code_run_app
 import com.vitorpamplona.amethyst.commons.resources.claude_code_run_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_session_missing
+import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_explain
+import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_review_branch
+import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_review_uncommitted
+import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_tests
 import com.vitorpamplona.amethyst.commons.resources.claude_code_stop
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_agent
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_command
@@ -165,16 +185,16 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_other
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_read
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_search
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_web
-import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_input
-import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_output
 import com.vitorpamplona.amethyst.commons.resources.claude_code_update_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_view_proposal
+import com.vitorpamplona.amethyst.commons.resources.claude_code_waiting_approval
 import com.vitorpamplona.amethyst.commons.resources.claude_code_working
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
@@ -224,10 +244,56 @@ fun ClaudeCodeChatScreen(
     val runError by viewModel.runError.collectAsStateWithLifecycle()
     val cleanupError by viewModel.cleanupError.collectAsStateWithLifecycle()
     val rows by ClaudeCodeService.shared.rows.collectAsStateWithLifecycle()
-    val openElsewhere = rows.any { it.sessionId != null && it.sessionId == state.sessionId && it.openElsewhere != null }
+    // A fork still carries its source's id until it starts, but it is not that session.
+    val openElsewhere = !state.forking && rows.any { it.sessionId != null && it.sessionId == state.sessionId && it.openElsewhere != null }
     val canRunApp = remember(state.cwd) { viewModel.canRunApp() }
 
     LaunchedEffect(Unit) { chat.refreshGit() }
+
+    val composerText = rememberTextFieldState()
+    val composerFocus = remember { FocusRequester() }
+    // Typing goes straight to the composer, and the keys below work, without a click first.
+    LaunchedEffect(Unit) { composerFocus.requestFocus() }
+    val pending = state.pendingPermissions.firstOrNull()
+    var switching by remember { mutableStateOf(false) }
+    val keys =
+        Modifier.onPreviewKeyEvent { event ->
+            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+            when {
+                // Ctrl/Cmd+K: jump to another session.
+                event.key == Key.K && (event.isCtrlPressed || event.isMetaPressed) -> {
+                    switching = true
+                    true
+                }
+                // An approval waits: Esc denies; Enter, with nothing typed, gives the default answer.
+                pending != null && event.key == Key.Escape -> {
+                    viewModel.deny(pending)
+                    true
+                }
+                pending != null && event.key == Key.Enter && !event.isShiftPressed && composerText.text.isBlank() -> {
+                    if (pending.defaultToNo) viewModel.deny(pending) else viewModel.approve(pending, always = false)
+                    true
+                }
+                // Otherwise Esc stops the turn, as in the terminal.
+                pending == null && event.key == Key.Escape && state.isBusy -> {
+                    viewModel.interrupt()
+                    true
+                }
+                else -> false
+            }
+        }
+
+    if (switching) {
+        SessionSwitcher(
+            rows = rows.filter { it.key != key && !it.archived },
+            onDismiss = { switching = false },
+            onPick = { row ->
+                switching = false
+                nav.popBack()
+                nav.nav(Route.ClaudeCodeChat(row.key))
+            },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -238,10 +304,16 @@ fun ClaudeCodeChatScreen(
             ) {
                 val git = state.git
                 if (git != null && git.hasChanges) {
-                    TextButton(onClick = { nav.nav(Route.ClaudeCodeChanges(key)) }) {
-                        Text(stringRes(Res.string.claude_code_changes))
-                        Spacer(Modifier.width(6.dp))
-                        DiffStat(git.insertions, git.deletions)
+                    // A narrow window keeps the title readable: the counts alone stand for the button.
+                    val wide = LocalScreenLayout.current.isLargeScreen
+                    HoverTooltip(stringRes(Res.string.claude_code_changes)) {
+                        TextButton(onClick = { nav.nav(Route.ClaudeCodeChanges(key)) }) {
+                            if (wide) {
+                                Text(stringRes(Res.string.claude_code_changes))
+                                Spacer(Modifier.width(6.dp))
+                            }
+                            DiffStat(git.insertions, git.deletions)
+                        }
                     }
                     // A merged or closed proposal takes no new version.
                     val ended = git.proposalId?.let { proposalEnded(it) } ?: false
@@ -260,7 +332,14 @@ fun ClaudeCodeChatScreen(
             }
         },
     ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize().imePadding(), contentAlignment = Alignment.TopCenter) {
+        Box(
+            Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .imePadding()
+                .then(keys),
+            contentAlignment = Alignment.TopCenter,
+        ) {
             Column(Modifier.widthIn(max = ChatColumnMaxWidth).fillMaxSize()) {
                 state.error?.let { ErrorBanner(it) }
                 if (runningApp) InlineNote(stringRes(Res.string.claude_code_app_running))
@@ -281,27 +360,48 @@ fun ClaudeCodeChatScreen(
                     }
                 }
 
-                Messages(state, nav, Modifier.weight(1f))
+                Messages(
+                    state = state,
+                    readOnly = openElsewhere,
+                    nav = nav,
+                    modifier = Modifier.weight(1f),
+                    onStarter = {
+                        composerText.setTextAndPlaceCursorAtEnd(it)
+                        composerFocus.requestFocus()
+                    },
+                )
 
                 state.pendingPermissions.firstOrNull()?.let { request ->
                     PermissionCard(
                         request = request,
+                        cwd = state.cwd,
                         onAllow = { viewModel.approve(request, always = false) },
                         onAllowAlways = { viewModel.approve(request, always = true) },
                         onDeny = { viewModel.deny(request) },
                     )
                 }
 
-                Composer(
-                    busy = state.isBusy,
-                    onSend = { viewModel.send(it) },
-                    onStop = { viewModel.interrupt() },
-                )
-                ComposerFooter(
-                    state = state,
-                    openElsewhere = openElsewhere,
-                    onMode = { viewModel.setPermissionMode(it) },
-                )
+                if (openElsewhere && !state.isBusy) {
+                    // Two processes writing one session would interleave their turns: this one reads.
+                    OpenElsewhereBar {
+                        viewModel.fork { forked ->
+                            nav.popBack()
+                            nav.nav(Route.ClaudeCodeChat(forked))
+                        }
+                    }
+                } else {
+                    Composer(
+                        text = composerText,
+                        focusRequester = composerFocus,
+                        busy = state.isBusy,
+                        onSend = { viewModel.send(it) },
+                        onStop = { viewModel.interrupt() },
+                    )
+                    ComposerFooter(
+                        state = state,
+                        onMode = { viewModel.setPermissionMode(it) },
+                    )
+                }
             }
         }
     }
@@ -349,9 +449,9 @@ internal fun DiffStat(
     insertions: Int,
     deletions: Int,
 ) {
-    Text("+$insertions", color = AddedColor, style = MaterialTheme.typography.labelMedium, fontFamily = FontFamily.Monospace)
+    Text("+" + compactCount(insertions.toLong()), color = AddedColor, style = MaterialTheme.typography.labelMedium, fontFamily = FontFamily.Monospace)
     Spacer(Modifier.width(4.dp))
-    Text("−$deletions", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium, fontFamily = FontFamily.Monospace)
+    Text("−" + compactCount(deletions.toLong()), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium, fontFamily = FontFamily.Monospace)
 }
 
 internal val AddedColor = Color(0xFF3FB950)
@@ -359,8 +459,10 @@ internal val AddedColor = Color(0xFF3FB950)
 @Composable
 private fun Messages(
     state: ClaudeChatState,
+    readOnly: Boolean,
     nav: INav,
     modifier: Modifier,
+    onStarter: (String) -> Unit,
 ) {
     val listState = rememberLazyListState()
     val rows = remember(state.items) { state.items.toChatRows() }
@@ -382,16 +484,25 @@ private fun Messages(
         if (!state.historyLoaded) {
             item { CenterNote(stringRes(Res.string.claude_code_loading_history)) }
         }
-        // A call the user stopped never gets a result: it only runs while the turn does.
-        val turnRunning = state.status == ChatStatus.WORKING || state.status == ChatStatus.NEEDS_APPROVAL
+        if (state.historyLoaded && state.items.isEmpty() && !busy && state.streamingText.isEmpty()) {
+            item(key = "intro") { EmptyChatIntro(state, onStarter) }
+        }
+        // A call the user stopped never gets a result: it only spins while the turn runs, and
+        // not while it waits for the user.
+        val turnRunning = state.status == ChatStatus.WORKING
         items(rows, key = { it.key }) { row ->
             when (row) {
-                is ChatRow.ToolGroup -> ToolGroupRow(row, turnRunning)
+                is ChatRow.ToolGroup -> ToolGroupRow(row, state.cwd, turnRunning)
                 is ChatRow.Single ->
                     when (val item = row.item) {
                         is ChatItem.UserText -> UserBubble(item.text, textStyle, onLink)
                         is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle)
-                        is ChatItem.ToolCall -> ToolCallRow(item, turnRunning)
+                        is ChatItem.ToolCall ->
+                            if (ToolKind.of(item.name) == ToolKind.EDIT) {
+                                FileChangeRow(item, state.cwd, turnRunning)
+                            } else {
+                                ToolCallRow(item, state.cwd, turnRunning)
+                            }
                         is ChatItem.Notice -> NoticeRow(item)
                     }
             }
@@ -403,8 +514,9 @@ private fun Messages(
         if (busy) {
             item(key = "status") { LiveStatus(state) }
         }
-        if (state.status == ChatStatus.NOT_STARTED && state.historyLoaded && state.items.isNotEmpty()) {
-            item(key = "resume") { CenterNote(stringRes(Res.string.claude_code_resume_hint)) }
+        if (state.status == ChatStatus.NOT_STARTED && state.historyLoaded && state.items.isNotEmpty() && !readOnly) {
+            // A fork looks like its source until it starts: say what the first message does.
+            item(key = "resume") { CenterNote(stringRes(if (state.forking) Res.string.claude_code_fork_hint else Res.string.claude_code_resume_hint)) }
         }
     }
 }
@@ -540,11 +652,21 @@ private fun LiveStatus(state: ClaudeChatState) {
         }
     }
     val seconds = state.turnStartedAt?.let { ((now - it) / 1000).coerceAtLeast(0) }
+    // While a call waits for an answer, the CLI's last activity is stale: the turn is on the user.
+    val waiting = state.status == ChatStatus.NEEDS_APPROVAL
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-        CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+        if (waiting) {
+            Icon(MaterialSymbols.HourglassEmpty, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+        } else {
+            CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+        }
         Spacer(Modifier.width(10.dp))
         Text(
-            listOfNotNull(state.activity ?: stringRes(Res.string.claude_code_working), seconds?.let { elapsed(it) }).joinToString(" · "),
+            if (waiting) {
+                stringRes(Res.string.claude_code_waiting_approval)
+            } else {
+                listOfNotNull(state.activity ?: stringRes(Res.string.claude_code_working), seconds?.let { elapsed(it) }).joinToString(" · ")
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.grayText,
             maxLines = 1,
@@ -554,6 +676,51 @@ private fun LiveStatus(state: ClaudeChatState) {
 }
 
 private fun elapsed(seconds: Long): String = if (seconds < 60) "${seconds}s" else "${seconds / 60}m ${seconds % 60}s"
+
+/** A new chat: where it will work, and a few ways to begin that fill the composer. */
+@Composable
+private fun EmptyChatIntro(
+    state: ClaudeChatState,
+    onStarter: (String) -> Unit,
+) {
+    Column(
+        Modifier.fillMaxWidth().padding(top = 48.dp, start = 8.dp, end = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+            Icon(MaterialSymbols.Assistant, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(24.dp))
+        }
+        Text(stringRes(Res.string.claude_code_intro_title, subtitle(state)), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        Text(
+            listOf(ToolViews.relative(state.cwd, File(System.getProperty("user.home"))).let { if (it != state.cwd) "~/$it" else it }, modeLabel(state.permissionMode)).joinToString(" · "),
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.grayText,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.size(6.dp))
+        val starters =
+            buildList {
+                add(stringRes(Res.string.claude_code_starter_explain))
+                add(stringRes(Res.string.claude_code_starter_tests))
+                val git = state.git
+                if (git != null && git.ahead > 0) add(stringRes(Res.string.claude_code_starter_review_branch, git.base ?: "main"))
+                if (git != null && git.uncommitted > 0) add(stringRes(Res.string.claude_code_starter_review_uncommitted))
+            }
+        starters.forEach { text ->
+            Surface(
+                onClick = { onStarter(text) },
+                shape = RoundedCornerShape(12.dp),
+                color = Color.Transparent,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
+            ) {
+                Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+            }
+        }
+    }
+}
 
 /** What the user wrote: a quiet rounded block on the right, in the reply's own type. */
 @Composable
@@ -580,21 +747,11 @@ private fun UserBubble(
     }
 }
 
-private fun ToolKind.symbol(): MaterialSymbol =
-    when (this) {
-        ToolKind.COMMAND -> MaterialSymbols.Code
-        ToolKind.READ -> MaterialSymbols.Visibility
-        ToolKind.EDIT -> MaterialSymbols.Edit
-        ToolKind.SEARCH -> MaterialSymbols.Search
-        ToolKind.WEB -> MaterialSymbols.Language
-        ToolKind.AGENT -> MaterialSymbols.Assistant
-        ToolKind.OTHER -> MaterialSymbols.Apps
-    }
-
 /** A run of tool calls as one quiet line: "Ran 6 commands · read 2 files", opened on click. */
 @Composable
 private fun ToolGroupRow(
     group: ChatRow.ToolGroup,
+    cwd: String,
     turnRunning: Boolean,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -628,7 +785,7 @@ private fun ToolGroupRow(
         )
         group.running?.takeIf { turnRunning && !expanded }?.let { running ->
             Text(
-                running.summary ?: running.name,
+                running.summary?.let { ToolViews.relative(it, File(cwd)) } ?: running.name,
                 style = MaterialTheme.typography.bodySmall,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.grayText,
@@ -639,92 +796,10 @@ private fun ToolGroupRow(
         }
         AnimatedVisibility(expanded) {
             Column(Modifier.padding(start = 14.dp)) {
-                group.calls.forEach { ToolCallRow(it, turnRunning) }
+                group.calls.forEach { ToolCallRow(it, cwd, turnRunning) }
             }
         }
     }
-}
-
-/** One tool call: its name and what it acted on; opened, its input and output. */
-@Composable
-private fun ToolCallRow(
-    call: ChatItem.ToolCall,
-    turnRunning: Boolean,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Column {
-        ToolLine(
-            symbol = ToolKind.of(call.name).symbol(),
-            text = listOfNotNull(call.name, call.summary).joinToString("  "),
-            running = turnRunning && !call.isDone,
-            error = call.isError,
-            expanded = expanded,
-            monospace = true,
-            onClick = { expanded = !expanded },
-        )
-        AnimatedVisibility(expanded) {
-            Column(Modifier.padding(start = 26.dp, top = 2.dp, bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Label(stringRes(Res.string.claude_code_tool_input))
-                CodeBlock(call.input)
-                call.result?.let {
-                    Label(stringRes(Res.string.claude_code_tool_output))
-                    CodeBlock(it.take(RESULT_SHOWN), if (call.isError) MaterialTheme.colorScheme.error else Color.Unspecified)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ToolLine(
-    symbol: MaterialSymbol,
-    text: String,
-    running: Boolean,
-    error: Boolean,
-    expanded: Boolean,
-    monospace: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip8()
-            .clickable(onClick = onClick)
-            .padding(vertical = 4.dp, horizontal = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        val tint = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.grayText
-        Box(Modifier.size(16.dp), contentAlignment = Alignment.Center) {
-            if (running) {
-                CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp, color = MaterialTheme.colorScheme.primary)
-            } else {
-                Icon(if (error) MaterialSymbols.Error else symbol, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
-            }
-        }
-        Spacer(Modifier.width(10.dp))
-        Text(
-            text,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = if (monospace) FontFamily.Monospace else null,
-            color = tint,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        Icon(
-            if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.placeholderText,
-            modifier = Modifier.size(16.dp),
-        )
-    }
-}
-
-private fun Modifier.clip8() = clip(RoundedCornerShape(6.dp))
-
-@Composable
-private fun Label(text: String) {
-    Text(text, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.grayText)
 }
 
 @Composable
@@ -801,28 +876,49 @@ private fun alwaysLabel(request: PermissionRequest): String? {
     }
 }
 
+/**
+ * What Claude asks to do, shown as what it would do: the diff of an edit, the command it would
+ * run. Enter answers with the default and Esc denies (see the screen's key handler).
+ */
 @Composable
 private fun PermissionCard(
     request: PermissionRequest,
+    cwd: String,
     onAllow: () -> Unit,
     onAllowAlways: () -> Unit,
     onDeny: () -> Unit,
 ) {
+    val view = rememberToolView(request.toolName, request.input, cwd, pending = true)
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(MaterialSymbols.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Icon(ToolKind.of(request.toolName).symbol(), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    stringRes(Res.string.claude_code_permission_title, request.displayName ?: request.toolName),
+                    when (view) {
+                        is ToolView.FileChange ->
+                            stringRes(if (view.newFile) Res.string.claude_code_permission_create else Res.string.claude_code_permission_edit, view.path)
+                        is ToolView.Command -> stringRes(Res.string.claude_code_permission_run)
+                        else -> stringRes(Res.string.claude_code_permission_title, request.displayName ?: request.toolName)
+                    },
                     style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            CodeBlock(request.summary, maxHeight = 160)
+            when (view) {
+                is ToolView.FileChange ->
+                    Box(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) { FileChangeDiff(view) }
+                is ToolView.Command -> {
+                    view.description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText) }
+                    CodeBlock("$ " + view.command, maxHeight = 200)
+                }
+                else -> CodeBlock(ToolViews.relative(request.summary, File(cwd)), maxHeight = 160)
+            }
             request.decisionReason?.takeIf { it.isNotBlank() }?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
             }
@@ -835,12 +931,20 @@ private fun PermissionCard(
                     Button(onClick = onAllow) { Text(stringRes(Res.string.claude_code_allow)) }
                     OutlinedButton(onClick = onDeny) { Text(stringRes(Res.string.claude_code_deny)) }
                 }
-            }
-            // The rule can be a whole command line: one line, cut, with the full text in a tooltip.
-            if (always != null) {
-                HoverTooltip(always) {
-                    TextButton(onClick = onAllowAlways) { Text(always, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                // The rule can be a whole command line: one line, cut, with the full text in a tooltip.
+                Box(Modifier.weight(1f)) {
+                    if (always != null) {
+                        HoverTooltip(always) {
+                            TextButton(onClick = onAllowAlways) { Text(always, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        }
+                    }
                 }
+                Text(
+                    stringRes(if (request.defaultToNo) Res.string.claude_code_permission_keys_deny else Res.string.claude_code_permission_keys),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    maxLines = 1,
+                )
             }
         }
     }
@@ -849,11 +953,12 @@ private fun PermissionCard(
 /** The app's chat composer: a rounded field with the send button inside; Stop while a turn runs. */
 @Composable
 private fun Composer(
+    text: TextFieldState,
+    focusRequester: FocusRequester,
     busy: Boolean,
     onSend: (String) -> Unit,
     onStop: () -> Unit,
 ) {
-    val text = rememberTextFieldState()
     val send = {
         val value = text.text.toString()
         if (value.isNotBlank()) {
@@ -864,7 +969,7 @@ private fun Composer(
     ThinPaddingTextField(
         state = text,
         modifier =
-            Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 6.dp).onPreviewKeyEvent { event ->
+            Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 6.dp).focusRequester(focusRequester).onPreviewKeyEvent { event ->
                 // Enter sends; Shift+Enter is a new line.
                 if (event.type == KeyEventType.KeyDown && event.key == Key.Enter && !event.isShiftPressed) {
                     send()
@@ -899,11 +1004,10 @@ private fun Composer(
     )
 }
 
-/** Under the composer: the permission mode, a note when another Claude Code has the session, the cost. */
+/** Under the composer: the permission mode, and how full the context is. */
 @Composable
 private fun ComposerFooter(
     state: ClaudeChatState,
-    openElsewhere: Boolean,
     onMode: (PermissionMode) -> Unit,
 ) {
     Row(
@@ -911,19 +1015,89 @@ private fun ComposerFooter(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ModeChip(state.permissionMode, onMode)
-        if (openElsewhere) {
-            Spacer(Modifier.width(10.dp))
-            HoverTooltip(stringRes(Res.string.claude_code_open_elsewhere_warning)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(7.dp).background(MaterialTheme.colorScheme.tertiary, CircleShape))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringRes(Res.string.claude_code_open_elsewhere_short), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.grayText)
-                }
+        Spacer(Modifier.weight(1f))
+        val used = state.contextTokens
+        val window = state.contextWindow
+        if (used != null && window != null && window > 0) ContextMeter(used, window)
+    }
+}
+
+/**
+ * How much of the model's context the conversation fills. Near full, Claude Code summarizes
+ * the conversation to go on, and details from early on can be lost.
+ */
+@Composable
+private fun ContextMeter(
+    used: Long,
+    window: Long,
+) {
+    val fraction = (used.toFloat() / window).coerceIn(0f, 1f)
+    val percent = (fraction * 100).toInt()
+    val color =
+        when {
+            fraction >= 0.85f -> MaterialTheme.colorScheme.error
+            fraction >= 0.6f -> MaterialTheme.colorScheme.tertiary
+            else -> MaterialTheme.colorScheme.grayText
+        }
+    HoverTooltip(stringRes(Res.string.claude_code_context_tooltip, compactCount(used), compactCount(window))) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(
+                progress = { fraction.coerceAtLeast(0.02f) },
+                modifier = Modifier.size(12.dp),
+                strokeWidth = 2.dp,
+                color = color,
+                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(stringRes(Res.string.claude_code_context_used, percent), style = MaterialTheme.typography.labelSmall, color = color)
+        }
+    }
+}
+
+/** 950, 12.4k, 1.2M: counts that fit a narrow bar. */
+internal fun compactCount(n: Long): String =
+    when {
+        n < 1_000 -> n.toString()
+        n < 10_000 -> "%.1fk".format(n / 1_000.0).replace(".0k", "k")
+        n < 1_000_000 -> "${n / 1_000}k"
+        else -> "%.1fM".format(n / 1_000_000.0).replace(".0M", "M")
+    }
+
+/** In place of the composer while a terminal holds the session: why, and the way to go on. */
+@Composable
+private fun OpenElsewhereBar(onFork: () -> Unit) {
+    // Side by side on a wide window; stacked on a narrow one, where the text would wrap to a column.
+    val wide = LocalScreenLayout.current.isLargeScreen
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        val note: @Composable (Modifier) -> Unit = { modifier ->
+            Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+                Icon(MaterialSymbols.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(stringRes(Res.string.claude_code_open_elsewhere_readonly), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
             }
         }
-        Spacer(Modifier.weight(1f))
-        state.costUsd?.let {
-            Text(stringRes(Res.string.claude_code_cost, "%.2f".format(it)), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.grayText)
+        val fork: @Composable () -> Unit = {
+            FilledTonalButton(onClick = onFork) {
+                Icon(MaterialSymbols.ForkRight, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringRes(Res.string.claude_code_fork))
+            }
+        }
+        if (wide) {
+            Row(Modifier.padding(start = 14.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                note(Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
+                fork()
+            }
+        } else {
+            Column(Modifier.padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                note(Modifier)
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) { fork() }
+            }
         }
     }
 }
@@ -934,15 +1108,27 @@ private fun ModeChip(
     onMode: (PermissionMode) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
+    // The mode decides what Claude may do unasked: the more it may, the louder the chip.
+    val color =
+        when (mode) {
+            PermissionMode.AUTO, PermissionMode.BYPASS -> MaterialTheme.colorScheme.error
+            PermissionMode.ACCEPT_EDITS -> MaterialTheme.colorScheme.tertiary
+            PermissionMode.PLAN -> MaterialTheme.colorScheme.primary
+            else -> MaterialTheme.colorScheme.grayText
+        }
     Box {
         Row(
-            Modifier.clip(RoundedCornerShape(50)).clickable { open = true }.padding(horizontal = 6.dp, vertical = 3.dp),
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(color.copy(alpha = 0.12f))
+                .clickable { open = true }
+                .padding(horizontal = 10.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(MaterialSymbols.Security, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(14.dp))
-            Spacer(Modifier.width(4.dp))
-            Text(modeLabel(mode), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.grayText)
-            Icon(MaterialSymbols.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(14.dp))
+            Icon(MaterialSymbols.Security, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(5.dp))
+            Text(modeLabel(mode), style = MaterialTheme.typography.labelMedium, color = color)
+            Icon(MaterialSymbols.ExpandMore, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
         }
         RoundedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             RoundedMenuSection {
@@ -1049,5 +1235,3 @@ internal fun modeDescription(mode: PermissionMode): String =
         PermissionMode.AUTO -> stringRes(Res.string.claude_code_mode_auto_desc)
         else -> stringRes(Res.string.claude_code_mode_default_desc)
     }
-
-private const val RESULT_SHOWN = 20_000

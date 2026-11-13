@@ -33,8 +33,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -63,7 +67,22 @@ data class ClaudeSessionRow(
     val openElsewhere: ClaudeLiveSession?,
     /** The repository (or folder) the session belongs to, worktrees included: the list's sections. */
     val project: String,
+    /** Its folder is gone (a removed worktree): kept for its history, out of the way. */
+    val archived: Boolean = false,
 )
+
+/** A chat that wants the user: it waits on an approval, or its turn ended. */
+@Immutable
+data class ChatAttention(
+    val key: String,
+    val title: String,
+    val kind: Kind,
+) {
+    enum class Kind {
+        NEEDS_APPROVAL,
+        FINISHED,
+    }
+}
 
 /** What a folder is part of: a NIP-34 repository, a git repository, or just itself. */
 @Immutable
@@ -93,6 +112,16 @@ class ClaudeCodeService(
     val rows: StateFlow<List<ClaudeSessionRow>> = _rows.asStateFlow()
 
     private val projects = ConcurrentHashMap<String, ProjectInfo>()
+
+    private val _attention = MutableSharedFlow<ChatAttention>(extraBufferCapacity = 16, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    /** Chats asking for the user, as it happens: what an OS notification tells them about. */
+    val attention: SharedFlow<ChatAttention> = _attention.asSharedFlow()
+
+    private val _needsYou = MutableStateFlow(0)
+
+    /** How many chats wait on an approval right now. */
+    val needsYou: StateFlow<Int> = _needsYou.asStateFlow()
 
     private fun projectOf(cwd: String?): String = cwd?.let { projects[it]?.name ?: folderProject(File(it)) } ?: ""
 
@@ -189,6 +218,17 @@ class ClaudeCodeService(
         title: String? = null,
     ): ClaudeChat = open("new-${UUID.randomUUID()}", null, cwd, title?.trim()?.ifEmpty { null }, permissionMode, model)
 
+    /**
+     * A new chat that starts from [key]'s history and branches off it with its first message:
+     * the way to go on with a session another Claude Code holds, without both writing to it.
+     */
+    fun fork(key: String): ClaudeChat? {
+        val source = chats.value[key]?.state?.value
+        val sessionId = source?.sessionId ?: saved.value.firstOrNull { it.sessionId == key }?.sessionId ?: return null
+        val cwd = source?.cwd ?: saved.value.firstOrNull { it.sessionId == sessionId }?.cwd ?: return null
+        return open("fork-${UUID.randomUUID()}", sessionId, File(cwd), null, source?.permissionMode ?: PermissionMode.DEFAULT, null, fork = true)
+    }
+
     private fun open(
         key: String,
         sessionId: String?,
@@ -196,19 +236,41 @@ class ClaudeCodeService(
         title: String?,
         mode: PermissionMode,
         model: String?,
+        fork: Boolean = false,
     ): ClaudeChat {
-        val chat = ClaudeChat(key, sessionId, cwd, title, mode, model, store, launcher, scope, onSessionChanged = { refreshInBackground() })
+        val chat = ClaudeChat(key, sessionId, cwd, title, mode, model, store, launcher, scope, onSessionChanged = { refreshInBackground() }, fork = fork)
         chats.update { it + (key to chat) }
-        // The list only shows these; streamed text must not rebuild it.
         watchers[key] =
             scope.launch {
+                // The list only shows these; streamed text must not rebuild it.
+                launch {
+                    chat.state
+                        .map { Triple(it.sessionId, it.title, it.status) to (it.items.firstOrNull() as? ChatItem.UserText) }
+                        .distinctUntilChanged()
+                        .collect { if (chats.value[key] === chat) rebuildRows() }
+                }
+                var last: ChatStatus? = null
                 chat.state
-                    .map { Triple(it.sessionId, it.title, it.status) to (it.items.firstOrNull() as? ChatItem.UserText) }
+                    .map { it.status }
                     .distinctUntilChanged()
-                    .collect { if (chats.value[key] === chat) rebuildRows() }
+                    .collect { status ->
+                        val wasRunning = last == ChatStatus.WORKING || last == ChatStatus.NEEDS_APPROVAL
+                        when {
+                            status == ChatStatus.NEEDS_APPROVAL -> ChatAttention.Kind.NEEDS_APPROVAL
+                            wasRunning && (status == ChatStatus.READY || status == ChatStatus.ENDED) -> ChatAttention.Kind.FINISHED
+                            else -> null
+                        }?.let { _attention.tryEmit(ChatAttention(chat.key, titleOf(chat.state.value), it)) }
+                        last = status
+                        _needsYou.value = chats.value.values.count { it.state.value.status == ChatStatus.NEEDS_APPROVAL }
+                    }
             }
         return chat
     }
+
+    private fun titleOf(state: ClaudeChatState): String =
+        state.title?.takeIf { it.isNotBlank() }
+            ?: (state.items.firstOrNull { it is ChatItem.UserText } as? ChatItem.UserText)?.text?.lineSequence()?.first()
+            ?: folderProject(File(state.cwd))
 
     suspend fun rename(
         row: ClaudeSessionRow,
@@ -277,6 +339,8 @@ class ClaudeCodeService(
         val open = chats.value
         val openBySession =
             open.values
+                // A fork that hasn't started still carries its source's id; the row is the source's.
+                .filter { !it.state.value.forking }
                 .mapNotNull { chat ->
                     chat.state.value.sessionId
                         ?.let { it to chat }
@@ -304,6 +368,7 @@ class ClaudeCodeService(
                     appStatus = chat?.state?.value?.status,
                     openElsewhere = live[info.sessionId]?.takeIf { it.pid !in ownPids },
                     project = projectOf(info.cwd),
+                    archived = info.cwd?.let { !File(it).isDirectory } ?: false,
                 )
             }
         val savedIds = saved.value.mapTo(HashSet()) { it.sessionId }
@@ -311,8 +376,9 @@ class ClaudeCodeService(
         val unsaved =
             open.values
                 .filter { chat ->
-                    chat.state.value.sessionId
-                        .let { it == null || it !in savedIds }
+                    chat.state.value.forking ||
+                        chat.state.value.sessionId
+                            .let { it == null || it !in savedIds }
                 }.map { chat ->
                     val state = chat.state.value
                     ClaudeSessionRow(

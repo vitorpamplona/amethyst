@@ -254,7 +254,8 @@ enum class ToolKind {
 
 /**
  * Folds every run of two or more tool calls into a [ChatRow.ToolGroup]. A single call stays on
- * its own row, so a turn that runs one command still shows it.
+ * its own row, so a turn that runs one command still shows it. Edits are never folded: what a
+ * turn changed is what the user reads it for, so each edit keeps its own row.
  */
 fun List<ChatItem>.toChatRows(): List<ChatRow> {
     val rows = ArrayList<ChatRow>()
@@ -269,7 +270,10 @@ fun List<ChatItem>.toChatRows(): List<ChatRow> {
         run.clear()
     }
     forEach { item ->
-        if (item is ChatItem.ToolCall) {
+        if (item is ChatItem.ToolCall && ToolKind.of(item.name) == ToolKind.EDIT) {
+            flush()
+            rows.add(ChatRow.Single(item))
+        } else if (item is ChatItem.ToolCall) {
             run.add(item)
         } else {
             flush()

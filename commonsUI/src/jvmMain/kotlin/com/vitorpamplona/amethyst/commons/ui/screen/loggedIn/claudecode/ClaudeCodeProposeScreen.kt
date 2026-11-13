@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,6 +36,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -59,6 +62,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -77,10 +81,12 @@ import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalResult
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalUiState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.claude_code_ask_to_commit
 import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_check_read_diff
 import com.vitorpamplona.amethyst.commons.resources.claude_code_check_tested
 import com.vitorpamplona.amethyst.commons.resources.claude_code_close
+import com.vitorpamplona.amethyst.commons.resources.claude_code_commit_prompt
 import com.vitorpamplona.amethyst.commons.resources.claude_code_draft_with_claude
 import com.vitorpamplona.amethyst.commons.resources.claude_code_gate
 import com.vitorpamplona.amethyst.commons.resources.claude_code_gate_cancelled
@@ -106,6 +112,10 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_push_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_push_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_push_no_remotes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_push_title
+import com.vitorpamplona.amethyst.commons.resources.claude_code_show_changes
+import com.vitorpamplona.amethyst.commons.resources.claude_code_step_check
+import com.vitorpamplona.amethyst.commons.resources.claude_code_step_confirm
+import com.vitorpamplona.amethyst.commons.resources.claude_code_step_describe
 import com.vitorpamplona.amethyst.commons.resources.claude_code_uncommitted_warning
 import com.vitorpamplona.amethyst.commons.resources.claude_code_update_proposal
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -213,149 +223,207 @@ private fun ProposeForm(
             }
         }
     }
-    Column(
-        Modifier
-            .widthIn(max = 760.dp)
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
-    ) {
-        Text(
-            stringRes(
-                when {
-                    isUpdate -> Res.string.claude_code_propose_update_desc
-                    noGrasp -> Res.string.claude_code_propose_desc_no_grasp
-                    else -> Res.string.claude_code_propose_desc
-                },
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.grayText,
-        )
+    val gateOk = gate is GateState.Passed || gate is GateState.None
+    val title = draft?.title.orEmpty()
+    val pushReady = !noGrasp || (remote != null && cloneUrl.isNotBlank())
+    val commitPrompt = stringRes(Res.string.claude_code_commit_prompt)
 
-        CommitList(info)
-        if (info.uncommitted > 0) {
+    // The steps scroll; publishing stays at the bottom, with what still blocks it.
+    Column(Modifier.widthIn(max = 760.dp).fillMaxSize()) {
+        Column(
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
             Text(
-                pluralStringRes(Res.plurals.claude_code_uncommitted_warning, info.uncommitted, info.uncommitted),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
+                stringRes(
+                    when {
+                        isUpdate -> Res.string.claude_code_propose_update_desc
+                        noGrasp -> Res.string.claude_code_propose_desc_no_grasp
+                        else -> Res.string.claude_code_propose_desc
+                    },
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.grayText,
             )
-        }
 
-        if (!isUpdate) {
-            val value = draft ?: ProposalDraft("", "")
-            OutlinedTextField(
-                value = value.title,
-                onValueChange = { viewModel.setDraft(value.copy(title = it)) },
-                label = { Text(stringRes(Res.string.claude_code_propose_title)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = value.description,
-                onValueChange = { viewModel.setDraft(value.copy(description = it)) },
-                label = { Text(stringRes(Res.string.claude_code_propose_description)) },
-                minLines = 6,
-                modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(enabled = !drafting, onClick = { viewModel.draftWithClaude() }) {
-                    if (drafting) {
-                        CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(8.dp))
+            CommitList(info)
+            if (info.uncommitted > 0) {
+                // Left out of the proposal unless committed: say so, with the two ways forward.
+                Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 4.dp)) {
+                        Text(
+                            pluralStringRes(Res.plurals.claude_code_uncommitted_warning, info.uncommitted, info.uncommitted),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        Row {
+                            TextButton(onClick = { nav.nav(Route.ClaudeCodeChanges(key)) }) { Text(stringRes(Res.string.claude_code_show_changes), color = MaterialTheme.colorScheme.onErrorContainer) }
+                            TextButton(onClick = {
+                                viewModel.chat?.send(commitPrompt)
+                                nav.popBack()
+                            }) { Text(stringRes(Res.string.claude_code_ask_to_commit), color = MaterialTheme.colorScheme.onErrorContainer) }
+                        }
                     }
-                    Text(stringRes(Res.string.claude_code_draft_with_claude))
+                }
+            }
+
+            var step = 0
+            if (!isUpdate) {
+                ProposeStep(++step, stringRes(Res.string.claude_code_step_describe), done = title.isNotBlank()) {
+                    val value = draft ?: ProposalDraft("", "")
+                    OutlinedTextField(
+                        value = value.title,
+                        onValueChange = { viewModel.setDraft(value.copy(title = it)) },
+                        label = { Text(stringRes(Res.string.claude_code_propose_title)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = value.description,
+                        onValueChange = { viewModel.setDraft(value.copy(description = it)) },
+                        label = { Text(stringRes(Res.string.claude_code_propose_description)) },
+                        minLines = 6,
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedButton(enabled = !drafting, onClick = { viewModel.draftWithClaude() }) {
+                            if (drafting) {
+                                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text(stringRes(Res.string.claude_code_draft_with_claude))
+                        }
+                    }
+                }
+            }
+
+            if (noGrasp) {
+                ProposeStep(++step, stringRes(Res.string.claude_code_push_title), done = pushReady) {
+                    PushSection(
+                        remotes = remotes,
+                        selected = remote,
+                        cloneUrl = cloneUrl,
+                        onSelect = {
+                            remote = it
+                            cloneUrl = it.cloneUrl
+                        },
+                        onCloneUrl = { cloneUrl = it },
+                    )
+                }
+            }
+            val logFile by viewModel.gateLogFile.collectAsStateWithLifecycle()
+            ProposeStep(++step, stringRes(Res.string.claude_code_step_check), done = gateOk) {
+                GateSection(
+                    gate = gate,
+                    logFile = logFile,
+                    fullLog = viewModel::fullGateLog,
+                    onRun = { viewModel.runGate() },
+                    onCancel = { viewModel.cancelGate() },
+                )
+            }
+
+            ProposeStep(++step, stringRes(Res.string.claude_code_step_confirm), done = readDiff && tested) {
+                Column {
+                    CheckRow(readDiff, stringRes(Res.string.claude_code_check_read_diff)) { readDiff = it }
+                    CheckRow(tested, stringRes(Res.string.claude_code_check_tested)) { tested = it }
                 }
             }
         }
 
-        if (noGrasp) {
-            PushSection(
-                remotes = remotes,
-                selected = remote,
-                cloneUrl = cloneUrl,
-                onSelect = {
-                    remote = it
-                    cloneUrl = it.cloneUrl
-                },
-                onCloneUrl = { cloneUrl = it },
-            )
-        }
-        val logFile by viewModel.gateLogFile.collectAsStateWithLifecycle()
-        GateSection(
-            gate = gate,
-            logFile = logFile,
-            fullLog = viewModel::fullGateLog,
-            onRun = { viewModel.runGate() },
-            onCancel = { viewModel.cancelGate() },
-        )
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            (done?.result as? GitProposalResult.Failed)?.let {
+                Text(stringRes(Res.string.claude_code_publish_failed, it.reason), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+            if (publishState is GitProposalUiState.Working || preparing) LinearProgressIndicator(Modifier.fillMaxWidth())
 
-        Column {
-            CheckRow(readDiff, stringRes(Res.string.claude_code_check_read_diff)) { readDiff = it }
-            CheckRow(tested, stringRes(Res.string.claude_code_check_tested)) { tested = it }
-        }
+            pushError?.let { Text(stringRes(Res.string.claude_code_push_failed, it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
 
-        (done?.result as? GitProposalResult.Failed)?.let {
-            Text(stringRes(Res.string.claude_code_publish_failed, it.reason), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-        }
-        if (publishState is GitProposalUiState.Working || preparing) LinearProgressIndicator(Modifier.fillMaxWidth())
-
-        pushError?.let { Text(stringRes(Res.string.claude_code_push_failed, it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-
-        val gateOk = gate is GateState.Passed || gate is GateState.None
-        val title = draft?.title.orEmpty()
-        val pushReady = !noGrasp || (remote != null && cloneUrl.isNotBlank())
-        val ready = readDiff && tested && gateOk && pushReady && target != null && (isUpdate || title.isNotBlank()) && publishState !is GitProposalUiState.Working && !preparing
-        Button(
-            enabled = ready,
-            modifier = Modifier.fillMaxWidth(),
-            onClick = {
-                val t = target ?: return@Button
-                preparing = true
-                pushError = null
-                scope.launch {
-                    val prNote = info.proposalId?.let { LocalCache.getOrCreateNote(it) }
-                    if (noGrasp) {
-                        val pushTo = remote
-                        val branchName = info.branch
-                        val tip = viewModel.localTip(null, emptyList(), null)
-                        if (pushTo == null || branchName == null || tip == null) {
+            val ready = readDiff && tested && gateOk && pushReady && target != null && (isUpdate || title.isNotBlank()) && publishState !is GitProposalUiState.Working && !preparing
+            Button(
+                enabled = ready,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    val t = target ?: return@Button
+                    preparing = true
+                    pushError = null
+                    scope.launch {
+                        val prNote = info.proposalId?.let { LocalCache.getOrCreateNote(it) }
+                        if (noGrasp) {
+                            val pushTo = remote
+                            val branchName = info.branch
+                            val tip = viewModel.localTip(null, emptyList(), null)
+                            if (pushTo == null || branchName == null || tip == null) {
+                                preparing = false
+                                return@launch
+                            }
+                            val error = viewModel.pushBranch(pushTo.name, branchName)
                             preparing = false
+                            if (error != null) {
+                                pushError = error
+                                return@launch
+                            }
+                            if (prNote != null) {
+                                proposals.updatePullRequest(prNote, t, cloneUrl.trim(), tip.tip)
+                            } else {
+                                proposals.openPullRequest(t, cloneUrl.trim(), tip.tip, branchName, null, title.trim(), draft?.description.orEmpty().trim(), emptyList())
+                            }
                             return@launch
                         }
-                        val error = viewModel.pushBranch(pushTo.name, branchName)
+                        val branch = t.defaultBranch
+                        val head = branch?.let { t.signedState?.commitFor(it) }
+                        val tip = viewModel.localTip(head, t.targets.grasp.map { it.cloneUrl } + t.targets.others, branch)
                         preparing = false
-                        if (error != null) {
-                            pushError = error
-                            return@launch
-                        }
-                        if (prNote != null) {
-                            proposals.updatePullRequest(prNote, t, cloneUrl.trim(), tip.tip)
-                        } else {
-                            proposals.openPullRequest(t, cloneUrl.trim(), tip.tip, branchName, null, title.trim(), draft?.description.orEmpty().trim(), emptyList())
-                        }
-                        return@launch
+                        if (tip == null) return@launch
+                        proposals.publishFromLocal(
+                            target = t,
+                            pullRequest = prNote,
+                            objects = { viewModel.objects(tip) },
+                            tip = tip.tip,
+                            mergeBase = tip.mergeBase,
+                            sourceBranch = info.branch,
+                            title = title.trim(),
+                            description = draft?.description.orEmpty().trim(),
+                        )
                     }
-                    val branch = t.defaultBranch
-                    val head = branch?.let { t.signedState?.commitFor(it) }
-                    val tip = viewModel.localTip(head, t.targets.grasp.map { it.cloneUrl } + t.targets.others, branch)
-                    preparing = false
-                    if (tip == null) return@launch
-                    proposals.publishFromLocal(
-                        target = t,
-                        pullRequest = prNote,
-                        objects = { viewModel.objects(tip) },
-                        tip = tip.tip,
-                        mergeBase = tip.mergeBase,
-                        sourceBranch = info.branch,
-                        title = title.trim(),
-                        description = draft?.description.orEmpty().trim(),
-                    )
-                }
-            },
-        ) {
-            Text(stringRes(if (isUpdate) Res.string.claude_code_publish_new_version else Res.string.claude_code_publish))
+                },
+            ) {
+                Text(stringRes(if (isUpdate) Res.string.claude_code_publish_new_version else Res.string.claude_code_publish))
+            }
         }
+    }
+}
+
+/** One numbered step of publishing; its number turns into a check once it is done. */
+@Composable
+private fun ProposeStep(
+    number: Int,
+    title: String,
+    done: Boolean,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(if (done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (done) {
+                    Icon(MaterialSymbols.Check, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
+                } else {
+                    Text(number.toString(), style = MaterialTheme.typography.labelMedium)
+                }
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(title, style = MaterialTheme.typography.titleSmall)
+        }
+        Column(Modifier.padding(start = 34.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
     }
 }
 
@@ -370,7 +438,6 @@ private fun PushSection(
 ) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringRes(Res.string.claude_code_push_title), style = MaterialTheme.typography.titleSmall)
             Text(stringRes(Res.string.claude_code_push_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
             if (remotes.isEmpty()) {
                 Text(stringRes(Res.string.claude_code_push_no_remotes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)

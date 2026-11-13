@@ -160,6 +160,20 @@ class ClaudeCodeStartViewModel(
     }
 }
 
+/** Which changes the Changes screen shows. */
+@Immutable
+sealed interface ChangesScope {
+    /** What isn't committed yet, new files included: what Claude just did. */
+    data object Uncommitted : ChangesScope
+
+    /** Everything the branch changed since its base, uncommitted work included. */
+    data object Branch : ChangesScope
+
+    data class Commit(
+        val sha: String,
+    ) : ChangesScope
+}
+
 /** What a chat's branch changed. */
 @Immutable
 sealed interface ChangesState {
@@ -167,6 +181,7 @@ sealed interface ChangesState {
 
     data class Loaded(
         val info: GitWorkInfo?,
+        val scope: ChangesScope,
         val patch: ParsedPatch,
         val untracked: List<String>,
     ) : ChangesState
@@ -181,7 +196,15 @@ class ClaudeCodeChangesViewModel(
     private val _state = MutableStateFlow<ChangesState>(ChangesState.Loading)
     val state: StateFlow<ChangesState> = _state.asStateFlow()
 
+    private var scope: ChangesScope? = null
+
     init {
+        reload()
+    }
+
+    /** Shows [next]'s changes. */
+    fun show(next: ChangesScope) {
+        scope = next
         reload()
     }
 
@@ -194,10 +217,29 @@ class ClaudeCodeChangesViewModel(
                 ?.let(::File) ?: return
         viewModelScope.launch {
             val info = GitWorkspace.inspect(dir)
-            val diff = GitWorkspace.diff(dir)
+            // First open: what isn't committed when there is some (what Claude just did), else the branch.
+            val shown = scope ?: (if ((info?.uncommitted ?: 0) > 0) ChangesScope.Uncommitted else ChangesScope.Branch).also { scope = it }
+            val untracked = GitWorkspace.untracked(dir)
+            val diff =
+                when (shown) {
+                    ChangesScope.Uncommitted -> GitWorkspace.uncommittedDiff(dir) + GitWorkspace.untrackedDiff(dir, untracked)
+                    ChangesScope.Branch -> GitWorkspace.diff(dir) + GitWorkspace.untrackedDiff(dir, untracked)
+                    is ChangesScope.Commit -> GitWorkspace.commitDiff(dir, shown.sha)
+                }
             val patch = withContext(Dispatchers.Default) { UnifiedDiffParser.parse(diff) }
-            _state.value = ChangesState.Loaded(info, patch, GitWorkspace.untracked(dir))
+            _state.value = ChangesState.Loaded(info, shown, patch, if (shown is ChangesScope.Commit) emptyList() else untracked)
         }
+    }
+
+    /** Puts a question about [line] of [path] to the chat, quoting the line, and sends it. */
+    fun askAbout(
+        path: String,
+        line: Int?,
+        code: String,
+        question: String,
+    ) {
+        val where = if (line != null) "$path:$line" else path
+        chat?.send("$where\n```\n$code\n```\n$question")
     }
 }
 

@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.moderation.notifications.sanitizeForTo
 import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_default_title
+import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_finished
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_dm
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_follow
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_mention
@@ -282,6 +283,8 @@ class DesktopNotificationAutoDispatcher(
                 NotifKind.FOLLOW -> loadStringRes(Res.string.desktop_notification_follow, displayName)
                 // Posted by DesktopCalendarReminders, never classified from an event here.
                 NotifKind.CALENDAR -> loadStringRes(Res.string.calendar_reminder_default_title)
+                // Posted by DesktopNotifications.watchClaudeCode, never classified from an event.
+                NotifKind.AGENT -> loadStringRes(Res.string.claude_code_notify_finished)
             }
 
         // Never leak DM ciphertext into the body — decryption pipeline

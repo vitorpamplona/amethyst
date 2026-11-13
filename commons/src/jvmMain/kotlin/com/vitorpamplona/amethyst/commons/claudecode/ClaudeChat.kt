@@ -100,6 +100,14 @@ data class ClaudeChatState(
     val turnStartedAt: Long? = null,
     /** The folder's git state, when it is a git checkout. */
     val git: GitWorkInfo? = null,
+    /**
+     * A copy of another session that hasn't started yet: [sessionId] is still the source's, and
+     * the first message branches it into a session of its own.
+     */
+    val forking: Boolean = false,
+    /** How much of the model's context the conversation fills, and how much it has, as the CLI last said. */
+    val contextTokens: Long? = null,
+    val contextWindow: Long? = null,
 ) {
     val isBusy: Boolean get() = status == ChatStatus.STARTING || status == ChatStatus.WORKING || status == ChatStatus.NEEDS_APPROVAL
 }
@@ -123,11 +131,16 @@ class ClaudeChat internal constructor(
     private val onSessionChanged: () -> Unit,
     /** Reads the folder's git state; tests replace it. */
     private val inspectGit: suspend (File) -> GitWorkInfo? = { GitWorkspace.inspect(it) },
+    /** Starts as a copy of [resumeSessionId]: its history, and a session of its own from the first message. */
+    fork: Boolean = false,
 ) {
     private val workDir = cwd
     private val transcript = ChatTranscript()
     private val lock = Mutex()
     private var connection: ClaudeCodeConnection? = null
+
+    /** Until the CLI names the copy's own session, the process starts with `--fork-session`. */
+    private var forkOnStart = fork && resumeSessionId != null
 
     /** The name a new chat was given, for the CLI's session once it exists. */
     private var titleToApply: String? = if (resumeSessionId == null) title else null
@@ -141,6 +154,7 @@ class ClaudeChat internal constructor(
                 permissionMode = permissionMode,
                 model = model,
                 historyLoaded = resumeSessionId == null,
+                forking = fork && resumeSessionId != null,
             ),
         )
     val state: StateFlow<ClaudeChatState> = _state.asStateFlow()
@@ -276,6 +290,7 @@ class ClaudeChat internal constructor(
                 ClaudeCodeOptions(
                     cwd = workDir,
                     resumeSessionId = current.sessionId,
+                    forkSession = forkOnStart,
                     model = model,
                     permissionMode = current.permissionMode,
                     // A NIP-34 checkout: publishing is the user's step (CONTRIBUTING-WITH-AI.md), never the agent's.
@@ -316,8 +331,11 @@ class ClaudeChat internal constructor(
         when (message) {
             is ClaudeMessage.Init -> {
                 val isNewSession = _state.value.sessionId != message.sessionId
+                // The copy has its own session now: later starts resume it, not the source.
+                if (isNewSession) forkOnStart = false
                 publish {
                     it.copy(
+                        forking = it.forking && !isNewSession,
                         sessionId = message.sessionId,
                         model = message.model ?: it.model,
                         permissionMode = message.permissionMode ?: it.permissionMode,
@@ -333,7 +351,8 @@ class ClaudeChat internal constructor(
                 // A subagent's own messages stay inside its tool call.
                 if (message.parentToolUseId != null) return
                 transcript.addAssistantBlocks(message.content)
-                publish { it.copy(streamingText = "") }
+                val used = message.contextTokens
+                publish { it.copy(streamingText = "", contextTokens = used ?: it.contextTokens) }
             }
             is ClaudeMessage.User -> {
                 if (message.parentToolUseId != null) return
@@ -376,6 +395,7 @@ class ClaudeChat internal constructor(
                         streamingText = "",
                         pendingPermissions = emptyList(),
                         costUsd = message.totalCostUsd ?: it.costUsd,
+                        contextWindow = message.contextWindow ?: it.contextWindow,
                     )
                 }
                 refreshGit()

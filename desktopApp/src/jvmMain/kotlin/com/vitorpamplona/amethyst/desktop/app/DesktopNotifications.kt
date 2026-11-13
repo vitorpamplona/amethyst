@@ -28,31 +28,41 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import com.vitorpamplona.amethyst.commons.claudecode.ChatAttention
+import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.moderation.notifications.AwtTrayNotifier
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotifKind
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationSettings
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationSpec
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NucleusNotificationDispatcher
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PermissionState
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PreferencesNotificationSettings
+import com.vitorpamplona.amethyst.commons.moderation.notifications.SendResult
 import com.vitorpamplona.amethyst.commons.moderation.notifications.nowEpochSeconds
 import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
 import com.vitorpamplona.amethyst.commons.notifications.composers.MentionNotificationComposer
 import com.vitorpamplona.amethyst.commons.notifications.composers.StandardNotificationComposer
 import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_finished
+import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_needs_you
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_denied
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_description
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_preview
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_preview_description
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.ui.notifications.DesktopNotificationAutoDispatcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -113,6 +123,29 @@ class DesktopNotifications(
             }
         }
 
+    /**
+     * Tells the user when a Claude Code session waits on their approval or finishes its turn,
+     * while the window is in the background: long tasks run without being watched. Follows the
+     * OS notifications switch and Do Not Disturb.
+     */
+    fun watchClaudeCode(isWindowFocused: StateFlow<Boolean>): Job =
+        scope.launch {
+            ClaudeCodeService.shared.attention.collect { event ->
+                if (!settings.enabled.value || isWindowFocused.value) return@collect
+                if (settings.dnd.value.isActive(TimeUtils.now())) return@collect
+                val title =
+                    loadStringRes(
+                        when (event.kind) {
+                            ChatAttention.Kind.NEEDS_APPROVAL -> Res.string.claude_code_notify_needs_you
+                            ChatAttention.Kind.FINISHED -> Res.string.claude_code_notify_finished
+                        },
+                    )
+                val notifier = withContext(Dispatchers.IO) { dispatcher }
+                val result = notifier.send(NotificationSpec(title = title, body = event.title, kind = NotifKind.AGENT, threadId = CLAUDE_CODE_THREAD))
+                if (result is SendResult.Failed) Log.w(TAG, "Could not post the Claude Code notification", result.error)
+            }
+        }
+
     /** A new top-level note that tags the user is a mention; every other kind goes to its shared composer. */
     private suspend fun composeNotification(
         account: Account,
@@ -130,6 +163,8 @@ class DesktopNotifications(
     companion object {
         private const val BUNDLE_ID = "com.vitorpamplona.amethyst.desktop"
         private const val APP_LABEL = "Amethyst"
+        private const val CLAUDE_CODE_THREAD = "claude-code"
+        private const val TAG = "DesktopNotifications"
 
         /**
          * Whether a note may raise a toast for [account]: the Notifications tab would list it under

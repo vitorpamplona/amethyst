@@ -26,6 +26,7 @@ import com.vitorpamplona.claudecode.protocol.boolean
 import com.vitorpamplona.claudecode.protocol.long
 import com.vitorpamplona.claudecode.protocol.obj
 import com.vitorpamplona.claudecode.protocol.string
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.io.File
@@ -281,8 +282,31 @@ class ClaudeSessionStore(
             cursor = node.parent
         }
         // A file whose links don't reach back (an older format): fall back to file order.
-        val ordered = if (chain.isEmpty()) nodes.values.toList() else chain.asReversed()
+        if (chain.isEmpty()) return nodes.values.mapNotNull { toEntry(it.obj) }
+
+        // Calls made together in one turn are chained one after another, and the CLI hangs an
+        // earlier call's result off its call, beside the chain. Those results belong to the
+        // conversation; a branch the user abandoned (a typed prompt, a reply) does not.
+        val onChain = chain.mapTo(HashSet()) { it.uuid }
+        val besides = HashMap<String, MutableList<Node>>()
+        nodes.values.forEach { node ->
+            val parent = node.parent ?: return@forEach
+            if (node.uuid !in onChain && parent in onChain && isToolResultsOnly(node.obj)) {
+                besides.getOrPut(parent) { ArrayList() }.add(node)
+            }
+        }
+        val ordered = ArrayList<Node>(chain.size + besides.size)
+        chain.asReversed().forEach { node ->
+            ordered.add(node)
+            besides[node.uuid]?.let(ordered::addAll)
+        }
         return ordered.mapNotNull { toEntry(it.obj) }
+    }
+
+    private fun isToolResultsOnly(obj: JsonObject): Boolean {
+        if (obj.string("type") != "user") return false
+        val content = obj.obj("message")?.get("content") as? JsonArray ?: return false
+        return content.isNotEmpty() && content.all { (it as? JsonObject)?.string("type") == "tool_result" }
     }
 
     private fun toEntry(obj: JsonObject): TranscriptEntry? {

@@ -68,6 +68,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -175,6 +176,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import org.jetbrains.compose.resources.StringResource
 
@@ -808,9 +810,12 @@ fun LazyListScope.drawerSectionItems(
                 val opensAsTab =
                     section.id == DrawerSectionId.NAVIGATE && LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
                 val tint = if (def.id == NavBarItem.PROFILE) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                val badge = LocalDrawerBadges.current[def.id]
                 Box(Modifier.animateItem()) {
                     if (def.id == NavBarItem.SCHEDULED_POSTS) {
                         ScheduledPostsNavigationRow(def, tint, accountViewModel, nav)
+                    } else if (badge != null) {
+                        CountedNavigationRow(def, badge, tint, accountViewModel, nav)
                     } else {
                         CatalogNavigationRow(def, tint, accountViewModel, nav, opensAsTab)
                     }
@@ -912,6 +917,33 @@ private fun ScheduledPostsNavigationRow(
         icon = def.icon,
         tint = tint,
         badgeCount = pendingCount,
+        onClick = {
+            nav.closeDrawer()
+            nav.navDrawer { def.resolveRoute(accountViewModel) }
+        },
+    )
+}
+
+/**
+ * Counts a platform shows beside drawer items it owns, e.g. the desktop's Claude Code sessions
+ * waiting on an approval. Empty by default: most items have none.
+ */
+val LocalDrawerBadges = staticCompositionLocalOf<Map<NavBarItem, StateFlow<Int>>> { emptyMap() }
+
+@Composable
+private fun CountedNavigationRow(
+    def: NavBarItemDef,
+    count: StateFlow<Int>,
+    tint: Color,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val n by count.collectAsStateWithLifecycle()
+    IconRowWithBadge(
+        title = def.labelRes,
+        icon = def.icon,
+        tint = tint,
+        badgeCount = n,
         onClick = {
             nav.closeDrawer()
             nav.navDrawer { def.resolveRoute(accountViewModel) }

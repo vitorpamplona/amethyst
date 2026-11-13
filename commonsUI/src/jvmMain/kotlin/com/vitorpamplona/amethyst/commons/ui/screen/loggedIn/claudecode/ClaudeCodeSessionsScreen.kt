@@ -21,7 +21,11 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,14 +56,24 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.claude_code_browse
 import com.vitorpamplona.amethyst.commons.resources.claude_code_delete
 import com.vitorpamplona.amethyst.commons.resources.claude_code_delete_body
 import com.vitorpamplona.amethyst.commons.resources.claude_code_delete_title
@@ -91,11 +106,15 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_w
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permissions
 import com.vitorpamplona.amethyst.commons.resources.claude_code_rename_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_search_hint
+import com.vitorpamplona.amethyst.commons.resources.claude_code_section_archived
+import com.vitorpamplona.amethyst.commons.resources.claude_code_section_needs_you
 import com.vitorpamplona.amethyst.commons.resources.claude_code_start
+import com.vitorpamplona.amethyst.commons.resources.claude_code_status_in_terminal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_needs_approval
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_ready
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_starting
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_working
+import com.vitorpamplona.amethyst.commons.resources.claude_code_switch_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_worktree
 import com.vitorpamplona.amethyst.commons.resources.claude_code_worktree_desc
@@ -108,11 +127,17 @@ import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
+import com.vitorpamplona.amethyst.commons.ui.platform.showModalDialog
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.claudecode.protocol.PermissionMode
+import kotlinx.coroutines.launch
+import java.awt.FileDialog
+import java.awt.Frame
 import java.io.File
+import javax.swing.JFileChooser
 
 /**
  * Every Claude Code session on this computer, grouped by the repository it worked on (worktrees
@@ -224,26 +249,68 @@ private fun SessionList(
     onRename: (ClaudeSessionRow) -> Unit,
     onDelete: (ClaudeSessionRow) -> Unit,
 ) {
-    // Sections in the order of their newest session; sessions newest first inside each.
-    val sections = remember(rows) { rows.groupBy { it.project }.toList() }
+    // Sessions waiting on the user first; then a section per project, in the order of its newest
+    // session; sessions whose folder is gone last, folded.
+    val needsYou = remember(rows) { rows.filter { it.appStatus == ChatStatus.NEEDS_APPROVAL } }
+    val archived = remember(rows) { rows.filter { it.archived && it.appStatus != ChatStatus.NEEDS_APPROVAL } }
+    val sections =
+        remember(rows) {
+            rows
+                .filter { it.appStatus != ChatStatus.NEEDS_APPROVAL && !it.archived }
+                .groupBy { it.project }
+                .toList()
+        }
+    var showArchived by remember { mutableStateOf(false) }
+
+    @Composable
+    fun Item(row: ClaudeSessionRow) =
+        SessionRow(
+            row = row,
+            onOpen = { nav.nav(Route.ClaudeCodeChat(row.key)) },
+            onRename = { onRename(row) },
+            onDelete = { onDelete(row) },
+        )
+
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+        if (needsYou.isNotEmpty()) {
+            item(key = "section-needs-you") { SectionHeader(stringRes(Res.string.claude_code_section_needs_you), MaterialTheme.colorScheme.error) }
+            items(needsYou, key = { "needs-" + it.key }) { Item(it) }
+        }
         sections.forEach { (project, sessions) ->
-            item(key = "section-$project") {
-                Text(
-                    project,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 4.dp),
+            item(key = "section-$project") { SectionHeader(project) }
+            items(sessions, key = { it.key }) { Item(it) }
+        }
+        if (archived.isNotEmpty()) {
+            item(key = "section-archived") {
+                SectionHeader(
+                    pluralStringRes(Res.plurals.claude_code_section_archived, archived.size, archived.size),
+                    expanded = showArchived,
+                    onClick = { showArchived = !showArchived },
                 )
             }
-            items(sessions, key = { it.key }) { row ->
-                SessionRow(
-                    row = row,
-                    onOpen = { nav.nav(Route.ClaudeCodeChat(row.key)) },
-                    onRename = { onRename(row) },
-                    onDelete = { onDelete(row) },
-                )
-            }
+            if (showArchived) items(archived, key = { "archived-" + it.key }) { Item(it) }
+        }
+    }
+}
+
+/** A quiet label over a group of sessions; a foldable one when it has [onClick]. */
+@Composable
+private fun SectionHeader(
+    text: String,
+    color: Color = MaterialTheme.colorScheme.grayText,
+    expanded: Boolean? = null,
+    onClick: (() -> Unit)? = null,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text, style = MaterialTheme.typography.labelLarge, color = color, modifier = Modifier.weight(1f, fill = false))
+        if (expanded != null) {
+            Icon(if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -256,16 +323,23 @@ private fun SessionRow(
     onDelete: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
+    val hover = remember { MutableInteractionSource() }
+    val hovered by hover.collectIsHoveredAsState()
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+        Modifier
+            .fillMaxWidth()
+            .hoverable(hover)
+            .clickable(onClick = onOpen)
+            .padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        StatusAvatar(row)
+        StatusMark(row)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
                 row.title.ifBlank { stringRes(Res.string.claude_code_new_session) },
                 style = MaterialTheme.typography.bodyLarge,
+                color = if (row.archived) MaterialTheme.colorScheme.grayText else Color.Unspecified,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -287,17 +361,13 @@ private fun SessionRow(
                     color = MaterialTheme.colorScheme.grayText,
                     maxLines = 1,
                 )
-                row.appStatus?.let { statusLabel(it) }?.let {
-                    Text(" • $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, maxLines = 1)
+                statusLabel(row)?.let { (label, color) ->
+                    Text(" • $label", style = MaterialTheme.typography.bodySmall, color = color, maxLines = 1)
                 }
             }
         }
-        if (row.openElsewhere != null) {
-            HoverTooltip(stringRes(Res.string.claude_code_open_elsewhere_warning)) {
-                Box(Modifier.padding(horizontal = 8.dp).size(8.dp).background(MaterialTheme.colorScheme.tertiary, CircleShape))
-            }
-        }
-        Box {
+        // Shown on hover (or while open); still there to click or tab to without a mouse.
+        Box(Modifier.alpha(if (hovered || menu) 1f else 0f)) {
             IconButton(onClick = { menu = true }) { Icon(MaterialSymbols.MoreVert, contentDescription = null, tint = MaterialTheme.colorScheme.grayText) }
             RoundedDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 RoundedMenuSection {
@@ -315,41 +385,40 @@ private fun SessionRow(
     }
 }
 
-/** A round mark showing what the session is doing: working, waiting on the user, or resting. */
+/**
+ * What the session is doing, at a glance: a spinner while it works, a filled mark when it waits
+ * on the user, a dot when it is open here or in a terminal, a ring when it rests.
+ */
 @Composable
-private fun StatusAvatar(row: ClaudeSessionRow) {
+private fun StatusMark(row: ClaudeSessionRow) {
     val status = row.appStatus
-    val active = status == ChatStatus.WORKING || status == ChatStatus.STARTING
-    val waiting = status == ChatStatus.NEEDS_APPROVAL
-    val background =
+    Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
         when {
-            waiting -> MaterialTheme.colorScheme.errorContainer
-            active || status == ChatStatus.READY -> MaterialTheme.colorScheme.primaryContainer
-            else -> MaterialTheme.colorScheme.surfaceContainerHigh
-        }
-    Box(Modifier.size(36.dp).clip(CircleShape).background(background), contentAlignment = Alignment.Center) {
-        when {
-            active -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-            waiting -> Icon(MaterialSymbols.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(18.dp))
-            else ->
-                Icon(
-                    MaterialSymbols.Assistant,
-                    contentDescription = null,
-                    tint = if (status == ChatStatus.READY) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.grayText,
-                    modifier = Modifier.size(18.dp),
-                )
+            status == ChatStatus.WORKING || status == ChatStatus.STARTING ->
+                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+            status == ChatStatus.NEEDS_APPROVAL ->
+                Box(Modifier.size(18.dp).background(MaterialTheme.colorScheme.error, CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(MaterialSymbols.HourglassEmpty, contentDescription = null, tint = MaterialTheme.colorScheme.onError, modifier = Modifier.size(12.dp))
+                }
+            status == ChatStatus.READY -> Box(Modifier.size(10.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+            row.openElsewhere != null ->
+                HoverTooltip(stringRes(Res.string.claude_code_open_elsewhere_warning)) {
+                    Box(Modifier.size(10.dp).background(MaterialTheme.colorScheme.tertiary, CircleShape))
+                }
+            else -> Box(Modifier.size(10.dp).border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape))
         }
     }
 }
 
 @Composable
-private fun statusLabel(status: ChatStatus): String? =
-    when (status) {
-        ChatStatus.STARTING -> stringRes(Res.string.claude_code_status_starting)
-        ChatStatus.WORKING -> stringRes(Res.string.claude_code_status_working)
-        ChatStatus.NEEDS_APPROVAL -> stringRes(Res.string.claude_code_status_needs_approval)
-        ChatStatus.READY -> stringRes(Res.string.claude_code_status_ready)
-        ChatStatus.NOT_STARTED, ChatStatus.ENDED -> null
+private fun statusLabel(row: ClaudeSessionRow): Pair<String, Color>? =
+    when (row.appStatus) {
+        ChatStatus.STARTING -> stringRes(Res.string.claude_code_status_starting) to MaterialTheme.colorScheme.primary
+        ChatStatus.WORKING -> stringRes(Res.string.claude_code_status_working) to MaterialTheme.colorScheme.primary
+        ChatStatus.NEEDS_APPROVAL -> stringRes(Res.string.claude_code_status_needs_approval) to MaterialTheme.colorScheme.error
+        ChatStatus.READY -> stringRes(Res.string.claude_code_status_ready) to MaterialTheme.colorScheme.primary
+        ChatStatus.NOT_STARTED, ChatStatus.ENDED, null ->
+            if (row.openElsewhere != null) stringRes(Res.string.claude_code_status_in_terminal) to MaterialTheme.colorScheme.tertiary else null
     }
 
 @Composable
@@ -386,6 +455,8 @@ private fun NewSessionDialog(
     var folder by remember { mutableStateOf(suggestedFolders.firstOrNull() ?: System.getProperty("user.home")) }
     var worktree by remember { mutableStateOf(false) }
     var mode by remember { mutableStateOf(PermissionMode.DEFAULT) }
+    val scope = rememberCoroutineScope()
+    val browseTitle = stringRes(Res.string.claude_code_browse)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -399,7 +470,18 @@ private fun NewSessionDialog(
                         viewModel.clearNewChatError()
                     },
                     label = { Text(stringRes(Res.string.claude_code_folder)) },
-                    leadingIcon = { Icon(MaterialSymbols.Folder, contentDescription = null) },
+                    trailingIcon = {
+                        HoverTooltip(browseTitle) {
+                            IconButton(onClick = {
+                                scope.launch {
+                                    pickFolder(browseTitle, folder)?.let {
+                                        folder = it
+                                        viewModel.clearNewChatError()
+                                    }
+                                }
+                            }) { Icon(MaterialSymbols.Folder, contentDescription = browseTitle) }
+                        }
+                    },
                     singleLine = true,
                     isError = error != null,
                     textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
@@ -408,7 +490,9 @@ private fun NewSessionDialog(
                 if (suggestedFolders.size > 1) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         suggestedFolders.take(6).forEach { cwd ->
-                            FilterChip(selected = folder == cwd, onClick = { folder = cwd }, label = { Text(folderName(cwd)) })
+                            HoverTooltip(cwd) {
+                                FilterChip(selected = folder == cwd, onClick = { folder = cwd }, label = { Text(folderName(cwd)) })
+                            }
                         }
                     }
                 }
@@ -486,3 +570,95 @@ internal fun Banner(
 }
 
 internal fun folderName(path: String): String = File(path).name.ifEmpty { path }
+
+/** A quick jump between sessions (Ctrl/Cmd+K): type to filter, Enter opens the first. */
+@Composable
+internal fun SessionSwitcher(
+    rows: List<ClaudeSessionRow>,
+    onDismiss: () -> Unit,
+    onPick: (ClaudeSessionRow) -> Unit,
+) {
+    var query by remember { mutableStateOf("") }
+    val focus = remember { FocusRequester() }
+    val matches =
+        remember(rows, query) {
+            rows
+                .filter { query.isBlank() || it.title.contains(query, ignoreCase = true) || it.project.contains(query, ignoreCase = true) || it.gitBranch?.contains(query, ignoreCase = true) == true }
+                // The ones waiting on the user first.
+                .sortedByDescending { it.appStatus == ChatStatus.NEEDS_APPROVAL }
+                .take(12)
+        }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(Res.string.claude_code_switch_title)) },
+        text = {
+            Column(Modifier.widthIn(min = 420.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = { Text(stringRes(Res.string.claude_code_search_hint)) },
+                    leadingIcon = { Icon(MaterialSymbols.Search, contentDescription = null) },
+                    singleLine = true,
+                    modifier =
+                        Modifier.fillMaxWidth().focusRequester(focus).onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
+                                matches.firstOrNull()?.let(onPick)
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                )
+                matches.forEach { row ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onPick(row) }
+                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        StatusMark(row)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(row.title.ifBlank { stringRes(Res.string.claude_code_new_session) }, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(listOfNotNull(row.project, row.gitBranch).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) } },
+    )
+}
+
+/**
+ * The system's folder chooser: Finder's on macOS (an AWT dialog switched to folders), Swing's
+ * elsewhere, where AWT can't pick a folder. Null when cancelled.
+ */
+internal suspend fun pickFolder(
+    title: String,
+    start: String?,
+): String? =
+    showModalDialog {
+        val from = start?.let { File(it.replaceFirst("~", System.getProperty("user.home"))) }?.takeIf { it.isDirectory }
+        if (System.getProperty("os.name").orEmpty().startsWith("Mac", ignoreCase = true)) {
+            System.setProperty("apple.awt.fileDialogForDirectories", "true")
+            try {
+                val dialog = FileDialog(null as Frame?, title, FileDialog.LOAD).apply { directory = from?.absolutePath }
+                dialog.isVisible = true
+                dialog.file?.let { File(dialog.directory, it).absolutePath }
+            } finally {
+                System.setProperty("apple.awt.fileDialogForDirectories", "false")
+            }
+        } else {
+            val chooser =
+                JFileChooser(from).apply {
+                    dialogTitle = title
+                    fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+                }
+            if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile?.absolutePath else null
+        }
+    }

@@ -120,6 +120,8 @@ fun GitDiffView(
     lineAnnotations: (@Composable (GitDiffFile, GitDiffLine) -> Unit)? = null,
     /** Whether [lineAnnotations] draws anything under a line; the code around such a line scrolls on its own. */
     hasAnnotations: (GitDiffFile, GitDiffLine) -> Boolean = { _, _ -> false },
+    /** The "N files changed" line and the unified/split switch; off where the diff sits inside something that already says so. */
+    showSummary: Boolean = true,
 ) {
     if (!parsed.hasDiff) return
     // Side by side needs the width of a large window; a phone keeps the unified view.
@@ -127,12 +129,14 @@ fun GitDiffView(
     var split by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f)) { GitDiffStatSummary(parsed) }
-            if (wide) {
-                FilterChip(selected = !split, onClick = { split = false }, label = { Text(stringResource(Res.string.git_diff_unified)) })
-                Spacer(Modifier.width(6.dp))
-                FilterChip(selected = split, onClick = { split = true }, label = { Text(stringResource(Res.string.git_diff_split)) })
+        if (showSummary) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) { GitDiffStatSummary(parsed) }
+                if (wide) {
+                    FilterChip(selected = !split, onClick = { split = false }, label = { Text(stringResource(Res.string.git_diff_unified)) })
+                    Spacer(Modifier.width(6.dp))
+                    FilterChip(selected = split, onClick = { split = true }, label = { Text(stringResource(Res.string.git_diff_split)) })
+                }
             }
         }
         val highlighted =

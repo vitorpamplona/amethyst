@@ -32,8 +32,24 @@ would go over Nostr (the Buzz agent channel, `cli/plans/2026-07-25-buzz-agent-su
   (`~/.claude/sessions/<pid>.json`).
 - A saved session shows its history from its file; its process starts on the first message, with
   `--resume`.
-- Tool calls that need the user show an approve/deny card; "don't ask again" sends the CLI's own
-  suggestion back.
+- Tool calls read as what they do, not as JSON (`ToolViews`): an edit or a write is a unified diff
+  (`LineDiff`, placed at its line in the file) drawn by the git diff view; a command is
+  `$ command` and its output; paths are relative to the session's folder. Edits keep their own
+  rows; reads, searches and commands fold into one line per run.
+- Tool calls that need the user show an approve/deny card with the change itself (the diff of an
+  edit, measured against the file as it is; the command); Enter gives the default answer, Esc
+  denies, and "don't ask again" sends the CLI's own suggestion back.
+- A session another Claude Code holds is read-only here; "Fork into a new session" resumes it with
+  `--fork-session`, so the copy gets a session of its own on its first message.
+- A chat that waits on an approval or ends its turn while the window is in the background raises
+  an OS notification (`ClaudeCodeService.attention`, `NotifKind.AGENT`, on the desktop
+  notifications switch), and the drawer counts the chats waiting (`LocalDrawerBadges`).
+- The footer shows how full the context is (the last reply's `usage` against the result's
+  `contextWindow`), not the cost. Ctrl/Cmd+K jumps between sessions.
+- The Changes screen shows what isn't committed (new files included), the whole branch, or one
+  commit; a line can be asked about, and the question goes to the chat with the line quoted.
+- The session reader keeps the results of calls made together in one turn: the CLI hangs an
+  earlier call's result off its call, beside the chain the walk follows.
 - A new session can start in a fresh git worktree (`<repo>-worktrees/claude-<time>` on a
   `claude/<time>` branch), so the running app's checkout is untouched.
 - In an Amethyst checkout, the chat's play button runs `./gradlew :desktopApp:run` there, output
@@ -88,7 +104,7 @@ pushed to a plain remote first.
 
 ## Not done
 
-- Images in prompts, slash commands, model switching in the UI, forking from a message.
+- Images in prompts, slash commands, model switching in the UI, forking from a given message.
 - Claude.ai cloud sessions (no documented API to list them).
 - Subagent messages are folded into their tool call, not shown.
 - Publishing through the user's own `ngit` instead of the app's signer.

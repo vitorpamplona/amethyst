@@ -137,4 +137,13 @@ class ClaudeMessageTest {
         assertNull(ClaudeMessage.parse("{not json"))
         assertTrue(ClaudeMessage.parse("{\"type\":\"brand_new_type\"}") is ClaudeMessage.Other)
     }
+
+    @Test
+    fun usageSaysHowFullTheContextIs() {
+        val messages = parse("turn-approve.jsonl")
+        // The last reply's input (fresh + cached) and output: what the next turn starts from.
+        val last = messages.filterIsInstance<ClaudeMessage.Assistant>().last { it.contextTokens != null }
+        assertTrue(last.contextTokens!! > 30_000, "${last.contextTokens}")
+        assertEquals(1_000_000L, messages.filterIsInstance<ClaudeMessage.Result>().single().contextWindow)
+    }
 }

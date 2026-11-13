@@ -202,6 +202,54 @@ object GitWorkspace {
             git(dir, "diff", "--no-color", "--find-renames", from).orEmpty()
         }
 
+    /** What isn't committed yet: tracked files against HEAD. */
+    suspend fun uncommittedDiff(dir: File): String =
+        withContext(Dispatchers.IO) {
+            git(dir, "diff", "--no-color", "--find-renames", "HEAD").orEmpty()
+        }
+
+    /** What one commit changed. */
+    suspend fun commitDiff(
+        dir: File,
+        sha: String,
+    ): String =
+        withContext(Dispatchers.IO) {
+            git(dir, "show", "--no-color", "--find-renames", "--format=", sha).orEmpty()
+        }
+
+    /**
+     * Files git doesn't track yet, as diffs that add them, so they read like the rest of the
+     * change. Binary files and large ones are left out (they stay in [untracked]'s list).
+     */
+    suspend fun untrackedDiff(
+        dir: File,
+        paths: List<String>,
+    ): String =
+        withContext(Dispatchers.IO) {
+            buildString {
+                paths.forEach { path ->
+                    val file = File(dir, path)
+                    if (!file.isFile || file.length() > UNTRACKED_SHOWN) return@forEach
+                    val bytes =
+                        try {
+                            file.readBytes()
+                        } catch (e: IOException) {
+                            return@forEach
+                        }
+                    if (bytes.contains(0)) return@forEach
+                    val diff = LineDiff.unified(emptyList(), ToolViews.lines(bytes.decodeToString()), 1, 1)
+                    if (diff.hunks.isEmpty()) return@forEach
+                    append("diff --git a/")
+                        .append(path)
+                        .append(" b/")
+                        .append(path)
+                        .append('\n')
+                    append("new file mode 100644\n--- /dev/null\n+++ b/").append(path).append('\n')
+                    append(diff.hunks)
+                }
+            }
+        }
+
     /** Files git doesn't track yet, which a plain diff leaves out. */
     suspend fun untracked(dir: File): List<String> =
         withContext(Dispatchers.IO) {
@@ -310,6 +358,8 @@ object GitWorkspace {
     }
 
     /** Runs git; its output, or null when it failed. */
+    private const val UNTRACKED_SHOWN = 256_000L
+
     internal fun git(
         dir: File,
         vararg args: String,
