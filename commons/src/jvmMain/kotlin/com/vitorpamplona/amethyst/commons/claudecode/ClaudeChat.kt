@@ -129,6 +129,9 @@ class ClaudeChat internal constructor(
     private val lock = Mutex()
     private var connection: ClaudeCodeConnection? = null
 
+    /** The name a new chat was given, for the CLI's session once it exists. */
+    private var titleToApply: String? = if (resumeSessionId == null) title else null
+
     private val _state =
         MutableStateFlow(
             ClaudeChatState(
@@ -321,6 +324,10 @@ class ClaudeChat internal constructor(
                     )
                 }
                 if (isNewSession) onSessionChanged()
+                titleToApply?.let { name ->
+                    titleToApply = null
+                    scope.launch { if (!renameLive(name)) Log.w(TAG) { "Could not name the session $name" } }
+                }
             }
             is ClaudeMessage.Assistant -> {
                 // A subagent's own messages stay inside its tool call.

@@ -61,24 +61,34 @@ the way an ngit contributor's does and shows up on gitworkshop like any other pr
    work included, through the git dashboard's `GitDiffView`.
 5. **Propose** (`Route.ClaudeCodePropose`): title and description (from the commits, or drafted
    by a tool-less one-off `claude -p`), the repository's build gate
-   (`PREPUSH_KMP_METADATA=1 .git-hooks/pre-push`, when it has one), and two confirmations (read
-   the diff, tried it by hand). Publishing signs with the account: `GitProposals.
+   (`PREPUSH_KMP_METADATA=1 .git-hooks/pre-push`, when it has one; cancellable, its whole output in
+   `<git dir>/amethyst/claude-code-gate.log` so it never shows as a change), and two confirmations
+   (read the diff, tried it by hand). Publishing signs with the account: `GitProposals.
    openPullRequestFromLocal` / `updatePullRequestFromLocal` push the objects read from the
    checkout (`LocalGitObjects`: `git rev-list --objects` + `git cat-file --batch`) to the GRASP
    servers under `refs/nostr/<event id>`, then publish the kind 1618, or a 1619 for a branch that
-   already is a proposal. A repository without a GRASP server can't take local commits that way.
+   already is a proposal. A repository without a GRASP server can't take local commits that way:
+   the branch is first pushed to one of the checkout's remotes, with the user's own git login, and
+   the proposal points at that clone URL.
 6. **Review loop.** While a linked proposal's chat is open its thread loads; reviewers' comments
-   show as a banner whose "Address it" sends them to Claude. A merged (1631) proposal offers to
-   remove the worktree.
+   show as a banner whose "Address it" sends them to Claude (`ReviewPrompt`: an inline comment
+   quotes its lines, ±2, from the commit it names or the merge base for a removed line). The ids
+   sent are kept in the branch's config (`nostr-reviewed`). A merged (1631) proposal offers to
+   remove the worktree; one with uncommitted files is kept unless the user removes it anyway.
+7. **Names.** A session started from an issue or proposal is named after its subject
+   (`rename_session` once the CLI reports the session), not after the long first message.
 
 Tested end to end on this machine with `cli/tests/git/git-grasp-e2e.sh --keep` and
 `run-headless.sh --local-only`: started from a proposal, cloned, Claude committed, the 1619 named
 the commit, merge base and GRASP server, and a comment from another account reached the session.
+Then: the gate run, cancelled, read in full and passed; an inline comment sent with its lines; a
+new version published, merged in the app, the worktree removed; "Draft with Claude"; "Run this
+checkout" on a stand-in checkout; and a proposal to a repository with no GRASP server, its branch
+pushed to a plain remote first.
 
 ## Not done
 
 - Images in prompts, slash commands, model switching in the UI, forking from a message.
 - Claude.ai cloud sessions (no documented API to list them).
 - Subagent messages are folded into their tool call, not shown.
-- Inline review comments (on a line of the diff) reach Claude as text without their file and line.
 - Publishing through the user's own `ngit` instead of the app's signer.

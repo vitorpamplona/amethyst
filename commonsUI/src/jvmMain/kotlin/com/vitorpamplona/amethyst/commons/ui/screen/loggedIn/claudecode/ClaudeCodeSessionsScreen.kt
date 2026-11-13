@@ -177,7 +177,8 @@ fun ClaudeCodeSessionsScreen(nav: INav) {
     if (showNew) {
         NewSessionDialog(
             viewModel = viewModel,
-            suggestedFolders = projects.map { it.cwd },
+            // Removed worktrees stay in the history; only folders that still exist are offered.
+            suggestedFolders = remember(projects) { projects.map { it.cwd }.filter { File(it).isDirectory } },
             onDismiss = {
                 showNew = false
                 viewModel.clearNewChatError()
@@ -466,12 +467,20 @@ private fun RenameDialog(
 }
 
 @Composable
-internal fun Banner(text: String) {
+internal fun Banner(
+    text: String,
+    action: String? = null,
+    onAction: () -> Unit = {},
+) {
     Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), shape = RoundedCornerShape(12.dp)) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(MaterialSymbols.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(10.dp))
-            Text(text, color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodyMedium)
+            Text(text, color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            action?.let {
+                Spacer(Modifier.width(8.dp))
+                TextButton(onClick = onAction) { Text(it, color = MaterialTheme.colorScheme.onErrorContainer) }
+            }
         }
     }
 }

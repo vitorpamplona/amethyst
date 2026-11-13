@@ -137,6 +137,7 @@ class ClaudeCodeStartViewModel(
         branch: String,
         permissionMode: PermissionMode,
         prompt: String,
+        title: String?,
         onReady: (String) -> Unit,
     ) {
         val dir = (_checkout.value as? CheckoutState.Found)?.dir ?: return
@@ -145,7 +146,7 @@ class ClaudeCodeStartViewModel(
         _error.value = null
         viewModelScope.launch {
             try {
-                onReady(service.startFromNostr(dir, target, branch.trim(), permissionMode, prompt).key)
+                onReady(service.startFromNostr(dir, target, branch.trim(), permissionMode, prompt, title).key)
             } catch (e: IOException) {
                 _error.value = StartError.Failed(e.message)
             } finally {
@@ -219,6 +220,11 @@ sealed interface GateState {
     data class Failed(
         val tail: String,
     ) : GateState
+
+    /** The user stopped it; publishing waits for a run that passes. */
+    data class Cancelled(
+        val tail: String,
+    ) : GateState
 }
 
 /** A title and description drafted for the proposal. */
@@ -226,6 +232,15 @@ sealed interface GateState {
 data class ProposalDraft(
     val title: String,
     val description: String,
+)
+
+/** A git remote of the checkout, and the URL others would fetch it from. */
+@Immutable
+data class PushRemote(
+    val name: String,
+    val url: String,
+    /** [url] as a public https clone URL, when it is an ssh one of a known shape. */
+    val cloneUrl: String,
 )
 
 /** What publishing needs from the checkout: the branch tip and its merge base with the target. */
@@ -278,36 +293,84 @@ class ClaudeCodeProposeViewModel(
 
     private fun gateScript(dir: File) = File(GitWorkspace.git(dir, "rev-parse", "--show-toplevel")?.trim() ?: dir.path, ".git-hooks/pre-push")
 
+    private var gateProcess: Process? = null
+    private val gateLog = StringBuilder()
+
+    private val _gateLogFile = MutableStateFlow<File?>(null)
+
+    /** Where the last run's whole output is, for an editor or a terminal. */
+    val gateLogFile: StateFlow<File?> = _gateLogFile.asStateFlow()
+
+    /** The last run's output, up to the last [GATE_LOG_MAX] characters. */
+    fun fullGateLog(): String = synchronized(gateLog) { gateLog.toString() }
+
     fun runGate() {
         val dir = dir ?: return
         if (gateJob?.isActive == true) return
         _gate.value = GateState.Running("")
+        synchronized(gateLog) { gateLog.setLength(0) }
         gateJob =
             viewModelScope.launch(Dispatchers.IO) {
                 val script = gateScript(dir)
-                val output = StringBuilder()
+                val root = script.parentFile.parentFile
+                // In the git dir: a build/ folder the repository does not ignore would show as a change.
+                val logFile = File(GitWorkspace.privateDir(root) ?: File(root, "build"), "claude-code-gate.log")
+                if (!logFile.parentFile.isDirectory && !logFile.parentFile.mkdirs()) Log.w(TAG) { "could not create ${logFile.parentFile}" }
+                _gateLogFile.value = logFile
                 val code =
                     try {
                         val process =
                             ProcessBuilder("bash", script.absolutePath)
-                                .directory(script.parentFile.parentFile)
+                                .directory(root)
                                 .redirectErrorStream(true)
                                 .apply { environment()["PREPUSH_KMP_METADATA"] = "1" }
                                 .start()
-                        process.inputStream.bufferedReader().useLines { lines ->
-                            lines.forEach { line ->
-                                output.appendLine(line)
-                                _gate.value = GateState.Running(output.takeLast(GATE_TAIL).toString())
+                        gateProcess = process
+                        // A pre-push hook reads the pushed refs on stdin; there are none.
+                        process.outputStream.close()
+                        logFile.bufferedWriter().use { log ->
+                            process.inputStream.bufferedReader().useLines { lines ->
+                                lines.forEach { line ->
+                                    log.write(line)
+                                    log.newLine()
+                                    val tail =
+                                        synchronized(gateLog) {
+                                            gateLog.appendLine(line)
+                                            if (gateLog.length > GATE_LOG_MAX) gateLog.delete(0, gateLog.length - GATE_LOG_MAX)
+                                            gateLog.takeLast(GATE_TAIL).toString()
+                                        }
+                                    if (_gate.value is GateState.Running) _gate.value = GateState.Running(tail)
+                                }
                             }
                         }
                         runInterruptible { process.waitFor() }
                     } catch (e: IOException) {
-                        output.appendLine(e.message)
+                        synchronized(gateLog) { gateLog.appendLine(e.message) }
                         -1
+                    } finally {
+                        gateProcess = null
                     }
-                val tail = output.takeLast(GATE_TAIL).toString()
-                _gate.value = if (code == 0) GateState.Passed(tail) else GateState.Failed(tail)
+                val tail = synchronized(gateLog) { gateLog.takeLast(GATE_TAIL).toString() }
+                _gate.value =
+                    when {
+                        _gate.value is GateState.Cancelled -> GateState.Cancelled(tail)
+                        code == 0 -> GateState.Passed(tail)
+                        else -> GateState.Failed(tail)
+                    }
             }
+    }
+
+    /** Stops the running gate and everything it started (Gradle and its workers included). */
+    fun cancelGate() {
+        val process = gateProcess ?: return
+        _gate.value = GateState.Cancelled((gate.value as? GateState.Running)?.tail.orEmpty())
+        process.descendants().forEach { it.destroy() }
+        process.destroy()
+    }
+
+    override fun onCleared() {
+        cancelGate()
+        super.onCleared()
     }
 
     fun setDraft(draft: ProposalDraft) {
@@ -371,6 +434,49 @@ class ClaudeCodeProposeViewModel(
 
     suspend fun objects(tip: LocalTip) = LocalGitObjects.between(dir ?: throw IOException("no folder"), tip.mergeBase, tip.tip)
 
+    private val _remotes = MutableStateFlow<List<PushRemote>>(emptyList())
+
+    /** The checkout's remotes, for a repository with no GRASP server to push the branch to. */
+    val remotes: StateFlow<List<PushRemote>> = _remotes.asStateFlow()
+
+    fun loadRemotes() {
+        val dir = dir ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            _remotes.value =
+                GitWorkspace
+                    .git(dir, "remote", "-v")
+                    .orEmpty()
+                    .lines()
+                    .mapNotNull { line ->
+                        val parts = line.split(Regex("\\s+"))
+                        if (parts.size < 3 || parts[2] != "(push)") null else PushRemote(parts[0], parts[1], httpsCloneUrl(parts[1]))
+                    }.filter { !it.url.startsWith("nostr://") }
+        }
+    }
+
+    /**
+     * Pushes the branch to [remote] as [branch]: the user's own step, with their git credentials,
+     * for a repository whose proposal must point at a host that serves the commits. Null when it
+     * worked, else git's message.
+     */
+    suspend fun pushBranch(
+        remote: String,
+        branch: String,
+    ): String? {
+        val dir = dir ?: return "no folder"
+        val result = withContext(Dispatchers.IO) { GitWorkspace.run(dir, listOf("git", "push", remote, "HEAD:refs/heads/$branch"), timeoutSeconds = 600) }
+        return if (result.code == 0) {
+            null
+        } else {
+            result.output
+                .trim()
+                .lines()
+                .takeLast(4)
+                .joinToString("\n")
+                .ifBlank { "git push failed" }
+        }
+    }
+
     /** Remembers the published proposal on the branch, so the next version updates it. */
     fun published(proposalId: String) {
         val dir = dir ?: return
@@ -388,6 +494,7 @@ class ClaudeCodeProposeViewModel(
     companion object {
         private const val TAG = "ClaudeCodePropose"
         private const val GATE_TAIL = 6_000
+        private const val GATE_LOG_MAX = 2_000_000
         private const val DRAFT_DIFF_CHARS = 60_000
 
         fun draftFromCommits(info: GitWorkInfo): ProposalDraft {
@@ -431,6 +538,19 @@ class ClaudeCodeProposeViewModel(
             }
         }
     }
+}
+
+/**
+ * A clone URL others can fetch: an https URL as it is, and the usual ssh forms of a forge
+ * (`git@host:owner/repo.git`, `ssh://git@host/owner/repo.git`) as their https twin.
+ */
+fun httpsCloneUrl(url: String): String {
+    val trimmed = url.trim()
+    if (trimmed.startsWith("https://") || trimmed.startsWith("http://")) return trimmed
+    Regex("^(?:ssh://)?[^@/]+@([^:/]+)[:/](.+)$").find(trimmed)?.let { m ->
+        return "https://${m.groupValues[1]}/${m.groupValues[2].removePrefix("/")}"
+    }
+    return trimmed
 }
 
 internal fun expandHome(path: String): String = path.trim().replaceFirst(Regex("^~"), Regex.escapeReplacement(System.getProperty("user.home")))

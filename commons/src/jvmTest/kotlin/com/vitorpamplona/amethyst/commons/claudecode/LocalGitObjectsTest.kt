@@ -100,6 +100,27 @@ class LocalGitObjectsTest {
         }
 
     @Test
+    fun reviewPromptQuotesTheCommentedLines() =
+        runBlocking {
+            GitWorkspace.link(dir, "pr/feat/x", base = "main")
+            val prompt =
+                ReviewPrompt.render(
+                    dir,
+                    "Reviewers commented.",
+                    listOf(
+                        ReviewItem("1", "bob wrote:", "Looks good overall.", createdAt = 1),
+                        ReviewItem("2", "alice on a.txt, line 2:", "Say three.", ReviewLocation("a.txt", 2, 2, removedSide = false, commit = null), createdAt = 2),
+                        ReviewItem("3", "carol on a.txt, removed line 1:", "Why drop it?", ReviewLocation("a.txt", 1, 1, removedSide = true, commit = null), createdAt = 3),
+                    ),
+                )
+            assertTrue(prompt.startsWith("Reviewers commented.\n\nbob wrote:\nLooks good overall."), prompt)
+            // The new side, at HEAD: line 2 is "two", marked.
+            assertTrue(prompt.contains("alice on a.txt, line 2:\n```\n1  one\n2> two\n```\nSay three."), prompt)
+            // The old side, at the merge base: the file had only "one".
+            assertTrue(prompt.contains("carol on a.txt, removed line 1:\n```\n1> one\n```\nWhy drop it?"), prompt)
+        }
+
+    @Test
     fun ngitRemotesNameTheRepository() {
         val npub = "npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m"
         val ref = assertNotNull(NostrRepoRef.fromNostrUrl("nostr://$npub/relay.ngit.dev/amethyst"))

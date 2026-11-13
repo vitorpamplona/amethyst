@@ -246,7 +246,7 @@ fun ClaudeCodeStartScreen(
                                 proposalCloneUrls = proposalClones,
                                 proposalBranch = proposal?.branchName(),
                             )
-                        viewModel.start(target, branch, mode, prompt) { key ->
+                        viewModel.start(target, branch, mode, prompt, itemTitle) { key ->
                             nav.popBack()
                             nav.nav(Route.ClaudeCodeChat(key))
                         }

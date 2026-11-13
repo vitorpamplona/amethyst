@@ -66,6 +66,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -94,14 +95,19 @@ import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChatState
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeChatViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.NoticeKind
+import com.vitorpamplona.amethyst.commons.claudecode.ReviewItem
+import com.vitorpamplona.amethyst.commons.claudecode.ReviewLocation
+import com.vitorpamplona.amethyst.commons.claudecode.ReviewPrompt
 import com.vitorpamplona.amethyst.commons.claudecode.ToolKind
 import com.vitorpamplona.amethyst.commons.claudecode.toChatRows
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitStatus
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.verdictLabel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.claude_code_address_review
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow
@@ -137,11 +143,16 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_merged
 import com.vitorpamplona.amethyst.commons.resources.claude_code_propose
+import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_anyway
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_worktree
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_worktree_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_resume_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_review_comments
+import com.vitorpamplona.amethyst.commons.resources.claude_code_review_general
+import com.vitorpamplona.amethyst.commons.resources.claude_code_review_inline
+import com.vitorpamplona.amethyst.commons.resources.claude_code_review_inline_removed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_review_prompt_header
+import com.vitorpamplona.amethyst.commons.resources.claude_code_review_verdict
 import com.vitorpamplona.amethyst.commons.resources.claude_code_run_app
 import com.vitorpamplona.amethyst.commons.resources.claude_code_run_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_session_missing
@@ -180,9 +191,13 @@ import com.vitorpamplona.claudecode.protocol.PermissionRequest
 import com.vitorpamplona.claudecode.protocol.PermissionSuggestion
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
+import com.vitorpamplona.quartz.nip34Git.review.gitCodeLocation
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.io.File
 
 /** The widest a chat column gets: past this, lines are too long to read. */
 internal val ChatColumnMaxWidth = 760.dp
@@ -228,7 +243,9 @@ fun ClaudeCodeChatScreen(
                         Spacer(Modifier.width(6.dp))
                         DiffStat(git.insertions, git.deletions)
                     }
-                    if (git.repo != null && git.ahead > 0) {
+                    // A merged or closed proposal takes no new version.
+                    val ended = git.proposalId?.let { proposalEnded(it) } ?: false
+                    if (git.repo != null && git.ahead > 0 && !ended) {
                         FilledTonalButton(onClick = { nav.nav(Route.ClaudeCodePropose(key)) }) {
                             Text(stringRes(if (git.proposalId != null) Res.string.claude_code_update_proposal else Res.string.claude_code_propose))
                         }
@@ -258,7 +275,11 @@ fun ClaudeCodeChatScreen(
                         onRemoveWorktree = { viewModel.removeWorktree { nav.popBack() } },
                     )
                 }
-                cleanupError?.let { Banner(stringRes(Res.string.claude_code_remove_worktree_failed, it)) }
+                cleanupError?.let {
+                    Banner(stringRes(Res.string.claude_code_remove_worktree_failed, it), stringRes(Res.string.claude_code_remove_anyway)) {
+                        viewModel.removeWorktree(force = true) { nav.popBack() }
+                    }
+                }
 
                 Messages(state, nav, Modifier.weight(1f))
 
@@ -361,14 +382,16 @@ private fun Messages(
         if (!state.historyLoaded) {
             item { CenterNote(stringRes(Res.string.claude_code_loading_history)) }
         }
+        // A call the user stopped never gets a result: it only runs while the turn does.
+        val turnRunning = state.status == ChatStatus.WORKING || state.status == ChatStatus.NEEDS_APPROVAL
         items(rows, key = { it.key }) { row ->
             when (row) {
-                is ChatRow.ToolGroup -> ToolGroupRow(row)
+                is ChatRow.ToolGroup -> ToolGroupRow(row, turnRunning)
                 is ChatRow.Single ->
                     when (val item = row.item) {
-                        is ChatItem.UserText -> UserBubble(item.text, textStyle)
+                        is ChatItem.UserText -> UserBubble(item.text, textStyle, onLink)
                         is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle)
-                        is ChatItem.ToolCall -> ToolCallRow(item)
+                        is ChatItem.ToolCall -> ToolCallRow(item, turnRunning)
                         is ChatItem.Notice -> NoticeRow(item)
                     }
             }
@@ -408,8 +431,14 @@ private fun ProposalActivity(
     val comments =
         remember(replies, reviewed) {
             note.replies.filter { reply ->
-                val event = reply.event
-                (event is CommentEvent || event is GitReplyEvent) && event.pubKey != me && reply.idHex !in reviewed
+                val event = reply.event ?: return@filter false
+                if (event.pubKey == me || reply.idHex in reviewed) return@filter false
+                when (event) {
+                    is CommentEvent, is GitReplyEvent -> event.content.isNotBlank()
+                    // A verdict counts when it asks for something or says why.
+                    is GitReviewEvent -> event.content.isNotBlank() || event.verdict() in ACTIONABLE_VERDICTS
+                    else -> false
+                }
             }
         }
 
@@ -422,17 +451,64 @@ private fun ProposalActivity(
     }
     if (comments.isNotEmpty()) {
         val header = stringRes(Res.string.claude_code_review_prompt_header)
+        // Worded here, in composition; the code each inline comment is about is read when sent.
+        val items = comments.map { reviewItem(it) }
+        val scope = rememberCoroutineScope()
         ActionBanner(
             pluralStringRes(Res.plurals.claude_code_review_comments, comments.size, comments.size),
             stringRes(Res.string.claude_code_address_review),
         ) {
-            val body =
-                comments.sortedBy { it.createdAt() ?: 0 }.joinToString("\n\n") { c ->
-                    "${c.author?.toBestDisplayName() ?: c.event?.pubKey?.take(8)}:\n${c.event?.content.orEmpty().trim()}"
-                }
-            chat.addressReview(comments.map { it.idHex }, "$header\n\n$body")
+            scope.launch {
+                val prompt = ReviewPrompt.render(File(chat.state.value.cwd), header, items)
+                chat.addressReview(items.map { it.id }, prompt)
+            }
         }
     }
+}
+
+/** Whether the proposal was merged or closed. */
+@Composable
+private fun proposalEnded(proposalId: String): Boolean {
+    val note = remember(proposalId) { LocalCache.getOrCreateNote(proposalId) }
+    val status = observeGitStatus(note)
+    return status is GitStatusAppliedEvent || status is GitStatusClosedEvent
+}
+
+private val ACTIONABLE_VERDICTS = setOf(GitReviewEvent.Verdict.NACK, GitReviewEvent.Verdict.CONCEPT_NACK, GitReviewEvent.Verdict.CHANGES_REQUIRED)
+
+/** A reviewer's comment, headed by who wrote it and, for an inline one, the file and lines. */
+@Composable
+private fun reviewItem(note: Note): ReviewItem {
+    val event = note.event
+    val name = note.author?.toBestDisplayName() ?: event?.pubKey?.take(8).orEmpty()
+    val location = (event as? CommentEvent)?.gitCodeLocation()
+    val heading =
+        when {
+            event is GitReviewEvent && event.verdict() != null -> stringRes(Res.string.claude_code_review_verdict, name, verdictLabel(event.verdict()!!))
+            location != null -> {
+                val start = location.startLine ?: location.endLine ?: 0
+                val end = location.endLine ?: start
+                val lines = if (end > start) "$start\u2013$end" else "$start"
+                stringRes(
+                    if (location.removedSide) Res.string.claude_code_review_inline_removed else Res.string.claude_code_review_inline,
+                    name,
+                    location.path,
+                    lines,
+                )
+            }
+            else -> stringRes(Res.string.claude_code_review_general, name)
+        }
+    return ReviewItem(
+        id = note.idHex,
+        heading = heading,
+        body = event?.content.orEmpty(),
+        location =
+            location?.let {
+                val start = it.startLine ?: it.endLine ?: 1
+                ReviewLocation(it.path, start, it.endLine ?: start, it.removedSide, it.commit)
+            },
+        createdAt = note.createdAt() ?: 0,
+    )
 }
 
 @Composable
@@ -484,14 +560,21 @@ private fun elapsed(seconds: Long): String = if (seconds < 60) "${seconds}s" els
 private fun UserBubble(
     text: String,
     textStyle: TextStyle,
+    onLink: (String) -> Unit,
 ) {
     Box(Modifier.fillMaxWidth().padding(top = 8.dp, start = 48.dp), contentAlignment = Alignment.CenterEnd) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             shape = RoundedCornerShape(18.dp),
         ) {
-            SelectionContainer {
-                Text(text, Modifier.padding(horizontal = 14.dp, vertical = 10.dp), style = textStyle)
+            val padding = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+            // Typed text stays as typed (markdown would join its lines); pasted code and review
+            // prompts carry fences, which read better as code blocks.
+            if (text.contains("```")) {
+                val style = rememberChatMarkdownStyle(codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest)
+                RenderMarkdown(text, onLink, padding, style = style, textStyle = textStyle)
+            } else {
+                SelectionContainer { Text(text, padding, style = textStyle) }
             }
         }
     }
@@ -510,7 +593,10 @@ private fun ToolKind.symbol(): MaterialSymbol =
 
 /** A run of tool calls as one quiet line: "Ran 6 commands · read 2 files", opened on click. */
 @Composable
-private fun ToolGroupRow(group: ChatRow.ToolGroup) {
+private fun ToolGroupRow(
+    group: ChatRow.ToolGroup,
+    turnRunning: Boolean,
+) {
     var expanded by remember { mutableStateOf(false) }
     val parts =
         group.counts.map { (kind, n) ->
@@ -534,13 +620,13 @@ private fun ToolGroupRow(group: ChatRow.ToolGroup) {
         ToolLine(
             symbol = ToolKind.of(group.calls.first().name).symbol(),
             text = summary,
-            running = group.running != null,
+            running = turnRunning && group.running != null,
             error = false,
             expanded = expanded,
             monospace = false,
             onClick = { expanded = !expanded },
         )
-        group.running?.takeIf { !expanded }?.let { running ->
+        group.running?.takeIf { turnRunning && !expanded }?.let { running ->
             Text(
                 running.summary ?: running.name,
                 style = MaterialTheme.typography.bodySmall,
@@ -553,7 +639,7 @@ private fun ToolGroupRow(group: ChatRow.ToolGroup) {
         }
         AnimatedVisibility(expanded) {
             Column(Modifier.padding(start = 14.dp)) {
-                group.calls.forEach { ToolCallRow(it) }
+                group.calls.forEach { ToolCallRow(it, turnRunning) }
             }
         }
     }
@@ -561,13 +647,16 @@ private fun ToolGroupRow(group: ChatRow.ToolGroup) {
 
 /** One tool call: its name and what it acted on; opened, its input and output. */
 @Composable
-private fun ToolCallRow(call: ChatItem.ToolCall) {
+private fun ToolCallRow(
+    call: ChatItem.ToolCall,
+    turnRunning: Boolean,
+) {
     var expanded by remember { mutableStateOf(false) }
     Column {
         ToolLine(
             symbol = ToolKind.of(call.name).symbol(),
             text = listOfNotNull(call.name, call.summary).joinToString("  "),
-            running = !call.isDone,
+            running = turnRunning && !call.isDone,
             error = call.isError,
             expanded = expanded,
             monospace = true,

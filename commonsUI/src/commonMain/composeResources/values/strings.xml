@@ -9577,6 +9577,7 @@
     <string name="claude_code_propose">Propose</string>
     <string name="claude_code_update_proposal">Update proposal</string>
     <string name="claude_code_propose_desc">Publishes this branch as a proposal to the repository, signed by you, the way ngit does: the commits go to its GRASP servers and the proposal shows up on gitworkshop and in every NIP-34 client.</string>
+    <string name="claude_code_propose_desc_no_grasp">Publishes this branch as a proposal to the repository, signed by you. The proposal shows up on gitworkshop and in every NIP-34 client.</string>
     <string name="claude_code_propose_update_desc">This branch is already a proposal. Publishing again makes its commits the proposal's new version.</string>
     <string name="claude_code_propose_title">Title</string>
     <string name="claude_code_propose_description">Description</string>
@@ -9587,7 +9588,15 @@
     <string name="claude_code_gate_running">Running the checks</string>
     <string name="claude_code_gate_passed">The checks passed.</string>
     <string name="claude_code_gate_failed">The checks failed. Ask Claude to fix them, then run them again.</string>
+    <string name="claude_code_gate_cancelled">Stopped. Run the checks again before publishing.</string>
+    <string name="claude_code_gate_full_log">Full log</string>
+    <string name="claude_code_close">Close</string>
     <string name="claude_code_gate_run">Run</string>
+    <string name="claude_code_push_title">Push the branch</string>
+    <string name="claude_code_push_desc">This repository has no GRASP server to hold the commits, so publishing first pushes this branch to one of your remotes, with your own git login. The proposal then points others at it.</string>
+    <string name="claude_code_push_no_remotes">This checkout has no remote to push to. Add one (your fork, for example) with git remote add, then come back.</string>
+    <string name="claude_code_push_clone_url">Where others fetch it from</string>
+    <string name="claude_code_push_failed">Couldn't push the branch: %1$s</string>
     <string name="claude_code_check_read_diff">I read the whole diff and can explain every line</string>
     <string name="claude_code_check_tested">I tried the change myself, by hand</string>
     <string name="claude_code_publish">Publish proposal</string>
@@ -9614,9 +9623,14 @@
     </plurals>
     <string name="claude_code_address_review">Address it</string>
     <string name="claude_code_review_prompt_header">Reviewers commented on the proposal. Address their comments on this branch, then summarize what you changed.</string>
+    <string name="claude_code_review_general">%1$s wrote:</string>
+    <string name="claude_code_review_inline">%1$s on %2$s, line %3$s:</string>
+    <string name="claude_code_review_inline_removed">%1$s on %2$s, removed line %3$s:</string>
+    <string name="claude_code_review_verdict">%1$s reviewed it (%2$s):</string>
     <string name="claude_code_proposal_merged">The proposal was merged.</string>
     <string name="claude_code_proposal_closed">The proposal was closed.</string>
     <string name="claude_code_remove_worktree">Remove worktree</string>
+    <string name="claude_code_remove_anyway">Remove anyway</string>
     <string name="claude_code_remove_worktree_failed">Couldn't remove the worktree: %1$s</string>
     <string name="claude_code_view_proposal">View</string>
     <string name="claude_code_install_title">Install Claude Code</string>

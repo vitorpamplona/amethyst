@@ -58,6 +58,7 @@ class ClaudeChatTest {
             written.add(line)
             when {
                 line.contains("\"subtype\":\"initialize\"") -> reply(line, "{}")
+                line.contains("\"subtype\":\"rename_session\"") -> reply(line, "{}")
                 line.contains("\"type\":\"user\"") -> {
                     emit("""{"type":"system","subtype":"init","cwd":"/work","session_id":"s-1","model":"claude-haiku-5-5","permissionMode":"default","tools":["Write"]}""")
                     emit("""{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Writ"}},"session_id":"s-1","parent_tool_use_id":null}""")
@@ -101,7 +102,10 @@ class ClaudeChatTest {
     // chat's work is what these tests advance. Cancelled at the end of each test.
     private lateinit var chatScope: CoroutineScope
 
-    private fun TestScope.newChat(cli: ScriptedCli): ClaudeChat {
+    private fun TestScope.newChat(
+        cli: ScriptedCli,
+        title: String? = null,
+    ): ClaudeChat {
         chatScope = CoroutineScope(StandardTestDispatcher(testScheduler) + SupervisorJob())
         val starter =
             ClaudeCodeStarter { _, scope ->
@@ -112,7 +116,7 @@ class ClaudeChatTest {
             key = "new-1",
             resumeSessionId = null,
             cwd = File("."),
-            title = null,
+            title = title,
             permissionMode = PermissionMode.DEFAULT,
             model = null,
             store = ClaudeSessionStore(config),
@@ -179,6 +183,23 @@ class ClaudeChatTest {
             advanceUntilIdle()
 
             assertNotNull(cli.written.firstOrNull { it.contains("\"updatedPermissions\":[{\"type\":\"setMode\",\"mode\":\"acceptEdits\"") })
+            chatScope.cancel()
+        }
+
+    @Test
+    fun aNewChatsTitleNamesTheSessionOnceItExists() =
+        runTest {
+            val cli = ScriptedCli()
+            val chat = newChat(cli, title = "Fix the relay list")
+            assertEquals("Fix the relay list", chat.state.value.title)
+
+            chat.send("A long first message from the issue template")
+            advanceUntilIdle()
+
+            val renames = cli.written.filter { it.contains("\"subtype\":\"rename_session\"") }
+            assertEquals(1, renames.size)
+            assertTrue(renames.single().contains("Fix the relay list"), renames.single())
+            assertEquals("Fix the relay list", chat.state.value.title)
             chatScope.cancel()
         }
 }

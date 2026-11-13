@@ -229,13 +229,20 @@ class ClaudeCodeChatViewModel(
     /** Why removing the worktree failed, as git said it. */
     val cleanupError: StateFlow<String?> = _cleanupError.asStateFlow()
 
-    /** Ends the session and removes its worktree: the proposal was merged. */
-    fun removeWorktree(onDone: () -> Unit) {
+    /**
+     * Ends the session and removes its worktree: the proposal was merged. Without [force], a
+     * worktree with uncommitted files stays and [cleanupError] says why.
+     */
+    fun removeWorktree(
+        force: Boolean = false,
+        onDone: () -> Unit,
+    ) {
         val cwd = chat?.state?.value?.cwd ?: return
         viewModelScope.launch {
             try {
+                _cleanupError.value = null
                 chat.close()
-                GitWorktrees.remove(File(cwd))
+                GitWorktrees.remove(File(cwd), force)
                 onDone()
             } catch (e: IOException) {
                 _cleanupError.value = e.message ?: cwd

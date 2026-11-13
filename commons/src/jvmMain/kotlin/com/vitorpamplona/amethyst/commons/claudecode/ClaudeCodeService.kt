@@ -94,15 +94,30 @@ class ClaudeCodeService(
 
     private val projects = ConcurrentHashMap<String, ProjectInfo>()
 
-    private fun projectOf(cwd: String?): String = cwd?.let { projects[it]?.name ?: File(it).name.ifEmpty { it } } ?: ""
+    private fun projectOf(cwd: String?): String = cwd?.let { projects[it]?.name ?: folderProject(File(it)) } ?: ""
+
+    /**
+     * A folder's project when git can't say (it was removed): for the app's own worktrees,
+     * `<repo>-worktrees/<branch>`, the repository; else the folder's name.
+     */
+    private fun folderProject(dir: File): String =
+        dir.absoluteFile.parentFile
+            ?.name
+            ?.removeSuffix(WORKTREES_SUFFIX)
+            ?.takeIf {
+                dir.absoluteFile.parentFile.name
+                    .endsWith(WORKTREES_SUFFIX) && it.isNotEmpty()
+            }
+            ?: dir.name.ifEmpty { dir.path }
 
     /**
      * The project of a folder: its nostr repository's name, or the name of the main checkout
-     * its worktree belongs to, or the folder's own name.
+     * its worktree belongs to, or the folder's own name. Null when the folder doesn't exist.
      */
-    private fun computeProject(cwd: String): ProjectInfo {
+    private fun computeProject(cwd: String): ProjectInfo? {
         val dir = File(cwd)
-        if (!dir.isDirectory) return ProjectInfo(dir.name, null)
+        // Not cached: a worktree removed now may be made again, in a repository.
+        if (!dir.isDirectory) return null
         val common = GitWorkspace.git(dir, "rev-parse", "--path-format=absolute", "--git-common-dir")?.trim()
         val mainCheckout = common?.let { File(it).parentFile }
         val branch = GitWorkspace.git(dir, "branch", "--show-current")?.trim()?.takeIf { it.isNotEmpty() }
@@ -131,15 +146,10 @@ class ClaudeCodeService(
                     Log.w(TAG, "Could not list Claude Code sessions", e)
                     emptyList()
                 }
-            saved.value
-                .mapNotNull { it.cwd }
+            (saved.value.mapNotNull { it.cwd } + chats.value.values.map { it.state.value.cwd })
                 .distinct()
                 .filter { !projects.containsKey(it) }
-                .forEach { projects[it] = computeProject(it) }
-            chats.value.values
-                .map { it.state.value.cwd }
-                .filter { !projects.containsKey(it) }
-                .forEach { projects[it] = computeProject(it) }
+                .forEach { cwd -> computeProject(cwd)?.let { projects[cwd] = it } }
             elsewhere.value =
                 try {
                     store.liveSessions()
@@ -168,12 +178,16 @@ class ClaudeCodeService(
         return open(key, info.sessionId, cwd, info.title, PermissionMode.DEFAULT, null)
     }
 
-    /** A new chat in [cwd]; its process starts with the first message. */
+    /**
+     * A new chat in [cwd]; its process starts with the first message. A [title] names the
+     * session from the start, instead of its first message.
+     */
     fun newChat(
         cwd: File,
         permissionMode: PermissionMode = PermissionMode.DEFAULT,
         model: String? = null,
-    ): ClaudeChat = open("new-${UUID.randomUUID()}", null, cwd, null, permissionMode, model)
+        title: String? = null,
+    ): ClaudeChat = open("new-${UUID.randomUUID()}", null, cwd, title?.trim()?.ifEmpty { null }, permissionMode, model)
 
     private fun open(
         key: String,
@@ -236,7 +250,8 @@ class ClaudeCodeService(
 
     /**
      * Starts a session on a NIP-34 repository: a worktree on [branch] made from [checkout], and,
-     * when [prompt] isn't blank, its first message.
+     * when [prompt] isn't blank, its first message. The session is named [title], the issue's
+     * or proposal's subject, rather than after the long first message.
      */
     suspend fun startFromNostr(
         checkout: File,
@@ -244,9 +259,10 @@ class ClaudeCodeService(
         branch: String,
         permissionMode: PermissionMode,
         prompt: String,
+        title: String? = null,
     ): ClaudeChat {
         val workspace = workspaces.prepare(checkout, target, branch)
-        val chat = newChat(workspace.dir, permissionMode)
+        val chat = newChat(workspace.dir, permissionMode, title = title)
         if (prompt.isNotBlank()) chat.send(prompt)
         return chat
     }
@@ -317,6 +333,7 @@ class ClaudeCodeService(
 
     companion object {
         private const val TAG = "ClaudeCodeService"
+        private const val WORKTREES_SUFFIX = "-worktrees"
 
         /** The app's one service. Its processes end with the app. */
         val shared: ClaudeCodeService by lazy {

@@ -106,3 +106,13 @@ class ChatRowsTest {
         assertTrue((rows[1] as ChatRow.Single).item is ChatItem.ToolCall)
     }
 }
+
+class CloneUrlTest {
+    @Test
+    fun sshRemotesBecomeHttpsCloneUrls() {
+        assertEquals("https://github.com/vitorpamplona/amethyst.git", httpsCloneUrl("git@github.com:vitorpamplona/amethyst.git"))
+        assertEquals("https://codeberg.org/me/repo.git", httpsCloneUrl("ssh://git@codeberg.org/me/repo.git"))
+        assertEquals("https://example.com/r.git", httpsCloneUrl("https://example.com/r.git"))
+        assertEquals("/srv/git/r.git", httpsCloneUrl("/srv/git/r.git"))
+    }
+}

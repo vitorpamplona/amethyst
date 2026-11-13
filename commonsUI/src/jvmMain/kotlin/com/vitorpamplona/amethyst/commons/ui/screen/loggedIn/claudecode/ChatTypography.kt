@@ -28,6 +28,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -54,9 +55,9 @@ internal val ChatTextStyle: TextStyle
  * blocks on a quiet rounded surface.
  */
 @Composable
-internal fun rememberChatMarkdownStyle(): RichTextStyle {
+internal fun rememberChatMarkdownStyle(codeBackground: Color = MaterialTheme.colorScheme.surfaceContainerHigh): RichTextStyle {
     val colors = MaterialTheme.colorScheme
-    return remember(colors) {
+    return remember(colors, codeBackground) {
         RichTextStyle(
             paragraphSpacing = 10.sp,
             headingStyle = { level, base ->
@@ -77,7 +78,7 @@ internal fun rememberChatMarkdownStyle(): RichTextStyle {
             codeBlockStyle =
                 CodeBlockStyle(
                     textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 19.sp),
-                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(colors.surfaceContainerHigh),
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(codeBackground),
                     padding = 12.sp,
                     wordWrap = true,
                 ),

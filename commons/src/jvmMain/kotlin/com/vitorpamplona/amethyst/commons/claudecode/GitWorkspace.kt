@@ -222,6 +222,34 @@ object GitWorkspace {
         base?.let { setConfig(dir, "branch.$branch.$KEY_BASE", it) }
     }
 
+    /**
+     * Lines [from]..[to] of [path] as of [rev] (a commit, or `HEAD`), numbered from 1; null when
+     * the file or the commit isn't in the checkout.
+     */
+    suspend fun linesAt(
+        dir: File,
+        rev: String,
+        path: String,
+        from: Int,
+        to: Int,
+    ): List<Pair<Int, String>>? =
+        withContext(Dispatchers.IO) {
+            val text = git(dir, "show", "$rev:$path") ?: return@withContext null
+            // A file ends with a newline; that is not one more (empty) line.
+            val lines = text.removeSuffix("\n").split('\n')
+            val first = from.coerceAtLeast(1)
+            val last = to.coerceAtMost(lines.size)
+            if (first > last) null else (first..last).map { it to lines[it - 1] }
+        }
+
+    /** The commit the branch forked from its base: where a comment on a removed line reads. */
+    suspend fun mergeBase(dir: File): String? =
+        withContext(Dispatchers.IO) {
+            val branch = git(dir, "branch", "--show-current")?.trim()?.takeIf { it.isNotEmpty() }
+            val base = baseOf(dir, branch) ?: return@withContext null
+            git(dir, "merge-base", base, "HEAD")?.trim()?.takeIf { it.isNotEmpty() }
+        }
+
     /** Remembers that the review comments [ids] were sent to Claude on this branch. */
     suspend fun markReviewed(
         dir: File,
@@ -230,6 +258,17 @@ object GitWorkspace {
     ) = withContext(Dispatchers.IO) {
         ids.forEach { run(dir, listOf("git", "config", "--add", "branch.$branch.$KEY_REVIEWED", it)) }
     }
+
+    /**
+     * A folder for the app's own files about this checkout (logs), inside its git dir so they
+     * never show as changes or get committed. Each worktree has its own. Null when [dir] is not
+     * in a repository.
+     */
+    fun privateDir(dir: File): File? =
+        git(dir, "rev-parse", "--absolute-git-dir")
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { File(it, "amethyst") }
 
     /** The repository a `nostr://` remote of the checkout points at, as ngit sets them up. */
     fun nostrRemoteRepo(dir: File): NostrRepoRef? =
