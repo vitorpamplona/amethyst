@@ -9530,6 +9530,10 @@
     <string name="front_page_print">Print today's Observer</string>
     <string name="front_page_print_again">Print again</string>
     <string name="front_page_model">Model</string>
+    <string name="front_page_effort">Writing effort</string>
+    <string name="front_page_effort_standard">Standard</string>
+    <string name="front_page_effort_deep">Deep</string>
+    <string name="front_page_effort_deep_note">Deep lets the model think longer before it plans and writes. It costs more.</string>
     <string name="front_page_model_id">Model id</string>
     <string name="front_page_model_dialog_title">Choose a model</string>
     <string name="front_page_model_search">Search models</string>
@@ -9559,6 +9563,7 @@
     <string name="front_page_step_fixing">Fixing the page</string>
     <string name="front_page_step_all_at_once">Writing (this provider sends the page all at once)</string>
     <string name="front_page_step_check">Checking quotes, pictures and links</string>
+    <string name="front_page_step_planning">Planning the paper</string>
     <string name="front_page_edition">No. %1$s</string>
     <string name="front_page_fixed_once">Fixed once</string>
     <string name="front_page_download">Download</string>
@@ -9701,6 +9706,8 @@
     <string name="front_page_log_passed">The page passed the check</string>
     <string name="front_page_log_refused">The page didn't pass the check · problems: %1$d</string>
     <string name="front_page_log_published">Published to your Observer site</string>
+    <string name="front_page_log_planned">Planned · posts read in full: %1$d · lead: %2$s</string>
+    <string name="front_page_log_plan_failed">No plan came back · writing from the digest alone</string>
     <string name="front_page_can_leave_desktop">You can use the app meanwhile. We'll tell you when it's ready.</string>
     <string name="front_page_quit_title">Your Observer is still printing</string>
     <string name="front_page_quit_text">Quitting now stops the print, and your AI provider may already have charged for it. Keep printing hides the window; Amethyst stays open until the paper is ready, then tells you.</string>

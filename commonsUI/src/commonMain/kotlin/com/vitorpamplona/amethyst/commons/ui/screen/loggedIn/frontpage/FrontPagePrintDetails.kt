@@ -67,6 +67,8 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_log_all_at_once
 import com.vitorpamplona.amethyst.commons.resources.front_page_log_asked
 import com.vitorpamplona.amethyst.commons.resources.front_page_log_first_byte
 import com.vitorpamplona.amethyst.commons.resources.front_page_log_passed
+import com.vitorpamplona.amethyst.commons.resources.front_page_log_plan_failed
+import com.vitorpamplona.amethyst.commons.resources.front_page_log_planned
 import com.vitorpamplona.amethyst.commons.resources.front_page_log_published
 import com.vitorpamplona.amethyst.commons.resources.front_page_log_quotes
 import com.vitorpamplona.amethyst.commons.resources.front_page_log_read
@@ -85,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_reasoning
 import com.vitorpamplona.amethyst.commons.resources.front_page_show_details
 import com.vitorpamplona.amethyst.commons.resources.front_page_step_all_at_once
 import com.vitorpamplona.amethyst.commons.resources.front_page_step_fixing
+import com.vitorpamplona.amethyst.commons.resources.front_page_step_planning
 import com.vitorpamplona.amethyst.commons.resources.front_page_step_probe
 import com.vitorpamplona.amethyst.commons.resources.front_page_step_thinking
 import com.vitorpamplona.amethyst.commons.resources.front_page_step_waiting
@@ -107,6 +110,7 @@ import kotlinx.coroutines.flow.map
 @Composable
 fun writeStepText(step: PrintStep.Write): String =
     when {
+        step.phase == WritePhase.PLANNING -> stringRes(Res.string.front_page_step_planning)
         step.phase == WritePhase.ALL_AT_ONCE -> stringRes(Res.string.front_page_step_all_at_once)
         step.round > 1 -> stringRes(Res.string.front_page_step_fixing)
         step.phase == WritePhase.WAITING -> stringRes(Res.string.front_page_step_waiting, formatElapsedTime(rememberElapsed(step.since)))
@@ -229,6 +233,9 @@ private fun logLine(entry: PrintLogEntry): String {
     return when (entry.kind) {
         PrintLogKind.ASKED -> stringRes(Res.string.front_page_log_asked, entry.detail.orEmpty())
         PrintLogKind.PROBE -> stringRes(Res.string.front_page_step_probe)
+        PrintLogKind.PLANNING -> stringRes(Res.string.front_page_step_planning)
+        PrintLogKind.PLANNED -> stringRes(Res.string.front_page_log_planned, n(0), entry.detail.orEmpty())
+        PrintLogKind.PLAN_FAILED -> stringRes(Res.string.front_page_log_plan_failed)
         PrintLogKind.READ -> stringRes(Res.string.front_page_log_read, n(0), formatGrouped(n(1).toLong()))
         PrintLogKind.REQUEST_SENT -> stringRes(Res.string.front_page_log_request_sent, n(0))
         PrintLogKind.FIRST_BYTE -> stringRes(Res.string.front_page_log_first_byte)

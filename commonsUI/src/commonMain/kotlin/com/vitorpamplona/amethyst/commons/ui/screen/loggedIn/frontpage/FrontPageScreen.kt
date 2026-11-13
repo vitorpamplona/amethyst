@@ -63,6 +63,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -131,6 +134,7 @@ import com.vitorpamplona.amethyst.commons.frontpage.SavedEdition
 import com.vitorpamplona.amethyst.commons.frontpage.ScheduleState
 import com.vitorpamplona.amethyst.commons.frontpage.ShownEdition
 import com.vitorpamplona.amethyst.commons.frontpage.Violation
+import com.vitorpamplona.amethyst.commons.frontpage.WritingEffort
 import com.vitorpamplona.amethyst.commons.frontpage.dayOfWeek
 import com.vitorpamplona.amethyst.commons.frontpage.formatUsd
 import com.vitorpamplona.amethyst.commons.frontpage.relativeDay
@@ -172,6 +176,10 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_details
 import com.vitorpamplona.amethyst.commons.resources.front_page_download
 import com.vitorpamplona.amethyst.commons.resources.front_page_edition_label
 import com.vitorpamplona.amethyst.commons.resources.front_page_edition_unreadable
+import com.vitorpamplona.amethyst.commons.resources.front_page_effort
+import com.vitorpamplona.amethyst.commons.resources.front_page_effort_deep
+import com.vitorpamplona.amethyst.commons.resources.front_page_effort_deep_note
+import com.vitorpamplona.amethyst.commons.resources.front_page_effort_standard
 import com.vitorpamplona.amethyst.commons.resources.front_page_fixed_once
 import com.vitorpamplona.amethyst.commons.resources.front_page_keep_printing
 import com.vitorpamplona.amethyst.commons.resources.front_page_last_printed
@@ -416,6 +424,7 @@ fun FrontPageScreen(
     val today by viewModel.today.collectAsStateWithLifecycle()
     val shown by viewModel.shown.collectAsStateWithLifecycle()
     val estimate by viewModel.estimate.collectAsStateWithLifecycle()
+    val effort by viewModel.effort.collectAsStateWithLifecycle()
     val estimateSats by viewModel.estimateSats.collectAsStateWithLifecycle()
     val printKey by viewModel.key.collectAsStateWithLifecycle()
     // A Routstr key pays in sats: the print says what in sats, and warns when the balance may not cover it.
@@ -599,6 +608,8 @@ fun FrontPageScreen(
                             scheduleActions,
                             printedBy,
                             onModel = viewModel::selectModel,
+                            effort = effort,
+                            onEffort = viewModel::selectEffort,
                             onPrint = requestPrint,
                             onCancel = askCancel,
                             publish = publishPrefs,
@@ -643,6 +654,8 @@ fun FrontPageScreen(
                             scheduleActions,
                             printedBy,
                             onModel = viewModel::selectModel,
+                            effort = effort,
+                            onEffort = viewModel::selectEffort,
                             onPrint = {
                                 printSheet = false
                                 requestPrint()
@@ -982,6 +995,8 @@ private fun PrintControls(
     scheduleActions: ScheduleActions,
     printedBy: PrintedBy?,
     onModel: (String) -> Unit,
+    effort: WritingEffort,
+    onEffort: (WritingEffort) -> Unit,
     onPrint: () -> Unit,
     onCancel: () -> Unit,
     publish: ObserverPrefs?,
@@ -992,6 +1007,7 @@ private fun PrintControls(
     val ink = MaterialTheme.colorScheme.onSurface
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         ModelPicker(models, onModel, PillColors.onCard(), ink, editionSats)
+        EffortRow(effort, onEffort, ink)
         // A Print that can't be pressed says why: the provider lists nothing and no model is named.
         if (!models.loading && models.ids.isEmpty() && models.selected == null) {
             Text(
@@ -1131,6 +1147,45 @@ private fun RowScope.ObserverFailed(
         }
     Text(stringRes(text), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
     TextButton(onClick = if (reason == ObserverFailure.NO_SERVERS) onAddServer else onRetry) { Text(stringRes(fix)) }
+}
+
+/**
+ * "Writing effort": Standard or Deep, kept in the schedule (its `effort` param) so every app and
+ * the Assistant print with it. Deep says it costs more; the Print button's estimate shows how much.
+ */
+@Composable
+private fun EffortRow(
+    effort: WritingEffort,
+    onEffort: (WritingEffort) -> Unit,
+    ink: Color,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            stringRes(Res.string.front_page_effort),
+            style = MaterialTheme.typography.labelMedium,
+            color = ink.copy(alpha = 0.8f),
+            modifier = Modifier.padding(start = 16.dp),
+        )
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            WritingEffort.entries.forEachIndexed { index, entry ->
+                SegmentedButton(
+                    selected = effort == entry,
+                    onClick = { onEffort(entry) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = WritingEffort.entries.size),
+                ) {
+                    Text(stringRes(if (entry == WritingEffort.DEEP) Res.string.front_page_effort_deep else Res.string.front_page_effort_standard))
+                }
+            }
+        }
+        if (effort == WritingEffort.DEEP) {
+            Text(
+                stringRes(Res.string.front_page_effort_deep_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = ink.copy(alpha = 0.8f),
+                modifier = Modifier.padding(start = 16.dp),
+            )
+        }
+    }
 }
 
 @Composable

@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_job_hide
 import com.vitorpamplona.amethyst.commons.resources.front_page_job_tap_to_open
 import com.vitorpamplona.amethyst.commons.resources.front_page_ready_title
 import com.vitorpamplona.amethyst.commons.resources.front_page_show_details
+import com.vitorpamplona.amethyst.commons.resources.front_page_step_planning
 import com.vitorpamplona.amethyst.commons.resources.front_page_step_writing_section
 import com.vitorpamplona.amethyst.commons.ui.broadcast.formatElapsedTime
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
@@ -224,6 +225,7 @@ fun printStageText(stage: PrintJobStage): String =
         is PrintJobStage.Reading -> stringRes(Res.string.front_page_banner_pull, stage.done, stage.total)
         is PrintJobStage.Writing ->
             when {
+                stage.phase == WritePhase.PLANNING -> stringRes(Res.string.front_page_step_planning)
                 stage.round > 1 -> stringRes(Res.string.front_page_banner_fix)
                 stage.phase == WritePhase.WAITING -> stringRes(Res.string.front_page_banner_waiting)
                 stage.phase == WritePhase.THINKING -> stringRes(Res.string.front_page_banner_thinking)
