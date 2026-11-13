@@ -95,6 +95,7 @@ class AccountStoreRecords(
     val feedVisibility: FeedVisibility,
     val notificationPrefs: NotificationPrefs,
     val nwcBackupPrefs: NwcBackupPrefs = NwcBackupPrefs(),
+    val composePrefs: ComposePrefs = ComposePrefs(),
 )
 
 /** The per-account stores [AccountSettings] is saved to and rebuilt from, all in the account's DataStore. */
@@ -119,6 +120,8 @@ class AccountSettingsStores(
 
     fun nwcBackupPrefs(npub: String) = NwcBackupPrefsStore(stores.getDataStore(npub))
 
+    fun composePrefs(npub: String) = ComposePrefsStore(stores.getDataStore(npub))
+
     /** Every store [npub] has, with no fallback: an empty store reads as its defaults. */
     suspend fun load(npub: String) =
         AccountStoreRecords(
@@ -131,6 +134,7 @@ class AccountSettingsStores(
             feedVisibility = feedVisibility(npub).load(),
             notificationPrefs = notificationPrefs(npub).load(),
             nwcBackupPrefs = nwcBackupPrefs(npub).load(),
+            composePrefs = composePrefs(npub).load(),
         )
 
     /** Writes every store-backed part of [settings]. Keys and secrets have stores of their own. */
@@ -209,6 +213,7 @@ class AccountSettingsStores(
                 walletIds = settings.backedUpNwcWalletIds.value,
             ),
         )
+        composePrefs(npub).save(ComposePrefs(signature = settings.composeSignature.value))
         latestEvents(npub).saveAll(
             mapOf(
                 LatestEventSlot.CONTACT_LIST to settings.backupContactList?.let { OptimizedJsonMapper.toJson(it) },
@@ -636,6 +641,7 @@ suspend fun AccountSettingsSource.toAccountSettings(): AccountSettings =
         ).also {
             it.restoreBackupConflicts(BackupConflictStorage.decode(openBackupConflictsStr))
             it.restoreNwcBackupPrefs(stores.nwcBackupPrefs)
+            it.composeSignature.value = stores.composePrefs.signature
         }
     }
 
