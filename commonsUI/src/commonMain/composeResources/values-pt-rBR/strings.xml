@@ -1639,7 +1639,6 @@
     <string name="media_servers_add_url_label">Ou cole um endereço de servidor</string>
     <string name="media_servers_cache_section">Cache no dispositivo</string>
     <string name="media_server_primary_badge">Principal</string>
-    <string name="media_server_added">Adicionado</string>
     <string name="media_server_reorder">Reordenar servidor</string>
     <string name="payment_targets_explainer">Publique seus endereços de pagamento para que outros possam enviar fundos diretamente para você.</string>
     <string name="no_payment_targets_message">Nenhum destino de pagamento definido. Adicione um abaixo ↓</string>

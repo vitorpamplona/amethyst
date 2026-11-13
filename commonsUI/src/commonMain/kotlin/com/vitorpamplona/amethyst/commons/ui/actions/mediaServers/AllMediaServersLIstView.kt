@@ -63,9 +63,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.mediaServers.ServerHealth
 import com.vitorpamplona.amethyst.commons.mediaServers.ui.MediaServerEditField
-import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
-import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+import com.vitorpamplona.amethyst.commons.model.mediaServers.missingRecommendedServers
+import com.vitorpamplona.amethyst.commons.model.mediaServers.recommendedServer
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relays.ui.RelayDragState
 import com.vitorpamplona.amethyst.commons.relays.ui.draggableRelayItem
@@ -79,7 +79,6 @@ import com.vitorpamplona.amethyst.commons.resources.blossom_mirror_uploads_capti
 import com.vitorpamplona.amethyst.commons.resources.blossom_optimize_media
 import com.vitorpamplona.amethyst.commons.resources.blossom_optimize_media_caption
 import com.vitorpamplona.amethyst.commons.resources.delete_media_server
-import com.vitorpamplona.amethyst.commons.resources.media_server_added
 import com.vitorpamplona.amethyst.commons.resources.media_server_primary_badge
 import com.vitorpamplona.amethyst.commons.resources.media_server_reorder
 import com.vitorpamplona.amethyst.commons.resources.media_server_status_offline
@@ -87,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.media_server_status_online
 import com.vitorpamplona.amethyst.commons.resources.media_server_status_slow
 import com.vitorpamplona.amethyst.commons.resources.media_servers_add_section
 import com.vitorpamplona.amethyst.commons.resources.media_servers_add_url_label
+import com.vitorpamplona.amethyst.commons.resources.media_servers_all_recommended_added
 import com.vitorpamplona.amethyst.commons.resources.media_servers_cache_section
 import com.vitorpamplona.amethyst.commons.resources.media_servers_priority_section
 import com.vitorpamplona.amethyst.commons.resources.media_servers_recommended_label
@@ -104,10 +104,9 @@ import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.utils.Rfc3986
 import org.jetbrains.compose.resources.StringResource
 
-/** Vibrant palette for server monograms; picked deterministically from the host name. */
+/** Vibrant palette for server monograms; picked deterministically from the display name. */
 private val MonogramColors =
     listOf(
         Color(0xFF8B5CF6),
@@ -177,16 +176,13 @@ fun AllMediaBody(
         }
 
         item {
+            // Server entries carry their host in `name`; match recommended servers by host so a
+            // URL written with or without a trailing slash still counts as added.
+            val missing = missingRecommendedServers(blossomServersState.mapTo(HashSet()) { it.name })
             AddServerSection(
-                // Server entries carry their host in `name`; match recommended chips by host so
-                // normalization differences in the URL don't hide the "added" state.
-                addedHosts = blossomServersState.mapTo(HashSet()) { it.name },
+                missing = missing,
                 onAddServer = { blossomServersViewModel.addServer(it) },
-                onAddAll = {
-                    blossomServersViewModel.addServerList(
-                        DEFAULT_MEDIA_SERVERS.mapNotNull { s -> if (s.type == ServerType.Blossom) s.baseUrl else null },
-                    )
-                },
+                onAddAll = { blossomServersViewModel.addServerList(missing.map { it.baseUrl }) },
             )
         }
 
@@ -338,6 +334,8 @@ fun MediaServerRow(
 ) {
     val isPrimary = index == 0
     val shape = RoundedCornerShape(16.dp)
+    // A recommended server shows the same friendly name its chip had; any other shows its host.
+    val title = recommendedServer(serverEntry.name)?.name ?: serverEntry.name.replaceFirstChar(Char::titlecase)
     Row(
         modifier =
             Modifier
@@ -367,14 +365,14 @@ fun MediaServerRow(
 
         Spacer(Modifier.size(8.dp))
 
-        ServerAvatar(name = serverEntry.name, rank = index + 1, isPrimary = isPrimary)
+        ServerAvatar(name = title, rank = index + 1, isPrimary = isPrimary)
 
         Column(
             modifier = Modifier.weight(1f).padding(start = 12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = serverEntry.name.replaceFirstChar(Char::titlecase),
+                    text = title,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -407,12 +405,13 @@ fun MediaServerRow(
 }
 
 /**
- * Inline "add a server" area: a URL field followed by the recommended servers as a
- * horizontal strip of add-chips (already-added ones read as done).
+ * Inline "add a server" area: the recommended servers not yet in the list as a horizontal
+ * strip of add-chips, then a URL field. Once every recommended server is in the list the
+ * strip and its "Use Default List" button give way to a single line saying so.
  */
 @Composable
 private fun AddServerSection(
-    addedHosts: Set<String>,
+    missing: List<ServerName>,
     onAddServer: (String) -> Unit,
     onAddAll: () -> Unit,
 ) {
@@ -429,26 +428,35 @@ private fun AddServerSection(
             color = MaterialTheme.colorScheme.grayText,
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = onAddAll) {
-            Text(text = stringRes(id = Res.string.use_default_servers))
+        if (missing.isNotEmpty()) {
+            TextButton(onClick = onAddAll) {
+                Text(text = stringRes(id = Res.string.use_default_servers))
+            }
         }
     }
 
-    LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(vertical = 4.dp),
-    ) {
-        items(
-            DEFAULT_MEDIA_SERVERS,
-            key = { it.baseUrl },
-        ) { server ->
-            val host = runCatching { Rfc3986.host(server.baseUrl) }.getOrNull()
-            RecommendedChip(
-                serverEntry = server,
-                added = host != null && host in addedHosts,
-                onAdd = { onAddServer(server.baseUrl) },
-            )
+    if (missing.isEmpty()) {
+        Text(
+            text = stringRes(id = Res.string.media_servers_all_recommended_added),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.grayText,
+            modifier = Modifier.padding(vertical = 4.dp),
+        )
+    } else {
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(vertical = 4.dp),
+        ) {
+            items(
+                missing,
+                key = { it.baseUrl },
+            ) { server ->
+                RecommendedChip(
+                    serverEntry = server,
+                    onAdd = { onAddServer(server.baseUrl) },
+                )
+            }
         }
     }
 
@@ -462,11 +470,13 @@ private fun AddServerSection(
     MediaServerEditField(Res.string.add_a_blossom_server) { onAddServer(it) }
 }
 
-/** A recommended server as a tappable pill. Once added it reads as done and stops responding. */
+/**
+ * A recommended server as a tappable pill. Only servers missing from the list get one, so a
+ * tap adds it, the chip leaves the strip and the server appears as a row above.
+ */
 @Composable
 private fun RecommendedChip(
     serverEntry: ServerName,
-    added: Boolean,
     onAdd: () -> Unit,
 ) {
     val shape = RoundedCornerShape(50)
@@ -474,13 +484,8 @@ private fun RecommendedChip(
         modifier =
             Modifier
                 .clip(shape)
-                .then(
-                    if (added) {
-                        Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
-                    } else {
-                        Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
-                    },
-                ).clickable(enabled = !added, onClick = onAdd)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
+                .clickable(onClick = onAdd)
                 .padding(start = 6.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -492,20 +497,15 @@ private fun RecommendedChip(
             maxLines = 1,
         )
         Icon(
-            symbol = if (added) MaterialSymbols.CheckCircle else MaterialSymbols.Add,
-            contentDescription =
-                if (added) {
-                    stringRes(id = Res.string.media_server_added)
-                } else {
-                    stringRes(id = Res.string.add_media_server)
-                },
+            symbol = MaterialSymbols.Add,
+            contentDescription = stringRes(id = Res.string.add_media_server),
             modifier = Modifier.size(18.dp),
-            tint = if (added) MaterialTheme.colorScheme.grayText else MaterialTheme.colorScheme.primary,
+            tint = MaterialTheme.colorScheme.primary,
         )
     }
 }
 
-/** A colored letter tile identifying a server, derived from its host name. */
+/** A colored letter tile identifying a server, derived from its display name. */
 @Composable
 private fun ServerMonogram(
     name: String,

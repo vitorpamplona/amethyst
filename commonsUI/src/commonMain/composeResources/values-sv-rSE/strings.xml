@@ -1639,7 +1639,6 @@
     <string name="media_servers_add_url_label">Eller klistra in en serveradress</string>
     <string name="media_servers_cache_section">Cache på enheten</string>
     <string name="media_server_primary_badge">Primär</string>
-    <string name="media_server_added">Tillagd</string>
     <string name="media_server_reorder">Ändra ordning på server</string>
     <string name="payment_targets_explainer">Publicera dina betalningsadresser så att andra kan skicka pengar direkt till dig.</string>
     <string name="no_payment_targets_message">Inga betalningsmottagare inställda. Lägg till en nedan ↓</string>

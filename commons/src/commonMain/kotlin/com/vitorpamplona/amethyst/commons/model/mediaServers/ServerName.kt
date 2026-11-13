@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.mediaServers
 
+import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -67,3 +68,16 @@ val DEFAULT_MEDIA_SERVERS: List<ServerName> =
         ServerName("Satellite (Paid)", "https://cdn.satellite.earth", ServerType.Blossom),
         ServerName("NostrMedia (Paid)", "https://nostrmedia.com", ServerType.Blossom),
     )
+
+// Declared after DEFAULT_MEDIA_SERVERS on purpose: top-level properties of one file initialize in
+// the order written, so a map above the list would read it as null and throw.
+
+/** Recommended servers keyed by host, which is what a list row's `name` holds. Keeps default order. */
+private val RECOMMENDED_BY_HOST: Map<String, ServerName> =
+    DEFAULT_MEDIA_SERVERS.associateBy { Rfc3986.host(it.baseUrl) }
+
+/** The recommended entry for [host], or null when the host is not one of the defaults. */
+fun recommendedServer(host: String): ServerName? = RECOMMENDED_BY_HOST[host]
+
+/** The defaults not yet in a list whose rows carry [addedHosts], in `DEFAULT_MEDIA_SERVERS` order. */
+fun missingRecommendedServers(addedHosts: Set<String>): List<ServerName> = RECOMMENDED_BY_HOST.filterKeys { it !in addedHosts }.values.toList()
