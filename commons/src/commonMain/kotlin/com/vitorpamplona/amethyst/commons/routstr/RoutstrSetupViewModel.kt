@@ -212,19 +212,6 @@ class RoutstrSetupViewModel(
     init {
         routstr.refreshNodes()
         viewModelScope.launch { routstr.purchases.load() }
-        // The invoice on screen is checked every few seconds; the others, every minute.
-        viewModelScope.launch {
-            var showing: String? = null
-            try {
-                _buy.map { (it as? RoutstrBuyUi.Invoice)?.purchase?.id }.distinctUntilChanged().collect { id ->
-                    showing?.let { routstr.purchases.setShown(it, false) }
-                    id?.let { routstr.purchases.setShown(it, true) }
-                    showing = id
-                }
-            } finally {
-                showing?.let { routstr.purchases.setShown(it, false) }
-            }
-        }
     }
 
     fun refresh() = routstr.refreshNodes(maxAgeSeconds = 0)
@@ -333,6 +320,23 @@ class RoutstrSetupViewModel(
 
     private val _buy = MutableStateFlow<RoutstrBuyUi>(RoutstrBuyUi.Idle)
     val buy: StateFlow<RoutstrBuyUi> = _buy.asStateFlow()
+
+    init {
+        // Here, after _buy exists. The invoice on screen is checked every few seconds; the others,
+        // every minute.
+        viewModelScope.launch {
+            var showing: String? = null
+            try {
+                _buy.map { (it as? RoutstrBuyUi.Invoice)?.purchase?.id }.distinctUntilChanged().collect { id ->
+                    showing?.let { routstr.purchases.setShown(it, false) }
+                    id?.let { routstr.purchases.setShown(it, true) }
+                    showing = id
+                }
+            } finally {
+                showing?.let { routstr.purchases.setShown(it, false) }
+            }
+        }
+    }
 
     /** Whether the account has a Lightning wallet to pay with (NWC, the zaps' wallet). */
     val hasLightningWallet: StateFlow<Boolean> = routstr.hasLightningWallet
