@@ -38,7 +38,6 @@ import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorageVault
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -204,7 +203,14 @@ class DesktopAppModules(
 
     private val filesPath: Path = filesDir.toOkioPath()
 
-    val appStores = AppPreferenceStores(rootFilesDir = { filesPath })
+    // Desktop runs the tabs layout: every install is moved to it once (see UiSettingsStore.desktopTabsLayout).
+    val appStores =
+        AppPreferenceStores(
+            rootFilesDir = { filesPath },
+            migrations = { name ->
+                if (name == AppPreferenceStores.SHARED_SETTINGS) listOf(UiSettingsStore.desktopTabsLayout()) else emptyList()
+            },
+        )
 
     private val sharedSettingsStore get() = appStores.sharedSettings()
 
@@ -531,8 +537,8 @@ class DesktopAppModules(
 
     private val legacyCustomFeedImport = LegacyCustomFeedImport(filesDir)
 
-    // A legacy user who ran the deck gets it on here too.
-    private val legacyDeckImport = LegacyDeckImport(filesDir) { uiPrefs.navigationLayout.tryEmit(NavigationLayoutType.DECK) }
+    // The legacy deck's columns come over; the layout stays tabs (UiSettingsStore.desktopTabsLayout).
+    private val legacyDeckImport = LegacyDeckImport(filesDir)
 
     // A NIP-46 signer's auth_url challenges, from logins and from the accounts' signers alike.
     val remoteSignerAuthPrompts = RemoteSignerAuthPrompts()

@@ -46,6 +46,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
 
 class UiSettingsStoreTest {
     @get:Rule
@@ -142,6 +143,39 @@ class UiSettingsStoreTest {
                 it[UiSettingsStore.UI_NAVIGATION_LAYOUT] = NavigationLayoutType.TABS.name
             }
             assertEquals(NavigationLayoutType.TABS, UiSettingsStore(chosen).load()!!.navigationLayout)
+        }
+
+    /** Desktop moves every install to tabs once, whatever it had, and keeps what the user picks afterwards. */
+    @Test
+    fun desktopTabsLayoutOverridesOnceThenKeepsTheUsersPick() =
+        runTest {
+            val desktop = { name: String -> if (name == AppPreferenceStores.SHARED_SETTINGS) listOf(UiSettingsStore.desktopTabsLayout()) else emptyList() }
+
+            // DataStore allows one live store per file, so each "start" opens a copy of the last one's files.
+            var run = 0
+
+            fun restart(from: File?): Pair<File, AppPreferenceStores> {
+                val dir = folder.newFolder("run${run++}")
+                from?.copyRecursively(dir, overwrite = true)
+                return dir to AppPreferenceStores(rootFilesDir = { dir.toOkioPath() }, migrations = desktop)
+            }
+
+            // A fresh install starts on tabs.
+            assertEquals(NavigationLayoutType.TABS, UiSettingsStore(restart(null).second.sharedSettings()).load()!!.navigationLayout)
+
+            // An existing install on the deck is moved to tabs.
+            val old = folder.newFolder("old")
+            AppPreferenceStores(rootFilesDir = { old.toOkioPath() }).sharedSettings().edit {
+                it[UiSettingsStore.UI_NAVIGATION_LAYOUT] = NavigationLayoutType.DECK.name
+            }
+            val (migratedDir, migrated) = restart(old)
+            val store = UiSettingsStore(migrated.sharedSettings())
+            assertEquals(NavigationLayoutType.TABS, store.load()!!.navigationLayout)
+
+            // A pick made after the move survives the next start.
+            store.save(store.load()!!.copy(navigationLayout = NavigationLayoutType.STACK))
+            val afterRestart = restart(migratedDir).second.sharedSettings()
+            assertEquals(NavigationLayoutType.STACK, UiSettingsStore(afterRestart).load()!!.navigationLayout)
         }
 
     @Test
