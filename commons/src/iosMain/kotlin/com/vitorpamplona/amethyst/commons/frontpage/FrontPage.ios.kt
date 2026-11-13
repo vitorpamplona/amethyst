@@ -30,6 +30,8 @@ actual suspend fun IRoleBasedHttpClientBuilder.chatComplete(
     key: AgentKeyTag,
     model: String,
     messages: List<ChatMessage>,
+    maxTokens: Int?,
+    effort: WritingEffort,
     onEvent: (WriterEvent) -> Unit,
 ): Written = throw WriterException(WriterFailure.UNSUPPORTED)
 

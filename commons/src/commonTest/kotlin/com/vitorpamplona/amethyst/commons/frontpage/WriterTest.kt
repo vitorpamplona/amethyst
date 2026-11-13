@@ -68,7 +68,6 @@ class WriterTest {
     @Test
     fun anthropicGetsRoomForAWholePage() {
         assertTrue(chatRequestBody("https://api.anthropic.com/v1", "m", emptyList(), true).contains("\"max_tokens\":32000"))
-        assertTrue(!chatRequestBody("https://openrouter.ai/api/v1", "m", emptyList(), true).contains("max_tokens"))
         assertTrue(chatRequestBody("https://openrouter.ai/api/v1", "m", emptyList(), true).contains("\"include_usage\":true"))
     }
 

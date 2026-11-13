@@ -41,12 +41,16 @@ class FrontPageCostTest {
     }
 
     @Test
-    fun theEstimateIsTheBriefAndDigestInAndAPageOut() {
+    fun theEstimateCountsThePlanPassAndThePage() {
         val sonnet = readModels(openRouter).first()
-        // 400,000 characters in is 100,000 tokens; 14,000 tokens out.
+        // 400,000 characters in is 100,000 tokens, read by the plan and again by the page with
+        // the posts in full; a plan and a page out.
         val estimate = estimateCost(sonnet, digestChars = 300_000, briefChars = 100_000)!!
-        assertEquals(100_000 * 0.000003 + EXPECTED_OUTPUT_TOKENS * 0.000015, estimate, 1e-9)
-        assertEquals("$0.51", formatUsd(estimate))
+        assertEquals((200_000 + approxTokens(EXPECTED_FULL_CHARS)) * 0.000003 + (PLAN_OUTPUT_TOKENS + EXPECTED_OUTPUT_TOKENS) * 0.000015, estimate, 1e-9)
+        assertEquals("$0.92", formatUsd(estimate))
+        // Deep reasons in both calls, and says so in the price.
+        val deep = estimateCost(sonnet, digestChars = 300_000, briefChars = 100_000, effort = WritingEffort.DEEP)!!
+        assertEquals(estimate + 2 * DEEP_REASONING_TOKENS * 0.000015, deep, 1e-9)
     }
 
     @Test

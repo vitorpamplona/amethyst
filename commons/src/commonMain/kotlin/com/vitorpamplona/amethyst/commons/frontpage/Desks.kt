@@ -60,12 +60,47 @@ class Desk(
     val kinds: List<Int>,
     val label: String,
     val limit: Int,
+    /** Tag filters the desk's REQ adds (`#t`), or null. */
+    val tags: Map<String, List<String>>? = null,
+    /** How far back the desk reads. Every desk reads the fixed 24-hour window but the Kitchen. */
+    val lookbackSeconds: Long = FRONT_PAGE_WINDOW_SECONDS,
     val keeps: (Event) -> Boolean = { true },
 )
 
 fun Event.firstTagValue(name: String): String? = tags.firstOrNull { it.size > 1 && it[0] == name }?.get(1)
 
 fun Event.tagsNamed(name: String): List<Array<String>> = tags.filter { it.isNotEmpty() && it[0] == name }
+
+/** Whether [event] carries a `t` tag in [values], ignoring case. */
+fun hasHashtag(
+    event: Event,
+    values: Set<String>,
+): Boolean = event.tags.any { it.size > 1 && it[0] == "t" && it[1].trim().lowercase() in values }
+
+/** The hashtags zap.cooking files a recipe under: `zapcooking` now, `nostrcooking` on older ones. */
+val RECIPE_TAGS = setOf("zapcooking", "nostrcooking")
+
+/** Republished copyrighted recipes (an NYT Cooking mirror): never in the Kitchen. */
+val RECIPE_MIRROR_TAGS = setOf("newsarchive", "nytcooking")
+
+/**
+ * The Kitchen reads 30 days back, not 24 hours: the one desk that bends the fixed window.
+ * Community recipes are too sparse for a day (about two dozen a month, measured 2026-11-13), so
+ * the desk offers the best-ranked recipe of the month that hasn't run lately ([pickRecipe]).
+ */
+const val KITCHEN_LOOKBACK_SECONDS = 30L * 24 * 60 * 60
+
+/** A recipe's address, `30023:<pubkey>:<d>`: what the paper remembers it ran ([SavedEdition.recipe]), so an edit doesn't run again. */
+fun recipeAddress(event: Event): String = "${event.kind}:${event.pubKey}:${event.firstTagValue("d").orEmpty()}"
+
+/**
+ * The Kitchen's one recipe: the best-ranked of [ranked] (in the relay's rank order) whose address
+ * isn't among [recent], the recipes run in recent editions. Null when every one has run.
+ */
+fun pickRecipe(
+    ranked: List<Event>,
+    recent: Set<String>,
+): Event? = ranked.firstOrNull { recipeAddress(it) !in recent }
 
 /**
  * The desks, and why each earns a column. ONE REQ PER DESK: merged into one subscription
@@ -86,13 +121,25 @@ val DESKS: List<Desk> =
         Desk("shorts", listOf(22, 34236), "Short videos", 40),
         Desk("files", listOf(1063), "File metadata", 50),
         Desk("highlights", listOf(9802), "Highlights", 50),
-        Desk("articles", listOf(30023), "Long-form", 100),
+        // Recipes are long-form too: they run in the Kitchen, never in both.
+        Desk("articles", listOf(30023), "Long-form", 100) { !hasHashtag(it, RECIPE_TAGS) },
         Desk("classifieds", listOf(30402), "Classifieds", 30),
         Desk("wiki", listOf(30818), "Wiki entries", 30),
         // 31922 is NIP-52's all-day half and 31923 the timed half; one alone drops events.
         Desk("calendar", listOf(31922, 31923), "Calendar events", 100),
         Desk("apps", listOf(32267), "App releases", 30),
         Desk("git", listOf(30617), "Code repositories", 30),
+        // zap.cooking's recipes, ranked like every desk, over 30 days ([KITCHEN_LOOKBACK_SECONDS]),
+        // without the NYT Cooking mirror. The print keeps one ([pickRecipe]).
+        Desk(
+            "kitchen",
+            listOf(30023),
+            "Kitchen",
+            30,
+            keeps = { hasHashtag(it, RECIPE_TAGS) && !hasHashtag(it, RECIPE_MIRROR_TAGS) },
+            tags = mapOf("t" to RECIPE_TAGS.toList()),
+            lookbackSeconds = KITCHEN_LOOKBACK_SECONDS,
+        ),
     )
 
 /**
@@ -108,8 +155,10 @@ fun deskFilter(
     limit: Int,
     observerHex: HexKey?,
     floor: Int,
+    tags: Map<String, List<String>>? = null,
 ) = Filter(
     kinds = kinds,
+    tags = tags,
     since = since,
     // BOTH ends: `until` was once carried through and never put into a filter.
     until = until,

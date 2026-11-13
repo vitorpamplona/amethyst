@@ -233,7 +233,7 @@ class JsoupPaperBoundaryTest {
     @Test
     fun detailsMayStartOpenAndUnknownAttributesAreRefused() {
         assertEquals(emptyList(), kinds("<details open><summary>More</summary><p>x</p></details>"))
-        assertTrue(markup("<p data-x=\"1\">x</p>").isNotEmpty())
+        assertTrue(markup("<p datum=\"1\">x</p>").isNotEmpty())
         assertTrue(markup("<a href=\"#x\" target=\"_top\">x</a>").isNotEmpty())
         assertTrue(markup("<div ping=\"https://evil.example\">x</div>").isNotEmpty())
     }
@@ -253,5 +253,25 @@ class JsoupPaperBoundaryTest {
         // A page that changes when read back is checked in the form it settles into.
         val checked = run("<p>x</p>")
         assertEquals(checked.html, JsoupPaperBoundary.serialize(JsoupPaperBoundary.parsePage(checked.html)))
+    }
+
+    @Test
+    fun preAndDataAttributesAreAllowed() {
+        assertEquals(emptyList(), markup("<pre class=\"sudoku\">5 3 . | . 7 .</pre>"))
+        assertEquals(emptyList(), markup("<div data-credit=\"weather\" data-row-2=\"x\"><p>Sunny</p></div>"))
+    }
+
+    @Test
+    fun dataAttributesAreTextAndNeverOnAQuote() {
+        assertEquals(listOf(Violation.Kind.MARKUP), markup("<div data-Credit_x=\"a\">x</div>"))
+        assertEquals(listOf(Violation.Kind.MARKUP), markup("<q data-x=\"y\">x</q>"))
+        // Everything else stays refused.
+        assertEquals(listOf(Violation.Kind.MARKUP), markup("<div datax=\"1\">x</div>"))
+    }
+
+    @Test
+    fun theInsertedHouseStylesheetPassesTheCheck() {
+        val html = insertHouseCss("<!doctype html><html><head><title>t</title><style id=\"house\"></style></head><body><p>x</p></body></html>")
+        assertEquals(emptyList(), JsoupPaperBoundary.resolveAndCheck(html, corpus).violations.map { it.detail })
     }
 }

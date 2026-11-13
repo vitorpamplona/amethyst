@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.commons.routstr
 
 import com.vitorpamplona.amethyst.commons.frontpage.DEFAULT_DIGEST_BUDGET
-import com.vitorpamplona.amethyst.commons.frontpage.EXPECTED_OUTPUT_TOKENS
-import com.vitorpamplona.amethyst.commons.frontpage.approxTokens
+import com.vitorpamplona.amethyst.commons.frontpage.WritingEffort
+import com.vitorpamplona.amethyst.commons.frontpage.editionTokens
 import com.vitorpamplona.amethyst.commons.frontpage.estimateCost
 import com.vitorpamplona.amethyst.commons.frontpage.readModels
 import com.vitorpamplona.amethyst.commons.frontpage.systemPrompt
@@ -64,17 +64,19 @@ class RoutstrPricingTest {
     @Test
     fun editionSatsUsesTheUsdEstimatesTokens() {
         val sonnet = RoutstrJson.models(body).first { it.id == "anthropic/claude-sonnet-5.5" }
-        val inTokens = approxTokens(DEFAULT_DIGEST_BUDGET + systemPrompt().length)
-        val expected = ceil(inTokens * 0.003 + EXPECTED_OUTPUT_TOKENS * 0.015 + 0.0).toLong()
+        val tokens = editionTokens(DEFAULT_DIGEST_BUDGET, systemPrompt().length)
+        val expected = ceil(tokens.input * 0.003 + tokens.output * 0.015 + 0.0).toLong()
         assertEquals(expected, RoutstrPricing.editionSats(sonnet.sats, DEFAULT_DIGEST_BUDGET))
         assertEquals(expected, RoutstrSetupViewModel.editionSats(sonnet))
         // A few hundred sats an edition, against a 4,308-sat reserve: max_cost dominates.
-        assertTrue(expected in 300..500, "$expected")
+        assertTrue(expected in 300..1_500, "$expected")
         assertEquals(4308L, RoutstrPricing.maxCostSats(sonnet.sats))
 
-        // The request fee is added once.
+        // The request fee is added once per call: the plan and the page.
         val mini = RoutstrJson.models(body).first { it.id == "openai/gpt-5.2-mini" }
-        assertEquals(ceil(inTokens * 0.00025 + EXPECTED_OUTPUT_TOKENS * 0.002 + 1.0).toLong(), RoutstrPricing.editionSats(mini.sats, DEFAULT_DIGEST_BUDGET))
+        assertEquals(ceil(tokens.input * 0.00025 + tokens.output * 0.002 + 2.0).toLong(), RoutstrPricing.editionSats(mini.sats, DEFAULT_DIGEST_BUDGET))
+        // Deep costs more.
+        assertTrue(RoutstrPricing.editionSats(sonnet.sats, DEFAULT_DIGEST_BUDGET, effort = WritingEffort.DEEP)!! > expected)
 
         assertNull(RoutstrPricing.editionSats(null, DEFAULT_DIGEST_BUDGET))
     }

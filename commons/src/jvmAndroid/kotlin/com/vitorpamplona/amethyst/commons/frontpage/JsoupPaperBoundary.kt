@@ -361,7 +361,7 @@ object JsoupPaperBoundary : PaperBoundary {
     val ALLOWED_ELEMENTS =
         (
             "html head body title meta style header footer main section article aside nav div span " +
-                "h1 h2 h3 h4 h5 h6 p br hr a img figure figcaption blockquote q cite em strong b i u s " +
+                "h1 h2 h3 h4 h5 h6 p br hr pre a img figure figcaption blockquote q cite em strong b i u s " +
                 "small sub sup mark time abbr ul ol li dl dt dd table thead tbody tfoot tr th td caption " +
                 "colgroup col details summary"
         ).split(" ").toSet()
@@ -421,6 +421,9 @@ object JsoupPaperBoundary : PaperBoundary {
 
     private val META_NAMES = setOf("viewport", "description")
 
+    /** A `data-*` attribute the page may carry for its own styling: lowercase letters, digits and dashes. */
+    private val DATA_ATTR = Regex("^data-[a-z0-9-]+$")
+
     /** Inside a quote: the only elements, and inside its attribution the only extra ones. */
     private val QUOTE_INSIDE = setOf("p", "br", "em", "strong", "b", "i", "cite", "footer")
 
@@ -452,6 +455,15 @@ object JsoupPaperBoundary : PaperBoundary {
                 continue
             }
             if (key in GLOBAL_ATTRS || key.startsWith("aria-")) continue
+            // Text only, and never on quoted text (a stylesheet could print it inside the quote).
+            if (key.startsWith("data-")) {
+                when {
+                    inQuote -> flag("$key= on quoted text, which could hide or change what it shows")
+                    !DATA_ATTR.matches(key) -> flag("$key= is not a data attribute a paper may use (letters, digits and dashes)")
+                    attr.value.any { it == '<' || it == '>' || it.isISOControl() } -> flag("$key= may hold text only")
+                }
+                continue
+            }
             if (ELEMENT_ATTRS[name]?.contains(key) != true) {
                 flag("$key= is not allowed on <$name>")
                 continue

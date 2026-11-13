@@ -65,6 +65,8 @@ data class SavedEdition(
     val published: Boolean = false,
     /** Printed by the runner the reader's schedule names (their Assistant), read from its own Observer site. */
     val byRunner: Boolean = false,
+    /** The Kitchen's recipe this edition ran, as its address ([recipeAddress]): the next editions don't offer it again. */
+    val recipe: String? = null,
 )
 
 /**

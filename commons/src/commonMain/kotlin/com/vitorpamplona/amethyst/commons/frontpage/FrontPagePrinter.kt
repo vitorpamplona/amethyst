@@ -191,8 +191,8 @@ class FrontPagePrinter(
     /** The synced morning schedule; null runs every scheduled call it gets (tests). */
     val morning: FrontPageMorning? = null,
     observerIO: ObserverSiteIO? = observerSiteIO(account, http),
-    private val press: (AgentKeyTag, String, PaperBoundary) -> FrontPagePress = { key, model, boundary ->
-        FrontPagePress(account.client, Constants.brainstorm, boundary, { messages, onText -> http.chatComplete(key, model, messages, onText) })
+    private val press: (AgentKeyTag, AgentModel, WritingEffort, PaperBoundary) -> FrontPagePress = { key, model, effort, boundary ->
+        FrontPagePress(account.client, Constants.brainstorm, boundary, { call, onEvent -> http.chatComplete(key, model.id, call.messages, outputLimitFor(model, call), effort, onEvent) })
     },
     /** What the platform does around a manual print (Android: a foreground service). */
     private val host: FrontPagePrintHost = FrontPagePrintHost.None,
@@ -484,9 +484,11 @@ class FrontPagePrinter(
         key: AgentKeyTag,
         model: AgentModel,
         trigger: PrintTrigger = PrintTrigger.MANUAL,
+        /** The writing effort; null reads the schedule's `effort` param. */
+        effort: WritingEffort? = null,
     ): Boolean {
         if (isBusy) return false
-        printing = scope.launch { printNow(key, model, trigger) }
+        printing = scope.launch { printNow(key, model, trigger, effort = effort) }
         return true
     }
 
@@ -515,11 +517,12 @@ class FrontPagePrinter(
         model: AgentModel,
         trigger: PrintTrigger = PrintTrigger.MANUAL,
         keep: suspend () -> Boolean = { true },
+        effort: WritingEffort? = null,
     ): FrontPageRun? {
         val boundary = boundary ?: return FrontPageRun.Failed(WriterFailure.UNSUPPORTED).also { _run.value = it }
         if (!slot.tryHold()) return null
         try {
-            return printHolding(key, model, boundary, trigger, keep)
+            return printHolding(key, model, boundary, trigger, keep, effort = effort)
         } finally {
             slot.release()
         }
@@ -537,7 +540,8 @@ class FrontPagePrinter(
         keep: suspend () -> Boolean,
         /** What the paper is dated (its `printedAt`): the occurrence a scheduled print is for; null, when the print starts. */
         printedAt: Long? = null,
-    ): FrontPageRun = slot.runCancellable(FrontPageRun.Cancelled) { printBody(key, model, boundary, trigger, keep, printedAt ?: now()) }
+        effort: WritingEffort? = null,
+    ): FrontPageRun = slot.runCancellable(FrontPageRun.Cancelled) { printBody(key, model, boundary, trigger, keep, printedAt ?: now(), effort ?: FrontPageParams.effort(scheduledTask())) }
 
     private suspend fun printBody(
         key: AgentKeyTag,
@@ -546,6 +550,7 @@ class FrontPagePrinter(
         trigger: PrintTrigger,
         keep: suspend () -> Boolean,
         printedAt: Long,
+        effort: WritingEffort,
     ): FrontPageRun {
         jobs.started(trigger)
         logBook.start(askedOf(key, model))
@@ -555,8 +560,9 @@ class FrontPagePrinter(
                 try {
                     _run.value = FrontPageRun.Running(PrintStep.Probe)
                     var shown: PrintStep = PrintStep.Probe
+                    val context = editionContext(printedAt)
                     val result =
-                        press(key, model.id, boundary).print(pubKey, readerName(), readerLanguage(), logBook) { step ->
+                        press(key, model, effort, boundary).print(pubKey, readerName(), readerLanguage(), logBook, context) { step ->
                             // The stream reports every chunk; every observer recomposing per chunk is the cost.
                             if (progressWorthShowing(shown, step)) {
                                 shown = step
@@ -641,6 +647,7 @@ class FrontPagePrinter(
                 digestChars = printed.digestChars,
                 rounds = printed.rounds,
                 sha256 = publishedSha256(html),
+                recipe = printed.recipe,
             )
         try {
             store.save(pubKey, edition, html)
@@ -740,6 +747,40 @@ class FrontPagePrinter(
     /** The reader's schedule, when this device has read it. */
     private fun scheduledTask(): ScheduledTask? = (account.observerSchedule.flow.value as? SyncedSchedule.Readable)?.task
 
+    /**
+     * What the edition knows beyond its posts, as of a print dated [at]: the paper as the newest
+     * editions left it, its number, the last front pages, the recipes recently run, and the
+     * reader's clock (the schedule's zone, else this device's). Never fails a print: what can't
+     * be read is left out.
+     */
+    private suspend fun editionContext(at: Long): EditionContext {
+        val today = FrontPageClock.dayKey(at)
+        val known = editions.value
+        val pages =
+            known
+                .sortedByDescending { it.day }
+                .distinctBy { it.day }
+                .take(PAGES_READ_BACK)
+                .mapIndexedNotNull { index, edition ->
+                    try {
+                        // The newest may be fetched from a site; the rest only if kept here.
+                        if (index == 0) html(edition.day) else store.html(pubKey, edition.day)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Could not read back the edition of ${edition.day}", e)
+                        null
+                    }
+                }
+        return EditionContext(
+            paper = standingPaper(pages),
+            number = editionNumber(known.map { it.day }, today),
+            recent = recentHeadlines(known, today),
+            clock = EditionClock.forReader(scheduledTask()?.tz),
+            recentRecipes = recentRecipes(known, today),
+        )
+    }
+
     /** The digest size a print is estimated with: the last edition's, or the budget. */
     private fun estimateDigestChars(): Int =
         localEditions.value
@@ -748,10 +789,16 @@ class FrontPagePrinter(
             ?.takeIf { it > 0 } ?: DEFAULT_DIGEST_BUDGET
 
     /** The cost estimate for one print with [model]: the last edition's digest size, or the budget. */
-    fun estimate(model: AgentModel?): Double? = estimateCost(model, estimateDigestChars())
+    fun estimate(
+        model: AgentModel?,
+        effort: WritingEffort = WritingEffort.STANDARD,
+    ): Double? = estimateCost(model, estimateDigestChars(), effort = effort)
 
     /** The same estimate in sats, for a model a Routstr node prices in sats; null otherwise. */
-    fun estimateSats(model: AgentModel?): Long? = RoutstrPricing.editionSats(model?.sats, estimateDigestChars())
+    fun estimateSats(
+        model: AgentModel?,
+        effort: WritingEffort = WritingEffort.STANDARD,
+    ): Long? = RoutstrPricing.editionSats(model?.sats, estimateDigestChars(), effort = effort)
 
     /**
      * The morning edition, with nobody there: only a signer that can decrypt on its own (a key
@@ -913,8 +960,21 @@ class FrontPagePrinter(
 
     companion object {
         private const val TAG = "FrontPagePrinter"
+
+        /** How many of the newest editions are read back for the masthead, motto and sections. */
+        const val PAGES_READ_BACK = 7
     }
 }
+
+/** A call's output limit for [model]: the plan's ([planTokenLimit]) or the page's ([outputTokenLimit]). */
+fun outputLimitFor(
+    model: AgentModel,
+    call: WriteCall,
+): Int =
+    when (call.purpose) {
+        WriteCall.Purpose.PLAN -> planTokenLimit(model)
+        WriteCall.Purpose.PAGE -> outputTokenLimit(model, approxTokens(call.messages.sumOf { it.text.length }))
+    }
 
 /** Opening The Observer reads both sites again, unless they were read less than this long ago (seconds): a rotation or a tab switch isn't news. */
 const val SITE_REREAD_ON_OPEN_SECONDS = 60L

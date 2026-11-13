@@ -56,6 +56,9 @@ sealed interface WriterEvent {
 
 /** Where a writer call is, as the reader is told. */
 enum class WritePhase {
+    /** Pass 1: the model plans the paper (which story leads, which posts to read in full). */
+    PLANNING,
+
     /** Sent, and nothing to show yet: "Waiting for the model…" with how long. */
     WAITING,
 
@@ -210,6 +213,15 @@ enum class PrintLogKind {
     /** Provider and model asked: detail "OpenRouter · anthropic/claude-sonnet-4.5". */
     ASKED,
     PROBE,
+
+    /** Pass 1 sent: the model plans the paper. */
+    PLANNING,
+
+    /** The plan came back: detail = the lead's angle, numbers = [posts sent in full]. */
+    PLANNED,
+
+    /** No plan came back (not JSON, an error, too slow): the page is written from the digest alone. */
+    PLAN_FAILED,
 
     /** The desks read: numbers = [desks, posts]. */
     READ,

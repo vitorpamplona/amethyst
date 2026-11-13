@@ -209,7 +209,7 @@ fun runsHereAtAll(task: ScheduledTask) = task.task == ObserverSchedule.TASK && t
  * (NIP-FB, Runner: then only that runner does, and a conflict runs nowhere), and holds no param
  * this app doesn't understand (NIP-FB, `param`: such a task is never run).
  */
-fun devicesPrint(task: ScheduledTask) = runsHereAtAll(task) && !task.namesRunner && ObserverParams.understands(task)
+fun devicesPrint(task: ScheduledTask) = runsHereAtAll(task) && !task.namesRunner && FrontPageParams.understands(task)
 
 /**
  * The one runner the schedule names for its author (NIP-FB, Runner): a lowercase hex key that
@@ -457,7 +457,7 @@ fun viewOf(
                 base.copy(
                     runners = task.runners,
                     runner = synced.runner(),
-                    unknownParams = ObserverParams.unknownParams(task),
+                    unknownParams = FrontPageParams.unknownParams(task),
                 )
             // Settings and no schedule: nothing runs, the switch is off, the settings are kept.
             if (isSettingsOnly(task)) return withRunner.copy(state = ScheduleState.NOT_SET_UP, settingsOnly = true)
@@ -752,6 +752,21 @@ class FrontPageMorning(
         }
 
     /**
+     * The writing effort the reader picked, written into the schedule as the Observer's `effort`
+     * param (every app, the Assistant and the worker print with it); Standard removes it. With no
+     * schedule yet, Deep is kept in a settings-only event; Standard needs nothing written.
+     */
+    suspend fun setEffort(
+        account: Account,
+        effort: WritingEffort,
+    ): ScheduleEdit =
+        editQueue.withLock {
+            edit(account, now()) { current ->
+                if (current == null && effort == WritingEffort.STANDARD) null else FrontPageParams.withEffort(current ?: observerSettingsOnly(), effort)
+            }
+        }
+
+    /**
      * Every edit this install makes of the schedule for the reader: the first one that writes also
      * moves the model this install remembered for the key's endpoint into the event, unless it
      * names one already ([withMigratedModel]), once.
@@ -871,7 +886,7 @@ class FrontPageMorning(
             val event = read.event ?: return ScheduledOutcome.NOT_RUNNER
             val task = read.task ?: return ScheduledOutcome.NOT_RUNNER
             // NIP-FB, `param`: a task with a param this app doesn't understand is never run.
-            if (!ObserverParams.understands(task)) return ScheduledOutcome.NOT_RUNNER
+            if (!FrontPageParams.understands(task)) return ScheduledOutcome.NOT_RUNNER
             val zone = FrontPageClock.cronZone(task.tz) ?: return ScheduledOutcome.NOT_RUNNER
             val at = now()
             val occurrence = ScheduledTaskClaims.occurrence(task, zone, at) ?: return ScheduledOutcome.NOT_DUE

@@ -134,6 +134,37 @@ class ChatCompleteTest {
         }
 
     @Test
+    fun aRefusedDeepCallIsSentOnceMoreWithoutItsExtras() =
+        runBlocking {
+            val written =
+                clients(
+                    Answer(400, "application/json", """{"error":"unknown field reasoning"}"""),
+                    Answer(400, "application/json", """{"error":"unknown field reasoning"}"""),
+                    Answer(200, "application/json", """{"choices":[{"message":{"content":"<p>ok</p>"}}]}"""),
+                ).chatComplete(key, "m", messages, maxTokens = 48_000, effort = WritingEffort.DEEP) {}
+            assertEquals("<p>ok</p>", written.text)
+            assertTrue(requests[0].contains("\"reasoning\":{\"effort\":\"high\"}"))
+            assertTrue(requests[0].contains("\"max_tokens\":48000"))
+            assertFalse(requests[2].contains("reasoning"))
+            assertFalse(requests[2].contains("max_tokens"))
+        }
+
+    @Test
+    fun aPlainCallIsNotRetriedOnARefusal() {
+        val failure =
+            assertFailsWith<WriterException> {
+                runBlocking {
+                    clients(
+                        Answer(400, "application/json", "{}"),
+                        Answer(400, "application/json", "{}"),
+                    ).chatComplete(key, "m", messages) {}
+                }
+            }
+        assertEquals(400, failure.status)
+        assertEquals(2, requests.size)
+    }
+
+    @Test
     fun aRejectedKeySaysSo() {
         val failure =
             assertFailsWith<WriterException> {

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.routstr
 
-import com.vitorpamplona.amethyst.commons.frontpage.EXPECTED_OUTPUT_TOKENS
-import com.vitorpamplona.amethyst.commons.frontpage.approxTokens
+import com.vitorpamplona.amethyst.commons.frontpage.WritingEffort
+import com.vitorpamplona.amethyst.commons.frontpage.editionTokens
 import com.vitorpamplona.amethyst.commons.frontpage.systemPrompt
 import kotlin.math.ceil
 
@@ -29,17 +29,20 @@ import kotlin.math.ceil
 object RoutstrPricing {
     /**
      * One Observer edition with [sats]: `prompt_tokens * prompt + completion_tokens * completion
-     * + request`, rounded up to a whole sat. The prompt is the brief and a digest of
-     * [digestChars]; the answer is [EXPECTED_OUTPUT_TOKENS]. Null when the node gives no prices.
+     * + request` for each of its two calls, rounded up to a whole sat. The tokens are the USD
+     * estimate's ([editionTokens]: a digest of [digestChars], the plan and the page, Deep's
+     * reasoning). Null when the node gives no prices.
      */
     fun editionSats(
         sats: SatsPricing?,
         digestChars: Int,
         briefChars: Int = systemPrompt().length,
+        effort: WritingEffort = WritingEffort.STANDARD,
     ): Long? {
         val prompt = sats?.prompt ?: return null
         val completion = sats.completion ?: return null
-        val cost = approxTokens(digestChars + briefChars) * prompt + EXPECTED_OUTPUT_TOKENS * completion + (sats.request ?: 0.0)
+        val tokens = editionTokens(digestChars, briefChars, effort)
+        val cost = tokens.input * prompt + tokens.output * completion + 2 * (sats.request ?: 0.0)
         if (!cost.isFinite() || cost < 0) return null
         return ceil(cost).toLong()
     }

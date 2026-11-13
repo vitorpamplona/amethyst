@@ -183,6 +183,14 @@ class FrontPageViewModel(
             .distinctUntilChanged()
             .stateIn(viewModelScope, SharingStarted.Eagerly, task.value?.let(ObserverParams::model))
 
+    private val _effort = MutableStateFlow(FrontPageParams.effort(task.value))
+
+    /** The writing effort: the schedule's `effort` param, or the reader's pick while it is being written. */
+    val effort: StateFlow<WritingEffort> = _effort.asStateFlow()
+
+    /** An effort pick being written into the schedule: until it lands, the schedule's old value doesn't overwrite it. */
+    private val effortWriting = MutableStateFlow(0)
+
     val gate: StateFlow<FrontPageGate> =
         combine(key, account.trustProviderList.liveUserRankProvider) { key, rank -> gateOf(key, rank != null, printer.boundary) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, FrontPageGate.NO_KEY)
@@ -283,16 +291,16 @@ class FrontPageViewModel(
 
     /** One print's estimated cost with the picked model; null when the endpoint lists no prices. */
     val estimate: StateFlow<Double?> =
-        combine(_models, printer.editions) { models, _ -> printer.estimate(models.selectedModel) }
+        combine(_models, printer.editions, _effort) { models, _, effort -> printer.estimate(models.selectedModel, effort) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** The same in sats, for a model a Routstr node prices in sats: what that key pays in. */
     val estimateSats: StateFlow<Long?> =
-        combine(_models, printer.editions) { models, _ -> printer.estimateSats(models.selectedModel) }
+        combine(_models, printer.editions, _effort) { models, _, effort -> printer.estimateSats(models.selectedModel, effort) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** One edition with [model] in sats, for the model picker; null when it isn't priced in sats. */
-    fun editionSats(model: AgentModel?): Long? = printer.estimateSats(model)
+    fun editionSats(model: AgentModel?): Long? = printer.estimateSats(model, _effort.value)
 
     /**
      * The screen is started (on screen, not just in the back stack): a signer that needs the
@@ -359,6 +367,10 @@ class FrontPageViewModel(
         viewModelScope.launch { key.collect { it?.let { loadModels(it) } } }
         // Today's paper asked for again (a "ready" notification) while this screen shows a past one.
         viewModelScope.launch { printer.todayRequests.collect { showToday() } }
+        // Another app or device picked an effort: it shows here too, unless the reader's own pick is still being written.
+        viewModelScope.launch {
+            task.map { FrontPageParams.effort(it) }.distinctUntilChanged().collect { if (effortWriting.value == 0) _effort.value = it }
+        }
         // Another app or device picked a model: the schedule's choice shows here too.
         viewModelScope.launch {
             namedModel.collect { named ->
@@ -460,6 +472,30 @@ class FrontPageViewModel(
         }
     }
 
+    /**
+     * The writing effort picked in the print view: shown, and printed with, now; written into the
+     * schedule as its `effort` param, so every app, the Assistant and the worker print with it.
+     * The write runs on the account's scope, so leaving the screen doesn't lose it.
+     */
+    fun selectEffort(effort: WritingEffort) {
+        if (_effort.value == effort) return
+        _effort.value = effort
+        effortWriting.update { it + 1 }
+        account.scope.launch {
+            try {
+                val outcome = morning.setEffort(account, effort)
+                if (outcome !is ScheduleEdit.Saved && outcome != ScheduleEdit.Unchanged) _scheduleProblem.value = outcome
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("FrontPageViewModel", "Could not save the writing effort", e)
+                _scheduleProblem.value = ScheduleEdit.Unreachable
+            } finally {
+                effortWriting.update { it - 1 }
+            }
+        }
+    }
+
     private val _printRefused = MutableStateFlow(false)
 
     /** A Print tap found another print running (the morning's, on this device): the screen says so, then [printRefusedShown]. */
@@ -473,7 +509,7 @@ class FrontPageViewModel(
         val key = key.value ?: return
         val model = _models.value.selectedModel ?: return
         // The new edition is today's: it takes the print view's place when it lands.
-        if (printer.print(key, model)) _pastDay.value = null else _printRefused.value = true
+        if (printer.print(key, model, effort = _effort.value)) _pastDay.value = null else _printRefused.value = true
     }
 
     /** Stops the print running now, the reader's or the morning's (the screen confirms first: it may have cost money). */

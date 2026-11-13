@@ -344,6 +344,25 @@ saying what it costs has printed everything except the news.
   shopstr.store URL from a post body; presence in the corpus is not evidence
   that a URL is yours to link.
 
+## The Kitchen
+
+The **Kitchen** desk carries a recipe from somebody the reader trusts: a
+long-form post zap.cooking files as one. It is the one desk that reads further
+back than the day — thirty days, because people post recipes rarely — and the
+digest gives you one, the best-ranked the paper has not run lately, in full.
+
+- Run at most one recipe, on the back page or in a corner of the paper. It is a
+  standing feature, never the lead.
+- Credit the cook by name.
+- Quote the ingredients and the steps verbatim, or summarise them in ordinary
+  prose. Never invent a quantity, a time or a temperature: what the post does
+  not say, the paper does not say.
+- Follow it with a Source link to the post, the citation form in Links below.
+- Its picture, when the digest gives one, is on the art shortlist; caption it as
+  the cook's own.
+- Never use a recipe from outside Nostr — not one you know, and not one a post
+  points to elsewhere.
+
 ## Video
 
 The corpus carries video, and the page cannot play it — there is no `<video>`

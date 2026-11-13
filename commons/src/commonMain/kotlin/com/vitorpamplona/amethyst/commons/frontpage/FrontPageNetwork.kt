@@ -107,12 +107,16 @@ expect suspend fun IRoleBasedHttpClientBuilder.listAgentModels(key: AgentKeyTag)
 /**
  * One Chat Completions call, streamed so the reader sees the model think and the page arrive
  * ([onEvent]: sent, first byte, reasoning, text); non-streamed when the provider refuses a stream,
- * said with [WriterEvent.AllAtOnce] before the whole answer comes.
+ * said with [WriterEvent.AllAtOnce] before the whole answer comes. [maxTokens] and [effort] go
+ * out as [chatRequestBody] maps them; a provider that refuses the request outright (400 or 422)
+ * while it carries them is asked once more without them, as before they existed.
  * @throws WriterException
  */
 expect suspend fun IRoleBasedHttpClientBuilder.chatComplete(
     key: AgentKeyTag,
     model: String,
     messages: List<ChatMessage>,
+    maxTokens: Int? = null,
+    effort: WritingEffort = WritingEffort.STANDARD,
     onEvent: (WriterEvent) -> Unit,
 ): Written

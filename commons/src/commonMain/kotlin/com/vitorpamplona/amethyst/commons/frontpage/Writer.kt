@@ -37,13 +37,13 @@ import kotlinx.serialization.json.put
 import kotlin.math.round
 
 /*
- * The writer call: one fixed system prompt, the digest as data, one HTML document back,
- * sent with the reader's own AI key (kind 12000, NIP-FA) to an OpenAI Chat Completions
- * endpoint. The prompt is the Observer's editorial brief and house stylesheet
+ * The writer calls: one fixed system prompt, the digest as data, a plan and then one HTML
+ * document back, sent with the reader's own AI key (kind 12000, NIP-FA) to an OpenAI Chat
+ * Completions endpoint. The prompt is the Observer's editorial brief and house stylesheet
  * (MIT, see ./LICENSE.observer); the helpers match Brainstorm's writer.ts.
  */
 
-/** The paper's standing name. There is no continuity: it is the same every day. */
+/** The paper's house name: its masthead until an edition announces another ([standingPaper]). */
 const val MASTHEAD = "The Nostr Observer"
 
 /**
@@ -53,32 +53,67 @@ const val MASTHEAD = "The Nostr Observer"
  */
 fun systemPrompt(): String = "$EDITORIAL_BRIEF\n\n## The house stylesheet\n\nFor reference: the app puts this into your page's `<style id=\"house\">`. Do not copy it.\n\n```css\n$HOUSE_CSS\n```"
 
+/** The size of the day, as the dateline prints it: events read, the voices among them, and the events kept in the digest. */
+class DaySize(
+    val read: Int,
+    val voices: Int,
+    val kept: Int,
+)
+
 /**
- * The digest in a delimited block; the reader's name and language go outside it, because they
- * are ours. The language goes here, never into the fixed brief: the brief says what to do when
- * one is named (correction 9), this names it, as a BCP 47 tag ("pt-BR").
+ * What the writer is told about the edition, above the corpus and outside it, because it is ours:
+ * the paper as the last edition left it, the reader, the language (a BCP 47 tag, "pt-BR": the
+ * brief says what to do with one), the edition's number and code, the date and the window's close
+ * on the reader's clock with the zone named, the size of the day and the last few front pages.
  */
+fun editionHeader(
+    readerName: String,
+    language: String? = null,
+    context: EditionContext = EditionContext(),
+    corpus: Corpus? = null,
+    size: DaySize? = null,
+): String =
+    buildList {
+        add("Masthead: ${context.paper.masthead}")
+        context.paper.motto?.let { add("Motto: $it") }
+        if (context.paper.sections.isNotEmpty()) add("Standing sections: " + context.paper.sections.joinToString(" \u00b7 "))
+        add("Reader: $readerName")
+        language?.trim()?.ifEmpty { null }?.let { add("Language: $it") }
+        context.number?.let { add("Edition: Vol. I \u00b7 No. $it") }
+        corpus?.let {
+            val clock = context.clock
+            add("Edition code: ${it.code}")
+            add("Date: ${clock.date(it.until)}")
+            add("Window: the 24 hours to ${clock.time(it.until)}, on the reader's clock (${clock.zoneLabel(it.until)}). Every time below is on that clock.")
+        }
+        size?.let { add("The day: ${it.read} events read, ${it.voices} voices, ${it.kept} kept in the digest.") }
+        if (context.recent.isNotEmpty()) {
+            add("Recent front pages (do not run a story again unless it moved):")
+            context.recent.forEach { add("- ${longDay(it.day)}: ${it.headline}") }
+        }
+    }.joinToString("\n")
+
+/**
+ * The part of the user message that is the same in every call of a print, so a provider that
+ * caches a prefix reads it once: the edition's header and the digest in its delimited block.
+ */
+fun corpusPrefix(
+    digest: String,
+    header: String,
+): String = "$header\n\n<corpus>\n$digest\n</corpus>"
+
+/** The single-pass message: the header, the digest in its block, the instruction. */
 fun userMessage(
     digest: String,
     readerName: String,
     language: String? = null,
-): String =
-    listOfNotNull(
-        "Masthead: $MASTHEAD",
-        "Reader: $readerName",
-        language?.trim()?.ifEmpty { null }?.let { "Language: $it" },
-        "",
-        "<corpus>",
-        digest,
-        "</corpus>",
-        "",
-        "Write today's front page. Return the complete HTML document and nothing else.",
-    ).joinToString("\n")
+    context: EditionContext = EditionContext(),
+): String = corpusPrefix(digest, editionHeader(readerName, language, context)) + "\n\n" + WRITE_INSTRUCTION
 
-/** One repair round: the page the boundary refused, and why. */
+/** One repair round: only what the check found, and a request for the whole page again. */
 fun repairMessage(violations: List<Violation>): String =
     buildList {
-        add("The boundary check refused that page. Every item below must be fixed:")
+        add("The check found these to fix:")
         add("")
         violations.take(40).forEach { add("- ${it.kind}: ${it.detail}\n  ${it.excerpt.replace(Regex("\\s+"), " ")}") }
         add("")
@@ -87,13 +122,23 @@ fun repairMessage(violations: List<Violation>): String =
         add("LINK: only the citation, byline, watch, listing and calendar URL forms the brief allows.")
         add("MARKUP: no scripts, forms, frames or handlers.")
         add("")
+        add("Fix each one and send the whole corrected page back; nothing else about it needs to change. Keep <style id=\"house\"></style> empty: the app still puts the house stylesheet in.")
         add("Return the corrected complete HTML document and nothing else.")
     }.joinToString("\n")
 
+/**
+ * One message. [prefix], when set, is the part of the text a provider may cache (the header and
+ * the digest, the same in every call of a print): sent first, marked where the provider takes a
+ * mark ([cachesPrefixes]), else simply joined to [content].
+ */
 class ChatMessage(
     val role: String,
     val content: String,
-)
+    val prefix: String? = null,
+) {
+    /** The whole text, as a provider without caching reads it. */
+    val text: String get() = if (prefix == null) content else prefix + content
+}
 
 class Usage(
     val promptTokens: Long?,
@@ -119,10 +164,64 @@ class Written(
     val usage: Usage?,
 )
 
-/** Anthropic's compatibility layer caps a reply far below a page unless told otherwise. */
-private const val ANTHROPIC_MAX_TOKENS = 32_000
+/** The output limit of a page when the model's own isn't known. */
+const val DEFAULT_OUTPUT_TOKENS = 32_000
+
+/** The most a page call ever asks for, whatever the model allows. */
+const val MAX_OUTPUT_TOKENS = 64_000
+
+/** The least a page call asks for when only the context window is known: room for a page. */
+const val MIN_PAGE_TOKENS = 8_000
+
+/** Kept free of the context window, beyond the prompt's estimate, when the limit is worked out from it. */
+private const val CONTEXT_MARGIN_TOKENS = 2_000
+
+/** On Anthropic, Deep's thinking budget: at most this, and less than half the call's limit. */
+const val DEEP_THINKING_TOKENS = 16_000
 
 fun isAnthropic(url: String) = hostOf(url) == "api.anthropic.com"
+
+fun isOpenRouter(url: String) = hostOf(url) == "openrouter.ai"
+
+fun isOpenAI(url: String) = hostOf(url) == "api.openai.com"
+
+/**
+ * Whether a call to [model] at [url] marks the cacheable prefix with `cache_control`: only where
+ * it is documented, OpenRouter's Anthropic models (explicit breakpoints on content blocks).
+ * Anthropic's own OpenAI-compatible endpoint says prompt caching isn't supported there; OpenAI
+ * and the rest cache a prefix on their own, unmarked.
+ */
+fun cachesPrefixes(
+    url: String,
+    model: String,
+): Boolean = isOpenRouter(url) && model.lowercase().startsWith("anthropic/")
+
+/**
+ * A page call's output limit: the model's own (OpenRouter's `top_provider.max_completion_tokens`,
+ * Anthropic's `max_tokens`) up to [MAX_OUTPUT_TOKENS]; else what its context window leaves after
+ * [promptTokens], within [MIN_PAGE_TOKENS]..[MAX_OUTPUT_TOKENS]; else [DEFAULT_OUTPUT_TOKENS].
+ */
+fun outputTokenLimit(
+    model: AgentModel?,
+    promptTokens: Long,
+): Int {
+    model?.maxOutputTokens?.takeIf { it > 0 }?.let { return it.coerceAtMost(MAX_OUTPUT_TOKENS.toLong()).toInt() }
+    model?.contextLength?.takeIf { it > 0 }?.let { context ->
+        return (context - promptTokens - CONTEXT_MARGIN_TOKENS).coerceIn(MIN_PAGE_TOKENS.toLong(), MAX_OUTPUT_TOKENS.toLong()).toInt()
+    }
+    return DEFAULT_OUTPUT_TOKENS
+}
+
+/** A plan call's output limit: [PLAN_MAX_TOKENS], or the model's own when that is less. */
+fun planTokenLimit(model: AgentModel?): Int =
+    model
+        ?.maxOutputTokens
+        ?.takeIf { it > 0 }
+        ?.coerceAtMost(PLAN_MAX_TOKENS.toLong())
+        ?.toInt() ?: PLAN_MAX_TOKENS
+
+/** Anthropic's thinking budget for Deep within a call limited to [maxTokens]: at least 1,024, under half the limit. */
+fun anthropicThinkingBudget(maxTokens: Int): Int = minOf(DEEP_THINKING_TOKENS, maxTokens / 2).coerceAtLeast(1_024)
 
 private fun hostOf(url: String) =
     url
@@ -132,22 +231,56 @@ private fun hostOf(url: String) =
         .substringBefore(':')
         .lowercase()
 
+/**
+ * One Chat Completions request. [maxTokens] goes out on every provider (OpenAI's own API takes it
+ * as `max_completion_tokens`, which its reasoning models require); Anthropic's endpoint needs one,
+ * so it gets [DEFAULT_OUTPUT_TOKENS] when none is given. [effort] Deep maps to each provider's
+ * knob: OpenRouter's `reasoning: {effort: "high"}`, Anthropic's documented `thinking` budget, and
+ * OpenAI's `reasoning_effort: "high"` elsewhere. Standard sends nothing: on OpenRouter a
+ * `reasoning` object may turn thinking on (and bill it) for a model where it is optional, and a
+ * model that reasons anyway streams it unasked, which [reasoningOf] reads when it comes.
+ */
 fun chatRequestBody(
     url: String,
     model: String,
     messages: List<ChatMessage>,
     stream: Boolean,
+    maxTokens: Int? = null,
+    effort: WritingEffort = WritingEffort.STANDARD,
 ): String =
     buildJsonObject {
+        val marks = cachesPrefixes(url, model)
         put("model", model)
         put(
             "messages",
             buildJsonArray {
-                messages.forEach {
+                messages.forEach { message ->
                     add(
                         buildJsonObject {
-                            put("role", it.role)
-                            put("content", it.content)
+                            put("role", message.role)
+                            if (marks && message.prefix != null) {
+                                // OpenRouter's explicit breakpoint: everything through this block is the cached prefix.
+                                put(
+                                    "content",
+                                    buildJsonArray {
+                                        add(
+                                            buildJsonObject {
+                                                put("type", "text")
+                                                put("text", message.prefix)
+                                                put("cache_control", buildJsonObject { put("type", "ephemeral") })
+                                            },
+                                        )
+                                        add(
+                                            buildJsonObject {
+                                                put("type", "text")
+                                                put("text", message.content)
+                                            },
+                                        )
+                                    },
+                                )
+                            } else {
+                                put("content", message.text)
+                            }
                         },
                     )
                 }
@@ -155,11 +288,24 @@ fun chatRequestBody(
         )
         put("stream", stream)
         if (stream) put("stream_options", buildJsonObject { put("include_usage", true) })
-        if (isAnthropic(url)) put("max_tokens", ANTHROPIC_MAX_TOKENS)
-        // No `reasoning` object, on any provider: on OpenRouter one may turn thinking on (and bill
-        // it) for a model where it is optional, and a model that reasons anyway streams it unasked
-        // ("included in the response by default if the model decides to output them"), which
-        // [reasoningOf] reads when it comes.
+        val limit = maxTokens ?: if (isAnthropic(url)) DEFAULT_OUTPUT_TOKENS else null
+        if (limit != null) put(if (isOpenAI(url)) "max_completion_tokens" else "max_tokens", limit)
+        if (effort == WritingEffort.DEEP) {
+            when {
+                isOpenRouter(url) -> put("reasoning", buildJsonObject { put("effort", "high") })
+                // Documented on Anthropic's OpenAI SDK compatibility page; on models that reject a
+                // budget the layer turns it into adaptive thinking. Its `reasoning_effort` is ignored.
+                isAnthropic(url) ->
+                    put(
+                        "thinking",
+                        buildJsonObject {
+                            put("type", "enabled")
+                            put("budget_tokens", anthropicThinkingBudget(limit ?: DEFAULT_OUTPUT_TOKENS))
+                        },
+                    )
+                else -> put("reasoning_effort", "high")
+            }
+        }
     }.toString()
 
 private val lenient = Json { ignoreUnknownKeys = true }
@@ -316,8 +462,9 @@ fun extractDocument(text: String): String {
  */
 private val PREFERENCE =
     listOf(
-        Regex("claude[-.\\w]*sonnet|sonnet[-.\\w]*claude", RegexOption.IGNORE_CASE),
+        // Opus-class first: a page is the longest, most careful thing the reader pays a model for.
         Regex("claude[-.\\w]*opus|opus", RegexOption.IGNORE_CASE),
+        Regex("claude[-.\\w]*sonnet|sonnet[-.\\w]*claude", RegexOption.IGNORE_CASE),
         Regex("gpt-5(?![-.\\w]*(mini|nano))", RegexOption.IGNORE_CASE),
         Regex("gemini[-.\\w]*pro", RegexOption.IGNORE_CASE),
         Regex("gpt-4\\.1(?![-.\\w]*(mini|nano))|gpt-4o(?![-.\\w]*mini)", RegexOption.IGNORE_CASE),
@@ -370,6 +517,10 @@ class AgentModel(
     val name: String? = null,
     /** A Routstr node's `sats_pricing`: what the model costs in sats, which is what that key pays in. */
     val sats: SatsPricing? = null,
+    /** The most it writes in one answer: OpenRouter's `top_provider.max_completion_tokens`, Anthropic's `max_tokens`. */
+    val maxOutputTokens: Long? = null,
+    /** Its context window, prompt and answer together: `context_length` (OpenRouter, Routstr). */
+    val contextLength: Long? = null,
 ) {
     val priced get() = promptPerToken != null && completionPerToken != null
 
@@ -395,9 +546,25 @@ fun readModels(body: String): List<AgentModel> {
                 val pricing = entry["pricing"] as? JsonObject
 
                 fun price(name: String) = (pricing?.get(name) as? JsonPrimitive)?.content?.toDoubleOrNull()?.takeIf { it >= 0 && it.isFinite() }
+
+                fun count(
+                    obj: JsonObject?,
+                    name: String,
+                ) = (obj?.get(name) as? JsonPrimitive)?.longOrNull?.takeIf { it > 0 }
+                val topProvider = entry["top_provider"] as? JsonObject
                 // Gemini names its models in `name` ("models/…"): only a name beside an id is a label.
                 val label = (entry["name"] as? JsonPrimitive)?.content?.trim()?.takeIf { entry["id"] != null && it.isNotEmpty() && it != id }
-                id?.let { AgentModel(it, price("prompt"), price("completion"), label, RoutstrJson.satsPricing(entry["sats_pricing"])?.takeIf { sats -> sats.priced || sats.maxCost != null }) }
+                id?.let {
+                    AgentModel(
+                        it,
+                        price("prompt"),
+                        price("completion"),
+                        label,
+                        RoutstrJson.satsPricing(entry["sats_pricing"])?.takeIf { sats -> sats.priced || sats.maxCost != null },
+                        maxOutputTokens = count(topProvider, "max_completion_tokens") ?: count(entry, "max_tokens"),
+                        contextLength = count(entry, "context_length") ?: count(topProvider, "context_length"),
+                    )
+                }
             }
             else -> null
         }
@@ -406,24 +573,56 @@ fun readModels(body: String): List<AgentModel> {
 
 // --- cost --------------------------------------------------------------------
 
-/** What a page usually takes to write: a full HTML document with inline CSS. A repair round is not counted. */
+/** What a page usually takes to write: a full HTML document. A repair round is not counted. */
 const val EXPECTED_OUTPUT_TOKENS = 14_000
+
+/** What the posts in full usually come to, for the estimate: half the block's cap. */
+const val EXPECTED_FULL_CHARS = FULL_BLOCK_CHARS / 2
+
+/** What Deep adds to each of the two calls, for the estimate: the reasoning, billed as output. */
+const val DEEP_REASONING_TOKENS = 12_000
 
 /** A rough token count: about four characters a token, for English-heavy text. */
 fun approxTokens(chars: Int): Long = (chars + 3L) / 4
 
+/** The tokens one print is estimated at, in and out. */
+class EditionTokens(
+    val input: Long,
+    val output: Long,
+)
+
 /**
- * The cost of one print before it runs: the brief and a digest of [digestChars] in, a page out.
- * Null when the endpoint publishes no prices: an estimate is never invented.
+ * One print, two passes: the plan reads the brief and the digest and writes about
+ * [PLAN_OUTPUT_TOKENS]; the page reads them again with the posts in full and writes a page. Deep
+ * adds [DEEP_REASONING_TOKENS] of reasoning to each.
+ */
+fun editionTokens(
+    digestChars: Int,
+    briefChars: Int = systemPrompt().length,
+    effort: WritingEffort = WritingEffort.STANDARD,
+): EditionTokens {
+    val prompt = approxTokens(digestChars + briefChars)
+    val reasoning = if (effort == WritingEffort.DEEP) 2L * DEEP_REASONING_TOKENS else 0L
+    return EditionTokens(
+        input = prompt + prompt + approxTokens(EXPECTED_FULL_CHARS),
+        output = PLAN_OUTPUT_TOKENS + EXPECTED_OUTPUT_TOKENS + reasoning,
+    )
+}
+
+/**
+ * The cost of one print before it runs ([editionTokens]). Null when the endpoint publishes no
+ * prices: an estimate is never invented.
  */
 fun estimateCost(
     model: AgentModel?,
     digestChars: Int,
     briefChars: Int = systemPrompt().length,
+    effort: WritingEffort = WritingEffort.STANDARD,
 ): Double? {
     val prompt = model?.promptPerToken ?: return null
     val completion = model.completionPerToken ?: return null
-    return approxTokens(digestChars + briefChars) * prompt + EXPECTED_OUTPUT_TOKENS * completion
+    val tokens = editionTokens(digestChars, briefChars, effort)
+    return tokens.input * prompt + tokens.output * completion
 }
 
 /** What a print cost, from the usage the provider reported and its own prices. */

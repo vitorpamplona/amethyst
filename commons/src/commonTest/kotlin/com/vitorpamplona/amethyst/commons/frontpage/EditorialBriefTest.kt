@@ -43,12 +43,12 @@ class EditorialBriefTest {
         listOf("Corrections for this harness", "Step 5", "both light and dark themes", "og:title", "twitter:", "UTC", "NO CONTINUITY", "thrown away", "second refusal").forEach {
             assertFalse(EDITORIAL_BRIEF.contains(it), it)
         }
-        listOf("Vol. I · No. N", "<style id=\"house\"></style>", "<!-- sections:", "Every `<img>` has an `alt`", "Never describe a picture you have not seen", "a quote that fails is sent back to you to fix").forEach {
+        listOf("Vol. I · No. N", "<style id=\"house\"></style>", "<!-- sections:", "Every `<img>` has an `alt`", "Never describe a picture you have not seen", "a quote that fails is sent back to you to fix", "## The Kitchen", "Never invent a quantity").forEach {
             assertTrue(EDITORIAL_BRIEF.contains(it), it)
         }
     }
 
     companion object {
-        const val BRIEF_SHA256 = "3cc5c1ab9971ff8c6bfe0720cf1a3b19442d4f02243d0278005a939dfff2cfc4"
+        const val BRIEF_SHA256 = "1365bb77c9a319f20d1d47d5b6e841c8b6376f51edc5c509cc95f6ecb1a8e794"
     }
 }
