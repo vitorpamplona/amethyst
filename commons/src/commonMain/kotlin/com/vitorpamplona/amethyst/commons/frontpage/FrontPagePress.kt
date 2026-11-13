@@ -346,12 +346,17 @@ class FrontPagePress(
     }
 }
 
-/** The Kitchen's recipe, when the page cites it (a Source link to it): what this edition ran. */
+/**
+ * The Kitchen's recipe, when the page cites it (a Source link to it): what this edition ran. A
+ * recipe is addressable, so the page cites it by its naddr; an older page, or an older writer, by
+ * its nevent.
+ */
 fun citedRecipe(
     html: String,
     corpus: Corpus,
 ): String? =
     corpus.desks["kitchen"]
         .orEmpty()
-        .firstOrNull { html.contains(toNevent(it.id)) }
-        ?.let(::recipeAddress)
+        .firstOrNull { recipe ->
+            PaperLinkSet.addressOf(recipe)?.let { html.contains(it) } == true || html.contains(toNevent(recipe.id))
+        }?.let(::recipeAddress)

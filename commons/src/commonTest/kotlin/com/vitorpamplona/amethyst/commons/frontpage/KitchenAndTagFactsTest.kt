@@ -103,6 +103,10 @@ class KitchenAndTagFactsTest {
         assertTrue(text.contains("    - 500 g flour\n    - 10 g salt"))
         assertTrue(text.contains("2. Bake at 220 °C."))
         // The page that cites it ran it.
+        // Cited the way the page cites a recipe now: by its naddr (a recipe is addressable).
+        assertEquals("30023:$ALICE:bread", citedRecipe("<a href=\"${PaperLinkSet("https://brainstorm.world/e/", "https://brainstorm.world/p/").citation(dish)}\">Source</a>", c))
+        assertEquals("30023:$ALICE:bread", citedRecipe("<a href=\"${PaperLinkSet.JUMBLE.citation(dish)}\">Source</a>", c))
+        // And by its nevent, the way older pages did.
         assertEquals("30023:$ALICE:bread", citedRecipe("<a href=\"https://jumble.social/notes/${toNevent(dish.id)}\">Source</a>", c))
         assertNull(citedRecipe("<p>no recipe</p>", c))
         // The first picture in the text, when there is no image tag.
