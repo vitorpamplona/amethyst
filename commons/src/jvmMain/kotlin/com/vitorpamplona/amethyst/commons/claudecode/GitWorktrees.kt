@@ -26,7 +26,6 @@ import java.io.File
 import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.concurrent.TimeUnit
 
 /**
  * A new branch checked out in its own folder, so a Claude Code session can change a repository
@@ -82,31 +81,10 @@ object GitWorktrees {
         return if (result.code == 0) result.output else null
     }
 
-    private class Result(
-        val code: Int,
-        val output: String,
-    )
-
     private fun run(
         dir: File,
         command: List<String>,
-    ): Result =
-        try {
-            val process =
-                ProcessBuilder(command)
-                    .directory(dir)
-                    .redirectErrorStream(true)
-                    .start()
-            val output = process.inputStream.bufferedReader().readText()
-            if (!process.waitFor(60, TimeUnit.SECONDS)) {
-                process.destroyForcibly()
-                Result(-1, "git timed out")
-            } else {
-                Result(process.exitValue(), output)
-            }
-        } catch (e: IOException) {
-            Result(-1, e.message ?: "git could not run")
-        }
+    ) = GitWorkspace.run(dir, command)
 }
 
 /**

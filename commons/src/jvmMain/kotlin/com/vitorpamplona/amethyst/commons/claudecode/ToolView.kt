@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.claudecode
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
+import com.vitorpamplona.quartz.nip34Git.patch.UnifiedDiffParser
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -42,7 +44,10 @@ sealed interface ToolView {
         val added: Int,
         val removed: Int,
         val newFile: Boolean,
-    ) : ToolView
+    ) : ToolView {
+        /** [diff], parsed for the diff view once, off the main thread when [ToolViews.of] made it. */
+        val patch: ParsedPatch by lazy { UnifiedDiffParser.parse(diff) }
+    }
 
     data class Command(
         val command: String,
@@ -72,6 +77,55 @@ sealed interface ToolView {
 
 object ToolViews {
     private val json = Json { ignoreUnknownKeys = true }
+
+    /**
+     * Views already worked out, by call: a chat row that scrolls back into view would otherwise
+     * read its file, diff it and parse the diff again.
+     */
+    private val cache =
+        object : LinkedHashMap<String, ToolView>(64, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ToolView>) = size > CACHE_SIZE
+        }
+
+    /**
+     * [of], remembered: the same call in the same folder, in the same state, gives the same
+     * view, with its diff already parsed. Call it off the main thread.
+     */
+    fun cached(
+        name: String,
+        input: String,
+        cwd: File?,
+        pending: Boolean,
+    ): ToolView {
+        val key = cacheKey(name, input, cwd, pending)
+        synchronized(cache) { cache[key] }?.let { return it }
+        val view = of(name, input, cwd, pending)
+        (view as? ToolView.FileChange)?.patch
+        synchronized(cache) { cache[key] = view }
+        return view
+    }
+
+    /** The view [cached] already made for this call, if any: cheap enough for the main thread. */
+    fun peek(
+        name: String,
+        input: String,
+        cwd: File?,
+        pending: Boolean,
+    ): ToolView? = synchronized(cache) { cache[cacheKey(name, input, cwd, pending)] }
+
+    private fun cacheKey(
+        name: String,
+        input: String,
+        cwd: File?,
+        pending: Boolean,
+    ) = "$pending\u0000$name\u0000${cwd?.path}\u0000$input"
+
+    fun cached(
+        name: String,
+        input: JsonObject,
+        cwd: File?,
+        pending: Boolean,
+    ): ToolView = cached(name, input.toString(), cwd, pending)
 
     /** The view of a call whose input is still JSON text, as the transcript keeps it. */
     fun of(
@@ -199,6 +253,7 @@ object ToolViews {
     private fun JsonObject.int(key: String): Int? = (this[key] as? JsonPrimitive)?.intOrNull
 
     private const val MAX_READ = 2_000_000L
+    private const val CACHE_SIZE = 256
 }
 
 /** A line diff, written as unified-diff hunks with three lines of context. */
@@ -211,8 +266,11 @@ internal object LineDiff {
 
     private const val CONTEXT = 3
 
-    /** Past this many line pairs the diff isn't searched: the old text is shown removed and the new added. */
-    private const val MAX_CELLS = 4_000_000L
+    /**
+     * Past this many line pairs the diff isn't searched (the table would take megabytes): the old
+     * text is shown removed and the new added.
+     */
+    private const val MAX_CELLS = 1_000_000L
 
     private class Op(
         val type: Char,

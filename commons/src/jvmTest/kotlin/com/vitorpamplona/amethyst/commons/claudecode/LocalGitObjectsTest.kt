@@ -128,4 +128,33 @@ class LocalGitObjectsTest {
         assertEquals(64, ref.pubKeyHex.length)
         assertEquals(ref, NostrRepoRef.fromConfig(ref.toConfig()))
     }
+
+    @Test
+    fun onlyPlainRemotesCommitsAndBranchesFromEventsReachGit() {
+        listOf("https://relay.ngit.dev/npub1x/amethyst.git", "git@github.com:me/repo.git", "ssh://git@host/r.git", "file:///srv/r.git", "git://h/r")
+            .forEach { assertTrue(GitWorkspace.isSafeRemoteUrl(it), it) }
+        listOf("--upload-pack=sh -c id", "-oProxyCommand=x", "ext::sh -c id", "https://h/r --x", "", "fd::3")
+            .forEach { assertTrue(!GitWorkspace.isSafeRemoteUrl(it), it) }
+        assertTrue(GitWorkspace.isCommitId("a".repeat(40)))
+        assertTrue(!GitWorkspace.isCommitId("--output=/tmp/x"))
+        assertTrue(GitWorkspace.isSafeBranchName("pr/feat/x"))
+        listOf("-b", "a..b", "x y", "").forEach { assertTrue(!GitWorkspace.isSafeBranchName(it), it) }
+    }
+
+    @Test
+    fun aRevisionFromACommentIsNeverAnOption() =
+        runBlocking {
+            assertEquals(null, GitWorkspace.linesAt(dir, "--output=${dir.absolutePath}/pwned", "a.txt", 1, 1))
+            assertTrue(!File(dir, "pwned:a.txt").exists())
+            assertEquals(listOf(1 to "one"), GitWorkspace.linesAt(dir, "HEAD", "a.txt", 1, 1))
+        }
+
+    @Test
+    fun aCommandThatHangsIsStoppedAtItsTimeout() {
+        val started = System.currentTimeMillis()
+        // Keeps its output open while it sleeps: reading to the end first would wait it out.
+        val result = GitWorkspace.run(dir, listOf("sh", "-c", "echo started; sleep 30"), timeoutSeconds = 1)
+        assertEquals(-1, result.code)
+        assertTrue(System.currentTimeMillis() - started < 10_000, "took ${System.currentTimeMillis() - started} ms")
+    }
 }

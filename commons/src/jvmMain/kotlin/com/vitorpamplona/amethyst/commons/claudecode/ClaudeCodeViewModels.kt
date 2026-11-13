@@ -155,7 +155,7 @@ class ClaudeCodeSessionsViewModel(
         permissionMode: PermissionMode,
         onReady: (String) -> Unit,
     ) {
-        val dir = File(folder.trim().replaceFirst("~", System.getProperty("user.home")))
+        val dir = File(expandHome(folder))
         if (!dir.isDirectory) {
             _newChatError.value = NewChatError.NotAFolder
             return

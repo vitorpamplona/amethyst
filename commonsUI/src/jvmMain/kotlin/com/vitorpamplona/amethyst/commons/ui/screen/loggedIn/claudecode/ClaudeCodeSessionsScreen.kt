@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeSessionsViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeSessionRow
 import com.vitorpamplona.amethyst.commons.claudecode.NewChatError
+import com.vitorpamplona.amethyst.commons.claudecode.expandHome
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -643,7 +644,7 @@ internal suspend fun pickFolder(
     start: String?,
 ): String? =
     showModalDialog {
-        val from = start?.let { File(it.replaceFirst("~", System.getProperty("user.home"))) }?.takeIf { it.isDirectory }
+        val from = start?.let { File(expandHome(it)) }?.takeIf { it.isDirectory }
         if (System.getProperty("os.name").orEmpty().startsWith("Mac", ignoreCase = true)) {
             System.setProperty("apple.awt.fileDialogForDirectories", "true")
             try {

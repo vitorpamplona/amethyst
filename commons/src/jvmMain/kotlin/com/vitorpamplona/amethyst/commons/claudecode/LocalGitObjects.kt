@@ -72,9 +72,12 @@ object LocalGitObjects {
         branch: String?,
     ): String? =
         withContext(Dispatchers.IO) {
+            if (!GitWorkspace.isCommitId(head) || !GitWorkspace.isCommitId(tip)) return@withContext null
             if (GitWorkspace.git(dir, "cat-file", "-e", "$head^{commit}") == null) {
-                for (url in cloneUrls) {
-                    GitWorkspace.run(dir, listOfNotNull("git", "fetch", "--no-tags", url, branch ?: head), timeoutSeconds = 300)
+                // From the repository's events: only plain transports, and after `--`.
+                val ref = branch?.takeIf(GitWorkspace::isSafeBranchName) ?: head
+                for (url in cloneUrls.filter(GitWorkspace::isSafeRemoteUrl)) {
+                    GitWorkspace.run(dir, listOf("git", "fetch", "--no-tags", "--", url, ref), timeoutSeconds = 300)
                     if (GitWorkspace.git(dir, "cat-file", "-e", "$head^{commit}") != null) break
                 }
             }

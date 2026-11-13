@@ -282,6 +282,8 @@ object GitWorkspace {
         to: Int,
     ): List<Pair<Int, String>>? =
         withContext(Dispatchers.IO) {
+            // The commit comes from a review comment: only a commit id (or HEAD), never an option.
+            if (rev != "HEAD" && !isCommitId(rev)) return@withContext null
             val text = git(dir, "show", "$rev:$path") ?: return@withContext null
             // A file ends with a newline; that is not one more (empty) line.
             val lines = text.removeSuffix("\n").split('\n')
@@ -373,27 +375,83 @@ object GitWorkspace {
         val output: String,
     )
 
+    /**
+     * Runs [command] in [dir] and gives its exit code and output. The output is read on a
+     * thread of its own, so [timeoutSeconds] holds even for a command that keeps its output open
+     * (a fetch from a slow host); past it the command and what it started are stopped. Git never
+     * waits on a password prompt here: there is no terminal to answer it.
+     */
     internal fun run(
         dir: File,
         command: List<String>,
         timeoutSeconds: Long = 60,
-    ): Result =
-        try {
-            val process =
+    ): Result {
+        val process =
+            try {
                 ProcessBuilder(command)
                     .directory(dir)
                     .redirectErrorStream(true)
-                    .start()
-            val output = process.inputStream.bufferedReader().readText()
-            if (!process.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
-                process.destroyForcibly()
-                Result(-1, "${command.first()} timed out")
-            } else {
-                Result(process.exitValue(), output)
+                    .apply {
+                        environment()["GIT_TERMINAL_PROMPT"] = "0"
+                        environment()["GCM_INTERACTIVE"] = "never"
+                    }.start()
+            } catch (e: IOException) {
+                return Result(-1, e.message ?: "${command.first()} could not run")
             }
-        } catch (e: IOException) {
-            Result(-1, e.message ?: "${command.first()} could not run")
+        process.outputStream.close()
+        val output = StringBuilder()
+        val reader =
+            Thread({
+                try {
+                    process.inputStream.bufferedReader().use { r ->
+                        val buffer = CharArray(8192)
+                        while (true) {
+                            val n = r.read(buffer)
+                            if (n < 0) break
+                            synchronized(output) { output.appendRange(buffer, 0, n) }
+                        }
+                    }
+                } catch (e: IOException) {
+                    // The process was stopped: what it said so far is kept.
+                }
+            }, "git-output").apply {
+                isDaemon = true
+                start()
+            }
+        if (!process.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
+            process.descendants().forEach { it.destroyForcibly() }
+            process.destroyForcibly()
+            reader.join(1_000)
+            return Result(-1, "${command.first()} timed out after ${timeoutSeconds}s")
         }
+        reader.join(5_000)
+        return Result(process.exitValue(), synchronized(output) { output.toString() })
+    }
+
+    /**
+     * Whether a clone URL from a nostr event may be handed to git: a known transport (or the
+     * `host:path` form of ssh), nothing git would read as an option (`-…`) or as a transport
+     * helper that runs a program (`ext::`), no spaces or control characters.
+     */
+    fun isSafeRemoteUrl(url: String): Boolean {
+        if (url.isEmpty() || url.startsWith("-") || url.contains("::")) return false
+        if (url.any { it.isWhitespace() || it.isISOControl() }) return false
+        val lower = url.lowercase()
+        if (SAFE_SCHEMES.any { lower.startsWith(it) }) return true
+        // scp-like ssh: [user@]host:path, where the host has no slash.
+        val colon = url.indexOf(':')
+        return colon > 0 && !url.substring(0, colon).contains('/')
+    }
+
+    /** A full commit id, as events name commits: 40 (SHA-1) or 64 (SHA-256) hex digits. */
+    fun isCommitId(value: String): Boolean = COMMIT_ID.matches(value)
+
+    /** A branch name from an event that is safe in a refspec: no option, no `..`, no odd characters. */
+    fun isSafeBranchName(value: String): Boolean = value.isNotEmpty() && !value.startsWith("-") && !value.contains("..") && BRANCH_NAME.matches(value)
+
+    private val SAFE_SCHEMES = listOf("https://", "http://", "git://", "ssh://", "file://")
+    private val COMMIT_ID = Regex("^[0-9a-f]{40}([0-9a-f]{24})?$")
+    private val BRANCH_NAME = Regex("^[A-Za-z0-9._/-]+$")
 
     const val KEY_REPO = "nostr-repo"
     const val KEY_ISSUE = "nostr-issue"

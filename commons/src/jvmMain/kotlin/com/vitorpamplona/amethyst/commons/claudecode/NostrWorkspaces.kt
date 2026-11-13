@@ -123,8 +123,9 @@ class NostrWorkspaces(
             val parent = into.absoluteFile.parentFile
             if (parent != null && !parent.isDirectory && !parent.mkdirs()) throw IOException("Could not create $parent")
             var lastError = "no clone URL"
-            for (url in cloneUrls) {
-                val result = GitWorkspace.run(parent ?: File("."), listOf("git", "clone", url, into.absolutePath), timeoutSeconds = 1800)
+            // The URLs come from a nostr event anyone can publish: only plain transports, and after `--`.
+            for (url in cloneUrls.filter(GitWorkspace::isSafeRemoteUrl)) {
+                val result = GitWorkspace.run(parent ?: File("."), listOf("git", "clone", "--", url, into.absolutePath), timeoutSeconds = 1800)
                 if (result.code == 0) {
                     remember(repo, into)
                     return@withContext into
@@ -150,11 +151,13 @@ class NostrWorkspaces(
     ): PreparedWorkspace =
         withContext(Dispatchers.IO) {
             val root = GitWorkspace.git(checkout, "rev-parse", "--show-toplevel")?.trim()?.let(::File) ?: throw IOException("$checkout is not a git checkout")
-            val mainBranch = target.defaultBranch ?: "main"
+            if (!GitWorkspace.isSafeBranchName(branch)) throw IOException("$branch is not a valid branch name")
+            // Every name and URL below comes from events: checked, and passed after `--`.
+            val mainBranch = target.defaultBranch?.takeIf(GitWorkspace::isSafeBranchName) ?: "main"
             val base = "nostr/$mainBranch"
             val fetched =
-                target.cloneUrls.any { url ->
-                    GitWorkspace.run(root, listOf("git", "fetch", "--no-tags", url, "+refs/heads/$mainBranch:refs/remotes/$base"), timeoutSeconds = 600).code == 0
+                target.cloneUrls.filter(GitWorkspace::isSafeRemoteUrl).any { url ->
+                    GitWorkspace.run(root, listOf("git", "fetch", "--no-tags", "--", url, "+refs/heads/$mainBranch:refs/remotes/$base"), timeoutSeconds = 600).code == 0
                 }
             val baseRef =
                 if (fetched) {
@@ -167,6 +170,7 @@ class NostrWorkspaces(
 
             val startPoint =
                 target.proposalTip?.let { tip ->
+                    if (!GitWorkspace.isCommitId(tip)) throw IOException("The proposal names no valid commit")
                     fetchCommit(root, tip, target.proposalCloneUrls + target.cloneUrls, target.proposalId)
                     tip
                 } ?: baseRef
@@ -194,18 +198,20 @@ class NostrWorkspaces(
     ) {
         fun has() = GitWorkspace.git(root, "cat-file", "-e", "$commit^{commit}") != null
         if (has()) return
-        for (url in urls.distinct()) {
-            GitWorkspace.run(root, listOf("git", "fetch", "--no-tags", url, commit), timeoutSeconds = 600)
+        for (url in urls.distinct().filter(GitWorkspace::isSafeRemoteUrl)) {
+            GitWorkspace.run(root, listOf("git", "fetch", "--no-tags", "--", url, commit), timeoutSeconds = 600)
             if (has()) return
             // Every refs/nostr/* that points at the commit (the proposal's, or one of its updates').
             val refs =
                 GitWorkspace
-                    .git(root, "ls-remote", url, "refs/nostr/*")
+                    .git(root, "ls-remote", "--", url, "refs/nostr/*")
                     .orEmpty()
                     .lines()
                     .mapNotNull { line -> line.split('\t').takeIf { it.size == 2 && it[0] == commit }?.get(1) }
             val wanted = refs.ifEmpty { listOfNotNull(proposalId?.let { "refs/nostr/$it" }) }
-            wanted.forEach { ref -> GitWorkspace.run(root, listOf("git", "fetch", "--no-tags", url, ref), timeoutSeconds = 600) }
+            wanted
+                .filter { it.startsWith("refs/nostr/") && GitWorkspace.isSafeBranchName(it) }
+                .forEach { ref -> GitWorkspace.run(root, listOf("git", "fetch", "--no-tags", "--", url, ref), timeoutSeconds = 600) }
             if (has()) return
         }
         throw IOException("Could not fetch the proposal's commit ${commit.take(8)}")

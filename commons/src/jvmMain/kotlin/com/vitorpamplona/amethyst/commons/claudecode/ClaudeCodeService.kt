@@ -106,6 +106,10 @@ class ClaudeCodeService(
     private val saved = MutableStateFlow<List<ClaudeSessionInfo>>(emptyList())
     private val elsewhere = MutableStateFlow<Map<String, ClaudeLiveSession>>(emptyMap())
 
+    /** Session folders that are gone, checked on each [refresh] rather than on every list rebuild. */
+    @Volatile
+    private var goneFolders: Set<String> = emptySet()
+
     private val _rows = MutableStateFlow<List<ClaudeSessionRow>>(emptyList())
 
     /** Every session, newest first. Call [refresh] to re-read the disk. */
@@ -175,6 +179,11 @@ class ClaudeCodeService(
                     Log.w(TAG, "Could not list Claude Code sessions", e)
                     emptyList()
                 }
+            goneFolders =
+                saved.value
+                    .mapNotNull { it.cwd }
+                    .distinct()
+                    .filterTo(HashSet()) { !File(it).isDirectory }
             (saved.value.mapNotNull { it.cwd } + chats.value.values.map { it.state.value.cwd })
                 .distinct()
                 .filter { !projects.containsKey(it) }
@@ -203,7 +212,9 @@ class ClaudeCodeService(
             ?.let { return it }
         if (!ClaudeSessionStore.isSafeId(key)) return null
         val info = saved.value.firstOrNull { it.sessionId == key } ?: store.session(key) ?: return null
-        val cwd = info.cwd?.let { File(it) }?.takeIf { it.isDirectory } ?: File(System.getProperty("user.home"))
+        // A folder that is gone stays the chat's folder: the history reads, and the chat refuses
+        // to start rather than resume in some other folder.
+        val cwd = info.cwd?.let { File(it) } ?: File(System.getProperty("user.home"))
         return open(key, info.sessionId, cwd, info.title, PermissionMode.DEFAULT, null)
     }
 
@@ -290,7 +301,8 @@ class ClaudeCodeService(
     /** Ends the session's chat here and deletes its file. */
     suspend fun delete(row: ClaudeSessionRow) {
         chats.value[row.key]?.let { chat ->
-            chat.kill()
+            // Waits for the process to exit: not on the main thread.
+            withContext(Dispatchers.IO) { chat.kill() }
             watchers.remove(row.key)?.cancel()
             chats.update { it - row.key }
             rebuildRows()
@@ -346,13 +358,17 @@ class ClaudeCodeService(
                         ?.let { it to chat }
                 }.toMap()
         val live = elsewhere.value
-        val ownPids =
+        val gone = goneFolders
+        // Walking the process tree reads every process on the machine: only when a session is
+        // open elsewhere and the question is whether that is one of this app's own.
+        val ownPids by lazy {
             ProcessHandle
                 .current()
                 .descendants()
                 .map { it.pid() }
                 .toList()
                 .toSet()
+        }
 
         val fromDisk =
             saved.value.map { info ->
@@ -368,7 +384,7 @@ class ClaudeCodeService(
                     appStatus = chat?.state?.value?.status,
                     openElsewhere = live[info.sessionId]?.takeIf { it.pid !in ownPids },
                     project = projectOf(info.cwd),
-                    archived = info.cwd?.let { !File(it).isDirectory } ?: false,
+                    archived = info.cwd in gone,
                 )
             }
         val savedIds = saved.value.mapTo(HashSet()) { it.sessionId }
@@ -383,7 +399,9 @@ class ClaudeCodeService(
                     val state = chat.state.value
                     ClaudeSessionRow(
                         key = chat.key,
-                        sessionId = state.sessionId,
+                        // A fork that hasn't started still holds its source's id: the row must not
+                        // let a rename or a delete reach the source's file.
+                        sessionId = state.sessionId.takeIf { !state.forking },
                         title = state.title ?: (state.items.firstOrNull() as? ChatItem.UserText)?.text?.lineSequence()?.first() ?: "",
                         lastPrompt = null,
                         cwd = state.cwd,

@@ -65,8 +65,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
-import com.vitorpamplona.quartz.nip34Git.patch.UnifiedDiffParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
@@ -83,8 +81,9 @@ internal fun rememberToolView(
     cwd: String,
     pending: Boolean = false,
 ): ToolView? {
-    val view by produceState<ToolView?>(null, name, input, cwd, pending) {
-        value = withContext(Dispatchers.IO) { ToolViews.of(name, input, File(cwd), pending) }
+    // A row scrolled back into view starts from the view already made, not from nothing.
+    val view by produceState(ToolViews.peek(name, input, File(cwd), pending), name, input, cwd, pending) {
+        value = withContext(Dispatchers.IO) { ToolViews.cached(name, input, File(cwd), pending) }
     }
     return view
 }
@@ -97,7 +96,7 @@ internal fun rememberToolView(
     pending: Boolean,
 ): ToolView? {
     val view by produceState<ToolView?>(null, name, input, cwd, pending) {
-        value = withContext(Dispatchers.IO) { ToolViews.of(name, input, File(cwd), pending) }
+        value = withContext(Dispatchers.IO) { ToolViews.cached(name, input, File(cwd), pending) }
     }
     return view
 }
@@ -108,10 +107,8 @@ internal fun FileChangeDiff(
     change: ToolView.FileChange,
     modifier: Modifier = Modifier,
 ) {
-    val parsed: ParsedPatch? by produceState<ParsedPatch?>(null, change.diff) {
-        value = withContext(Dispatchers.Default) { UnifiedDiffParser.parse(change.diff) }
-    }
-    parsed?.let { GitDiffView(it, modifier, showSummary = false) }
+    // Parsed when the view was made, off the main thread (ToolViews.cached).
+    GitDiffView(change.patch, modifier, showSummary = false)
 }
 
 /** What a call acts on, in one line, with paths from the session's folder. */

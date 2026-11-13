@@ -101,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChat
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChatState
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeChatViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
+import com.vitorpamplona.amethyst.commons.claudecode.NostrRepoRef
 import com.vitorpamplona.amethyst.commons.claudecode.NoticeKind
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewItem
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewLocation
@@ -131,6 +132,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_deny
 import com.vitorpamplona.amethyst.commons.resources.claude_code_end_session
 import com.vitorpamplona.amethyst.commons.resources.claude_code_error_exited
 import com.vitorpamplona.amethyst.commons.resources.claude_code_error_start_failed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_folder_gone
 import com.vitorpamplona.amethyst.commons.resources.claude_code_fork
 import com.vitorpamplona.amethyst.commons.resources.claude_code_fork_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_intro_title
@@ -209,8 +211,10 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.claudecode.protocol.PermissionMode
 import com.vitorpamplona.claudecode.protocol.PermissionRequest
 import com.vitorpamplona.claudecode.protocol.PermissionSuggestion
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
 import com.vitorpamplona.quartz.nip34Git.review.gitCodeLocation
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
@@ -221,6 +225,9 @@ import java.io.File
 
 /** The widest a chat column gets: past this, lines are too long to read. */
 internal val ChatColumnMaxWidth = 760.dp
+
+/** How many rows from the end the view may be and still follow new ones. */
+private const val FOLLOW_SLACK = 3
 
 /** One Claude Code session: its history, the live turn, and the approvals it waits on. */
 @Composable
@@ -247,6 +254,7 @@ fun ClaudeCodeChatScreen(
     // A fork still carries its source's id until it starts, but it is not that session.
     val openElsewhere = !state.forking && rows.any { it.sessionId != null && it.sessionId == state.sessionId && it.openElsewhere != null }
     val canRunApp = remember(state.cwd) { viewModel.canRunApp() }
+    val folderGone = remember(state.cwd, state.status) { !File(state.cwd).isDirectory }
 
     LaunchedEffect(Unit) { chat.refreshGit() }
 
@@ -362,7 +370,7 @@ fun ClaudeCodeChatScreen(
 
                 Messages(
                     state = state,
-                    readOnly = openElsewhere,
+                    readOnly = openElsewhere || folderGone,
                     nav = nav,
                     modifier = Modifier.weight(1f),
                     onStarter = {
@@ -381,7 +389,10 @@ fun ClaudeCodeChatScreen(
                     )
                 }
 
-                if (openElsewhere && !state.isBusy) {
+                if (folderGone && !state.isBusy) {
+                    // A removed worktree: its history reads, but there is nowhere to continue it.
+                    InlineNote(stringRes(Res.string.claude_code_folder_gone))
+                } else if (openElsewhere && !state.isBusy) {
                     // Two processes writing one session would interleave their turns: this one reads.
                     OpenElsewhereBar {
                         viewModel.fork { forked ->
@@ -468,8 +479,14 @@ private fun Messages(
     val rows = remember(state.items) { state.items.toChatRows() }
     val busy = state.isBusy
     val count = rows.size + (if (state.streamingText.isNotEmpty()) 1 else 0) + (if (busy) 1 else 0)
+    // Follows the conversation while its end is in view; someone scrolled up to read is left there.
     LaunchedEffect(count, state.streamingText.length / 200) {
-        if (count > 0) listState.animateScrollToItem(count - 1)
+        if (count == 0) return@LaunchedEffect
+        val lastVisible =
+            listState.layoutInfo.visibleItemsInfo
+                .lastOrNull()
+                ?.index
+        if (lastVisible == null || lastVisible >= count - FOLLOW_SLACK) listState.animateScrollToItem(count - 1)
     }
     val uriHandler = LocalUriHandler.current
     val onLink = remember(uriHandler) { { url: String -> uriHandler.openUri(url) } }
@@ -540,11 +557,18 @@ private fun ProposalActivity(
     val status = observeGitStatus(note)
     val reviewed by chat.reviewed.collectAsStateWithLifecycle()
     val me = accountViewModel.account.signer.pubKey
+    val repo =
+        chat.state.value.git
+            ?.repo
     val comments =
-        remember(replies, reviewed) {
+        remember(replies, reviewed, repo) {
+            // A reply goes to Claude as a review only from the repository's maintainers or someone
+            // the user follows: anyone can reply to a proposal, and the text becomes a prompt.
+            val trusted = trustedReviewers(repo)
             note.replies.filter { reply ->
                 val event = reply.event ?: return@filter false
                 if (event.pubKey == me || reply.idHex in reviewed) return@filter false
+                if (event.pubKey !in trusted && !accountViewModel.account.isFollowing(event.pubKey)) return@filter false
                 when (event) {
                     is CommentEvent, is GitReplyEvent -> event.content.isNotBlank()
                     // A verdict counts when it asks for something or says why.
@@ -576,6 +600,19 @@ private fun ProposalActivity(
             }
         }
     }
+}
+
+/**
+ * Who may review [repo]'s proposals: its confirmed maintainers, as the repository screen counts
+ * them, or the announcement's own owner and list until those load.
+ */
+private fun trustedReviewers(repo: NostrRepoRef?): Set<String> {
+    if (repo == null) return emptySet()
+    val address = Address(repo.kind, repo.pubKeyHex, repo.identifier)
+    val confirmed = LocalCache.gitAuthority.membership(address)?.confirmedMaintainers
+    if (!confirmed.isNullOrEmpty()) return confirmed.toSet()
+    val announcement = LocalCache.getAddressableNoteIfExists(address)?.event as? GitRepositoryEvent
+    return (listOf(repo.pubKeyHex) + announcement?.maintainers().orEmpty()).toSet()
 }
 
 /** Whether the proposal was merged or closed. */
@@ -1208,6 +1245,7 @@ private fun ErrorBanner(error: ChatError) {
     when (error) {
         ChatError.NotInstalled -> Banner(stringRes(Res.string.claude_code_not_installed))
         is ChatError.StartFailed -> Banner(stringRes(Res.string.claude_code_error_start_failed, error.message ?: ""))
+        ChatError.FolderGone -> Banner(stringRes(Res.string.claude_code_folder_gone))
         is ChatError.Exited ->
             Column {
                 Banner(stringRes(Res.string.claude_code_error_exited, error.code?.toString() ?: "?"))

@@ -31,6 +31,7 @@ import com.vitorpamplona.claudecode.protocol.PermissionMode
 import com.vitorpamplona.claudecode.protocol.PermissionRequest
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,6 +77,9 @@ sealed interface ChatError {
         val code: Int?,
         val stderr: String,
     ) : ChatError
+
+    /** The session's folder is gone (a removed worktree): it can be read, not continued. */
+    data object FolderGone : ChatError
 }
 
 @Immutable
@@ -142,6 +146,17 @@ class ClaudeChat internal constructor(
     /** Until the CLI names the copy's own session, the process starts with `--fork-session`. */
     private var forkOnStart = fork && resumeSessionId != null
 
+    /** Set by [kill]: a process that finishes starting afterwards is stopped at once. */
+    @Volatile
+    private var killed = false
+
+    /** Done once a resumed session's history is in: a prompt sent earlier waits, so it lands after it. */
+    private val historyReady = CompletableDeferred<Unit>().apply { if (resumeSessionId == null) complete(Unit) }
+
+    /** Streamed text, gathered here and shown every [STREAM_PUBLISH_MS] rather than on every delta. */
+    private val streamBuffer = StringBuilder()
+    private var streamPublishedAt = 0L
+
     /** The name a new chat was given, for the CLI's session once it exists. */
     private var titleToApply: String? = if (resumeSessionId == null) title else null
 
@@ -163,10 +178,14 @@ class ClaudeChat internal constructor(
         refreshGit()
         if (resumeSessionId != null) {
             scope.launch(Dispatchers.IO) {
-                val history = store.transcript(resumeSessionId)
-                lock.withLock {
-                    transcript.addHistory(history)
-                    publish { it.copy(historyLoaded = true) }
+                try {
+                    val history = store.transcript(resumeSessionId)
+                    lock.withLock {
+                        transcript.addHistory(history)
+                        publish { it.copy(historyLoaded = true) }
+                    }
+                } finally {
+                    historyReady.complete(Unit)
                 }
             }
         }
@@ -209,6 +228,7 @@ class ClaudeChat internal constructor(
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return
         scope.launch {
+            historyReady.await()
             lock.withLock {
                 transcript.addPrompt(trimmed)
                 publish { it.copy(status = ChatStatus.WORKING, error = null, activity = null, turnStartedAt = it.turnStartedAt ?: System.currentTimeMillis()) }
@@ -276,14 +296,24 @@ class ClaudeChat internal constructor(
         scope.launch { connection?.close() }
     }
 
-    /** Ends the process now (app exit, session deleted). */
+    /**
+     * Ends the process now (app exit, session deleted), and one still starting as soon as it is
+     * up. Blocks briefly while the process exits: call it off the main thread.
+     */
     fun kill() {
+        killed = true
         connection?.kill()
     }
 
     private suspend fun ensureStarted(): ClaudeCodeConnection? =
         lock.withLock {
             connection?.let { if (it.reader.isActive) return@withLock it }
+            if (killed) return@withLock null
+            // A removed worktree: resuming elsewhere (the home folder) would run the session there.
+            if (!workDir.isDirectory) {
+                publish { it.copy(status = ChatStatus.ENDED, error = ChatError.FolderGone) }
+                return@withLock null
+            }
             publish { it.copy(status = ChatStatus.STARTING) }
             val current = _state.value
             val options =
@@ -307,6 +337,10 @@ class ClaudeChat internal constructor(
                     publish { it.copy(status = ChatStatus.ENDED, error = ChatError.StartFailed(e.message)) }
                     return@withLock null
                 }
+            if (killed) {
+                started.kill()
+                return@withLock null
+            }
             connection = started
             publish { it.copy(status = ChatStatus.WORKING) }
             scope.launch { collect(started) }
@@ -318,7 +352,10 @@ class ClaudeChat internal constructor(
         // stdout closed: the process ended.
         val code = c.close()
         lock.withLock {
-            if (connection === c) connection = null
+            // A newer process already took over (the user sent a message as this one died): its
+            // turn is not this one's to end.
+            if (connection !== c) return@withLock
+            connection = null
             val wasBusy = _state.value.isBusy
             val error = if (code != null && code != 0 && wasBusy) ChatError.Exited(code, c.stderrTail().takeLast(STDERR_SHOWN)) else null
             if (wasBusy) transcript.addNotice(NoticeKind.PROCESS_ENDED)
@@ -351,6 +388,7 @@ class ClaudeChat internal constructor(
                 // A subagent's own messages stay inside its tool call.
                 if (message.parentToolUseId != null) return
                 transcript.addAssistantBlocks(message.content)
+                streamBuffer.setLength(0)
                 val used = message.contextTokens
                 publish { it.copy(streamingText = "", contextTokens = used ?: it.contextTokens) }
             }
@@ -362,8 +400,21 @@ class ClaudeChat internal constructor(
             is ClaudeMessage.StreamEvent -> {
                 if (message.parentToolUseId != null) return
                 when (message.eventType) {
-                    "message_start", "content_block_start" -> publish { it.copy(streamingText = "") }
-                    else -> message.textDelta?.let { delta -> publish { it.copy(streamingText = it.streamingText + delta) } }
+                    "message_start", "content_block_start" -> {
+                        streamBuffer.setLength(0)
+                        publish { it.copy(streamingText = "") }
+                    }
+                    else ->
+                        message.textDelta?.let { delta ->
+                            // Many small deltas a second: each would re-lay the whole reply out.
+                            streamBuffer.append(delta)
+                            val now = System.currentTimeMillis()
+                            if (now - streamPublishedAt >= STREAM_PUBLISH_MS) {
+                                streamPublishedAt = now
+                                val text = streamBuffer.toString()
+                                publish { it.copy(streamingText = text) }
+                            }
+                        }
                 }
             }
             is ClaudeMessage.ControlRequest -> {
@@ -412,6 +463,7 @@ class ClaudeChat internal constructor(
 
     companion object {
         private const val TAG = "ClaudeChat"
+        private const val STREAM_PUBLISH_MS = 50L
 
         /** What a session on a nostr repository may not run: pushing and publishing proposals. */
         val NO_PUBLISHING =

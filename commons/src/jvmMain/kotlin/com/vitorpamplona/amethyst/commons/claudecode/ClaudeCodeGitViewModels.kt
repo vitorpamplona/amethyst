@@ -80,14 +80,19 @@ class ClaudeCodeStartViewModel(
     private val _starting = MutableStateFlow(false)
     val starting: StateFlow<Boolean> = _starting.asStateFlow()
 
-    private var lookedFor: NostrRepoRef? = null
+    private var lookedFor: Pair<NostrRepoRef, List<String>>? = null
 
+    /**
+     * Looks for the user's checkout of [repo]. Called again when the announcement loads with
+     * its clone URLs, which can match a checkout the first look (without them) missed.
+     */
     fun find(
         repo: NostrRepoRef,
         cloneUrls: List<String>,
     ) {
-        if (lookedFor == repo && _checkout.value !is CheckoutState.Looking) return
-        lookedFor = repo
+        val key = repo to cloneUrls
+        if (lookedFor == key || _checkout.value is CheckoutState.Found) return
+        lookedFor = key
         viewModelScope.launch {
             service.refresh()
             val found = service.workspaces.find(repo, cloneUrls, service.knownFolders())
@@ -595,4 +600,5 @@ fun httpsCloneUrl(url: String): String {
     return trimmed
 }
 
-internal fun expandHome(path: String): String = path.trim().replaceFirst(Regex("^~"), Regex.escapeReplacement(System.getProperty("user.home")))
+/** [path] with a leading `~` (only a leading one) as the home folder. */
+fun expandHome(path: String): String = path.trim().replaceFirst(Regex("^~(?=/|$)"), Regex.escapeReplacement(System.getProperty("user.home")))
