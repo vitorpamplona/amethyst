@@ -1639,7 +1639,6 @@
     <string name="media_servers_add_url_label">Oder füge eine Serveradresse ein</string>
     <string name="media_servers_cache_section">Cache auf dem Gerät</string>
     <string name="media_server_primary_badge">Primär</string>
-    <string name="media_server_added">Hinzugefügt</string>
     <string name="media_server_reorder">Server neu anordnen</string>
     <string name="payment_targets_explainer">Veröffentliche deine Zahlungsadressen, damit andere dir direkt Geld senden können.</string>
     <string name="no_payment_targets_message">Keine Zahlungsadressen festgelegt. Füge unten eine hinzu ↓</string>

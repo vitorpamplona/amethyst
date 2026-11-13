@@ -1642,7 +1642,6 @@
     <string name="media_servers_add_url_label">Of plak een serveradres</string>
     <string name="media_servers_cache_section">Cache op apparaat</string>
     <string name="media_server_primary_badge">Primair</string>
-    <string name="media_server_added">Toegevoegd</string>
     <string name="media_server_reorder">Server herordenen</string>
     <string name="payment_targets_explainer">Publiceer betalingsadressen zodat anderen je direct kunnen betalen.</string>
     <string name="no_payment_targets_message">Nog geen betalingsdoelen ingesteld. Voeg er hieronder een toe.</string>

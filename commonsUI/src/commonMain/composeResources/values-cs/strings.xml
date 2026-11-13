@@ -1671,7 +1671,6 @@
     <string name="media_servers_add_url_label">Nebo vložte adresu serveru</string>
     <string name="media_servers_cache_section">Mezipaměť v zařízení</string>
     <string name="media_server_primary_badge">Hlavní</string>
-    <string name="media_server_added">Přidáno</string>
     <string name="media_server_reorder">Změnit pořadí serveru</string>
     <string name="payment_targets_explainer">Zveřejněte své platební adresy, aby vám ostatní mohli přímo posílat prostředky.</string>
     <string name="no_payment_targets_message">Žádné platební cíle nastaveny. Přidejte jeden níže ↓</string>

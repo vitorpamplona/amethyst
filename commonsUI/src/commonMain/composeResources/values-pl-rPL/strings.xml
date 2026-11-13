@@ -1671,7 +1671,6 @@
     <string name="media_servers_add_url_label">Lub wklej adres serwera</string>
     <string name="media_servers_cache_section">Pamięć podręczna urządzenia</string>
     <string name="media_server_primary_badge">Podstawowy</string>
-    <string name="media_server_added">Dodano</string>
     <string name="media_server_reorder">Zmień kolejność serwera</string>
     <string name="payment_targets_explainer">Opublikuj swoje adresy płatności, aby inni mogli wysyłać Ci środki bezpośrednio.</string>
     <string name="no_payment_targets_message">Brak danych do płatności. Dodaj je poniżej ↓</string>
