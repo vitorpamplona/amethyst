@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
@@ -53,6 +54,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletHost
+import com.vitorpamplona.amethyst.desktop.napplet.HeldNappletPane
+import com.vitorpamplona.amethyst.desktop.napplet.HeldPaperSession
 import com.vitorpamplona.amethyst.desktop.napplet.InlineNappletPane
 import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
 import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
@@ -194,9 +197,11 @@ class DesktopAppPlatform(
     ) {
         val host = nappletHost ?: return
         // The bundled Chromium, off screen, as for an inline nSite: drawn by the screen, no script runs.
-        InlineNappletPane(host, posterKey = null, instanceId, onStatus, modifier, wheelNeedsFocus = !takesWheel) {
-            host.openInlinePaper(html, title, instanceId)
-        }
+        // Held by the screen's back-stack entry, not the composition: a tab switch and back keeps the
+        // page, scrolled where the reader left it, instead of loading it again from the top.
+        val holder = viewModel(key = "front-page-paper") { HeldPaperSession(host) }
+        val session = remember(holder, instanceId, html, title) { holder.open(instanceId, html, title) }
+        HeldNappletPane(session, instanceId, onStatus, modifier, wheelNeedsFocus = !takesWheel)
     }
 
     @Composable

@@ -109,6 +109,35 @@ fun InlineNappletPane(
     key(current) { SessionPane(current, view, instanceId, onStatus, modifier, wheelNeedsFocus) }
 }
 
+/**
+ * [InlineNappletPane] for a session something else holds open ([HeldPaperSession], the front
+ * page's): leaving the composition hides the page instead of closing it, so the reader comes back to
+ * it as they left it, scrolled where they were. [session] is the open result: a failure says FAILED.
+ */
+@Composable
+fun HeldNappletPane(
+    session: Result<CefNappletSession>,
+    instanceId: String,
+    onStatus: (InlineNappletStatus) -> Unit,
+    modifier: Modifier,
+    wheelNeedsFocus: Boolean,
+) {
+    val status by rememberUpdatedState(onStatus)
+    val current = session.getOrNull()
+    val view = current?.offscreen
+    if (current == null || view == null) {
+        if (current == null) LaunchedEffect(session) { status(InlineNappletStatus.FAILED) }
+        Box(modifier)
+        return
+    }
+    // Out of sight, the page barely paints, as an app screen's does.
+    DisposableEffect(current) {
+        current.setVisible(true)
+        onDispose { current.setVisible(false) }
+    }
+    key(current) { SessionPane(current, view, instanceId, onStatus, modifier, wheelNeedsFocus) }
+}
+
 @Composable
 private fun SessionPane(
     session: CefNappletSession,
