@@ -9475,7 +9475,6 @@
     <string name="claude_code_title">Claude Code</string>
     <string name="claude_code_new_session">New session</string>
     <string name="claude_code_search_hint">Search sessions</string>
-    <string name="claude_code_all_folders">All folders</string>
     <string name="claude_code_no_sessions">No Claude Code sessions on this computer yet. Start one here, or run claude in a terminal and it shows up in this list.</string>
     <string name="claude_code_no_matches">No sessions match.</string>
     <string name="claude_code_not_installed">Amethyst can't find Claude Code on this computer. Install it, or set CLAUDE_CODE_EXECUTABLE to the claude program, then refresh.</string>
@@ -9483,8 +9482,6 @@
     <string name="claude_code_status_working">Working</string>
     <string name="claude_code_status_needs_approval">Needs your approval</string>
     <string name="claude_code_status_ready">Ready</string>
-    <string name="claude_code_status_ended">Ended</string>
-    <string name="claude_code_open_elsewhere">Open in another Claude Code</string>
     <string name="claude_code_open_elsewhere_warning">This session is open in another Claude Code right now. Continuing it here at the same time can mix up its history.</string>
     <string name="claude_code_delete">Delete</string>
     <string name="claude_code_delete_title">Delete this session?</string>
@@ -9503,11 +9500,9 @@
     <string name="claude_code_error_not_a_repository">That folder isn't in a git repository.</string>
     <string name="claude_code_error_worktree">Couldn't create the worktree: %1$s</string>
     <string name="claude_code_message_hint">Message Claude</string>
-    <string name="claude_code_send">Send</string>
     <string name="claude_code_stop">Stop</string>
     <string name="claude_code_permission_title">Claude wants to use %1$s</string>
     <string name="claude_code_allow">Allow</string>
-    <string name="claude_code_allow_always">Allow, don't ask again</string>
     <string name="claude_code_deny">Deny</string>
     <string name="claude_code_notice_interrupted">Stopped</string>
     <string name="claude_code_notice_turn_failed">The turn ended with an error</string>
@@ -9519,14 +9514,113 @@
     <string name="claude_code_run_failed">Couldn't start the app: %1$s</string>
     <string name="claude_code_end_session">End session</string>
     <string name="claude_code_session_missing">This session isn't on this computer anymore.</string>
-    <string name="claude_code_tool_running">Running</string>
     <string name="claude_code_tool_input">Input</string>
     <string name="claude_code_tool_output">Output</string>
     <string name="claude_code_cost">$%1$s so far</string>
+    <string name="claude_code_working">Working</string>
+    <string name="claude_code_open_elsewhere_short">Also open in another Claude Code</string>
+    <string name="claude_code_mode_default_desc">Claude asks before it edits files or runs commands.</string>
+    <string name="claude_code_mode_accept_edits_desc">Edits in this folder go through; commands still ask.</string>
+    <string name="claude_code_mode_plan_desc">Claude reads and plans, and changes nothing.</string>
+    <string name="claude_code_mode_auto_desc">A classifier approves safe calls and asks you about the rest.</string>
+    <string name="claude_code_allow_mode">Allow, and switch to %1$s</string>
+    <string name="claude_code_allow_rule_session">Allow %1$s for this session</string>
+    <string name="claude_code_allow_rule_project">Always allow %1$s in this project</string>
+    <string name="claude_code_allow_dirs">Allow access to %1$s</string>
+    <plurals name="claude_code_tool_group_command">
+        <item quantity="one">ran %1$d command</item>
+        <item quantity="other">ran %1$d commands</item>
+    </plurals>
+    <plurals name="claude_code_tool_group_read">
+        <item quantity="one">read %1$d file</item>
+        <item quantity="other">read %1$d files</item>
+    </plurals>
+    <plurals name="claude_code_tool_group_edit">
+        <item quantity="one">edited %1$d file</item>
+        <item quantity="other">edited %1$d files</item>
+    </plurals>
+    <plurals name="claude_code_tool_group_search">
+        <item quantity="one">%1$d search</item>
+        <item quantity="other">%1$d searches</item>
+    </plurals>
+    <plurals name="claude_code_tool_group_web">
+        <item quantity="one">%1$d web lookup</item>
+        <item quantity="other">%1$d web lookups</item>
+    </plurals>
+    <plurals name="claude_code_tool_group_agent">
+        <item quantity="one">%1$d subagent</item>
+        <item quantity="other">%1$d subagents</item>
+    </plurals>
+    <plurals name="claude_code_tool_group_other">
+        <item quantity="one">%1$d other tool</item>
+        <item quantity="other">%1$d other tools</item>
+    </plurals>
+    <plurals name="claude_code_tool_group_failed">
+        <item quantity="one">%1$d failed</item>
+        <item quantity="other">%1$d failed</item>
+    </plurals>
+    <string name="claude_code_changes">Changes</string>
+    <string name="claude_code_no_changes">Nothing changed on this branch yet.</string>
+    <string name="claude_code_untracked">New files not added to git</string>
+    <plurals name="claude_code_commits">
+        <item quantity="one">%1$d commit</item>
+        <item quantity="other">%1$d commits</item>
+    </plurals>
+    <plurals name="claude_code_uncommitted">
+        <item quantity="one">%1$d file with changes not committed yet</item>
+        <item quantity="other">%1$d files with changes not committed yet</item>
+    </plurals>
+    <plurals name="claude_code_uncommitted_warning">
+        <item quantity="one">%1$d file has changes that aren't committed. They won't be part of the proposal.</item>
+        <item quantity="other">%1$d files have changes that aren't committed. They won't be part of the proposal.</item>
+    </plurals>
+    <string name="claude_code_propose">Propose</string>
+    <string name="claude_code_update_proposal">Update proposal</string>
+    <string name="claude_code_propose_desc">Publishes this branch as a proposal to the repository, signed by you, the way ngit does: the commits go to its GRASP servers and the proposal shows up on gitworkshop and in every NIP-34 client.</string>
+    <string name="claude_code_propose_update_desc">This branch is already a proposal. Publishing again makes its commits the proposal's new version.</string>
+    <string name="claude_code_propose_title">Title</string>
+    <string name="claude_code_propose_description">Description</string>
+    <string name="claude_code_draft_with_claude">Draft with Claude</string>
+    <string name="claude_code_gate">Build checks</string>
+    <string name="claude_code_gate_desc">Runs the repository's pre-push checks in this branch's folder.</string>
+    <string name="claude_code_gate_none">This repository has no pre-push checks to run.</string>
+    <string name="claude_code_gate_running">Running the checks</string>
+    <string name="claude_code_gate_passed">The checks passed.</string>
+    <string name="claude_code_gate_failed">The checks failed. Ask Claude to fix them, then run them again.</string>
+    <string name="claude_code_gate_run">Run</string>
+    <string name="claude_code_check_read_diff">I read the whole diff and can explain every line</string>
+    <string name="claude_code_check_tested">I tried the change myself, by hand</string>
+    <string name="claude_code_publish">Publish proposal</string>
+    <string name="claude_code_publish_new_version">Publish new version</string>
+    <string name="claude_code_publish_failed">Couldn't publish: %1$s</string>
+    <string name="claude_code_publish_no_repo">This folder isn't linked to a nostr repository. Start the session from the repository's page in Amethyst, or add its nostr:// remote with ngit.</string>
+    <string name="claude_code_work_on_this">Work on this with Claude</string>
+    <string name="claude_code_start_title">Start a Claude Code session</string>
+    <string name="claude_code_start_desc">Claude works in its own folder, on a new branch made from the repository's current main, so your checkout stays as it is. When it's done, you review the changes and publish them as a proposal.</string>
+    <string name="claude_code_checkout">Your checkout</string>
+    <string name="claude_code_checkout_looking">Looking for your checkout</string>
+    <string name="claude_code_checkout_missing">Amethyst didn't find a checkout of %1$s on this computer. Point it at yours, or clone it.</string>
+    <string name="claude_code_change_folder">Change</string>
+    <string name="claude_code_use_folder">Use this checkout</string>
+    <string name="claude_code_clone_here">Clone here</string>
+    <string name="claude_code_cloning">Cloning the repository</string>
+    <string name="claude_code_branch">Branch</string>
+    <string name="claude_code_first_message">First message to Claude</string>
+    <string name="claude_code_prompt_issue">Work on this issue from the %1$s repository.\n\n# %2$s\n\n%3$s\n\nYou're on the branch %4$s, made from %5$s. Commit your work on this branch as you go. Don't push or publish anything: I review the changes and publish the proposal myself.</string>
+    <string name="claude_code_prompt_proposal">This branch is the proposal "%1$s" to the %2$s repository, checked out at its latest version.\n\n%3$s\n\nRead its changes first (git log and git diff against %4$s), then tell me what you think and wait for me. Don't push or publish anything.</string>
+    <plurals name="claude_code_review_comments">
+        <item quantity="one">%1$d new review comment on the proposal</item>
+        <item quantity="other">%1$d new review comments on the proposal</item>
+    </plurals>
+    <string name="claude_code_address_review">Address it</string>
+    <string name="claude_code_review_prompt_header">Reviewers commented on the proposal. Address their comments on this branch, then summarize what you changed.</string>
+    <string name="claude_code_proposal_merged">The proposal was merged.</string>
+    <string name="claude_code_proposal_closed">The proposal was closed.</string>
+    <string name="claude_code_remove_worktree">Remove worktree</string>
+    <string name="claude_code_remove_worktree_failed">Couldn't remove the worktree: %1$s</string>
+    <string name="claude_code_view_proposal">View</string>
+    <string name="claude_code_install_title">Install Claude Code</string>
+    <string name="claude_code_install_body">Amethyst runs the Claude Code you have installed. Install it on this computer and sign in once in a terminal, then refresh. If it's installed somewhere unusual, set CLAUDE_CODE_EXECUTABLE to the claude program.</string>
     <string name="claude_code_resume_hint">Send a message to continue this session.</string>
     <string name="claude_code_loading_history">Loading the history</string>
-    <plurals name="claude_code_sessions_count">
-        <item quantity="one">%1$d session</item>
-        <item quantity="other">%1$d sessions</item>
-    </plurals>
 </resources>

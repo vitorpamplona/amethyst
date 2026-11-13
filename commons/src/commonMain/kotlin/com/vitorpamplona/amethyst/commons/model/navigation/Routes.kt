@@ -730,6 +730,28 @@ sealed class Route {
         val key: String,
     ) : Route()
 
+    /** What a Claude Code chat's branch changed: its commits and diff. */
+    @Serializable data class ClaudeCodeChanges(
+        val key: String,
+    ) : Route()
+
+    /** Publishes a Claude Code chat's branch as a NIP-34 proposal, or a new version of one. */
+    @Serializable data class ClaudeCodePropose(
+        val key: String,
+    ) : Route()
+
+    /**
+     * Starts a Claude Code session on a NIP-34 repository, from the repository itself, one of its
+     * issues ([issueId]) or one of its proposals ([proposalId]).
+     */
+    @Serializable data class ClaudeCodeStart(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+        val issueId: HexKey? = null,
+        val proposalId: HexKey? = null,
+    ) : Route()
+
     @Serializable object RequestToVanish : Route()
 
     @Serializable object VanishEvents : Route()

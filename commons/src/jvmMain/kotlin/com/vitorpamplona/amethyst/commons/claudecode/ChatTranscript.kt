@@ -190,3 +190,92 @@ class ChatTranscript {
         cached = null
     }
 }
+
+/** A row of the chat screen: a message, or a run of tool calls folded into one line. */
+@Immutable
+sealed interface ChatRow {
+    val key: Long
+
+    @Immutable
+    data class Single(
+        val item: ChatItem,
+    ) : ChatRow {
+        override val key: Long get() = item.id
+    }
+
+    /**
+     * Tool calls made one after another with nothing said between them. Shown as one line that
+     * counts them by kind ("Ran 6 commands · read 2 files"), opened on demand.
+     */
+    @Immutable
+    data class ToolGroup(
+        val calls: List<ChatItem.ToolCall>,
+    ) : ChatRow {
+        override val key: Long get() = calls.first().id
+
+        val running: ChatItem.ToolCall? get() = calls.lastOrNull { !it.isDone }
+        val failed: Int get() = calls.count { it.isError }
+
+        /** How many calls of each [ToolKind], in the order the kinds first appear. */
+        val counts: List<Pair<ToolKind, Int>>
+            get() =
+                calls
+                    .groupingBy { ToolKind.of(it.name) }
+                    .eachCount()
+                    .toList()
+                    .sortedBy { (kind, _) -> calls.indexOfFirst { ToolKind.of(it.name) == kind } }
+    }
+}
+
+/** What a tool does, for counting calls in a folded group. */
+enum class ToolKind {
+    COMMAND,
+    READ,
+    EDIT,
+    SEARCH,
+    WEB,
+    AGENT,
+    OTHER,
+    ;
+
+    companion object {
+        fun of(toolName: String): ToolKind =
+            when (toolName) {
+                "Bash", "PowerShell", "BashOutput", "KillShell", "Monitor" -> COMMAND
+                "Read", "NotebookRead" -> READ
+                "Edit", "Write", "MultiEdit", "NotebookEdit" -> EDIT
+                "Grep", "Glob", "LS", "ToolSearch" -> SEARCH
+                "WebFetch", "WebSearch" -> WEB
+                "Task", "Agent", "Workflow" -> AGENT
+                else -> OTHER
+            }
+    }
+}
+
+/**
+ * Folds every run of two or more tool calls into a [ChatRow.ToolGroup]. A single call stays on
+ * its own row, so a turn that runs one command still shows it.
+ */
+fun List<ChatItem>.toChatRows(): List<ChatRow> {
+    val rows = ArrayList<ChatRow>()
+    val run = ArrayList<ChatItem.ToolCall>()
+
+    fun flush() {
+        when (run.size) {
+            0 -> {}
+            1 -> rows.add(ChatRow.Single(run[0]))
+            else -> rows.add(ChatRow.ToolGroup(run.toList()))
+        }
+        run.clear()
+    }
+    forEach { item ->
+        if (item is ChatItem.ToolCall) {
+            run.add(item)
+        } else {
+            flush()
+            rows.add(ChatRow.Single(item))
+        }
+    }
+    flush()
+    return rows
+}

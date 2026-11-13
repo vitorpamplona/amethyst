@@ -58,6 +58,18 @@ object GitWorktrees {
             dir
         }
 
+    /**
+     * Removes the worktree at [dir] once its work is merged; the branch stays. Refuses when it has
+     * uncommitted changes, as `git worktree remove` does.
+     */
+    suspend fun remove(dir: File) =
+        withContext(Dispatchers.IO) {
+            val common = git(dir, "rev-parse", "--path-format=absolute", "--git-common-dir")?.trim() ?: throw IOException("$dir is not a git worktree")
+            val main = File(common).parentFile ?: throw IOException("no main checkout for $dir")
+            val result = run(main, listOf("git", "worktree", "remove", dir.absolutePath))
+            if (result.code != 0) throw IOException(result.output.trim().ifEmpty { "git worktree remove failed" })
+        }
+
     fun defaultBranchName(): String = "claude/" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
 
     private fun git(

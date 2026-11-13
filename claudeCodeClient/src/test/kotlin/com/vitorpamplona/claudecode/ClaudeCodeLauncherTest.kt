@@ -66,6 +66,12 @@ class ClaudeCodeLauncherTest {
     }
 
     @Test
+    fun disallowedToolsGoInOneFlag() {
+        val args = ClaudeCodeLauncher().arguments(ClaudeCodeOptions(cwd = File("/work"), disallowedTools = listOf("Bash(git push:*)", "Bash(ngit send:*)")))
+        assertEquals(listOf("--disallowedTools", "Bash(git push:*),Bash(ngit send:*)"), args.takeLast(2))
+    }
+
+    @Test
     fun childPathGetsTheExecutablesFolder() {
         val launcher = ClaudeCodeLauncher(environment = mapOf("PATH" to "/usr/bin", "HOME" to "/home/u"))
         val env = launcher.childEnvironment(File("/opt/claude/bin/claude"))

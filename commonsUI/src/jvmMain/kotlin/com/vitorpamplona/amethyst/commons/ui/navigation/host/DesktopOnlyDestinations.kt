@@ -21,15 +21,23 @@
 package com.vitorpamplona.amethyst.commons.ui.navigation.host
 
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.ClaudeCodeChangesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.ClaudeCodeChatScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.ClaudeCodeProposeScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.ClaudeCodeSessionsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.ClaudeCodeStartScreen
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * Shared screens only a desktop computer can back: Claude Code runs the user's installed `claude`
  * program, which an Android app can't start. The desktop app registers these next to
- * [jvmDestinations]; elsewhere the drawer leaves their rows out, since nothing opens them.
+ * [jvmDestinations]; elsewhere every way in (the drawer row, "Work on this with Claude" on the git
+ * screens) hides, since [canOpen] finds no screen for the route.
  */
-fun NavDestinations.desktopOnlyDestinations() {
+fun NavDestinations.desktopOnlyDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.ClaudeCode> { ClaudeCodeSessionsScreen(nav) }
-    composableFromEndArgs<Route.ClaudeCodeChat>(capWidth = false) { ClaudeCodeChatScreen(it.key, nav) }
+    composableFromEndArgs<Route.ClaudeCodeChat>(capWidth = false) { ClaudeCodeChatScreen(it.key, accountViewModel, nav) }
+    composableFromEndArgs<Route.ClaudeCodeChanges>(capWidth = false) { ClaudeCodeChangesScreen(it.key, nav) }
+    composableFromEndArgs<Route.ClaudeCodePropose>(capWidth = false) { ClaudeCodeProposeScreen(it.key, accountViewModel, nav) }
+    composableFromEndArgs<Route.ClaudeCodeStart>(capWidth = false) { ClaudeCodeStartScreen(it, accountViewModel, nav) }
 }

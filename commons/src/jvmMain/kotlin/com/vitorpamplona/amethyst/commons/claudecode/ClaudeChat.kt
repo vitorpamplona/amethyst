@@ -94,6 +94,12 @@ data class ClaudeChatState(
     val costUsd: Double? = null,
     val error: ChatError? = null,
     val historyLoaded: Boolean = false,
+    /** What the CLI says it is doing in the running turn ("Writing hello.txt"). */
+    val activity: String? = null,
+    /** When the running turn started, for an elapsed-time label. */
+    val turnStartedAt: Long? = null,
+    /** The folder's git state, when it is a git checkout. */
+    val git: GitWorkInfo? = null,
 ) {
     val isBusy: Boolean get() = status == ChatStatus.STARTING || status == ChatStatus.WORKING || status == ChatStatus.NEEDS_APPROVAL
 }
@@ -115,6 +121,8 @@ class ClaudeChat internal constructor(
     private val launcher: ClaudeCodeStarter,
     private val scope: CoroutineScope,
     private val onSessionChanged: () -> Unit,
+    /** Reads the folder's git state; tests replace it. */
+    private val inspectGit: suspend (File) -> GitWorkInfo? = { GitWorkspace.inspect(it) },
 ) {
     private val workDir = cwd
     private val transcript = ChatTranscript()
@@ -135,6 +143,7 @@ class ClaudeChat internal constructor(
     val state: StateFlow<ClaudeChatState> = _state.asStateFlow()
 
     init {
+        refreshGit()
         if (resumeSessionId != null) {
             scope.launch(Dispatchers.IO) {
                 val history = store.transcript(resumeSessionId)
@@ -146,6 +155,38 @@ class ClaudeChat internal constructor(
         }
     }
 
+    private val _reviewed = MutableStateFlow<Set<String>>(emptySet())
+
+    /** Review comments on the linked proposal already sent to Claude (event ids). */
+    val reviewed: StateFlow<Set<String>> = _reviewed.asStateFlow()
+
+    /** Sends reviewers' comments on the proposal as the next message, once each. */
+    fun addressReview(
+        ids: Collection<String>,
+        prompt: String,
+    ) {
+        _reviewed.update { it + ids }
+        send(prompt)
+        // Kept on the branch, so the next session (or the next start of the app) doesn't offer them again.
+        val branch = _state.value.git?.branch ?: return
+        scope.launch {
+            try {
+                GitWorkspace.markReviewed(workDir, branch, ids)
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not remember the reviewed comments", e)
+            }
+        }
+    }
+
+    /** Re-reads the folder's git state: after a turn, and when the chat is shown. */
+    fun refreshGit() {
+        scope.launch {
+            val info = inspectGit(workDir)
+            _state.update { it.copy(git = info) }
+            info?.reviewed?.let { saved -> _reviewed.update { it + saved } }
+        }
+    }
+
     /** Sends a message, starting the process first if it isn't running. */
     fun send(text: String) {
         val trimmed = text.trim()
@@ -153,7 +194,7 @@ class ClaudeChat internal constructor(
         scope.launch {
             lock.withLock {
                 transcript.addPrompt(trimmed)
-                publish { it.copy(status = ChatStatus.WORKING, error = null) }
+                publish { it.copy(status = ChatStatus.WORKING, error = null, activity = null, turnStartedAt = it.turnStartedAt ?: System.currentTimeMillis()) }
             }
             val c = ensureStarted() ?: return@launch
             try {
@@ -234,6 +275,8 @@ class ClaudeChat internal constructor(
                     resumeSessionId = current.sessionId,
                     model = model,
                     permissionMode = current.permissionMode,
+                    // A NIP-34 checkout: publishing is the user's step (CONTRIBUTING-WITH-AI.md), never the agent's.
+                    disallowedTools = if ((current.git ?: inspectGit(workDir))?.repo != null) NO_PUBLISHING else emptyList(),
                 )
             val started =
                 try {
@@ -261,7 +304,7 @@ class ClaudeChat internal constructor(
             val wasBusy = _state.value.isBusy
             val error = if (code != null && code != 0 && wasBusy) ChatError.Exited(code, c.stderrTail().takeLast(STDERR_SHOWN)) else null
             if (wasBusy) transcript.addNotice(NoticeKind.PROCESS_ENDED)
-            publish { it.copy(status = ChatStatus.ENDED, pendingPermissions = emptyList(), streamingText = "", error = error ?: it.error) }
+            publish { it.copy(status = ChatStatus.ENDED, pendingPermissions = emptyList(), streamingText = "", activity = null, turnStartedAt = null, error = error ?: it.error) }
         }
         onSessionChanged()
     }
@@ -307,6 +350,9 @@ class ClaudeChat internal constructor(
                     state.copy(pendingPermissions = left, status = if (left.isEmpty() && state.status == ChatStatus.NEEDS_APPROVAL) ChatStatus.WORKING else state.status)
                 }
             }
+            is ClaudeMessage.System -> {
+                if (message.subtype == "task_summary") message.detail?.let { detail -> publish { it.copy(activity = detail) } }
+            }
             is ClaudeMessage.Result -> {
                 if (message.isError) {
                     if (message.subtype == "error_during_execution" || message.terminalReason?.startsWith("aborted") == true) {
@@ -318,11 +364,14 @@ class ClaudeChat internal constructor(
                 publish {
                     it.copy(
                         status = ChatStatus.READY,
+                        activity = null,
+                        turnStartedAt = null,
                         streamingText = "",
                         pendingPermissions = emptyList(),
                         costUsd = message.totalCostUsd ?: it.costUsd,
                     )
                 }
+                refreshGit()
                 onSessionChanged()
             }
             else -> {}
@@ -336,6 +385,17 @@ class ClaudeChat internal constructor(
 
     companion object {
         private const val TAG = "ClaudeChat"
+
+        /** What a session on a nostr repository may not run: pushing and publishing proposals. */
+        val NO_PUBLISHING =
+            listOf(
+                "Bash(git push:*)",
+                "Bash(ngit send:*)",
+                "Bash(ngit pr merge:*)",
+                "Bash(ngit sync:*)",
+                "Bash(amy git pr:*)",
+                "Bash(amy git pr-update:*)",
+            )
         private const val STDERR_SHOWN = 2_000
     }
 }

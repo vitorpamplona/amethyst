@@ -220,6 +220,75 @@ class GitProposals(
     }
 
     /**
+     * Opens a pull request of [tip] whose commits exist only on this computer (a local checkout):
+     * [objects] are what the servers lack, every commit after [mergeBase] with its trees and blobs,
+     * and they go to the repository's GRASP servers with the event. A repository without a GRASP
+     * server can't hold them, so it fails there; push the branch somewhere and use [openPullRequest].
+     */
+    suspend fun openPullRequestFromLocal(
+        target: GitProposalTarget,
+        objects: List<GitObject>,
+        tip: String,
+        mergeBase: String?,
+        title: String,
+        description: String,
+        labels: List<String> = emptyList(),
+        branchName: String? = null,
+        targetBranch: String? = null,
+    ): GitProposalResult {
+        val setup = Setup(target, emptyList(), targetBranch ?: target.defaultBranch)
+        val coMaintainers = setup.coMaintainers
+        return publishWithCommits(
+            target = target,
+            graspClones = setup.graspClones,
+            fallbackClones = emptyList(),
+            tip = tip,
+            newObjects = objects,
+            branchObjects = null,
+        ) { clones ->
+            GitPullRequestEvent.build(
+                description = description,
+                repository = setup.repositoryHint,
+                earliestUniqueCommit = setup.earliestUniqueCommit,
+                currentCommit = tip,
+                cloneUrls = clones,
+                subject = title,
+                labels = labels,
+                branchName = branchName,
+                mergeBase = mergeBase,
+                targetBranch = targetBranch?.takeIf { it != target.defaultBranch },
+                notify = coMaintainers.map { PTag(it.pubKeyHex) },
+            ) {
+                coMaintainers.forEach { repository(ATag(it)) }
+            }
+        }
+    }
+
+    /** [updatePullRequest] for commits that exist only on this computer; see [openPullRequestFromLocal]. */
+    suspend fun updatePullRequestFromLocal(
+        prHint: EventHintBundle<GitPullRequestEvent>,
+        target: GitProposalTarget,
+        objects: List<GitObject>,
+        tip: String,
+        mergeBase: String?,
+    ): GitProposalResult {
+        val setup = Setup(target, emptyList(), prHint.event.targetBranch() ?: target.defaultBranch)
+        val coMaintainers = setup.coMaintainers
+        return publishWithCommits(
+            target = target,
+            graspClones = setup.graspClones,
+            fallbackClones = emptyList(),
+            tip = tip,
+            newObjects = objects,
+            branchObjects = null,
+        ) { clones ->
+            GitPullRequestUpdateEvent.build(prHint, setup.repositoryHint, setup.earliestUniqueCommit, tip, clones, mergeBase, notify = coMaintainers.map { PTag(it.pubKeyHex) }) {
+                coMaintainers.forEach { repository(ATag(it)) }
+            }
+        }
+    }
+
+    /**
      * Proposes [changes] (paths to new bytes, or null to delete) on top of [parent], the tip of
      * [branch] as served by [sourceClones]: a commit by the user, opened as a pull request into it.
      */

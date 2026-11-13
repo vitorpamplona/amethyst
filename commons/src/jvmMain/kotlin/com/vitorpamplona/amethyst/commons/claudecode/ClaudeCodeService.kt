@@ -61,6 +61,15 @@ data class ClaudeSessionRow(
     val appStatus: ChatStatus?,
     /** Set while another Claude Code process (a terminal) has the session open. */
     val openElsewhere: ClaudeLiveSession?,
+    /** The repository (or folder) the session belongs to, worktrees included: the list's sections. */
+    val project: String,
+)
+
+/** What a folder is part of: a NIP-34 repository, a git repository, or just itself. */
+@Immutable
+data class ProjectInfo(
+    val name: String,
+    val repo: NostrRepoRef?,
 )
 
 /**
@@ -83,6 +92,26 @@ class ClaudeCodeService(
     /** Every session, newest first. Call [refresh] to re-read the disk. */
     val rows: StateFlow<List<ClaudeSessionRow>> = _rows.asStateFlow()
 
+    private val projects = ConcurrentHashMap<String, ProjectInfo>()
+
+    private fun projectOf(cwd: String?): String = cwd?.let { projects[it]?.name ?: File(it).name.ifEmpty { it } } ?: ""
+
+    /**
+     * The project of a folder: its nostr repository's name, or the name of the main checkout
+     * its worktree belongs to, or the folder's own name.
+     */
+    private fun computeProject(cwd: String): ProjectInfo {
+        val dir = File(cwd)
+        if (!dir.isDirectory) return ProjectInfo(dir.name, null)
+        val common = GitWorkspace.git(dir, "rev-parse", "--path-format=absolute", "--git-common-dir")?.trim()
+        val mainCheckout = common?.let { File(it).parentFile }
+        val branch = GitWorkspace.git(dir, "branch", "--show-current")?.trim()?.takeIf { it.isNotEmpty() }
+        val repo =
+            branch?.let { NostrRepoRef.fromConfig(GitWorkspace.git(dir, "config", "--get", "branch.$it.${GitWorkspace.KEY_REPO}")?.trim()) }
+                ?: GitWorkspace.nostrRemoteRepo(dir)
+        return ProjectInfo(repo?.identifier ?: mainCheckout?.name ?: dir.name, repo)
+    }
+
     private val _executable = MutableStateFlow<File?>(null)
 
     /** The `claude` the chats run, or null when it isn't installed (or not found yet). */
@@ -102,6 +131,15 @@ class ClaudeCodeService(
                     Log.w(TAG, "Could not list Claude Code sessions", e)
                     emptyList()
                 }
+            saved.value
+                .mapNotNull { it.cwd }
+                .distinct()
+                .filter { !projects.containsKey(it) }
+                .forEach { projects[it] = computeProject(it) }
+            chats.value.values
+                .map { it.state.value.cwd }
+                .filter { !projects.containsKey(it) }
+                .forEach { projects[it] = computeProject(it) }
             elsewhere.value =
                 try {
                     store.liveSessions()
@@ -145,7 +183,7 @@ class ClaudeCodeService(
         mode: PermissionMode,
         model: String?,
     ): ClaudeChat {
-        val chat = ClaudeChat(key, sessionId, cwd, title, mode, model, store, launcher, scope) { refreshInBackground() }
+        val chat = ClaudeChat(key, sessionId, cwd, title, mode, model, store, launcher, scope, onSessionChanged = { refreshInBackground() })
         chats.update { it + (key to chat) }
         // The list only shows these; streamed text must not rebuild it.
         watchers[key] =
@@ -186,6 +224,33 @@ class ClaudeCodeService(
         refresh()
     }
 
+    /** Where NIP-34 repositories are kept on this computer. */
+    val workspaces = NostrWorkspaces()
+
+    /** The folders sessions ran in, newest first: where a repository's checkout is looked for. */
+    fun knownFolders(): List<File> =
+        saved.value
+            .mapNotNull { it.cwd }
+            .distinct()
+            .map(::File)
+
+    /**
+     * Starts a session on a NIP-34 repository: a worktree on [branch] made from [checkout], and,
+     * when [prompt] isn't blank, its first message.
+     */
+    suspend fun startFromNostr(
+        checkout: File,
+        target: NostrWorkTarget,
+        branch: String,
+        permissionMode: PermissionMode,
+        prompt: String,
+    ): ClaudeChat {
+        val workspace = workspaces.prepare(checkout, target, branch)
+        val chat = newChat(workspace.dir, permissionMode)
+        if (prompt.isNotBlank()) chat.send(prompt)
+        return chat
+    }
+
     /** Stops every process this app started. */
     fun shutdown() {
         chats.value.values.forEach { it.kill() }
@@ -222,6 +287,7 @@ class ClaudeCodeService(
                     lastModified = info.lastModified,
                     appStatus = chat?.state?.value?.status,
                     openElsewhere = live[info.sessionId]?.takeIf { it.pid !in ownPids },
+                    project = projectOf(info.cwd),
                 )
             }
         val savedIds = saved.value.mapTo(HashSet()) { it.sessionId }
@@ -239,10 +305,11 @@ class ClaudeCodeService(
                         title = state.title ?: (state.items.firstOrNull() as? ChatItem.UserText)?.text?.lineSequence()?.first() ?: "",
                         lastPrompt = null,
                         cwd = state.cwd,
-                        gitBranch = null,
+                        gitBranch = state.git?.branch,
                         lastModified = System.currentTimeMillis(),
                         appStatus = state.status,
                         openElsewhere = null,
+                        project = projectOf(state.cwd),
                     )
                 }
         _rows.value = (unsaved + fromDisk).sortedByDescending { it.lastModified }

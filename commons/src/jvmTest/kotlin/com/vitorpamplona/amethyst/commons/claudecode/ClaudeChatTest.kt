@@ -119,6 +119,7 @@ class ClaudeChatTest {
             launcher = starter,
             scope = chatScope,
             onSessionChanged = {},
+            inspectGit = { null },
         )
     }
 

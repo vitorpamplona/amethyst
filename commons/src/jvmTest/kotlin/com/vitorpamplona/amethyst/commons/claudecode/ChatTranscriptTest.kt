@@ -76,3 +76,33 @@ class ChatTranscriptTest {
         assertEquals(2, transcript.snapshot().size)
     }
 }
+
+class ChatRowsTest {
+    private var id = 0L
+
+    private fun call(
+        name: String,
+        done: Boolean = true,
+    ) = ChatItem.ToolCall(id++, "t$id", name, null, "{}", if (done) "ok" else null, false)
+
+    private fun text(t: String) = ChatItem.AssistantText(id++, t)
+
+    @Test
+    fun runsOfToolCallsFoldIntoOneRow() {
+        val items = listOf(text("a"), call("Bash"), call("Read"), call("Bash"), text("b"), call("Edit"), call("Bash", done = false))
+        val rows = items.toChatRows()
+
+        assertEquals(4, rows.size)
+        val first = rows[1] as ChatRow.ToolGroup
+        assertEquals(listOf(ToolKind.COMMAND to 2, ToolKind.READ to 1), first.counts)
+        val last = rows[3] as ChatRow.ToolGroup
+        assertEquals("Bash", last.running?.name)
+    }
+
+    @Test
+    fun aSingleCallStaysOnItsOwnRow() {
+        val rows = listOf(text("a"), call("Write"), text("b")).toChatRows()
+        assertEquals(3, rows.size)
+        assertTrue((rows[1] as ChatRow.Single).item is ChatItem.ToolCall)
+    }
+}

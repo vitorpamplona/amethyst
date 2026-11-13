@@ -40,6 +40,8 @@ data class ClaudeCodeOptions(
     val includePartialMessages: Boolean = true,
     /** More folders the tools may read and write. */
     val addDirs: List<File> = emptyList(),
+    /** Tool rules the session may never use, e.g. `Bash(git push:*)`; nothing can approve them. */
+    val disallowedTools: List<String> = emptyList(),
     /** Any other CLI flags, appended last. */
     val extraArgs: List<String> = emptyList(),
 )
@@ -86,6 +88,10 @@ class ClaudeCodeLauncher(
             options.addDirs.forEach {
                 add("--add-dir")
                 add(it.absolutePath)
+            }
+            if (options.disallowedTools.isNotEmpty()) {
+                add("--disallowedTools")
+                add(options.disallowedTools.joinToString(","))
             }
             addAll(options.extraArgs)
         }

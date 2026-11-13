@@ -1,6 +1,6 @@
 # Claude Code sessions in the desktop app
 
-Status: first version (2026-11-12). Desktop only.
+Status: second version (2026-11-13): redesigned screens and the NIP-34 workflow. Desktop only.
 
 ## Goal
 
@@ -39,9 +39,46 @@ would go over Nostr (the Buzz agent channel, `cli/plans/2026-07-25-buzz-agent-su
 - In an Amethyst checkout, the chat's play button runs `./gradlew :desktopApp:run` there, output
   in `build/claude-code-run.log`.
 
+## Working through nostr (ngit / gitworkshop)
+
+A session is tied to a NIP-34 repository and, once published, to its proposal, so the work goes
+the way an ngit contributor's does and shows up on gitworkshop like any other proposal.
+
+1. **Start from nostr.** "Work on this with Claude" on a repository (top bar), an issue or a
+   proposal (thread root, `WorkWithClaudeButton`) opens `Route.ClaudeCodeStart`. It finds the
+   user's checkout (remembered in `claude-code-checkouts.json` in the app data folder, or found by
+   a `nostr://` remote or clone URL among the folders sessions ran in) or clones it, fetches the
+   maintainers' main into `refs/remotes/nostr/<main>`, and makes a worktree on `pr/feat/<slug>`
+   (or on the proposal's tip, fetched from `refs/nostr/*`, to continue a proposal). The issue or
+   proposal becomes the first message.
+2. **Links live in git.** `branch.<name>.nostr-repo`, `nostr-issue`, `nostr-proposal` and
+   `amethyst-base` in the branch's config (`GitWorkspace`), so the next session on the branch, or
+   any checkout of it, knows what it is.
+3. **The agent can't publish.** A session on a nostr repository starts with
+   `--disallowedTools` for `git push`, `ngit send`, `ngit pr merge`, `ngit sync` and
+   `amy git pr/pr-update` (`ClaudeChat.NO_PUBLISHING`): CONTRIBUTING-WITH-AI.md.
+4. **Changes** (`Route.ClaudeCodeChanges`): commits ahead of the base and the diff, uncommitted
+   work included, through the git dashboard's `GitDiffView`.
+5. **Propose** (`Route.ClaudeCodePropose`): title and description (from the commits, or drafted
+   by a tool-less one-off `claude -p`), the repository's build gate
+   (`PREPUSH_KMP_METADATA=1 .git-hooks/pre-push`, when it has one), and two confirmations (read
+   the diff, tried it by hand). Publishing signs with the account: `GitProposals.
+   openPullRequestFromLocal` / `updatePullRequestFromLocal` push the objects read from the
+   checkout (`LocalGitObjects`: `git rev-list --objects` + `git cat-file --batch`) to the GRASP
+   servers under `refs/nostr/<event id>`, then publish the kind 1618, or a 1619 for a branch that
+   already is a proposal. A repository without a GRASP server can't take local commits that way.
+6. **Review loop.** While a linked proposal's chat is open its thread loads; reviewers' comments
+   show as a banner whose "Address it" sends them to Claude. A merged (1631) proposal offers to
+   remove the worktree.
+
+Tested end to end on this machine with `cli/tests/git/git-grasp-e2e.sh --keep` and
+`run-headless.sh --local-only`: started from a proposal, cloned, Claude committed, the 1619 named
+the commit, merge base and GRASP server, and a comment from another account reached the session.
+
 ## Not done
 
-- Rendering replies as markdown (shown as plain selectable text).
 - Images in prompts, slash commands, model switching in the UI, forking from a message.
 - Claude.ai cloud sessions (no documented API to list them).
 - Subagent messages are folded into their tool call, not shown.
+- Inline review comments (on a line of the diff) reach Claude as text without their file and line.
+- Publishing through the user's own `ngit` instead of the app's signer.

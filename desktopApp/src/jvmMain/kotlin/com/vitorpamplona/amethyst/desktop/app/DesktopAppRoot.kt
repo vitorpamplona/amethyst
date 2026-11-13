@@ -197,7 +197,7 @@ class DesktopAppRoot(
         accountViewModel: AccountViewModel,
     ) {
         destinations.jvmDestinations(accountViewModel)
-        destinations.desktopOnlyDestinations()
+        destinations.desktopOnlyDestinations(accountViewModel)
         // A web page, a napplet and an nSite are screens like any other: the layout puts each on the
         // stack, in a deck column, a tab or a window.
         nappletHost?.let { host ->

@@ -23,6 +23,7 @@ package com.vitorpamplona.claudecode
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
 import com.vitorpamplona.claudecode.protocol.ContentBlock
 import com.vitorpamplona.claudecode.protocol.PermissionMode
+import com.vitorpamplona.claudecode.protocol.PermissionSuggestion
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -116,6 +117,18 @@ class ClaudeMessageTest {
         assertTrue(result.isError)
         assertEquals("error_during_execution", result.subtype)
         assertNull(result.result)
+    }
+
+    @Test
+    fun suggestionsSayWhatDontAskAgainAllows() {
+        val write = parse("turn-approve.jsonl").firstNotNullOf { (it as? ClaudeMessage.ControlRequest)?.permission }
+        assertEquals(PermissionSuggestion.SetMode(PermissionMode.ACCEPT_EDITS, "session"), write.parsedSuggestions.single())
+
+        val bash = parse("turn-deny.jsonl").firstNotNullOf { (it as? ClaudeMessage.ControlRequest)?.permission }
+        val rules = bash.parsedSuggestions.first() as PermissionSuggestion.AddRules
+        assertEquals("Bash(echo hi *)", rules.rules.single().toString())
+        assertEquals("localSettings", rules.destination)
+        assertTrue(bash.parsedSuggestions[1] is PermissionSuggestion.AddDirectories)
     }
 
     @Test
