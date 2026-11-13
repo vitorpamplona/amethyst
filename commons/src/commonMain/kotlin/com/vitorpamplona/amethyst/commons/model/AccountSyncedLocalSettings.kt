@@ -65,6 +65,8 @@ class SyncedLocalSettings(
     val mirrorUploadsToAllServers: Boolean,
     val optimizeMediaOnUpload: Boolean,
     val callsEnabled: Boolean,
+    /** Null when this account never set a signature of its own. */
+    val composeSignature: String? = null,
 )
 
 /** Fills this blob's newer groups from [local]. Sets and maps keep a fixed order, so the JSON is deterministic. */
@@ -100,6 +102,7 @@ fun AccountSyncedSettingsInternal.withLocalGroups(local: SyncedLocalSettings): A
                 optimizeMedia = local.optimizeMediaOnUpload,
             )
         calls = AccountCallPreferencesInternal(local.callsEnabled)
+        compose = local.composeSignature?.let { AccountComposePreferencesInternal(it) }
     }
 
 /** The [E] named [name], or [current] when the name is missing or one this version does not know. */

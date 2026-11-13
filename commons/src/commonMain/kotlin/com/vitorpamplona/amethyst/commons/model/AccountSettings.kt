@@ -299,6 +299,12 @@ class AccountSettings(
     var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
     var callMaxBitrateBps: Int = 1_500_000,
     val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    /**
+     * The text appended to this account's new posts. Null until the account sets one, which leaves
+     * the app-wide [UiSettings.composeSignature] in charge: that is where the signature lived before
+     * it became per account, so an upgrade keeps it.
+     */
+    val composeSignature: MutableStateFlow<String?> = MutableStateFlow(null),
     // New accounts authenticate with every relay that asks. Existing accounts keep whatever they
     // had saved (LocalPreferences falls back to CUSTOM for prefs written before this key existed).
     val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.ALWAYS),
@@ -972,6 +978,7 @@ class AccountSettings(
             mirrorUploadsToAllServers = mirrorUploadsToAllServers.value,
             optimizeMediaOnUpload = optimizeMediaOnUpload.value,
             callsEnabled = callsEnabled.value,
+            composeSignature = composeSignature.value,
         )
 
     /** The whole NIP-78 blob: [syncedSettings] plus the groups that live here. */
@@ -1018,6 +1025,8 @@ class AccountSettings(
         }
 
         remote.calls?.let { group -> callsEnabled.value = group.callsEnabled }
+
+        remote.compose?.let { group -> composeSignature.value = group.signature }
     }
 
     /**
@@ -2070,6 +2079,13 @@ class AccountSettings(
     fun changeCallsEnabled(enabled: Boolean) {
         if (callsEnabled.value != enabled) {
             callsEnabled.tryEmit(enabled)
+            saveAndSync()
+        }
+    }
+
+    fun changeComposeSignature(signature: String) {
+        if (composeSignature.value != signature) {
+            composeSignature.tryEmit(signature)
             saveAndSync()
         }
     }

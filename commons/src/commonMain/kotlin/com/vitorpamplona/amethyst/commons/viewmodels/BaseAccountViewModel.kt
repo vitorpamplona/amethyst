@@ -1995,6 +1995,14 @@ open class BaseAccountViewModel(
 
     fun updateAddClientTag(add: Boolean) = launchSigner { account.updateAddClientTag(add) }
 
+    /**
+     * The signature this account's composer appends: its own, or the app-wide one when it never set
+     * one (where the signature lived before it became per account).
+     */
+    fun composeSignature(): String = (account.settings.composeSignature.value ?: settings.uiSettingsFlow.composeSignature.value).trim()
+
+    fun updateComposeSignature(signature: String) = account.settings.changeComposeSignature(signature)
+
     fun updatePowDifficulty(difficulty: Int) = launchSigner { account.updatePowDifficulty(difficulty) }
 
     fun updatePowCategory(

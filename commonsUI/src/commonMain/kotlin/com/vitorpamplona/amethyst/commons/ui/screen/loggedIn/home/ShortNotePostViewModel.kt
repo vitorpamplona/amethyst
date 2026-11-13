@@ -814,7 +814,7 @@ open class ShortNotePostViewModel :
      * deliberately omits — a signature).
      */
     fun applySignature() {
-        val signature = accountViewModel.settings.composeSignature()
+        val signature = accountViewModel.composeSignature()
         if (signature.isEmpty()) return
 
         appliedSignature = signature
