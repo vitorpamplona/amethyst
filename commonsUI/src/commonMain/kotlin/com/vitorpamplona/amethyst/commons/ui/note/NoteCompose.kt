@@ -424,6 +424,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRequestToVanish
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventConfirmation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventReport
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoboSatsCoordinatorRating
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoutstrNode
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSiteSnapshot
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoAvatar
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoObject
@@ -972,6 +973,7 @@ import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistra
 import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
 import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
 import com.vitorpamplona.quartz.openagents.nipExtExtensions.release.ExtensionReleaseEvent
+import com.vitorpamplona.quartz.routstr.node.RoutstrNodeEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -3050,6 +3052,7 @@ internal fun RenderNoteRow(
             is ExtensionListingEvent -> RenderExtensionListing(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is ExtensionReleaseEvent -> RenderExtensionRelease(baseNote)
             is CvmServerAnnouncementEvent -> RenderCvmServerAnnouncement(baseNote, backgroundColor, accountViewModel, nav)
+            is RoutstrNodeEvent -> RenderRoutstrNode(baseNote, nav)
             is CvmToolsListEvent -> RenderCvmToolsList(baseNote, accountViewModel)
             is EventReminderEvent -> RenderEventReminder(baseNote)
             is AgentTurnMetricEvent -> RenderAgentTurnMetric(baseNote)

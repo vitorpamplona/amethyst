@@ -64,11 +64,14 @@ import com.vitorpamplona.amethyst.commons.resources.front_page_model_none_found
 import com.vitorpamplona.amethyst.commons.resources.front_page_model_other_vendor
 import com.vitorpamplona.amethyst.commons.resources.front_page_model_search
 import com.vitorpamplona.amethyst.commons.resources.front_page_model_use_typed
+import com.vitorpamplona.amethyst.commons.resources.routstr_edition_sats
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSectionLabel
 import com.vitorpamplona.amethyst.commons.ui.components.M3LazyActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.PillTextField
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.commons.util.formatGrouped
 
 /**
  * The model choice in the app's grouped-dialog style (the feed selector's): models under their
@@ -88,6 +91,8 @@ fun ModelPickerDialog(
     selected: String?,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
+    /** One edition with a model in sats, for a Routstr node that prices in sats; null shows no price. */
+    editionSats: ((AgentModel?) -> Long?)? = null,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     val searchable = ids.size >= ModelChoices.SEARCH_FROM
@@ -171,7 +176,8 @@ fun ModelPickerDialog(
                 }
             }
             items(group.models, key = { "model:${it.id}" }) { choice ->
-                ChoiceRow(choice, choice.id == selected) { pick(choice.id) }
+                val sats = editionSats?.invoke(byId[choice.id])
+                ChoiceRow(choice, choice.id == selected, sats?.let { satsPerEdition(it) }) { pick(choice.id) }
             }
         }
     }
@@ -199,8 +205,12 @@ private fun indexOf(
 private fun ChoiceRow(
     choice: ModelChoice,
     selected: Boolean,
+    price: String?,
     onClick: () -> Unit,
-) = ModelRow(choice.name, choice.id.takeIf { it != choice.name }, selected, icon = false, onClick = onClick)
+) = ModelRow(choice.name, choice.id.takeIf { it != choice.name }, selected, icon = false, price = price, onClick = onClick)
+
+@Composable
+private fun satsPerEdition(sats: Long): String = pluralStringRes(Res.plurals.routstr_edition_sats, sats.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), formatGrouped(sats))
 
 @Composable
 private fun ModelRow(
@@ -208,6 +218,7 @@ private fun ModelRow(
     id: String?,
     selected: Boolean,
     icon: Boolean,
+    price: String? = null,
     onClick: () -> Unit,
 ) {
     Row(
@@ -239,6 +250,10 @@ private fun ModelRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
+        price?.let {
+            Spacer(Modifier.width(8.dp))
+            Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         }
         if (selected) {
             Spacer(Modifier.width(8.dp))

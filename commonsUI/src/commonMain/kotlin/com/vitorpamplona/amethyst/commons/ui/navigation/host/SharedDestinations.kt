@@ -268,6 +268,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.Cord
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnMigrateScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.Nip46ConnectedAppsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.Nip46SignerScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.RoutstrSetupScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.wot.WebOfTrustScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.shorts.ShortsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.softwareapps.SoftwareAppDetailScreen
@@ -482,6 +483,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.ProfileUiSettings> { ProfileUiSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SearchEngineSettings> { SearchEngineSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.AgentKeysSettings> { AgentKeysSettingsScreen(accountViewModel, nav) }
+    composableFromEndArgs<Route.RoutstrSetup> { RoutstrSetupScreen(it, accountViewModel, nav) }
     // The paper's own HTML sets its measure: the screen gets the whole pane (see PanelFreeRoutes).
     composableFromEndArgs<Route.FrontPage>(capWidth = false) { FrontPageScreen(accountViewModel, nav, it.day) }
     composableFromEnd<Route.VideoPlayerSettings> { VideoPlayerSettingsScreen(accountViewModel, nav) }

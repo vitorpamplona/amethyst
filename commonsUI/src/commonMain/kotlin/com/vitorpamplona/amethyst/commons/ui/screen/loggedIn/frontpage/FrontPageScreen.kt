@@ -104,6 +104,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
+import com.vitorpamplona.amethyst.commons.frontpage.AgentModel
 import com.vitorpamplona.amethyst.commons.frontpage.CronWords
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageClock
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageGate
@@ -130,7 +131,6 @@ import com.vitorpamplona.amethyst.commons.frontpage.SavedEdition
 import com.vitorpamplona.amethyst.commons.frontpage.ScheduleState
 import com.vitorpamplona.amethyst.commons.frontpage.ShownEdition
 import com.vitorpamplona.amethyst.commons.frontpage.Violation
-import com.vitorpamplona.amethyst.commons.frontpage.WriterFailure
 import com.vitorpamplona.amethyst.commons.frontpage.dayOfWeek
 import com.vitorpamplona.amethyst.commons.frontpage.formatUsd
 import com.vitorpamplona.amethyst.commons.frontpage.relativeDay
@@ -272,6 +272,9 @@ import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.commons.resources.retry
+import com.vitorpamplona.amethyst.commons.resources.routstr_balance_low
+import com.vitorpamplona.amethyst.commons.resources.routstr_balance_low_schedule
+import com.vitorpamplona.amethyst.commons.resources.routstr_top_up
 import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.resources.tor_waiting
 import com.vitorpamplona.amethyst.commons.resources.try_again
@@ -304,6 +307,9 @@ import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberAppLauncher
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.BottomBarEditing
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.RoutstrPrintNote
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.rememberRoutstrPrintNote
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.satsText
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
@@ -410,6 +416,10 @@ fun FrontPageScreen(
     val today by viewModel.today.collectAsStateWithLifecycle()
     val shown by viewModel.shown.collectAsStateWithLifecycle()
     val estimate by viewModel.estimate.collectAsStateWithLifecycle()
+    val estimateSats by viewModel.estimateSats.collectAsStateWithLifecycle()
+    val printKey by viewModel.key.collectAsStateWithLifecycle()
+    // A Routstr key pays in sats: the print says what in sats, and warns when the balance may not cover it.
+    val routstrNote = rememberRoutstrPrintNote(accountViewModel, nav, printKey, models.selectedModel, estimateSats)
     val schedule by viewModel.schedule.collectAsStateWithLifecycle()
     val scheduleProblem by viewModel.scheduleProblem.collectAsStateWithLifecycle()
     val schedulePending by viewModel.schedulePending.collectAsStateWithLifecycle()
@@ -593,6 +603,8 @@ fun FrontPageScreen(
                             onCancel = askCancel,
                             publish = publishPrefs,
                             onPublish = viewModel::setPublish,
+                            routstrNote = routstrNote,
+                            editionSats = viewModel::editionSats,
                         )
                     }
                 },
@@ -638,6 +650,8 @@ fun FrontPageScreen(
                             onCancel = askCancel,
                             publish = publishPrefs,
                             onPublish = viewModel::setPublish,
+                            routstrNote = routstrNote,
+                            editionSats = viewModel::editionSats,
                         )
                     // A step removed since this paper printed: what the next one needs, as on the print view.
                     FrontPageGate.NO_KEY, FrontPageGate.NO_LENS ->
@@ -972,10 +986,12 @@ private fun PrintControls(
     onCancel: () -> Unit,
     publish: ObserverPrefs?,
     onPublish: (Boolean) -> Unit,
+    routstrNote: RoutstrPrintNote? = null,
+    editionSats: ((AgentModel?) -> Long?)? = null,
 ) {
     val ink = MaterialTheme.colorScheme.onSurface
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        ModelPicker(models, onModel, PillColors.onCard(), ink)
+        ModelPicker(models, onModel, PillColors.onCard(), ink, editionSats)
         // A Print that can't be pressed says why: the provider lists nothing and no model is named.
         if (!models.loading && models.ids.isEmpty() && models.selected == null) {
             Text(
@@ -998,13 +1014,20 @@ private fun PrintControls(
                 Spacer(Modifier.width(8.dp))
                 val label = stringRes(if (printedToday) Res.string.front_page_print_again else Res.string.front_page_print)
                 // The reader pays for this: say roughly what before they press it (NIP-FA).
+                // A Routstr key pays in sats: the estimate is in what it pays with.
+                val sats = routstrNote?.estimateSats
                 Text(
-                    if (estimate != null) stringRes(Res.string.front_page_print_estimate, label, formatUsd(estimate)) else label,
+                    when {
+                        sats != null -> stringRes(Res.string.front_page_print_estimate, label, satsText(sats))
+                        estimate != null -> stringRes(Res.string.front_page_print_estimate, label, formatUsd(estimate))
+                        else -> label
+                    },
                     style = MaterialTheme.typography.titleSmall,
                 )
             }
         }
-        ScheduleRow(schedule, scheduleProblem, scheduleBusy, scheduleActions, printedBy, ink)
+        if (routstrNote?.lowBalance == true) RoutstrLowBalance(stringRes(Res.string.routstr_balance_low), routstrNote.onTopUp, ink)
+        ScheduleRow(schedule, scheduleProblem, scheduleBusy, scheduleActions, printedBy, ink, lowBalance = routstrNote?.lowBalance == true)
         publish?.let { PublishRow(it.publish, onPublish, ink) }
     }
 }
@@ -1116,6 +1139,7 @@ private fun ModelPicker(
     onModel: (String) -> Unit,
     colors: PillColors,
     ink: Color,
+    editionSats: ((AgentModel?) -> Long?)? = null,
 ) {
     if (models.loading) {
         Row(Modifier.heightIn(min = 54.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1164,7 +1188,7 @@ private fun ModelPicker(
         Icon(MaterialSymbols.ExpandMore, contentDescription = null, tint = colors.icon)
     }
     if (picking) {
-        ModelPickerDialog(models.ids, models.byId, selected, onSelect = onModel, onDismiss = { picking = false })
+        ModelPickerDialog(models.ids, models.byId, selected, onSelect = onModel, onDismiss = { picking = false }, editionSats = editionSats)
     }
 }
 
@@ -1198,6 +1222,8 @@ private fun ScheduleRow(
     actions: ScheduleActions,
     printedBy: PrintedBy?,
     ink: Color,
+    /** A Routstr key whose balance may not cover the next paper: said next to the schedule, when it is on. */
+    lowBalance: Boolean = false,
 ) {
     if (schedule.state == ScheduleState.LOADING) return
     var picking by remember { mutableStateOf(false) }
@@ -1242,6 +1268,13 @@ private fun ScheduleRow(
                                 .padding(vertical = 12.dp),
                     )
                 }
+        }
+        if (lowBalance && schedule.enabled) {
+            Row(indent, verticalAlignment = Alignment.CenterVertically) {
+                Icon(MaterialSymbols.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringRes(Res.string.routstr_balance_low_schedule), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            }
         }
         // When it last printed belongs to the schedule, not to this device's switch below.
         LastPrinted(schedule, note, indent)
@@ -1976,7 +2009,22 @@ private fun Progress(
 }
 
 @Composable
-private fun failureText(run: FrontPageRun.Failed): String = if (run.failure == WriterFailure.HTTP) stringRes(run.failure.sentenceRes(), run.status ?: 0) else stringRes(run.failure.sentenceRes())
+private fun failureText(run: FrontPageRun.Failed): String = writerFailureSentence(run.failure, run.status, run.shortfallSats)
+
+/** "Your Routstr balance may not cover the next paper", with Top up. */
+@Composable
+private fun RoutstrLowBalance(
+    text: String,
+    onTopUp: (() -> Unit)?,
+    ink: Color,
+) {
+    Row(Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(MaterialSymbols.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+        onTopUp?.let { TextButton(onClick = it, colors = ButtonDefaults.textButtonColors(contentColor = ink)) { Text(stringRes(Res.string.routstr_top_up)) } }
+    }
+}
 
 /** The boundary's verdict kinds in the reader's words, never the enum's name. */
 @Composable

@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.agents.connectOpenRouter
 import com.vitorpamplona.amethyst.commons.agents.probeAgentKey
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditFailure
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditKind
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditState
@@ -161,8 +162,15 @@ import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.resources.hide_password
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.resources.retry
+import com.vitorpamplona.amethyst.commons.resources.routstr_balance_failed
+import com.vitorpamplona.amethyst.commons.resources.routstr_balance_low
+import com.vitorpamplona.amethyst.commons.resources.routstr_tile_subtitle
+import com.vitorpamplona.amethyst.commons.resources.routstr_top_up
 import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.resources.show_password
+import com.vitorpamplona.amethyst.commons.routstr.RoutstrAccount
+import com.vitorpamplona.amethyst.commons.routstr.RoutstrFailure
+import com.vitorpamplona.amethyst.commons.routstr.RoutstrKeyBalance
 import com.vitorpamplona.amethyst.commons.ui.components.PillGood
 import com.vitorpamplona.amethyst.commons.ui.components.PillTextField
 import com.vitorpamplona.amethyst.commons.ui.components.PillTone
@@ -170,6 +178,10 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.rememberRoutstr
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.rememberRoutstrBalance
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.routstrErrorText
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.satsText
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
@@ -197,6 +209,7 @@ fun AgentKeysSettingsScreen(
         onDispose { release() }
     }
     var adding by remember { mutableStateOf(false) }
+    val routstr = rememberRoutstr(accountViewModel)
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.agent_keys_title), nav) },
@@ -220,6 +233,8 @@ fun AgentKeysSettingsScreen(
                     onAdd = { adding = !adding },
                     onMakePreferred = { key -> editor.submit(AgentKeyEditKind.MAKE_DEFAULT, key) },
                     onRemove = { key -> editor.submit(AgentKeyEditKind.REMOVE, key) },
+                    routstr = routstr,
+                    onTopUp = { key -> nav.nav(Route.RoutstrSetup(topUpUrl = key.url, topUpMask = AgentProviderPresets.maskKey(key.key))) },
                 )
             }
 
@@ -230,6 +245,7 @@ fun AgentKeysSettingsScreen(
                 onConnectOpenRouter = { donePage, openBrowser -> accountViewModel.httpClientBuilder.connectOpenRouter(donePage, openBrowser = openBrowser) },
                 onSave = { key -> editor.submit(AgentKeyEditKind.SAVE, key) },
                 onSaved = { adding = false },
+                onRoutstr = { nav.nav(Route.RoutstrSetup()) },
                 saving = edit.isBusyWith(AgentKeyEditKind.SAVE),
                 busy = edit.isBusy,
                 compactStart = keys.isEmpty() && !adding,
@@ -365,6 +381,8 @@ private fun SavedKeys(
     onAdd: () -> Unit,
     onMakePreferred: (AgentKeyTag) -> Unit,
     onRemove: (AgentKeyTag) -> Unit,
+    routstr: RoutstrAccount?,
+    onTopUp: (AgentKeyTag) -> Unit,
 ) {
     var confirmRemoval by remember { mutableStateOf<AgentKeyTag?>(null) }
 
@@ -408,6 +426,7 @@ private fun SavedKeys(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
+                        RoutstrKeyBalanceLine(routstr, key, onTopUp)
                     }
                     // The row an edit is about spins; every row waits for it, as the screen saves one edit at a time.
                     if (edit is AgentKeyEditState.Busy && AgentKeyEdits.sameUrl(edit.url, key.url)) {
@@ -483,6 +502,8 @@ private fun AddAgentKey(
     onConnectOpenRouter: suspend (donePageText: String, openBrowser: (String) -> Unit) -> OpenRouterConnectResult,
     onSave: (AgentKeyTag) -> Deferred<AgentKeyEditState>?,
     onSaved: () -> Unit,
+    /** Routstr has its own flow: a node picker and a key bought in sats, not a pasted key. */
+    onRoutstr: () -> Unit,
     /** A save is on its way: the button says "Saving…". */
     saving: Boolean,
     /** Any edit is on its way (one at a time): the button waits. */
@@ -515,6 +536,7 @@ private fun AddAgentKey(
     val canSave = canCheck && !testing && result != null && result !is AgentKeyProbeResult.Rejected && !busy
 
     fun select(next: AgentProviderPreset) {
+        if (next.id == RoutstrAccount.ROUTSTR_PRESET) return onRoutstr()
         preset = next
         url = next.url
         key = ""
@@ -887,6 +909,8 @@ private fun ProviderTile(
                 Text(name, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (preset == AgentProviderPresets.OPENROUTER) {
                     Text(stringRes(Res.string.agent_keys_recommended), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, maxLines = 1)
+                } else if (preset.id == RoutstrAccount.ROUTSTR_PRESET) {
+                    Text(stringRes(Res.string.routstr_tile_subtitle), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
             }
         }
@@ -935,5 +959,48 @@ private fun checkCaption(
                 else -> stringRes(Res.string.agent_keys_unreachable)
             },
         )
+    }
+}
+
+/**
+ * Under a Routstr key: its balance in sats, asked for when the screen opens, a warning when it
+ * may not cover the Observer's next paper, and Top up. Nothing for any other key.
+ */
+@Composable
+private fun RoutstrKeyBalanceLine(
+    routstr: RoutstrAccount?,
+    key: AgentKeyTag,
+    onTopUp: (AgentKeyTag) -> Unit,
+) {
+    val balance = rememberRoutstrBalance(routstr, key) ?: return
+    var low by remember(key) { mutableStateOf(false) }
+    LaunchedEffect(balance) {
+        low = routstr != null && balance is RoutstrKeyBalance.Known && routstr.isLow(key, balance.balance)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        when (balance) {
+            RoutstrKeyBalance.Loading -> CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 2.dp)
+            is RoutstrKeyBalance.Known ->
+                Text(
+                    satsText(balance.balance.balanceSats),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (low) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                )
+            is RoutstrKeyBalance.Failed ->
+                Text(
+                    if (balance.error.failure == RoutstrFailure.KEY_NOT_FOUND || balance.error.failure == RoutstrFailure.INVALID_KEY) routstrErrorText(balance.error) else stringRes(Res.string.routstr_balance_failed),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+        }
+        TextButton(onClick = { onTopUp(key) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
+            Text(stringRes(Res.string.routstr_top_up), style = MaterialTheme.typography.labelLarge)
+        }
+    }
+    if (low) {
+        Text(stringRes(Res.string.routstr_balance_low), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
     }
 }

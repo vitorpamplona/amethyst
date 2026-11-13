@@ -9724,4 +9724,150 @@
     <string name="front_page_reason_insecure">The key's address isn't https.</string>
     <string name="front_page_reason_not_ready">Your rankings aren't ready yet.</string>
     <string name="front_page_reason_refused">The edition didn't pass the check.</string>
+    <!-- Routstr: AI paid in sats -->
+    <string name="routstr_title">Routstr</string>
+    <string name="routstr_tile_subtitle">Pay in sats</string>
+    <string name="routstr_tagline">AI paid in sats, by Lightning or Cashu. Pick a node, get a key, and The Observer prints with it.</string>
+    <string name="routstr_pick_node">Pick a node</string>
+    <string name="routstr_search_nodes">Search nodes</string>
+    <string name="routstr_loading_nodes">Looking for Routstr nodes…</string>
+    <string name="routstr_no_nodes">No Routstr nodes found.</string>
+    <string name="routstr_nodes_failed">Couldn't read the Routstr nodes.</string>
+    <plurals name="routstr_show_stale">
+        <item quantity="one">Show %1$d not seen this week</item>
+        <item quantity="other">Show %1$d not seen this week</item>
+    </plurals>
+    <string name="routstr_hide_stale">Hide nodes not seen this week</string>
+    <string name="routstr_enter_url">Enter a node URL</string>
+    <string name="routstr_url_placeholder">https://node.example</string>
+    <string name="routstr_url_open">Open</string>
+    <string name="routstr_url_not_node">That address isn't a Routstr node, or it isn't https.</string>
+    <string name="routstr_seen_today">Seen today</string>
+    <plurals name="routstr_seen_days">
+        <item quantity="one">Seen %1$d day ago</item>
+        <item quantity="other">Seen %1$d days ago</item>
+    </plurals>
+    <string name="routstr_version">v%1$s</string>
+    <plurals name="routstr_mints_count">
+        <item quantity="one">%1$d mint</item>
+        <item quantity="other">%1$d mints</item>
+    </plurals>
+    <string name="routstr_models_none">Models: —</string>
+    <string name="routstr_models_list">Models: %1$s</string>
+    <string name="routstr_badge_https">https</string>
+    <string name="routstr_badge_onion">onion</string>
+    <string name="routstr_onion_only">This node has only an onion address. A saved key needs an https one, so keys can't be bought here.</string>
+    <string name="routstr_verified">Verified</string>
+    <string name="routstr_verified_hint">The node's own key matches the one that announced it.</string>
+    <string name="routstr_mismatch">Not verified: the node answers under another key than the one that announced it.</string>
+    <string name="routstr_unknown">Couldn't confirm this node.</string>
+    <string name="routstr_typed">Not announced on Nostr: you typed its address.</string>
+    <string name="routstr_models_title">Models</string>
+    <string name="routstr_models_loading">Reading prices…</string>
+    <string name="routstr_models_failed">Couldn't read this node's models.</string>
+    <plurals name="routstr_edition_sats">
+        <item quantity="one">≈ %1$s sat per edition</item>
+        <item quantity="other">≈ %1$s sats per edition</item>
+    </plurals>
+    <plurals name="routstr_reserve_sats">
+        <item quantity="one">reserves %1$s sat</item>
+        <item quantity="other">reserves %1$s sats</item>
+    </plurals>
+    <string name="routstr_model_disabled">Off on this node</string>
+    <plurals name="routstr_sats">
+        <item quantity="one">%1$s sat</item>
+        <item quantity="other">%1$s sats</item>
+    </plurals>
+    <string name="routstr_get_key">Get a key</string>
+    <string name="routstr_have_key">I have a key</string>
+    <string name="routstr_top_up_title">Top up %1$s</string>
+    <string name="routstr_amount_title">How much?</string>
+    <string name="routstr_amount_custom">Custom</string>
+    <string name="routstr_amount_placeholder">Amount in sats</string>
+    <plurals name="routstr_amount_under_reserve">
+        <item quantity="one">%1$s needs %2$s sat reserved for each request: this amount can't run it.</item>
+        <item quantity="other">%1$s needs %2$s sats reserved for each request: this amount can't run it.</item>
+    </plurals>
+    <string name="routstr_make_invoice">Make a Lightning invoice</string>
+    <string name="routstr_pay_with_wallet">Pay with your wallet</string>
+    <string name="routstr_paying">Paying…</string>
+    <string name="routstr_paid_by_wallet">Your wallet paid. Waiting for the node…</string>
+    <string name="routstr_pay_failed">Your wallet didn't pay: %1$s</string>
+    <string name="routstr_open_wallet">Open in wallet</string>
+    <string name="routstr_copy_invoice">Copy invoice</string>
+    <string name="routstr_waiting_payment">Waiting for the payment…</string>
+    <string name="routstr_key_saved">Your key is saved. The Observer can print with it.</string>
+    <string name="routstr_topped_up">Topped up.</string>
+    <string name="routstr_expired">The invoice expired before it was paid. Nothing was spent.</string>
+    <string name="routstr_paid_no_key">Paid. Waiting for the node to hand over the key…</string>
+    <string name="routstr_key_not_saved">Your key was bought but not saved yet.</string>
+    <string name="routstr_show_key">Show key</string>
+    <string name="routstr_show_key_warning">Anyone with this key can spend its balance. Show it only to copy it somewhere safe.</string>
+    <string name="routstr_or_cashu">Or pay with Cashu</string>
+    <string name="routstr_pay_cashu_wallet">Pay from your Cashu wallet (%1$s)</string>
+    <string name="routstr_cashu_placeholder">Paste a Cashu token (cashuB…)</string>
+    <string name="routstr_cashu_use">Use this token</string>
+    <string name="routstr_token_not_taken">The node didn't take the token, or its answer was lost. The token is still yours: send it again (the same token gives the same key) or copy it.</string>
+    <string name="routstr_token_returned">The node didn't take the token. It went back to your Cashu wallet.</string>
+    <string name="routstr_send_again">Send again</string>
+    <string name="routstr_copy_token">Copy token</string>
+    <plurals name="routstr_change_unclaimed">
+        <item quantity="one">The node returned %1$s sat of change your wallet couldn't take. Copy it into a Cashu wallet.</item>
+        <item quantity="other">The node returned %1$s sats of change your wallet couldn't take. Copy it into a Cashu wallet.</item>
+    </plurals>
+    <string name="routstr_forget_change">I copied it</string>
+    <string name="routstr_key_placeholder">sk-…</string>
+    <string name="routstr_key_is_cashu">That's a Cashu token, which is money, not a key: anyone who can read your saved keys could spend it.</string>
+    <string name="routstr_turn_token_into_key">Turn this token into a key instead</string>
+    <plurals name="routstr_key_works">
+        <item quantity="one">Works · %1$s sat left</item>
+        <item quantity="other">Works · %1$s sats left</item>
+    </plurals>
+    <string name="routstr_checking_key">Checking the key…</string>
+    <string name="routstr_top_up">Top up</string>
+    <string name="routstr_balance_failed">Couldn't read the balance</string>
+    <string name="routstr_balance_low">Your Routstr balance may not cover the next paper.</string>
+    <string name="routstr_balance_low_schedule">Your Routstr balance may not cover tomorrow's paper</string>
+    <string name="routstr_pending_title">On its way</string>
+    <plurals name="routstr_pending_invoice">
+        <item quantity="one">Invoice for %1$s sat at %2$s, not paid yet</item>
+        <item quantity="other">Invoice for %1$s sats at %2$s, not paid yet</item>
+    </plurals>
+    <string name="routstr_pending_paid">Paid at %1$s: waiting for the key</string>
+    <string name="routstr_pending_key">A key from %1$s was bought but not saved yet</string>
+    <string name="routstr_show_invoice">Show</string>
+    <string name="routstr_card_use">Use for The Observer</string>
+    <string name="routstr_done">Done</string>
+    <string name="routstr_all_nodes">All nodes</string>
+    <string name="routstr_reveal">Show it</string>
+    <string name="routstr_err_insufficient_plain">Your Routstr balance is too low for this model: top it up.</string>
+    <string name="routstr_err_key_not_found">This key isn't on this node.</string>
+    <string name="routstr_err_invalid_key">The key was rejected.</string>
+    <string name="routstr_err_key_expired">This key has expired.</string>
+    <string name="routstr_err_upstream">The node's AI provider is down. Nothing was spent: try later, or another node.</string>
+    <string name="routstr_err_rate">The node's AI provider is limiting requests. Try again in a minute.</string>
+    <string name="routstr_err_settlement">The node charged for the request but withheld the answer. It won't be sent again on its own.</string>
+    <string name="routstr_err_token">The node didn't take this Cashu token: spent, or from a mint it doesn't accept.</string>
+    <string name="routstr_err_not_found">The node doesn't know this invoice.</string>
+    <string name="routstr_err_unexpected">The node answered in a way Amethyst doesn't understand.</string>
+    <string name="routstr_err_unreachable">Couldn't reach the node.</string>
+    <string name="routstr_err_unsupported">Routstr isn't available on this platform yet.</string>
+    <string name="routstr_err_http">The node answered with an error (%1$d).</string>
+    <string name="routstr_err_not_kept">This device couldn't keep the invoice, so it wasn't shown. Nothing was spent.</string>
+    <plurals name="routstr_err_insufficient">
+        <item quantity="one">Your Routstr balance is too low for this model: top up %1$s sat.</item>
+        <item quantity="other">Your Routstr balance is too low for this model: top up %1$s sats.</item>
+    </plurals>
+    <string name="front_page_fail_low_balance">Your Routstr balance is too low for this model: top it up.</string>
+    <plurals name="front_page_fail_low_balance_sats">
+        <item quantity="one">Your Routstr balance is too low for this model: top up %1$s sat.</item>
+        <item quantity="other">Your Routstr balance is too low for this model: top up %1$s sats.</item>
+    </plurals>
+    <string name="front_page_fail_key_not_on_node">Your Routstr key isn't on that node: a key works only where it was bought.</string>
+    <string name="front_page_fail_upstream_down">The Routstr node's AI provider is down. Nothing was spent: try later, or another node.</string>
+    <string name="front_page_fail_settlement">The Routstr node charged for the paper but withheld it. It won't be printed again on its own.</string>
+    <string name="front_page_reason_low_balance">The Routstr balance is too low.</string>
+    <string name="front_page_reason_key_not_on_node">The key isn't on that node.</string>
+    <string name="front_page_reason_upstream_down">The node's provider is down.</string>
+    <string name="front_page_reason_settlement">The node charged and withheld the answer.</string>
 </resources>

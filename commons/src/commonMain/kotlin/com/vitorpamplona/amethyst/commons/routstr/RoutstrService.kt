@@ -25,12 +25,14 @@ import com.vitorpamplona.amethyst.commons.agents.AgentProviderPresets
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditKind
 import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditState
+import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.SyncedSchedule
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletWalletGateway
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip5aStaticWebsites.observer.ObserverParams
 import com.vitorpamplona.quartz.nip60Cashu.p2pk.anyP2pkLocked
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenB64Parser
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
@@ -242,6 +244,35 @@ class RoutstrAccount(
 
     /** The models [key]'s node lists, with sats prices. */
     suspend fun models(key: AgentKeyTag): List<RoutstrModel> = api.models(baseFor(key), key.key.ifEmpty { null })
+
+    private val modelCache = MutableStateFlow<Map<AgentKeyTag, List<RoutstrModel>>>(emptyMap())
+
+    /** [models], asked once per run per key; null when the node didn't answer. */
+    suspend fun cachedModels(key: AgentKeyTag): List<RoutstrModel>? {
+        modelCache.value[key]?.let { return it }
+        return try {
+            models(key).also { list -> modelCache.update { it + (key to list) } }
+        } catch (e: RoutstrException) {
+            null
+        }
+    }
+
+    /** The Observer's model (the schedule's `model` param), when this device has read the schedule. */
+    fun observerModel(): String? = (account.observerSchedule.flow.value as? SyncedSchedule.Readable)?.task?.let(ObserverParams::model)
+
+    /**
+     * Whether [balance] may not cover one edition with the Observer's model at [key]'s node: under
+     * its `max_cost` reserve or its edition estimate. Unknown model, unknown answer: false.
+     */
+    suspend fun isLow(
+        key: AgentKeyTag,
+        balance: RoutstrBalance,
+    ): Boolean {
+        val wanted = observerModel()
+        val models = cachedModels(key) ?: return false
+        val model = models.firstOrNull { it.id == wanted } ?: return false
+        return RoutstrPricing.isLow(balance.balanceMsats, model.sats, RoutstrSetupViewModel.editionSats(model))
+    }
 
     // --- Wallets -------------------------------------------------------------------------
 
