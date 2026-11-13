@@ -141,7 +141,7 @@ class RoutstrAccount(
                 if (current !is RoutstrNodeList.Loaded) _nodes.value = RoutstrNodeList.Loading
                 _nodes.value =
                     try {
-                        val events = account.client.fetchRoutstrNodes(maxAge = RoutstrNodes.LISTED_MAX_AGE)
+                        val events = account.client.fetchRoutstrNodes()
                         // Kept in the cache too, so a note that quotes one finds it.
                         events.forEach { account.cache.justConsume(it, null, false) }
                         val merged = (events.filterIsInstance<RoutstrNodeEvent>() + (current as? RoutstrNodeList.Loaded)?.events.orEmpty())

@@ -142,7 +142,7 @@ object RoutstrNodes {
     /**
      * The picker's nodes from the announcements: the newest per address, only nodes with an
      * endpoint this client may call ([torEnabled] admits onion-only ones), none older than
-     * [LISTED_MAX_AGE] (a month), the freshest first, then by name. [RoutstrNodePicks.stale] are
+     * [RoutstrNodeEvent.LISTED_MAX_AGE] (a month, [RoutstrNodeEvent.isListed]), the freshest first, then by name. [RoutstrNodePicks.stale] are
      * the ones not seen this week, which the picker keeps behind "Show N not seen this week": live
      * nodes that still answer have announced 7.6 days ago.
      */
@@ -161,7 +161,7 @@ object RoutstrNodes {
         val listed =
             newest.values
                 .asSequence()
-                .filter { it.isFresh(now, LISTED_MAX_AGE) }
+                .filter { it.isListed(now) }
                 .filter { it.usableEndpoints(torEnabled).isNotEmpty() }
                 .map(RoutstrNode::from)
                 .sortedWith(compareByDescending<RoutstrNode> { it.lastSeen / DAY }.thenBy { it.displayName.lowercase() })
@@ -169,9 +169,6 @@ object RoutstrNodes {
         val (fresh, stale) = listed.partition { it.isFresh(now) }
         return RoutstrNodePicks(fresh, stale)
     }
-
-    /** Nodes not seen for longer than this are not listed at all: a month, in seconds. */
-    const val LISTED_MAX_AGE: Long = 30 * 24 * 60 * 60L
 
     /** Every word of [query] in the node's name, about or address, ignoring case. */
     fun matches(
@@ -193,14 +190,15 @@ object RoutstrNodes {
 }
 
 /**
- * The node announcements (kind 38421) on [relays], from the last [maxAge] seconds unless
- * [maxAge] is null: one `fetchAll`, no node contacted.
+ * The node announcements (kind 38421) on [relays] that a node list can show
+ * ([RoutstrDiscovery.listedFilter]: the last [RoutstrNodeEvent.LISTED_MAX_AGE]), or every one
+ * when [listedOnly] is false: one `fetchAll`, no node contacted.
  */
 suspend fun INostrClient.fetchRoutstrNodes(
     relays: List<NormalizedRelayUrl> = RoutstrDiscovery.DEFAULT_RELAYS,
-    maxAge: Long? = null,
+    listedOnly: Boolean = true,
     idleTimeoutMs: Long = 8_000L,
 ): List<Event> {
-    val filter = RoutstrDiscovery.filter(since = maxAge?.let { TimeUtils.now() - it })
+    val filter = if (listedOnly) RoutstrDiscovery.listedFilter(TimeUtils.now()) else RoutstrDiscovery.filter()
     return fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = idleTimeoutMs)
 }

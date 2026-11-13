@@ -72,7 +72,7 @@ class RoutstrDiscoveryTest {
         assertEquals(all.sortedByDescending { it.lastSeen / 86_400 }.map { it.lastSeen / 86_400 }, all.map { it.lastSeen / 86_400 })
         assertTrue(clear.fresh.all { it.isFresh(now) })
         assertTrue(clear.stale.none { it.isFresh(now) })
-        assertTrue(all.all { now - it.lastSeen <= RoutstrNodes.LISTED_MAX_AGE })
+        assertTrue(all.all { now - it.lastSeen <= RoutstrNodeEvent.LISTED_MAX_AGE })
     }
 
     @Test
