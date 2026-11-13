@@ -40,15 +40,15 @@ class EditorialBriefTest {
     @Test
     fun theBriefCarriesNoCorrectionsThatContradictIt() {
         // Folded into the body: no stacked corrections, no promise the app does not keep.
-        listOf("Corrections for this harness", "Step 5", "both light and dark themes", "og:title", "twitter:", "UTC", "NO CONTINUITY", "thrown away", "second refusal").forEach {
+        listOf("Corrections for this harness", "Step 5", "both light and dark themes", "og:title", "twitter:", "UTC", "NO CONTINUITY", "thrown away", "second refusal", "jumble", "njump", "zap.stream", "shopstr").forEach {
             assertFalse(EDITORIAL_BRIEF.contains(it), it)
         }
-        listOf("Vol. I · No. N", "<style id=\"house\"></style>", "<!-- sections:", "Every `<img>` has an `alt`", "Never describe a picture you have not seen", "a quote that fails is sent back to you to fix", "## The Kitchen", "Never invent a quantity").forEach {
+        listOf("Vol. I · No. N", "<style id=\"house\"></style>", "<!-- sections:", "Every `<img>` has an `alt`", "Never describe a picture you have not seen", "a quote that fails is sent back to you to fix", "## The Kitchen", "Never invent a quantity", "<CITE_BASE><64-hex-event-id>", "<PROFILE_BASE><64-hex>").forEach {
             assertTrue(EDITORIAL_BRIEF.contains(it), it)
         }
     }
 
     companion object {
-        const val BRIEF_SHA256 = "1365bb77c9a319f20d1d47d5b6e841c8b6376f51edc5c509cc95f6ecb1a8e794"
+        const val BRIEF_SHA256 = "f3b16ee788ba8d859dfeb349c94c7facbf7158eaa02d5151ee94618972b24792"
     }
 }

@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.commons.frontpage
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -153,16 +156,6 @@ object JsoupPaperBoundary : PaperBoundary {
 
     // --- links -----------------------------------------------------------------
 
-    /**
-     * The one shape a citation may take after resolve: a jumble.social nevent naming an
-     * event we read. DECODED, not captured: a regex once allowed `nevent1…` in a branch
-     * that captured nothing, so every such link compared against the empty string.
-     */
-    private val PERMALINK = Regex("^https://jumble\\.social/notes/(nevent1[0-9a-zA-Z]+)(?:[/?#].*)?$", RegexOption.IGNORE_CASE)
-    private val JUMBLE_HEX = Regex("^https://jumble\\.social/notes/([0-9a-fA-F]{64})(?:[/?#].*)?$")
-    private val NJUMP_HEX = Regex("^https://njump\\.me/([0-9a-fA-F]{64})(?:[/?#].*)?$")
-    private val NEVENT_ANY = Regex("^https://(?:jumble\\.social/notes/|njump\\.me/)(nevent1[0-9a-zA-Z]+)", RegexOption.IGNORE_CASE)
-
     /** What a browser does to an attribute URL before it parses it: C0 and spaces trimmed, tabs and newlines gone. */
     fun cleanUrl(raw: String): String =
         raw
@@ -174,28 +167,17 @@ object JsoupPaperBoundary : PaperBoundary {
     /** A same-document `#fragment`. */
     fun isFragment(raw: String) = cleanUrl(raw).startsWith("#")
 
-    fun toPermalink(eventId: HexKey) = "https://jumble.social/notes/${toNevent(eventId)}"
-
-    fun permalinkTarget(href: String): HexKey? = PERMALINK.find(href)?.let { fromNevent(it.groupValues[1]) }
-
-    private fun citedEventId(href: String): HexKey? =
-        permalinkTarget(href)
-            ?: JUMBLE_HEX
-                .find(href)
-                ?.groupValues
-                ?.get(1)
-                ?.lowercase()
-            ?: NJUMP_HEX
-                .find(href)
-                ?.groupValues
-                ?.get(1)
-                ?.lowercase()
-            ?: NEVENT_ANY.find(href)?.let { fromNevent(it.groupValues[1]) }
-
-    private class DeskIndex(
-        val byId: Map<String, Event>,
-        val byAddress: Map<String, Event>,
-    )
+    /** The corpus's events by id, and its addressable ones by `kind:pubkey:d`. */
+    private class LinkIndex(
+        corpus: Corpus,
+    ) {
+        val byId: Map<String, Event> = corpus.events.associateBy { it.id.lowercase() }
+        val byAddress: Map<String, Event> =
+            corpus.events
+                .filter { PaperLinkSet.addressOf(it) != null }
+                .associateBy { addressKey(it.kind, it.pubKey, it.firstTagValue("d")) }
+        val authors: Set<String> = corpus.events.mapTo(HashSet()) { it.pubKey.lowercase() }
+    }
 
     private fun addressKey(
         kind: Int,
@@ -203,71 +185,55 @@ object JsoupPaperBoundary : PaperBoundary {
         identifier: String?,
     ) = "$kind:${pubkey.lowercase()}:$identifier"
 
-    /** The corpus indexed per desk link. The kind is in the address key, so 31922 and 31923 never answer for each other. */
-    private fun index(corpus: Corpus): Map<String, DeskIndex> =
-        DESK_LINKS.mapValues { (_, link) ->
-            val list = corpus.events.filter { link.canonicalUrlOrNull(it) != null }
-            DeskIndex(
-                list.associateBy { it.id.lowercase() },
-                list.associateBy { addressKey(it.kind, it.pubKey, it.firstTagValue("d")) },
-            )
+    /**
+     * The event an ENCODED citation in [links] names, if this edition read it: an nevent (or note)
+     * for an event that has no address, an naddr matching the kind, pubkey and `d` of one that
+     * has. DECODED, not captured: a regex once allowed `nevent1…` in a branch that captured
+     * nothing. An nevent for an addressable event would freeze one revision of it: not accepted.
+     */
+    private fun citedTarget(
+        href: String,
+        links: PaperLinkSet,
+        index: LinkIndex,
+    ): Event? =
+        when (val entity = links.cited(href)) {
+            is NEvent -> index.byId[entity.hex.lowercase()]?.takeIf { PaperLinkSet.addressOf(it) == null }
+            is NNote -> index.byId[entity.hex.lowercase()]?.takeIf { PaperLinkSet.addressOf(it) == null }
+            is NAddress -> index.byAddress[addressKey(entity.kind, entity.author, entity.dTag)]
+            else -> null
         }
 
-    /**
-     * Event id if [href] is a verified canonical link to an event we read on desk [key]:
-     * the naddr must decode to the kind + pubkey + d-tag of a corpus event, not merely
-     * appear in somebody's post. The writer form is not accepted here: resolve encodes it,
-     * and refusing it afterwards makes a regression there fail closed.
-     */
-    private fun deskLinkTarget(
-        key: String,
+    /** The event a writer's or an encoded citation names, any revision form, for resolve to re-encode. */
+    private fun anyCitedEvent(
         href: String,
-        index: Map<String, DeskIndex>,
-    ): HexKey? {
-        val link = DESK_LINKS.getValue(key)
-        val naddr = link.naddr.find(href) ?: return null
-        val address = fromNaddr(naddr.groupValues[1]) ?: return null
-        if (address.kind !in link.kinds) return null
-        return index.getValue(key).byAddress[addressKey(address.kind, address.pubkey, address.identifier)]?.id
-    }
-
-    private fun deskWriterTarget(
-        key: String,
-        href: String,
-        index: Map<String, DeskIndex>,
-    ): HexKey? {
-        val id =
-            DESK_LINKS
-                .getValue(key)
-                .writer
-                .find(href)
-                ?.groupValues
-                ?.get(1)
-                ?.lowercase() ?: return null
-        return id.takeIf { index.getValue(key).byId.containsKey(it) }
+        links: PaperLinkSet,
+        index: LinkIndex,
+    ): Event? {
+        links.writerCited(href)?.let { return index.byId[it] }
+        return when (val entity = links.cited(href)) {
+            is NEvent -> index.byId[entity.hex.lowercase()]
+            is NNote -> index.byId[entity.hex.lowercase()]
+            is NAddress -> index.byAddress[addressKey(entity.kind, entity.author, entity.dTag)]
+            else -> null
+        }
     }
 
     /**
      * The author a byline link names, if they wrote a post this edition read: the writer's form
-     * names them by one of their event ids (or, leniently, by their pubkey hex), the canonical
-     * form by npub. Anyone else is not the paper's to link, however they were named.
+     * names them by one of their event ids (or, leniently, by their pubkey hex), the encoded form
+     * by npub. Anyone else is not the paper's to link, however they were named.
      */
     private fun profileTarget(
         href: String,
-        byId: Map<String, Event>,
-        authors: Set<String>,
+        links: PaperLinkSet,
+        index: LinkIndex,
     ): HexKey? {
-        PROFILE_LINK.find(href)?.let { found -> return fromNpub(found.groupValues[1])?.takeIf { it in authors } }
-        val hex =
-            PROFILE_WRITER
-                .find(href)
-                ?.groupValues
-                ?.get(1)
-                ?.lowercase() ?: return null
-        return byId[hex]?.pubKey?.lowercase() ?: hex.takeIf { it in authors }
+        links.profiled(href)?.let { return it.lowercase().takeIf { key -> key in index.authors } }
+        val hex = links.writerProfile(href) ?: return null
+        return index.byId[hex]?.pubKey?.lowercase() ?: hex.takeIf { it in index.authors }
     }
 
-    /** Jumble is a source citation, not a page the paper should be replaced by. */
+    /** A citation or a byline is a source, not a page the paper should be replaced by. */
     private fun openInNewTab(anchor: Element) {
         anchor.attr("target", "_blank")
         val rel =
@@ -292,7 +258,6 @@ object JsoupPaperBoundary : PaperBoundary {
     ): List<ResolveChange> {
         val changes = mutableListOf<ResolveChange>()
         val byId = corpus.art.associateBy { it.id }
-        val eventIds = corpus.events.mapTo(HashSet()) { it.id }
 
         for (img in doc.select("img")) {
             val id = cleanUrl(img.attr("src"))
@@ -307,17 +272,15 @@ object JsoupPaperBoundary : PaperBoundary {
             }
         }
 
-        // The paper prints addresses; it does not make them clickable — except citations
-        // and the verified zap.stream / Shopstr / njump-calendar links.
-        val index = index(corpus)
-        val eventsById = corpus.events.associateBy { it.id.lowercase() }
-        val authors = corpus.events.mapTo(HashSet()) { it.pubKey.lowercase() }
+        // The paper prints addresses; it does not make them clickable, except citations of the
+        // events it read and bylines of their authors, in the app's own link set.
+        val links = corpus.links
+        val index = LinkIndex(corpus)
         for (anchor in doc.select("a[href]")) {
             val raw = anchor.attr("href")
             if (isFragment(raw)) continue
             // Judged by where a browser would go: ` javascript:`, `java&#9;script:` and `//host` are links too.
             val url = cleanUrl(raw)
-            val id = citedEventId(url)
 
             fun keep(
                 canonical: String,
@@ -330,23 +293,14 @@ object JsoupPaperBoundary : PaperBoundary {
                 openInNewTab(anchor)
             }
 
-            val desk =
-                DESK_LINKS.keys.firstNotNullOfOrNull { key ->
-                    val eventId = deskWriterTarget(key, url, index) ?: deskLinkTarget(key, url, index)
-                    eventId?.let { index.getValue(key).byId[it.lowercase()] }?.let { DESK_LINKS.getValue(key) to it }
-                } ?: id?.let { index.getValue("calendar").byId[it] }?.let { DESK_LINKS.getValue("calendar") to it }
-            val deskUrl = desk?.let { (link, event) -> link.canonicalUrlOrNull(event) }
-            if (desk != null && deskUrl != null) {
-                keep(deskUrl, desk.first.change)
-                continue
-            }
-            val author = profileTarget(url, eventsById, authors)
+            val author = profileTarget(url, links, index)
             if (author != null) {
-                keep(toProfileLink(author), ResolveChange.Kind.PROFILE)
+                keep(links.profile(author), ResolveChange.Kind.PROFILE)
                 continue
             }
-            if (id != null && id in eventIds) {
-                keep(toPermalink(id), ResolveChange.Kind.PERMALINK)
+            val event = anyCitedEvent(url, links, index)
+            if (event != null) {
+                keep(links.citation(event), if (PaperLinkSet.addressOf(event) != null) ResolveChange.Kind.ADDRESS else ResolveChange.Kind.PERMALINK)
                 continue
             }
             anchor.unwrap()
@@ -514,7 +468,6 @@ object JsoupPaperBoundary : PaperBoundary {
         doc: Document,
         corpus: Corpus,
         allowedImages: Set<String>,
-        index: Map<String, DeskIndex>,
         out: MutableList<Violation>,
     ) {
         for (img in doc.select("img")) {
@@ -523,20 +476,17 @@ object JsoupPaperBoundary : PaperBoundary {
             if (cleanUrl(src) !in allowedImages) out.add(Violation(Violation.Kind.IMAGE, "image source is not from the shortlist", src.take(120)))
         }
 
-        val eventIds = corpus.events.mapTo(HashSet()) { it.id.lowercase() }
-        val calendarIds = index.getValue("calendar").byId
-        val authors = corpus.events.mapTo(HashSet()) { it.pubKey.lowercase() }
+        val links = corpus.links
+        val index = LinkIndex(corpus)
         for (anchor in doc.select("a[href]")) {
             val raw = anchor.attr("href")
             if (isFragment(raw)) continue
             val href = cleanUrl(raw)
-            val id = permalinkTarget(href)
-            // A jumble nevent naming a CALENDAR listing is refused: it freezes one revision of
-            // an event whose nature is to be replaced. Resolve rewrites these to njump naddrs.
-            if (id != null && id in eventIds && !calendarIds.containsKey(id)) continue
-            if (DESK_LINKS.keys.any { deskLinkTarget(it, href, index) != null }) continue
-            // Bylines: only the canonical npub form, only for someone this edition read.
-            if (PROFILE_LINK.find(href)?.let { fromNpub(it.groupValues[1]) }?.let { it in authors } == true) continue
+            // Exactly the app's encoded forms: a citation of an event this edition read, a byline
+            // of its author. The writer's hex forms are resolve's to encode; a regression there
+            // fails closed here.
+            if (citedTarget(href, links, index) != null) continue
+            if (links.profiled(href)?.lowercase()?.let { it in index.authors } == true) continue
             // Presence in the corpus is evidence of NOTHING: the corpus is written by the
             // attacker too, so allowlisting its URLs once allowlisted a phishing link. Every
             // pattern above is anchored at `https://<host>/`, so `//host`, backslashes and
@@ -544,7 +494,7 @@ object JsoupPaperBoundary : PaperBoundary {
             out.add(
                 Violation(
                     Violation.Kind.LINK,
-                    "only source citations, author bylines, verified zap.stream watch links, Shopstr listing links, and njump calendar links may be links",
+                    "only citations of the posts this edition read and bylines of their authors may be links",
                     raw.take(120),
                 ),
             )
@@ -918,7 +868,7 @@ object JsoupPaperBoundary : PaperBoundary {
         val out = mutableListOf<Violation>()
         elementViolations(doc, out)
         cssViolations(doc, out)
-        urlViolations(doc, corpus, corpus.art.mapTo(HashSet()) { it.url }, index(corpus), out)
+        urlViolations(doc, corpus, corpus.art.mapTo(HashSet()) { it.url }, out)
         return out
     }
 

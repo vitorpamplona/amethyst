@@ -25,7 +25,8 @@ class ResolveChange(
     val kind: Kind,
     val detail: String,
 ) {
-    enum class Kind { RESOLVED, DROPPED, UNWRAPPED, PERMALINK, STREAM, LISTING, CALENDAR, PROFILE }
+    /** [PERMALINK] an nevent citation, [ADDRESS] an naddr one (a stream, listing, calendar entry, long-form post or recipe). */
+    enum class Kind { RESOLVED, DROPPED, UNWRAPPED, PERMALINK, ADDRESS, PROFILE }
 
     /** The page trying to do something the paper does not: the visible edge of an injection. */
     val noteworthy get() = kind == Kind.DROPPED || kind == Kind.UNWRAPPED

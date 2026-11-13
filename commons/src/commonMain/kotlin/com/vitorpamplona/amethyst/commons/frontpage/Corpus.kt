@@ -71,6 +71,8 @@ class Corpus(
     val overlap: Int,
     val profiles: Map<HexKey, Profile>,
     val art: List<Art>,
+    /** Where this app's citations and bylines point: what resolve writes and the boundary accepts. */
+    val links: PaperLinkSet = PaperLinkSet.JUMBLE,
 ) {
     /** Every desk event, never the control run: that measures the network, it is not the paper. */
     val events: List<Event> by lazy { desks.values.flatten() }
@@ -368,9 +370,6 @@ fun digest(
             val author = corpus.profiles[event.pubKey]?.name ?: shortNpub(event.pubKey)
             p("- [${event.id}] kind ${event.kind} · $author · ${clock.stamp(event.createdAt)}")
             if (!title.isNullOrEmpty()) p("  title: $title")
-            val link = DESK_LINKS[desk.key]
-            // Only an address that encodes gets a link: resolve could not verify any other.
-            if (link != null && link.canonicalUrlOrNull(event) != null) p("  ${link.line}: ${link.writerUrl(event.id)}")
             val facts = tagFacts(desk.key, event, corpus.profiles, excerptOf(desk.key))
             facts.forEach { p("  $it") }
             if (desk.key == "kitchen") corpus.art.firstOrNull { it.eventId == event.id }?.let { p("  picture: ${it.id}") }
@@ -414,6 +413,7 @@ fun assemble(
     desks: Map<String, List<Event>>,
     control: List<Event>,
     profiles: Map<HexKey, Profile>,
+    links: PaperLinkSet = PaperLinkSet.JUMBLE,
 ): Corpus {
     val rankedNoteIds = desks["notes"].orEmpty().mapTo(HashSet()) { it.id }
     return Corpus(
@@ -429,6 +429,7 @@ fun assemble(
         overlap = control.count { it.id in rankedNoteIds },
         profiles = profiles,
         art = shortlist(desks, profiles),
+        links = links,
     )
 }
 

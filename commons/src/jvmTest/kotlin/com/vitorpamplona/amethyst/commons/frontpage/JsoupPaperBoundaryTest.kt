@@ -100,11 +100,37 @@ class JsoupPaperBoundaryTest {
     }
 
     @Test
-    fun streamsAndCalendarListingsGetTheirHostsNaddr() {
-        val checked = run("<a href=\"https://zap.stream/stream/${id(4)}\">Watch</a> <a href=\"https://jumble.social/notes/${id(5)}\">Meetup</a>")
+    fun streamsAndCalendarListingsAreCitedByTheirAddress() {
+        val checked = run("<a href=\"https://jumble.social/notes/${id(4)}\">Watch</a> <a href=\"https://jumble.social/notes/${toNevent(id(5))}\">Meetup</a>")
         assertTrue(checked.violations.isEmpty())
-        assertTrue(checked.html.contains("https://zap.stream/naddr1"))
-        assertTrue(checked.html.contains("https://njump.me/naddr1"))
+        assertEquals(2, Regex("https://jumble\\.social/notes/naddr1").findAll(checked.html).count())
+        assertEquals(2, checked.changes.count { it.kind == ResolveChange.Kind.ADDRESS })
+        // An nevent for a replaceable event would freeze one revision: the check alone refuses it.
+        val doc = JsoupPaperBoundary.parsePage(page("<a href=\"https://jumble.social/notes/${toNevent(id(4))}\">x</a>"))
+        assertEquals(listOf(Violation.Kind.LINK), JsoupPaperBoundary.check(doc, corpus).violations.map { it.kind })
+    }
+
+    @Test
+    fun anotherAppsLinkSetResolvesAndValidates() {
+        val brainstorm = PaperLinkSet("https://brainstorm.world/e/", "https://brainstorm.world/p/")
+        val theirs = assemble(Fixtures.OBSERVER, "wss://search.brainstorm.world/", DEFAULT_TRUST_FLOOR, 1_794_182_400L, 1_794_268_800L, corpus.desks, emptyList(), corpus.profiles, brainstorm)
+        val checked =
+            JsoupPaperBoundary.resolveAndCheck(
+                page(
+                    "<a href=\"https://brainstorm.world/e/${id(1)}\">Source</a> <a href=\"https://brainstorm.world/e/${id(4)}\">Watch</a> " +
+                        "<a href=\"https://brainstorm.world/p/${id(2)}\">Bob</a> <a href=\"https://jumble.social/notes/${id(1)}\">elsewhere</a>",
+                ),
+                theirs,
+            )
+        assertEquals(emptyList(), checked.violations.map { it.detail })
+        assertTrue(checked.html.contains("https://brainstorm.world/e/${toNevent(id(1))}"))
+        assertTrue(checked.html.contains("https://brainstorm.world/e/naddr1"))
+        assertTrue(checked.html.contains("https://brainstorm.world/p/${npubOf(BOB)}"))
+        // Another app's host is the open web here: unwrapped, and refused by the check alone.
+        assertFalse(checked.html.contains("jumble.social"))
+        val doc = JsoupPaperBoundary.parsePage(page("<a href=\"https://jumble.social/notes/${toNevent(id(1))}\">x</a>"))
+        assertEquals(listOf(Violation.Kind.LINK), JsoupPaperBoundary.check(doc, theirs).violations.map { it.kind })
+        assertEquals("nostr:${toNevent(id(1))}", brainstorm.toNostrUri("https://brainstorm.world/e/${toNevent(id(1))}"))
     }
 
     @Test
@@ -242,10 +268,11 @@ class JsoupPaperBoundaryTest {
     fun anUnencodableDeskAddressNeverThrows() {
         val longD = event(9, 30311, tags = arrayOf(arrayOf("d", "x".repeat(300)), arrayOf("status", "live")))
         val big = Fixtures.corpus(mapOf("notes" to listOf(note), "live" to listOf(longD)))
-        val checked = JsoupPaperBoundary.resolveAndCheck(page("<a href=\"https://zap.stream/stream/${id(9)}\">Watch</a>"), big)
+        val checked = JsoupPaperBoundary.resolveAndCheck(page("<a href=\"https://jumble.social/notes/${id(9)}\">Watch</a>"), big)
         assertEquals(emptyList(), checked.violations.map { it.kind })
-        assertFalse(checked.html.contains("zap.stream"))
-        assertEquals(null, DESK_LINKS.getValue("live").canonicalUrlOrNull(longD))
+        // An address that won't encode is cited by its nevent instead.
+        assertTrue(checked.html.contains("https://jumble.social/notes/${toNevent(id(9))}"))
+        assertEquals(null, PaperLinkSet.addressOf(longD))
     }
 
     @Test

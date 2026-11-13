@@ -82,6 +82,7 @@ fun editionHeader(
         context.number?.let { add("Edition: Vol. I \u00b7 No. $it") }
         corpus?.let {
             val clock = context.clock
+            add(linksLine(it.links))
             add("Edition code: ${it.code}")
             add("Date: ${clock.date(it.until)}")
             add("Window: the 24 hours to ${clock.time(it.until)}, on the reader's clock (${clock.zoneLabel(it.until)}). Every time below is on that clock.")
@@ -119,7 +120,7 @@ fun repairMessage(violations: List<Violation>): String =
         add("")
         add("QUOTE: copy the words exactly from one event, or paraphrase without <q>/<blockquote>.")
         add("IMAGE: use <img src=\"art-N\"> ids from the shortlist only.")
-        add("LINK: only the citation, byline, watch, listing and calendar URL forms the brief allows.")
+        add("LINK: only the citation and byline forms the brief allows, on the two link bases you were given.")
         add("MARKUP: no scripts, forms, frames or handlers.")
         add("")
         add("Fix each one and send the whole corrected page back; nothing else about it needs to change. Keep <style id=\"house\"></style> empty: the app still puts the house stylesheet in.")

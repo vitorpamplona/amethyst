@@ -145,6 +145,8 @@ class FrontPagePress(
     private val probeIdleMs: Long = 15_000,
     private val now: () -> Long = { TimeUtils.now() },
     private val planTimeoutMs: Long = PLAN_TIMEOUT_MS,
+    /** Where this app's citations and bylines point ([PaperLinkSet]). */
+    private val links: PaperLinkSet = PaperLinkSet.JUMBLE,
 ) {
     private suspend fun ask(
         filter: Filter,
@@ -225,7 +227,7 @@ class FrontPagePress(
                     .awaitAll()
                     .flatten()
 
-            assemble(observer, relay.url, floor, since, until, desks, control.await(), profilesFrom(profiles))
+            assemble(observer, relay.url, floor, since, until, desks, control.await(), profilesFrom(profiles), links)
         }
 
     suspend fun print(

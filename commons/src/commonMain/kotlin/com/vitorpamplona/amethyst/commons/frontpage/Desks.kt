@@ -31,8 +31,8 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.Hex
 
 /*
- * What a front page is made of: the desks, the filters that read them, and the three
- * desks whose events get a real destination.
+ * What a front page is made of: the desks and the filters that read them. Where an event's
+ * link points is the app's ([PaperLinkSet]), the same for every desk.
  *
  * Ported from NosFabrica/the-nostr-observer @ 0901b92 (MIT, see ./LICENSE.observer):
  * `generator/.../nostr/Pull.kt` and `DeskLink.kt`, matched to Brainstorm's port
@@ -231,75 +231,8 @@ fun fromNpub(value: String): HexKey? {
     return entity.hex.lowercase().takeIf { isEventIdHex(it) }
 }
 
-/*
- * A byline's link to its author. Beyond the Observer, which prints names and links no one:
- * the digest gives the writer event ids and never pubkeys, so the writer names an author by
- * one of their posts ([PROFILE_WRITER]) and resolve turns it into the author's own npub page
- * ([PROFILE_LINK]). Only someone who wrote a post this edition read may be linked.
- */
-const val PROFILE_HOST_PATH = "https://jumble.social/users/"
-val PROFILE_WRITER = Regex("^https://jumble\\.social/users/([0-9a-fA-F]{64})(?:[/?#].*)?$")
-val PROFILE_LINK = Regex("^https://jumble\\.social/users/(npub1[0-9a-zA-Z]+)(?:[/?#].*)?$", RegexOption.IGNORE_CASE)
-
-fun toProfileLink(pubkey: HexKey) = PROFILE_HOST_PATH + npubOf(pubkey)
-
 /** What a person is called when they have published no name. Never hex. */
 fun shortNpub(hex: HexKey): String {
     val npub = npubOf(hex)
     return npub.take(10) + "…" + npub.takeLast(4)
 }
-
-/**
- * A desk whose events get a real destination. The digest hands the writer
- * [writerUrl] (event id hex on the host) and resolve re-encodes it to the host's naddr
- * page. Only events with a `d` tag qualify.
- */
-class DeskLink(
-    val kinds: Set<Int>,
-    /** The digest's line name (`watch:`), and resolve's name for an encoded link. */
-    val line: String,
-    val change: ResolveChange.Kind,
-    host: String,
-    writerPath: String,
-    naddrPath: String,
-) {
-    private val writerPrefix = "https://$host$writerPath"
-    private val naddrPrefix = "https://$host$naddrPath"
-    val writer = Regex("^" + Regex.escape(writerPrefix) + "([0-9a-fA-F]{64})(?:[/?#].*)?$", RegexOption.IGNORE_CASE)
-    val naddr = Regex("^" + Regex.escape(naddrPrefix) + "(naddr1[0-9a-zA-Z]+)(?:[/?#].*)?$", RegexOption.IGNORE_CASE)
-
-    fun writerUrl(eventId: String): String {
-        val id = eventId.lowercase()
-        require(isEventIdHex(id)) { "Not an event id" }
-        return writerPrefix + id
-    }
-
-    /**
-     * The host's naddr page for [event], or null when it has none: not this desk's kind, no `d`
-     * tag, or an address that won't encode (a `d` tag over 255 bytes). Never throws: the corpus
-     * is written by anyone, and nothing in resolve or check may fail on it.
-     */
-    fun canonicalUrlOrNull(event: Event): String? {
-        val d = event.firstTagValue("d") ?: return null
-        if (event.kind !in kinds || d.encodeToByteArray().size > 255) return null
-        val naddr =
-            try {
-                NAddress.createOrNull(event.kind, event.pubKey, d, emptyList())
-            } catch (e: Exception) {
-                null
-            } ?: return null
-        return naddrPrefix + naddr
-    }
-}
-
-/**
- * Live now to zap.stream, Classifieds to Shopstr, Calendar to njump. Calendar goes to
- * njump because jumble.social has no calendar view and an nevent would freeze one
- * revision of a replaceable event.
- */
-val DESK_LINKS: Map<String, DeskLink> =
-    linkedMapOf(
-        "live" to DeskLink(setOf(30311), "watch", ResolveChange.Kind.STREAM, "zap.stream", "/stream/", "/"),
-        "classifieds" to DeskLink(setOf(30402), "listing", ResolveChange.Kind.LISTING, "shopstr.store", "/listing/", "/listing/"),
-        "calendar" to DeskLink(setOf(31922, 31923), "calendar", ResolveChange.Kind.CALENDAR, "njump.me", "/", "/"),
-    )
