@@ -9357,4 +9357,24 @@
     <string name="media_kind_audio">Ljud</string>
     <string name="media_kind_pdf">PDF</string>
     <string name="media_type_and_size">%1$s · %2$s</string>
+    <string name="browser_download_ask">Spara %1$s från %2$s?</string>
+    <string name="browser_download_ask_size">Spara %1$s (%2$s) från %3$s?</string>
+    <string name="browser_download_done">%1$s har sparats</string>
+    <string name="browser_download_show_folder">Visa i mapp</string>
+    <string name="browser_download_stopped">%1$s laddades inte ner</string>
+    <string name="browser_downloading">Laddar ner %1$s</string>
+    <string name="media_servers_all_recommended_added">Alla rekommenderade servrar har lagts till</string>
+    <string name="napplet_desktop_engine_in_use">En annan instans av Amethyst använder webbläsarmotorn. Avsluta den och försök igen.</string>
+    <string name="napplet_desktop_engine_restart">Webbläsarmotorn startade inte. Starta om Amethyst för att försöka igen.</string>
+    <string name="tor_progress_channel_description">Visar hur långt Tor har kommit med anslutningen.</string>
+    <string name="tor_progress_channel_name">Tor-anslutningsförlopp</string>
+    <string name="tor_progress_downloading">Laddar ner Tor-nätverkets katalog: %1$d %</string>
+    <string name="tor_progress_downloading_unknown">Laddar ner Tor-nätverkets katalog</string>
+    <string name="tor_progress_notification_description">Visa en avisering med Tors startförlopp medan den ansluter</string>
+    <string name="tor_progress_notification_title">Tor-anslutningsförlopp</string>
+    <string name="tor_progress_ready">Tor är redo. Anslutningarna är nu privata.</string>
+    <string name="tor_progress_starting">Startar Tor-klienten</string>
+    <string name="tor_restart">Starta om Tor</string>
+    <string name="tor_use_applets_and_websites">Appletar och webbplatser</string>
+    <string name="tor_use_applets_and_websites_explainer">Tvinga Tor vid nerladdning av appletar och när nSites och webbplatser som du ännu inte har ställt in öppnas</string>
 </resources>

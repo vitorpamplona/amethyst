@@ -9359,4 +9359,24 @@
     <string name="media_kind_audio">Audio</string>
     <string name="media_kind_pdf">PDF</string>
     <string name="media_type_and_size">%1$s · %2$s</string>
+    <string name="browser_download_ask">%1$s von %2$s speichern?</string>
+    <string name="browser_download_ask_size">%1$s (%2$s) von %3$s speichern?</string>
+    <string name="browser_download_done">%1$s gespeichert</string>
+    <string name="browser_download_show_folder">Im Ordner anzeigen</string>
+    <string name="browser_download_stopped">%1$s wurde nicht heruntergeladen</string>
+    <string name="browser_downloading">%1$s wird heruntergeladen</string>
+    <string name="media_servers_all_recommended_added">Alle empfohlenen Server hinzugefügt</string>
+    <string name="napplet_desktop_engine_in_use">Eine andere Amethyst-Instanz verwendet die Browser-Engine. Beende sie und versuche es erneut.</string>
+    <string name="napplet_desktop_engine_restart">Die Browser-Engine wurde nicht gestartet. Starte Amethyst neu, um es erneut zu versuchen.</string>
+    <string name="tor_progress_channel_description">Zeigt an, wie weit Tor beim Verbinden ist.</string>
+    <string name="tor_progress_channel_name">Tor-Verbindungsfortschritt</string>
+    <string name="tor_progress_downloading">Tor-Netzwerkverzeichnis wird heruntergeladen: %1$d %</string>
+    <string name="tor_progress_downloading_unknown">Tor-Netzwerkverzeichnis wird heruntergeladen</string>
+    <string name="tor_progress_notification_description">Während des Verbindens eine Benachrichtigung mit dem Startfortschritt von Tor anzeigen</string>
+    <string name="tor_progress_notification_title">Tor-Verbindungsfortschritt</string>
+    <string name="tor_progress_ready">Tor ist bereit. Verbindungen sind jetzt privat.</string>
+    <string name="tor_progress_starting">Tor-Client wird gestartet</string>
+    <string name="tor_restart">Tor neu starten</string>
+    <string name="tor_use_applets_and_websites">Applets und Websites</string>
+    <string name="tor_use_applets_and_websites_explainer">Erzwinge Tor beim Herunterladen von Applets und beim Öffnen von nSites und Websites, die du noch nicht eingestellt hast</string>
 </resources>

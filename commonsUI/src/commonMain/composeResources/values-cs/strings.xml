@@ -9963,4 +9963,24 @@
     <string name="media_kind_audio">Zvuk</string>
     <string name="media_kind_pdf">PDF</string>
     <string name="media_type_and_size">%1$s · %2$s</string>
+    <string name="browser_download_ask">Uložit %1$s z %2$s?</string>
+    <string name="browser_download_ask_size">Uložit %1$s (%2$s) z %3$s?</string>
+    <string name="browser_download_done">Soubor %1$s byl uložen</string>
+    <string name="browser_download_show_folder">Zobrazit ve složce</string>
+    <string name="browser_download_stopped">Soubor %1$s nebyl stažen</string>
+    <string name="browser_downloading">Stahuje se %1$s</string>
+    <string name="media_servers_all_recommended_added">Všechny doporučené servery byly přidány</string>
+    <string name="napplet_desktop_engine_in_use">Prohlížečový engine používá jiná kopie Amethystu. Ukončete ji a zkuste to znovu.</string>
+    <string name="napplet_desktop_engine_restart">Prohlížečový engine se nespustil. Restartujte Amethyst a zkuste to znovu.</string>
+    <string name="tor_progress_channel_description">Ukazuje, jak daleko je Tor s připojováním.</string>
+    <string name="tor_progress_channel_name">Průběh připojení k Toru</string>
+    <string name="tor_progress_downloading">Stahování adresáře sítě Tor: %1$d %</string>
+    <string name="tor_progress_downloading_unknown">Stahování adresáře sítě Tor</string>
+    <string name="tor_progress_notification_description">Zobrazit oznámení s průběhem spouštění Toru během připojování</string>
+    <string name="tor_progress_notification_title">Průběh připojení k Toru</string>
+    <string name="tor_progress_ready">Tor je připraven. Připojení jsou nyní soukromá.</string>
+    <string name="tor_progress_starting">Spouštění klienta Tor</string>
+    <string name="tor_restart">Restartovat Tor</string>
+    <string name="tor_use_applets_and_websites">Applety a weby</string>
+    <string name="tor_use_applets_and_websites_explainer">Vynutit Tor při stahování appletů a otevírání nSites a webů, které jste ještě nenastavili</string>
 </resources>

@@ -9357,4 +9357,24 @@
     <string name="media_kind_audio">Áudio</string>
     <string name="media_kind_pdf">PDF</string>
     <string name="media_type_and_size">%1$s · %2$s</string>
+    <string name="browser_download_ask">Salvar %1$s de %2$s?</string>
+    <string name="browser_download_ask_size">Salvar %1$s (%2$s) de %3$s?</string>
+    <string name="browser_download_done">%1$s salvo</string>
+    <string name="browser_download_show_folder">Mostrar na pasta</string>
+    <string name="browser_download_stopped">%1$s não foi baixado</string>
+    <string name="browser_downloading">Baixando %1$s</string>
+    <string name="media_servers_all_recommended_added">Todos os servidores recomendados foram adicionados</string>
+    <string name="napplet_desktop_engine_in_use">Outra cópia do Amethyst está usando o mecanismo do navegador. Feche-a e tente novamente.</string>
+    <string name="napplet_desktop_engine_restart">O mecanismo do navegador não iniciou. Reinicie o Amethyst para tentar novamente.</string>
+    <string name="tor_progress_channel_description">Mostra o progresso do Tor enquanto ele se conecta.</string>
+    <string name="tor_progress_channel_name">Progresso da conexão do Tor</string>
+    <string name="tor_progress_downloading">Baixando o diretório da rede Tor: %1$d%</string>
+    <string name="tor_progress_downloading_unknown">Baixando o diretório da rede Tor</string>
+    <string name="tor_progress_notification_description">Mostrar uma notificação com o progresso de inicialização do Tor enquanto ele se conecta</string>
+    <string name="tor_progress_notification_title">Progresso da conexão do Tor</string>
+    <string name="tor_progress_ready">O Tor está pronto. As conexões agora são privadas.</string>
+    <string name="tor_progress_starting">Iniciando o cliente Tor</string>
+    <string name="tor_restart">Reiniciar o Tor</string>
+    <string name="tor_use_applets_and_websites">Applets e sites</string>
+    <string name="tor_use_applets_and_websites_explainer">Forçar Tor ao baixar applets e abrir nSites e sites que você ainda não configurou</string>
 </resources>
