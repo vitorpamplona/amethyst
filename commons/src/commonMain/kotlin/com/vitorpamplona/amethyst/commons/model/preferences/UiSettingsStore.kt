@@ -258,6 +258,19 @@ class UiSettingsStore(
         }
 
         /**
+         * Puts the desktop app on the [NavigationLayoutType.TABS] layout, once: new installs start
+         * there and every existing install is moved to it, whatever layout it had. The marker keeps
+         * it to one run, so a layout the user picks afterwards sticks.
+         *
+         * A migration on the file rather than a step after [load], so it runs before any store
+         * sharing the file reads it, and never again.
+         */
+        fun desktopTabsLayout(): DataMigration<Preferences> =
+            CopyOnceMigration("migrated.desktopTabsLayout") { out ->
+                out[UI_NAVIGATION_LAYOUT] = NavigationLayoutType.TABS.name
+            }
+
+        /**
          * The one-shot copy out of the single `shared_settings` JSON blob these
          * settings used to be kept as, in the global encrypted file.
          *

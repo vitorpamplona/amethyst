@@ -29,15 +29,15 @@ import java.util.prefs.Preferences
 
 /**
  * Brings the legacy desktop app's deck over, once: its workspaces (or, from builds before
- * workspaces, its one list of columns) become the deck of the first account that loads, and a
- * legacy user who ran the deck gets it turned on. The legacy app kept one deck for every login.
+ * workspaces, its one list of columns) become the deck of the first account that loads. The
+ * layout is not carried over: desktop starts on tabs, and the deck is a pick in Settings away.
+ * The legacy app kept one deck for every login.
  *
  * The columns without a shared screen are listed in [DeckLayout.importNotice] ([LegacyDeckParser])
  * so the user is told once. A custom feed is still in the Home picker.
  */
 class LegacyDeckImport(
     filesDir: File,
-    private val turnDeckOn: () -> Unit,
 ) {
     private val marker = File(filesDir, "legacy-desktop-deck.imported")
 
@@ -54,10 +54,7 @@ class LegacyDeckImport(
                 val prefs = root.node(NODE)
                 val feedNames = settings.customFeeds.value.associate { it.id to "${it.emoji} ${it.name}".trim() }
                 val layout = LegacyDeckParser.parse(prefs.get(KEY_WORKSPACES, ""), prefs.get(KEY_DECK_COLUMNS, ""), myPubKey) { feedNames[it] }
-                if (layout != null) {
-                    settings.updateDeck { layout }
-                    if (prefs.get(KEY_LAYOUT_MODE, "") == "DECK") turnDeckOn()
-                }
+                if (layout != null) settings.updateDeck { layout }
             }
             marker.createNewFile()
         } catch (e: Exception) {
@@ -71,6 +68,5 @@ class LegacyDeckImport(
         private const val NODE = "com/vitorpamplona/amethyst/desktop"
         private const val KEY_WORKSPACES = "workspaces"
         private const val KEY_DECK_COLUMNS = "deck_columns"
-        private const val KEY_LAYOUT_MODE = "layout_mode"
     }
 }
