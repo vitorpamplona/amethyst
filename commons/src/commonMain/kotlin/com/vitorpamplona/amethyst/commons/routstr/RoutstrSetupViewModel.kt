@@ -90,7 +90,12 @@ data class RoutstrNodeDetail(
     val node: RoutstrNode,
     val verification: RoutstrVerification = RoutstrVerification.Checking,
     val models: RoutstrModelsUi = RoutstrModelsUi.Loading,
+    /** The onion the node's own https `/v1/info` names: never the announcement's, which could be anyone's. */
+    val onionRoot: String? = null,
 ) {
+    /** Where buying here goes: the https root, and only the onion that root names. Null for an onion-only node. */
+    val target: RoutstrTarget? get() = node.httpsUrl?.let { RoutstrTarget(it, onionRoot, node.displayName) }
+
     /** The most a key must hold for the dearest model's reserve: what the buy screen warns under. */
     fun maxCostSats(modelId: String?): Long? {
         val loaded = models as? RoutstrModelsUi.Loaded ?: return null
@@ -209,18 +214,16 @@ class RoutstrSetupViewModel(
         detailJob?.cancel()
         detailJob =
             viewModelScope.launch {
+                // Over https only: an onion's answer, or an announcement's onion, could be anyone's.
                 if (!typed) {
-                    val root = node.httpsUrl ?: node.onionUrl
-                    val info = root?.let { routstr.info(it, node.onionUrl) }
-                    val verification =
-                        when {
-                            info == null -> RoutstrVerification.Unknown
-                            info.pubKeyHex == node.pubKey -> RoutstrVerification.Verified
-                            else -> RoutstrVerification.Mismatch
-                        }
+                    val verification = routstr.routing.verify(node)
                     _detail.update { it?.takeIf { d -> d.node == node }?.copy(verification = verification) ?: it }
                 }
-                val base = node.callBase(routstr.torEnabled())
+                val https = node.httpsUrl
+                val onion = https?.let { routstr.routing.target(it, null).onionRoot }
+                _detail.update { it?.takeIf { d -> d.node == node }?.copy(onionRoot = onion) ?: it }
+                // A node with https: there, or the onion it names itself. An onion-only node: its onion, with Tor.
+                val base = if (https != null) routstr.routing.baseFor(https) else node.callBase(routstr.torEnabled())
                 val models =
                     if (base == null) {
                         RoutstrModelsUi.Failed(RoutstrError(null, RoutstrFailure.UNREACHABLE))
@@ -268,7 +271,7 @@ class RoutstrSetupViewModel(
         _checkingUrl.value = true
         viewModelScope.launch {
             try {
-                val info = routstr.api.info(root)
+                val info = routstr.routing.ask(root)
                 if (!info.isRoutstr) {
                     _urlCheck.value = RoutstrError(null, RoutstrFailure.UNEXPECTED)
                 } else {
@@ -283,7 +286,7 @@ class RoutstrSetupViewModel(
                             mints = info.mints.orEmpty(),
                             models = emptyList(),
                             httpsUrl = root,
-                            onionUrl = info.onionUrl?.let(RoutstrNodes::root)?.takeIf { it.endsWith(".onion") },
+                            onionUrl = RoutstrNodes.onionRoot(info.onionUrl),
                         ),
                         typed = true,
                     )
@@ -466,7 +469,7 @@ class RoutstrSetupViewModel(
         _keyCheck.value = RoutstrKeyCheck.Checking
         keyJob =
             viewModelScope.launch {
-                val base = if (routstr.torEnabled() && target.onionRoot != null) target.onionRoot else target.root
+                val base = target.callBase(routstr.torEnabled())
                 _keyCheck.value =
                     try {
                         RoutstrKeyCheck.Works(routstr.api.balance(base, trimmed))

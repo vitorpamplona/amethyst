@@ -68,16 +68,18 @@ data class RoutstrNode(
     fun isFresh(now: Long = TimeUtils.now()): Boolean = lastSeen >= now - RoutstrNodeEvent.MAX_AGE
 
     /**
-     * Where to call it: the onion when Tor is on and it has one, else https. Null when neither
-     * works here (an onion-only node without Tor).
+     * Where to call it before its own https `/v1/info` is read: https when it has it, else its
+     * onion when Tor is on; null when neither works here. The announcement's onion is used only
+     * for an onion-only node: for a node with https, only that host's own `/v1/info` may name an
+     * onion ([RoutstrRouting.onionOf]), since anyone can announce someone else's https host.
      */
-    fun callBase(torEnabled: Boolean): String? = if (torEnabled && onionUrl != null) onionUrl else httpsUrl
+    fun callBase(torEnabled: Boolean): String? = httpsUrl ?: onionUrl?.takeIf { torEnabled }
 
     /** The NIP-FA URL a key bought here is saved under: `https://…/v1`. Null for an onion-only node. */
     val keyUrl: String? get() = httpsUrl?.let { RoutstrNodes.keyUrl(it) }
 
-    /** Whether [key]'s URL names this node. */
-    fun owns(keyUrl: String): Boolean = RoutstrNodes.sameNode(keyUrl, httpsUrl) || RoutstrNodes.sameNode(keyUrl, onionUrl)
+    /** Whether [keyUrl] is this announcement's https address. Says nothing about who runs it: see [RoutstrRouting.nodeForKey]. */
+    fun owns(keyUrl: String): Boolean = RoutstrNodes.sameNode(keyUrl, httpsUrl)
 
     companion object {
         fun from(event: RoutstrNodeEvent): RoutstrNode {
@@ -117,6 +119,17 @@ object RoutstrNodes {
             .trimEnd('/')
 
     fun keyUrl(root: String): String = root(root) + "/v1"
+
+    /** [url]'s root when it is https, else null. */
+    fun httpsRoot(url: String): String? = root(url).takeIf { it.length > HTTPS.length && it.startsWith(HTTPS, ignoreCase = true) }
+
+    /**
+     * [url]'s root when it is a real Tor v3 onion, by Quartz's rule ([RoutstrEndpoint.typeOf]):
+     * never a string test, which `http://x@evil.com/.onion` passes.
+     */
+    fun onionRoot(url: String?): String? = url?.takeIf { RoutstrEndpoint.typeOf(it) == RoutstrEndpoint.Type.ONION }?.let(::root)
+
+    private const val HTTPS = "https://"
 
     fun sameNode(
         a: String?,

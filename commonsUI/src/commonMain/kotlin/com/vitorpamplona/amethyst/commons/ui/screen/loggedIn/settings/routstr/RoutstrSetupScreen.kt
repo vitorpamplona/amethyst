@@ -249,7 +249,7 @@ fun RoutstrSetupScreen(
         topBar = {
             TopBarWithBackButton(
                 if (topUpKey != null) {
-                    stringRes(Res.string.routstr_top_up_title, routstr.nodeName(topUpKey.url) ?: AgentProviderPresets.hostOf(topUpKey.url) ?: topUpKey.url)
+                    stringRes(Res.string.routstr_top_up_title, rememberRoutstrNodeName(routstr, topUpKey.url) ?: AgentProviderPresets.hostOf(topUpKey.url) ?: topUpKey.url)
                 } else {
                     stringRes(Res.string.routstr_title)
                 },
@@ -270,10 +270,9 @@ fun RoutstrSetupScreen(
             val shown = detail
             when {
                 topUpKey != null -> {
-                    val node = routstr.nodeForKey(topUpKey.url)
-                    val target = RoutstrTarget(RoutstrNodes.root(topUpKey.url), node?.onionUrl, node?.displayName ?: AgentProviderPresets.hostOf(topUpKey.url))
+                    val topUp = rememberRoutstrTopUp(routstr, topUpKey.url)
                     Text(AgentProviderPresets.maskKey(topUpKey.key), style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    BuyPanel(viewModel, target, topUpKey, node?.mints.orEmpty(), reserve = null, nav = nav)
+                    BuyPanel(viewModel, topUp.target, topUpKey, topUp.mints, reserve = null, nav = nav)
                 }
                 shown == null -> {
                     Text(stringRes(Res.string.routstr_tagline), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -522,7 +521,7 @@ private fun NodeDetailPanel(
             is RoutstrModelsUi.Loaded -> m.models.take(MODELS_SHOWN).forEach { model -> ModelRow(model, model.id == chosenModel?.id) { chosen = model.id } }
         }
 
-        val target = RoutstrTarget.of(node)
+        val target = detail.target
         if (target == null) {
             Text(stringRes(Res.string.routstr_onion_only), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             return@Column

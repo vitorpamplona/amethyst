@@ -96,8 +96,9 @@ class RoutstrDiscoveryTest {
             assertEquals(null, node.keyUrl)
             assertEquals(null, RoutstrTarget.of(node))
         }
-        // With Tor on, a node that has both is called at its onion.
-        tor.filter { it.hasHttps && it.hasOnion }.forEach { assertTrue(it.callBase(torEnabled = true)!!.endsWith(".onion")) }
+        // A node that has both is called at its https host until that host's own /v1/info names
+        // an onion: an announcement's onion could be anyone's.
+        tor.filter { it.hasHttps && it.hasOnion }.forEach { assertEquals(it.httpsUrl, it.callBase(torEnabled = true)) }
     }
 
     @Test

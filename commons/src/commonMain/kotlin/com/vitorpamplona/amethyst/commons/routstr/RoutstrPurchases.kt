@@ -62,8 +62,16 @@ data class RoutstrTarget(
     val onionRoot: String? = null,
     val name: String? = null,
 ) {
+    /** Where calls go: the onion when Tor is on and [onionRoot] is a real v3 onion, else [root]. */
+    fun callBase(torEnabled: Boolean): String = RoutstrNodes.onionRoot(onionRoot)?.takeIf { torEnabled } ?: root
+
     companion object {
-        fun of(node: RoutstrNode): RoutstrTarget? = node.httpsUrl?.let { RoutstrTarget(it, node.onionUrl, node.displayName) }
+        /**
+         * A target from an announcement alone: its https root, never its onion (anyone can announce
+         * someone else's https host with their own onion). The onion comes from that root's own
+         * https `/v1/info` ([RoutstrRouting.target], [RoutstrNodeDetail.target]).
+         */
+        fun of(node: RoutstrNode): RoutstrTarget? = node.httpsUrl?.let { RoutstrTarget(it, null, node.displayName) }
     }
 }
 
@@ -237,7 +245,7 @@ class RoutstrPurchases(
     ): RoutstrPendingPurchase {
         require(amountSats > 0) { "amount must be positive" }
         require(purpose == RoutstrPurpose.CREATE || topupKey != null) { "a top-up needs its key" }
-        val base = if (torEnabled() && target.onionRoot != null) target.onionRoot else target.root
+        val base = target.callBase(torEnabled())
         val invoice = api.createInvoice(base, amountSats, purpose, topupKey?.key)
         val record =
             RoutstrPendingPurchase(
@@ -246,7 +254,7 @@ class RoutstrPurchases(
                 purpose = purpose,
                 stage = RoutstrStage.AWAITING_PAYMENT,
                 nodeRoot = RoutstrNodes.root(target.root),
-                onionRoot = target.onionRoot?.let(RoutstrNodes::root),
+                onionRoot = RoutstrNodes.onionRoot(target.onionRoot),
                 nodeName = target.name,
                 amountSats = invoice.amountSats.takeIf { it > 0 } ?: amountSats,
                 createdAt = now(),
@@ -422,7 +430,7 @@ class RoutstrPurchases(
         purpose: RoutstrPurpose,
         topupKey: AgentKeyTag?,
     ): RoutstrPurchaseOutcome {
-        val base = if (torEnabled() && target.onionRoot != null) target.onionRoot else target.root
+        val base = target.callBase(torEnabled())
         val result =
             try {
                 if (purpose == RoutstrPurpose.TOPUP) {
@@ -444,7 +452,7 @@ class RoutstrPurchases(
                 purpose = purpose,
                 stage = RoutstrStage.KEY_UNSAVED,
                 nodeRoot = RoutstrNodes.root(target.root),
-                onionRoot = target.onionRoot?.let(RoutstrNodes::root),
+                onionRoot = RoutstrNodes.onionRoot(target.onionRoot),
                 nodeName = target.name,
                 amountSats = result.balanceMsats?.let { it / 1000 } ?: 0,
                 createdAt = now(),
@@ -469,7 +477,7 @@ class RoutstrPurchases(
                     purpose = purpose,
                     stage = RoutstrStage.CHANGE_UNCLAIMED,
                     nodeRoot = RoutstrNodes.root(target.root),
-                    onionRoot = target.onionRoot?.let(RoutstrNodes::root),
+                    onionRoot = RoutstrNodes.onionRoot(target.onionRoot),
                     nodeName = target.name,
                     amountSats = result.changeAmount ?: 0,
                     createdAt = now(),

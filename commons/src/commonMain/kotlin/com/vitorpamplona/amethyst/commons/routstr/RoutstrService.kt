@@ -162,75 +162,50 @@ class RoutstrAccount(
         return RoutstrNode.from(event)
     }
 
-    /** The node a key URL names, among those read. */
-    fun nodeForKey(keyUrl: String): RoutstrNode? =
-        (_nodes.value as? RoutstrNodeList.Loaded)
-            ?.events
-            ?.asSequence()
-            ?.map(RoutstrNode::from)
-            ?.firstOrNull { it.owns(keyUrl) }
+    private fun nodeEvents(): List<RoutstrNodeEvent> = (_nodes.value as? RoutstrNodeList.Loaded)?.events.orEmpty()
 
-    /** The name of the node a key URL names: from its announcement, else its `/v1/info`. */
-    fun nodeName(keyUrl: String): String? = nodeForKey(keyUrl)?.name ?: _info.value[RoutstrNodes.root(keyUrl).lowercase()]?.name
+    /**
+     * The announcement of the node at [keyUrl]: only one by the npub that node's own https
+     * `/v1/info` gave ([RoutstrRouting.nodeForKey]). Null until that answer is in.
+     */
+    fun nodeForKey(keyUrl: String): RoutstrNode? = routing.nodeForKey(nodeEvents(), keyUrl)
+
+    /** The name of the node at [keyUrl]: from its own `/v1/info`, else its verified announcement. */
+    fun nodeName(keyUrl: String): String? = routing.nodeName(nodeEvents(), keyUrl)
 
     // --- What a node says about itself -------------------------------------------------
 
-    private val _info = MutableStateFlow<Map<String, RoutstrInfo?>>(emptyMap())
+    /** Where calls go, and what each https node said about itself over https. */
+    val routing = RoutstrRouting(api, torEnabled)
 
-    /** `/v1/info` per node root: null where the node answered as something else. */
-    val info: StateFlow<Map<String, RoutstrInfo?>> = _info.asStateFlow()
+    /** `/v1/info` per https root, asked over https: null where the node answered as something else. */
+    val info: StateFlow<Map<String, RoutstrInfo?>> = routing.info
 
-    /** `/v1/info` of [root], asked once per run; null when it isn't a Routstr node. */
-    suspend fun info(
-        root: String,
-        onionRoot: String? = null,
-    ): RoutstrInfo? {
-        val key = RoutstrNodes.root(root).lowercase()
-        if (_info.value.containsKey(key)) return _info.value[key]
-        val base = if (torEnabled() && onionRoot != null) onionRoot else root
-        val answer =
-            try {
-                api.info(base).takeIf { it.isRoutstr }
-            } catch (e: RoutstrException) {
-                // No answer says nothing about what it is: ask again next time.
-                if (e.failure == RoutstrFailure.UNREACHABLE || e.failure == RoutstrFailure.UNSUPPORTED) return null
-                null
-            }
-        _info.update { it + (key to answer) }
-        return answer
-    }
+    /** The https roots whose own `/v1/models` listed sats prices. */
+    val pricedModels: StateFlow<Set<String>> = routing.pricedModels
 
-    /** Whether [key] is a Routstr key: a node read from the announcements, or one whose `/v1/info` said so. */
-    fun isRoutstrKey(key: AgentKeyTag): Boolean {
-        if (!key.hasKey()) return false
-        if (nodeForKey(key.url) != null) return true
-        if (_info.value[RoutstrNodes.root(key.url).lowercase()] != null) return true
-        return AgentProviderPresets.forUrl(key.url)?.id == ROUTSTR_PRESET
-    }
+    /** `/v1/info` of the https node at [url], asked over https once per run; null when it isn't a Routstr node. */
+    suspend fun info(url: String): RoutstrInfo? = routing.info(url)
+
+    /** Whether [key] is a Routstr key: its own URL said so ([RoutstrRouting.isRoutstrKey]). */
+    fun isRoutstrKey(key: AgentKeyTag): Boolean = routing.isRoutstrKey(key)
 
     /** Whether to ask [key]'s endpoint whether it is a Routstr node: a custom endpoint or Routstr's own, https, `/v1`. */
-    fun mayBeRoutstr(key: AgentKeyTag): Boolean {
-        if (!key.hasKey() || !key.isUrlAllowed() || AgentKeyTag.isLoopback(key.url)) return false
-        val preset = AgentProviderPresets.forUrl(key.url)
-        if (preset != null && preset.id != ROUTSTR_PRESET) return false
-        return key.url
-            .trim()
-            .trimEnd('/')
-            .endsWith("/v1")
-    }
+    fun mayBeRoutstr(key: AgentKeyTag): Boolean = routing.mayBeRoutstr(key)
+
+    /** Asks [key]'s own URL whether it is a Routstr node; true when it is. */
+    suspend fun confirm(key: AgentKeyTag): Boolean = routing.confirm(key)
+
+    /** Where a purchase or top-up at [keyUrl]'s node goes: its own https root, and the onion only that root names. */
+    suspend fun targetFor(keyUrl: String): RoutstrTarget = routing.target(keyUrl, nodeName(keyUrl) ?: AgentProviderPresets.hostOf(keyUrl))
 
     // --- Balances ------------------------------------------------------------------------
 
     private val _balances = MutableStateFlow<Map<AgentKeyTag, RoutstrKeyBalance>>(emptyMap())
     val balances: StateFlow<Map<AgentKeyTag, RoutstrKeyBalance>> = _balances.asStateFlow()
 
-    /** Where to call [key]'s node: its onion when Tor is on and the node has one. */
-    private fun baseFor(key: AgentKeyTag): String {
-        val root = RoutstrNodes.root(key.url)
-        if (!torEnabled()) return root
-        val onion = nodeForKey(key.url)?.onionUrl ?: _info.value[root.lowercase()]?.onionUrl?.takeIf { RoutstrNodes.root(it).endsWith(".onion") }
-        return onion?.let(RoutstrNodes::root) ?: root
-    }
+    /** Where to call [key]'s node: its own URL, or the onion that URL's https `/v1/info` names when Tor is on. */
+    private suspend fun baseFor(key: AgentKeyTag): String = routing.baseFor(key.url)
 
     /** Asks the node for [key]'s balance (`/v1/balance/info`), for the key card and the print card. */
     suspend fun refreshBalance(key: AgentKeyTag): RoutstrKeyBalance {
@@ -247,7 +222,7 @@ class RoutstrAccount(
     }
 
     /** The models [key]'s node lists, with sats prices. */
-    suspend fun models(key: AgentKeyTag): List<RoutstrModel> = api.models(baseFor(key), key.key.ifEmpty { null })
+    suspend fun models(key: AgentKeyTag): List<RoutstrModel> = api.models(baseFor(key), key.key.ifEmpty { null }).also { routing.notePricing(key.url, it) }
 
     private val modelCache = MutableStateFlow<Map<AgentKeyTag, List<RoutstrModel>>>(emptyMap())
 
@@ -298,7 +273,7 @@ class RoutstrAccount(
 
     companion object {
         private const val TAG = "RoutstrAccount"
-        const val ROUTSTR_PRESET = "routstr"
+        const val ROUTSTR_PRESET = RoutstrRouting.ROUTSTR_PRESET
         private const val EDITOR_WAIT_MS = 60_000L
 
         fun newestPerAddress(events: List<RoutstrNodeEvent>): List<RoutstrNodeEvent> =

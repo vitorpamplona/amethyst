@@ -101,7 +101,7 @@ data class RoutstrPendingPurchase(
 ) {
     val keyUrl: String get() = RoutstrNodes.keyUrl(nodeRoot)
 
-    fun callBase(torEnabled: Boolean): String = if (torEnabled && onionRoot != null) onionRoot else nodeRoot
+    fun callBase(torEnabled: Boolean): String = RoutstrNodes.onionRoot(onionRoot)?.takeIf { torEnabled } ?: nodeRoot
 
     /** Whether the user's money is in this record (anything past an unpaid invoice). */
     val holdsMoney: Boolean get() = stage != RoutstrStage.AWAITING_PAYMENT

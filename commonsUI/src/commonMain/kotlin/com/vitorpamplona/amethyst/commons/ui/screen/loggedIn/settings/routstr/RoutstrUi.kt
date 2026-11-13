@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.routstr.RoutstrFailure
 import com.vitorpamplona.amethyst.commons.routstr.RoutstrKeyBalance
 import com.vitorpamplona.amethyst.commons.routstr.RoutstrNodes
 import com.vitorpamplona.amethyst.commons.routstr.RoutstrPricing
+import com.vitorpamplona.amethyst.commons.routstr.RoutstrTarget
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -115,12 +116,14 @@ fun rememberRoutstrBalance(
     if (routstr == null || key == null) return null
     val balances by routstr.balances.collectAsStateWithLifecycle()
     val info by routstr.info.collectAsStateWithLifecycle()
+    val priced by routstr.pricedModels.collectAsStateWithLifecycle()
     LaunchedEffect(routstr, key) {
-        val routstrKey = routstr.isRoutstrKey(key) || (routstr.mayBeRoutstr(key) && routstr.info(RoutstrNodes.root(key.url)) != null)
-        if (routstrKey) routstr.refreshBalance(key)
+        // Only the key's own URL can say it is a Routstr key: never an announcement.
+        if (routstr.confirm(key)) routstr.refreshBalance(key)
     }
-    // Recomposes once /v1/info says so.
-    if (!routstr.isRoutstrKey(key) && info[RoutstrNodes.root(key.url).lowercase()] == null) return null
+    // Recomposes once the key's own URL says so.
+    val routstrKey = remember(routstr, key, info, priced) { routstr.isRoutstrKey(key) }
+    if (!routstrKey) return null
     return balances[key]
 }
 
@@ -153,7 +156,36 @@ fun rememberRoutstrPrintNote(
     )
 }
 
-/** The Routstr node's name for a key at [keyUrl], once its announcement or `/v1/info` is read; null otherwise. */
+/** Where a top-up of the key at [keyUrl] goes, and the mints its node takes. */
+@Immutable
+data class RoutstrTopUp(
+    val target: RoutstrTarget,
+    val mints: List<String>,
+)
+
+/**
+ * The top-up of the key at [keyUrl]: its own https root until that root's `/v1/info` (asked over
+ * https) is in, then also the onion that answer names. Never an announcement's onion.
+ */
+@Composable
+fun rememberRoutstrTopUp(
+    routstr: RoutstrAccount,
+    keyUrl: String,
+): RoutstrTopUp {
+    val nodes by routstr.nodes.collectAsStateWithLifecycle()
+    val info by routstr.info.collectAsStateWithLifecycle()
+    LaunchedEffect(routstr, keyUrl) { routstr.info(keyUrl) }
+    return remember(routstr, nodes, info, keyUrl) {
+        val name = routstr.nodeName(keyUrl) ?: AgentProviderPresets.hostOf(keyUrl)
+        val known = routstr.routing.knownInfo(keyUrl)
+        RoutstrTopUp(
+            target = RoutstrTarget(RoutstrNodes.root(keyUrl), routstr.routing.onionOf(keyUrl), name),
+            mints = known?.mints ?: routstr.nodeForKey(keyUrl)?.mints.orEmpty(),
+        )
+    }
+}
+
+/** The Routstr node's name for a key at [keyUrl], once its `/v1/info` (or verified announcement) is read; null otherwise. */
 @Composable
 fun rememberRoutstrNodeName(
     routstr: RoutstrAccount?,
