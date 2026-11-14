@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.devtools
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.commons.util.toPrettyJson
 import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.isAddressable
@@ -67,7 +66,6 @@ data class EventInspection(
     val signatureValid: Boolean,
     val kindName: String?,
     val kindNip: String?,
-    val prettyJson: String,
     val issues: ImmutableList<EventIssue>,
     val codes: EventCodes,
 ) {
@@ -166,7 +164,6 @@ object EventInspector {
             signatureValid = signatureValid,
             kindName = info?.name,
             kindNip = info?.nip,
-            prettyJson = event.toPrettyJson(),
             issues = issues.toImmutableList(),
             codes = EventCodes.of(event),
         )

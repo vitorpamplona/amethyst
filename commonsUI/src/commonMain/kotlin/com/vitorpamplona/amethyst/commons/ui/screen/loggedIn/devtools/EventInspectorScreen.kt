@@ -68,7 +68,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -194,6 +196,9 @@ private fun EventActions(
 /** Past this many distinct users, the rest of a long `p` list keeps its bare keys: each name costs a relay subscription. */
 private const val MAX_NAMED_USERS = 100
 
+/** The least time between two re-colourings of the JSON while names load. */
+private const val NAME_BATCH_MS = 250L
+
 /** Tags whose first value is a Unix timestamp. */
 private val TIMESTAMP_TAGS = setOf("expiration", "published_at", "start", "end")
 
@@ -259,10 +264,14 @@ private fun pubkeyIndex(tagName: String): Int =
         else -> -1
     }
 
+/** Up to the end of year 9999: past it a value is not a date anyone meant, and `* 1000` overflows a Long. */
+private const val MAX_NOTED_SECONDS = 253_402_300_799L
+
 private fun formatDate(
     seconds: Long,
     timeOfDay: (Long) -> String,
-): String {
+): String? {
+    if (seconds !in 0..MAX_NOTED_SECONDS) return null
     val millis = seconds * 1000
     return FullDateFormatter.format(millis) + ", " + timeOfDay(millis)
 }
@@ -312,7 +321,12 @@ private fun rememberUserNames(pubkeys: List<HexKey>): Map<HexKey, String> {
         if (users.isEmpty()) return@produceState
         combine(users.map { user -> user.metadata().flow.map { user.pubkeyHex to it?.info?.bestName() } }) { pairs ->
             buildMap { pairs.forEach { (key, name) -> if (!name.isNullOrBlank()) put(key, name) } }
-        }.distinctUntilChanged().collect { value = it }
+        }.distinctUntilChanged().conflate().collect {
+            value = it
+            // Names arrive one profile at a time; each new map re-colours the whole JSON, so
+            // take at most a few batches a second.
+            delay(NAME_BATCH_MS)
+        }
     }
     return names
 }

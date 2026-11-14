@@ -43,9 +43,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -381,7 +381,12 @@ fun DevToolsJsonBlock(
     note: ((JsonValueContext) -> String?)? = null,
 ) {
     val colors = jsonColors()
-    val highlighted = remember(json, colors, note) { highlightJson(json, colors, note) }
+    // Off the main thread: a follow list or a long article is a few hundred KB of spans, and
+    // [note] changes each time a batch of names arrives. Until the first pass lands the text
+    // shows uncoloured; after that the previous colouring stays up while the next one builds.
+    val highlighted by produceState(AnnotatedString(json), json, colors, note) {
+        value = withContext(Dispatchers.Default) { highlightJson(json, colors, note) }
+    }
     Box(
         modifier
             .fillMaxWidth()
@@ -447,8 +452,8 @@ fun rememberSaveableText(initial: () -> String = { "" }): MutableState<String> =
 private const val INSPECT_DEBOUNCE_MS = 150L
 
 /**
- * Parses, hashes, verifies and pretty-prints [input] off the main thread, after typing pauses: a
- * Schnorr verify plus a pretty print of a long article per keystroke is too much for a frame.
+ * Parses, hashes and verifies [input] off the main thread, after typing pauses: a
+ * Schnorr verify of a long article per keystroke is too much for a frame.
  */
 @Composable
 fun rememberEventInspection(input: String): State<EventInspectResult> =
