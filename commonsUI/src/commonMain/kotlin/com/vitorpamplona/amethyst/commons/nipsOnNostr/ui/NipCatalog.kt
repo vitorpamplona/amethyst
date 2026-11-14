@@ -144,7 +144,7 @@ fun NipCatalog(
                         Text(
                             stringRes(Res.string.try_again),
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable { viewModel.refresh() }.padding(8.dp),
+                            modifier = Modifier.clickable { viewModel.loadOfficial() }.padding(8.dp),
                         )
                     }
                 }

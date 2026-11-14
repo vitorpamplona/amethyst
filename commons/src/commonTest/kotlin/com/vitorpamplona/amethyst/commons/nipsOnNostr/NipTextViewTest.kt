@@ -158,4 +158,13 @@ class NipTextViewTest {
         assertEquals("NIP-AMB", view.title)
         assertEquals("This NIP defines AMB.", view.body)
     }
+
+    @Test
+    fun cachedViewFollowsTheEventsContent() {
+        // Same id, different text (only tests do this): the cache must not hand back the old view.
+        assertEquals("First.", NipTextView.of(nip("First.", arrayOf("title", "T"))).body)
+        assertEquals("Second.", NipTextView.of(nip("Second.", arrayOf("title", "T"))).body)
+        val event = nip("Same.", arrayOf("title", "T"))
+        assertTrue(NipTextView.of(event) === NipTextView.of(event))
+    }
 }

@@ -29,7 +29,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
 import com.vitorpamplona.amethyst.commons.richtext.MarkdownChunks
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +40,11 @@ import kotlinx.coroutines.launch
  * document at its headings while one of these is provided ([LocalMarkdownAnchors]) and registers
  * where each section starts; a table of contents or a `[link](#section)` then scrolls [scrollable]
  * to it. [viewport] is the scrolling container, and [topInsetPx] the part of it a top bar covers.
+ *
+ * Sections are also registered by their position among the document's headings, and the owner can
+ * name the document's original anchors ([useSections]). A translated body renders its headings in
+ * another language, so their own anchors differ from a table of contents or a `#Encryption` link
+ * written against the original; the position still finds them.
  *
  * Positions are read when a jump is asked for, so they are right however far the reader scrolled.
  * A section whose layout left the screen (a lazy list recycled it) can't be reached until it is
@@ -52,17 +57,27 @@ class MarkdownAnchors(
     private val topInsetPx: () -> Float,
 ) {
     private val targets = HashMap<String, LayoutCoordinates>()
+    private val byPosition = HashMap<Int, LayoutCoordinates>()
+    private var sections: List<String> = emptyList()
     private var viewport: LayoutCoordinates? = null
+
+    /** The document's anchors in heading order, as written (untranslated). */
+    fun useSections(anchors: List<String>) {
+        sections = anchors
+    }
 
     fun registerViewport(coordinates: LayoutCoordinates) {
         viewport = coordinates
     }
 
+    /** Registers the section that opens with the [position]th heading of the document. */
     fun register(
         anchor: String,
+        position: Int,
         coordinates: LayoutCoordinates,
     ) {
         targets[anchor] = coordinates
+        byPosition[position] = coordinates
     }
 
     /**
@@ -79,13 +94,15 @@ class MarkdownAnchors(
                 else -> return null
             }
         val key = MarkdownChunks.anchorOf(raw)
-        return key.takeIf { it in targets }
+        return key.takeIf { it in targets || it in sections }
     }
 
     /** Scrolls to [anchor] (`encryption`, `#Encryption`); false when the section isn't laid out. */
     fun jumpTo(anchor: String): Boolean {
         val key = MarkdownChunks.anchorOf(anchor.removePrefix("#"))
-        val target = targets[key] ?: return false
+        // The original section's position first: it survives translation; the rendered anchor otherwise.
+        val position = sections.indexOf(key)
+        val target = (if (position >= 0) byPosition[position] else null) ?: targets[key] ?: return false
         val view = viewport ?: return false
         if (!target.isAttached || !view.isAttached) return false
         val delta = target.positionInRoot().y - view.positionInRoot().y - topInsetPx()
@@ -109,11 +126,15 @@ fun rememberMarkdownAnchors(
     return remember(scrollable, scope) { MarkdownAnchors(scrollable, scope, topInsetPx) }
 }
 
-/** Marks the scrolling container the anchors measure against. */
-fun Modifier.markdownAnchorViewport(anchors: MarkdownAnchors?): Modifier = if (anchors == null) this else onGloballyPositioned { anchors.registerViewport(it) }
+/**
+ * Marks the scrolling container the anchors measure against. onPlaced, not onGloballyPositioned:
+ * the coordinates are only read when a jump is asked for, so nothing needs to run while scrolling.
+ */
+fun Modifier.markdownAnchorViewport(anchors: MarkdownAnchors?): Modifier = if (anchors == null) this else onPlaced { anchors.registerViewport(it) }
 
-/** Marks where the section [anchor] starts. */
+/** Marks where the section [anchor], the [position]th heading of the document, starts. */
 fun Modifier.markdownAnchor(
     anchors: MarkdownAnchors?,
     anchor: String?,
-): Modifier = if (anchors == null || anchor == null) this else onGloballyPositioned { anchors.register(anchor, it) }
+    position: Int,
+): Modifier = if (anchors == null || anchor == null) this else onPlaced { anchors.register(anchor, position, it) }

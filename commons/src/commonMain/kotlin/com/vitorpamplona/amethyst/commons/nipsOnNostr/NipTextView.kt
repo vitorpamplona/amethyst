@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MarkdownChunks
 import com.vitorpamplona.amethyst.commons.richtext.MarkdownHeading
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.kinds.KindNames
+import com.vitorpamplona.quartz.utils.cache.ConcurrentLruCache
 
 /** A kind a NIP defines: its number and, when the `k` tag carries one, the NIP's own name for it. */
 @Immutable
@@ -63,7 +64,26 @@ class NipTextView(
         private const val MIN_SECTIONS = 3
         private const val MIN_BODY_FOR_CONTENTS = 3000
 
+        private class Cached(
+            val event: NipTextEvent,
+            val view: NipTextView,
+        )
+
+        private val cache = ConcurrentLruCache<String, Cached>(64)
+
+        /**
+         * The view of [event], built once and shared: the feed card, the thread header and the
+         * thread body all ask for it, and building it takes several passes over the whole text.
+         */
         fun of(event: NipTextEvent): NipTextView {
+            cache.get(event.id)?.let { cached ->
+                val old = cached.event
+                if (old === event || (old.content == event.content && old.tags.contentDeepEquals(event.tags))) return cached.view
+            }
+            return build(event).also { cache.put(event.id, Cached(event, it)) }
+        }
+
+        private fun build(event: NipTextEvent): NipTextView {
             val title = event.title()?.trim()?.ifBlank { null }
             val stripped = stripLeadingTitle(event.content, title)
             val status = event.tagValue("status")?.trim()?.ifBlank { null }
@@ -105,13 +125,18 @@ class NipTextView(
     }
 }
 
+// The registry inverted once: official NIP number to the kinds it defines, in kind order.
+private val kindsByOfficialNip: Map<String, List<NipDefinedKind>> by lazy {
+    val byNip = HashMap<String, MutableList<Int>>()
+    KindNames.names.forEach { (kind, info) ->
+        val nip = info.nip?.let { NipLinks.normalize(it) } ?: return@forEach
+        byNip.getOrPut(nip) { ArrayList() }.add(kind)
+    }
+    byNip.mapValues { (_, kinds) -> kinds.sorted().map { NipDefinedKind(it, null) } }
+}
+
 /** The kinds the registry attributes to official NIP [number], in kind order. */
-fun officialKinds(number: String): List<NipDefinedKind> =
-    KindNames.names
-        .filter { (_, info) -> info.nip?.let { NipLinks.normalize(it) } == number }
-        .keys
-        .sorted()
-        .map { NipDefinedKind(it, null) }
+fun officialKinds(number: String): List<NipDefinedKind> = kindsByOfficialNip[number] ?: emptyList()
 
 private fun NipTextEvent.tagValue(name: String): String? {
     for (tag in tags) {

@@ -38,7 +38,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -125,7 +125,7 @@ class EventKindViewModel(
     }
 
     private suspend fun fetchRecent(): Pair<List<Note>, Int> {
-        val relays = account.followPlusAllMineWithSearch.flow.value
+        val relays = NipsOnNostr.discoveryRelays(account)
         if (relays.isEmpty()) return emptyList<Note>() to 0
         val filter = Filter(kinds = listOf(kind), limit = RECENT_LIMIT)
         val events =
@@ -149,20 +149,6 @@ class EventKindViewModel(
     companion object {
         const val RECENT_LIMIT = 20
     }
-}
-
-/** One row of the NIP catalogue. */
-@Immutable
-sealed interface NipCatalogItem {
-    @Immutable
-    class Official(
-        val entry: OfficialNipEntry,
-    ) : NipCatalogItem
-
-    @Immutable
-    class OnNostr(
-        val note: AddressableNote,
-    ) : NipCatalogItem
 }
 
 /** Which NIPs the catalogue lists. */
@@ -212,29 +198,28 @@ class NipCatalogViewModel(
                 officialFailed = all.officialFailed,
                 loadingOnNostr = all.loadingOnNostr,
             )
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NipCatalogState(emptyList(), NipsOnNostr.cached(), true, false, true))
-
-    val isEmpty = state.map { it.official.isEmpty() && it.onNostr.isEmpty() }
+        }.flowOn(Dispatchers.Default) // Filtering every NIP body per keystroke stays off the main thread.
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NipCatalogState(emptyList(), emptyList(), true, false, true))
 
     init {
-        refresh(force = false)
+        loadOfficial()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                NipsOnNostr.fetchAll(account)
+            } finally {
+                loadingOnNostr.value = false
+            }
+        }
     }
 
-    fun refresh(force: Boolean = true) {
+    /** Loads the official index; also the "Try again" after it failed, which leaves the Nostr list alone. */
+    fun loadOfficial() {
         viewModelScope.launch(Dispatchers.IO) {
             loadingOfficial.value = true
             val index = OfficialNips.index(http)
             officialFailed.value = index == null
             if (index != null) official.value = index
             loadingOfficial.value = false
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            loadingOnNostr.value = true
-            try {
-                NipsOnNostr.fetchAll(account, force)
-            } finally {
-                loadingOnNostr.value = false
-            }
         }
     }
 

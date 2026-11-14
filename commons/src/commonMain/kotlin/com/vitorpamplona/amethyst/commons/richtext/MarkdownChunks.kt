@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.utils.cache.ConcurrentLruCache
 
 /** A heading of a Markdown document: its level (1 for `#`), its text and the anchor that links to it. */
 @Immutable
@@ -91,6 +92,9 @@ object MarkdownChunks {
         markdown: String,
         atHeadings: Boolean,
     ): List<MarkdownChunk>? {
+        // Most notes have no fence: without one and without anchors to place, nothing to split.
+        if (!atHeadings && !markdown.contains("```") && !markdown.contains("~~~")) return null
+
         val lines = markdown.lines()
         val parsed = ArrayList<Line>(lines.size)
         scan(lines) { parsed.add(it) }
@@ -144,6 +148,29 @@ object MarkdownChunks {
             }
         }
         flush()
+        return chunks
+    }
+
+    private class CachedSplit(
+        val markdown: String,
+        val atHeadings: Boolean,
+        val chunks: List<MarkdownChunk>?,
+    )
+
+    private val splitCache = ConcurrentLruCache<Int, CachedSplit>(200)
+
+    /**
+     * [split], remembered across compositions: a feed card that scrolls back into view re-renders
+     * its Markdown without scanning it again.
+     */
+    fun cachedSplit(
+        markdown: String,
+        atHeadings: Boolean,
+    ): List<MarkdownChunk>? {
+        val key = 31 * markdown.hashCode() + atHeadings.hashCode()
+        splitCache.get(key)?.takeIf { it.markdown == markdown && it.atHeadings == atHeadings }?.let { return it.chunks }
+        val chunks = split(markdown, atHeadings)
+        splitCache.put(key, CachedSplit(markdown, atHeadings, chunks))
         return chunks
     }
 

@@ -43,6 +43,10 @@ class NipLinksTest {
         assertEquals("19", NipLinks.numberFromUrl("https://nips.nostr.com/19"))
         assertNull(NipLinks.numberFromUrl("https://github.com/nostr-protocol/nips/blob/master/README.md"))
         assertNull(NipLinks.numberFromUrl("https://github.com/vitorpamplona/amethyst/blob/main/44.md"))
+        // A proposal on another branch keeps opening on GitHub: the reader shows master.
+        assertNull(NipLinks.numberFromUrl("https://github.com/nostr-protocol/nips/blob/maven-repos/A1.md"))
+        assertNull(NipLinks.numberFromUrl("https://raw.githubusercontent.com/nostr-protocol/nips/feature/44.md"))
+        assertEquals("44", NipLinks.numberFromUrl("https://raw.githubusercontent.com/nostr-protocol/nips/refs/heads/master/44.md"))
         assertEquals("kinds", NipLinks.anchorFromUrl("https://github.com/nostr-protocol/nips/blob/master/01.md#kinds"))
         assertNull(NipLinks.anchorFromUrl("https://nips.nostr.com/19"))
     }

@@ -155,6 +155,9 @@ fun NipHeader(
     anchors: MarkdownAnchors?,
     modifier: Modifier = Modifier,
 ) {
+    // The body may render translated; its sections are found by their place among the originals.
+    if (anchors != null) remember(anchors, view) { anchors.useSections(view.sections.map { it.anchor }) }
+
     Column(modifier = modifier) {
         NipBadges(view)
 

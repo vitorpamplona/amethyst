@@ -103,7 +103,7 @@ fun RenderContentAsMarkdown(
         }
 
     // Split only when it buys something: highlighted code, or sections a reader can jump to.
-    val chunks = remember(content, anchors != null) { MarkdownChunks.split(content, atHeadings = anchors != null) }
+    val chunks = remember(content, anchors != null) { MarkdownChunks.cachedSplit(content, atHeadings = anchors != null) }
 
     CompositionLocalProvider(LocalUriHandler provides onClick) {
         if (chunks == null) {
@@ -111,10 +111,11 @@ fun RenderContentAsMarkdown(
         } else {
             val spacing = with(LocalDensity.current) { DefaultParagraphSpacing.toDp() }
             Column(verticalArrangement = Arrangement.spacedBy(spacing)) {
+                var headingPosition = 0
                 chunks.forEach { chunk ->
                     when (chunk) {
                         is MarkdownChunk.Prose ->
-                            Box(Modifier.markdownAnchor(anchors, chunk.anchor)) {
+                            Box(Modifier.markdownAnchor(anchors, chunk.anchor, if (chunk.anchor != null) headingPosition++ else -1)) {
                                 if (chunk.markdown.isNotBlank()) {
                                     MarkdownBlock(chunk.markdown, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
                                 }

@@ -94,4 +94,12 @@ class MarkdownChunksTest {
         assertEquals("nip-44-v2-encryption", MarkdownChunks.anchorOf("NIP-44 v2: Encryption"))
         assertEquals("kinds", MarkdownChunks.anchorOf("Kinds"))
     }
+
+    @Test
+    fun cachedSplitMatchesSplitAndKeysOnAnchors() {
+        val md = "Intro.\n\n## Part\n\nText."
+        assertNull(MarkdownChunks.cachedSplit(md, atHeadings = false))
+        assertEquals(MarkdownChunks.split(md, atHeadings = true), MarkdownChunks.cachedSplit(md, atHeadings = true))
+        assertEquals(2, MarkdownChunks.cachedSplit(md, atHeadings = true)?.size)
+    }
 }

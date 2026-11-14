@@ -44,9 +44,11 @@ object NipLinks {
     fun repoUrl(number: String) = "$REPO_BLOB$number.md"
 
     /**
-     * The NIP a URL points at, for links that should open in the app's reader: the nips repo
-     * (`github.com/nostr-protocol/nips/blob/<branch>/44.md`, raw or not, with or without an
-     * anchor) and `nips.nostr.com/44`. Null for anything else, including the repo's README.
+     * The NIP a URL points at, for links that should open in the app's reader: the nips repo's
+     * master branch (`github.com/nostr-protocol/nips/blob/master/44.md`, raw or not, with or
+     * without an anchor) and `nips.nostr.com/44`. Null for anything else: the README, and a file
+     * on another branch, which is a proposal the reader (it fetches master) would not show, so it
+     * keeps opening on GitHub.
      */
     fun numberFromUrl(url: String): String? {
         val noScheme = url.substringAfter("://", url).removePrefix("www.")
@@ -54,12 +56,14 @@ object NipLinks {
 
         val file =
             when {
-                path.startsWith("github.com/nostr-protocol/nips/blob/") -> path.substringAfterLast('/')
-                path.startsWith("raw.githubusercontent.com/nostr-protocol/nips/") -> path.substringAfterLast('/')
-                path.startsWith("nips.nostr.com/") -> path.substringAfter('/') + ".md"
+                path.startsWith("github.com/nostr-protocol/nips/blob/master/") -> path.removePrefix("github.com/nostr-protocol/nips/blob/master/")
+                path.startsWith("raw.githubusercontent.com/nostr-protocol/nips/master/") -> path.removePrefix("raw.githubusercontent.com/nostr-protocol/nips/master/")
+                path.startsWith("raw.githubusercontent.com/nostr-protocol/nips/refs/heads/master/") -> path.removePrefix("raw.githubusercontent.com/nostr-protocol/nips/refs/heads/master/")
+                path.startsWith("nips.nostr.com/") -> path.removePrefix("nips.nostr.com/") + ".md"
                 else -> return null
             }
-        if (!file.endsWith(".md")) return null
+        // Only a file at the top of the repo: `44.md`, not `some/dir/44.md`.
+        if (file.contains('/') || !file.endsWith(".md")) return null
         return file.removeSuffix(".md").takeIf { it.length == 2 }?.let { normalize(it) }
     }
 
