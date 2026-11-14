@@ -49,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -64,36 +65,17 @@ import com.vitorpamplona.amethyst.commons.resources.location_picker_area
 import com.vitorpamplona.amethyst.commons.resources.location_picker_confirm
 import com.vitorpamplona.amethyst.commons.resources.location_picker_hint_map_only
 import com.vitorpamplona.amethyst.commons.resources.location_picker_title
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.areaSize
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.areaSize
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.label
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
 import kotlinx.coroutines.delay
-
-/** How far out the picker starts with nothing chosen yet: the Americas, Europe and Africa. */
-private const val WORLD_ZOOM = 3
-
-/**
- * A mid-Atlantic point with no place name, so the unseeded view names nothing; the same one the
- * Android picker opens on (20N/0E would sit on the prime meridian and inland Mali).
- */
-private const val WORLD_CENTER_LAT = 20.0
-private const val WORLD_CENTER_LON = -30.0
-
-/** A zoom at which a cell of [length] characters roughly fills the view, as on Android. */
-private fun zoomForGeohashLength(length: Int): Int =
-    when {
-        length <= 1 -> 2
-        length == 2 -> 4
-        length == 3 -> 7
-        length == 4 -> 9
-        length == 5 -> 12
-        length == 6 -> 14
-        length == 7 -> 16
-        else -> 18
-    }
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
+import kotlin.math.roundToInt
 
 /**
  * The desktop's [GeohashLocationPickerDialog][com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform.GeohashLocationPickerDialog]:
@@ -167,41 +149,59 @@ fun DesktopGeohashLocationPickerContent(
     onConfirm: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val seed = remember(initialGeohash) { initialGeohash?.trim()?.takeIf { it.isNotEmpty() }?.let { GeoHash.decode(it) } }
-    val seedLength = initialGeohash?.trim()?.length ?: 0
+    // A geohash is lowercase; an uppercase or otherwise invalid seed decodes to nothing and the picker
+    // opens unseeded.
+    val seedText = remember(initialGeohash) { initialGeohash?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } }
+    val seed = remember(seedText) { seedText?.let { GeoHash.decode(it) } }
+    // A seed that matches no level exactly (3 characters, or a geocache's 9) shows the nearest one.
+    val seedLevel = remember(seed) { if (seed != null && seedText != null) GeohashPickerDefaults.nearestLevel(seedText.length) else null }
 
     val state =
         remember(seed) {
-            if (seed != null) {
-                DesktopMapState(seed.centerLat, seed.centerLon, zoomForGeohashLength(seedLength))
+            if (seed != null && seedText != null) {
+                DesktopMapState(seed.centerLat, seed.centerLon, GeohashPickerDefaults.zoomForGeohashLength(seedText.length).roundToInt())
             } else {
-                DesktopMapState(WORLD_CENTER_LAT, WORLD_CENTER_LON, WORLD_ZOOM)
+                DesktopMapState(GeohashPickerDefaults.WORLD_CENTER_LAT, GeohashPickerDefaults.WORLD_CENTER_LON, GeohashPickerDefaults.WORLD_ZOOM.roundToInt())
             }
         }
 
-    var level by remember(seed) { mutableStateOf(GeohashChannelLevel.forChars(seedLength) ?: GeohashChannelLevel.CITY) }
+    var level by remember(seed) { mutableStateOf(seedLevel ?: GeohashChannelLevel.CITY) }
 
-    // [DesktopMapState.positioned] turns true once the reader drags, zooms or presses and holds.
-    // It is not snapshot state, so the cell below reads the centre and the zoom, one of which
-    // every such move changes.
+    // Whether the view has moved since it opened: a drag, a zoom, a press and hold, or a new area
+    // level reframing it. Watching the view itself, not [DesktopMapState.positioned], which is not
+    // snapshot state and turns true even when a zoom at its limit moves nothing.
+    var moved by remember(state) { mutableStateOf(false) }
+    LaunchedEffect(state) {
+        snapshotFlow { Triple(state.centerX, state.centerY, state.zoom) }.drop(1).first()
+        moved = true
+    }
+
     val cell by remember(state, seed) {
         derivedStateOf {
-            val x = state.centerX
-            val y = state.centerY
-            state.zoom
-            if (seed != null || state.positioned) GeoHash.encode(latitudeOf(y), longitudeOf(x), level.chars).toString() else null
+            when {
+                moved -> GeoHash.encode(latitudeOf(state.centerY), longitudeOf(state.centerX), level.chars).toString()
+                // Untouched, the seed comes back exactly as given, whatever its length: opening the
+                // picker and confirming must not turn a geocache's 9 characters into a city.
+                seed != null && level == seedLevel -> seedText
+                seed != null -> GeoHash.encode(seed.centerLat, seed.centerLon, level.chars).toString()
+                else -> null
+            }
         }
     }
 
-    // Picking a coarser or finer area frames the new cell, once there is a pick to frame.
-    LaunchedEffect(level) {
-        if (seed != null || state.positioned) {
-            state.centerOn(latitudeOf(state.centerY), longitudeOf(state.centerX), zoomForGeohashLength(level.chars))
+    // Choosing a coarser or finer area frames the new cell, once there is a place to frame. Not on
+    // open: the seed already opened at its own zoom.
+    LaunchedEffect(state) {
+        snapshotFlow { level }.drop(1).collect { newLevel ->
+            if (seed != null || moved) {
+                val zoom = GeohashPickerDefaults.zoomForGeohashLength(newLevel.chars).roundToInt()
+                state.centerOn(latitudeOf(state.centerY), longitudeOf(state.centerX), zoom)
+            }
         }
     }
 
     // A drag changes the cell every few pixels; name the place only once the map settles.
-    var settledCell by remember { mutableStateOf(cell) }
+    var settledCell by remember(state) { mutableStateOf(cell) }
     LaunchedEffect(cell) {
         delay(450)
         settledCell = cell

@@ -412,15 +412,3 @@ fun GeohashChannelLevel.labelRes(): StringResource =
         GeohashChannelLevel.BLOCK -> Res.string.geohash_level_block
         GeohashChannelLevel.BUILDING -> Res.string.geohash_level_building
     }
-
-/** A rough physical size for a geohash cell at this precision, for the location pickers' chips. */
-fun GeohashChannelLevel.areaSize(): String =
-    when (this) {
-        GeohashChannelLevel.CONTINENT -> "~5000 km"
-        GeohashChannelLevel.REGION -> "~1250 km"
-        GeohashChannelLevel.PROVINCE -> "~39 km"
-        GeohashChannelLevel.CITY -> "~5 km"
-        GeohashChannelLevel.NEIGHBORHOOD -> "~1.2 km"
-        GeohashChannelLevel.BLOCK -> "~150 m"
-        GeohashChannelLevel.BUILDING -> "~38 m"
-    }

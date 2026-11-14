@@ -9114,6 +9114,13 @@
     <string name="geohash_level_building">Building</string>
     <string name="geohash_level_region">Region</string>
     <string name="geohash_level_block">Block</string>
+    <string name="geohash_area_continent">~5000 km</string>
+    <string name="geohash_area_region">~1250 km</string>
+    <string name="geohash_area_province">~39 km</string>
+    <string name="geohash_area_city">~5 km</string>
+    <string name="geohash_area_neighborhood">~1.2 km</string>
+    <string name="geohash_area_block">~150 m</string>
+    <string name="geohash_area_building">~38 m</string>
     <string name="geohash_chats_intro_title">Chat by location</string>
     <string name="geohash_chats_intro_description">Anonymous, ephemeral rooms shared with everyone in the same map cell. Interoperable with Bitchat.</string>
     <string name="geohash_chats_empty_title">No location channels yet</string>
