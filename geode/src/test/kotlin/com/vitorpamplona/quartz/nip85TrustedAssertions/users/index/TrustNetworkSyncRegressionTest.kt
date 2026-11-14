@@ -222,28 +222,21 @@ class TrustNetworkSyncRegressionTest {
         }
 
     @Test
-    fun anIndexFromTheVersionBeforeStillReads() {
+    fun anIndexFromAnOlderVersionIsRebuilt() {
         val header = TrustNetworkHeader(provider.pubKey, "wss://scores.example.com", syncCursor = batchTime, lastFullCheck = 1, lastUpdate = 2, heldAtCursor = 300, heldAfterCursor = 0, heldTotal = 301, generation = 7)
         val builder = TrustNetworkBuilder(provider.pubKey)
         val current = TrustNetworkCodec.encodeIndex(header, builder.build().first)
         assertEquals(header, TrustNetworkCodec.decodeHeader(current))
+        assertEquals(header, assertNotNull(TrustNetworkCodec.decodeIndex(current), "the current version reads back").first)
 
-        val relayLength = header.relay.encodeToByteArray().size
-        val heldAfterAt = 4 + 2 + 32 + 2 + relayLength + 8 * 3 + 4
-
-        // Version 4: the same bytes without heldTotal (the i32 after heldAfterCursor).
-        val v4 = current.copyOfRange(0, heldAfterAt + 4) + current.copyOfRange(heldAfterAt + 8, current.size)
-        v4[4] = 0
-        v4[5] = 4
-        val decoded4 = assertNotNull(TrustNetworkCodec.decodeIndex(v4), "a version 4 file is still read")
-        assertEquals(header.copy(heldTotal = null), decoded4.first, "unknown, so the next update reconciles once")
-
-        // Version 3: without heldAfterCursor either.
-        val v3 = current.copyOfRange(0, heldAfterAt) + current.copyOfRange(heldAfterAt + 8, current.size)
-        v3[4] = 0
-        v3[5] = 3
-        val decoded = assertNotNull(TrustNetworkCodec.decodeIndex(v3), "a version 3 file is still read")
-        assertEquals(header.copy(heldAfterCursor = null, heldTotal = null), decoded.first, "unknown, so the next update reconciles once")
+        // Version 6 keys the index by the whole pubkey; older files keyed it by a prefix, so they
+        // are not read (and possibly misread) but refused, and the next update rebuilds the index.
+        for (version in 3 until TrustNetworkCodec.VERSION) {
+            val older = current.copyOf()
+            older[4] = (version shr 8).toByte()
+            older[5] = version.toByte()
+            assertNull(TrustNetworkCodec.decodeIndex(older), "a version $version file is rebuilt, not read")
+        }
     }
 
     @Test
