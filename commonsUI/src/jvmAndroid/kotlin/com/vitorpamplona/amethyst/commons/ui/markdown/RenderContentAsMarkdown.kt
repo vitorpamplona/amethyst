@@ -20,11 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.markdown
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
@@ -32,8 +36,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
@@ -44,6 +50,8 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.uriToRoute
 import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
+import com.vitorpamplona.amethyst.commons.richtext.MarkdownChunk
+import com.vitorpamplona.amethyst.commons.richtext.MarkdownChunks
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
@@ -51,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.theme.DefaultParagraphSpacing
 import com.vitorpamplona.amethyst.commons.ui.theme.MarkdownTextStyle
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.markdownStyle
@@ -74,11 +83,15 @@ fun RenderContentAsMarkdown(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val anchors = LocalMarkdownAnchors.current
     val uriHandler = LocalUriHandler.current
     val onClick =
-        remember(uriHandler, accountViewModel, nav) {
+        remember(uriHandler, accountViewModel, nav, anchors) {
             object : UriHandler {
                 override fun openUri(uri: String) {
+                    // `[link](#section)`: a section of the document being read, when it can be reached.
+                    val section = anchors?.anchorOfLink(uri)
+                    if (section != null && anchors.jumpTo(section)) return
                     val route = uriToRoute(uri, accountViewModel.account)
                     if (route != null) {
                         nav.nav(route)
@@ -89,6 +102,69 @@ fun RenderContentAsMarkdown(
             }
         }
 
+    // Split only when it buys something: highlighted code, or sections a reader can jump to.
+    val chunks = remember(content, anchors != null) { MarkdownChunks.split(content, atHeadings = anchors != null) }
+
+    CompositionLocalProvider(LocalUriHandler provides onClick) {
+        if (chunks == null) {
+            MarkdownBlock(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
+        } else {
+            val spacing = with(LocalDensity.current) { DefaultParagraphSpacing.toDp() }
+            Column(verticalArrangement = Arrangement.spacedBy(spacing)) {
+                chunks.forEach { chunk ->
+                    when (chunk) {
+                        is MarkdownChunk.Prose ->
+                            Box(Modifier.markdownAnchor(anchors, chunk.anchor)) {
+                                if (chunk.markdown.isNotBlank()) {
+                                    MarkdownBlock(chunk.markdown, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
+                                }
+                            }
+
+                        is MarkdownChunk.Code -> HighlightedCodeBlock(chunk)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A fenced code block drawn like the Markdown library draws one, with the JSON-ish highlighter's colors. */
+@Composable
+private fun HighlightedCodeBlock(chunk: MarkdownChunk.Code) {
+    val style = MaterialTheme.colorScheme.markdownStyle.codeBlockStyle
+    val colors = MaterialTheme.colorScheme.codeColors
+    val text =
+        remember(chunk, colors) {
+            if (MarkdownChunks.isHighlightable(chunk.language, chunk.code)) {
+                highlightCode(chunk.code, chunk.language, colors)
+            } else {
+                AnnotatedString(chunk.code)
+            }
+        }
+    // Code keeps its lines, as on GitHub: aligned comments and indentation stay readable, and a
+    // long line scrolls sideways instead of wrapping.
+    Box(modifier = style?.modifier ?: Modifier) {
+        Text(
+            text = text,
+            style = style?.textStyle ?: MarkdownTextStyle,
+            softWrap = false,
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+        )
+    }
+}
+
+/** One Markdown document, parsed once, drawn by the Markdown library with the app's media renderer. */
+@Composable
+private fun MarkdownBlock(
+    content: String,
+    tags: ImmutableListOfLists<String>?,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    callbackUri: String?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     ProvideTextStyle(MarkdownTextStyle) {
         val astNode =
             remember(content) {
@@ -114,15 +190,13 @@ fun RenderContentAsMarkdown(
                 )
             }
 
-        CompositionLocalProvider(LocalUriHandler provides onClick) {
-            // The renderer hands the bleed back to its top-level media; nothing else in here bleeds.
-            ProvideMediaBleed(0.dp) {
-                RichText(
-                    style = MaterialTheme.colorScheme.markdownStyle,
-                    renderer = renderer,
-                ) {
-                    BasicMarkdown(astNode)
-                }
+        // The renderer hands the bleed back to its top-level media; nothing else in here bleeds.
+        ProvideMediaBleed(0.dp) {
+            RichText(
+                style = MaterialTheme.colorScheme.markdownStyle,
+                renderer = renderer,
+            ) {
+                BasicMarkdown(astNode)
             }
         }
     }

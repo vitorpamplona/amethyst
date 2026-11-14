@@ -35,5 +35,5 @@ fun RenderNipContent(
 ) {
     val noteEvent = note.event as? NipTextEvent ?: return
 
-    NipCard(noteEvent)
+    NipCard(noteEvent, nav)
 }

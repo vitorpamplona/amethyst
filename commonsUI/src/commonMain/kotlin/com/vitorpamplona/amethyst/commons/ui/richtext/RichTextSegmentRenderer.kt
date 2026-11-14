@@ -203,6 +203,8 @@ interface RichTextSegmentRenderer {
 @Immutable
 data class RichTextInteractions(
     val onClickHashtag: (hashtag: String) -> Unit = {},
+    /** A `NIP-44` mention: [number] is the two-character NIP number. */
+    val onClickNip: (number: String) -> Unit = {},
 )
 
 /**

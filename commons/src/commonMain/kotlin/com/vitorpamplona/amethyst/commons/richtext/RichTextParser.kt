@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.cartridges.CartLinks
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipLinks
 import com.vitorpamplona.amethyst.commons.util.isValidUrl
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
@@ -461,6 +462,8 @@ class RichTextParser {
         if (isPotentialPhoneNumber(word) && !isDate(word)) {
             if (Patterns.PHONE.matches(word)) return PhoneSegment(word)
         }
+
+        NipLinks.mention(word)?.let { (number, extras) -> return NipMentionSegment(word, number, extras.ifEmpty { null }) }
 
         return RegularTextSegment(word)
     }

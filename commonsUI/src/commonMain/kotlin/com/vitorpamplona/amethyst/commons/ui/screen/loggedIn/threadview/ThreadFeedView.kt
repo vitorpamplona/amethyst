@@ -55,10 +55,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -114,6 +116,10 @@ import com.vitorpamplona.amethyst.commons.ui.components.ShowFullTextCache
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedTextField
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.markdown.LocalMarkdownAnchors
+import com.vitorpamplona.amethyst.commons.ui.markdown.MarkdownAnchors
+import com.vitorpamplona.amethyst.commons.ui.markdown.markdownAnchorViewport
+import com.vitorpamplona.amethyst.commons.ui.markdown.rememberMarkdownAnchors
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.CheckAndDisplayEditStatus
@@ -372,9 +378,14 @@ fun RenderThreadFeed(
         }
     }
 
+    val contentPadding = rememberFeedContentPadding(FeedPadding)
+    val density = LocalDensity.current
+    // A NIP read here jumps to its sections; the top padding is the part a top bar covers.
+    val anchors = rememberMarkdownAnchors(listState) { with(density) { contentPadding.calculateTopPadding().toPx() } }
+
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = rememberFeedContentPadding(FeedPadding),
+        modifier = Modifier.fillMaxSize().markdownAnchorViewport(anchors),
+        contentPadding = contentPadding,
         state = listState,
     ) {
         itemsIndexed(
@@ -409,7 +420,7 @@ fun RenderThreadFeed(
             if (index == 0) {
                 ProvideTextStyle(TextStyle(fontSize = 18.sp, lineHeight = 1.20.em)) {
                     // A git item's tools (diff, clone, status buttons) belong to its own thread.
-                    CompositionLocalProvider(LocalGitThreadRoot provides item.idHex) {
+                    CompositionLocalProvider(LocalGitThreadRoot provides item.idHex, LocalThreadReaderAnchors provides anchors) {
                         NoteMaster(
                             baseNote = item,
                             modifier = modifier,
@@ -708,6 +719,12 @@ fun NoteMaster(
     }
 }
 
+/**
+ * The thread list's section anchors. Only a NIP's own body is split into sections (see
+ * [FullBleedNoteCompose]), so replies with headings render as before.
+ */
+private val LocalThreadReaderAnchors = staticCompositionLocalOf<MarkdownAnchors?> { null }
+
 @Composable
 private fun FullBleedNoteCompose(
     baseNote: Note,
@@ -868,7 +885,7 @@ private fun FullBleedNoteCompose(
             is NipTextEvent -> {
                 // A NIP is opened to be read: its body starts expanded, not cut at "Show More".
                 remember(baseNote.idHex) { ShowFullTextCache.cache.put(baseNote.idHex, true) }
-                RenderNipHeaderForThread(noteEvent)
+                RenderNipHeaderForThread(noteEvent, nav, LocalThreadReaderAnchors.current)
             }
             is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
             is CodeSnippetEvent -> RenderCodeSnippetHeaderForThread(noteEvent)
@@ -945,18 +962,22 @@ private fun FullBleedNoteCompose(
                     )
                 } else if (hasThreadHeader(noteEvent)) {
                     // The header above already drew the card's title/cover/summary; the body is the
-                    // full text, not the feed card, which would repeat that header.
-                    RenderTextEvent(
-                        baseNote,
-                        false,
-                        canPreview,
-                        quotesLeft = 3,
-                        unPackReply = ReplyRenderType.NONE,
-                        backgroundColor,
-                        editState,
-                        accountViewModel,
-                        nav,
-                    )
+                    // full text, not the feed card, which would repeat that header. A NIP's body is
+                    // split at its headings so its table of contents and `#section` links can reach them.
+                    val anchors = if (noteEvent is NipTextEvent) LocalThreadReaderAnchors.current else null
+                    CompositionLocalProvider(LocalMarkdownAnchors provides anchors) {
+                        RenderTextEvent(
+                            baseNote,
+                            false,
+                            canPreview,
+                            quotesLeft = 3,
+                            unPackReply = ReplyRenderType.NONE,
+                            backgroundColor,
+                            editState,
+                            accountViewModel,
+                            nav,
+                        )
+                    }
                 } else {
                     RenderNoteRow(
                         baseNote = baseNote,

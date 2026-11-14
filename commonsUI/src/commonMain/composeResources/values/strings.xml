@@ -9471,4 +9471,35 @@
     <string name="media_kind_audio">Audio</string>
     <string name="media_kind_pdf">PDF</string>
     <string name="media_type_and_size">%1$s · %2$s</string>
+
+    <!-- NIPs: the reader, the event-kind page and the NIPs tab -->
+    <string name="nip_number">NIP-%1$s</string>
+    <string name="nip_contents">Contents</string>
+    <plurals name="nip_contents_sections">
+        <item quantity="one">%1$d section</item>
+        <item quantity="other">%1$d sections</item>
+    </plurals>
+    <string name="nip_open_on_github">Open on GitHub</string>
+    <string name="nip_load_failed">Couldn't load NIP-%1$s. Check your connection and try again.</string>
+    <string name="nip_unrecommended">Unrecommended</string>
+    <string name="event_kind_title">Kind %1$d</string>
+    <string name="event_kind_official">Defined by NIP-%1$s</string>
+    <string name="event_kind_nips_on_nostr">NIPs on Nostr</string>
+    <string name="event_kind_no_definitions">No NIP on your relays defines this kind yet.</string>
+    <string name="event_kind_recent">Recent events</string>
+    <string name="event_kind_no_recent">No events of this kind on your relays.</string>
+    <plurals name="event_kind_not_shown">
+        <item quantity="one">%1$d event of this kind was found, but the app keeps this kind out of feeds.</item>
+        <item quantity="other">%1$d events of this kind were found, but the app keeps this kind out of feeds.</item>
+    </plurals>
+    <string name="event_kind_inspect">See how clients encode it</string>
+    <string name="unknown_kind_defined_by">Defined by %1$s</string>
+    <string name="unknown_kind_about">About kind %1$d</string>
+    <string name="discover_nips">NIPs</string>
+    <string name="nip_catalog_search">Search by number, title or kind</string>
+    <string name="nip_catalog_all">All</string>
+    <string name="nip_catalog_official">Official</string>
+    <string name="nip_catalog_on_nostr">On Nostr</string>
+    <string name="nip_catalog_official_failed">Couldn't load the official list.</string>
+    <string name="nip_catalog_empty">No NIPs match your search.</string>
 </resources>

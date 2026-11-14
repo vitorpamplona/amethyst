@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.MathSegment
+import com.vitorpamplona.amethyst.commons.richtext.NipMentionSegment
 import com.vitorpamplona.amethyst.commons.richtext.NowhereLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.ParagraphState
 import com.vitorpamplona.amethyst.commons.richtext.PdfSegment
@@ -203,6 +204,7 @@ private fun RenderWord(
         is RegularTextSegment -> Text(word.segmentText)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state.customEmoji)
         is HashTagSegment -> HashTagText(word) { actions.onClickHashtag(word.hashtag) }
+        is NipMentionSegment -> NipMentionText(word) { actions.onClickNip(word.number) }
 
         // Presentation + CTA are platform-owned: each front end styles its own
         // clickable link/mail/phone and decides how to open it.
@@ -246,6 +248,26 @@ private fun RenderWord(
         // Unknown/other segments fall back to their raw text.
         else -> Text(word.segmentText)
     }
+}
+
+/** A `NIP-44` mention in the theme's primary color; glued punctuation keeps the text color. */
+@Composable
+private fun NipMentionText(
+    segment: NipMentionSegment,
+    onClick: () -> Unit,
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val background = MaterialTheme.colorScheme.onBackground
+    val annotated =
+        remember(segment.segmentText, primary, background) {
+            buildAnnotatedString {
+                val extras = segment.extras
+                val mention = if (extras != null) segment.segmentText.removeSuffix(extras) else segment.segmentText
+                withStyle(SpanStyle(color = primary)) { append(mention) }
+                extras?.let { withStyle(SpanStyle(color = background)) { append(it) } }
+            }
+        }
+    Text(text = annotated, modifier = Modifier.clickable(onClick = onClick))
 }
 
 private val HashtagIconPlaceholder =

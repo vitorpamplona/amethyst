@@ -137,6 +137,7 @@ fun RichTextViewer(
             remember(nav) {
                 RichTextInteractions(
                     onClickHashtag = { nav.nav(Route.Hashtag(it.lowercase())) },
+                    onClickNip = { nav.nav(Route.Nip(it)) },
                 )
             }
 

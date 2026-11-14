@@ -208,7 +208,7 @@ fun SecretMessageContent(
         }
     val interactions =
         remember(nav) {
-            RichTextInteractions(onClickHashtag = { nav.nav(Route.Hashtag(it.lowercase())) })
+            RichTextInteractions(onClickHashtag = { nav.nav(Route.Hashtag(it.lowercase())) }, onClickNip = { nav.nav(Route.Nip(it)) })
         }
 
     CompositionLocalProvider(

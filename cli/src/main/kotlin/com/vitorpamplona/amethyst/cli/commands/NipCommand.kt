@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipLinks
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipTextView
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -53,8 +55,6 @@ import okhttp3.Request
  *   nip list   fetch the repo's NIP index (README)
  */
 object NipCommand {
-    private const val RAW_BASE = "https://raw.githubusercontent.com/nostr-protocol/nips/master"
-
     // Amethyst's default NIP-50-capable search relays (search isn't universal).
     private val SEARCH_RELAYS = DefaultSearchRelayList
 
@@ -86,7 +86,7 @@ object NipCommand {
         args.rejectUnknown()
 
         // 1. Canonical repo first.
-        val url = "$RAW_BASE/$slug.md"
+        val url = NipLinks.rawUrl(slug)
         fetchText(url)?.let { text ->
             Output.emit(mapOf("nip" to slug, "source" to "repo", "url" to url, "title" to titleOf(text), "text" to text))
             return 0
@@ -102,38 +102,26 @@ object NipCommand {
     }
 
     private fun list(): Int {
-        val url = "$RAW_BASE/README.md"
+        val url = NipLinks.INDEX_RAW_URL
         val text = fetchText(url) ?: return Output.error("http_error", "could not fetch the NIP index from $url")
         Output.emit(mapOf("source" to "repo", "url" to url, "text" to text))
         return 0
     }
 
-    /** `1` -> `01`, `7d` -> `7D`, `46` -> `46`. The repo names files in 2-char upper-case. */
-    private fun normalizeSlug(input: String): String {
-        val cleaned = input.removePrefix("NIP-").removePrefix("nip-").uppercase()
-        return if (cleaned.length == 1) "0$cleaned" else cleaned
-    }
+    /** `1` -> `01`, `7d` -> `7D`, `46` -> `46` (shared with the app); anything else upper-cased as given. */
+    private fun normalizeSlug(input: String): String = NipLinks.normalize(input) ?: input.removePrefix("NIP-").removePrefix("nip-").uppercase()
 
     /**
-     * NIP docs use setext headings — `NIP-46\n======` (H1) then a descriptive
-     * `Nostr Remote Signing\n--------` (H2). Prefer the descriptive H2, then
-     * the H1, then any ATX `#` heading.
+     * The NIP's descriptive title: the heading under `NIP-46` (`Nostr Remote Signing`), as the app's
+     * reader shows it, else the first heading.
      */
-    private fun titleOf(markdown: String): String? {
-        val lines = markdown.lines()
-
-        fun underlinedBy(
-            ch: Char,
-            i: Int,
-        ): Boolean {
-            val text = lines.getOrNull(i)?.trim().orEmpty()
-            val rule = lines.getOrNull(i + 1)?.trim().orEmpty()
-            return text.isNotEmpty() && !text.startsWith("#") && rule.length >= 3 && rule.all { it == ch }
-        }
-        for (i in lines.indices) if (underlinedBy('-', i)) return lines[i].trim()
-        for (i in lines.indices) if (underlinedBy('=', i)) return lines[i].trim()
-        return lines.firstOrNull { it.startsWith("# ") || it.startsWith("## ") }?.trimStart('#', ' ')?.trim()
-    }
+    private fun titleOf(markdown: String): String? =
+        NipTextView.ofMarkdown("", markdown).title
+            ?: markdown
+                .lines()
+                .firstOrNull { it.startsWith("# ") || it.startsWith("## ") }
+                ?.trimStart('#', ' ')
+                ?.trim()
 
     private fun fetchText(url: String): String? =
         try {

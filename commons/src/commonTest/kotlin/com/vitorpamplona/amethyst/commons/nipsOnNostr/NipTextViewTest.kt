@@ -57,7 +57,7 @@ class NipTextViewTest {
         assertEquals("review", view.status)
         assertEquals(listOf(NipDefinedKind(12000, "AI Agent Keys")), view.kinds)
         assertTrue(view.body.startsWith("A user stores"))
-        assertTrue(view.body.endsWith("[NIP-44](${NIPS_REPO_BLOB}44.md)."), view.body)
+        assertTrue(view.body.endsWith("[NIP-44](${NipLinks.REPO_BLOB}44.md)."), view.body)
         assertEquals(
             "A user stores the API key of their AI provider so every client they sign into can run AI tasks for them, billed to the user.",
             view.preview,
@@ -121,7 +121,7 @@ class NipTextViewTest {
     fun linksReferenceDefinitionsAndAnchors() {
         val md = "See [NIP-44][] and [sig](01.md#signing).\n\n[NIP-44]: 44.md\n[Blossom]: https://github.com/hzrd149/blossom"
         assertEquals(
-            "See [NIP-44][] and [sig](${NIPS_REPO_BLOB}01.md#signing).\n\n[NIP-44]: ${NIPS_REPO_BLOB}44.md\n[Blossom]: https://github.com/hzrd149/blossom",
+            "See [NIP-44][] and [sig](${NipLinks.REPO_BLOB}01.md#signing).\n\n[NIP-44]: ${NipLinks.REPO_BLOB}44.md\n[Blossom]: https://github.com/hzrd149/blossom",
             linkRelativeNips(md),
         )
     }
@@ -130,5 +130,32 @@ class NipTextViewTest {
     fun previewSkipsCodeAndReducesLinks() {
         val md = "```json\n{}\n```\n\nThis NIP defines how to publish Maven artifacts as [Blossom][] blobs and **pins** them with [events](https://x.y)."
         assertEquals("This NIP defines how to publish Maven artifacts as Blossom blobs and pins them with events.", plainPreview(md))
+    }
+
+    @Test
+    fun linksPlainMentionsButNotCodeOrExistingLinks() {
+        val md = "Uses NIP-44, see `NIP-04` and [NIP-17](17.md).\n\n```\nNIP-01\n```\n\n[NIP-59]: 59.md\n\nThis is NIP-7D's own text."
+        val out = linkNipMentions(md, self = "7D")
+        assertTrue(out.startsWith("Uses [NIP-44](${NipLinks.REPO_BLOB}44.md), see `NIP-04` and [NIP-17](17.md)."), out)
+        assertTrue(out.contains("```\nNIP-01\n```"), out)
+        assertTrue(out.contains("[NIP-59]: 59.md"), out)
+        assertTrue(out.endsWith("This is NIP-7D's own text."), out)
+    }
+
+    @Test
+    fun longNipsGetContents() {
+        val body = (1..4).joinToString("\n\n") { "## Section $it\n\n" + "Lorem ipsum dolor sit amet. ".repeat(40) }
+        val view = NipTextView.of(nip(body, arrayOf("title", "Long")))
+        assertEquals(listOf("section-1", "section-2", "section-3", "section-4"), view.sections.map { it.anchor })
+        assertTrue(view.hasContents)
+        assertTrue(!NipTextView.of(nip("## A\n\nshort", arrayOf("title", "Short"))).hasContents)
+    }
+
+    @Test
+    fun namedNipHeadingIsATitleNotANumber() {
+        val view = NipTextView.of(nip("NIP-AMB\n=======\n\nThis NIP defines AMB.", arrayOf("title", "NIP-AMB")))
+        assertNull(view.number)
+        assertEquals("NIP-AMB", view.title)
+        assertEquals("This NIP defines AMB.", view.body)
     }
 }

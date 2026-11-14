@@ -21,16 +21,24 @@
 package com.vitorpamplona.amethyst.commons.nipsOnNostr.ui
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,11 +48,22 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipDefinedKind
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipTextView
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.kind_nip
 import com.vitorpamplona.amethyst.commons.resources.kinds
+import com.vitorpamplona.amethyst.commons.resources.nip_contents
+import com.vitorpamplona.amethyst.commons.resources.nip_contents_sections
+import com.vitorpamplona.amethyst.commons.resources.nip_number
+import com.vitorpamplona.amethyst.commons.richtext.MarkdownHeading
+import com.vitorpamplona.amethyst.commons.ui.markdown.MarkdownAnchors
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -60,11 +79,14 @@ import com.vitorpamplona.quartz.kinds.KindNames
 
 /**
  * Feed card for a NIP published on Nostr ("NIPs on Nostr"): its NIP/status badges, title, summary
- * (or its opening paragraph as plain text) and the kinds it defines. The full text is read in the
- * thread view, under [RenderNipHeaderForThread].
+ * (or its opening paragraph as plain text) and the kinds it defines, each opening its kind page. The
+ * full text is read in the thread view, under [RenderNipHeaderForThread].
  */
 @Composable
-fun NipCard(noteEvent: NipTextEvent) {
+fun NipCard(
+    noteEvent: NipTextEvent,
+    nav: INav? = null,
+) {
     val view = remember(noteEvent) { NipTextView.of(noteEvent) }
     val text = view.summary ?: view.preview.ifBlank { null }
 
@@ -105,20 +127,35 @@ fun NipCard(noteEvent: NipTextEvent) {
 
         if (view.kinds.isNotEmpty()) {
             Spacer(modifier = DoubleVertSpacer)
-            NipKinds(view.kinds)
+            NipKinds(view.kinds, onKindClick = nav?.let { { kind: Int -> it.nav(Route.EventKind(kind)) } })
         }
     }
 }
 
 /**
- * Header of a NIP opened in the thread view: badges, title, summary and the kinds it defines. The
- * body below it is the NIP's Markdown, without the headings and status line shown here.
+ * Header of a NIP opened in the thread view: badges, title, summary, the kinds it defines and,
+ * for a long one, its table of contents. The body below it is the NIP's Markdown, without the
+ * headings and status line shown here.
  */
 @Composable
-fun RenderNipHeaderForThread(noteEvent: NipTextEvent) {
+fun RenderNipHeaderForThread(
+    noteEvent: NipTextEvent,
+    nav: INav,
+    anchors: MarkdownAnchors?,
+) {
     val view = remember(noteEvent) { NipTextView.of(noteEvent) }
+    NipHeader(view, nav, anchors, Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp))
+}
 
-    Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+/** The header of a NIP being read, on Nostr or official. */
+@Composable
+fun NipHeader(
+    view: NipTextView,
+    nav: INav,
+    anchors: MarkdownAnchors?,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
         NipBadges(view)
 
         view.title?.let {
@@ -144,22 +181,26 @@ fun RenderNipHeaderForThread(noteEvent: NipTextEvent) {
 
         if (view.kinds.isNotEmpty()) {
             Spacer(modifier = DoubleVertSpacer)
-            NipKinds(view.kinds)
+            NipKinds(view.kinds, onKindClick = { nav.nav(Route.EventKind(it)) })
+        }
+
+        if (anchors != null && view.hasContents) {
+            Spacer(modifier = DoubleVertSpacer)
+            NipContents(view.sections) { anchors.jumpTo(it) }
         }
     }
 }
 
 /** `NIP-XX` (or just `NIP`), then the status tag and the nips repo's `draft` `optional` flags. */
 @Composable
-private fun NipBadges(view: NipTextView) {
+fun NipBadges(view: NipTextView) {
     FlowRow(
         horizontalArrangement = SpacedBy5dp,
         verticalArrangement = SpacedBy5dp,
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
-        val nip = stringRes(Res.string.kind_nip)
         NipPill(
-            label = view.number?.let { "$nip-$it" } ?: nip,
+            label = view.number?.let { stringRes(Res.string.nip_number, it) } ?: stringRes(Res.string.kind_nip),
             container = MaterialTheme.colorScheme.primary,
             content = MaterialTheme.colorScheme.onPrimary,
             bold = true,
@@ -170,7 +211,7 @@ private fun NipBadges(view: NipTextView) {
 }
 
 @Composable
-private fun StatusPill(status: String) {
+fun StatusPill(status: String) {
     val colors = MaterialTheme.colorScheme
     val (container, content) =
         when (status.lowercase()) {
@@ -184,7 +225,10 @@ private fun StatusPill(status: String) {
 
 /** "Kinds" followed by one chip per kind: its number and the NIP's name for it, or a known name. */
 @Composable
-private fun NipKinds(kinds: List<NipDefinedKind>) {
+fun NipKinds(
+    kinds: List<NipDefinedKind>,
+    onKindClick: ((Int) -> Unit)?,
+) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = SpacedBy5dp,
@@ -202,24 +246,95 @@ private fun NipKinds(kinds: List<NipDefinedKind>) {
                 label = if (name != null) "${kind.kind} · $name" else kind.kind.toString(),
                 container = MaterialTheme.colorScheme.secondaryContainer,
                 content = MaterialTheme.colorScheme.onSecondaryContainer,
+                onClick = onKindClick?.let { { it(kind.kind) } },
             )
         }
     }
 }
 
+/**
+ * The NIP's sections, folded to one line ("Contents · 7 sections") until opened. A section
+ * scrolls the reader to its heading.
+ */
 @Composable
-private fun knownKindName(kind: Int): String? = kindDisplayName(kind)?.let { stringRes(it) } ?: KindNames.nameFor(kind)
+fun NipContents(
+    sections: List<MarkdownHeading>,
+    onSection: (String) -> Unit,
+) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    val shown = remember(sections) { sections.filter { it.level <= 3 } }
+    val top = remember(shown) { shown.minOfOrNull { it.level } ?: 2 }
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(QuoteBorder)
+                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { open = !open }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(MaterialSymbols.MenuBook, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.size(8.dp))
+            Text(
+                text = stringRes(Res.string.nip_contents),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = " · " + pluralStringRes(Res.plurals.nip_contents_sections, shown.size, shown.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.grayText,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                if (open) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.grayText,
+            )
+        }
+        if (open) {
+            Column(modifier = Modifier.padding(bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                shown.forEach { section ->
+                    Text(
+                        text = section.text,
+                        style = if (section.level == top) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,
+                        color = if (section.level == top) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.grayText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onSection(section.anchor) }
+                                .padding(start = 12.dp + (14 * (section.level - top)).dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
-private fun NipPill(
+fun knownKindName(kind: Int): String? = kindDisplayName(kind)?.let { stringRes(it) } ?: KindNames.nameFor(kind)
+
+@Composable
+fun NipPill(
     label: String,
     container: Color,
     content: Color,
     bold: Boolean = false,
+    onClick: (() -> Unit)? = null,
 ) {
     Surface(
         shape = MaterialTheme.shapes.extraSmall,
         color = container,
+        modifier = if (onClick != null) Modifier.clip(MaterialTheme.shapes.extraSmall).clickable(onClick = onClick) else Modifier,
     ) {
         Text(
             text = label,
@@ -265,6 +380,6 @@ fun NipCardPreview() {
 @Composable
 fun NipHeaderForThreadPreview() {
     ThemeComparisonColumn(
-        toPreview = { RenderNipHeaderForThread(previewEvent) },
+        toPreview = { NipHeader(NipTextView.of(previewEvent), EmptyNav(), null) },
     )
 }

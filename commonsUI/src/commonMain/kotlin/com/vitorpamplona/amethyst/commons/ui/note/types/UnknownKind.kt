@@ -25,6 +25,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -35,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,19 +51,25 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipLinks
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipsOnNostr
 import com.vitorpamplona.amethyst.commons.rendering.unknown.BlobEncoding
 import com.vitorpamplona.amethyst.commons.rendering.unknown.ContentShape
 import com.vitorpamplona.amethyst.commons.rendering.unknown.DigestMedia
 import com.vitorpamplona.amethyst.commons.rendering.unknown.RawTag
 import com.vitorpamplona.amethyst.commons.rendering.unknown.UnknownEventDigest
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nip_number
+import com.vitorpamplona.amethyst.commons.resources.unknown_kind_about
 import com.vitorpamplona.amethyst.commons.resources.unknown_kind_client
+import com.vitorpamplona.amethyst.commons.resources.unknown_kind_defined_by
 import com.vitorpamplona.amethyst.commons.resources.unknown_kind_encoded_base64
 import com.vitorpamplona.amethyst.commons.resources.unknown_kind_encoded_hex
 import com.vitorpamplona.amethyst.commons.resources.unknown_kind_encoded_json
@@ -90,8 +98,13 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.utils.Hex
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
 
 /**
  * The body of a note whose kind the app has no renderer for. Before, these fell into the text path,
@@ -187,6 +200,55 @@ private fun UnknownKindCard(
         KindCardUsers(people, accountViewModel, nav)
         UnknownKindFirstReference(digest, quotesLeft, backgroundColor, accountViewModel, nav)
         UnknownKindOtherTags(digest.otherTags, accountViewModel, nav)
+        KindDefinedBy(digest.kind, accountViewModel, nav)
+    }
+}
+
+/**
+ * Where to learn what this kind is: its official NIP when the kind registry knows one, else a NIP
+ * published on Nostr whose `k` tags define it (asked of the relays once per kind per session), else
+ * the kind's own page.
+ */
+@Composable
+private fun KindDefinedBy(
+    kind: Int,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val official = remember(kind) { KindNames.nipFor(kind)?.let { NipLinks.normalize(it) } }
+    val changes by NipsOnNostr.changes.collectAsStateWithLifecycle()
+    val onNostr = remember(kind, changes, official) { if (official == null) NipsOnNostr.definitionsOf(kind).firstOrNull() else null }
+
+    if (official == null) {
+        LaunchedEffect(kind) {
+            withContext(Dispatchers.IO) { NipsOnNostr.fetchDefinitionsOf(accountViewModel.account, kind) }
+        }
+    }
+
+    val nipTitle = (onNostr?.event as? NipTextEvent)?.let { it.title() ?: it.dTag() }
+    val label =
+        when {
+            official != null -> stringRes(Res.string.unknown_kind_defined_by, stringRes(Res.string.nip_number, official))
+            nipTitle != null -> stringRes(Res.string.unknown_kind_defined_by, nipTitle)
+            else -> stringRes(Res.string.unknown_kind_about, kind)
+        }
+
+    Row(
+        modifier =
+            Modifier.clickable {
+                val route =
+                    when {
+                        official != null -> Route.Nip(official)
+                        onNostr != null -> routeFor(onNostr, accountViewModel.account)
+                        else -> null
+                    }
+                nav.nav(route ?: Route.EventKind(kind))
+            },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(MaterialSymbols.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(6.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

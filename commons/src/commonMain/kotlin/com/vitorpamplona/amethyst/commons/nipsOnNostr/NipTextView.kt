@@ -21,7 +21,10 @@
 package com.vitorpamplona.amethyst.commons.nipsOnNostr
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.richtext.MarkdownChunks
+import com.vitorpamplona.amethyst.commons.richtext.MarkdownHeading
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.kinds.KindNames
 
 /** A kind a NIP defines: its number and, when the `k` tag carries one, the NIP's own name for it. */
 @Immutable
@@ -31,12 +34,15 @@ data class NipDefinedKind(
 )
 
 /**
- * What the screens draw for a kind-30817 NIP ("NIPs on Nostr"), worked out once per event.
+ * What the screens draw for a NIP, worked out once per document: a kind-30817 NIP published on
+ * Nostr ([of]) or an official one read from the nips repo ([ofMarkdown]).
  *
  * [body] is the Markdown to render: the content without the leading headings that repeat
- * [title] (NostrHub and the nips repo both open with them), and with relative links to other
- * NIPs (`44.md`) pointed at the nips repo, where they resolve. [preview] is the opening prose
- * as plain text, for the feed card when the NIP has no summary.
+ * [title] (NostrHub and the nips repo both open with them), with relative links to other NIPs
+ * (`44.md`) pointed at the nips repo, and with plain `NIP-44` mentions turned into links. The app
+ * opens both kinds of link in its own reader. [sections] are the body's headings, for a table of
+ * contents. [preview] is the opening prose as plain text, for the feed card when the NIP has no
+ * summary.
  */
 @Immutable
 class NipTextView(
@@ -48,12 +54,20 @@ class NipTextView(
     val kinds: List<NipDefinedKind>,
     val body: String,
     val preview: String,
+    val sections: List<MarkdownHeading>,
 ) {
+    /** True when a table of contents helps: a long body with a few sections. */
+    val hasContents: Boolean get() = sections.count { it.level <= 3 } >= MIN_SECTIONS && body.length > MIN_BODY_FOR_CONTENTS
+
     companion object {
+        private const val MIN_SECTIONS = 3
+        private const val MIN_BODY_FOR_CONTENTS = 3000
+
         fun of(event: NipTextEvent): NipTextView {
             val title = event.title()?.trim()?.ifBlank { null }
             val stripped = stripLeadingTitle(event.content, title)
             val status = event.tagValue("status")?.trim()?.ifBlank { null }
+            val body = linkNipMentions(linkRelativeNips(stripped.body), stripped.number)
             return NipTextView(
                 number = stripped.number,
                 title = title ?: stripped.firstHeading,
@@ -63,14 +77,41 @@ class NipTextView(
                 status = status,
                 flags = stripped.flags.filterNot { it.equals(status, ignoreCase = true) },
                 kinds = definedKinds(event.tags),
-                body = linkRelativeNips(stripped.body),
+                body = body,
                 preview = plainPreview(stripped.body),
+                sections = MarkdownChunks.headings(body),
+            )
+        }
+
+        /** An official NIP, from its file in the nips repo. Its kinds come from the kind registry. */
+        fun ofMarkdown(
+            number: String,
+            markdown: String,
+        ): NipTextView {
+            val stripped = stripLeadingTitle(markdown, null)
+            val body = linkNipMentions(linkRelativeNips(stripped.body), number)
+            return NipTextView(
+                number = stripped.number ?: number,
+                title = stripped.firstHeading,
+                summary = null,
+                status = null,
+                flags = stripped.flags,
+                kinds = officialKinds(number),
+                body = body,
+                preview = plainPreview(stripped.body),
+                sections = MarkdownChunks.headings(body),
             )
         }
     }
 }
 
-const val NIPS_REPO_BLOB = "https://github.com/nostr-protocol/nips/blob/master/"
+/** The kinds the registry attributes to official NIP [number], in kind order. */
+fun officialKinds(number: String): List<NipDefinedKind> =
+    KindNames.names
+        .filter { (_, info) -> info.nip?.let { NipLinks.normalize(it) } == number }
+        .keys
+        .sorted()
+        .map { NipDefinedKind(it, null) }
 
 private fun NipTextEvent.tagValue(name: String): String? {
     for (tag in tags) {
@@ -98,7 +139,8 @@ internal class StrippedNip(
     val body: String,
 )
 
-private val NIP_NUMBER = Regex("^NIP[- ]?([0-9A-Za-z]{2,3})$", RegexOption.IGNORE_CASE)
+// Real NIP numbers are two hex characters; a heading like `NIP-AMB` is a name, so it stays a heading.
+private val NIP_NUMBER = Regex("^NIP[- ]?([0-9A-Fa-f]{2})$", RegexOption.IGNORE_CASE)
 private val ATX_HEADING = Regex("^#{1,6}\\s+(.*?)\\s*#*\\s*$")
 private val SETEXT_UNDERLINE = Regex("^\\s*(=+|-+)\\s*$")
 
@@ -179,7 +221,114 @@ internal fun stripLeadingTitle(
 private val RELATIVE_NIP_LINK = Regex("(\\]\\(|^\\s{0,3}\\[[^\\]]+\\]:\\s*)(\\.?/?)([0-9A-Fa-f]{2}\\.md(?:#[^)\\s]*)?)", RegexOption.MULTILINE)
 
 /** Points relative links to other NIPs (`[NIP-44](44.md)`) at the nips repo, where they resolve. */
-internal fun linkRelativeNips(markdown: String): String = RELATIVE_NIP_LINK.replace(markdown) { m -> m.groupValues[1] + NIPS_REPO_BLOB + m.groupValues[3] }
+internal fun linkRelativeNips(markdown: String): String = RELATIVE_NIP_LINK.replace(markdown) { m -> m.groupValues[1] + NipLinks.REPO_BLOB + m.groupValues[3] }
+
+private val NIP_MENTION = Regex("NIP-([0-9A-Fa-f]{2})(?![\\w-])", RegexOption.IGNORE_CASE)
+
+/**
+ * Turns plain `NIP-44` mentions into links, so they open in the reader like linked ones do. Text
+ * already inside a link (`[NIP-44](…)`), inline code and fenced code is left alone, and so is a
+ * mention of [self], the NIP being read.
+ */
+internal fun linkNipMentions(
+    markdown: String,
+    self: String?,
+): String {
+    if (!markdown.contains("NIP-", ignoreCase = true)) return markdown
+    val out = StringBuilder(markdown.length + 64)
+    var inFence = false
+    markdown.lines().forEachIndexed { index, line ->
+        if (index > 0) out.append('\n')
+        val trimmed = line.trimStart()
+        if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+            inFence = !inFence
+            out.append(line)
+            return@forEachIndexed
+        }
+        if (inFence || REFERENCE_LINE.containsMatchIn(line)) {
+            out.append(line)
+        } else {
+            out.append(linkMentionsInLine(line, self))
+        }
+    }
+    return out.toString()
+}
+
+/** A mention glued to a word, path or anchor (`xNIP-44`, `/NIP-44`, `#NIP-44`) is not one. */
+private fun isWordJoined(previous: Char?) = previous != null && (previous.isLetterOrDigit() || previous == '/' || previous == '#' || previous == '-' || previous == '_')
+
+private val REFERENCE_LINE = Regex("^ {0,3}\\[[^\\]]+\\]:")
+
+/** Links the mentions in one line, skipping code spans and the text and targets of existing links. */
+private fun linkMentionsInLine(
+    line: String,
+    self: String?,
+): String {
+    val out = StringBuilder(line.length + 32)
+    var i = 0
+    var bracketDepth = 0
+    while (i < line.length) {
+        val c = line[i]
+        when {
+            c == '`' -> {
+                val close = line.indexOf('`', i + 1)
+                val end = if (close < 0) line.length else close + 1
+                out.append(line, i, end)
+                i = end
+            }
+
+            c == '[' -> {
+                bracketDepth++
+                out.append(c)
+                i++
+            }
+
+            c == ']' -> {
+                if (bracketDepth > 0) bracketDepth--
+                out.append(c)
+                i++
+                // Skip a link target right after the brackets: `](…)`.
+                if (i < line.length && line[i] == '(') {
+                    val close = line.indexOf(')', i)
+                    val end = if (close < 0) line.length else close + 1
+                    out.append(line, i, end)
+                    i = end
+                }
+            }
+
+            c == '<' -> {
+                // An autolink or HTML: copy it whole.
+                val close = line.indexOf('>', i)
+                val end = if (close < 0) i + 1 else close + 1
+                out.append(line, i, end)
+                i = end
+            }
+
+            bracketDepth == 0 && (c == 'N' || c == 'n') && !isWordJoined(line.getOrNull(i - 1)) -> {
+                val match = NIP_MENTION.matchAt(line, i)
+                val number = match?.groupValues?.get(1)?.let { NipLinks.normalize(it) }
+                if (match != null && number != null && number != self) {
+                    out
+                        .append('[')
+                        .append(match.value)
+                        .append("](")
+                        .append(NipLinks.repoUrl(number))
+                        .append(')')
+                    i += match.value.length
+                } else {
+                    out.append(c)
+                    i++
+                }
+            }
+
+            else -> {
+                out.append(c)
+                i++
+            }
+        }
+    }
+    return out.toString()
+}
 
 private val STATUS_LINE = Regex("^(`[^`]+`\\s*)+$")
 private val STATUS_FLAG = Regex("`([^`]+)`")
