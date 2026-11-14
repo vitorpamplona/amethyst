@@ -123,6 +123,9 @@ private fun PreloadFor(
 
         NavBarItem.NSITES -> {}
 
+        // The NIPs screen asks the relays itself when it opens; nothing to preload.
+        NavBarItem.NIPS -> {}
+
         // The browser is a "new tab" launcher with no feed to preload.
         NavBarItem.BROWSER -> {}
 

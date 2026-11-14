@@ -32,23 +32,27 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Per-nSite network routing: whether a site's traffic goes through **Tor** (the default) or over the
- * **open web**. Keyed by the site's coordinate (`author:identifier`), like the permission ledger, so
+ * Per-nSite network routing: whether a site's traffic goes through **Tor** or over the **open web**. Keyed by the site's coordinate (`author:identifier`), like the permission ledger, so
  * the choice survives across launches and routine code updates.
  *
- * When Tor is active, nSites route through it by default; a user can opt a specific site out (a site
- * that breaks or is unusably slow over Tor) from the site's window. "Open web" makes *everything* for
- * that site direct: its live web traffic and its blob fetches.
+ * When Tor is active, a site the user never set follows the Tor settings' "Applets and Websites"
+ * switch ([defaultUseTor]); the user can set a specific site either way from its window. "Open web"
+ * makes *everything* for that site direct: its live web traffic and its blob fetches.
  *
  * The in-memory map is authoritative for the session, so a launch can read it synchronously, with
- * write-through persistence. Absent means Tor (the safe default), so a site never silently starts on
- * the open web before the on-disk preference has loaded.
+ * write-through persistence. Until the on-disk choices have loaded every site is on Tor, so a site
+ * pinned to Tor never silently starts on the open web.
  */
 class NsiteNetworkChoices(
     private val dataStore: DataStore<Preferences>,
     private val scope: CoroutineScope,
+    /**
+     * Where a site the user never set starts: the Tor settings' "Applets and Websites" switch. Read
+     * only once the stored choices have loaded; until then every site is on Tor.
+     */
+    private val defaultUseTor: () -> Boolean = { true },
 ) {
-    // coordinate -> useTor. Absent means "never chosen" -> Tor.
+    // coordinate -> useTor. Absent means "never chosen" -> [defaultUseTor].
     private val modes = MutableStateFlow<Map<String, Boolean>>(emptyMap())
 
     private val hydration: Job =
@@ -71,8 +75,12 @@ class NsiteNetworkChoices(
         hydration.join()
     }
 
-    /** Whether [coordinate] routes through Tor. Defaults to true (Tor) for any site never set. */
-    fun useTor(coordinate: String): Boolean = modes.value[coordinate] ?: true
+    /**
+     * Whether [coordinate] routes through Tor: the user's choice for it, else [defaultUseTor]. Before
+     * the stored choices have loaded, Tor: a site pinned to Tor must not start on the open web
+     * because its choice wasn't read yet.
+     */
+    fun useTor(coordinate: String): Boolean = modes.value[coordinate] ?: (!hydration.isCompleted || defaultUseTor())
 
     /** Records [useTor] for [coordinate] in memory and persists it. */
     fun set(

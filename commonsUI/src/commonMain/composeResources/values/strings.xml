@@ -1681,9 +1681,9 @@
     <string name="media_servers_add_section">Add a server</string>
     <string name="media_servers_recommended_label">Recommended</string>
     <string name="media_servers_add_url_label">Or paste a server address</string>
+    <string name="media_servers_all_recommended_added">All recommended servers added</string>
     <string name="media_servers_cache_section">On-device cache</string>
     <string name="media_server_primary_badge">Primary</string>
-    <string name="media_server_added">Added</string>
     <string name="media_server_reorder">Reorder server</string>
     <string name="payment_targets_explainer">Publish your payment addresses so others can send you funds directly.</string>
     <string name="no_payment_targets_message">No payment targets set. Add one below ↓</string>
@@ -6243,6 +6243,8 @@
     <string name="tor_use_images_explainer">Force Tor when loading images</string>
     <string name="tor_use_media_uploads">Media Uploads</string>
     <string name="tor_use_media_uploads_explainer">Force Tor when uploading content</string>
+    <string name="tor_use_applets_and_websites">Applets and Websites</string>
+    <string name="tor_use_applets_and_websites_explainer">Force Tor when downloading applets and opening nSites and websites you haven’t set yet</string>
     <string name="tor_use_money_operations">Money Operations</string>
     <string name="tor_use_money_operations_explainer">Force Tor on zaps, lightning and cashu transfers</string>
     <string name="tor_use_new_relays">Untrusted Relays</string>
@@ -9047,15 +9049,6 @@
     <string name="namecoin_resolution_malformed_record">%1$s record is malformed: %2$s</string>
     <string name="namecoin_resolution_servers_unreachable">ElectrumX servers unreachable — check your connection or try again</string>
     <string name="namecoin_resolution_invalid_identifier">Invalid Namecoin identifier</string>
-    <string name="namecoin_resolution_reference_loop">%1$s refers back to itself: %2$s</string>
-    <plurals name="namecoin_resolution_too_many_lookups">
-        <item quantity="one">%1$s needs more than %2$d lookup to resolve</item>
-        <item quantity="other">%1$s needs more than %2$d lookups to resolve</item>
-    </plurals>
-    <plurals name="namecoin_resolution_too_deep">
-        <item quantity="one">%1$s nests its references deeper than %2$d level</item>
-        <item quantity="other">%1$s nests its references deeper than %2$d levels</item>
-    </plurals>
     <string name="namecoin_resolution_timeout">Resolution timed out — servers may be slow, try again</string>
     <string name="namecoin_resolution_unknown_error">Unknown error</string>
     <string name="chess_sync_tap_to_retry">Tap to retry</string>
@@ -9890,4 +9883,35 @@
     <string name="front_page_reason_key_not_on_node">The key isn't on that node.</string>
     <string name="front_page_reason_upstream_down">The node's provider is down.</string>
     <string name="front_page_reason_settlement">The node charged and withheld the answer.</string>
+
+    <!-- NIPs: the reader, the event-kind page and the NIPs tab -->
+    <string name="nip_number">NIP-%1$s</string>
+    <string name="nip_contents">Contents</string>
+    <plurals name="nip_contents_sections">
+        <item quantity="one">%1$d section</item>
+        <item quantity="other">%1$d sections</item>
+    </plurals>
+    <string name="nip_open_on_github">Open on GitHub</string>
+    <string name="nip_load_failed">Couldn't load NIP-%1$s. Check your connection and try again.</string>
+    <string name="nip_unrecommended">Unrecommended</string>
+    <string name="event_kind_title">Kind %1$d</string>
+    <string name="event_kind_official">Defined by NIP-%1$s</string>
+    <string name="event_kind_nips_on_nostr">NIPs on Nostr</string>
+    <string name="event_kind_no_definitions">No NIP on your relays defines this kind yet.</string>
+    <string name="event_kind_recent">Recent events</string>
+    <string name="event_kind_no_recent">No events of this kind on your relays.</string>
+    <plurals name="event_kind_not_shown">
+        <item quantity="one">%1$d event of this kind was found, but the app keeps this kind out of feeds.</item>
+        <item quantity="other">%1$d events of this kind were found, but the app keeps this kind out of feeds.</item>
+    </plurals>
+    <string name="event_kind_inspect">See how clients encode it</string>
+    <string name="unknown_kind_defined_by">Defined by %1$s</string>
+    <string name="unknown_kind_about">About kind %1$d</string>
+    <string name="nip_catalog_title">NIPs</string>
+    <string name="nip_catalog_search">Search by number, title or kind</string>
+    <string name="nip_catalog_all">All</string>
+    <string name="nip_catalog_official">NIP-Repo</string>
+    <string name="nip_catalog_on_nostr">On Nostr</string>
+    <string name="nip_catalog_official_failed">Couldn't load the official list.</string>
+    <string name="nip_catalog_empty">No NIPs match your search.</string>
 </resources>

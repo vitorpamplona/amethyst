@@ -276,31 +276,29 @@ class NamecoinResolutionRowTest {
         )
     }
 
+    // ── outcomes of a record that references other names ──────────────────
+
     @Test
-    fun `a reference that loops or reaches too far is reported as such`() {
-        assertEquals(
-            NamecoinResolveState.Error(NamecoinResolveState.Reason.ReferenceLoop("d/a", listOf("d/a", "d/b", "d/a"))),
-            mapOutcomeToResolveState(NamecoinResolveOutcome.CyclicReference("d/a", listOf("d/a", "d/b", "d/a"))),
-        )
-        assertEquals(
-            NamecoinResolveState.Error(NamecoinResolveState.Reason.TooManyLookups("d/a", 8)),
-            mapOutcomeToResolveState(NamecoinResolveOutcome.LookupBudgetExhausted("d/a", 8)),
-        )
-        assertEquals(
-            NamecoinResolveState.Error(NamecoinResolveState.Reason.TooDeep("d/a", 4)),
-            mapOutcomeToResolveState(NamecoinResolveOutcome.DepthLimitExceeded("d/a", 4)),
-        )
+    fun `a failed import reports why the imported name failed`() {
+        val state = mapOutcomeToResolveState(NamecoinResolveOutcome.ImportFailed("d/a", "d/b", NamecoinResolveOutcome.NameNotFound("d/b")))
+        assertSame(NamecoinResolveState.NotFound, state)
     }
 
     @Test
-    fun `a failed import or delegation reports what failed underneath it`() {
-        assertSame(
-            NamecoinResolveState.NotFound,
-            mapOutcomeToResolveState(NamecoinResolveOutcome.ImportFailed("d/a", "d/b", NamecoinResolveOutcome.NameNotFound("d/b"))),
-        )
-        assertEquals(
-            NamecoinResolveState.Error(NamecoinResolveState.Reason.Timeout),
-            mapOutcomeToResolveState(NamecoinResolveOutcome.DelegationFailed("d/a", "d/b", NamecoinResolveOutcome.Timeout)),
-        )
+    fun `a failed delegation reports why the delegate failed`() {
+        val state = mapOutcomeToResolveState(NamecoinResolveOutcome.DelegationFailed("d/a", "d/b", NamecoinResolveOutcome.Timeout))
+        assertEquals(NamecoinResolveState.Error(NamecoinResolveState.Reason.Timeout), state)
+    }
+
+    @Test
+    fun `references that loop or go too deep read as a malformed record`() {
+        val cyclic = mapOutcomeToResolveState(NamecoinResolveOutcome.CyclicReference("d/a", listOf("d/a", "d/b", "d/a")))
+        assertEquals(NamecoinResolveState.Error(NamecoinResolveState.Reason.MalformedRecord("d/a", "references loop: d/a → d/b → d/a")), cyclic)
+
+        val budget = mapOutcomeToResolveState(NamecoinResolveOutcome.LookupBudgetExhausted("d/a", 16))
+        assertEquals(NamecoinResolveState.Error(NamecoinResolveState.Reason.MalformedRecord("d/a", "references need more than 16 lookups")), budget)
+
+        val depth = mapOutcomeToResolveState(NamecoinResolveOutcome.DepthLimitExceeded("d/a", 4))
+        assertEquals(NamecoinResolveState.Error(NamecoinResolveState.Reason.MalformedRecord("d/a", "references nest deeper than 4")), depth)
     }
 }

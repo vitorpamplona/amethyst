@@ -63,7 +63,7 @@ object WebAppNetworkRegistry {
     private const val OPEN_WEB = "OPEN"
     private const val TOR = "TOR"
 
-    // host -> useTor. Absent means "never chosen" -> Tor.
+    // host -> useTor. Absent means "never chosen" -> "Applets and Websites" (see [useTor]).
     private val modes = ConcurrentHashMap<String, Boolean>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -99,8 +99,12 @@ object WebAppNetworkRegistry {
     /** The host key for [url] (e.g. `vitorpamplona.com`), or the raw string if it has no host. */
     fun hostKeyOf(url: String): String = runCatching { url.toUri().host }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
 
-    /** Whether the site behind [url] routes through Tor. Defaults to true (Tor) for any site never set. */
-    fun useTor(url: String): Boolean = modes[hostKeyOf(url)] ?: true
+    /**
+     * Whether the site behind [url] routes through Tor: the user's choice for its host, else the Tor
+     * settings' "Applets and Websites" switch. Tor until the stored choices have loaded (or when [init]
+     * never ran), so a site pinned to Tor never starts on the open web because its choice wasn't read.
+     */
+    fun useTor(url: String): Boolean = modes[hostKeyOf(url)] ?: (hydration?.isCompleted != true || Amethyst.instance.torPrefs.value.appletsAndWebsitesViaTor.value)
 
     /** Records [useTor] for the host behind [url] in memory and persists it. */
     fun set(

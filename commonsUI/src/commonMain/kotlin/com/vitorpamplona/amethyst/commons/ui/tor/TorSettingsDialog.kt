@@ -55,6 +55,8 @@ import com.vitorpamplona.amethyst.commons.resources.tor_preset
 import com.vitorpamplona.amethyst.commons.resources.tor_preset_explainer
 import com.vitorpamplona.amethyst.commons.resources.tor_progress_notification_description
 import com.vitorpamplona.amethyst.commons.resources.tor_progress_notification_title
+import com.vitorpamplona.amethyst.commons.resources.tor_use_applets_and_websites
+import com.vitorpamplona.amethyst.commons.resources.tor_use_applets_and_websites_explainer
 import com.vitorpamplona.amethyst.commons.resources.tor_use_dm_relays
 import com.vitorpamplona.amethyst.commons.resources.tor_use_dm_relays_explainer
 import com.vitorpamplona.amethyst.commons.resources.tor_use_images
@@ -344,6 +346,12 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
                 Res.string.tor_use_media_uploads,
                 Res.string.tor_use_media_uploads_explainer,
                 dialogViewModel.mediaUploadsViaTor,
+            )
+
+            SwitchSettingsRow(
+                Res.string.tor_use_applets_and_websites,
+                Res.string.tor_use_applets_and_websites_explainer,
+                dialogViewModel.appletsAndWebsitesViaTor,
             )
         }
     }

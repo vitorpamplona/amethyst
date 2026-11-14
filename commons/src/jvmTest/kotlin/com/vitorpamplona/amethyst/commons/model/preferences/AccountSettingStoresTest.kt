@@ -162,6 +162,23 @@ class AccountSettingStoresTest {
             assertEquals(NwcBackupPrefs(), store.load())
         }
 
+    /** Unset must read as null, not "": null lets the app-wide signature apply, "" turns it off. */
+    @Test
+    fun composePrefsKeepUnsetApartFromEmpty() =
+        runTest {
+            val store = ComposePrefsStore(raw())
+            assertNull(store.load().signature)
+
+            store.save(ComposePrefs(signature = "— sent from my relay"))
+            assertEquals("— sent from my relay", store.load().signature)
+
+            store.save(ComposePrefs(signature = ""))
+            assertEquals("", store.load().signature)
+
+            store.save(ComposePrefs(signature = null))
+            assertNull(store.load().signature)
+        }
+
     /** Three of these default to true — trusting by default — so a wrong default weakens AUTH behaviour. */
     @Test
     fun relayAuthDefaults() =

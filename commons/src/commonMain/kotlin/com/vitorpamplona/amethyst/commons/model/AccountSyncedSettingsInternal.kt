@@ -168,6 +168,7 @@ class AccountSyncedSettingsInternal(
     var relayAuth: AccountRelayAuthPreferencesInternal? = null,
     var uploads: AccountUploadPreferencesInternal? = null,
     var calls: AccountCallPreferencesInternal? = null,
+    var compose: AccountComposePreferencesInternal? = null,
 )
 
 @Serializable
@@ -226,6 +227,16 @@ class SyncedFileServer(
 @Serializable
 class AccountCallPreferencesInternal(
     val callsEnabled: Boolean = true,
+)
+
+/**
+ * Written only once the account has a signature of its own: a device that never set one leaves
+ * the group out, so it cannot blank the signature another device (or this account's earlier,
+ * app-wide setting) holds. An empty [signature] is a choice: no signature.
+ */
+@Serializable
+class AccountComposePreferencesInternal(
+    val signature: String = "",
 )
 
 @Serializable

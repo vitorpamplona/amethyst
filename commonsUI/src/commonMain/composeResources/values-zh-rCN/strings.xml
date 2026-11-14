@@ -984,7 +984,6 @@
     <string name="media_servers_add_url_label">或者粘贴服务器地址</string>
     <string name="media_servers_cache_section">设备上的缓存</string>
     <string name="media_server_primary_badge">主要</string>
-    <string name="media_server_added">已添加</string>
     <string name="media_server_reorder">重新排列服务器顺序</string>
     <string name="payment_targets_explainer">发布您的付款地址，以便他人能够直接向您发送资金。</string>
     <string name="no_payment_targets_message">未设定付款目标。在下方添加一个 ↓</string>

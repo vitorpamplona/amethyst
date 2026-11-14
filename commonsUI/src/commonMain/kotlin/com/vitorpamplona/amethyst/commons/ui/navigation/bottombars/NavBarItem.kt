@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.resources.my_lists
 import com.vitorpamplona.amethyst.commons.resources.napplets
 import com.vitorpamplona.amethyst.commons.resources.nests
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_title
+import com.vitorpamplona.amethyst.commons.resources.nip_catalog_title
 import com.vitorpamplona.amethyst.commons.resources.nsites
 import com.vitorpamplona.amethyst.commons.resources.pictures
 import com.vitorpamplona.amethyst.commons.resources.polls
@@ -313,6 +314,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 label = { Res.string.git_repositories },
                 icon = MaterialSymbols.Code,
                 resolveRoute = { Route.GitRepositories },
+            ),
+        NavBarItem.NIPS to
+            NavBarItemDef(
+                id = NavBarItem.NIPS,
+                label = { Res.string.nip_catalog_title },
+                icon = MaterialSymbols.MenuBook,
+                resolveRoute = { Route.Nips },
             ),
         NavBarItem.HIGHLIGHTS to
             NavBarItemDef(
@@ -630,6 +638,7 @@ val BottomBarCategories: List<NavBarCategory> by lazy {
                 NavBarItem.GEOCACHE_HUNTS,
                 NavBarItem.WORKOUTS,
                 NavBarItem.GIT_REPOSITORIES,
+                NavBarItem.NIPS,
                 NavBarItem.HIGHLIGHTS,
                 NavBarItem.COMMUNITIES,
                 NavBarItem.FOLLOW_PACKS,

@@ -250,6 +250,9 @@ class RenderableKindsTest {
                 3184,
                 30180,
                 30184,
+                // Routstr node announcements: Quartz indexes them for node search, and no card shows
+                // them in global search yet
+                38421,
             ).sorted(),
             omitted.sorted(),
             "the set of searchable kinds not shown in search changed",

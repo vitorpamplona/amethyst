@@ -1674,7 +1674,6 @@
     <string name="media_servers_add_url_label">Ali prilepite naslov strežnika</string>
     <string name="media_servers_cache_section">Predpomnilnik naprave</string>
     <string name="media_server_primary_badge">Primarni</string>
-    <string name="media_server_added">Dodano</string>
     <string name="media_server_reorder">Razvrsti strežnik</string>
     <string name="payment_targets_explainer">Objavite svoje naslove za plačila, da vam lahko drugi neposredno pošiljajo sredstva.</string>
     <string name="no_payment_targets_message">Ni nastavljenih ciljev plačil. Dodajte jih spodaj ↓</string>

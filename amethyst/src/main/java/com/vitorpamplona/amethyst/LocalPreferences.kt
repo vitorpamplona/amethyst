@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.AccountPreferenceSto
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountSettingsSource
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountSettingsStores
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountStoreRecords
+import com.vitorpamplona.amethyst.commons.model.preferences.ComposePrefsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.CopyOnceMigration
 import com.vitorpamplona.amethyst.commons.model.preferences.DialogDismissalStore
 import com.vitorpamplona.amethyst.commons.model.preferences.FeedVisibilityStore
@@ -272,6 +273,8 @@ object LocalPreferences : AccountSessionStore {
 
     private fun nwcBackupPrefsStore(npub: String) = NwcBackupPrefsStore(accountStores.getDataStore(npub))
 
+    private fun composePrefsStore(npub: String) = ComposePrefsStore(accountStores.getDataStore(npub))
+
     private fun identityStore(npub: String) = AccountIdentityStore(accountStores.getDataStore(npub))
 
     private fun legacySource(npub: String): LegacyPreferenceSource = LegacySharedPreferences(encryptedPreferences(npub))
@@ -431,6 +434,7 @@ object LocalPreferences : AccountSessionStore {
         feedVisibility = feedVisibilityStore(npub).load(),
         notificationPrefs = notificationPrefsStore(npub).load(),
         nwcBackupPrefs = nwcBackupPrefsStore(npub).load(),
+        composePrefs = composePrefsStore(npub).load(),
     )
 
     // NOT migrated to DataStore, and cannot be: DataStore is suspend-only, while

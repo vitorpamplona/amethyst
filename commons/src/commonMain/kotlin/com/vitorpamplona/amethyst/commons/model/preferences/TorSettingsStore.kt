@@ -93,6 +93,7 @@ class TorSettingsStore(
         val MONEY_OPERATIONS_VIA_TOR_KEY = booleanPreferencesKey("tor.moneyOperationsViaTor")
         val NIP05_VERIFICATIONS_VIA_TOR_KEY = booleanPreferencesKey("tor.nip05VerificationsViaTor")
         val MEDIA_UPLOADS_VIA_TOR_KEY = booleanPreferencesKey("tor.mediaUploadsViaTor")
+        val APPLETS_AND_WEBSITES_VIA_TOR_KEY = booleanPreferencesKey("tor.appletsAndWebsitesViaTor")
         val PROGRESS_NOTIFICATION_KEY = booleanPreferencesKey("tor.progressNotification")
 
         suspend fun torPreferences(store: DataStore<Preferences>): TorSettings? =
@@ -113,6 +114,7 @@ class TorSettingsStore(
                     moneyOperationsViaTor = preferences[MONEY_OPERATIONS_VIA_TOR_KEY] ?: false,
                     nip05VerificationsViaTor = preferences[NIP05_VERIFICATIONS_VIA_TOR_KEY] ?: false,
                     mediaUploadsViaTor = preferences[MEDIA_UPLOADS_VIA_TOR_KEY] ?: false,
+                    appletsAndWebsitesViaTor = preferences[APPLETS_AND_WEBSITES_VIA_TOR_KEY] ?: false,
                     progressNotification = preferences[PROGRESS_NOTIFICATION_KEY] ?: false,
                 )
             } catch (e: Exception) {
@@ -141,6 +143,7 @@ class TorSettingsStore(
                     preferences[MONEY_OPERATIONS_VIA_TOR_KEY] = torSettings.moneyOperationsViaTor
                     preferences[NIP05_VERIFICATIONS_VIA_TOR_KEY] = torSettings.nip05VerificationsViaTor
                     preferences[MEDIA_UPLOADS_VIA_TOR_KEY] = torSettings.mediaUploadsViaTor
+                    preferences[APPLETS_AND_WEBSITES_VIA_TOR_KEY] = torSettings.appletsAndWebsitesViaTor
                     preferences[PROGRESS_NOTIFICATION_KEY] = torSettings.progressNotification
                 }
             } catch (e: Exception) {
