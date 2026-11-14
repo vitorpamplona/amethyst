@@ -9498,7 +9498,7 @@
     <string name="nip_catalog_title">NIPs</string>
     <string name="nip_catalog_search">Search by number, title or kind</string>
     <string name="nip_catalog_all">All</string>
-    <string name="nip_catalog_official">Official</string>
+    <string name="nip_catalog_official">NIP-Repo</string>
     <string name="nip_catalog_on_nostr">On Nostr</string>
     <string name="nip_catalog_official_failed">Couldn't load the official list.</string>
     <string name="nip_catalog_empty">No NIPs match your search.</string>
