@@ -193,7 +193,7 @@ class NipCatalogViewModel(
             val q = query.trim()
             NipCatalogState(
                 official = if (filter == NipCatalogFilter.ON_NOSTR) emptyList() else all.official.filter { matches(it, q) },
-                onNostr = if (filter == NipCatalogFilter.OFFICIAL) emptyList() else all.onNostr.filter { matches(it, q) },
+                onNostr = if (filter == NipCatalogFilter.OFFICIAL) emptyList() else rank(all.onNostr, q),
                 loadingOfficial = all.loadingOfficial,
                 officialFailed = all.officialFailed,
                 loadingOnNostr = all.loadingOnNostr,
@@ -235,16 +235,28 @@ class NipCatalogViewModel(
         return officialKinds(entry.number).any { it.kind == kind }
     }
 
-    private fun matches(
-        note: AddressableNote,
+    /**
+     * The NIPs on Nostr that match [q], strongest first: a match in the title, identifier or a
+     * defined kind before one only in the text, each group newest first (the order [all] is in).
+     */
+    private fun rank(
+        notes: List<AddressableNote>,
         q: String,
-    ): Boolean {
-        if (q.isEmpty()) return true
-        val event = note.event as? NipTextEvent ?: return false
-        if (event.title()?.contains(q, ignoreCase = true) == true) return true
-        if (event.dTag().contains(q, ignoreCase = true)) return true
+    ): List<AddressableNote> {
+        if (q.isEmpty()) return notes
+        val strong = ArrayList<AddressableNote>()
+        val inText = ArrayList<AddressableNote>()
         val kind = q.toIntOrNull()
-        if (kind != null && definedKinds(event.tags).any { it.kind == kind }) return true
-        return event.content.contains(q, ignoreCase = true) && q.length >= 3
+        for (note in notes) {
+            val event = note.event as? NipTextEvent ?: continue
+            when {
+                event.title()?.contains(q, ignoreCase = true) == true ||
+                    event.dTag().contains(q, ignoreCase = true) ||
+                    (kind != null && definedKinds(event.tags).any { it.kind == kind }) -> strong.add(note)
+
+                q.length >= 3 && event.content.contains(q, ignoreCase = true) -> inText.add(note)
+            }
+        }
+        return strong + inText
     }
 }

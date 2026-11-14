@@ -33,13 +33,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -63,14 +60,13 @@ import com.vitorpamplona.amethyst.commons.resources.nip_catalog_official
 import com.vitorpamplona.amethyst.commons.resources.nip_catalog_official_failed
 import com.vitorpamplona.amethyst.commons.resources.nip_catalog_on_nostr
 import com.vitorpamplona.amethyst.commons.resources.nip_catalog_search
-import com.vitorpamplona.amethyst.commons.resources.nip_catalog_title
 import com.vitorpamplona.amethyst.commons.resources.nip_number
 import com.vitorpamplona.amethyst.commons.resources.nip_unrecommended
 import com.vitorpamplona.amethyst.commons.resources.try_again
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SearchTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
@@ -78,42 +74,34 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
- * The NIPs screen ([NipsScreen]): one searchable list of every NIP, the ones published on Nostr (drawn as their
+ * The list of the NIPs screen ([NipsScreen]): every NIP, the ones published on Nostr (drawn as their
  * feed cards, with author and reactions) and the official ones from the nips repo (a line each,
- * opening the in-app reader). The search matches a number (`44`, `nip-7d`), words of the title,
+ * opening the in-app reader), under [NipCatalogFilter] chips. The top bar's search matches a number (`44`, `nip-7d`), words of the title,
  * or a kind a NIP defines.
  */
 @Composable
 fun NipCatalog(
+    viewModel: NipCatalogViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
-    val viewModel = rememberViewModel(key = "NipCatalog") { NipCatalogViewModel(accountViewModel.account, accountViewModel.httpClientBuilder) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
 
-    // Fills the page: the pager centers a page vertically, so a short result list would float.
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = rememberFeedContentPadding(FeedPadding)) {
-        item(key = "controls") {
-            Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { viewModel.query.value = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    placeholder = { Text(stringRes(Res.string.nip_catalog_search)) },
-                    leadingIcon = { Icon(MaterialSymbols.Search, contentDescription = null) },
-                )
-                val options = NipCatalogFilter.entries
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    options.forEachIndexed { index, option ->
-                        SegmentedButton(
-                            selected = filter == option,
-                            onClick = { viewModel.filter.value = option },
-                            shape = SegmentedButtonDefaults.itemShape(index, options.size),
-                        ) {
+        item(key = "filters") {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                NipCatalogFilter.entries.forEach { option ->
+                    val selected = filter == option
+                    FilterChip(
+                        selected = selected,
+                        onClick = { viewModel.filter.value = option },
+                        label = {
                             Text(
                                 stringRes(
                                     when (option) {
@@ -123,8 +111,14 @@ fun NipCatalog(
                                     },
                                 ),
                             )
-                        }
-                    }
+                        },
+                        leadingIcon =
+                            if (selected) {
+                                { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                            } else {
+                                null
+                            },
+                    )
                 }
             }
         }
@@ -176,10 +170,22 @@ fun NipsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val viewModel = rememberViewModel(key = "NipCatalog") { NipCatalogViewModel(accountViewModel.account, accountViewModel.httpClientBuilder) }
+    val query by viewModel.query.collectAsStateWithLifecycle()
+
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(Res.string.nip_catalog_title), nav) },
+        // The search is the top bar, as in Settings: the list below filters as you type.
+        topBar = {
+            SearchTopBar(
+                query = query,
+                onQueryChange = { viewModel.query.value = it },
+                onClear = { viewModel.query.value = "" },
+                placeholder = stringRes(Res.string.nip_catalog_search),
+                nav = nav,
+            )
+        },
     ) { padding ->
-        NipCatalog(accountViewModel, nav, Modifier.padding(padding))
+        NipCatalog(viewModel, accountViewModel, nav, Modifier.padding(padding))
     }
 }
 
