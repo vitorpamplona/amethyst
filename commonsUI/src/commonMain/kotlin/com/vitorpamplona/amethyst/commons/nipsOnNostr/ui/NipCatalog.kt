@@ -31,15 +31,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -49,10 +50,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipCatalogFilter
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipCatalogViewModel
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.OfficialNipEntry
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.datasource.AllNipsSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nip_catalog_all
 import com.vitorpamplona.amethyst.commons.resources.nip_catalog_empty
@@ -64,33 +67,98 @@ import com.vitorpamplona.amethyst.commons.resources.nip_number
 import com.vitorpamplona.amethyst.commons.resources.nip_unrecommended
 import com.vitorpamplona.amethyst.commons.resources.try_again
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.commons.ui.feeds.SaveableFeedContentState
+import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SearchTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
- * The list of the NIPs screen ([NipsScreen]): every NIP, the ones published on Nostr (drawn as their
- * feed cards, with author and reactions) and the official ones from the nips repo (a line each,
- * opening the in-app reader), under [NipCatalogFilter] chips. The top bar's search matches a number (`44`, `nip-7d`), words of the title,
- * or a kind a NIP defines.
+ * The NIPs screen, opened from the drawer or the bottom bar. The NIPs published on Nostr are the
+ * account's NIPs feed (AccountFeedContentStates.nipsFeed), kept live by [AllNipsSubscription] while
+ * the screen is open and rendered through the shared feed scaffolding (pull to refresh, the saved
+ * scroll position); a mute rebuilds it from AccountFeedContentStates. The nips repo's index sits
+ * beside them, and the search in the top bar filters both.
  */
 @Composable
-fun NipCatalog(
-    viewModel: NipCatalogViewModel,
+fun NipsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
-    modifier: Modifier = Modifier,
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
+    val feedState = accountViewModel.feedStates.nipsFeed
+    val viewModel = rememberViewModel(key = "NipCatalog") { NipCatalogViewModel(accountViewModel.httpClientBuilder) }
+    val query by viewModel.query.collectAsStateWithLifecycle()
+
+    WatchLifecycleAndUpdateModel(feedState)
+    AllNipsSubscription(accountViewModel)
+
+    DisappearingScaffold(
+        isInvertedLayout = false,
+        // The search is the top bar, as in Settings: the list below filters as you type.
+        topBar = {
+            SearchTopBar(
+                query = query,
+                onQueryChange = { viewModel.query.value = it },
+                onClear = { viewModel.query.value = "" },
+                placeholder = stringRes(Res.string.nip_catalog_search),
+                nav = nav,
+            )
+        },
+        bottomBar = {
+            AppBottomBar(Route.Nips, nav, accountViewModel) { route ->
+                if (route == Route.Nips) feedState.sendToTop() else nav.navBottomBar(route)
+            }
+        },
+        accountViewModel = accountViewModel,
+    ) {
+        RefresheableBox(feedState, true) {
+            SaveableFeedContentState(feedState, scrollStateKey = ScrollStateKeys.NIPS_SCREEN) { listState ->
+                // One list whatever the feed's state: the nips repo's index and the chips belong to
+                // the screen, not to the feed, so they don't cross-fade or reset as the feed loads.
+                val (notes, loading) = feedNotes(feedState)
+                NipCatalogList(viewModel, notes, loadingOnNostr = loading, listState, accountViewModel, nav)
+            }
+        }
+    }
+}
+
+/**
+ * The list: the filter chips, the NIPs published on Nostr (the feed's [notes], drawn as their feed
+ * cards with author and reactions) and the nips repo's index (a line each, opening the in-app
+ * reader). The search matches a number (`44`, `nip-7d`), words of the title, or a kind a NIP
+ * defines; ranking the Nostr ones reads their text, so it runs off the main thread.
+ */
+@Composable
+private fun NipCatalogList(
+    viewModel: NipCatalogViewModel,
+    notes: List<Note>,
+    loadingOnNostr: Boolean,
+    listState: LazyListState,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val official by viewModel.official.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
+    // Until the ranking is done: the feed as it is when nothing narrows it, else nothing, so a search
+    // doesn't flash the whole list first.
+    val unfiltered = query.isBlank() && filter != NipCatalogFilter.OFFICIAL
+    val onNostr by produceState(initialValue = if (unfiltered) notes else emptyList(), notes, query, filter) {
+        value = withContext(Dispatchers.Default) { viewModel.onNostr(notes, query, filter) }
+    }
 
-    LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = rememberFeedContentPadding(FeedPadding)) {
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = rememberFeedContentPadding(FeedPadding)) {
         item(key = "filters") {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -125,17 +193,17 @@ fun NipCatalog(
 
         // While searching, a section with no match is left out instead of drawn as an empty heading.
         val searching = query.isNotBlank()
-        if (filter != NipCatalogFilter.OFFICIAL && !(searching && state.onNostr.isEmpty() && !state.loadingOnNostr)) {
-            item(key = "nostr-title") { CatalogSection(stringRes(Res.string.nip_catalog_on_nostr), state.onNostr.size, state.loadingOnNostr) }
-            items(state.onNostr, key = { "nostr-" + it.idHex }) { note ->
+        if (filter != NipCatalogFilter.OFFICIAL && !(searching && onNostr.isEmpty() && !loadingOnNostr)) {
+            item(key = "nostr-title") { CatalogSection(stringRes(Res.string.nip_catalog_on_nostr), onNostr.size, loadingOnNostr) }
+            items(onNostr, key = { "nostr-" + it.idHex }) { note ->
                 NoteCompose(baseNote = note, quotesLeft = 1, accountViewModel = accountViewModel, nav = nav)
                 HorizontalDivider(thickness = 0.5.dp)
             }
         }
 
-        if (filter != NipCatalogFilter.ON_NOSTR && !(searching && state.official.isEmpty() && !state.loadingOfficial)) {
-            item(key = "official-title") { CatalogSection(stringRes(Res.string.nip_catalog_official), state.official.size, state.loadingOfficial) }
-            if (state.officialFailed && state.official.isEmpty()) {
+        if (filter != NipCatalogFilter.ON_NOSTR && !(searching && official.entries.isEmpty() && !official.loading)) {
+            item(key = "official-title") { CatalogSection(stringRes(Res.string.nip_catalog_official), official.entries.size, official.loading) }
+            if (official.failed && official.entries.isEmpty()) {
                 item(key = "official-failed") {
                     Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(stringRes(Res.string.nip_catalog_official_failed), color = MaterialTheme.colorScheme.grayText, modifier = Modifier.weight(1f))
@@ -147,12 +215,12 @@ fun NipCatalog(
                     }
                 }
             }
-            items(state.official, key = { "official-" + it.number }) { entry ->
+            items(official.entries, key = { "official-" + it.number }) { entry ->
                 OfficialNipRow(entry) { nav.nav(Route.Nip(entry.number)) }
             }
         }
 
-        if (state.official.isEmpty() && state.onNostr.isEmpty() && !state.loadingOfficial && !state.loadingOnNostr && query.isNotBlank()) {
+        if (searching && official.entries.isEmpty() && onNostr.isEmpty() && !official.loading && !loadingOnNostr) {
             item(key = "empty") {
                 Text(
                     stringRes(Res.string.nip_catalog_empty),
@@ -161,31 +229,6 @@ fun NipCatalog(
                 )
             }
         }
-    }
-}
-
-/** The NIPs screen, opened from the drawer: the catalogue under a top bar. */
-@Composable
-fun NipsScreen(
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val viewModel = rememberViewModel(key = "NipCatalog") { NipCatalogViewModel(accountViewModel.account, accountViewModel.httpClientBuilder) }
-    val query by viewModel.query.collectAsStateWithLifecycle()
-
-    Scaffold(
-        // The search is the top bar, as in Settings: the list below filters as you type.
-        topBar = {
-            SearchTopBar(
-                query = query,
-                onQueryChange = { viewModel.query.value = it },
-                onClear = { viewModel.query.value = "" },
-                placeholder = stringRes(Res.string.nip_catalog_search),
-                nav = nav,
-            )
-        },
-    ) { padding ->
-        NipCatalog(viewModel, accountViewModel, nav, Modifier.padding(padding))
     }
 }
 

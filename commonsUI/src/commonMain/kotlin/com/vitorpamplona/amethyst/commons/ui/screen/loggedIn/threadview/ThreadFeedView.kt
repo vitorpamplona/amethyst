@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ClassifiedsOpenMar
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ListingStatusBadge
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.RenderProductCollection
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.RenderNipHeaderForThread
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.datasource.WatchNipSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.expand
@@ -885,6 +886,8 @@ private fun FullBleedNoteCompose(
             is NipTextEvent -> {
                 // A NIP is opened to be read: its body starts expanded, not cut at "Show More".
                 remember(baseNote.idHex) { ShowFullTextCache.cache.put(baseNote.idHex, true) }
+                // While it is read, a new version of the NIP arrives and replaces this one in place.
+                if (baseNote is AddressableNote) WatchNipSubscription(baseNote, accountViewModel)
                 RenderNipHeaderForThread(noteEvent, nav, LocalThreadReaderAnchors.current)
             }
             is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)

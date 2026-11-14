@@ -38,34 +38,32 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.nipsOnNostr.EventKindViewModel
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipLinks
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipsOnNostr
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.dal.KindEventsFeedViewModel
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.datasource.KindEventsSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.event_kind_inspect
 import com.vitorpamplona.amethyst.commons.resources.event_kind_nips_on_nostr
 import com.vitorpamplona.amethyst.commons.resources.event_kind_no_definitions
 import com.vitorpamplona.amethyst.commons.resources.event_kind_no_recent
-import com.vitorpamplona.amethyst.commons.resources.event_kind_not_shown
 import com.vitorpamplona.amethyst.commons.resources.event_kind_official
 import com.vitorpamplona.amethyst.commons.resources.event_kind_recent
 import com.vitorpamplona.amethyst.commons.resources.event_kind_title
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -74,8 +72,9 @@ import com.vitorpamplona.quartz.kinds.KindNames
 /**
  * An event kind's own page: its name, the official NIP that defines it (when the registry knows
  * one), the NIPs published on Nostr whose `k` tags define it, and a sample of its recent events,
- * each drawn the way the feed draws it. Reached from a NIP's kind chips and from the card of an
- * event the app can't render.
+ * each drawn the way the feed draws it. Both lists are feeds over the cache (the definitions the
+ * account's NIPs feed, the sample this page's own), kept live by their subscriptions while the page
+ * is open. Reached from a NIP's kind chips and from the card of an event the app can't render.
  */
 @Composable
 fun EventKindScreen(
@@ -83,32 +82,37 @@ fun EventKindScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val viewModel = rememberViewModel(key = "EventKind-$kind") { EventKindViewModel(kind, accountViewModel.account) }
-    val state by viewModel.state.collectAsStateWithLifecycle()
+    val eventsModel: KindEventsFeedViewModel =
+        rememberViewModel(key = "KindEvents-$kind", factory = KindEventsFeedViewModel.Factory(kind, accountViewModel.account))
+
+    // The definitions are read from the account's NIPs feed; the sample is this page's own feed. Each
+    // is kept current from the cache and fed by its own live subscription.
+    val definitions = rememberNipsDefining(kind, accountViewModel)
+    val loadingDefinitions = definitions.isEmpty() && feedNotes(accountViewModel.feedStates.nipsFeed).second
+    WatchLifecycleAndUpdateModel(eventsModel)
+    KindEventsSubscription(kind, accountViewModel)
+    val (recent, loadingRecent) = feedNotes(eventsModel.feedState)
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.event_kind_title, kind), nav) },
     ) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-            item(key = "header") { KindHeader(kind, remember(state.definitions) { NipsOnNostr.labelOf(kind) }, nav) }
+            item(key = "header") { KindHeader(kind, remember(definitions) { NipsOnNostr.labelOf(kind, definitions) }, nav) }
 
-            item(key = "defs-title") { SectionTitle(stringRes(Res.string.event_kind_nips_on_nostr), state.loadingDefinitions && state.definitions.isEmpty()) }
-            if (state.definitions.isEmpty() && !state.loadingDefinitions) {
+            item(key = "defs-title") { SectionTitle(stringRes(Res.string.event_kind_nips_on_nostr), loadingDefinitions) }
+            if (definitions.isEmpty() && !loadingDefinitions) {
                 item(key = "defs-empty") { EmptyLine(stringRes(Res.string.event_kind_no_definitions)) }
             }
-            items(state.definitions, key = { "def-" + it.idHex }) { note ->
+            items(definitions, key = { "def-" + it.idHex }) { note ->
                 NoteCompose(baseNote = note, quotesLeft = 1, accountViewModel = accountViewModel, nav = nav)
                 HorizontalDivider(thickness = 0.5.dp)
             }
 
-            item(key = "recent-title") { SectionTitle(stringRes(Res.string.event_kind_recent), state.loadingRecent && state.recent.isEmpty()) }
-            if (state.recent.isEmpty() && state.notShown == 0 && !state.loadingRecent) {
+            item(key = "recent-title") { SectionTitle(stringRes(Res.string.event_kind_recent), loadingRecent) }
+            if (recent.isEmpty() && !loadingRecent) {
                 item(key = "recent-empty") { EmptyLine(stringRes(Res.string.event_kind_no_recent)) }
             }
-            if (state.notShown > 0) {
-                item(key = "recent-hidden") { EmptyLine(pluralStringRes(Res.plurals.event_kind_not_shown, state.notShown, state.notShown)) }
-            }
-            items(state.recent, key = { "recent-" + it.idHex }) { note ->
+            items(recent, key = { "recent-" + it.idHex }) { note ->
                 NoteCompose(baseNote = note, quotesLeft = 1, accountViewModel = accountViewModel, nav = nav)
                 HorizontalDivider(thickness = 0.5.dp)
             }

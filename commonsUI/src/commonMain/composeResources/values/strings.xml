@@ -9487,11 +9487,7 @@
     <string name="event_kind_nips_on_nostr">NIPs on Nostr</string>
     <string name="event_kind_no_definitions">No NIP on your relays defines this kind yet.</string>
     <string name="event_kind_recent">Recent events</string>
-    <string name="event_kind_no_recent">No events of this kind on your relays.</string>
-    <plurals name="event_kind_not_shown">
-        <item quantity="one">%1$d event of this kind was found, but the app keeps this kind out of feeds.</item>
-        <item quantity="other">%1$d events of this kind were found, but the app keeps this kind out of feeds.</item>
-    </plurals>
+    <string name="event_kind_no_recent">No events of this kind to show yet.</string>
     <string name="event_kind_inspect">See how clients encode it</string>
     <string name="unknown_kind_defined_by">Defined by %1$s</string>
     <string name="unknown_kind_about">About kind %1$d</string>
