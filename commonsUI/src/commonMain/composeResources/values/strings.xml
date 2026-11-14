@@ -2025,6 +2025,7 @@
     <string name="relay_group_location_manual">Enter a geohash manually</string>
     <string name="location_picker_title">Choose location</string>
     <string name="location_picker_hint">Move the map, search for a place, or use your current location.</string>
+    <string name="location_picker_hint_map_only">Drag the map to put the pin on the place, or press and hold a spot to jump there.</string>
     <string name="location_picker_search_hint">Search for a city or address</string>
     <string name="location_picker_search_empty">No matching place found.</string>
     <string name="location_picker_use_mine">Use my current location</string>
@@ -2686,6 +2687,8 @@
     <string name="buzz_forum_new_title">New forum topic</string>
     <string name="buzz_forum_body_label">What do you want to discuss?</string>
     <string name="buzz_forum_post_action">Post topic</string>
+    <string name="buzz_forum_invalid_relay">This channel's relay address isn't valid, so the topic can't be posted there.</string>
+    <string name="buzz_forum_post_failed">Couldn't post the topic: %1$s</string>
     <string name="buzz_forum_thread_title">Forum thread</string>
     <string name="buzz_forum_no_replies">No replies yet. Be the first to respond.</string>
     <string name="buzz_dm_title">Direct Messages</string>

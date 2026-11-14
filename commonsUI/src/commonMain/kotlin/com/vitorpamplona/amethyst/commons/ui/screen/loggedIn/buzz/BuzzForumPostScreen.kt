@@ -44,9 +44,12 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_forum_body_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_forum_invalid_relay
 import com.vitorpamplona.amethyst.commons.resources.buzz_forum_new_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_forum_post_action
+import com.vitorpamplona.amethyst.commons.resources.buzz_forum_post_failed
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -77,6 +80,7 @@ fun BuzzForumPostScreen(
     var body by remember { mutableStateOf("") }
     var isPosting by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    val invalidRelayText = stringRes(Res.string.buzz_forum_invalid_relay)
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -115,7 +119,7 @@ fun BuzzForumPostScreen(
                 onClick = {
                     val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl)
                     if (relay == null) {
-                        error = "Invalid relay url"
+                        error = invalidRelayText
                         return@Button
                     }
                     isPosting = true
@@ -147,7 +151,7 @@ fun BuzzForumPostScreen(
                         } catch (e: Exception) {
                             isPosting = false
                             currentCoroutineContext().ensureActive()
-                            error = "Failed to post: ${e.message ?: e::class.simpleName}"
+                            error = loadStringRes(Res.string.buzz_forum_post_failed, e.message ?: e::class.simpleName)
                         }
                     }
                 },

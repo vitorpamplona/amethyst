@@ -115,6 +115,7 @@ fun NewCalendarEventScreen(
         topBar = {
             SavingTopBar(
                 titleRes = if (vm.isEditing) Res.string.edit_calendar_event else Res.string.new_calendar_event,
+                isActive = { vm.isValid() && vm.isEndAfterStart() },
                 onCancel = { nav.popBack() },
                 onPost = {
                     accountViewModel.launchSigner {

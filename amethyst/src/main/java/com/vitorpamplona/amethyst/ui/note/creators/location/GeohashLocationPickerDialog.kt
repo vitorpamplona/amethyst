@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.resources.location_picker_use_mine
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.areaSize
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.label
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.location.ForwardGeolocation
@@ -774,15 +775,3 @@ private fun geohashBounds(geohash: String): BoundingBox? {
         gh.centerLon - lonWidth / 2,
     )
 }
-
-/** A rough physical size for a geohash cell at this precision, for the chip subtitle. */
-private fun GeohashChannelLevel.areaSize(): String =
-    when (this) {
-        GeohashChannelLevel.CONTINENT -> "~5000 km"
-        GeohashChannelLevel.REGION -> "~1250 km"
-        GeohashChannelLevel.PROVINCE -> "~39 km"
-        GeohashChannelLevel.CITY -> "~5 km"
-        GeohashChannelLevel.NEIGHBORHOOD -> "~1.2 km"
-        GeohashChannelLevel.BLOCK -> "~150 m"
-        GeohashChannelLevel.BUILDING -> "~38 m"
-    }

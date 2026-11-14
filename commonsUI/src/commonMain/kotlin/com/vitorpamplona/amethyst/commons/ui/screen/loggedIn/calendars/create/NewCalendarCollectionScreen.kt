@@ -91,6 +91,7 @@ fun NewCalendarCollectionScreen(
         topBar = {
             SavingTopBar(
                 titleRes = if (editDTag == null) Res.string.new_calendar_collection else Res.string.edit_calendar_collection,
+                isActive = { vm.isValid() },
                 onCancel = { nav.popBack() },
                 onPost = {
                     accountViewModel.launchSigner {
