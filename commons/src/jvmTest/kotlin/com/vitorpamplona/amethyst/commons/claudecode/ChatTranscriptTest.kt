@@ -55,6 +55,24 @@ class ChatTranscriptTest {
     }
 
     @Test
+    fun savedPromptsKeepThatImagesWereSent() {
+        val transcript = ChatTranscript()
+        transcript.addHistory(
+            listOf(
+                entry(TranscriptEntry.Role.USER, ContentBlock.Image("image/png"), ContentBlock.Image("image/png"), ContentBlock.Text("what is this?")),
+                entry(TranscriptEntry.Role.USER, ContentBlock.Image("image/jpeg")),
+            ),
+        )
+        val items = transcript.snapshot().map { it as ChatItem.UserText }
+        assertEquals(2, items.size)
+        assertEquals("what is this?", items[0].text)
+        assertEquals(2, items[0].images.size)
+        // An image sent on its own still shows as a message.
+        assertEquals("", items[1].text)
+        assertEquals(1, items[1].images.size)
+    }
+
+    @Test
     fun cliNotesAndWrappersAreNotUserMessages() {
         val transcript = ChatTranscript()
         transcript.addUserBlocks(listOf(ContentBlock.Text("[Request interrupted by user]")), typedByUser = false)

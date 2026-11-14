@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.claudecode
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.claudecode.protocol.ImageInput
 import com.vitorpamplona.claudecode.protocol.PermissionMode
 import com.vitorpamplona.claudecode.protocol.PermissionRequest
 import com.vitorpamplona.quartz.utils.Log
@@ -212,6 +213,13 @@ class ClaudeCodeChatViewModel(
     val runError: StateFlow<String?> = _runError.asStateFlow()
 
     fun send(text: String) = chat?.send(text)
+
+    /** Sends [text] with images already read for sending, and the files they came from. */
+    fun send(
+        text: String,
+        images: List<ImageInput>,
+        files: List<File?>,
+    ) = chat?.send(text, images, files)
 
     fun approve(
         request: PermissionRequest,

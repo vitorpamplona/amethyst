@@ -24,20 +24,53 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 /** The lines a host writes on Claude Code's stdin in `--input-format stream-json` mode. */
 object ClaudeInput {
     /** A prompt typed by the user. */
-    fun userText(text: String): JsonObject =
+    fun userText(text: String): JsonObject = userMessage(JsonPrimitive(text))
+
+    /** A prompt with [images]: the images first, then the text, as the Messages API advises. */
+    fun userText(
+        text: String,
+        images: List<ImageInput>,
+    ): JsonObject {
+        if (images.isEmpty()) return userText(text)
+        val blocks =
+            buildJsonArray {
+                images.forEach { image ->
+                    addJsonObject {
+                        put("type", "image")
+                        putJsonObject("source") {
+                            put("type", "base64")
+                            put("media_type", image.mediaType)
+                            put("data", image.base64)
+                        }
+                    }
+                }
+                if (text.isNotBlank()) {
+                    addJsonObject {
+                        put("type", "text")
+                        put("text", text)
+                    }
+                }
+            }
+        return userMessage(blocks)
+    }
+
+    private fun userMessage(content: JsonElement): JsonObject =
         buildJsonObject {
             put("type", "user")
             put(
                 "message",
                 buildJsonObject {
                     put("role", "user")
-                    put("content", text)
+                    put("content", content)
                 },
             )
             put("parent_tool_use_id", JsonNull)

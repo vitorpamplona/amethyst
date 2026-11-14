@@ -102,6 +102,16 @@ new version published, merged in the app, the worktree removed; "Draft with Clau
 checkout" on a stand-in checkout; and a proposal to a repository with no GRASP server, its branch
 pushed to a plain remote first.
 
+## Images in the chat
+
+The composer's left edge attaches images (the system file chooser); pasting a screenshot or image
+files attaches them too, and a text paste goes on as usual. They go as base64 `image` blocks before
+the text, the way the Messages API takes them. `ImageInput.fromFile` (claudeCodeClient) checks the
+format by its bytes (PNG, JPEG, GIF, WebP) and shrinks one the API would refuse (over ~3.75 MB, or a
+side over 8,000 px) to 1,568 px on its longest side, which is what the API scales to anyway. The
+user's bubble shows the pictures while their files exist; a saved history only records that an
+image was sent, and shows a placeholder.
+
 ## Settings assistant
 
 A Claude Code chat whose only tools are Amethyst's settings (Settings › "Settings assistant", or

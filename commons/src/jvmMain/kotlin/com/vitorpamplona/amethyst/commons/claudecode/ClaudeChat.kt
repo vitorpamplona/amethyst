@@ -27,6 +27,7 @@ import com.vitorpamplona.claudecode.process.ClaudeCodeNotFoundException
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
+import com.vitorpamplona.claudecode.protocol.ImageInput
 import com.vitorpamplona.claudecode.protocol.PermissionDecision
 import com.vitorpamplona.claudecode.protocol.PermissionMode
 import com.vitorpamplona.claudecode.protocol.PermissionRequest
@@ -244,10 +245,18 @@ class ClaudeChat internal constructor(
         }
     }
 
-    /** Sends a message, starting the process first if it isn't running. */
-    fun send(text: String) {
+    /**
+     * Sends a message, starting the process first if it isn't running. [images] go with it
+     * (read with [ImageInput.fromFile]); [imageFiles] are where they came from, to show them.
+     */
+    fun send(
+        text: String,
+        images: List<ImageInput> = emptyList(),
+        imageFiles: List<File?> = emptyList(),
+    ) {
         val trimmed = text.trim()
-        if (trimmed.isEmpty()) return
+        if (trimmed.isEmpty() && images.isEmpty()) return
+        val sent = images.mapIndexed { i, image -> SentImage(image.name, imageFiles.getOrNull(i)?.absolutePath) }
         scope.launch {
             historyReady.await()
             // Every way of sending lands here (the composer, review comments, questions from the
@@ -259,12 +268,12 @@ class ClaudeChat internal constructor(
                 return@launch
             }
             lock.withLock {
-                transcript.addPrompt(trimmed)
+                transcript.addPrompt(trimmed, sent)
                 publish { it.copy(status = ChatStatus.WORKING, error = null, activity = null, turnStartedAt = it.turnStartedAt ?: System.currentTimeMillis()) }
             }
             val c = ensureStarted() ?: return@launch
             try {
-                c.send(trimmed)
+                c.send(trimmed, images)
             } catch (e: IOException) {
                 Log.w(TAG, "Could not send to Claude Code", e)
                 publish { it.copy(status = ChatStatus.ENDED, error = ChatError.StartFailed(e.message)) }

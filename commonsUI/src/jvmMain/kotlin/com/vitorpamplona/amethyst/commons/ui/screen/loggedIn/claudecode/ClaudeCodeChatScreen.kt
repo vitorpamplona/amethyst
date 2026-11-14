@@ -107,6 +107,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.NoticeKind
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewItem
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewLocation
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewPrompt
+import com.vitorpamplona.amethyst.commons.claudecode.SentImage
 import com.vitorpamplona.amethyst.commons.claudecode.ToolKind
 import com.vitorpamplona.amethyst.commons.claudecode.ToolView
 import com.vitorpamplona.amethyst.commons.claudecode.ToolViews
@@ -126,6 +127,9 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_allow_mode
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow_rule_project
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow_rule_session
 import com.vitorpamplona.amethyst.commons.resources.claude_code_app_running
+import com.vitorpamplona.amethyst.commons.resources.claude_code_attach
+import com.vitorpamplona.amethyst.commons.resources.claude_code_attach_failed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_attach_pick
 import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_context_tooltip
 import com.vitorpamplona.amethyst.commons.resources.claude_code_context_used
@@ -201,6 +205,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_update_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_view_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_waiting_approval
 import com.vitorpamplona.amethyst.commons.resources.claude_code_working
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.pickFiles
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
@@ -218,6 +223,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.claudecode.protocol.ImageInput
 import com.vitorpamplona.claudecode.protocol.PermissionMode
 import com.vitorpamplona.claudecode.protocol.PermissionRequest
 import com.vitorpamplona.claudecode.protocol.PermissionSuggestion
@@ -278,6 +284,7 @@ fun ClaudeCodeChatScreen(
     }
 
     val composerText = rememberTextFieldState()
+    val attachments = remember { ComposerAttachments() }
     val composerFocus = remember { FocusRequester() }
     // Typing goes straight to the composer, and the keys below work, without a click first.
     LaunchedEffect(Unit) { composerFocus.requestFocus() }
@@ -423,9 +430,12 @@ fun ClaudeCodeChatScreen(
                 } else {
                     Composer(
                         text = composerText,
+                        attachments = attachments,
                         focusRequester = composerFocus,
                         busy = state.isBusy,
-                        onSend = { viewModel.send(it) },
+                        onSend = { text, images ->
+                            if (images.isEmpty()) viewModel.send(text) else viewModel.send(text, images.map { it.input }, images.map { it.file })
+                        },
                         onStop = { viewModel.interrupt() },
                     )
                     ComposerFooter(
@@ -532,7 +542,7 @@ private fun Messages(
                 is ChatRow.ToolGroup -> ToolGroupRow(row, state.cwd, turnRunning)
                 is ChatRow.Single ->
                     when (val item = row.item) {
-                        is ChatItem.UserText -> UserBubble(item.text, textStyle, onLink)
+                        is ChatItem.UserText -> UserBubble(item.text, item.images, textStyle, onLink)
                         is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle)
                         is ChatItem.ToolCall ->
                             if (ToolKind.of(item.name) == ToolKind.EDIT) {
@@ -826,10 +836,17 @@ private fun SettingsAssistantIntro(onStarter: (String) -> Unit) {
 @Composable
 private fun UserBubble(
     text: String,
+    images: List<SentImage>,
     textStyle: TextStyle,
     onLink: (String) -> Unit,
 ) {
-    Box(Modifier.fillMaxWidth().padding(top = 8.dp, start = 48.dp), contentAlignment = Alignment.CenterEnd) {
+    if (images.isNotEmpty()) {
+        Box(Modifier.fillMaxWidth().padding(top = 8.dp, start = 48.dp), contentAlignment = Alignment.CenterEnd) {
+            SentImageRow(images)
+        }
+    }
+    if (text.isEmpty()) return
+    Box(Modifier.fillMaxWidth().padding(top = if (images.isEmpty()) 8.dp else 4.dp, start = 48.dp), contentAlignment = Alignment.CenterEnd) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             shape = RoundedCornerShape(18.dp),
@@ -1064,28 +1081,50 @@ private fun PermissionCard(
 @Composable
 private fun Composer(
     text: TextFieldState,
+    attachments: ComposerAttachments,
     focusRequester: FocusRequester,
     busy: Boolean,
-    onSend: (String) -> Unit,
+    onSend: (String, List<ComposerImage>) -> Unit,
     onStop: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
+    val canSend = text.text.isNotBlank() || attachments.images.isNotEmpty()
     val send = {
         val value = text.text.toString()
-        if (value.isNotBlank()) {
-            onSend(value)
+        if (value.isNotBlank() || attachments.images.isNotEmpty()) {
+            onSend(value, attachments.take())
             text.clearText()
         }
+    }
+    val pickTitle = stringRes(Res.string.claude_code_attach_pick)
+    if (attachments.images.isNotEmpty()) {
+        ComposerImageRow(attachments, Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp))
+    }
+    attachments.refused?.let { name ->
+        Text(
+            stringRes(Res.string.claude_code_attach_failed, name),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp),
+        )
     }
     ThinPaddingTextField(
         state = text,
         modifier =
             Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 6.dp).focusRequester(focusRequester).onPreviewKeyEvent { event ->
-                // Enter sends; Shift+Enter is a new line.
-                if (event.type == KeyEventType.KeyDown && event.key == Key.Enter && !event.isShiftPressed) {
-                    send()
-                    true
-                } else {
-                    false
+                when {
+                    event.type != KeyEventType.KeyDown -> false
+                    // Enter sends; Shift+Enter is a new line.
+                    event.key == Key.Enter && !event.isShiftPressed -> {
+                        send()
+                        true
+                    }
+                    // Pasting a screenshot or image files attaches them; pasting text goes on as usual.
+                    event.key == Key.V && (event.isCtrlPressed || event.isMetaPressed) && attachments.clipboardHasImage() -> {
+                        scope.launch { attachments.pasteFromClipboard() }
+                        true
+                    }
+                    else -> false
                 }
             },
         shape = EditFieldBorder,
@@ -1097,6 +1136,14 @@ private fun Composer(
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
             ),
+        leadingIcon = {
+            val attach = stringRes(Res.string.claude_code_attach)
+            HoverTooltip(attach) {
+                IconButton(onClick = { scope.launch { attachments.add(pickFiles(pickTitle, multiple = true, ImageInput.EXTENSIONS)) } }) {
+                    Icon(MaterialSymbols.AddPhotoAlternate, contentDescription = attach, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(22.dp))
+                }
+            }
+        },
         trailingIcon = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (busy) {
@@ -1108,7 +1155,7 @@ private fun Composer(
                         }
                     }
                 }
-                ThinSendButton(isActive = text.text.isNotBlank(), modifier = Modifier) { send() }
+                ThinSendButton(isActive = canSend, modifier = Modifier) { send() }
             }
         },
     )

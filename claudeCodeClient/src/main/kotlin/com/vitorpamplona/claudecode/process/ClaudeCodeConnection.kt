@@ -24,6 +24,7 @@ import com.vitorpamplona.claudecode.mcp.SdkMcpDispatcher
 import com.vitorpamplona.claudecode.mcp.SdkMcpServer
 import com.vitorpamplona.claudecode.protocol.ClaudeInput
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
+import com.vitorpamplona.claudecode.protocol.ImageInput
 import com.vitorpamplona.claudecode.protocol.PermissionDecision
 import com.vitorpamplona.claudecode.protocol.PermissionMode
 import com.vitorpamplona.claudecode.protocol.PermissionRequest
@@ -140,7 +141,10 @@ class ClaudeCodeConnection(
         )
 
     /** Starts a turn with [text], or queues it if a turn is running. */
-    suspend fun send(text: String) = write(ClaudeInput.userText(text))
+    suspend fun send(
+        text: String,
+        images: List<ImageInput> = emptyList(),
+    ) = write(ClaudeInput.userText(text, images))
 
     /** Answers a permission prompt. */
     suspend fun respond(

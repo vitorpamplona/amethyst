@@ -9674,6 +9674,10 @@
     <string name="claude_code_step_check">Run the checks</string>
     <string name="claude_code_step_confirm">Confirm</string>
     <string name="claude_code_browse">Choose a folder</string>
+    <string name="claude_code_attach">Attach images</string>
+    <string name="claude_code_attach_pick">Choose images to send</string>
+    <string name="claude_code_attach_remove">Remove %1$s</string>
+    <string name="claude_code_attach_failed">Couldn’t attach %1$s: images must be PNG, JPEG, GIF or WebP.</string>
     <string name="claude_code_settings_assistant">Settings assistant</string>
     <string name="claude_code_context_used_little">under 1% of context</string>
     <plurals name="claude_code_tool_group_settings">

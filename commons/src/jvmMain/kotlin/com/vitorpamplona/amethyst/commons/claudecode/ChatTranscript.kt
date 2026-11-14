@@ -30,10 +30,12 @@ sealed interface ChatItem {
     /** Stable for the life of the chat, for list keys. */
     val id: Long
 
+    /** What the user sent: text, and the images that went with it. */
     @Immutable
     data class UserText(
         override val id: Long,
         val text: String,
+        val images: List<SentImage> = emptyList(),
     ) : ChatItem
 
     @Immutable
@@ -110,8 +112,11 @@ class ChatTranscript {
 
     /** A prompt the user just typed in this app. */
     @Synchronized
-    fun addPrompt(text: String) {
-        add(ChatItem.UserText(nextId++, text))
+    fun addPrompt(
+        text: String,
+        images: List<SentImage> = emptyList(),
+    ) {
+        add(ChatItem.UserText(nextId++, text, images))
     }
 
     @Synchronized
@@ -149,6 +154,9 @@ class ChatTranscript {
         blocks: List<ContentBlock>,
         typedByUser: Boolean,
     ) {
+        // A saved prompt's images: the app doesn't keep them, so they show as images were sent.
+        val images = if (typedByUser) blocks.filterIsInstance<ContentBlock.Image>().map { SentImage(name = null, file = null) } else emptyList()
+        var imagesShown = images.isEmpty()
         blocks.forEach { block ->
             when (block) {
                 is ContentBlock.ToolResult -> attachResult(block)
@@ -159,13 +167,17 @@ class ChatTranscript {
                         text.startsWith("[Request interrupted") -> add(ChatItem.Notice(nextId++, NoticeKind.INTERRUPTED))
                         // Slash-command wrappers and reminders the CLI stores as user text.
                         text.startsWith("<") -> {}
-                        typedByUser -> add(ChatItem.UserText(nextId++, text))
+                        typedByUser -> {
+                            add(ChatItem.UserText(nextId++, text, if (imagesShown) emptyList() else images))
+                            imagesShown = true
+                        }
                         else -> add(ChatItem.Notice(nextId++, NoticeKind.CLI_NOTE, text))
                     }
                 }
                 else -> {}
             }
         }
+        if (!imagesShown) add(ChatItem.UserText(nextId++, "", images))
     }
 
     @Synchronized
@@ -297,3 +309,13 @@ fun List<ChatItem>.toChatRows(): List<ChatRow> {
     flush()
     return rows
 }
+
+/**
+ * An image sent with a prompt: its file's [name] and, while it is still there, the [file] to show
+ * it from. A saved history keeps neither, only that an image was sent.
+ */
+@Immutable
+data class SentImage(
+    val name: String?,
+    val file: String?,
+)
