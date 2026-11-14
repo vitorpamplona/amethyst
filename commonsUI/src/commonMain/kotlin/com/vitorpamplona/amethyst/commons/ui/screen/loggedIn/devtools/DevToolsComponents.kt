@@ -57,6 +57,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.devtools.EventInspectResult
 import com.vitorpamplona.amethyst.commons.devtools.EventInspector
@@ -181,7 +182,7 @@ fun DevToolsCodeBlock(
     }
 }
 
-/** Colours for each JSON token; [jsonColors] picks the set for the current theme. */
+/** Colours for each JSON token, plus the faded [note] after a line; [jsonColors] picks the set for the current theme. */
 @Immutable
 data class JsonColors(
     val key: Color,
@@ -189,6 +190,7 @@ data class JsonColors(
     val number: Color,
     val literal: Color,
     val punctuation: Color,
+    val note: Color,
 )
 
 private val LightJsonColors =
@@ -198,6 +200,7 @@ private val LightJsonColors =
         number = Color(0xFFB35C00),
         literal = Color(0xFF1565C0),
         punctuation = Color(0xFF6B6B6B),
+        note = Color(0xFF9A9A9A),
     )
 
 private val DarkJsonColors =
@@ -207,22 +210,84 @@ private val DarkJsonColors =
         number = Color(0xFFFFB74D),
         literal = Color(0xFF64B5F6),
         punctuation = Color(0xFF9E9E9E),
+        note = Color(0xFF7C7C7C),
     )
 
 @Composable
 fun jsonColors(): JsonColors = if (MaterialTheme.colorScheme.isLight) LightJsonColors else DarkJsonColors
 
 /**
+ * Where a scalar sits in the document, for [highlightJson]'s notes. [key] is the nearest object
+ * key above the value: its own key in an object, the array's key for an array element (so every
+ * value inside `"tags": [[...]]` has key `tags`). In an array, [index] is the element's position
+ * and [arrayHead] the array's first element when that is a scalar (a tag's name). [value] is the
+ * token without its quotes, escapes left as written.
+ */
+@Immutable
+class JsonValueContext(
+    val key: String?,
+    val arrayHead: String?,
+    val index: Int,
+    val value: String,
+)
+
+private class JsonFrame(
+    val isArray: Boolean,
+    val key: String?,
+) {
+    var index = 0
+    var head: String? = null
+    var memberKey: String? = null
+}
+
+/**
  * Colours [json] token by token: object keys, string values, numbers, `true`/`false`/`null` and
- * punctuation. A lenient single pass: text that is not valid JSON keeps the default colour
- * instead of failing, and whitespace is copied as is, so the layout of a pretty print survives.
+ * punctuation. Whatever [note] returns for a value is added, faded, at the end of that value's
+ * line as `// note`, several joined by ` · `. A lenient single pass: text that is not valid JSON
+ * keeps the default colour instead of failing, and whitespace is copied as is, so the layout of
+ * a pretty print survives.
  */
 fun highlightJson(
     json: String,
     colors: JsonColors,
+    note: ((JsonValueContext) -> String?)? = null,
 ): AnnotatedString =
     buildAnnotatedString {
-        append(json)
+        val stack = ArrayList<JsonFrame>()
+        val notes = ArrayList<String>()
+
+        fun appendStyled(
+            color: Color,
+            start: Int,
+            end: Int,
+        ) {
+            val from = length
+            append(json, start, end)
+            addStyle(SpanStyle(color = color), from, length)
+        }
+
+        fun flushNotes() {
+            if (notes.isEmpty()) return
+            val from = length
+            append("  // ")
+            append(notes.joinToString(" \u00B7 "))
+            addStyle(SpanStyle(color = colors.note, fontStyle = FontStyle.Italic), from, length)
+            notes.clear()
+        }
+
+        fun onScalar(value: String) {
+            val frame = stack.lastOrNull() ?: return
+            if (frame.isArray && frame.index == 0) frame.head = value
+            if (note == null) return
+            val context =
+                if (frame.isArray) {
+                    JsonValueContext(frame.key, frame.head, frame.index, value)
+                } else {
+                    JsonValueContext(frame.memberKey, null, -1, value)
+                }
+            note(context)?.let { notes.add(it) }
+        }
+
         val n = json.length
         var i = 0
         while (i < n) {
@@ -234,63 +299,104 @@ fun highlightJson(
                     while (i < n && json[i] != '"') {
                         i += if (json[i] == '\\') 2 else 1
                     }
-                    i = minOf(i + 1, n)
+                    val closed = i < n
+                    i = if (closed) i + 1 else n
+                    val text = json.substring(start + 1, if (closed) i - 1 else n)
                     // A string followed by a colon is a key.
                     var next = i
                     while (next < n && json[next].isWhitespace()) next++
-                    val color = if (next < n && json[next] == ':') colors.key else colors.string
-                    addStyle(SpanStyle(color = color), start, i)
+                    if (next < n && json[next] == ':') {
+                        stack.lastOrNull()?.memberKey = text
+                        appendStyled(colors.key, start, i)
+                    } else {
+                        appendStyled(colors.string, start, i)
+                        onScalar(text)
+                    }
                 }
 
                 c == '-' || c.isDigit() -> {
                     val start = i
                     i++
                     while (i < n && (json[i].isDigit() || json[i] in NUMBER_CHARS)) i++
-                    addStyle(SpanStyle(color = colors.number), start, i)
+                    appendStyled(colors.number, start, i)
+                    onScalar(json.substring(start, i))
                 }
 
                 c.isLetter() -> {
                     val start = i
                     while (i < n && json[i].isLetter()) i++
-                    addStyle(SpanStyle(color = colors.literal), start, i)
+                    appendStyled(colors.literal, start, i)
+                    onScalar(json.substring(start, i))
                 }
 
-                c in PUNCTUATION -> {
-                    addStyle(SpanStyle(color = colors.punctuation), i, i + 1)
+                c == '{' || c == '[' -> {
+                    val parent = stack.lastOrNull()
+                    stack.add(JsonFrame(isArray = c == '[', key = if (parent == null || parent.isArray) parent?.key else parent.memberKey))
+                    appendStyled(colors.punctuation, i, i + 1)
+                    i++
+                }
+
+                c == '}' || c == ']' -> {
+                    if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex)
+                    appendStyled(colors.punctuation, i, i + 1)
+                    i++
+                }
+
+                c == ',' -> {
+                    stack.lastOrNull()?.let { if (it.isArray) it.index++ }
+                    appendStyled(colors.punctuation, i, i + 1)
+                    i++
+                }
+
+                c == ':' -> {
+                    appendStyled(colors.punctuation, i, i + 1)
+                    i++
+                }
+
+                c == '\n' -> {
+                    flushNotes()
+                    append(c)
                     i++
                 }
 
                 else -> {
+                    append(c)
                     i++
                 }
             }
         }
+        flushNotes()
     }
 
 private const val NUMBER_CHARS = ".eE+-"
-private const val PUNCTUATION = "{}[]:,"
 
-/** Read-only JSON in monospace with syntax colours, selectable, wrapping long values instead of scrolling sideways. */
+/**
+ * Read-only JSON in monospace with syntax colours and [note]s, selectable, wrapping long values
+ * instead of scrolling sideways. The copy button copies [json] alone, without the notes.
+ */
 @Composable
 fun DevToolsJsonBlock(
     json: String,
     modifier: Modifier = Modifier,
+    note: ((JsonValueContext) -> String?)? = null,
 ) {
     val colors = jsonColors()
-    val highlighted = remember(json, colors) { highlightJson(json, colors) }
+    val highlighted = remember(json, colors, note) { highlightJson(json, colors, note) }
     Box(
         modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
-            .padding(10.dp),
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
     ) {
-        SelectionContainer {
+        SelectionContainer(Modifier.padding(start = 10.dp, top = 10.dp, bottom = 10.dp, end = 40.dp)) {
             Text(
                 highlighted,
                 style = MaterialTheme.typography.bodySmall,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurface,
             )
+        }
+        Box(Modifier.align(Alignment.TopEnd)) {
+            CopyIconButton(json)
         }
     }
 }

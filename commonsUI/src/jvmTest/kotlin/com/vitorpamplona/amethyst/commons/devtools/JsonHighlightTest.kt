@@ -22,12 +22,13 @@ package com.vitorpamplona.amethyst.commons.devtools
 
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.JsonColors
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.JsonValueContext
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.highlightJson
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class JsonHighlightTest {
-    private val colors = JsonColors(Color.Red, Color.Green, Color.Blue, Color.Cyan, Color.Gray)
+    private val colors = JsonColors(Color.Red, Color.Green, Color.Blue, Color.Cyan, Color.Gray, Color.Magenta)
 
     private fun colorOf(
         json: String,
@@ -55,5 +56,42 @@ class JsonHighlightTest {
     @Test
     fun brokenJsonDoesNotThrow() {
         assertEquals("{\"open", highlightJson("{\"open", colors).text)
+    }
+
+    @Test
+    fun notesLandAtTheEndOfTheValuesLine() {
+        val json =
+            """
+            {
+              "kind": 1,
+              "tags": [
+                ["p", "abc", "wss://r"],
+                ["e", "def"]
+              ],
+              "created_at": 5
+            }
+            """.trimIndent()
+        val seen = mutableListOf<String>()
+        val text =
+            highlightJson(json, colors) { c: JsonValueContext ->
+                seen.add("${c.key}/${c.arrayHead}/${c.index}=${c.value}")
+                when {
+                    c.key == "kind" -> "Text"
+                    c.arrayHead == "p" && c.index == 1 -> "Alice"
+                    c.arrayHead == "p" && c.index == 2 -> "relay"
+                    c.key == "created_at" -> "epoch"
+                    else -> null
+                }
+            }.text
+
+        assertEquals(
+            listOf("kind/null/-1=1", "tags/p/0=p", "tags/p/1=abc", "tags/p/2=wss://r", "tags/e/0=e", "tags/e/1=def", "created_at/null/-1=5"),
+            seen,
+        )
+        val lines = text.lines()
+        assertEquals("  \"kind\": 1,  // Text", lines[1])
+        assertEquals("    [\"p\", \"abc\", \"wss://r\"],  // Alice \u00B7 relay", lines[3])
+        assertEquals("    [\"e\", \"def\"]", lines[4])
+        assertEquals("  \"created_at\": 5  // epoch", lines[6])
     }
 }
