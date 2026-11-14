@@ -172,22 +172,25 @@ class NavDestinations {
     internal fun entryFor(
         entry: NavStackEntry,
         navFor: (NavStackEntry) -> INav,
-    ): NavEntry<NavStackEntry> {
-        val destination = of(entry.route)
-        return NavEntry(
+    ): NavEntry<NavStackEntry> =
+        NavEntry(
             key = entry,
             contentKey = entry.contentKey,
             metadata = mapOf(NAV_STACK_ENTRY to entry),
         ) {
             val scope = remember(entry) { DestinationScope(navFor(entry)) }
+            // Read as it is drawn, not when the entry was made: a screen can be handed a route of
+            // another destination in place (the event redirect becomes the note it found, in a tab),
+            // and the old destination's content cast the new route to its own and crashed.
+            val route = entry.route
+            val destination = of(route)
             CompositionLocalProvider(LocalNavStackEntry provides entry) {
                 // A screen behind a privacy lock is not composed until it is unlocked.
-                PrivacyLockGate(entry.route.lockScope()) {
-                    MaybeCappedScreen(destination.capWidth) { with(destination) { scope.content(entry.route) } }
+                PrivacyLockGate(route.lockScope()) {
+                    MaybeCappedScreen(destination.capWidth) { with(destination) { scope.content(route) } }
                 }
             }
         }
-    }
 
     companion object {
         /** [NavEntry.metadata] key carrying the [NavStackEntry], which the transition specs read. */

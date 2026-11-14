@@ -179,10 +179,57 @@ object NamecoinCommand {
                 Output.error("servers_unreachable", outcome.message)
             is NamecoinResolveOutcome.InvalidIdentifier ->
                 Output.error("invalid_identifier", outcome.identifier)
+            is NamecoinResolveOutcome.ImportFailed ->
+                Output.error(
+                    "import_failed",
+                    "import of ${outcome.target} failed: ${describe(outcome.cause)}",
+                    extra = mapOf("namecoin_name" to outcome.name, "target" to outcome.target),
+                )
+            is NamecoinResolveOutcome.DelegationFailed ->
+                Output.error(
+                    "delegation_failed",
+                    "delegation to ${outcome.target} failed: ${describe(outcome.cause)}",
+                    extra = mapOf("namecoin_name" to outcome.name, "target" to outcome.target),
+                )
+            is NamecoinResolveOutcome.CyclicReference ->
+                Output.error(
+                    "cyclic_reference",
+                    "references loop: ${outcome.path.joinToString(" -> ")}",
+                    extra = mapOf("namecoin_name" to outcome.name),
+                )
+            is NamecoinResolveOutcome.LookupBudgetExhausted ->
+                Output.error(
+                    "lookup_budget_exhausted",
+                    "references need more than ${outcome.limit} lookups",
+                    extra = mapOf("namecoin_name" to outcome.name),
+                )
+            is NamecoinResolveOutcome.DepthLimitExceeded ->
+                Output.error(
+                    "depth_limit_exceeded",
+                    "references nest deeper than ${outcome.limit}",
+                    extra = mapOf("namecoin_name" to outcome.name),
+                )
             NamecoinResolveOutcome.Timeout ->
                 Output.error("timeout", "lookup timed out after ${timeoutSecs}s")
         }
     }
+
+    /** One line for the failure behind a failed import or delegation, nested ones included. */
+    private fun describe(outcome: NamecoinResolveOutcome): String =
+        when (outcome) {
+            is NamecoinResolveOutcome.Success -> "resolved"
+            is NamecoinResolveOutcome.NameNotFound -> "${outcome.name} does not exist"
+            is NamecoinResolveOutcome.NoNostrField -> "${outcome.name} has no Nostr field"
+            is NamecoinResolveOutcome.MalformedRecord -> "${outcome.name} is malformed: ${outcome.error}"
+            is NamecoinResolveOutcome.ImportFailed -> "import of ${outcome.target} failed: ${describe(outcome.cause)}"
+            is NamecoinResolveOutcome.DelegationFailed -> "delegation to ${outcome.target} failed: ${describe(outcome.cause)}"
+            is NamecoinResolveOutcome.CyclicReference -> "references loop: ${outcome.path.joinToString(" -> ")}"
+            is NamecoinResolveOutcome.LookupBudgetExhausted -> "more than ${outcome.limit} lookups"
+            is NamecoinResolveOutcome.DepthLimitExceeded -> "nested deeper than ${outcome.limit}"
+            is NamecoinResolveOutcome.ServersUnreachable -> "servers unreachable: ${outcome.message}"
+            is NamecoinResolveOutcome.InvalidIdentifier -> "invalid identifier ${outcome.identifier}"
+            NamecoinResolveOutcome.Timeout -> "timed out"
+        }
 
     private fun servers(rest: Array<String>): Int {
         // No positional/flags today — but reject unknown ones so future

@@ -249,6 +249,8 @@ class DesktopCefEngine(
      * - [NappletWebContract.COOKIE_GUARD_JS] everywhere under napplet.local, which is one site for every
      *   app, account and route here.
      * - [PageScrollbars.CSS] in every frame: its scrollbars, in the app's colors.
+     * - [PaperLinkReports.SCRIPT] in its own isolated world under napplet.local, which stays only in
+     *   a front page's frame and tells the host which link the reader clicked (the page runs no script).
      *
      * The in-app browser's pages live in contexts this extension doesn't reach ([webContext]); they get
      * their scripts from [webPageScripts].
@@ -262,6 +264,9 @@ class DesktopCefEngine(
         // An older start's: the browser's pages install their own scripts now.
         File(dir, "browser.js").let { if (it.exists() && !it.delete()) Log.w(TAG) { "Could not delete $it" } }
         File(dir, "scrollbars.css").writeText(PageScrollbars.CSS)
+        // An older start's: the front page no longer reports its scroll.
+        File(dir, PaperLinkReports.OLD_FILE).let { if (it.exists() && !it.delete()) Log.w(TAG) { "Could not delete $it" } }
+        File(dir, PaperLinkReports.FILE).writeText(PaperLinkReports.SCRIPT)
         return dir
     }
 
@@ -440,6 +445,11 @@ class DesktopCefEngine(
                 "match_origin_as_fallback": true,
                 "run_at": "document_start",
                 "world": "MAIN"
+              }, {
+                "matches": ["https://*.${NappletWebContract.HOST}/*"],
+                "js": ["${PaperLinkReports.FILE}"],
+                "all_frames": true,
+                "run_at": "document_start"
               }, {
                 "matches": ["<all_urls>"],
                 "css": ["scrollbars.css"],

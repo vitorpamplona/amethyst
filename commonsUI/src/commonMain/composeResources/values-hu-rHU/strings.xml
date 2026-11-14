@@ -1642,7 +1642,6 @@
     <string name="media_servers_add_url_label">Vagy illesszen be egy kiszolgálócímet</string>
     <string name="media_servers_cache_section">Eszközön lévő gyorsítótár</string>
     <string name="media_server_primary_badge">Elsődleges</string>
-    <string name="media_server_added">Hozzáadva</string>
     <string name="media_server_reorder">Kiszolgáló átrendezése</string>
     <string name="payment_targets_explainer">Tegye közzé fizetési címeit, hogy mások közvetlenül küldhessenek Önnek fizetséget.</string>
     <string name="no_payment_targets_message">Nincsenek fizetési célok megadva. Adjon meg egyet alább ↓</string>

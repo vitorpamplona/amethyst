@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.nip78AppSpecific
 
 import com.vitorpamplona.amethyst.commons.model.AccentColorType
 import com.vitorpamplona.amethyst.commons.model.AccountAppearancePreferencesInternal
+import com.vitorpamplona.amethyst.commons.model.AccountComposePreferencesInternal
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.AccountSyncedSettingsInternal
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -78,6 +79,7 @@ class AppSpecificLocalGroupsTest {
         runBlocking {
             val theirs = settings.toSyncedSettingsInternal()
             theirs.appearance = AccountAppearancePreferencesInternal("ORANGE")
+            theirs.compose = AccountComposePreferencesInternal("— from my other device")
             settings.setChatFeedEnabled(ChatFeedType.NIP17, false)
             settings.changeDefaultHomeFollowList(TopFilter.Global)
             val withTheirFilters = settings.toSyncedSettingsInternal()
@@ -90,6 +92,7 @@ class AppSpecificLocalGroupsTest {
             receive(theirs)
 
             assertEquals(AccentColorType.ORANGE, settings.accentColor.value)
+            assertEquals("— from my other device", settings.composeSignature.value)
             assertEquals(ChatFeedType.ALL - ChatFeedType.NIP17, settings.enabledChatFeeds.value)
             assertEquals(TopFilter.Global, settings.defaultHomeFollowList.value)
         }
@@ -99,10 +102,12 @@ class AppSpecificLocalGroupsTest {
         runBlocking {
             settings.updateAccentColor(AccentColorType.PINK)
             settings.changeCallsEnabled(false)
+            settings.changeComposeSignature("— mine")
 
             val older = settings.toSyncedSettingsInternal()
             older.appearance = null
             older.calls = null
+            older.compose = null
             older.messages = null
             older.feeds = null
             older.relayAuth = null
@@ -114,6 +119,7 @@ class AppSpecificLocalGroupsTest {
             assertEquals(listOf("C"), settings.syncedSettings.reactions.reactionChoices.value)
             assertEquals(AccentColorType.PINK, settings.accentColor.value)
             assertEquals(false, settings.callsEnabled.value)
+            assertEquals("— mine", settings.composeSignature.value)
         }
 
     @Test

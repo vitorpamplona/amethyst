@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.moderation.notifications
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -93,9 +94,46 @@ data class NotificationSpec(
     val kind: NotifKind,
     /** OS grouping key (macOS `threadIdentifier`, Windows Tag+Group). */
     val threadId: String? = null,
-    /** Amethyst event id for deep-linking from a click. */
-    val deepLinkNoteId: String? = null,
-)
+    /** What a click on the notification opens; null only brings the app forward. */
+    val target: NotificationTarget? = null,
+    /** The account (hex pubkey) the notification is for; a click switches to it when it is not the one in use. */
+    val account: HexKey? = null,
+) {
+    /** The note a click opens, if the notification is about one. */
+    val deepLinkNoteId: String? get() = (target as? NotificationTarget.Note)?.id
+}
+
+/** Where a click on an OS notification takes the user. */
+@Immutable
+sealed interface NotificationTarget {
+    /** A note, by event id: its thread, or wherever the app opens that kind. */
+    data class Note(
+        val id: HexKey,
+    ) : NotificationTarget
+
+    /** A `nostr:` or `amethyst:` link, routed as one the OS hands to the app. */
+    data class Link(
+        val uri: String,
+    ) : NotificationTarget
+
+    /** The Observer, the reader's front page, on today's edition. */
+    data object FrontPage : NotificationTarget
+}
+
+/**
+ * A click on one of the app's OS notifications. [target] and [account] come from the
+ * [NotificationSpec] that was sent; both are null when the OS reports a click on a notification
+ * this run did not post (one left over from before a restart), which only brings the app forward.
+ */
+@Immutable
+data class NotificationClick(
+    val target: NotificationTarget?,
+    val account: HexKey?,
+) {
+    companion object {
+        fun of(spec: NotificationSpec?) = NotificationClick(spec?.target, spec?.account)
+    }
+}
 
 sealed interface SendResult {
     object Delivered : SendResult

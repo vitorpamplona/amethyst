@@ -38,11 +38,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.frontpage.PrintJobEnd
 import com.vitorpamplona.amethyst.commons.model.BooleanType
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.commons.service.broadcast.canAutoDismiss
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.FrontPagePrintJobContent
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.rememberBackgroundPrint
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.collections.immutable.ImmutableList
@@ -57,11 +64,16 @@ import kotlinx.coroutines.delay
  *
  * The relay-progress part is hidden when the "Tracked broadcasts" UI setting
  * is off, but the NIP-13 mining phase always shows — the user needs to see
- * (and be able to cancel) posts still burning CPU in the queue.
+ * (and be able to cancel) posts still burning CPU in the queue. So does a front
+ * page printing while the reader is elsewhere: its step, how long it has run,
+ * then, briefly, how it ended; tapping it opens the front page.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
+fun DisplayBroadcastProgress(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val useTrackedBroadcasts by accountViewModel.settings.uiSettingsFlow.useTrackedBroadcasts
         .collectAsStateWithLifecycle()
     val trackingEnabled = useTrackedBroadcasts == BooleanType.ALWAYS
@@ -74,10 +86,12 @@ fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
     val visibleBroadcasts = remember(trackedBroadcasts) { trackedBroadcasts.filterNot { it.hidden }.toImmutableList() }
     val activeBroadcasts = if (trackingEnabled) visibleBroadcasts else persistentListOf()
 
+    val print = rememberBackgroundPrint(accountViewModel)
+
     // State for details sheet
     var seeDetails by remember { mutableStateOf(false) }
 
-    if (activeBroadcasts.isEmpty() && miningJobs.isEmpty() && !seeDetails) return
+    if (activeBroadcasts.isEmpty() && miningJobs.isEmpty() && print == null && !seeDetails) return
 
     if (!seeDetails) {
         DisplaySnack(
@@ -85,6 +99,21 @@ fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
             miningJobs,
             { if (activeBroadcasts.isNotEmpty()) seeDetails = true },
             accountViewModel,
+            backgroundWork =
+                print?.let { (printer, job) ->
+                    {
+                        FrontPagePrintJobContent(
+                            job,
+                            onOpen = {
+                                if (!job.running) printer.dismissJob()
+                                nav.nav(Route.FrontPage((job.end as? PrintJobEnd.Ready)?.day))
+                            },
+                            onHide = printer::hideJob,
+                            onDismiss = printer::dismissJob,
+                            log = printer.log,
+                        )
+                    }
+                },
         )
 
         // Keyed on the decision, not the list: a slow relay answering during
@@ -136,8 +165,11 @@ fun DisplaySnack(
     miningJobs: ImmutableList<PoWJobState>,
     onTap: () -> Unit,
     accountViewModel: AccountViewModel,
+    backgroundWork: (@Composable () -> Unit)? = null,
 ) {
     val powQueue = LocalAppServices.current.powPublishQueue
+    // Above the screen's FAB (and the bottom bar under it, on a phone), never over it.
+    val clearance = if (LocalScreenLayout.current.navigationStyle == NavigationStyle.BOTTOM_BAR) 152.dp else 128.dp
     Box(modifier = Modifier.fillMaxSize()) {
         BroadcastBanner(
             broadcasts = activeBroadcasts,
@@ -162,9 +194,11 @@ fun DisplaySnack(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(start = 12.dp, end = 12.dp, bottom = 58.dp)
-                    .fillMaxWidth(0.94f)
-                    .widthIn(max = 560.dp),
+                    .padding(start = 12.dp, end = 12.dp, bottom = clearance)
+                    // Capped first, then a share of what is left: the other order never caps.
+                    .widthIn(max = 560.dp)
+                    .fillMaxWidth(0.94f),
+            backgroundWork = backgroundWork,
         )
     }
 }

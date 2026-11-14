@@ -73,6 +73,7 @@ object ScrollStateKeys {
     const val PICTURES_SCREEN = "PicturesFeed"
     const val WORKOUTS_SCREEN = "WorkoutsFeed"
     const val GIT_REPOSITORIES_SCREEN = "GitRepositoriesFeed"
+    const val NIPS_SCREEN = "NipsFeed"
     const val HIGHLIGHTS_SCREEN = "HighlightsFeed"
     const val RELAY_GROUPS_DISCOVERY_SCREEN = "RelayGroupsDiscoveryFeed"
     const val CALENDARS_SCREEN = "CalendarsFeed"

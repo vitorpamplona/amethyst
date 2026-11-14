@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilt
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_finished
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notify_needs_you
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_open
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_denied
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_description
@@ -82,9 +83,19 @@ class DesktopNotifications(
 ) {
     val settings: NotificationSettings = PreferencesNotificationSettings()
 
+    /** Clicks on the notifications below: the window comes forward and opens what each was about. */
+    val clicks = NotificationClickRouter()
+
     // Built on first use: it loads the native notifier.
     val dispatcher: NotificationDispatcher by lazy {
-        NucleusNotificationDispatcher(bundleId = BUNDLE_ID, appLabel = APP_LABEL, fallback = AwtTrayNotifier(), scope = scope)
+        NucleusNotificationDispatcher(
+            bundleId = BUNDLE_ID,
+            appLabel = APP_LABEL,
+            fallback = AwtTrayNotifier(),
+            scope = scope,
+            openActionLabel = { loadStringRes(Res.string.desktop_notification_open) },
+            onClick = clicks::onClick,
+        )
     }
 
     /** Events older than the app are history, not news. */

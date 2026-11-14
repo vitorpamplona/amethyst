@@ -37,6 +37,9 @@ enum class NotifKind {
 
     /** A Claude Code session that needs an approval or finished its turn. On with the OS notifications switch. */
     AGENT,
+
+    /** The reader's front page is ready, or needs them. Its switch is the schedule itself. */
+    FRONT_PAGE,
 }
 
 @Immutable
@@ -61,6 +64,7 @@ data class KindToggles(
             NotifKind.FOLLOW -> follow
             NotifKind.CALENDAR -> true
             NotifKind.AGENT -> true
+            NotifKind.FRONT_PAGE -> true
         }
 
     fun with(
@@ -77,6 +81,7 @@ data class KindToggles(
             NotifKind.FOLLOW -> copy(follow = v)
             NotifKind.CALENDAR -> this
             NotifKind.AGENT -> this
+            NotifKind.FRONT_PAGE -> this
         }
 }
 

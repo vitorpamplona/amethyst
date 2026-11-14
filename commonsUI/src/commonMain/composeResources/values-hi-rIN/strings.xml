@@ -1642,7 +1642,6 @@
     <string name="media_servers_add_url_label">अथवा सेवासंगणक पता चिपकाएँ</string>
     <string name="media_servers_cache_section">यन्त्र स्थित द्रुतस्मृति</string>
     <string name="media_server_primary_badge">प्रधान</string>
-    <string name="media_server_added">जोडा गया</string>
     <string name="media_server_reorder">सेवासंगणक पुनःव्यवस्थापन</string>
     <string name="payment_targets_explainer">आपके भुगतान पताएँ प्रकाशित करें जिससे कि अन्य लोग आपको धन सीधे भेज सकते हैं।</string>
     <string name="no_payment_targets_message">कोई भुगतान लक्ष्य स्थापित नहीं। नीचे जोडें।</string>

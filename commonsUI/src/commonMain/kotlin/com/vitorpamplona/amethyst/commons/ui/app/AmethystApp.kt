@@ -385,7 +385,8 @@ private fun AppNavigation(
         DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
         DisplayNotifyMessages(accountViewModel, nav)
         DisplayCrashMessages(accountViewModel, nav)
-        DisplayBroadcastProgress(accountViewModel)
+        // Background work, a front page printing elsewhere included: one popup for all of it.
+        DisplayBroadcastProgress(accountViewModel, nav)
         DisplayBlossomSyncProgress()
     }
 }

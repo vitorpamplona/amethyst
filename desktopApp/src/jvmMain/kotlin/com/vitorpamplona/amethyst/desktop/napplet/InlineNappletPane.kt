@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -61,16 +62,19 @@ fun InlineNappletPane(
 
 /**
  * [InlineNappletPane] for any app a note runs: [open] starts its off-screen session, and the last
- * frame is kept as the poster under [posterKey].
+ * frame is kept as the poster under [posterKey]. A null key keeps none: the front page is private
+ * and never shown as a poster, so its frames have no business in the shared cache.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun InlineNappletPane(
     host: DesktopNappletHost,
-    posterKey: String,
+    posterKey: String?,
     instanceId: String,
     onStatus: (InlineNappletStatus) -> Unit,
     modifier: Modifier,
+    // In a feed the wheel scrolls the feed until the app is clicked; a page that fills the screen takes it at once.
+    wheelNeedsFocus: Boolean = true,
     open: () -> Result<CefNappletSession>,
 ) {
     val status by rememberUpdatedState(onStatus)
@@ -85,7 +89,7 @@ fun InlineNappletPane(
                 val last = opened.offscreen?.keepLastFrame()
                 // A session the host already closed belonged to an account that left: its screen is
                 // never a poster for the next one.
-                if (last != null && !opened.isClosed) InlineNappletPosters.put(posterKey, last)
+                if (posterKey != null && last != null && !opened.isClosed) InlineNappletPosters.put(posterKey, last)
                 host.closeInline(opened)
             }
             session = null
@@ -99,22 +103,71 @@ fun InlineNappletPane(
         Box(modifier)
         return
     }
-    val state by current.state.collectAsState()
+    // Each session's own: a new one (Retry, another edition) must not inherit the last one's state
+    // and frame. It did, and when it came up Showing and painted before the pane looked, its status
+    // read just as the last one's had, so SHOWING was never said again and its frame stayed hidden.
+    key(current) { SessionPane(current, view, instanceId, onStatus, modifier, wheelNeedsFocus) }
+}
+
+/**
+ * [InlineNappletPane] for a session something else holds open ([HeldPaperSession], the front
+ * page's): leaving the composition hides the page instead of closing it, so the reader comes back to
+ * it as they left it, scrolled where they were. [session] is the open result: a failure says FAILED.
+ */
+@Composable
+fun HeldNappletPane(
+    session: Result<CefNappletSession>,
+    instanceId: String,
+    onStatus: (InlineNappletStatus) -> Unit,
+    modifier: Modifier,
+    wheelNeedsFocus: Boolean,
+) {
+    val status by rememberUpdatedState(onStatus)
+    val current = session.getOrNull()
+    val view = current?.offscreen
+    if (current == null || view == null) {
+        if (current == null) LaunchedEffect(session) { status(InlineNappletStatus.FAILED) }
+        Box(modifier)
+        return
+    }
+    // Out of sight, the page barely paints, as an app screen's does.
+    DisposableEffect(current) {
+        current.setVisible(true)
+        onDispose { current.setVisible(false) }
+    }
+    key(current) { SessionPane(current, view, instanceId, onStatus, modifier, wheelNeedsFocus) }
+}
+
+@Composable
+private fun SessionPane(
+    session: CefNappletSession,
+    view: OffscreenNappletView,
+    instanceId: String,
+    onStatus: (InlineNappletStatus) -> Unit,
+    modifier: Modifier,
+    wheelNeedsFocus: Boolean,
+) {
+    val status by rememberUpdatedState(onStatus)
+    val state by session.state.collectAsState()
     // The note's stage draws the bar; the run is known to it by its instance id.
-    LaunchedEffect(current, instanceId) { current.download.collect { NappletInlineDownloads.shared.report(instanceId, it) } }
+    LaunchedEffect(instanceId) { session.download.collect { NappletInlineDownloads.shared.report(instanceId, it) } }
     // Read only where it is drawn, so a new frame redraws the box instead of recomposing the pane.
     val frame = view.frame.collectAsState()
     val painted by remember(frame) { derivedStateOf { frame.value != null } }
 
     LaunchedEffect(state, painted) {
+        val now = state
         status(
             when {
-                state is CefNappletSession.State.Failed -> InlineNappletStatus.FAILED
-                state is CefNappletSession.State.Showing && painted -> InlineNappletStatus.SHOWING
+                // Tor said apart from other failures, so a caller can say why nothing is showing.
+                now is CefNappletSession.State.WaitingForTor -> InlineNappletStatus.WAITING_FOR_TOR
+                now is CefNappletSession.State.Failed && now.reason == CefNappletSession.Failure.ROUTE_BLOCKED -> InlineNappletStatus.NO_TOR
+                now is CefNappletSession.State.Failed -> InlineNappletStatus.FAILED
+                now is CefNappletSession.State.Showing && painted -> InlineNappletStatus.SHOWING
                 else -> InlineNappletStatus.LOADING
             },
         )
     }
 
-    OffscreenPage(view, modifier, wheelNeedsFocus = true)
+    OffscreenPage(view, modifier, wheelNeedsFocus = wheelNeedsFocus)
 }

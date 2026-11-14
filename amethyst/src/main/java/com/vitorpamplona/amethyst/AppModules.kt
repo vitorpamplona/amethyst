@@ -39,6 +39,14 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46Clie
 import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageInstallStore
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageModelMemory
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageScheduleStore
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreObserverPrefsStore
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageEditionStore
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageInstallInfo
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduleWatcher
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettings
@@ -90,6 +98,8 @@ import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetri
 import com.vitorpamplona.amethyst.commons.richtext.CachedAsciiDocToMarkdown
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
+import com.vitorpamplona.amethyst.commons.routstr.DataStoreRoutstrPurchaseStore
+import com.vitorpamplona.amethyst.commons.routstr.RoutstrService
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostWorkGate
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
@@ -145,6 +155,9 @@ import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettings
 import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettingsMigrations
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
+import com.vitorpamplona.amethyst.service.frontpage.AndroidFrontPageNotifier
+import com.vitorpamplona.amethyst.service.frontpage.AndroidFrontPagePrintHost
+import com.vitorpamplona.amethyst.service.frontpage.AndroidFrontPageScheduler
 import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
@@ -1100,12 +1113,16 @@ class AppModules(
         /**
          * Drops everything a deleted account left in the publish pipelines: parked scheduled posts,
          * checkpointed PoW mining jobs, and any of its jobs still queued or mining (a post must not
-         * publish after its account is gone).
+         * publish after its account is gone), and its front page's job, papers and settings.
          */
         override suspend fun onAccountRemoved(pubkey: HexKey) {
             scheduledPostStore.removeForAccount(pubkey)
             powPublishQueue.cancelForOwner(pubkey)
             powJobStore.removeForAccount(pubkey)
+            // Its morning edition must not wake for an account that is gone, nor its papers stay.
+            frontPageScheduler.forget(pubkey)
+            frontPagePrinters.forget(pubkey)
+            routstr.forget(pubkey)
         }
 
         override fun cashuCountersFor(npub: String) = CashuPreferences.forAccount(npub)
@@ -1218,6 +1235,37 @@ class AppModules(
     // single JSON file under the app's private filesDir; read by ScheduledPostWorker.
     val scheduledPostStore =
         ScheduledPostStore(File(appContext.filesDir, ScheduledPostStore.FILE_NAME).path)
+
+    // Each account's front page: prints that outlive the screen, the last week of editions in
+    // filesDir, and the morning schedule (WorkManager).
+    val frontPageNotifier by lazy { AndroidFrontPageNotifier(appContext) }
+    val frontPageScheduler by lazy { AndroidFrontPageScheduler(appContext) }
+    val frontPagePrinters by lazy {
+        FrontPagePrinters(
+            http = roleBasedHttpClientBuilder,
+            memory = DataStoreFrontPageModelMemory(appStores),
+            store = FrontPageEditionStore(File(appContext.filesDir, FrontPageEditionStore.FOLDER).path),
+            schedules = DataStoreFrontPageScheduleStore(appStores),
+            notifier = frontPageNotifier,
+            observerPrefs = DataStoreObserverPrefsStore(appStores),
+            installs = DataStoreFrontPageInstallStore(appStores),
+            // How this phone appears in the reader's synced schedule ("Printed each morning by Pixel 8").
+            installInfo = FrontPageInstallInfo(name = Build.MODEL?.trim()?.ifEmpty { null } ?: "Android", app = "amethyst-android"),
+            // A print the reader starts runs in a foreground service, so leaving the app doesn't stop it.
+            host = AndroidFrontPagePrintHost(appContext),
+        )
+    }
+
+    // Routstr, the sats-paid AI nodes: each account's purchases, kept in DataStore until the key is
+    // saved to kind 12000, and followed again on launch.
+    val routstr by lazy {
+        RoutstrService(
+            http = roleBasedHttpClientBuilder,
+            store = DataStoreRoutstrPurchaseStore(appStores),
+            torEnabled = { RoutstrService.onionsViaTor(torPrefs.value) },
+            scope = applicationIOScope,
+        )
+    }
 
     // Organizes cache clearing
     val trimmingService by
@@ -1403,6 +1451,12 @@ class AppModules(
 
         // starts observing LocalCache for notification-worthy events
         notificationDispatcher.start()
+
+        // Keeps each account's morning edition job on the one device the synced schedule names.
+        FrontPageScheduleWatcher(frontPagePrinters.morning, accountsCache.accounts, frontPageScheduler, applicationIOScope).start()
+
+        // A Routstr purchase left on its way (an invoice out, a key not saved yet) is picked up again.
+        routstr.start(accountsCache.accounts)
 
         // Keep the scheduled-posts worker (15-min periodic + one-time catch-up)
         // enqueued exactly while the store holds a PENDING post — see

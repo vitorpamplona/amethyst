@@ -652,6 +652,27 @@ sealed class Route {
 
     @Serializable object SearchEngineSettings : Route()
 
+    @Serializable object AgentKeysSettings : Route()
+
+    /**
+     * Routstr, the sats-paid AI nodes: the node picker, or the node announced at [node]
+     * (`38421:<pubkey>:<d>`), or a top-up of the saved key at [topUpUrl] whose masked form is
+     * [topUpMask]. The key itself never rides in the back stack.
+     */
+    @Serializable data class RoutstrSetup(
+        val node: String? = null,
+        val topUpUrl: String? = null,
+        val topUpMask: String? = null,
+    ) : Route()
+
+    /**
+     * The front page, about today; [day] (`yyyy-MM-dd`) shows that kept edition in its place, as a
+     * notification or a link does, with the way back to today.
+     */
+    @Serializable data class FrontPage(
+        val day: String? = null,
+    ) : Route()
+
     @Serializable object VideoPlayerSettings : Route()
 
     @Serializable object CallSettings : Route()
@@ -872,6 +893,20 @@ sealed class Route {
 
     @Serializable data class Note(
         val id: String,
+    ) : Route()
+
+    /** Official NIP [number] (`01`, `7D`) in the in-app reader, scrolled to [anchor] when given. */
+    @Serializable data class Nip(
+        val number: String,
+        val anchor: String? = null,
+    ) : Route()
+
+    /** Every NIP: the official index and the NIPs published on Nostr, searchable. */
+    @Serializable object Nips : Route()
+
+    /** An event kind: the NIPs that define it and a sample of its recent events. */
+    @Serializable data class EventKind(
+        val kind: Int,
     ) : Route()
 
     @Serializable data class ShareNoteAsImage(

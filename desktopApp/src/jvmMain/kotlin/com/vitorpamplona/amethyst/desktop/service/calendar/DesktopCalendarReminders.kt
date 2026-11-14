@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderLogS
 import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderSettingsStore
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotifKind
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationSpec
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationTarget
 import com.vitorpamplona.amethyst.commons.moderation.notifications.SendResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_body
@@ -110,7 +111,8 @@ class DesktopCalendarReminders(
                                 body = body,
                                 kind = NotifKind.CALENDAR,
                                 threadId = THREAD_ID,
-                                deepLinkNoteId = due.eventId,
+                                // The appointment's naddr: it opens by address, whichever version is cached.
+                                target = NotificationTarget.Link(due.deepLink),
                             ),
                         )
                     // Not posted: leave it unmarked, so the next scan tries again while it is due.

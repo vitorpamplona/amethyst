@@ -424,6 +424,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRequestToVanish
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventConfirmation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventReport
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoboSatsCoordinatorRating
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoutstrNode
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSiteSnapshot
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoAvatar
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoObject
@@ -959,6 +960,8 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
+import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
@@ -970,6 +973,7 @@ import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistra
 import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
 import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
 import com.vitorpamplona.quartz.openagents.nipExtExtensions.release.ExtensionReleaseEvent
+import com.vitorpamplona.quartz.routstr.node.RoutstrNodeEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -2964,6 +2968,10 @@ internal fun RenderNoteRow(
             is ManageEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Settings)
             // NIP-60 Cashu wallet
             is CashuWalletEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.AccountBalanceWallet)
+            // AI agent keys (kind 12000): encrypted to the author, never drawn
+            is AgentKeyEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Key)
+            // NIP-FB scheduled tasks (kind 34817): encrypted to the author, never drawn
+            is ScheduledTaskEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Schedule)
             is CashuTokenEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Paid)
             is CashuSpendingHistoryEvent -> RenderCashuSpendingHistory(baseNote, accountViewModel, nav)
             is CashuMintQuoteEvent -> RenderCashuMintQuote(baseNote)
@@ -3044,6 +3052,7 @@ internal fun RenderNoteRow(
             is ExtensionListingEvent -> RenderExtensionListing(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is ExtensionReleaseEvent -> RenderExtensionRelease(baseNote)
             is CvmServerAnnouncementEvent -> RenderCvmServerAnnouncement(baseNote, backgroundColor, accountViewModel, nav)
+            is RoutstrNodeEvent -> RenderRoutstrNode(baseNote, nav)
             is CvmToolsListEvent -> RenderCvmToolsList(baseNote, accountViewModel)
             is EventReminderEvent -> RenderEventReminder(baseNote)
             is AgentTurnMetricEvent -> RenderAgentTurnMetric(baseNote)

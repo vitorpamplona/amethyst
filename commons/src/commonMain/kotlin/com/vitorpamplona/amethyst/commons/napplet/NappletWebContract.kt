@@ -117,6 +117,8 @@ object NappletWebContract {
                 HostProfile.WEBSITE -> "allow-scripts allow-same-origin"
                 // Forms post to the app's own origin (its CSP's form-action); nothing else is added.
                 HostProfile.WEBXDC -> "allow-scripts allow-same-origin allow-forms"
+                // No scripts and an opaque origin: only its links may leave, to the system browser.
+                HostProfile.PAPER -> "allow-popups allow-popups-to-escape-sandbox"
             }
         val frameSource = if (napplet) "'self'" else appOrigin
         val template =
@@ -130,7 +132,7 @@ object NappletWebContract {
 
         if (!napplet) {
             // A webxdc app opens at its root with index.html appended, as the spec requires.
-            val entry = if (profile == HostProfile.WEBXDC) "/index.html" else "/"
+            val entry = if (profile == HostProfile.WEBXDC || profile == HostProfile.PAPER) "/index.html" else "/"
             return ShellPage(before + "iframe.src = '$appOrigin$entry';".encodeToByteArray() + after, shellCsp(frameSource))
         }
 
@@ -230,6 +232,15 @@ object NappletWebContract {
             "manifest-src 'none'; base-uri 'none'; form-action 'none'"
 
     /**
+     * The front page's CSP: no script source at all, its inline house stylesheet, and pictures from
+     * the open web over https only (its art is hotlinked where its authors published it). Nothing
+     * else loads, nothing posts, nothing frames.
+     */
+    const val PAPER_CSP: String =
+        "default-src 'none'; style-src 'unsafe-inline'; img-src https:; " +
+            "frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+
+    /**
      * A webxdc app's CSP: everything from its own origin (the archive, served locally) and inline
      * `data:`/`blob:`, nothing from anywhere else. Webxdc requires that an app has no Internet access.
      */
@@ -285,6 +296,13 @@ object NappletWebContract {
         "(function(){try{Object.defineProperty(Document.prototype,'cookie',{get:function(){return '';},set:function(){},configurable:false});}catch(e){}" +
             "try{Object.defineProperty(window,'cookieStore',{value:undefined,writable:false,configurable:false});}catch(e){}" +
             "try{if(window.CookieStore){Object.defineProperty(window,'CookieStore',{value:undefined,writable:false,configurable:false});}}catch(e){}})();"
+
+    /**
+     * What a paper gets before its page: markup only, no script. It names the charset the server's
+     * header already promises, because JCEF drops the header's charset and a page that names none
+     * was read as Latin-1. A repeated doctype and head in the page are ignored by the parser.
+     */
+    const val PAPER_PRELUDE = "<!doctype html><html><head><meta charset=\"utf-8\">"
 
     /**
      * Injects host-owned policy and the runtime prelude before any authored element in `head`.

@@ -68,6 +68,8 @@ import com.vitorpamplona.amethyst.desktop.napplet.NostrAppScreen
 import com.vitorpamplona.amethyst.desktop.napplet.WebPageScreen
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -279,6 +281,34 @@ class DesktopAppRoot(
             DesktopDeepLinks.pending.filterNotNull().collect { uri ->
                 DesktopDeepLinks.pending.value = null
                 uriToRoute(uri, accountViewModel.account)?.let { route -> nav.nav(route) }
+                // A link opens where it can be seen: a main window hidden (kept for a print, or closed
+                // beside screen windows) comes back.
+                navigator.windows.showMainWindow()
+            }
+        }
+
+        // A click on an OS notification (the window came forward already, NotificationClickRouter):
+        // open what it was about, in the account it was for.
+        LaunchedEffect(nav, accountViewModel) {
+            val clicks = modules.notifications.clicks
+            clicks.pending.filterNotNull().collect { click ->
+                clicks.pending.value = null
+                val account = accountViewModel.account
+                val savedNpubs = sessionManager.localPreferences.allSavedAccounts().mapTo(HashSet()) { it.npub }
+                val plan = NotificationClickRules.plan(click, account.signer.pubKey) { hex -> hex.hexToByteArray().toNpub() in savedNpubs }
+                when (plan) {
+                    is NotificationClickPlan.Open -> {
+                        // The Observer already on top, on a past edition: opening its route again does
+                        // nothing, so it is told to show today, the paper the notification is about.
+                        if (NotificationClickRules.showsToday(plan.target)) modules.frontPagePrinters.existing(account.signer.pubKey)?.showToday()
+                        NotificationClickRules.routeFor(plan.target, account)?.let { nav.nav(it) }
+                    }
+                    is NotificationClickPlan.SwitchAndOpen ->
+                        sessionManager.checkAndSwitchUserSync(plan.account.hexToByteArray().toNpub()) { switched ->
+                            plan.target?.let { NotificationClickRules.routeFor(it, switched) }
+                        }
+                    NotificationClickPlan.ShowOnly -> Unit
+                }
             }
         }
     }

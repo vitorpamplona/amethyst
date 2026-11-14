@@ -85,6 +85,7 @@ private val DrawerNavigateItems: List<NavBarItem> =
 private val DrawerYouItems: List<NavBarItem> =
     listOf(
         NavBarItem.PROFILE,
+        NavBarItem.FRONT_PAGE,
         NavBarItem.MY_FITNESS,
         NavBarItem.MY_LISTS,
         NavBarItem.BOOKMARKS,
@@ -118,6 +119,7 @@ private val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.GIT_REPOSITORIES,
         // Desktop only: hidden wherever the route has no screen.
         NavBarItem.CLAUDE_CODE,
+        NavBarItem.NIPS,
         NavBarItem.HIGHLIGHTS,
         NavBarItem.LIVE_STREAMS,
         NavBarItem.NESTS,

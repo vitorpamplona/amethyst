@@ -188,7 +188,7 @@ fun ComposeSettingsContent(
             SettingsDivider()
             AddClientTagTile(accountViewModel)
             SettingsDivider()
-            SignatureTile(sharedPrefs.composeSignature)
+            SignatureTile(accountViewModel, sharedPrefs.composeSignature)
         }
 
         SettingsSection(Res.string.pow_settings_title) {
@@ -353,8 +353,15 @@ private fun PoWCategory.descriptionRes(): StringResource =
     }
 
 @Composable
-private fun SignatureTile(flow: MutableStateFlow<String>) {
-    val value by flow.collectAsState()
+private fun SignatureTile(
+    accountViewModel: AccountViewModel,
+    appWideSignature: MutableStateFlow<String>,
+) {
+    // The account's own signature; until it sets one, the app-wide signature it used before applies.
+    val accountSignature by accountViewModel.account.settings.composeSignature
+        .collectAsStateWithLifecycle()
+    val appWide by appWideSignature.collectAsState()
+    val value = accountSignature ?: appWide
 
     SettingsBlockTile(
         icon = MaterialSymbols.EditNote,
@@ -363,7 +370,7 @@ private fun SignatureTile(flow: MutableStateFlow<String>) {
     ) {
         SpellCheckedOutlinedTextField(
             value = value,
-            onValueChange = { flow.tryEmit(it) },
+            onValueChange = accountViewModel::updateComposeSignature,
             placeholder = { Text(stringRes(Res.string.compose_signature_setting_hint)) },
             modifier = Modifier.fillMaxWidth(),
         )

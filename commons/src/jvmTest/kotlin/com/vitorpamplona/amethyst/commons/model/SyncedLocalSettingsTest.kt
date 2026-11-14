@@ -42,12 +42,14 @@ class SyncedLocalSettingsTest {
         settings.changeDefaultHomeFollowList(TopFilter.Global)
         settings.changeDefaultFileServer(ServerName("Mine", "https://files.example.com", ServerType.NIP96))
         settings.changeCallsEnabled(false)
+        settings.changeComposeSignature("— me")
 
         val json = JsonMapper.toJson(settings.toSyncedSettingsInternal())
         val back = JsonMapper.fromJson<AccountSyncedSettingsInternal>(json)
 
         assertEquals("GREEN", back.appearance?.accentColor)
         assertEquals(false, back.calls?.callsEnabled)
+        assertEquals("— me", back.compose?.signature)
         assertEquals(ServerName("Mine", "https://files.example.com", ServerType.NIP96), decodeFileServer(back.uploads?.defaultFileServer))
         val home = readableFeedFilters(back.feeds!!.feedFilters)[FollowListSlot.HOME]
         assertEquals(TopFilter.Global, decodeFeedFilter(assertNotNull(home)))
@@ -66,6 +68,20 @@ class SyncedLocalSettingsTest {
         assertNull(decoded.relayAuth)
         assertNull(decoded.uploads)
         assertNull(decoded.calls)
+        assertNull(decoded.compose)
+    }
+
+    /**
+     * An account that never set a signature leaves the group out, so its blob cannot blank the
+     * signature another device set. An emptied one is a choice and goes out as "".
+     */
+    @Test
+    fun theComposeGroupIsWrittenOnlyOnceTheAccountHasASignature() {
+        val settings = AccountSettings(KeyPair())
+        assertNull(settings.toSyncedSettingsInternal().compose)
+
+        settings.changeComposeSignature("")
+        assertEquals("", settings.toSyncedSettingsInternal().compose?.signature)
     }
 
     @Test

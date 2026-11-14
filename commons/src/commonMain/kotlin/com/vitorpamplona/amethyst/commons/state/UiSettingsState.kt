@@ -85,8 +85,6 @@ class UiSettingsState(
 
     fun automaticallyCreateDrafts() = uiSettingsFlow.automaticallyCreateDrafts.value == BooleanType.ALWAYS
 
-    fun composeSignature() = uiSettingsFlow.composeSignature.value.trim()
-
     fun isImmersiveScrollingActive() = uiSettingsFlow.automaticallyHideNavigationBars.value == BooleanType.ALWAYS
 
     fun showProfilePictures() = showProfilePictures.value

@@ -35,6 +35,7 @@ import com.davotoula.lightcompressor.config.AppSpecificStorageConfiguration
 import com.davotoula.lightcompressor.config.Configuration
 import com.davotoula.lightcompressor.config.VideoResizer
 import com.davotoula.lightcompressor.hdr.HdrInput
+import com.davotoula.lightcompressor.sanitizer.Mp4Sanitizer
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoCompressionRules
@@ -194,9 +195,17 @@ object VideoCompressionHelper {
                                                 "Compressed [$size] ($reductionPercent% reduction)"
                                         }
 
+                                        // The encode asks for fast-start; say so when the library could not deliver it.
+                                        // Diagnostic only, so nothing it throws may keep the continuation from resuming.
+                                        val output = File(path)
+                                        val fastStart = runCatching { Mp4Sanitizer.isFastStart(output) }.getOrDefault(true)
+                                        if (!fastStart) {
+                                            Log.w(LOG_TAG) { "Compressed output is not fast-start: $path" }
+                                        }
+
                                         // A continuation cancelled before or during this resume drops the value and
                                         // runs the handler instead, so the finished file goes with it.
-                                        continuation.resume(MediaCompressorResult(File(path).toUri(), contentType, size)) { _, _, _ -> deleteOutput(path) }
+                                        continuation.resume(MediaCompressorResult(output.toUri(), contentType, size)) { _, _, _ -> deleteOutput(path) }
                                     }
 
                                     override fun onFailure(

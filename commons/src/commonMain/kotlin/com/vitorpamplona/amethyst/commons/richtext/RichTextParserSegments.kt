@@ -160,6 +160,14 @@ class HashTagSegment(
     val extras: String?,
 ) : Segment(segment)
 
+/** A mention of an official NIP (`NIP-44`), opened in the reader; [extras] is punctuation glued after it. */
+@Immutable
+class NipMentionSegment(
+    segment: String,
+    val number: String,
+    val extras: String?,
+) : Segment(segment)
+
 @Immutable
 class RelayUrlSegment(
     segment: String,

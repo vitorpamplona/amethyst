@@ -150,6 +150,11 @@ abstract class FlowProgressForegroundService<T> : Service() {
         val title: String,
         val text: String?,
         val bar: Bar,
+        /**
+         * When the work started (epoch milliseconds): the notification counts up from it by
+         * itself (a chronometer), so a clock in the text needs no re-send each second.
+         */
+        val chronometerSince: Long? = null,
     )
 
     private val tapIntent: PendingIntent by lazy {
@@ -218,9 +223,32 @@ abstract class FlowProgressForegroundService<T> : Service() {
         return START_NOT_STICKY
     }
 
-    /** Foreground-service budget exhausted (shortService ~3 min; dataSync on newer OS). Exit cleanly. */
-    override fun onTimeout(startId: Int) {
+    /**
+     * The work this service protects can't go on unprotected once its budget is spent: what to
+     * do with it then (the front page cancels its print, so it ends recorded rather than frozen).
+     * By default the work goes on without the service, as PoW mining does.
+     */
+    protected open fun onBudgetExhausted() {
+        // Nothing by default: the work continues, unprotected.
+    }
+
+    /** shortService's budget (~3 min) is spent (Android 14+). */
+    override fun onTimeout(startId: Int) = budgetExhausted()
+
+    /** A typed service's budget is spent: dataSync's 6 hours in 24, on Android 15+. */
+    override fun onTimeout(
+        startId: Int,
+        fgsType: Int,
+    ) = budgetExhausted()
+
+    /** Either timeout: the subclass's say, then stop, as Android requires within seconds. */
+    private fun budgetExhausted() {
         Log.d(logTag()) { "foreground-service budget exhausted; stopping" }
+        try {
+            onBudgetExhausted()
+        } catch (e: Exception) {
+            Log.w(logTag(), "Could not end the work cleanly at the service's timeout", e)
+        }
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -313,7 +341,13 @@ abstract class FlowProgressForegroundService<T> : Service() {
                 .setContentText(content.text)
                 .setStyle(style)
                 .setContentIntent(tapIntent)
-                .addAction(0, stringRes(this, cancelLabelRes), cancelIntent)
+                .apply {
+                    content.chronometerSince?.let { since ->
+                        setUsesChronometer(true)
+                        setShowWhen(true)
+                        setWhen(since)
+                    }
+                }.addAction(0, stringRes(this, cancelLabelRes), cancelIntent)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setCategory(NotificationCompat.CATEGORY_PROGRESS)
