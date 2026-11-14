@@ -68,6 +68,8 @@ class SettingDefinition(
     val keywords: List<String> = emptyList(),
     private val read: () -> String,
     private val write: (String) -> Unit,
+    /** Values the setting can hold that its options don't describe (see AmethystSettings.choice). */
+    val unexplained: List<String> = emptyList(),
 ) {
     fun current(): String = read()
 

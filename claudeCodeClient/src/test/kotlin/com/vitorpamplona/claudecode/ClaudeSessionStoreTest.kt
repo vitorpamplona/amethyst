@@ -69,6 +69,31 @@ class ClaudeSessionStoreTest {
     }
 
     @Test
+    fun readsSubagentsByTheCallThatStartedThem() {
+        // As the CLI writes them: <session>/subagents/agent-<id>.jsonl, every line on the side
+        // chain, and a .meta.json that names the Agent call.
+        val dir = File(config, "projects/-work/${Fixtures.SESSION_WRITE}/subagents").apply { mkdirs() }
+        File(dir, "agent-a1.meta.json").writeText("""{"agentType":"general-purpose","description":"Read a.txt","toolUseId":"toolu_parent","finished":true}""")
+        File(dir, "agent-a1.jsonl").writeText(
+            listOf(
+                """{"parentUuid":null,"isSidechain":true,"agentId":"a1","type":"user","message":{"role":"user","content":"Read a.txt"},"uuid":"s1"}""",
+                """{"parentUuid":"s1","isSidechain":true,"agentId":"a1","type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_child","name":"Read","input":{"file_path":"a.txt"}}]},"uuid":"s2"}""",
+                """{"parentUuid":"s2","isSidechain":true,"agentId":"a1","type":"user","message":{"role":"user","content":[{"tool_use_id":"toolu_child","type":"tool_result","content":"hello"}]},"uuid":"s3"}""",
+                """{"parentUuid":"s3","isSidechain":true,"agentId":"a1","type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"It says hello."}]},"uuid":"s4"}""",
+            ).joinToString("\n", postfix = "\n"),
+        )
+        // A log without its meta can't be placed, and is left out.
+        File(dir, "agent-orphan.jsonl").writeText("")
+
+        val subagents = store.subagentTranscripts(Fixtures.SESSION_WRITE)
+        assertEquals(setOf("toolu_parent"), subagents.keys)
+        val entries = subagents.getValue("toolu_parent")
+        assertEquals(listOf("s1", "s2", "s3", "s4"), entries.map { it.uuid })
+        assertEquals("It says hello.", (entries.last().content.single() as ContentBlock.Text).text)
+        assertTrue(store.subagentTranscripts(Fixtures.SESSION_RENAMED).isEmpty())
+    }
+
+    @Test
     fun filtersByFolder() {
         assertEquals(2, store.listSessions(cwd = "/work").size)
         assertTrue(store.listSessions(cwd = "/elsewhere").isEmpty())

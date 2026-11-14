@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeProposeViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.GateState
 import com.vitorpamplona.amethyst.commons.claudecode.GitWorkInfo
+import com.vitorpamplona.amethyst.commons.claudecode.Ngit
 import com.vitorpamplona.amethyst.commons.claudecode.ProposalDraft
 import com.vitorpamplona.amethyst.commons.claudecode.PushRemote
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -106,6 +107,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_propose_update_d
 import com.vitorpamplona.amethyst.commons.resources.claude_code_publish
 import com.vitorpamplona.amethyst.commons.resources.claude_code_publish_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_publish_new_version
+import com.vitorpamplona.amethyst.commons.resources.claude_code_publish_ngit
 import com.vitorpamplona.amethyst.commons.resources.claude_code_publish_no_repo
 import com.vitorpamplona.amethyst.commons.resources.claude_code_push_clone_url
 import com.vitorpamplona.amethyst.commons.resources.claude_code_push_desc
@@ -193,6 +195,8 @@ private fun ProposeForm(
     var readDiff by remember { mutableStateOf(false) }
     var tested by remember { mutableStateOf(false) }
     var preparing by remember { mutableStateOf(false) }
+    val ngitAccount by viewModel.ngitAccount.collectAsStateWithLifecycle()
+    var ngitError by remember { mutableStateOf<String?>(null) }
 
     val done = publishState as? GitProposalUiState.Done
     (done?.result as? GitProposalResult.Published)?.let { published ->
@@ -392,6 +396,39 @@ private fun ProposeForm(
                 },
             ) {
                 Text(stringRes(if (isUpdate) Res.string.claude_code_publish_new_version else Res.string.claude_code_publish))
+            }
+
+            // The same branch through the user's own ngit, signed by their ngit account.
+            ngitAccount?.let { account ->
+                val canSend = readDiff && tested && gateOk && target != null && (isUpdate || title.isNotBlank()) && !preparing && publishState !is GitProposalUiState.Working
+                OutlinedButton(
+                    enabled = canSend,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        val t = target ?: return@OutlinedButton
+                        preparing = true
+                        ngitError = null
+                        scope.launch {
+                            val branch = t.defaultBranch
+                            val head = branch?.let { t.signedState?.commitFor(it) }
+                            val tip = viewModel.localTip(head, t.targets.grasp.map { it.cloneUrl } + t.targets.others, branch)
+                            val result = viewModel.sendWithNgit(repoNote.toNAddr(), tip?.mergeBase, title.trim(), draft?.description.orEmpty().trim())
+                            preparing = false
+                            when (result) {
+                                is Ngit.SendResult.Failed -> ngitError = result.reason
+                                is Ngit.SendResult.Published -> {
+                                    val id = info.proposalId ?: result.eventId
+                                    result.eventId?.let { viewModel.published(it) }
+                                    nav.popBack()
+                                    if (id != null) nav.nav(Route.Note(id))
+                                }
+                            }
+                        }
+                    },
+                ) {
+                    Text(stringRes(Res.string.claude_code_publish_ngit, account.name.ifBlank { account.npub.take(16) + "…" }))
+                }
+                ngitError?.let { Text(stringRes(Res.string.claude_code_publish_failed, it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             }
         }
     }

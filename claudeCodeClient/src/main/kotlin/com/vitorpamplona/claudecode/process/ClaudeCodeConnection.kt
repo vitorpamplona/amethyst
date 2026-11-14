@@ -24,6 +24,7 @@ import com.vitorpamplona.claudecode.mcp.SdkMcpDispatcher
 import com.vitorpamplona.claudecode.mcp.SdkMcpServer
 import com.vitorpamplona.claudecode.protocol.ClaudeInput
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
+import com.vitorpamplona.claudecode.protocol.CliInfo
 import com.vitorpamplona.claudecode.protocol.ImageInput
 import com.vitorpamplona.claudecode.protocol.PermissionDecision
 import com.vitorpamplona.claudecode.protocol.PermissionMode
@@ -138,7 +139,12 @@ class ClaudeCodeConnection(
         request(
             "initialize",
             if (mcpServers.isEmpty()) emptyMap() else mapOf("sdkMcpServers" to SdkMcpDispatcher.names(mcpServers)),
-        )
+        ).also { answer -> if (answer?.isSuccess == true) info = CliInfo.parse(answer.response) }
+
+    /** The commands and models the CLI offered when it started, once [initialize] answered. */
+    @Volatile
+    var info: CliInfo? = null
+        private set
 
     /** Starts a turn with [text], or queues it if a turn is running. */
     suspend fun send(

@@ -35,6 +35,11 @@ data class ClaudeCodeOptions(
     val resumeSessionId: String? = null,
     /** With [resumeSessionId]: continue in a new session that starts as a copy of that one. */
     val forkSession: Boolean = false,
+    /**
+     * With [resumeSessionId]: keep the history only up to and including this assistant message
+     * (its uuid), dropping what came after. With [forkSession] the source stays whole.
+     */
+    val resumeSessionAt: String? = null,
     /** A model alias (`opus`, `sonnet`) or full name; null for the user's default. */
     val model: String? = null,
     val permissionMode: PermissionMode? = null,
@@ -90,6 +95,10 @@ class ClaudeCodeLauncher(
                 add("--resume")
                 add(it)
                 if (options.forkSession) add("--fork-session")
+                options.resumeSessionAt?.let { at ->
+                    add("--resume-session-at")
+                    add(at)
+                }
             }
             options.model?.let {
                 add("--model")

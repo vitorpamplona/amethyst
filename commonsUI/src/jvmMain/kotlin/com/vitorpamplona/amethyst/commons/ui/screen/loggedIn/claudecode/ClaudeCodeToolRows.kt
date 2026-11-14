@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,12 +57,16 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.claude_code_subagent_running
+import com.vitorpamplona.amethyst.commons.resources.claude_code_subagent_steps
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_from_line
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_input
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_lines
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_output
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_search_in
+import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -170,11 +175,15 @@ internal fun ToolCallRow(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val view = rememberToolView(call.name, call.input, cwd, pending = !call.isDone)
+    // A subagent: how far it got, and whether it still runs after its call returned.
+    val steps = call.subagent.count { it is ChatItem.ToolCall }
+    val stepsLabel = if (steps > 0) pluralStringRes(Res.plurals.claude_code_subagent_steps, steps, steps) else ""
+    val background = if (call.subagentRunning) stringRes(Res.string.claude_code_subagent_running) else ""
     Column {
         ToolLine(
             symbol = ToolKind.of(call.name).symbol(),
-            text = listOf(displayName(call.name), toolLabel(view, call)).filter { it.isNotEmpty() }.joinToString("  "),
-            running = turnRunning && !call.isDone,
+            text = listOf(displayName(call.name), toolLabel(view, call), stepsLabel, background).filter { it.isNotEmpty() }.joinToString("  "),
+            running = (turnRunning && !call.isDone) || call.subagentRunning,
             error = call.isError,
             expanded = expanded,
             monospace = true,
@@ -182,7 +191,7 @@ internal fun ToolCallRow(
         )
         AnimatedVisibility(expanded) {
             Column(Modifier.padding(start = 26.dp, top = 2.dp, bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                ToolBody(view, call)
+                if (call.subagent.isEmpty()) ToolBody(view, call) else SubagentBody(call, cwd, turnRunning || call.subagentRunning)
             }
         }
     }
@@ -216,6 +225,27 @@ private fun ToolBody(
             }
         }
     }
+}
+
+/** What a subagent did, in order: what it said, and each of its calls, opened like the chat's own. */
+@Composable
+private fun SubagentBody(
+    call: ChatItem.ToolCall,
+    cwd: String,
+    running: Boolean,
+) {
+    val uriHandler = LocalUriHandler.current
+    val onLink = remember(uriHandler) { { url: String -> uriHandler.openUri(url) } }
+    val style = rememberChatMarkdownStyle()
+    call.subagent.forEach { item ->
+        when (item) {
+            is ChatItem.ToolCall -> ToolCallRow(item, cwd, running)
+            is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth().padding(vertical = 2.dp), style = style, textStyle = MaterialTheme.typography.bodySmall)
+            else -> {}
+        }
+    }
+    // Its final answer is the call's result, once the subagent is done.
+    call.result?.takeIf { !call.subagentRunning && call.subagent.none { it is ChatItem.AssistantText } }?.let { CodeBlock(it.take(RESULT_SHOWN)) }
 }
 
 @Composable

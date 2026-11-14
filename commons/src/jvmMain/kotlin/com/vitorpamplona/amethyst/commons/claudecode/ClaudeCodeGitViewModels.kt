@@ -329,7 +329,17 @@ class ClaudeCodeProposeViewModel(
 
     private var gateJob: Job? = null
 
+    private val _ngitAccount = MutableStateFlow<Ngit.Account?>(null)
+
+    /** The account the user's own ngit signs with, when ngit is installed and logged in. */
+    val ngitAccount: StateFlow<Ngit.Account?> = _ngitAccount.asStateFlow()
+
     init {
+        viewModelScope.launch {
+            val dir = dir ?: return@launch
+            val accounts = Ngit.accounts(dir)
+            _ngitAccount.value = accounts.firstOrNull { it.active } ?: accounts.firstOrNull()
+        }
         viewModelScope.launch {
             val dir = dir ?: return@launch
             val info = GitWorkspace.inspect(dir)
@@ -521,6 +531,22 @@ class ClaudeCodeProposeViewModel(
         val tip = LocalGitObjects.resolve(dir, "HEAD") ?: return null
         val mergeBase = head?.let { LocalGitObjects.mergeBase(dir, it, tip, cloneUrls, branch) }
         return LocalTip(tip, mergeBase)
+    }
+
+    /**
+     * Sends the branch through the user's ngit, signed by their ngit account: the commits after
+     * [mergeBase] (null: what ngit works out itself) as a proposal to [repo], or a new version of
+     * the branch's own proposal.
+     */
+    suspend fun sendWithNgit(
+        repo: String,
+        mergeBase: String?,
+        title: String,
+        description: String,
+    ): Ngit.SendResult {
+        val dir = dir ?: return Ngit.SendResult.Failed("no folder")
+        val base = mergeBase ?: GitWorkspace.git(dir, "merge-base", "HEAD", "@{upstream}")?.trim() ?: return Ngit.SendResult.Failed("Can't tell where the branch starts")
+        return Ngit.send(dir, repo, base, title, description, _info.value?.proposalId)
     }
 
     suspend fun objects(tip: LocalTip) = LocalGitObjects.between(dir ?: throw IOException("no folder"), tip.mergeBase, tip.tip)

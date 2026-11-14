@@ -40,9 +40,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asComposeImageBitmap
@@ -60,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.claudecode.protocol.ImageInput
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Canvas
@@ -67,6 +73,8 @@ import org.jetbrains.skia.Rect
 import org.jetbrains.skia.SamplingMode
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
+import java.awt.dnd.DropTargetDragEvent
+import java.awt.dnd.DropTargetDropEvent
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
@@ -170,17 +178,92 @@ class ComposerAttachments {
                     g.drawImage(image, 0, 0, null)
                     g.dispose()
                 }
-        // Kept for the chat to show it from; the system's temp cleanup removes it.
-        val file = File.createTempFile("pasted-image-", ".png")
+        // Kept for the chat to show it from, in a folder of its own that is swept of old ones.
+        val file = File.createTempFile("pasted-image-", ".png", pastedImagesDir())
         file.deleteOnExit()
         if (!ImageIO.write(buffered, "png", file)) throw IOException("No PNG writer")
         return file
     }
 
+    /** Files dropped on the chat: the images among them are attached. */
+    suspend fun addDropped(files: List<File>) {
+        val images = files.filter { it.extension.lowercase() in ImageInput.EXTENSIONS }
+        if (images.isEmpty()) {
+            refused = files.firstOrNull()?.name
+            return
+        }
+        add(images)
+    }
+
     private companion object {
         const val TAG = "ClaudeCodeAttachments"
+
+        /** A day: long enough for a chat that is still open to show what was pasted into it. */
+        const val PASTED_KEPT_MS = 24 * 60 * 60 * 1000L
+
+        @Volatile
+        var swept = false
+
+        /** Where pasted images go; the first use in a run removes the ones a day old. */
+        fun pastedImagesDir(): File {
+            val dir = File(System.getProperty("java.io.tmpdir"), "amethyst-claude-images")
+            if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Could not create $dir")
+            if (!swept) {
+                swept = true
+                val cutoff = System.currentTimeMillis() - PASTED_KEPT_MS
+                dir.listFiles().orEmpty().filter { it.isFile && it.lastModified() < cutoff }.forEach { old ->
+                    if (!old.delete() && old.exists()) Log.w(TAG) { "Could not delete $old" }
+                }
+            }
+            return dir
+        }
     }
 }
+
+/**
+ * Images dropped anywhere on the chat are attached; [hovering] says while files are dragged
+ * over it, for the composer to show where they go.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+internal fun rememberImageDropTarget(
+    attachments: ComposerAttachments,
+    onHover: (Boolean) -> Unit,
+): DragAndDropTarget {
+    val scope = rememberCoroutineScope()
+    return remember(attachments) {
+        object : DragAndDropTarget {
+            override fun onEntered(event: DragAndDropEvent) = onHover(true)
+
+            override fun onExited(event: DragAndDropEvent) = onHover(false)
+
+            override fun onEnded(event: DragAndDropEvent) = onHover(false)
+
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                onHover(false)
+                val files = droppedFiles(event)
+                if (files.isEmpty()) return false
+                scope.launch { attachments.addDropped(files) }
+                return true
+            }
+        }
+    }
+}
+
+/** Whether what is dragged is files (and so maybe images), to accept the drag at all. */
+@OptIn(ExperimentalComposeUiApi::class)
+internal fun DragAndDropEvent.hasFiles(): Boolean = (nativeEvent as? DropTargetDragEvent)?.isDataFlavorSupported(DataFlavor.javaFileListFlavor) ?: true
+
+@OptIn(ExperimentalComposeUiApi::class)
+private fun droppedFiles(event: DragAndDropEvent): List<File> =
+    try {
+        val transferable = (event.nativeEvent as? DropTargetDropEvent)?.transferable
+        (transferable?.getTransferData(DataFlavor.javaFileListFlavor) as? List<*>)?.filterIsInstance<File>().orEmpty()
+    } catch (e: Exception) {
+        // The drag can carry no files after all, or the source can refuse to hand them over.
+        Log.w("ClaudeCodeAttachments", "Could not read the dropped files", e)
+        emptyList()
+    }
 
 /** A small picture of an encoded image, or null when Skia can't read it. */
 internal fun thumbnail(

@@ -73,6 +73,36 @@ class ChatTranscriptTest {
     }
 
     @Test
+    fun aCopyCutBeforeAMessageKeepsWhatCameBefore() {
+        val entries = listOf("u1", "a1", "u2", "a2").map { TranscriptEntry(it, if (it.startsWith("u")) TranscriptEntry.Role.USER else TranscriptEntry.Role.ASSISTANT, listOf(ContentBlock.Text(it)), null, null) }
+        with(ClaudeChat) {
+            assertEquals(listOf("u1", "a1"), entries.cutBefore("u2").map { it.uuid })
+            assertEquals(entries, entries.cutBefore("gone"))
+        }
+    }
+
+    @Test
+    fun aSubagentsWorkGoesInsideItsCall() {
+        val transcript = ChatTranscript()
+        transcript.addAssistantBlocks(listOf(ContentBlock.ToolUse("agent1", "Agent", JsonObject(mapOf("description" to JsonPrimitive("Read a.txt"))))))
+        transcript.addUserBlocks(listOf(ContentBlock.ToolResult("agent1", "Async agent launched", false)), typedByUser = false)
+        transcript.setSubagentRunning("agent1", true)
+        // Live, the subagent's messages carry the Agent call's id as their parent.
+        transcript.addSubagentAssistant("agent1", listOf(ContentBlock.ToolUse("read1", "Read", JsonObject(mapOf("file_path" to JsonPrimitive("a.txt"))))))
+        transcript.addSubagentUser("agent1", listOf(ContentBlock.Text("Read a.txt"), ContentBlock.ToolResult("read1", "hello", false)))
+        transcript.addSubagentAssistant("agent1", listOf(ContentBlock.Text("It says hello.")))
+
+        val call = transcript.snapshot().single() as ChatItem.ToolCall
+        assertTrue(call.subagentRunning)
+        assertEquals(2, call.subagent.size)
+        assertEquals("hello", (call.subagent[0] as ChatItem.ToolCall).result)
+        assertEquals("It says hello.", (call.subagent[1] as ChatItem.AssistantText).text)
+
+        transcript.setSubagentRunning("agent1", false)
+        assertTrue(!(transcript.snapshot().single() as ChatItem.ToolCall).subagentRunning)
+    }
+
+    @Test
     fun cliNotesAndWrappersAreNotUserMessages() {
         val transcript = ChatTranscript()
         transcript.addUserBlocks(listOf(ContentBlock.Text("[Request interrupted by user]")), typedByUser = false)

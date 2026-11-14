@@ -27,10 +27,12 @@ import com.vitorpamplona.claudecode.process.ClaudeCodeLauncher
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
 import com.vitorpamplona.claudecode.process.ClaudeExecutable
+import com.vitorpamplona.claudecode.protocol.ContentBlock
 import com.vitorpamplona.claudecode.protocol.PermissionMode
 import com.vitorpamplona.claudecode.session.ClaudeLiveSession
 import com.vitorpamplona.claudecode.session.ClaudeSessionInfo
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
+import com.vitorpamplona.claudecode.session.TranscriptEntry
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -243,6 +245,43 @@ class ClaudeCodeService(
         return open("fork-${UUID.randomUUID()}", sessionId, File(cwd), null, source?.permissionMode ?: PermissionMode.DEFAULT, null, fork = true)
     }
 
+    /**
+     * A new chat to ask [message] again differently: a copy of [key]'s session cut just before
+     * that message, or, when it has nothing before it (or isn't in the saved history), a fresh
+     * session in the same folder. Its text waits in the new chat's composer ([ClaudeChat.draft]).
+     * Blocking: reads the session's file.
+     */
+    fun editFrom(
+        key: String,
+        message: ChatItem.UserText,
+    ): ClaudeChat? {
+        val chat = chats.value[key]
+        val source = chat?.state?.value
+        val sessionId = source?.sessionId ?: saved.value.firstOrNull { it.sessionId == key }?.sessionId ?: return null
+        val cwd = source?.cwd ?: saved.value.firstOrNull { it.sessionId == sessionId }?.cwd ?: return null
+        val mode = source?.permissionMode ?: PermissionMode.DEFAULT
+        val model = source?.modelChoice
+        // The same prompt can be sent more than once: the one with as many before it as on screen.
+        val repeats = source?.items?.takeWhile { it.id != message.id }?.count { it is ChatItem.UserText && it.text == message.text } ?: 0
+        val prompt = promptsIn(store.transcript(sessionId)).filter { it.second == message.text }.getOrNull(repeats)?.first
+        val copy =
+            if (prompt?.parentUuid == null) {
+                open("new-${UUID.randomUUID()}", null, File(cwd), null, mode, model)
+            } else {
+                open("fork-${UUID.randomUUID()}", sessionId, File(cwd), null, mode, model, fork = true, forkBefore = prompt)
+            }
+        copy.draft = message.text
+        return copy
+    }
+
+    /** The saved prompts the user typed, with their text as the chat shows it. */
+    private fun promptsIn(history: List<TranscriptEntry>): List<Pair<TranscriptEntry, String>> =
+        history.mapNotNull { entry ->
+            if (entry.role != TranscriptEntry.Role.USER) return@mapNotNull null
+            val text = entry.content.firstNotNullOfOrNull { (it as? ContentBlock.Text)?.text?.trim() } ?: return@mapNotNull null
+            if (text.isEmpty() || text.startsWith("<") || text.startsWith("[")) null else entry to text
+        }
+
     private fun open(
         key: String,
         sessionId: String?,
@@ -251,6 +290,7 @@ class ClaudeCodeService(
         mode: PermissionMode,
         model: String?,
         fork: Boolean = false,
+        forkBefore: TranscriptEntry? = null,
         mcpServers: List<SdkMcpServer> = emptyList(),
         launchOptions: (ClaudeCodeOptions) -> ClaudeCodeOptions = { it },
         kind: ChatKind = ChatKind.CODE,
@@ -272,6 +312,7 @@ class ClaudeCodeService(
                 mcpServers = mcpServers,
                 launchOptions = launchOptions,
                 kind = kind,
+                forkBefore = forkBefore,
             )
         chats.update { it + (key to chat) }
         watchers[key] =

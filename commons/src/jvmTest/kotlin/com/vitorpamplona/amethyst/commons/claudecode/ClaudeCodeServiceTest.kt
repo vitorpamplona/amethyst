@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.claudecode
 
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
+import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
 import com.vitorpamplona.claudecode.process.ClaudeTransport
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
@@ -91,6 +92,71 @@ class ClaudeCodeServiceTest {
     private suspend fun waitFor(condition: () -> Boolean) =
         withTimeout(5_000) {
             while (!condition()) delay(10)
+        }
+
+    @Test
+    fun askingAMessageAgainCutsTheCopyJustBeforeIt() =
+        runBlocking {
+            // As the CLI saves it: a local command's output is a `system` line, and the next
+            // prompt hangs off it. The same prompt is then sent a second time.
+            val other = "22222222-2222-3333-4444-555555555555"
+            val cwd = work.absolutePath.replace("\\", "\\\\")
+            File(config, "projects/-work/$other.jsonl").writeText(
+                listOf(
+                    """{"type":"user","uuid":"c1","parentUuid":null,"sessionId":"$other","cwd":"$cwd","message":{"role":"user","content":"<command-name>/context</command-name>"}}""",
+                    """{"type":"system","subtype":"local_command","uuid":"s1","parentUuid":"c1","sessionId":"$other","content":"<local-command-stdout>usage</local-command-stdout>"}""",
+                    """{"type":"user","uuid":"p1","parentUuid":"s1","sessionId":"$other","cwd":"$cwd","message":{"role":"user","content":"which model?"}}""",
+                    """{"type":"assistant","uuid":"a1","parentUuid":"p1","sessionId":"$other","cwd":"$cwd","message":{"role":"assistant","content":[{"type":"text","text":"haiku"}]}}""",
+                    """{"type":"user","uuid":"p2","parentUuid":"a1","sessionId":"$other","cwd":"$cwd","message":{"role":"user","content":"which model?"}}""",
+                    """{"type":"assistant","uuid":"a2","parentUuid":"p2","sessionId":"$other","cwd":"$cwd","message":{"role":"assistant","content":[{"type":"text","text":"still haiku"}]}}""",
+                ).joinToString("\n", postfix = "\n"),
+            )
+            // A CLI that records how it was asked to start.
+            val started = mutableListOf<ClaudeCodeOptions>()
+            val service =
+                ClaudeCodeService(
+                    store = ClaudeSessionStore(config),
+                    launcher =
+                        ClaudeCodeStarter { options, _ ->
+                            synchronized(started) { started.add(options) }
+                            throw IOException("not in tests")
+                        },
+                    scope = scope,
+                    findExecutable = { null },
+                )
+            service.refresh()
+            val chat = assertNotNull(service.chat(other))
+            waitFor { chat.state.value.historyLoaded }
+            val prompts =
+                chat.state.value.items
+                    .filterIsInstance<ChatItem.UserText>()
+            assertEquals(listOf("which model?", "which model?"), prompts.map { it.text })
+
+            // The second: the copy keeps the first exchange and is cut at its reply.
+            val second = assertNotNull(service.editFrom(other, prompts[1]))
+            assertEquals("which model?", second.draft)
+            waitFor { second.state.value.historyLoaded }
+            assertEquals(
+                listOf("which model?", "haiku"),
+                second.state.value.items
+                    .map { (it as? ChatItem.UserText)?.text ?: (it as ChatItem.AssistantText).text },
+            )
+            assertTrue(second.state.value.forking)
+            second.send("which model, really?")
+            waitFor { synchronized(started) { started.size == 1 } }
+            assertEquals(Triple(other, true, "a1"), started[0].let { Triple(it.resumeSessionId, it.forkSession, it.resumeSessionAt) })
+
+            // The first: cut at the command's output, which the chat doesn't show.
+            val first = assertNotNull(service.editFrom(other, prompts[0]))
+            waitFor { first.state.value.historyLoaded }
+            assertTrue(
+                first.state.value.items
+                    .isEmpty(),
+            )
+            assertTrue(first.state.value.forking)
+            first.send("which model, really?")
+            waitFor { synchronized(started) { started.size == 2 } }
+            assertEquals("s1", started[1].resumeSessionAt)
         }
 
     @Test

@@ -133,9 +133,33 @@ A Claude Code chat whose only tools are Amethyst's settings (Settings › "Setti
 - Verified with a live CLI (`LiveClaudeCodeTest`) and in the desktop app: "everything is too small
   to read" → Text size NORMAL → LARGE, approved with Enter, applied at once.
 
+## Composer, models, editing, subagents
+
+- Slash commands: typing `/` lists the commands the CLI offers in the folder (built-ins, skills,
+  plugins), from its `initialize` answer; arrows, Tab or Enter pick one. A new chat learns them
+  before its first message by starting the CLI and sending only `initialize` (no session is saved),
+  once per folder.
+- The model chip under the composer lists the CLI's own models and switches with `set_model`; a
+  new process starts with `--model`.
+- Edit and ask again: a pencil beside each of the user's messages opens a copy of the session cut
+  just before it, with the message in the composer. The copy is `--resume --resume-session-at
+  <the message's parent> --fork-session`; the original stays whole. The message is found in the
+  saved file by its text (and which repeat of it), not by ids from the live stream: a local
+  command's output is saved as a `system` line no live message names.
+- Subagents: an Agent call's row counts its steps and opens to what the subagent did, live (by
+  `parent_tool_use_id`) and from history (`<session>/subagents/`). A subagent still running in the
+  background spins on its row, and the turn the CLI starts on its own when it reports back shows
+  as working.
+- Images can also be dropped on the chat. Pasted ones go to `amethyst-claude-images` in the temp
+  folder; the first paste in a run removes those a day old.
+- Publishing through the user's own ngit: when `ngit` is installed and logged in, the Propose
+  screen also offers "Publish with ngit as …": `ngit --repo <naddr> --json --defaults send
+  <merge-base>..HEAD` (or `--in-reply-to` the branch's proposal for a new version), signed by the
+  ngit account. Verified against a local geode relay with a throwaway key.
+
 ## Not done
 
-- Images in prompts, slash commands, model switching in the UI, forking from a given message.
-- Claude.ai cloud sessions (no documented API to list them).
-- Subagent messages are folded into their tool call, not shown.
-- Publishing through the user's own `ngit` instead of the app's signer.
+- Claude.ai cloud sessions: the CLI can create one or attach to one by id or URL (`--cloud`), but
+  offers no way to list them or read their history, and `--cloud` doesn't take stream-json.
+- Dropping files on the chat is untested: this container's X server passes no drag between
+  programs at all.

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.settings.registry.AmethystSettings
+import com.vitorpamplona.amethyst.commons.settings.registry.SettingType
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -113,4 +114,34 @@ class SettingsToolServerTest {
             server.call(SettingsToolServer.OPEN, args("""{"id":"app.font_size"}"""))
             assertEquals(Route.Settings, assertNotNull(opened.single()))
         }
+
+    @Test
+    fun everyValueASettingCanHoldIsExplained() {
+        // A value added to one of the settings' enums must be described for the assistant too.
+        val gaps =
+            AmethystSettings
+                .registry(ui, account)
+                .settings
+                .filter { it.unexplained.isNotEmpty() }
+                .associate { it.id to it.unexplained }
+        assertTrue(gaps.isEmpty(), "Describe these values in AmethystSettings: $gaps")
+    }
+
+    @Test
+    fun everyOptionSetsAndReadsBack() {
+        AmethystSettings.registry(ui, account).settings.forEach { setting ->
+            val values =
+                when (val type = setting.type) {
+                    is SettingType.Choice -> type.options.map { it.value }
+                    SettingType.OnOff -> listOf("true", "false")
+                    is SettingType.Text -> listOf("x")
+                }
+            val before = setting.current()
+            values.forEach { value ->
+                setting.set(value)
+                assertEquals(value, setting.current(), "${setting.id} = $value")
+            }
+            setting.set(before)
+        }
+    }
 }

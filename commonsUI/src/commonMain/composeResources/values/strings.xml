@@ -9675,6 +9675,14 @@
     <string name="claude_code_step_check">Run the checks</string>
     <string name="claude_code_step_confirm">Confirm</string>
     <string name="claude_code_browse">Choose a folder</string>
+    <string name="claude_code_edit_message">Edit and ask again from here</string>
+    <string name="claude_code_model_tooltip">The model for the next message</string>
+    <string name="claude_code_subagent_running">Working in the background</string>
+    <plurals name="claude_code_subagent_steps">
+        <item quantity="one">%1$d step</item>
+        <item quantity="other">%1$d steps</item>
+    </plurals>
+    <string name="claude_code_publish_ngit">Publish with ngit as %1$s</string>
     <string name="claude_code_attach">Attach images</string>
     <string name="claude_code_attach_pick">Choose images to send</string>
     <string name="claude_code_attach_remove">Remove %1$s</string>

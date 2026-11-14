@@ -23,7 +23,12 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -135,6 +140,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_context_tooltip
 import com.vitorpamplona.amethyst.commons.resources.claude_code_context_used
 import com.vitorpamplona.amethyst.commons.resources.claude_code_context_used_little
 import com.vitorpamplona.amethyst.commons.resources.claude_code_deny
+import com.vitorpamplona.amethyst.commons.resources.claude_code_edit_message
 import com.vitorpamplona.amethyst.commons.resources.claude_code_end_session
 import com.vitorpamplona.amethyst.commons.resources.claude_code_error_exited
 import com.vitorpamplona.amethyst.commons.resources.claude_code_error_start_failed
@@ -227,6 +233,7 @@ import com.vitorpamplona.claudecode.protocol.ImageInput
 import com.vitorpamplona.claudecode.protocol.PermissionMode
 import com.vitorpamplona.claudecode.protocol.PermissionRequest
 import com.vitorpamplona.claudecode.protocol.PermissionSuggestion
+import com.vitorpamplona.claudecode.protocol.SlashCommand
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
@@ -285,7 +292,15 @@ fun ClaudeCodeChatScreen(
 
     val composerText = rememberTextFieldState()
     val attachments = remember { ComposerAttachments() }
+    var dropHover by remember { mutableStateOf(false) }
+    val dropTarget = rememberImageDropTarget(attachments) { dropHover = it }
     val composerFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        // A message opened to be asked again arrives with its text, ready to change.
+        viewModel.takeDraft()?.let { composerText.setTextAndPlaceCursorAtEnd(it) }
+        // The settings assistant has no commands of its own to offer.
+        if (state.kind == ChatKind.CODE) viewModel.loadCliInfo()
+    }
     // Typing goes straight to the composer, and the keys below work, without a click first.
     LaunchedEffect(Unit) { composerFocus.requestFocus() }
     val pending = state.pendingPermissions.firstOrNull()
@@ -371,7 +386,8 @@ fun ClaudeCodeChatScreen(
                 .padding(padding)
                 .fillMaxSize()
                 .imePadding()
-                .then(keys),
+                .then(keys)
+                .dragAndDropTarget(shouldStartDragAndDrop = { it.hasFiles() }, target = dropTarget),
             contentAlignment = Alignment.TopCenter,
         ) {
             Column(Modifier.widthIn(max = ChatColumnMaxWidth).fillMaxSize()) {
@@ -399,6 +415,12 @@ fun ClaudeCodeChatScreen(
                     readOnly = openElsewhere || folderGone,
                     nav = nav,
                     modifier = Modifier.weight(1f),
+                    onEditFrom =
+                        if (state.kind == ChatKind.CODE && state.sessionId != null && !folderGone) {
+                            { item -> viewModel.editFrom(item) { key -> nav.nav(Route.ClaudeCodeChat(key)) } }
+                        } else {
+                            null
+                        },
                     onStarter = {
                         composerText.setTextAndPlaceCursorAtEnd(it)
                         composerFocus.requestFocus()
@@ -430,7 +452,9 @@ fun ClaudeCodeChatScreen(
                 } else {
                     Composer(
                         text = composerText,
+                        commands = state.commands,
                         attachments = attachments,
+                        dropHover = dropHover,
                         focusRequester = composerFocus,
                         busy = state.isBusy,
                         onSend = { text, images ->
@@ -441,6 +465,7 @@ fun ClaudeCodeChatScreen(
                     ComposerFooter(
                         state = state,
                         onMode = { viewModel.setPermissionMode(it) },
+                        onModel = { viewModel.setModel(it) },
                     )
                 }
             }
@@ -503,6 +528,7 @@ private fun Messages(
     readOnly: Boolean,
     nav: INav,
     modifier: Modifier,
+    onEditFrom: ((ChatItem.UserText) -> Unit)?,
     onStarter: (String) -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -542,7 +568,7 @@ private fun Messages(
                 is ChatRow.ToolGroup -> ToolGroupRow(row, state.cwd, turnRunning)
                 is ChatRow.Single ->
                     when (val item = row.item) {
-                        is ChatItem.UserText -> UserBubble(item.text, item.images, textStyle, onLink)
+                        is ChatItem.UserText -> UserBubble(item.text, item.images, textStyle, onLink, onEditFrom?.let { edit -> { edit(item) } })
                         is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle)
                         is ChatItem.ToolCall ->
                             if (ToolKind.of(item.name) == ToolKind.EDIT) {
@@ -839,6 +865,7 @@ private fun UserBubble(
     images: List<SentImage>,
     textStyle: TextStyle,
     onLink: (String) -> Unit,
+    onEdit: (() -> Unit)?,
 ) {
     if (images.isNotEmpty()) {
         Box(Modifier.fillMaxWidth().padding(top = 8.dp, start = 48.dp), contentAlignment = Alignment.CenterEnd) {
@@ -846,8 +873,26 @@ private fun UserBubble(
         }
     }
     if (text.isEmpty()) return
-    Box(Modifier.fillMaxWidth().padding(top = if (images.isEmpty()) 8.dp else 4.dp, start = 48.dp), contentAlignment = Alignment.CenterEnd) {
+    val hover = remember { MutableInteractionSource() }
+    val hovered by hover.collectIsHoveredAsState()
+    Row(
+        Modifier.fillMaxWidth().padding(top = if (images.isEmpty()) 8.dp else 4.dp).hoverable(hover),
+        horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Shown on hover: ask this again differently, in a copy of the session cut just before it.
+        Box(Modifier.width(48.dp), contentAlignment = Alignment.Center) {
+            if (onEdit != null && hovered) {
+                val label = stringRes(Res.string.claude_code_edit_message)
+                HoverTooltip(label) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                        Icon(MaterialSymbols.Edit, contentDescription = label, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+        }
         Surface(
+            modifier = Modifier.weight(1f, fill = false),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             shape = RoundedCornerShape(18.dp),
         ) {
@@ -1081,7 +1126,9 @@ private fun PermissionCard(
 @Composable
 private fun Composer(
     text: TextFieldState,
+    commands: List<SlashCommand>,
     attachments: ComposerAttachments,
+    dropHover: Boolean,
     focusRequester: FocusRequester,
     busy: Boolean,
     onSend: (String, List<ComposerImage>) -> Unit,
@@ -1097,6 +1144,19 @@ private fun Composer(
         }
     }
     val pickTitle = stringRes(Res.string.claude_code_attach_pick)
+    // Typing `/` offers the CLI's commands; Esc puts the menu away until the text changes.
+    val typed = text.text.toString()
+    var dismissedFor by remember { mutableStateOf<String?>(null) }
+    val matches = remember(typed, commands) { slashMatches(typed, commands) }
+    val showMenu = matches.isNotEmpty() && dismissedFor != typed
+    var selected by remember(matches) { mutableStateOf(0) }
+    val pick = { command: SlashCommand ->
+        text.setTextAndPlaceCursorAtEnd("/" + command.name + " ")
+        dismissedFor = null
+    }
+    if (showMenu) {
+        SlashCommandMenu(matches, selected.coerceIn(0, matches.lastIndex), pick, Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 6.dp))
+    }
     if (attachments.images.isNotEmpty()) {
         ComposerImageRow(attachments, Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp))
     }
@@ -1111,22 +1171,47 @@ private fun Composer(
     ThinPaddingTextField(
         state = text,
         modifier =
-            Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 6.dp).focusRequester(focusRequester).onPreviewKeyEvent { event ->
-                when {
-                    event.type != KeyEventType.KeyDown -> false
-                    // Enter sends; Shift+Enter is a new line.
-                    event.key == Key.Enter && !event.isShiftPressed -> {
-                        send()
-                        true
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 10.dp, end = 10.dp, top = 6.dp)
+                // Files dragged over the chat land here.
+                .then(if (dropHover) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, EditFieldBorder) else Modifier)
+                .focusRequester(focusRequester)
+                .onPreviewKeyEvent { event ->
+                    when {
+                        event.type != KeyEventType.KeyDown -> false
+                        // The command menu: arrows move, Tab or Enter takes the command (Enter sends
+                        // one already typed in full), Esc closes it.
+                        showMenu && event.key == Key.DirectionDown -> {
+                            selected = (selected + 1) % matches.size
+                            true
+                        }
+                        showMenu && event.key == Key.DirectionUp -> {
+                            selected = (selected - 1 + matches.size) % matches.size
+                            true
+                        }
+                        showMenu && event.key == Key.Escape -> {
+                            dismissedFor = typed
+                            true
+                        }
+                        showMenu && (event.key == Key.Tab || (event.key == Key.Enter && !event.isShiftPressed)) &&
+                            !(event.key == Key.Enter && typed == "/" + matches[selected.coerceIn(0, matches.lastIndex)].name) -> {
+                            pick(matches[selected.coerceIn(0, matches.lastIndex)])
+                            true
+                        }
+                        // Enter sends; Shift+Enter is a new line.
+                        event.key == Key.Enter && !event.isShiftPressed -> {
+                            send()
+                            true
+                        }
+                        // Pasting a screenshot or image files attaches them; pasting text goes on as usual.
+                        event.key == Key.V && (event.isCtrlPressed || event.isMetaPressed) && attachments.clipboardHasImage() -> {
+                            scope.launch { attachments.pasteFromClipboard() }
+                            true
+                        }
+                        else -> false
                     }
-                    // Pasting a screenshot or image files attaches them; pasting text goes on as usual.
-                    event.key == Key.V && (event.isCtrlPressed || event.isMetaPressed) && attachments.clipboardHasImage() -> {
-                        scope.launch { attachments.pasteFromClipboard() }
-                        true
-                    }
-                    else -> false
-                }
-            },
+                },
         shape = EditFieldBorder,
         textStyle = ChatTextStyle,
         maxLines = 10,
@@ -1166,6 +1251,7 @@ private fun Composer(
 private fun ComposerFooter(
     state: ClaudeChatState,
     onMode: (PermissionMode) -> Unit,
+    onModel: (String?) -> Unit,
 ) {
     Row(
         Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 2.dp, bottom = 8.dp),
@@ -1173,6 +1259,7 @@ private fun ComposerFooter(
     ) {
         // The settings assistant asks before every change whatever the mode: no mode to pick.
         if (state.kind != ChatKind.SETTINGS) ModeChip(state.permissionMode, onMode)
+        ModelChip(state, onModel)
         Spacer(Modifier.weight(1f))
         val used = state.contextTokens
         val window = state.contextWindow

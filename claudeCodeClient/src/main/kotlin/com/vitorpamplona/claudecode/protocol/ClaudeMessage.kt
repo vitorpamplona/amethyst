@@ -57,6 +57,9 @@ sealed interface ClaudeMessage {
     ) : ClaudeMessage {
         /** A one-line description some subtypes carry (`task_summary`, `post_turn_summary`, `permission_denied`). */
         val detail: String? get() = raw.string("detail") ?: raw.string("status_detail") ?: raw.string("message")
+
+        /** The tool call a background task (`task_started`, `task_notification`...) belongs to. */
+        val toolUseId: String? get() = raw.string("tool_use_id")
     }
 
     /**

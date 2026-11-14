@@ -54,6 +54,10 @@ sealed interface ChatItem {
         val input: String,
         val result: String?,
         val isError: Boolean,
+        /** What a subagent this call started did: its own messages and tool calls. */
+        val subagent: List<ChatItem> = emptyList(),
+        /** A subagent running in the background after its call returned. */
+        val subagentRunning: Boolean = false,
     ) : ChatItem {
         val isDone: Boolean get() = result != null
     }
@@ -92,6 +96,9 @@ class ChatTranscript {
     private val toolRows = HashMap<String, Int>()
     private var nextId = 0L
 
+    /** Each subagent's own rows, by the call that started it. */
+    private val subagents = HashMap<String, ChatTranscript>()
+
     // Copied once per change, not once per read: the chat republishes on every streamed delta.
     private var cached: List<ChatItem>? = null
 
@@ -108,6 +115,65 @@ class ChatTranscript {
                 TranscriptEntry.Role.ASSISTANT -> addAssistantBlocks(entry.content)
             }
         }
+    }
+
+    /** A saved session's subagents, by the call that started each. */
+    @Synchronized
+    fun addSubagentHistory(byCall: Map<String, List<TranscriptEntry>>) {
+        byCall.forEach { (toolUseId, entries) ->
+            entries.forEach { entry ->
+                when (entry.role) {
+                    TranscriptEntry.Role.USER -> addSubagentUser(toolUseId, entry.content)
+                    TranscriptEntry.Role.ASSISTANT -> addSubagentAssistant(toolUseId, entry.content)
+                }
+            }
+        }
+    }
+
+    /** A message a subagent wrote, live or saved: it goes inside the call that started it. */
+    @Synchronized
+    fun addSubagentAssistant(
+        toolUseId: String,
+        blocks: List<ContentBlock>,
+    ) {
+        subagents.getOrPut(toolUseId) { ChatTranscript() }.addAssistantBlocks(blocks)
+        refreshSubagent(toolUseId)
+    }
+
+    /** A subagent's tool results. Its prompt is the call's own input, so text is left out. */
+    @Synchronized
+    fun addSubagentUser(
+        toolUseId: String,
+        blocks: List<ContentBlock>,
+    ) {
+        val results = blocks.filterIsInstance<ContentBlock.ToolResult>()
+        if (results.isEmpty()) return
+        subagents.getOrPut(toolUseId) { ChatTranscript() }.addUserBlocks(results, typedByUser = false)
+        refreshSubagent(toolUseId)
+    }
+
+    /** Whether the subagent [toolUseId] started still runs (the CLI's task events say). */
+    @Synchronized
+    fun setSubagentRunning(
+        toolUseId: String,
+        running: Boolean,
+    ) {
+        updateCall(toolUseId) { it.copy(subagentRunning = running) }
+    }
+
+    private fun refreshSubagent(toolUseId: String) {
+        val rows = subagents[toolUseId]?.snapshot() ?: return
+        updateCall(toolUseId) { it.copy(subagent = rows) }
+    }
+
+    private fun updateCall(
+        toolUseId: String,
+        change: (ChatItem.ToolCall) -> ChatItem.ToolCall,
+    ) {
+        val index = toolRows[toolUseId] ?: return
+        val call = items[index] as? ChatItem.ToolCall ?: return
+        items[index] = change(call)
+        cached = null
     }
 
     /** A prompt the user just typed in this app. */
@@ -195,12 +261,7 @@ class ChatTranscript {
         cached = null
     }
 
-    private fun attachResult(block: ContentBlock.ToolResult) {
-        val index = toolRows[block.toolUseId] ?: return
-        val call = items[index] as? ChatItem.ToolCall ?: return
-        items[index] = call.copy(result = block.text, isError = block.isError)
-        cached = null
-    }
+    private fun attachResult(block: ContentBlock.ToolResult) = updateCall(block.toolUseId) { it.copy(result = block.text, isError = block.isError) }
 }
 
 /** A row of the chat screen: a message, or a run of tool calls folded into one line. */

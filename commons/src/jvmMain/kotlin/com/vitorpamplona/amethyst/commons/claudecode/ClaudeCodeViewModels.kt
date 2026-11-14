@@ -27,6 +27,7 @@ import com.vitorpamplona.claudecode.protocol.ImageInput
 import com.vitorpamplona.claudecode.protocol.PermissionMode
 import com.vitorpamplona.claudecode.protocol.PermissionRequest
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +39,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 
@@ -233,6 +235,26 @@ class ClaudeCodeChatViewModel(
     fun setPermissionMode(mode: PermissionMode) = chat?.setPermissionMode(mode)
 
     fun endSession() = chat?.close()
+
+    /** Opens a chat to ask [message] again differently, with the history before it. */
+    fun editFrom(
+        message: ChatItem.UserText,
+        onReady: (String) -> Unit,
+    ) {
+        val key = chat?.key ?: return
+        viewModelScope.launch {
+            // Reads the session's file to find where to cut.
+            val copy = withContext(Dispatchers.IO) { service.editFrom(key, message) }
+            copy?.let { onReady(it.key) }
+        }
+    }
+
+    fun setModel(value: String?) = chat?.setModel(value)
+
+    fun loadCliInfo() = chat?.loadCliInfo()
+
+    /** The text a chat opened to ask a message again starts with, once. */
+    fun takeDraft(): String? = chat?.draft?.also { chat.draft = null }
 
     /** Opens a copy of this session to go on with, while another Claude Code holds this one. */
     fun fork(onReady: (String) -> Unit) {

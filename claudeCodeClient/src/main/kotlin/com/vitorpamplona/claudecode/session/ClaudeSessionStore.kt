@@ -72,6 +72,11 @@ data class TranscriptEntry(
     val content: List<ContentBlock>,
     val timestamp: Long?,
     val model: String?,
+    /**
+     * The message before this one on the conversation's chain, whatever its kind (a reply, a
+     * local command's output): where a copy cut just before this message ends.
+     */
+    val parentUuid: String? = null,
 ) {
     enum class Role { USER, ASSISTANT }
 }
@@ -151,6 +156,24 @@ class ClaudeSessionStore(
     fun transcript(sessionId: String): List<TranscriptEntry> {
         val file = sessionFile(sessionId) ?: return emptyList()
         return readTranscript(file)
+    }
+
+    /**
+     * What the session's subagents did, by the id of the Agent call that started each: their own
+     * messages, oldest first. The CLI keeps each in `<session>/subagents/agent-<id>.jsonl`, with
+     * a `.meta.json` beside it that names the call.
+     */
+    fun subagentTranscripts(sessionId: String): Map<String, List<TranscriptEntry>> {
+        val file = sessionFile(sessionId) ?: return emptyMap()
+        val dir = File(file.parentFile, "$sessionId/subagents")
+        return dir
+            .listFiles { f -> f.name.endsWith(META_SUFFIX) }
+            .orEmpty()
+            .mapNotNull { meta ->
+                val toolUseId = meta.readTextOrNull()?.let(::parseObject)?.string("toolUseId") ?: return@mapNotNull null
+                val log = File(dir, meta.name.removeSuffix(META_SUFFIX) + ".jsonl")
+                if (log.isFile) toolUseId to readTranscript(log, sidechain = true) else null
+            }.toMap()
     }
 
     /** Sets the session's title, the way the CLI's own rename does: a `custom-title` line. */
@@ -312,7 +335,11 @@ class ClaudeSessionStore(
         val obj: JsonObject,
     )
 
-    private fun readTranscript(file: File): List<TranscriptEntry> {
+    /** [sidechain]: the file is a subagent's own, every line of it on the side chain. */
+    private fun readTranscript(
+        file: File,
+        sidechain: Boolean = false,
+    ): List<TranscriptEntry> {
         val nodes = LinkedHashMap<String, Node>()
         var leaf: String? = null
         file.bufferedReader(Charsets.UTF_8).useLines { lines ->
@@ -320,7 +347,7 @@ class ClaudeSessionStore(
                 if (!line.contains("\"uuid\"")) return@forEach
                 val obj = parseObject(line) ?: return@forEach
                 val uuid = obj.string("uuid") ?: return@forEach
-                if (obj.boolean("isSidechain") == true) return@forEach
+                if (!sidechain && obj.boolean("isSidechain") == true) return@forEach
                 // A compaction starts a new chain whose root points at the old one logically.
                 val parent = obj.string("parentUuid") ?: obj.string("logicalParentUuid")
                 nodes[uuid] = Node(uuid, parent, obj)
@@ -382,6 +409,7 @@ class ClaudeSessionStore(
             content = content,
             timestamp = obj.string("timestamp")?.let(::parseInstant),
             model = message.string("model"),
+            parentUuid = obj.string("parentUuid"),
         )
     }
 
@@ -432,6 +460,8 @@ class ClaudeSessionStore(
         private val SAFE_ID = Regex("[A-Za-z0-9-]+")
 
         /** `CLAUDE_CONFIG_DIR` when set, else `~/.claude`, where the CLI keeps its files. */
+        private const val META_SUFFIX = ".meta.json"
+
         fun defaultConfigDir(environment: Map<String, String> = System.getenv()): File = environment["CLAUDE_CONFIG_DIR"]?.let { File(it) } ?: File(System.getProperty("user.home"), ".claude")
 
         /** Session ids are UUIDs; anything else must not become a path. */

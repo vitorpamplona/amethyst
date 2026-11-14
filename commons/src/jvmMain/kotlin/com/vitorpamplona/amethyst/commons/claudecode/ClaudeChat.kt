@@ -27,11 +27,15 @@ import com.vitorpamplona.claudecode.process.ClaudeCodeNotFoundException
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
+import com.vitorpamplona.claudecode.protocol.CliInfo
 import com.vitorpamplona.claudecode.protocol.ImageInput
+import com.vitorpamplona.claudecode.protocol.ModelChoice
 import com.vitorpamplona.claudecode.protocol.PermissionDecision
 import com.vitorpamplona.claudecode.protocol.PermissionMode
 import com.vitorpamplona.claudecode.protocol.PermissionRequest
+import com.vitorpamplona.claudecode.protocol.SlashCommand
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
+import com.vitorpamplona.claudecode.session.TranscriptEntry
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -45,6 +49,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 
 enum class ChatStatus {
     /** A saved session shown from its file; no process yet. It starts on the first message. */
@@ -126,6 +131,12 @@ data class ClaudeChatState(
      */
     val permissionNotes: Map<String, String> = emptyMap(),
     val kind: ChatKind = ChatKind.CODE,
+    /** The slash commands the CLI offers in this folder, once it said. */
+    val commands: List<SlashCommand> = emptyList(),
+    /** The models the user can pick, once the CLI said. */
+    val models: List<ModelChoice> = emptyList(),
+    /** The model the user picked ([ModelChoice.value]), or null for the CLI's default. */
+    val modelChoice: String? = null,
 ) {
     val isBusy: Boolean get() = status == ChatStatus.STARTING || status == ChatStatus.WORKING || status == ChatStatus.NEEDS_APPROVAL
 }
@@ -142,7 +153,7 @@ class ClaudeChat internal constructor(
     cwd: File,
     title: String?,
     permissionMode: PermissionMode,
-    private val model: String?,
+    model: String?,
     private val store: ClaudeSessionStore,
     private val launcher: ClaudeCodeStarter,
     private val scope: CoroutineScope,
@@ -158,8 +169,21 @@ class ClaudeChat internal constructor(
     /** Changes to how the CLI starts for this chat: which tools it has, its system prompt. */
     private val launchOptions: (ClaudeCodeOptions) -> ClaudeCodeOptions = { it },
     kind: ChatKind = ChatKind.CODE,
+    /**
+     * With [fork]: the copy is cut just before this message (its uuid), to ask it again
+     * differently. The CLI cuts at the message's parent ([TranscriptEntry.parentUuid]).
+     */
+    private val forkBefore: TranscriptEntry? = null,
 ) {
     private val workDir = cwd
+
+    /** Text for the composer when the chat first shows (a message to ask again); the screen takes it once. */
+    @Volatile
+    var draft: String? = null
+
+    /** What `--model` starts the process with; [setModel] changes it, and the running process. */
+    @Volatile
+    private var model: String? = model
     private val transcript = ChatTranscript()
     private val lock = Mutex()
     private var connection: ClaudeCodeConnection? = null
@@ -189,6 +213,7 @@ class ClaudeChat internal constructor(
                 title = title,
                 permissionMode = permissionMode,
                 model = model,
+                modelChoice = model,
                 historyLoaded = resumeSessionId == null,
                 forking = fork && resumeSessionId != null,
                 kind = kind,
@@ -201,9 +226,11 @@ class ClaudeChat internal constructor(
         if (resumeSessionId != null) {
             scope.launch(Dispatchers.IO) {
                 try {
-                    val history = store.transcript(resumeSessionId)
+                    val history = store.transcript(resumeSessionId).let { all -> if (forkBefore != null) all.cutBefore(forkBefore.uuid) else all }
+                    val subagents = store.subagentTranscripts(resumeSessionId)
                     lock.withLock {
                         transcript.addHistory(history)
+                        transcript.addSubagentHistory(subagents)
                         publish { it.copy(historyLoaded = true) }
                     }
                 } finally {
@@ -315,6 +342,56 @@ class ClaudeChat internal constructor(
         }
     }
 
+    /**
+     * Uses [value] (a [ModelChoice.value], null for the default) from the next message on: the
+     * running process switches at once, and a new one starts with it.
+     */
+    fun setModel(value: String?) {
+        model = value
+        publish { it.copy(modelChoice = value) }
+        scope.launch {
+            val c = connection ?: return@launch
+            try {
+                c.setModel(value)
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not switch the model", e)
+            }
+        }
+    }
+
+    /**
+     * Learns the CLI's commands and models before the first message, so the composer can offer
+     * them: from an earlier start in the same folder, or by starting the CLI briefly.
+     */
+    fun loadCliInfo() {
+        if (_state.value.commands.isNotEmpty() || connection != null) return
+        scope.launch(Dispatchers.IO) {
+            val info = cliInfoCache[workDir.absolutePath] ?: probe() ?: return@launch
+            remember(info)
+            lock.withLock { publish { if (it.commands.isEmpty()) it.copy(commands = info.commands, models = info.models) else it } }
+        }
+    }
+
+    private suspend fun probe(): CliInfo? {
+        if (!workDir.isDirectory || killed) return null
+        val options = ClaudeCodeOptions(cwd = workDir, sdkMcpServers = mcpServers).let(launchOptions)
+        val c =
+            try {
+                launcher.start(options, scope)
+            } catch (e: ClaudeCodeNotFoundException) {
+                return null
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not ask Claude Code for its commands", e)
+                return null
+            }
+        // No message was sent, so no session is saved: closing stdin just ends it.
+        return c.info.also { c.close() }
+    }
+
+    private fun remember(info: CliInfo) {
+        cliInfoCache[workDir.absolutePath] = info
+    }
+
     fun setPermissionMode(mode: PermissionMode) {
         publish { it.copy(permissionMode = mode) }
         scope.launch { connection?.setPermissionMode(mode) }
@@ -360,6 +437,7 @@ class ClaudeChat internal constructor(
                     cwd = workDir,
                     resumeSessionId = current.sessionId,
                     forkSession = forkOnStart,
+                    resumeSessionAt = if (forkOnStart) forkBefore?.parentUuid else null,
                     model = model,
                     permissionMode = current.permissionMode,
                     // A NIP-34 checkout: publishing is the user's step (CONTRIBUTING-WITH-AI.md), never the agent's.
@@ -383,7 +461,9 @@ class ClaudeChat internal constructor(
                 return@withLock null
             }
             connection = started
-            publish { it.copy(status = ChatStatus.WORKING) }
+            val info = started.info
+            if (info != null) remember(info)
+            publish { it.copy(status = ChatStatus.WORKING, commands = info?.commands ?: it.commands, models = info?.models ?: it.models) }
             scope.launch { collect(started) }
             started
         }
@@ -412,7 +492,11 @@ class ClaudeChat internal constructor(
                 // The copy has its own session now: later starts resume it, not the source.
                 if (isNewSession) forkOnStart = false
                 publish {
+                    // A turn the CLI started by itself (a background subagent reported back).
+                    val ownTurn = it.status == ChatStatus.READY
                     it.copy(
+                        status = if (ownTurn) ChatStatus.WORKING else it.status,
+                        turnStartedAt = if (ownTurn) System.currentTimeMillis() else it.turnStartedAt,
                         forking = it.forking && !isNewSession,
                         sessionId = message.sessionId,
                         model = message.model ?: it.model,
@@ -426,15 +510,23 @@ class ClaudeChat internal constructor(
                 }
             }
             is ClaudeMessage.Assistant -> {
-                // A subagent's own messages stay inside its tool call.
-                if (message.parentToolUseId != null) return
+                // A subagent's own messages go inside the call that started it.
+                message.parentToolUseId?.let { parent ->
+                    transcript.addSubagentAssistant(parent, message.content)
+                    publish { it }
+                    return
+                }
                 transcript.addAssistantBlocks(message.content)
                 streamBuffer.setLength(0)
                 val used = message.contextTokens
                 publish { it.copy(streamingText = "", contextTokens = used ?: it.contextTokens) }
             }
             is ClaudeMessage.User -> {
-                if (message.parentToolUseId != null) return
+                message.parentToolUseId?.let { parent ->
+                    transcript.addSubagentUser(parent, message.content)
+                    publish { it }
+                    return
+                }
                 transcript.addUserBlocks(message.content, typedByUser = false)
                 publish { it }
             }
@@ -481,7 +573,20 @@ class ClaudeChat internal constructor(
                 }
             }
             is ClaudeMessage.System -> {
-                if (message.subtype == "task_summary") message.detail?.let { detail -> publish { it.copy(activity = detail) } }
+                when (message.subtype) {
+                    "task_summary" -> message.detail?.let { detail -> publish { it.copy(activity = detail) } }
+                    // A subagent running in the background: its call shows it working until it reports.
+                    "task_started", "task_progress" ->
+                        message.toolUseId?.let { id ->
+                            transcript.setSubagentRunning(id, true)
+                            publish { it }
+                        }
+                    "task_notification" ->
+                        message.toolUseId?.let { id ->
+                            transcript.setSubagentRunning(id, false)
+                            publish { it }
+                        }
+                }
             }
             is ClaudeMessage.Result -> {
                 if (message.isError) {
@@ -516,6 +621,16 @@ class ClaudeChat internal constructor(
 
     companion object {
         private const val TAG = "ClaudeChat"
+
+        /** What the CLI offered in each folder: commands and models change rarely, and asking starts a process. */
+        private val cliInfoCache = ConcurrentHashMap<String, CliInfo>()
+
+        /** The history before the message [uuid], or all of it when it isn't there. */
+        internal fun List<TranscriptEntry>.cutBefore(uuid: String): List<TranscriptEntry> {
+            val at = indexOfFirst { it.uuid == uuid }
+            return if (at < 0) this else subList(0, at)
+        }
+
         private const val STREAM_PUBLISH_MS = 50L
 
         /** What a session on a nostr repository may not run: pushing and publishing proposals. */

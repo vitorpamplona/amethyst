@@ -476,7 +476,7 @@ object AmethystSettings {
             ),
         )
 
-    private fun <E : Enum<E>> choice(
+    private inline fun <reified E : Enum<E>> choice(
         id: String,
         title: String,
         description: String,
@@ -496,6 +496,8 @@ object AmethystSettings {
             keywords = keywords,
             read = { flow.value.name },
             write = { name -> values.firstOrNull { it.name == name }?.let { flow.value = it } },
+            // A value added to the enum later, with no meaning here: a test fails until it has one.
+            unexplained = enumValues<E>().filter { it !in meanings }.map { it.name },
         )
     }
 
