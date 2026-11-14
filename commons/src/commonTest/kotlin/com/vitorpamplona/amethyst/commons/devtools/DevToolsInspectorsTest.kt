@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.devtools
 
 import com.vitorpamplona.quartz.kinds.KindNames
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -145,6 +146,21 @@ class DevToolsInspectorsTest {
             assertIs<EventInspectResult.Parsed>(result)
             assertEquals(EventSource.NEMBED, result.inspection.source)
             assertTrue(result.inspection.isValid)
+        }
+
+    @Test
+    fun codesCarryAnNaddrOnlyForAddressableAndReplaceableKinds() =
+        runTest {
+            val note = signer.sign<TextNoteEvent>(1_000, TextNoteEvent.KIND, emptyArray(), "hi")
+            val noteCodes = EventCodes.of(note)
+            assertEquals(null, noteCodes.naddr)
+            assertEquals(NPub.create(pubKey), noteCodes.npub)
+
+            val article = signer.sign<Event>(1_000, 30023, arrayOf(arrayOf("d", "slug")), "body")
+            assertEquals(NAddress.create(30023, pubKey, "slug", null), EventCodes.of(article).naddr)
+
+            val metadata = signer.sign<Event>(1_000, 0, emptyArray(), "{}")
+            assertEquals(NAddress.create(0, pubKey, "", null), EventCodes.of(metadata).naddr)
         }
 
     @Test

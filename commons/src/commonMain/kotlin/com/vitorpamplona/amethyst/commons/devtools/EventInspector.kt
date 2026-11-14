@@ -21,19 +21,21 @@
 package com.vitorpamplona.amethyst.commons.devtools
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.commons.util.toPrettyJson
 import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.isAddressable
+import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.crypto.generateId
 import com.vitorpamplona.quartz.nip01Core.crypto.verifySignature
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
@@ -64,13 +66,33 @@ data class EventInspection(
     val signatureValid: Boolean,
     val kindName: String?,
     val kindNip: String?,
-    val prettyJson: String,
     val issues: ImmutableList<EventIssue>,
-    val nevent: String,
-    val note: String,
-    val npub: String,
+    val codes: EventCodes,
 ) {
     val isValid get() = idValid && signatureValid
+}
+
+/** The NIP-19 handles a developer copies out of an event: its nevent, its naddr when it has one, and its author's npub. */
+@Immutable
+data class EventCodes(
+    val nevent: String,
+    /** Null for a kind that is neither replaceable nor addressable, or a d-tag too long for an naddr. */
+    val naddr: String?,
+    val npub: String,
+) {
+    companion object {
+        fun of(event: Event) =
+            EventCodes(
+                nevent = NEvent.create(event.id, event.pubKey, event.kind, emptyList()),
+                naddr =
+                    when {
+                        event.kind.isAddressable() -> NAddress.createOrNull(event.kind, event.pubKey, event.tags.dTag(), emptyList())
+                        event.kind.isReplaceable() -> NAddress.createOrNull(event.kind, event.pubKey, "", emptyList())
+                        else -> null
+                    },
+                npub = NPub.create(event.pubKey),
+            )
+    }
 }
 
 @Immutable
@@ -142,11 +164,8 @@ object EventInspector {
             signatureValid = signatureValid,
             kindName = info?.name,
             kindNip = info?.nip,
-            prettyJson = event.toPrettyJson(),
             issues = issues.toImmutableList(),
-            nevent = NEvent.create(event.id, event.pubKey, event.kind, emptyList()),
-            note = NNote.create(event.id),
-            npub = NPub.create(event.pubKey),
+            codes = EventCodes.of(event),
         )
     }
 
