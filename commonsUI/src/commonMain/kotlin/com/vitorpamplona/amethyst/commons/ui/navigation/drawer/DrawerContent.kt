@@ -29,6 +29,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -152,9 +153,9 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.DrawerSectionHeaderModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.IconRowTextModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size22ModifierWith4Padding
@@ -647,19 +648,27 @@ private fun FollowingAndFollowerCounts(
     accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
-    Row(
+    // A narrow drawer (a resizable desktop window, a split-screen phone) has no room for both
+    // counts on one line: wrap the second count to the next line as a whole instead of letting
+    // its label break letter by letter.
+    FlowRow(
         modifier = drawerSpacing.clickable(onClick = onClick),
+        horizontalArrangement = Arrangement.spacedBy(Size10dp),
     ) {
-        DisplayFollowingCount(baseAccountUser)
-
-        Text(stringRes(Res.string.following))
-
-        Spacer(modifier = DoubleHorzSpacer)
-
-        DisplayFollowerCount(baseAccountUser, accountViewModel)
-
-        Text(stringRes(Res.string.followers))
+        Row {
+            DisplayFollowingCount(baseAccountUser)
+            CountLabel(stringRes(Res.string.following))
+        }
+        Row {
+            DisplayFollowerCount(baseAccountUser, accountViewModel)
+            CountLabel(stringRes(Res.string.followers))
+        }
     }
+}
+
+@Composable
+private fun CountLabel(text: String) {
+    Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable
@@ -669,6 +678,7 @@ fun DisplayFollowingCount(baseAccountUser: Account) {
     Text(
         text = followingCount.authors.size.toString(),
         fontWeight = FontWeight.Bold,
+        maxLines = 1,
     )
 }
 
@@ -682,6 +692,7 @@ fun DisplayFollowerCount(
     Text(
         text = followerCount,
         fontWeight = FontWeight.Bold,
+        maxLines = 1,
     )
 }
 
