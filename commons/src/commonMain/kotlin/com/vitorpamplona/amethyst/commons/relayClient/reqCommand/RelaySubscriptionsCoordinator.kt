@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.napplets.ConnectedAppsFilt
 import com.vitorpamplona.amethyst.commons.relayClient.napplets.NappletsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nests.NestsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.nips.NipsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nsites.NsitesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.pictures.PicturesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.podcasts.MyPodcastFilterAssembler
@@ -192,6 +193,9 @@ class RelaySubscriptionsCoordinator(
     val thread = ThreadFilterAssembler(cache, client)
     val profile = UserProfileFilterAssembler(cache, client)
     val hashtags = HashtagFilterAssembler(client)
+
+    // The NIPs screen, the kind page and an open NIP: kind 30817 and the kinds NIPs define.
+    val nips = NipsFilterAssembler(client)
     val geohashes = GeoHashFilterAssembler(client)
     val urls = UrlFilterAssembler(client)
     val relayFeed = RelayFeedFilterAssembler(client)
@@ -315,6 +319,7 @@ class RelaySubscriptionsCoordinator(
             thread,
             profile,
             hashtags,
+            nips,
             geohashes,
             urls,
             relayFeed,

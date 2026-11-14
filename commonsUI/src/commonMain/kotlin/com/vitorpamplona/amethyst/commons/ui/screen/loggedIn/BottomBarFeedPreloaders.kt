@@ -26,6 +26,7 @@ import androidx.compose.runtime.key
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.datasource.AllNipsSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.badges.datasource.BadgesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
@@ -123,8 +124,7 @@ private fun PreloadFor(
 
         NavBarItem.NSITES -> {}
 
-        // The NIPs screen asks the relays itself when it opens; nothing to preload.
-        NavBarItem.NIPS -> {}
+        NavBarItem.NIPS -> AllNipsSubscription(accountViewModel)
 
         // The browser is a "new tab" launcher with no feed to preload.
         NavBarItem.BROWSER -> {}

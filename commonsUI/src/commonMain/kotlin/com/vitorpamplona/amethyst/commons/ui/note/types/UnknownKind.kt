@@ -36,7 +36,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,7 +58,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipLinks
-import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipsOnNostr
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.datasource.NipsDefiningKindSubscription
 import com.vitorpamplona.amethyst.commons.rendering.unknown.BlobEncoding
 import com.vitorpamplona.amethyst.commons.rendering.unknown.ContentShape
 import com.vitorpamplona.amethyst.commons.rendering.unknown.DigestMedia
@@ -101,10 +100,8 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.utils.Hex
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.withContext
 
 /**
  * The body of a note whose kind the app has no renderer for. Before, these fell into the text path,
@@ -206,8 +203,8 @@ private fun UnknownKindCard(
 
 /**
  * Where to learn what this kind is: its official NIP when the kind registry knows one, else a NIP
- * published on Nostr whose `k` tags define it (asked of the relays once per kind per session), else
- * the kind's own page.
+ * published on Nostr whose `k` tags define it (watched on the relays while the card is on screen,
+ * one subscription per kind however many cards show it), else the kind's own page.
  */
 @Composable
 private fun KindDefinedBy(
@@ -216,14 +213,7 @@ private fun KindDefinedBy(
     nav: INav,
 ) {
     val official = remember(kind) { KindNames.nipFor(kind)?.let { NipLinks.normalize(it) } }
-    val changes by NipsOnNostr.changes.collectAsStateWithLifecycle()
-    val onNostr = remember(kind, changes, official) { if (official == null) NipsOnNostr.definitionsOf(kind).firstOrNull() else null }
-
-    if (official == null) {
-        LaunchedEffect(kind) {
-            withContext(Dispatchers.IO) { NipsOnNostr.fetchDefinitionsOf(accountViewModel.account, kind) }
-        }
-    }
+    val onNostr = if (official == null) nipDefining(kind, accountViewModel) else null
 
     val nipTitle = (onNostr?.event as? NipTextEvent)?.let { it.title() ?: it.dTag() }
     val label =
@@ -250,6 +240,21 @@ private fun KindDefinedBy(
         Spacer(Modifier.width(6.dp))
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
+}
+
+/** The newest NIP on Nostr defining [kind], from the cache as it fills, by an author the account doesn't hide. */
+@Composable
+private fun nipDefining(
+    kind: Int,
+    accountViewModel: AccountViewModel,
+): Note? {
+    NipsDefiningKindSubscription(kind, accountViewModel)
+    val definitions by remember(kind) {
+        LocalCache.observeNotes(Filter(kinds = listOf(NipTextEvent.KIND), tags = mapOf("k" to listOf(kind.toString()))))
+    }.collectAsStateWithLifecycle(emptyList())
+    val hidden by accountViewModel.account.hiddenUsers.flow
+        .collectAsStateWithLifecycle()
+    return remember(definitions, hidden) { definitions.firstOrNull { !it.isHiddenFor(hidden) } }
 }
 
 /** "Recipe" when quartz knows the kind's name, "Kind 31337" when it doesn't. */

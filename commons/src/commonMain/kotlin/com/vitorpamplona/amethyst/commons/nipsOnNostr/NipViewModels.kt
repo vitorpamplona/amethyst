@@ -23,15 +23,9 @@ package com.vitorpamplona.amethyst.commons.nipsOnNostr
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.rendering.unknown.unknownKindAddress
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,81 +70,6 @@ class OfficialNipViewModel(
     }
 }
 
-/** What the app knows about an event kind: who defines it and what its events look like. */
-@Immutable
-class EventKindState(
-    /** NIPs on Nostr whose `k` tags define the kind, newest first. */
-    val definitions: List<AddressableNote>,
-    /** Recent events of the kind, newest first. */
-    val recent: List<Note>,
-    /** Events of the kind the relays sent that the app keeps out of feeds (private settings, for one), so it can't draw. */
-    val notShown: Int,
-    val loadingDefinitions: Boolean,
-    val loadingRecent: Boolean,
-)
-
-/** Backs the event-kind page: the NIPs that define [kind] and a sample of its recent events. */
-class EventKindViewModel(
-    val kind: Int,
-    private val account: Account,
-) : ViewModel() {
-    private val recent = MutableStateFlow<Pair<List<Note>, Int>>(emptyList<Note>() to 0)
-    private val loadingDefinitions = MutableStateFlow(true)
-    private val loadingRecent = MutableStateFlow(true)
-
-    val state: StateFlow<EventKindState> =
-        combine(NipsOnNostr.changes, recent, loadingDefinitions, loadingRecent) { _, recent, loadingDefs, loadingRecent ->
-            EventKindState(NipsOnNostr.definitionsOf(kind), recent.first, recent.second, loadingDefs, loadingRecent)
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, EventKindState(NipsOnNostr.definitionsOf(kind), emptyList(), 0, true, true))
-
-    init {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                NipsOnNostr.fetchDefinitionsOf(account, kind)
-            } finally {
-                loadingDefinitions.value = false
-            }
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                recent.value = fetchRecent()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                // Relays that fail just leave the sample short.
-            } finally {
-                loadingRecent.value = false
-            }
-        }
-    }
-
-    private suspend fun fetchRecent(): Pair<List<Note>, Int> {
-        val relays = NipsOnNostr.discoveryRelays(account)
-        if (relays.isEmpty()) return emptyList<Note>() to 0
-        val filter = Filter(kinds = listOf(kind), limit = RECENT_LIMIT)
-        val events =
-            account.client
-                .fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 6_000L)
-                .filter { it.kind == kind }
-                .distinctBy { it.id }
-                .sortedByDescending { it.createdAt }
-                .take(RECENT_LIMIT)
-        events.forEach { account.cache.justConsume(it, null, false) }
-        // An unknown replaceable or addressable kind lives at its address, which getNoteIfExists(event)
-        // only checks for the kinds quartz has a class for.
-        val notes =
-            events
-                .mapNotNull { event ->
-                    unknownKindAddress(event)?.let { account.cache.getAddressableNoteIfExists(it) } ?: account.cache.getNoteIfExists(event)
-                }.filter { it.event != null }
-        return notes to (events.size - notes.size)
-    }
-
-    companion object {
-        const val RECENT_LIMIT = 20
-    }
-}
-
 /** Which NIPs the catalogue lists. */
 enum class NipCatalogFilter {
     ALL,
@@ -158,69 +77,83 @@ enum class NipCatalogFilter {
     ON_NOSTR,
 }
 
+/** The nips repo's index as the NIPs screen shows it: filtered by the search and the chips. */
 @Immutable
-class NipCatalogState(
-    val official: List<OfficialNipEntry>,
-    val onNostr: List<AddressableNote>,
-    val loadingOfficial: Boolean,
-    val officialFailed: Boolean,
-    val loadingOnNostr: Boolean,
+class OfficialIndexState(
+    val entries: List<OfficialNipEntry>,
+    val loading: Boolean,
+    val failed: Boolean,
 )
 
 /**
- * Backs the NIPs tab: the official index from the nips repo and the NIPs published on Nostr,
- * filtered by [query] (number, title or kind) and by [filter].
+ * Backs the NIPs screen apart from its feed: the nips repo's index (fetched once, from GitHub),
+ * the search [query] and the [filter] chips. The NIPs published on Nostr are the account's NIPs
+ * feed (AccountFeedContentStates.nipsFeed), kept live by its subscription; [onNostr] filters and
+ * ranks that feed's notes for the search.
  */
 class NipCatalogViewModel(
-    private val account: Account,
     private val http: IRoleBasedHttpClientBuilder,
 ) : ViewModel() {
     val query = MutableStateFlow("")
     val filter = MutableStateFlow(NipCatalogFilter.ALL)
 
-    private val official = MutableStateFlow<List<OfficialNipEntry>>(emptyList())
-    private val loadingOfficial = MutableStateFlow(true)
-    private val officialFailed = MutableStateFlow(false)
-    private val loadingOnNostr = MutableStateFlow(true)
+    private val entries = MutableStateFlow<List<OfficialNipEntry>>(emptyList())
+    private val loading = MutableStateFlow(true)
+    private val failed = MutableStateFlow(false)
 
-    private val all =
-        combine(official, NipsOnNostr.changes, loadingOfficial, officialFailed, loadingOnNostr) { official, _, loadingOfficial, failed, loadingOnNostr ->
-            NipCatalogState(official, NipsOnNostr.cached(), loadingOfficial, failed, loadingOnNostr)
-        }
-
-    val state: StateFlow<NipCatalogState> =
-        combine(all, query, filter) { all, query, filter ->
+    val official: StateFlow<OfficialIndexState> =
+        combine(entries, loading, failed, query, filter) { entries, loading, failed, query, filter ->
             val q = query.trim()
-            NipCatalogState(
-                official = if (filter == NipCatalogFilter.ON_NOSTR) emptyList() else all.official.filter { matches(it, q) },
-                onNostr = if (filter == NipCatalogFilter.OFFICIAL) emptyList() else rank(all.onNostr, q),
-                loadingOfficial = all.loadingOfficial,
-                officialFailed = all.officialFailed,
-                loadingOnNostr = all.loadingOnNostr,
+            OfficialIndexState(
+                entries = if (filter == NipCatalogFilter.ON_NOSTR) emptyList() else entries.filter { matches(it, q) },
+                loading = loading,
+                failed = failed,
             )
-        }.flowOn(Dispatchers.Default) // Filtering every NIP body per keystroke stays off the main thread.
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NipCatalogState(emptyList(), emptyList(), true, false, true))
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), OfficialIndexState(emptyList(), true, false))
 
     init {
         loadOfficial()
+    }
+
+    /** Loads the nips repo's index; also the "Try again" after it failed. */
+    fun loadOfficial() {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                NipsOnNostr.fetchAll(account)
-            } finally {
-                loadingOnNostr.value = false
-            }
+            loading.value = true
+            val index = OfficialNips.index(http)
+            failed.value = index == null
+            if (index != null) entries.value = index
+            loading.value = false
         }
     }
 
-    /** Loads the official index; also the "Try again" after it failed, which leaves the Nostr list alone. */
-    fun loadOfficial() {
-        viewModelScope.launch(Dispatchers.IO) {
-            loadingOfficial.value = true
-            val index = OfficialNips.index(http)
-            officialFailed.value = index == null
-            if (index != null) official.value = index
-            loadingOfficial.value = false
+    /**
+     * The NIPs on Nostr of [notes] (the feed, newest first) that [query] matches under [filter],
+     * strongest first: a match in the title, identifier or a defined kind before one only in the
+     * text. Call it off the main thread: a text match reads every NIP's body.
+     */
+    fun onNostr(
+        notes: List<Note>,
+        query: String,
+        filter: NipCatalogFilter,
+    ): List<Note> {
+        if (filter == NipCatalogFilter.OFFICIAL) return emptyList()
+        val q = query.trim()
+        if (q.isEmpty()) return notes
+        val strong = ArrayList<Note>()
+        val inText = ArrayList<Note>()
+        val kind = q.toIntOrNull()
+        for (note in notes) {
+            val event = note.event as? NipTextEvent ?: continue
+            when {
+                event.title()?.contains(q, ignoreCase = true) == true ||
+                    event.dTag().contains(q, ignoreCase = true) ||
+                    (kind != null && definesKind(event.tags, kind)) -> strong.add(note)
+
+                q.length >= 3 && event.content.contains(q, ignoreCase = true) -> inText.add(note)
+            }
         }
+        return strong + inText
     }
 
     private fun matches(
@@ -233,30 +166,5 @@ class NipCatalogViewModel(
         if (entry.title.contains(q, ignoreCase = true)) return true
         val kind = q.toIntOrNull() ?: return false
         return officialKinds(entry.number).any { it.kind == kind }
-    }
-
-    /**
-     * The NIPs on Nostr that match [q], strongest first: a match in the title, identifier or a
-     * defined kind before one only in the text, each group newest first (the order [all] is in).
-     */
-    private fun rank(
-        notes: List<AddressableNote>,
-        q: String,
-    ): List<AddressableNote> {
-        if (q.isEmpty()) return notes
-        val strong = ArrayList<AddressableNote>()
-        val inText = ArrayList<AddressableNote>()
-        val kind = q.toIntOrNull()
-        for (note in notes) {
-            val event = note.event as? NipTextEvent ?: continue
-            when {
-                event.title()?.contains(q, ignoreCase = true) == true ||
-                    event.dTag().contains(q, ignoreCase = true) ||
-                    (kind != null && definedKinds(event.tags).any { it.kind == kind }) -> strong.add(note)
-
-                q.length >= 3 && event.content.contains(q, ignoreCase = true) -> inText.add(note)
-            }
-        }
-        return strong + inText
     }
 }
