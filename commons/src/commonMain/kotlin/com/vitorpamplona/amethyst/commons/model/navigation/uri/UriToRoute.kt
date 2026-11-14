@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeForPointer
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.findQueryParameterValue
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipLinks
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.cordn.client.CordnLinkInspection
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
@@ -220,6 +221,9 @@ fun uriToRoute(
     concordInviteRoute(uri)?.let { return it }
     buzzInviteRoute(uri)?.let { return it }
     cordnLinkRoute(uri)?.let { return it }
+
+    // A link to an official NIP (the nips repo, nips.nostr.com) opens in the in-app reader.
+    NipLinks.numberFromUrl(uri)?.let { return Route.Nip(it, NipLinks.anchorFromUrl(uri)) }
 
     val parsedNip19 = Nip19Parser.uriToRoute(uri)
     val nip19 = parsedNip19?.entity

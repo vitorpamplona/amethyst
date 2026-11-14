@@ -51,6 +51,7 @@ enum class NavBarItem {
     PICTURES,
     WORKOUTS,
     GIT_REPOSITORIES,
+    NIPS,
     HIGHLIGHTS,
     SOFTWARE_APPS,
     NAPPLETS,

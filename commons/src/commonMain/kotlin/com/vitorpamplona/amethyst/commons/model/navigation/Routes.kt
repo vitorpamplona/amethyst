@@ -836,6 +836,20 @@ sealed class Route {
         val id: String,
     ) : Route()
 
+    /** Official NIP [number] (`01`, `7D`) in the in-app reader, scrolled to [anchor] when given. */
+    @Serializable data class Nip(
+        val number: String,
+        val anchor: String? = null,
+    ) : Route()
+
+    /** Every NIP: the official index and the NIPs published on Nostr, searchable. */
+    @Serializable object Nips : Route()
+
+    /** An event kind: the NIPs that define it and a sample of its recent events. */
+    @Serializable data class EventKind(
+        val kind: Int,
+    ) : Route()
+
     @Serializable data class ShareNoteAsImage(
         val id: String,
     ) : Route()
