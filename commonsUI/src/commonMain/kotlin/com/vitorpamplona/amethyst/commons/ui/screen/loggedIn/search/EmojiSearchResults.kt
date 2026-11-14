@@ -78,7 +78,8 @@ fun EmojiSearchResults(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
+    // Keyed on the hits: "Show all" for one search must not leave the next one opened up.
+    var expanded by rememberSaveable(hits) { mutableStateOf(false) }
     var preview by remember { mutableStateOf<EmojiSearchHit?>(null) }
     val shown = if (expanded || hits.size <= COLLAPSED_HITS) hits else hits.subList(0, COLLAPSED_HITS)
 

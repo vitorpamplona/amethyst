@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -65,6 +66,18 @@ class EmojiPackState(
     fun getEmojiList(): EmojiListEvent? = emojiPackListNote.event as? EmojiListEvent
 
     fun getEmojiListFlow(): StateFlow<NoteState> = emojiPackListNote.flow().metadata.stateFlow
+
+    /**
+     * The addresses (`kind:pubkey:d`) of the packs in the emoji list, or empty while the list is not
+     * on this device. One shared set, so a screen of pack cards answers "is this one added?" with
+     * a lookup instead of a subscription and a tag scan per card.
+     */
+    val selectedPackIds: StateFlow<Set<String>> =
+        getEmojiListFlow()
+            .map { (it.note.event as? EmojiListEvent)?.emojiPackIds()?.toSet() ?: emptySet() }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
+            .stateIn(scope, SharingStarted.Eagerly, getEmojiList()?.emojiPackIds()?.toSet() ?: emptySet())
 
     fun convertEmojiSelectionPack(selection: EmojiListEvent?): List<StateFlow<NoteState>>? =
         selection?.emojiPacks()?.map {

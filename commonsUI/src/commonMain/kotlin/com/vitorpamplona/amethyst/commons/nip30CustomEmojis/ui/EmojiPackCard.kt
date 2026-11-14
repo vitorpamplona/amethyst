@@ -87,11 +87,13 @@ fun EmojiPackCard(
     action: (@Composable () -> Unit)? = null,
 ) {
     ElevatedCard(
-        modifier = modifier.fillMaxWidth().clip(CardShape).combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        modifier = modifier.fillMaxWidth(),
         shape = CardShape,
         elevation = CardDefaults.elevatedCardElevation(),
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
+        // Clickable inside the card, not on its modifier: the card already clips its content to
+        // its shape, and a clip on the outside would cut off the elevation shadow.
+        Column(modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(10.dp)) {
             EmojiSheet(emojiUrls)
 
             Spacer(Modifier.height(10.dp))

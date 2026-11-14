@@ -52,9 +52,33 @@ class EmojiSearchTest {
 
     @Test
     fun termsDropTheColonsAReaderTypesAroundAShortcode() {
-        assertEquals(listOf("blobcat"), EmojiSearch.terms(":blobcat:"))
-        assertEquals(listOf("blob", "cat"), EmojiSearch.terms("Blob CAT"))
-        assertTrue(EmojiSearch.terms("  ").isEmpty())
+        assertEquals(listOf("blobcat"), EmojiSearch.terms(":blobcat:").all)
+        assertEquals(listOf("blob", "cat"), EmojiSearch.terms("Blob CAT").all)
+        assertTrue(EmojiSearch.terms("  ").isEmpty)
+    }
+
+    @Test
+    fun anExclusionDropsTheEmojisThatHoldIt() {
+        val cats = pack('a', "Cats", "catdance" to "https://x/1.gif", "catjam" to "https://x/2.gif")
+        // As the app's parser hands it over: `-dance` is not in the text.
+        val hits = EmojiSearch.find(listOf(cats), EmojiSearch.terms("cat", excludeTerms = listOf("dance")))
+        assertEquals(listOf("catjam"), hits.map { it.emoji.code })
+        // And as a NIP-50 exclusion left in the text.
+        assertEquals(listOf("catjam"), EmojiSearch.find(listOf(cats), EmojiSearch.terms("cat -dance")).map { it.emoji.code })
+    }
+
+    @Test
+    fun aQuotedPhraseMatchesItsWordsAcrossSeparators() {
+        val cats = pack('a', "Cats", "blob_cat" to "https://x/1.png", "blobcat" to "https://x/2.png", "cat" to "https://x/3.png")
+        val hits = EmojiSearch.find(listOf(cats), EmojiSearch.terms("\"blob cat\""))
+        assertEquals(setOf("blob_cat", "blobcat"), hits.map { it.emoji.code }.toSet())
+    }
+
+    @Test
+    fun anOrChainNeedsOneOfItsTerms() {
+        val pets = pack('a', "Pets", "cat" to "https://x/1.png", "dog" to "https://x/2.png", "fish" to "https://x/3.png")
+        val hits = EmojiSearch.find(listOf(pets), EmojiSearch.terms("", orTerms = listOf("cat", "dog")))
+        assertEquals(setOf("cat", "dog"), hits.map { it.emoji.code }.toSet())
     }
 
     @Test

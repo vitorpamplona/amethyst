@@ -25,16 +25,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -43,15 +46,15 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
@@ -59,12 +62,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_to_emoji_list
@@ -76,45 +79,49 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_pack_added
 import com.vitorpamplona.amethyst.commons.resources.kind_emoji_packs
 import com.vitorpamplona.amethyst.commons.resources.my_emoji_list_by_author
 import com.vitorpamplona.amethyst.commons.resources.remove_from_emoji_list
+import com.vitorpamplona.amethyst.commons.search.EmojiSearch
 import com.vitorpamplona.amethyst.commons.ui.components.ShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEmojiPack
+import com.vitorpamplona.amethyst.commons.ui.note.types.EmojiPackHeader
+import com.vitorpamplona.amethyst.commons.ui.note.types.EmojiTile
+import com.vitorpamplona.amethyst.commons.ui.note.types.EmojiTileSize
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.listTitle
+import com.vitorpamplona.amethyst.commons.ui.note.types.lists.loadPrivateItems
+import com.vitorpamplona.amethyst.commons.ui.note.types.rememberEmojiTileModifier
+import com.vitorpamplona.amethyst.commons.ui.note.types.rememberPackEmojis
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import kotlinx.coroutines.launch
 
 /**
  * The shortcode fragments the reader is searching for, so a pack card drawn inside search results
  * can lead with, and ring, the emojis that matched. Empty everywhere else.
+ *
+ * Not static: the terms change with every search, and only the pack cards read them, so only they
+ * should recompose, not every result the provider wraps.
  */
-val LocalEmojiSearchTerms = staticCompositionLocalOf<List<String>> { emptyList() }
+val LocalEmojiSearchTerms = compositionLocalOf { EmojiSearch.Terms.EMPTY }
 
-/** Whether [packNote] is in the account's emoji list (kind 10030), or null while that list loads. */
+/**
+ * Whether [packNote] is in the account's emoji list (kind 10030). False while that list has not
+ * arrived: adding is still safe then, because `Account.addEmojiPack` fetches the list before it
+ * would build a new one, and refuses when no relay answers.
+ */
 @Composable
 fun EmojiPackInMyList(
     packNote: Note,
     accountViewModel: AccountViewModel,
     content: @Composable (inList: Boolean) -> Unit,
 ) {
-    LoadAddressableNote(accountViewModel.account.emoji.getEmojiListAddress()) { list ->
-        if (list == null) {
-            content(false)
-        } else {
-            val inList by observeNoteAndMap(list, accountViewModel) {
-                (list.event as? EmojiListEvent)?.hasEmojiPack(packNote.idHex) == true
-            }
-            content(inList)
-        }
-    }
+    val selected by accountViewModel.account.emoji.selectedPackIds
+        .collectAsStateWithLifecycle()
+    content(packNote.idHex in selected)
 }
 
 /** Adds or removes [packNote] from the account's emoji list. */
@@ -314,7 +321,11 @@ private fun PackOrigin(
     }
 }
 
-/** The whole pack in a bottom sheet, opened by long-pressing a pack card, so browsing does not navigate. */
+/**
+ * The whole pack in a bottom sheet, opened by long-pressing a pack card, so browsing does not
+ * navigate. A lazy grid, not the feed card's FlowRow: a pack can hold a thousand emojis, and only
+ * the rows on screen should be composed and fetched.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmojiPackSheet(
@@ -323,30 +334,48 @@ fun EmojiPackSheet(
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
-    val sheetColor = MaterialTheme.colorScheme.surfaceContainerLow
-    val background = remember(sheetColor) { mutableStateOf<Color>(sheetColor) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = sheetColor,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 24.dp)
-                    .navigationBarsPadding(),
-        ) {
-            RenderEmojiPack(
-                baseNote = packNote,
-                actionable = true,
-                backgroundColor = background,
-                accountViewModel = accountViewModel,
-                startExpanded = true,
-            )
+        val noteEvent by observeNoteEvent<EmojiPackEvent>(packNote, accountViewModel)
+        noteEvent?.let { EmojiPackSheetGrid(it, packNote, accountViewModel) }
+    }
+}
+
+@Composable
+private fun EmojiPackSheetGrid(
+    noteEvent: EmojiPackEvent,
+    packNote: Note,
+    accountViewModel: AccountViewModel,
+) {
+    val privateEmojis by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateEmojis(it) }
+    val allEmojis = rememberPackEmojis(noteEvent, privateEmojis)
+    val tileModifier = rememberEmojiTileModifier()
+    var preview by remember { mutableStateOf<EmojiUrlTag?>(null) }
+
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(EmojiTileSize),
+        modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Box(modifier = Modifier.padding(bottom = 4.dp)) {
+                EmojiPackHeader(noteEvent, packNote, true, allEmojis, privateEmojis, accountViewModel)
+            }
         }
+        items(allEmojis) { emoji ->
+            Box(contentAlignment = Alignment.Center) {
+                EmojiTile(emoji, tileModifier) { preview = it }
+            }
+        }
+    }
+
+    preview?.let { emoji ->
+        EmojiPreviewDialog(emoji, packNote, accountViewModel, nav = null) { preview = null }
     }
 }

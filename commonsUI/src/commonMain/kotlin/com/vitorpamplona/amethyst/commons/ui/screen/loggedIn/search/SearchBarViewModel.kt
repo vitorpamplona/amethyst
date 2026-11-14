@@ -180,6 +180,21 @@ class SearchBarViewModel(
         ).scan(0) { count, _ -> count + 1 }
             .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
+    /**
+     * [refreshes] narrowed to emoji packs: the emoji scan reads only kind 30030, so a relay batch of
+     * notes or profiles has nothing in it that could change its answer.
+     */
+    private val packRefreshes: StateFlow<Int> =
+        merge(
+            manualInvalidations,
+            merge(
+                account.cache.getEventStream().newEventBundles,
+                account.cache.getEventStream().deletedEventBundles,
+            ).filter { bundle -> bundle.any { it.event?.kind == EmojiPackEvent.KIND } }
+                .sample(RESCAN_INTERVAL_MS),
+        ).scan(0) { count, _ -> count + 1 }
+            .stateIn(viewModelScope, WhileSubscribed(5000), 0)
+
     /** True while a token picker is open under the field.
      *
      * The search screen pins its bars on this. A picker is a scrollable inside the *top bar*, and
@@ -516,13 +531,13 @@ class SearchBarViewModel(
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
-    /** The search's free text as shortcode fragments ([EmojiSearch.terms]); empty without free text. */
+    /** The search as shortcode fragments ([EmojiSearch.terms]); empty without free text. */
     val emojiSearchTerms =
         state.debounced
-            .map { input -> EmojiSearch.terms(input.query.text) }
+            .map { input -> EmojiSearch.terms(input.query) }
             .distinctUntilChanged()
             .flowOn(Dispatchers.Default)
-            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
+            .stateIn(viewModelScope, WhileSubscribed(5000), EmojiSearch.Terms.EMPTY)
 
     /**
      * Single emojis whose shortcode holds the search's terms, out of the emoji packs that match it.
@@ -535,7 +550,7 @@ class SearchBarViewModel(
     val emojiResults =
         combine(
             state.debounced,
-            refreshes,
+            packRefreshes,
             scope,
             combine(followsOnly, account.kind3FollowList.flow) { only, follows ->
                 if (only) follows.authorsPlusMe else null
@@ -544,8 +559,8 @@ class SearchBarViewModel(
             if (!currentScope.shows(SearchResultKind.EMOJIS)) return@combine emptyList<EmojiSearchHit>()
             val parsed = input.query
             if (parsed.kinds.isNotEmpty() && EmojiPackEvent.KIND !in parsed.kinds) return@combine emptyList<EmojiSearchHit>()
-            val terms = EmojiSearch.terms(parsed.text)
-            if (terms.isEmpty()) return@combine emptyList<EmojiSearchHit>()
+            val terms = EmojiSearch.terms(parsed)
+            if (terms.isEmpty) return@combine emptyList<EmojiSearchHit>()
 
             val packs =
                 LocalCache.findNotesMatching(

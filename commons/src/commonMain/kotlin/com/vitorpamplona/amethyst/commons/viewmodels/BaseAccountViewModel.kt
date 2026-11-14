@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.model.zapraiserStatus
 import com.vitorpamplona.amethyst.commons.notices.Bolt12OfferNotice
 import com.vitorpamplona.amethyst.commons.notices.CashuRedeemNotice
 import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
+import com.vitorpamplona.amethyst.commons.notices.EmojiListNotice
 import com.vitorpamplona.amethyst.commons.notices.InvoiceNotice
 import com.vitorpamplona.amethyst.commons.notices.MarmotNotice
 import com.vitorpamplona.amethyst.commons.notices.NoWalletFound
@@ -1443,7 +1444,10 @@ open class BaseAccountViewModel(
 
     fun removeEmojiPack(emojiPack: Note) = launchSigner { account.removeEmojiPack(emojiPack) }
 
-    fun addEmojiPack(emojiPack: Note) = launchSigner { account.addEmojiPack(emojiPack) }
+    fun addEmojiPack(emojiPack: Note) =
+        launchSigner {
+            if (!account.addEmojiPack(emojiPack)) notices.notify(EmojiListNotice.NotLoaded)
+        }
 
     fun addMediaToGallery(
         hex: String,

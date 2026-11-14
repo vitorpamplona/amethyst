@@ -48,40 +48,102 @@ object EmojiSearch {
     const val MAX_HITS = 120
 
     /**
-     * The search's terms as shortcode fragments: lowercased, with any `:` a reader typed around a
-     * shortcode removed. Empty when the search has no free text (a bare `kind:emoji`), which asks
-     * for packs, not for emojis.
+     * What a shortcode must hold to match: every one of [all], at least one of [any] when there is
+     * an `OR` chain, and none of [none]. All lowercased shortcode fragments.
      */
-    fun terms(text: String): List<String> {
-        if (text.isBlank()) return emptyList()
-        return EventSearchMatcher
-            .splitTerms(Nip50Query.parse(text).terms)
-            .mapNotNull { term -> term.trim(':').lowercase().takeIf { it.isNotEmpty() } }
+    @Immutable
+    data class Terms(
+        val all: List<String> = emptyList(),
+        val any: List<String> = emptyList(),
+        val none: List<String> = emptyList(),
+    ) {
+        /** No free text: a bare `kind:emoji` asks for packs, not for emojis. */
+        val isEmpty: Boolean get() = all.isEmpty() && any.isEmpty()
+
+        /** The fragment a best match starts with. */
+        val lead: String? get() = all.firstOrNull() ?: any.firstOrNull()
+
+        companion object {
+            val EMPTY = Terms()
+        }
     }
 
-    /** True when [code] holds every one of [terms]. */
+    /** A fragment as a shortcode would hold it: lowercased, with the `:` a reader types around one. */
+    private fun fragment(text: String): String? =
+        text
+            .trim()
+            .trim(':')
+            .lowercase()
+            .takeIf { it.isNotEmpty() }
+
+    /** The words of a quoted phrase: `"blob cat"` matches `blobcat` and `blob_cat` alike. */
+    private fun words(phrase: String): List<String> {
+        val out = ArrayList<String>()
+        val word = StringBuilder()
+        for (c in phrase) {
+            if (c.isLetterOrDigit()) {
+                word.append(c.lowercaseChar())
+            } else if (word.isNotEmpty()) {
+                out.add(word.toString())
+                word.clear()
+            }
+        }
+        if (word.isNotEmpty()) out.add(word.toString())
+        return out
+    }
+
+    /** The [query]'s free text, phrases, `OR` chain and exclusions as shortcode fragments. */
+    fun terms(query: SearchQuery): Terms = terms(query.text, query.orTerms, query.excludeTerms)
+
+    fun terms(
+        text: String,
+        orTerms: List<String> = emptyList(),
+        excludeTerms: List<String> = emptyList(),
+    ): Terms {
+        val parsed = if (text.isBlank()) null else Nip50Query.parse(text)
+        val all =
+            (
+                EventSearchMatcher.splitTerms(parsed?.terms).mapNotNull(::fragment) +
+                    parsed?.phrases.orEmpty().flatMap(::words)
+            ).distinct()
+        val any = orTerms.mapNotNull(::fragment).distinct()
+        val none =
+            (
+                excludeTerms.mapNotNull(::fragment) +
+                    parsed?.notTerms.orEmpty().mapNotNull(::fragment) +
+                    parsed?.notPhrases.orEmpty().flatMap(::words)
+            ).distinct()
+        return if (all.isEmpty() && any.isEmpty()) Terms.EMPTY else Terms(all, any, none)
+    }
+
+    /** True when [code] holds every required fragment, one of the `OR` ones, and no excluded one. */
     fun matches(
         code: String,
-        terms: List<String>,
-    ): Boolean = terms.isNotEmpty() && terms.all { code.contains(it, ignoreCase = true) }
+        terms: Terms,
+    ): Boolean {
+        if (terms.isEmpty) return false
+        if (!terms.all.all { code.contains(it, ignoreCase = true) }) return false
+        if (terms.any.isNotEmpty() && terms.any.none { code.contains(it, ignoreCase = true) }) return false
+        return terms.none.none { code.contains(it, ignoreCase = true) }
+    }
 
     /**
-     * The emojis in [notes] (only the emoji packs among them count) whose shortcode holds every
-     * one of [terms], one per image, best first: a shortcode that is the term exactly, then one
-     * that starts with it, then the rest, each in the order the packs were found.
+     * The emojis in [notes] (only the emoji packs among them count) that [matches] [terms], one per
+     * image, best first: a shortcode that is the lead fragment exactly, then one that starts with
+     * it, then the rest, each in the order the packs were found.
      */
     fun find(
         notes: List<Note>,
-        terms: List<String>,
+        terms: Terms,
         max: Int = MAX_HITS,
     ): List<EmojiSearchHit> {
-        if (terms.isEmpty()) return emptyList()
+        val lead = terms.lead ?: return emptyList()
+        val single = terms.all.size + terms.any.size == 1
 
         val exact = ArrayList<EmojiSearchHit>()
         val prefix = ArrayList<EmojiSearchHit>()
         val rest = ArrayList<EmojiSearchHit>()
         val seenUrls = HashSet<String>()
-        val first = terms[0]
 
         for (note in notes) {
             val pack = note.event as? EmojiPackEvent ?: continue
@@ -89,8 +151,8 @@ object EmojiSearch {
                 if (!matches(emoji.code, terms) || !seenUrls.add(emoji.url)) continue
                 val hit = EmojiSearchHit(emoji, note)
                 when {
-                    terms.size == 1 && emoji.code.equals(first, ignoreCase = true) -> exact.add(hit)
-                    emoji.code.startsWith(first, ignoreCase = true) -> prefix.add(hit)
+                    single && emoji.code.equals(lead, ignoreCase = true) -> exact.add(hit)
+                    emoji.code.startsWith(lead, ignoreCase = true) -> prefix.add(hit)
                     else -> rest.add(hit)
                 }
             }
