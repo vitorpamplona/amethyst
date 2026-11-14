@@ -40,10 +40,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -51,6 +53,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.devtools.EventInspectResult
@@ -68,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -171,6 +177,120 @@ fun DevToolsCodeBlock(
     ) {
         SelectionContainer {
             Text(code, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+        }
+    }
+}
+
+/** Colours for each JSON token; [jsonColors] picks the set for the current theme. */
+@Immutable
+data class JsonColors(
+    val key: Color,
+    val string: Color,
+    val number: Color,
+    val literal: Color,
+    val punctuation: Color,
+)
+
+private val LightJsonColors =
+    JsonColors(
+        key = Color(0xFF7A3E9D),
+        string = Color(0xFF2E7D32),
+        number = Color(0xFFB35C00),
+        literal = Color(0xFF1565C0),
+        punctuation = Color(0xFF6B6B6B),
+    )
+
+private val DarkJsonColors =
+    JsonColors(
+        key = Color(0xFFD7A6F2),
+        string = Color(0xFF9CCC65),
+        number = Color(0xFFFFB74D),
+        literal = Color(0xFF64B5F6),
+        punctuation = Color(0xFF9E9E9E),
+    )
+
+@Composable
+fun jsonColors(): JsonColors = if (MaterialTheme.colorScheme.isLight) LightJsonColors else DarkJsonColors
+
+/**
+ * Colours [json] token by token: object keys, string values, numbers, `true`/`false`/`null` and
+ * punctuation. A lenient single pass: text that is not valid JSON keeps the default colour
+ * instead of failing, and whitespace is copied as is, so the layout of a pretty print survives.
+ */
+fun highlightJson(
+    json: String,
+    colors: JsonColors,
+): AnnotatedString =
+    buildAnnotatedString {
+        append(json)
+        val n = json.length
+        var i = 0
+        while (i < n) {
+            val c = json[i]
+            when {
+                c == '"' -> {
+                    val start = i
+                    i++
+                    while (i < n && json[i] != '"') {
+                        i += if (json[i] == '\\') 2 else 1
+                    }
+                    i = minOf(i + 1, n)
+                    // A string followed by a colon is a key.
+                    var next = i
+                    while (next < n && json[next].isWhitespace()) next++
+                    val color = if (next < n && json[next] == ':') colors.key else colors.string
+                    addStyle(SpanStyle(color = color), start, i)
+                }
+
+                c == '-' || c.isDigit() -> {
+                    val start = i
+                    i++
+                    while (i < n && (json[i].isDigit() || json[i] in NUMBER_CHARS)) i++
+                    addStyle(SpanStyle(color = colors.number), start, i)
+                }
+
+                c.isLetter() -> {
+                    val start = i
+                    while (i < n && json[i].isLetter()) i++
+                    addStyle(SpanStyle(color = colors.literal), start, i)
+                }
+
+                c in PUNCTUATION -> {
+                    addStyle(SpanStyle(color = colors.punctuation), i, i + 1)
+                    i++
+                }
+
+                else -> {
+                    i++
+                }
+            }
+        }
+    }
+
+private const val NUMBER_CHARS = ".eE+-"
+private const val PUNCTUATION = "{}[]:,"
+
+/** Read-only JSON in monospace with syntax colours, selectable, wrapping long values instead of scrolling sideways. */
+@Composable
+fun DevToolsJsonBlock(
+    json: String,
+    modifier: Modifier = Modifier,
+) {
+    val colors = jsonColors()
+    val highlighted = remember(json, colors) { highlightJson(json, colors) }
+    Box(
+        modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+            .padding(10.dp),
+    ) {
+        SelectionContainer {
+            Text(
+                highlighted,
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
         }
     }
 }
