@@ -842,6 +842,9 @@ sealed class Route {
         val anchor: String? = null,
     ) : Route()
 
+    /** Every NIP: the official index and the NIPs published on Nostr, searchable. */
+    @Serializable object Nips : Route()
+
     /** An event kind: the NIPs that define it and a sample of its recent events. */
     @Serializable data class EventKind(
         val kind: Int,
@@ -1432,7 +1435,6 @@ enum class DiscoverTab {
     COMMUNITY,
     MARKETPLACE,
     CHATS,
-    NIPS,
 }
 
 fun isSameRoute(

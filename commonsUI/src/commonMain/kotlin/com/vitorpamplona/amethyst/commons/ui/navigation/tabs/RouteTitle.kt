@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
 import com.vitorpamplona.amethyst.commons.resources.event_kind_title
+import com.vitorpamplona.amethyst.commons.resources.nip_catalog_title
 import com.vitorpamplona.amethyst.commons.resources.nip_number
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
@@ -95,6 +96,7 @@ fun routeTitle(
         }
         is Route.Hashtag -> return "#${route.hashtag}"
         is Route.Nip -> return stringRes(Res.string.nip_number, route.number)
+        is Route.Nips -> return stringRes(Res.string.nip_catalog_title)
         is Route.EventKind -> return knownKindName(route.kind) ?: NipsOnNostr.labelOf(route.kind) ?: stringRes(Res.string.event_kind_title, route.kind)
         // The page's own title as it loads, else its host.
         is Route.WebPage ->

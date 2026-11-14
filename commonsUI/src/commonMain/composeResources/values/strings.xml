@@ -9495,7 +9495,7 @@
     <string name="event_kind_inspect">See how clients encode it</string>
     <string name="unknown_kind_defined_by">Defined by %1$s</string>
     <string name="unknown_kind_about">About kind %1$d</string>
-    <string name="discover_nips">NIPs</string>
+    <string name="nip_catalog_title">NIPs</string>
     <string name="nip_catalog_search">Search by number, title or kind</string>
     <string name="nip_catalog_all">All</string>
     <string name="nip_catalog_official">Official</string>

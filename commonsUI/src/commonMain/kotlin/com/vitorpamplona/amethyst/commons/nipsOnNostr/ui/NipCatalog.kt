@@ -36,6 +36,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -62,12 +63,14 @@ import com.vitorpamplona.amethyst.commons.resources.nip_catalog_official
 import com.vitorpamplona.amethyst.commons.resources.nip_catalog_official_failed
 import com.vitorpamplona.amethyst.commons.resources.nip_catalog_on_nostr
 import com.vitorpamplona.amethyst.commons.resources.nip_catalog_search
+import com.vitorpamplona.amethyst.commons.resources.nip_catalog_title
 import com.vitorpamplona.amethyst.commons.resources.nip_number
 import com.vitorpamplona.amethyst.commons.resources.nip_unrecommended
 import com.vitorpamplona.amethyst.commons.resources.try_again
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
@@ -75,7 +78,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
- * The NIPs tab: one searchable list of every NIP, the ones published on Nostr (drawn as their
+ * The NIPs screen ([NipsScreen]): one searchable list of every NIP, the ones published on Nostr (drawn as their
  * feed cards, with author and reactions) and the official ones from the nips repo (a line each,
  * opening the in-app reader). The search matches a number (`44`, `nip-7d`), words of the title,
  * or a kind a NIP defines.
@@ -84,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 fun NipCatalog(
     accountViewModel: AccountViewModel,
     nav: INav,
+    modifier: Modifier = Modifier,
 ) {
     val viewModel = rememberViewModel(key = "NipCatalog") { NipCatalogViewModel(accountViewModel.account, accountViewModel.httpClientBuilder) }
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -91,7 +95,7 @@ fun NipCatalog(
     val filter by viewModel.filter.collectAsStateWithLifecycle()
 
     // Fills the page: the pager centers a page vertically, so a short result list would float.
-    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = rememberFeedContentPadding(FeedPadding)) {
+    LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = rememberFeedContentPadding(FeedPadding)) {
         item(key = "controls") {
             Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
@@ -163,6 +167,19 @@ fun NipCatalog(
                 )
             }
         }
+    }
+}
+
+/** The NIPs screen, opened from the drawer: the catalogue under a top bar. */
+@Composable
+fun NipsScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Scaffold(
+        topBar = { TopBarWithBackButton(stringRes(Res.string.nip_catalog_title), nav) },
+    ) { padding ->
+        NipCatalog(accountViewModel, nav, Modifier.padding(padding))
     }
 }
 

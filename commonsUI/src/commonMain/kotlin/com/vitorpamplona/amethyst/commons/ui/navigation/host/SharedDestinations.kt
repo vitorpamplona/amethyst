@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.cashu.ui.CashuWalletCreatedScreen
 import com.vitorpamplona.amethyst.commons.chats.ui.NewConversationScreen
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.EventKindScreen
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.NipsScreen
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.OfficialNipScreen
 import com.vitorpamplona.amethyst.commons.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.commons.ui.actions.bolt12Offers.Bolt12OffersScreen
@@ -519,6 +520,7 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.Nip> { OfficialNipScreen(it.number, it.anchor, accountViewModel, nav) }
     composableFromEndArgs<Route.EventKind> { EventKindScreen(it.kind, accountViewModel, nav) }
+    composableFromEnd<Route.Nips> { NipsScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsQr> { ShareNoteAsQrScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsImage> { ShareNoteAsImageScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsImageFile> { ShareNoteAsImageFileScreen(it.id, accountViewModel, nav) }

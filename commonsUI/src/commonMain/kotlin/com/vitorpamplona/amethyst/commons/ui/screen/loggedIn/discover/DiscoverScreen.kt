@@ -54,7 +54,6 @@ import com.vitorpamplona.amethyst.commons.model.navigation.DiscoverTab
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip23LongContent.ui.NewArticleButton
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.NewProductButton
-import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.NipCatalog
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.discover_chat
 import com.vitorpamplona.amethyst.commons.resources.discover_community_v2
@@ -62,7 +61,6 @@ import com.vitorpamplona.amethyst.commons.resources.discover_content_v2
 import com.vitorpamplona.amethyst.commons.resources.discover_follows
 import com.vitorpamplona.amethyst.commons.resources.discover_live_v2
 import com.vitorpamplona.amethyst.commons.resources.discover_marketplace
-import com.vitorpamplona.amethyst.commons.resources.discover_nips
 import com.vitorpamplona.amethyst.commons.resources.discover_reads
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
@@ -192,8 +190,7 @@ fun DiscoverScreen(
             )
         }
 
-    // The feed tabs, then the NIPs catalogue, which is a page of its own rather than a feed.
-    val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN) { feedTabs.size + 1 }
+    val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN) { feedTabs.size }
 
     LaunchedEffect(initialTab) {
         initialTab?.let { pagerState.scrollToPage(it.toTabIndex()) }
@@ -251,11 +248,6 @@ private fun DiscoverPages(
                             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
                         )
                     }
-                    Tab(
-                        selected = pagerState.currentPage == feedTabs.size,
-                        text = { Text(text = stringRes(Res.string.discover_nips)) },
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(feedTabs.size) } },
-                    )
                 }
             }
         },
@@ -288,9 +280,7 @@ private fun DiscoverPages(
         accountViewModel = accountViewModel,
     ) {
         HorizontalPager(state = pagerState) { page ->
-            if (page == feedTabs.size) {
-                NipCatalog(accountViewModel, nav)
-            } else if (page >= 0 && page < feedTabs.size) {
+            if (page >= 0 && page < feedTabs.size) {
                 val tab = feedTabs[page]
                 RefresheableBox(
                     onRefresh = {
@@ -528,5 +518,4 @@ private fun DiscoverTab.toTabIndex(): Int =
         DiscoverTab.COMMUNITY -> 4
         DiscoverTab.MARKETPLACE -> 5
         DiscoverTab.CHATS -> 6
-        DiscoverTab.NIPS -> 7
     }
