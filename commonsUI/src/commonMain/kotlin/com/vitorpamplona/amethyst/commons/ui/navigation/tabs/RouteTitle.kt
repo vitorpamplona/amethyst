@@ -76,7 +76,13 @@ fun routeTitle(
                     .flow()
                     .metadata.stateFlow
                     .collectAsState()
-                state.note.event
+                val event = state.note.event
+                // A titled kind (NIP, article, wiki) by its title; any other note by its first line.
+                event
+                    ?.tags
+                    ?.firstOrNull { it.size > 1 && it[0] == "title" && it[1].isNotBlank() }
+                    ?.let { return it[1].trim().take(MAX_TITLE) }
+                event
                     ?.content
                     ?.lineSequence()
                     ?.firstOrNull { it.isNotBlank() }

@@ -92,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.nip99Classifieds.listingStatus
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ClassifiedsOpenMarketsDetails
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ListingStatusBadge
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.RenderProductCollection
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.RenderNipHeaderForThread
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.expand
@@ -109,6 +110,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.ShowFullTextCache
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedTextField
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
@@ -202,6 +204,7 @@ import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
@@ -862,6 +865,11 @@ private fun FullBleedNoteCompose(
             is LongFormContentEvent -> RenderLongFormHeaderForThread(noteEvent, baseNote, accountViewModel, nav)
             is ThreadEvent -> RenderThreadHeaderForThread(noteEvent)
             is WikiArticleEvent -> RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
+            is NipTextEvent -> {
+                // A NIP is opened to be read: its body starts expanded, not cut at "Show More".
+                remember(baseNote.idHex) { ShowFullTextCache.cache.put(baseNote.idHex, true) }
+                RenderNipHeaderForThread(noteEvent)
+            }
             is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
             is CodeSnippetEvent -> RenderCodeSnippetHeaderForThread(noteEvent)
         }
@@ -988,6 +996,7 @@ private fun hasThreadHeader(event: Event) =
         event is LongFormContentEvent ||
         event is ThreadEvent ||
         event is WikiArticleEvent ||
+        event is NipTextEvent ||
         event is ClassifiedsEvent ||
         event is CodeSnippetEvent
 

@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCodeLocationBanner
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipTextView
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
@@ -63,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
@@ -90,13 +92,16 @@ enum class ReplyRenderType {
  *
  * A kind-30041 publication section is the other text whose screen string differs from its
  * content: it renders (and translates) the markdown its AsciiDoc body converts to, so that is
- * what this returns for one.
+ * what this returns for one. A kind-30817 NIP is the third: its header already shows the
+ * title and status the content opens with, so this returns the body without them.
  */
 fun displayedNoteText(
     note: Note,
     body: String,
 ): String {
     (note.event as? PublicationContentEvent)?.let { return publicationSectionMarkdown(it) }
+    // A NIP's header shows its title and status, so the body drops the headings that repeat them.
+    (note.event as? NipTextEvent)?.let { if (it.content == body) return NipTextView.of(it).body }
 
     val subject = (note.event as? TextNoteEvent)?.subject()?.ifBlank { null }
     return if (subject != null && !body.contains(subject, ignoreCase = true)) {
