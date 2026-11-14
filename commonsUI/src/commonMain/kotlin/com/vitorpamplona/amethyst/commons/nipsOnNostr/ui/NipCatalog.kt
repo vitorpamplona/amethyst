@@ -39,7 +39,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
@@ -49,7 +48,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -70,7 +68,6 @@ import com.vitorpamplona.amethyst.commons.resources.nip_unrecommended
 import com.vitorpamplona.amethyst.commons.resources.try_again
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
-import com.vitorpamplona.amethyst.commons.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
@@ -91,8 +88,8 @@ import kotlinx.coroutines.withContext
  * The NIPs screen, opened from the drawer or the bottom bar. The NIPs published on Nostr are the
  * account's NIPs feed (AccountFeedContentStates.nipsFeed), kept live by [AllNipsSubscription] while
  * the screen is open and rendered through the shared feed scaffolding (pull to refresh, the saved
- * scroll position, loading and error states). The nips repo's index sits beside them, and the
- * search in the top bar filters both.
+ * scroll position); a mute rebuilds it from AccountFeedContentStates. The nips repo's index sits
+ * beside them, and the search in the top bar filters both.
  */
 @Composable
 fun NipsScreen(
@@ -104,7 +101,6 @@ fun NipsScreen(
     val query by viewModel.query.collectAsStateWithLifecycle()
 
     WatchLifecycleAndUpdateModel(feedState)
-    WatchHiddenUsersForNips(feedState, accountViewModel)
     AllNipsSubscription(accountViewModel)
 
     DisappearingScaffold(
@@ -128,35 +124,12 @@ fun NipsScreen(
     ) {
         RefresheableBox(feedState, true) {
             SaveableFeedContentState(feedState, scrollStateKey = ScrollStateKeys.NIPS_SCREEN) { listState ->
-                RenderFeedContentState(
-                    feedContentState = feedState,
-                    accountViewModel = accountViewModel,
-                    listState = listState,
-                    nav = nav,
-                    routeForLastRead = null,
-                    onLoaded = { loaded ->
-                        val notes by loaded.feed.collectAsStateWithLifecycle()
-                        NipCatalogList(viewModel, notes.list, loadingOnNostr = false, listState, accountViewModel, nav)
-                    },
-                    // No NIP on Nostr (yet): the nips repo's index still lists.
-                    onEmpty = { NipCatalogList(viewModel, emptyList(), loadingOnNostr = false, listState, accountViewModel, nav) },
-                    onLoading = { NipCatalogList(viewModel, emptyList(), loadingOnNostr = true, listState, accountViewModel, nav) },
-                )
+                // One list whatever the feed's state: the nips repo's index and the chips belong to
+                // the screen, not to the feed, so they don't cross-fade or reset as the feed loads.
+                val (notes, loading) = feedNotes(feedState)
+                NipCatalogList(viewModel, notes, loadingOnNostr = loading, listState, accountViewModel, nav)
             }
         }
-    }
-}
-
-/** Rebuilds the NIPs feed when the account mutes or blocks someone, as the other feeds do. */
-@Composable
-private fun WatchHiddenUsersForNips(
-    feedState: FeedContentState,
-    accountViewModel: AccountViewModel,
-) {
-    val hiddenUsers by accountViewModel.account.hiddenUsers.flow
-        .collectAsStateWithLifecycle()
-    LaunchedEffect(accountViewModel, hiddenUsers) {
-        feedState.checkKeysInvalidateDataAndSendToTop()
     }
 }
 

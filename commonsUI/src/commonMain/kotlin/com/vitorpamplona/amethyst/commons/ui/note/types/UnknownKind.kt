@@ -50,7 +50,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -58,7 +57,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipLinks
-import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.datasource.NipsDefiningKindSubscription
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.rememberNipsDefining
 import com.vitorpamplona.amethyst.commons.rendering.unknown.BlobEncoding
 import com.vitorpamplona.amethyst.commons.rendering.unknown.ContentShape
 import com.vitorpamplona.amethyst.commons.rendering.unknown.DigestMedia
@@ -100,7 +99,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.utils.Hex
 
 /**
@@ -213,7 +211,7 @@ private fun KindDefinedBy(
     nav: INav,
 ) {
     val official = remember(kind) { KindNames.nipFor(kind)?.let { NipLinks.normalize(it) } }
-    val onNostr = if (official == null) nipDefining(kind, accountViewModel) else null
+    val onNostr = if (official == null) rememberNipsDefining(kind, accountViewModel).firstOrNull() else null
 
     val nipTitle = (onNostr?.event as? NipTextEvent)?.let { it.title() ?: it.dTag() }
     val label =
@@ -240,21 +238,6 @@ private fun KindDefinedBy(
         Spacer(Modifier.width(6.dp))
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
-}
-
-/** The newest NIP on Nostr defining [kind], from the cache as it fills, by an author the account doesn't hide. */
-@Composable
-private fun nipDefining(
-    kind: Int,
-    accountViewModel: AccountViewModel,
-): Note? {
-    NipsDefiningKindSubscription(kind, accountViewModel)
-    val definitions by remember(kind) {
-        LocalCache.observeNotes(Filter(kinds = listOf(NipTextEvent.KIND), tags = mapOf("k" to listOf(kind.toString()))))
-    }.collectAsStateWithLifecycle(emptyList())
-    val hidden by accountViewModel.account.hiddenUsers.flow
-        .collectAsStateWithLifecycle()
-    return remember(definitions, hidden) { definitions.firstOrNull { !it.isHiddenFor(hidden) } }
 }
 
 /** "Recipe" when quartz knows the kind's name, "Kind 31337" when it doesn't. */

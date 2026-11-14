@@ -23,28 +23,16 @@ package com.vitorpamplona.amethyst.commons.nipsOnNostr.dal
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.viewmodels.AndroidFeedViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
-
-/** The kind page's NIPs on Nostr that define [kind], kept current from the cache like any feed. */
-@Stable
-class NipsDefiningKindFeedViewModel(
-    val kind: Int,
-    val account: Account,
-) : AndroidFeedViewModel(NipsDefiningKindFeedFilter(kind, account)) {
-    class Factory(
-        val kind: Int,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(
-            modelClass: KClass<T>,
-            extras: CreationExtras,
-        ): T = NipsDefiningKindFeedViewModel(kind, account) as T
-    }
-}
 
 /** The kind page's sample of events of [kind], kept current from the cache like any feed. */
 @Stable
@@ -52,6 +40,10 @@ class KindEventsFeedViewModel(
     val kind: Int,
     val account: Account,
 ) : AndroidFeedViewModel(KindEventsFeedFilter(kind, account)) {
+    init {
+        rebuildOnMutes(account)
+    }
+
     class Factory(
         val kind: Int,
         val account: Account,
@@ -61,5 +53,18 @@ class KindEventsFeedViewModel(
             modelClass: KClass<T>,
             extras: CreationExtras,
         ): T = KindEventsFeedViewModel(kind, account) as T
+    }
+}
+
+/**
+ * Rebuilds the feed whenever the account mutes, blocks or unmutes someone. An additive feed only
+ * adds what arrives, so a note by a newly hidden author would otherwise stay listed until the page
+ * is reopened.
+ */
+private fun FeedViewModel.rebuildOnMutes(account: Account) {
+    viewModelScope.launch(Dispatchers.IO) {
+        account.hiddenUsers.flow
+            .drop(1)
+            .collect { invalidateData() }
     }
 }

@@ -23,11 +23,14 @@ package com.vitorpamplona.amethyst.commons.nipsOnNostr.dal
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
-import com.vitorpamplona.amethyst.commons.nipsOnNostr.definesKind
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipsOnNostr
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.nip01Core.core.isAddressable
+import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 
 /**
  * Every NIP published on Nostr (kind 30817) in the cache, newest first: the NIPs screen's feed. A
@@ -46,55 +49,38 @@ class NipsFeedFilter(
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { accept(it) }
 
-    private fun accept(note: Note): Boolean = note.event is NipTextEvent && !note.isHiddenFor(account.hiddenUsers.flow.value) && account.isAcceptable(note)
-
-    override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
-}
-
-/** The NIPs on Nostr whose `k` tags define [kind], newest first: the kind page's first section. */
-class NipsDefiningKindFeedFilter(
-    val kind: Int,
-    val account: Account,
-) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-k" + kind
-
-    override fun limit() = 100
-
-    override fun feed(): List<Note> = sort(LocalCache.addressables.filterIntoSet(NipTextEvent.KIND) { _, note -> accept(note) })
-
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { accept(it) }
-
-    private fun accept(note: Note): Boolean {
-        val event = note.event as? NipTextEvent ?: return false
-        return definesKind(event.tags, kind) && !note.isHiddenFor(account.hiddenUsers.flow.value) && account.isAcceptable(note)
-    }
+    private fun accept(note: Note): Boolean = note.event is NipTextEvent && NipsOnNostr.isListable(note, account)
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
 }
 
 /**
  * The events of [kind] in the cache, newest first: the kind page's sample. A replaceable or
- * addressable kind lives among the addressable notes (an unknown one too, at its address), a regular
- * one among the notes. Events the cache keeps out of feeds (the account's private settings) never
- * reach it, so they are not listed.
+ * addressable kind is read from the addressable notes only (an unknown one too, at its address):
+ * the cache also keeps each of its versions as a plain note by id, which would list every event
+ * once more for each version it had. A regular kind is read from the notes. Events the cache keeps
+ * out of feeds (the account's private settings) never reach it, so they are not listed.
  */
 class KindEventsFeedFilter(
     val kind: Int,
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
+    private val atAddress = kind.isAddressable() || kind.isReplaceable()
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-kind" + kind
 
     override fun limit() = 50
 
-    override fun feed(): List<Note> {
-        val addressable = LocalCache.addressables.filterIntoSet(kind) { _, note -> accept(note) }
-        val regular = LocalCache.notes.filterIntoSet { _, note -> accept(note) }
-        return sort(addressable + regular)
-    }
+    override fun feed(): List<Note> =
+        if (atAddress) {
+            sort(LocalCache.addressables.filterIntoSet(kind) { _, note -> accept(note) })
+        } else {
+            sort(LocalCache.notes.filterIntoSet { _, note -> accept(note) })
+        }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { accept(it) }
 
-    private fun accept(note: Note): Boolean = note.event?.kind == kind && !note.isHiddenFor(account.hiddenUsers.flow.value) && account.isAcceptable(note)
+    private fun accept(note: Note): Boolean = note.event?.kind == kind && (!atAddress || note is AddressableNote) && NipsOnNostr.isListable(note, account)
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
 }

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.relayClient.nips
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipsOnNostr
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
@@ -32,7 +33,9 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlin.concurrent.Volatile
 
 /**
  * What a NIPs screen keeps live while it is open. Each is one relay subscription, shared by every
@@ -67,13 +70,16 @@ sealed class NipsQueryState(
         override val id = "kind:$kind"
     }
 
-    /** One NIP at [address], watched for new versions while it is read; [relays] are where it was seen. */
+    /**
+     * One NIP, watched for new versions while it is read. The relays it has been seen on are read
+     * each time the filters are rebuilt, so ones it turns up on later are asked too.
+     */
     class Watch(
-        val address: Address,
-        val relays: Set<NormalizedRelayUrl>,
+        val note: AddressableNote,
         account: Account,
     ) : NipsQueryState(account) {
-        override val id = "a:" + address.toValue()
+        val address: Address get() = note.address
+        override val id = "a:" + note.address.toValue()
     }
 }
 
@@ -89,20 +95,44 @@ class NipsFilterAssembler(
     override fun destroy() = group.forEach { it.destroy() }
 }
 
+/**
+ * The relays asked include the outboxes of the cached NIPs' authors, so after an EOSE that brought in
+ * a new author the filters are rebuilt to ask that author's outboxes too. Only then: rebuilding on
+ * every EOSE would move that relay's `since` and send it a new REQ, which answers with another EOSE.
+ */
 class NipsSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<NipsQueryState>,
 ) : PerUniqueIdEoseManager<NipsQueryState, String>(client, allKeys) {
+    @Volatile private var askedOutboxes: Set<NormalizedRelayUrl> = emptySet()
+
+    override fun newEose(
+        key: NipsQueryState,
+        relayUrl: NormalizedRelayUrl,
+        time: Long,
+        filters: List<Filter>?,
+    ) {
+        super.newEose(key, relayUrl, time, filters)
+        if (!askedOutboxes.containsAll(NipsOnNostr.authorOutboxes())) invalidateFilters()
+    }
+
     override fun updateFilter(
         key: NipsQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        val relays =
+        val outboxes = NipsOnNostr.authorOutboxes()
+        askedOutboxes = outboxes
+        val relays = NipsOnNostr.accountDiscoveryRelays(key.account) + outboxes
+        val all =
             when (key) {
-                is NipsQueryState.Watch -> NipsOnNostr.discoveryRelays(key.account) + key.relays
-                else -> NipsOnNostr.discoveryRelays(key.account)
+                is NipsQueryState.Watch ->
+                    relays + key.note.relays +
+                        key.note.author
+                            ?.outboxRelays()
+                            .orEmpty()
+                else -> relays
             }
-        return nipsRelayFilters(NipsQuerySpec.of(key), relays, since)
+        return nipsRelayFilters(NipsQuerySpec.of(key), all, since)
     }
 
     override fun id(key: NipsQueryState) = key.id

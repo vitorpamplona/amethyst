@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.nipsOnNostr
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
@@ -34,25 +35,44 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  * screens are open); these only read the cache.
  */
 object NipsOnNostr {
-    /**
-     * The relays NIP subscriptions ask: the account's own, its search and index relays, and the ones
-     * the client is already connected to (most follows' outboxes while a feed is open). That reaches
-     * NIPs published off the big public relays without opening a socket to every follow's outbox.
-     */
-    fun discoveryRelays(account: Account): Set<NormalizedRelayUrl> = account.homeRelays.flow.value + account.searchRelays() + account.indexRelays() + account.client.connectedRelaysFlow().value
+    private const val PER_AUTHOR = 3
 
-    /** The cached NIPs whose `k` tags define [kind], newest first. */
-    fun definitionsOf(kind: Int): List<Note> =
-        LocalCache.addressables
-            .filterIntoSet(NipTextEvent.KIND) { _, note ->
-                val event = note.event as? NipTextEvent
-                event != null && definesKind(event.tags, kind)
-            }.sortedByDescending { it.createdAt() ?: 0L }
+    /**
+     * The account's relays a NIP subscription asks: its own, its search and its index relays. The
+     * subscription adds [authorOutboxes], which reach NIPs published off the big public relays and
+     * new versions of known ones; both are sets the account and the cache decide, so every rebuild
+     * of the filters asks the same relays.
+     */
+    fun accountDiscoveryRelays(account: Account): Set<NormalizedRelayUrl> {
+        val relays = HashSet<NormalizedRelayUrl>()
+        relays.addAll(account.homeRelays.flow.value)
+        relays.addAll(account.searchRelays())
+        relays.addAll(account.indexRelays())
+        return relays
+    }
+
+    /** The outbox relays of every author of a cached NIP, at most [PER_AUTHOR] each. */
+    fun authorOutboxes(): Set<NormalizedRelayUrl> {
+        val authors = HashSet<User>()
+        LocalCache.addressables.filterIntoSet(NipTextEvent.KIND) { _, note ->
+            note.author?.let { authors.add(it) }
+            false
+        }
+        val relays = HashSet<NormalizedRelayUrl>()
+        for (author in authors) author.outboxRelays()?.let { relays.addAll(it.take(PER_AUTHOR)) }
+        return relays
+    }
+
+    /** Whether [note] may be listed for [account]: not by a hidden author, and not rejected as spam. */
+    fun isListable(
+        note: Note,
+        account: Account,
+    ): Boolean = !note.isHiddenFor(account.hiddenUsers.flow.value) && account.isAcceptable(note)
 
     /** The name the newest of [definitions] gives [kind] in its `k` tag, if any. */
     fun labelOf(
         kind: Int,
-        definitions: List<Note> = definitionsOf(kind),
+        definitions: List<Note>,
     ): String? {
         val target = kind.toString()
         for (note in definitions) {

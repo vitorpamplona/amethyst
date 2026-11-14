@@ -60,6 +60,6 @@ fun WatchNipSubscription(
     note: AddressableNote,
     accountViewModel: AccountViewModel,
 ) {
-    val state = remember(note, accountViewModel.account) { NipsQueryState.Watch(note.address, note.relays.toSet(), accountViewModel.account) }
+    val state = remember(note, accountViewModel.account) { NipsQueryState.Watch(note, accountViewModel.account) }
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().nips)
 }

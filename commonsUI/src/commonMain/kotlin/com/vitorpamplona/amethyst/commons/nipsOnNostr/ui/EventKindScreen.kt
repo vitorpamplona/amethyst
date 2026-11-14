@@ -38,26 +38,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
-import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipLinks
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipsOnNostr
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.dal.KindEventsFeedViewModel
-import com.vitorpamplona.amethyst.commons.nipsOnNostr.dal.NipsDefiningKindFeedViewModel
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.datasource.KindEventsSubscription
-import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.datasource.NipsDefiningKindSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.event_kind_inspect
 import com.vitorpamplona.amethyst.commons.resources.event_kind_nips_on_nostr
@@ -79,9 +72,9 @@ import com.vitorpamplona.quartz.kinds.KindNames
 /**
  * An event kind's own page: its name, the official NIP that defines it (when the registry knows
  * one), the NIPs published on Nostr whose `k` tags define it, and a sample of its recent events,
- * each drawn the way the feed draws it. Both lists are feeds over the cache, kept live by their
- * subscriptions while the page is open. Reached from a NIP's kind chips and from the card of an
- * event the app can't render.
+ * each drawn the way the feed draws it. Both lists are feeds over the cache (the definitions the
+ * account's NIPs feed, the sample this page's own), kept live by their subscriptions while the page
+ * is open. Reached from a NIP's kind chips and from the card of an event the app can't render.
  */
 @Composable
 fun EventKindScreen(
@@ -89,18 +82,15 @@ fun EventKindScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val definitionsModel: NipsDefiningKindFeedViewModel =
-        rememberViewModel(key = "NipsDefiningKind-$kind", factory = NipsDefiningKindFeedViewModel.Factory(kind, accountViewModel.account))
     val eventsModel: KindEventsFeedViewModel =
         rememberViewModel(key = "KindEvents-$kind", factory = KindEventsFeedViewModel.Factory(kind, accountViewModel.account))
 
-    // Two feeds, each kept current from the cache and fed by its own live subscription.
-    WatchLifecycleAndUpdateModel(definitionsModel)
+    // The definitions are read from the account's NIPs feed; the sample is this page's own feed. Each
+    // is kept current from the cache and fed by its own live subscription.
+    val definitions = rememberNipsDefining(kind, accountViewModel)
+    val loadingDefinitions = definitions.isEmpty() && feedNotes(accountViewModel.feedStates.nipsFeed).second
     WatchLifecycleAndUpdateModel(eventsModel)
-    NipsDefiningKindSubscription(kind, accountViewModel)
     KindEventsSubscription(kind, accountViewModel)
-
-    val (definitions, loadingDefinitions) = feedNotes(definitionsModel.feedState)
     val (recent, loadingRecent) = feedNotes(eventsModel.feedState)
 
     Scaffold(
@@ -127,20 +117,6 @@ fun EventKindScreen(
                 HorizontalDivider(thickness = 0.5.dp)
             }
         }
-    }
-}
-
-/** A feed's notes as they stand, and whether it is still loading its first page. */
-@Composable
-private fun feedNotes(feedState: FeedContentState): Pair<List<Note>, Boolean> {
-    val state by feedState.feedContent.collectAsStateWithLifecycle()
-    return when (val current = state) {
-        is FeedState.Loaded -> {
-            val loaded by current.feed.collectAsStateWithLifecycle()
-            loaded.list to false
-        }
-        is FeedState.Loading -> emptyList<Note>() to true
-        else -> emptyList<Note>() to false
     }
 }
 

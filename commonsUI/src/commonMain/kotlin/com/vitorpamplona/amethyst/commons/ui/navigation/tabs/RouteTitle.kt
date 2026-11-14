@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipsOnNostr
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.knownKindName
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.rememberNipsDefining
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -97,7 +98,11 @@ fun routeTitle(
         is Route.Hashtag -> return "#${route.hashtag}"
         is Route.Nip -> return stringRes(Res.string.nip_number, route.number)
         is Route.Nips -> return stringRes(Res.string.nip_catalog_title)
-        is Route.EventKind -> return knownKindName(route.kind) ?: NipsOnNostr.labelOf(route.kind) ?: stringRes(Res.string.event_kind_title, route.kind)
+        is Route.EventKind -> {
+            knownKindName(route.kind)?.let { return it }
+            val definitions = rememberNipsDefining(route.kind, accountViewModel)
+            return remember(definitions) { NipsOnNostr.labelOf(route.kind, definitions) } ?: stringRes(Res.string.event_kind_title, route.kind)
+        }
         // The page's own title as it loads, else its host.
         is Route.WebPage ->
             return LocalAppPlatform.current

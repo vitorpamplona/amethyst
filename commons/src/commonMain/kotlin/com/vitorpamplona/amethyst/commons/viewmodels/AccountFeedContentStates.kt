@@ -402,6 +402,15 @@ class AccountFeedContentStates(
                 }
         }
 
+        // The NIPs feed is read beyond its screen (the "Defined by" row of an unknown event, a kind
+        // page's tab title), so a mute rebuilds it wherever it is shown. An additive feed only adds,
+        // so without this a newly hidden author's NIP would stay listed.
+        scope.launch(Dispatchers.IO) {
+            account.hiddenUsers.flow
+                .drop(1)
+                .collect { nipsFeed.invalidateData() }
+        }
+
         scope.launch(Dispatchers.IO) {
             account.hiddenUsers.flow.collect {
                 dmKnown.invalidateData()
