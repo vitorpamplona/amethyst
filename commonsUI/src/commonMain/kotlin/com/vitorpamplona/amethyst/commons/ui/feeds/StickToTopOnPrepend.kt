@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.feeds
 
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -93,6 +94,28 @@ fun StickToTopOnPrepend(
 @Composable
 fun StickToTopOnPrepend(
     gridState: LazyGridState,
+    firstItemKey: Any?,
+) {
+    stickToTopOnPrepend(
+        stateKey = gridState,
+        firstItemKey = firstItemKey,
+        initialAtTop = {
+            gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
+        },
+        sampler = {
+            snapshotFlow {
+                gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
+            }
+        },
+        isScrollInProgress = { gridState.isScrollInProgress },
+        firstVisibleItemIndex = { gridState.firstVisibleItemIndex },
+        scrollToTop = { gridState.scrollToItem(0) },
+    )
+}
+
+@Composable
+fun StickToTopOnPrepend(
+    gridState: LazyStaggeredGridState,
     firstItemKey: Any?,
 ) {
     stickToTopOnPrepend(

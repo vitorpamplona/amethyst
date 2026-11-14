@@ -42,8 +42,8 @@ class SearchScopeTest {
                 // People hid notes, hashtags, relays and all three channel kinds.
                 SearchScope.PEOPLE to setOf(SearchResultKind.PEOPLE),
                 // Notes hid people, relays and the channels — but not hashtags, which the note
-                // flow's guard let through and the channel flows' guards did not.
-                SearchScope.NOTES to setOf(SearchResultKind.NOTES, SearchResultKind.HASHTAGS),
+                // flow's guard let through and the channel flows' guards did not. Emojis came later: they are pulled out of the notes found.
+                SearchScope.NOTES to setOf(SearchResultKind.NOTES, SearchResultKind.HASHTAGS, SearchResultKind.EMOJIS),
             )
         expected.forEach { (scope, shown) ->
             assertEquals(shown, SearchResultKind.entries.filter { scope.shows(it) }.toSet(), "$scope")

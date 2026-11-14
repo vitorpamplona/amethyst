@@ -39,6 +39,8 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relayClient.search.SearchQueryState
 import com.vitorpamplona.amethyst.commons.search.AuthorNameRewrite
+import com.vitorpamplona.amethyst.commons.search.EmojiSearch
+import com.vitorpamplona.amethyst.commons.search.EmojiSearchHit
 import com.vitorpamplona.amethyst.commons.search.RenderableKinds
 import com.vitorpamplona.amethyst.commons.search.SearchHistory
 import com.vitorpamplona.amethyst.commons.search.SearchHistoryStorage
@@ -76,6 +78,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Rfc3986
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
@@ -95,6 +98,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -509,6 +513,47 @@ class SearchBarViewModel(
                 event = { it.event },
                 zapTotal = { it.zapsAmount.toDoubleValue() },
             )
+        }.flowOn(Dispatchers.IO)
+            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
+
+    /** The search's free text as shortcode fragments ([EmojiSearch.terms]); empty without free text. */
+    val emojiSearchTerms =
+        state.debounced
+            .map { input -> EmojiSearch.terms(input.query.text) }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
+
+    /**
+     * Single emojis whose shortcode holds the search's terms, out of the emoji packs that match it.
+     *
+     * Its own scan, of emoji packs only, rather than a filter over [searchResultsNotes]: that list
+     * is capped across every kind, so on a common word ("cat") ordinary notes would push the packs
+     * out of it, and the emojis with them. The rest of the query (`from:`, `since:`, follows-only)
+     * still narrows it, and a `kind:` that leaves emoji packs out turns it off.
+     */
+    val emojiResults =
+        combine(
+            state.debounced,
+            refreshes,
+            scope,
+            combine(followsOnly, account.kind3FollowList.flow) { only, follows ->
+                if (only) follows.authorsPlusMe else null
+            },
+        ) { input, _, currentScope, follows ->
+            if (!currentScope.shows(SearchResultKind.EMOJIS)) return@combine emptyList<EmojiSearchHit>()
+            val parsed = input.query
+            if (parsed.kinds.isNotEmpty() && EmojiPackEvent.KIND !in parsed.kinds) return@combine emptyList<EmojiSearchHit>()
+            val terms = EmojiSearch.terms(parsed.text)
+            if (terms.isEmpty()) return@combine emptyList<EmojiSearchHit>()
+
+            val packs =
+                LocalCache.findNotesMatching(
+                    SearchPipeline.filters(parsed, listOf(EmojiPackEvent.KIND), limit = 500),
+                    account.hiddenUsers.flow.value,
+                )
+            val followed = if (follows != null) packs.filter { it.author?.pubkeyHex in follows } else packs
+            EmojiSearch.find(followed, terms)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 

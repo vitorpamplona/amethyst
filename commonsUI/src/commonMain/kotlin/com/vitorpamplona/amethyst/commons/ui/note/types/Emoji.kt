@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -52,18 +54,21 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteAndMap
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.EmojiPackInMyList
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.EmojiPreviewDialog
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.LocalEmojiSearchTerms
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.toggleEmojiPack
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_emoji_count
 import com.vitorpamplona.amethyst.commons.resources.kind_emoji_packs
 import com.vitorpamplona.amethyst.commons.resources.nip51_list_has_private_members
+import com.vitorpamplona.amethyst.commons.search.EmojiSearch
 import com.vitorpamplona.amethyst.commons.ui.components.AddButton
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.RemoveButton
 import com.vitorpamplona.amethyst.commons.ui.components.ShowMoreButton
-import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.getGradient
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.hidesPrivateMembers
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.listTitle
@@ -75,7 +80,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import kotlinx.collections.immutable.toImmutableMap
 
 /** How many emojis a collapsed pack shows: about four rows on a phone, before "Show more". */
@@ -93,6 +97,7 @@ fun RenderEmojiPack(
     actionable: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
+    startExpanded: Boolean = false,
 ) {
     val noteEvent by observeNoteEvent<EmojiPackEvent>(baseNote, accountViewModel)
 
@@ -103,6 +108,7 @@ fun RenderEmojiPack(
             actionable = actionable,
             backgroundColor = backgroundColor,
             accountViewModel = accountViewModel,
+            startExpanded = startExpanded,
         )
     }
 }
@@ -110,7 +116,9 @@ fun RenderEmojiPack(
 /**
  * A kind 30030 emoji pack as a feed card: the pack's cover, title, size and description on top,
  * then the emojis themselves as a grid of even tiles. Hovering a tile on desktop names its
- * `:shortcode:`, which is what a reader types to use it.
+ * `:shortcode:`, which is what a reader types to use it, and tapping one opens it large
+ * ([EmojiPreviewDialog]). Inside search results ([LocalEmojiSearchTerms]) the emojis that matched
+ * come first and are ringed, so they are never hidden behind "Show more".
  *
  * Private emojis are decrypted only for the pack's author ([loadPrivateItems]); everyone else sees
  * the public ones, and an all-private pack says so instead of rendering as an empty card.
@@ -122,6 +130,7 @@ fun RenderEmojiPack(
     actionable: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
+    startExpanded: Boolean = false,
 ) {
     val publicEmojis = remember(noteEvent) { noteEvent.publicEmojis() }
     val privateEmojis by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateEmojis(it) }
@@ -130,6 +139,7 @@ fun RenderEmojiPack(
     val title = listTitle(noteEvent.titleOrName(), noteEvent.dTag(), Res.string.kind_emoji_packs)
     val cover = remember(noteEvent) { noteEvent.image()?.takeIf { it.isNotBlank() } }
     val description = remember(noteEvent) { noteEvent.description()?.takeIf { it.isNotBlank() } }
+    var preview by remember { mutableStateOf<EmojiUrlTag?>(null) }
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
@@ -183,8 +193,28 @@ fun RenderEmojiPack(
                 )
             }
         } else {
-            EmojiPackGrid(allEmojis, backgroundColor)
+            val searchTerms = LocalEmojiSearchTerms.current
+            val matched =
+                remember(allEmojis, searchTerms) {
+                    if (searchTerms.isEmpty()) emptySet() else allEmojis.filterTo(HashSet()) { EmojiSearch.matches(it.code, searchTerms) }
+                }
+            val ordered =
+                remember(allEmojis, matched) {
+                    if (matched.isEmpty()) allEmojis else allEmojis.sortedByDescending { it in matched }
+                }
+            EmojiPackGrid(ordered, matched, backgroundColor, startExpanded) { preview = it }
         }
+    }
+
+    preview?.let { emoji ->
+        EmojiPreviewDialog(
+            emoji = emoji,
+            packNote = baseNote,
+            accountViewModel = accountViewModel,
+            // The reader is already looking at this pack: the dialog does not offer to open it.
+            nav = null,
+            onDismiss = { preview = null },
+        )
     }
 }
 
@@ -220,13 +250,18 @@ private fun EmojiPackCover(
 @Composable
 private fun EmojiPackGrid(
     emojis: List<EmojiUrlTag>,
+    matched: Set<EmojiUrlTag>,
     backgroundColor: MutableState<Color>,
+    startExpanded: Boolean,
+    onClick: (EmojiUrlTag) -> Unit,
 ) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(startExpanded) }
     val shown = if (expanded || emojis.size <= COLLAPSED_EMOJIS) emojis else emojis.subList(0, COLLAPSED_EMOJIS)
 
     val tileColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     val tileModifier = remember(tileColor) { Modifier.size(TileSize).clip(TileShape).background(tileColor) }
+    val ringColor = MaterialTheme.colorScheme.primary
+    val matchedModifier = remember(tileModifier, ringColor) { tileModifier.border(2.dp, ringColor, TileShape) }
 
     Box(Modifier.fillMaxWidth()) {
         FlowRow(
@@ -234,7 +269,7 @@ private fun EmojiPackGrid(
             horizontalArrangement = spacedBy(6.dp),
             verticalArrangement = spacedBy(6.dp),
         ) {
-            shown.forEach { emoji -> EmojiTile(emoji, tileModifier) }
+            shown.forEach { emoji -> EmojiTile(emoji, if (emoji in matched) matchedModifier else tileModifier, onClick) }
         }
 
         if (!expanded && emojis.size > COLLAPSED_EMOJIS) {
@@ -257,10 +292,11 @@ private fun EmojiPackGrid(
 private fun EmojiTile(
     emoji: EmojiUrlTag,
     tileModifier: Modifier,
+    onClick: (EmojiUrlTag) -> Unit,
 ) {
     val label = remember(emoji.code) { ":${emoji.code}:" }
     HoverTooltip(label) {
-        Box(modifier = tileModifier, contentAlignment = Alignment.Center) {
+        Box(modifier = tileModifier.clickable { onClick(emoji) }, contentAlignment = Alignment.Center) {
             AsyncImage(
                 model = emoji.url,
                 contentDescription = label,
@@ -277,20 +313,12 @@ private fun EmojiListOptions(
     accountViewModel: AccountViewModel,
     emojiPackNote: Note,
 ) {
-    LoadAddressableNote(
-        accountViewModel.account.emoji.getEmojiListAddress(),
-    ) {
-        it?.let { usersEmojiList ->
-            val hasAddedThis by observeNoteAndMap(usersEmojiList, accountViewModel) {
-                (usersEmojiList.event as? EmojiListEvent)?.hasEmojiPack(emojiPackNote.idHex)
-            }
-
-            CrossfadeIfEnabled(targetState = hasAddedThis, label = "EmojiListOptions") {
-                if (it != true) {
-                    AddButton(modifier = Modifier.padding(start = 3.dp)) { accountViewModel.addEmojiPack(emojiPackNote) }
-                } else {
-                    RemoveButton(modifier = Modifier.padding(start = 3.dp)) { accountViewModel.removeEmojiPack(emojiPackNote) }
-                }
+    EmojiPackInMyList(emojiPackNote, accountViewModel) { inList ->
+        CrossfadeIfEnabled(targetState = inList, label = "EmojiListOptions") {
+            if (!it) {
+                AddButton(modifier = Modifier.padding(start = 3.dp)) { toggleEmojiPack(emojiPackNote, false, accountViewModel) }
+            } else {
+                RemoveButton(modifier = Modifier.padding(start = 3.dp)) { toggleEmojiPack(emojiPackNote, true, accountViewModel) }
             }
         }
     }

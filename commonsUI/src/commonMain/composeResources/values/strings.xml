@@ -3563,6 +3563,15 @@
     <string name="emoji_pack_upload_image_hint">Pick a square image to represent this emoji pack.</string>
     <string name="no_emoji_packs">You don't have any emoji packs yet</string>
     <string name="emoji_pack_count">%1$d emojis</string>
+    <string name="emoji_copy_shortcode">Copy</string>
+    <string name="emoji_from_pack">From %1$s</string>
+    <string name="emoji_pack_add">Add pack</string>
+    <string name="emoji_pack_added">Added</string>
+    <string name="search_emojis_header">Emojis</string>
+    <plurals name="search_emojis_show_all">
+        <item quantity="one">Show %1$d emoji</item>
+        <item quantity="other">Show all %1$d emojis</item>
+    </plurals>
     <plurals name="emoji_pack_emoji_count">
         <item quantity="one">%1$d emoji</item>
         <item quantity="other">%1$d emojis</item>
