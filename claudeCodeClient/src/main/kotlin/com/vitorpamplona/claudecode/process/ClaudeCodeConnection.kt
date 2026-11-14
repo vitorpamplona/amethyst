@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.claudecode.process
 
+import com.vitorpamplona.claudecode.mcp.SdkMcpDispatcher
+import com.vitorpamplona.claudecode.mcp.SdkMcpServer
 import com.vitorpamplona.claudecode.protocol.ClaudeInput
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
 import com.vitorpamplona.claudecode.protocol.PermissionDecision
@@ -37,9 +39,12 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * One running Claude Code session over its stream-json pipe.
@@ -54,7 +59,9 @@ import java.util.concurrent.atomic.AtomicLong
  */
 class ClaudeCodeConnection(
     private val transport: ClaudeTransport,
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
+    /** Tools the host runs itself, which the CLI reaches over this pipe (see [SdkMcpServer]). */
+    private val mcpServers: List<SdkMcpServer> = emptyList(),
 ) {
     private val output = Channel<ClaudeMessage>(Channel.UNLIMITED)
     private val pending = ConcurrentHashMap<String, CompletableDeferred<ClaudeMessage.ControlResponse>>()
@@ -91,6 +98,9 @@ class ClaudeCodeConnection(
                 val permission = message.permission
                 if (permission != null) {
                     openPrompts[message.requestId] = permission
+                } else if (message.subtype == "mcp_message") {
+                    // A tool can take a while: the stream keeps flowing meanwhile.
+                    scope.launch { answerMcp(message) }
                 } else {
                     writeQuietly(ClaudeInput.controlError(message.requestId, "Not supported by this client: ${message.subtype}"))
                 }
@@ -99,11 +109,35 @@ class ClaudeCodeConnection(
         }
     }
 
+    private suspend fun answerMcp(message: ClaudeMessage.ControlRequest) {
+        val serverName = (message.request["server_name"] as? JsonPrimitive)?.content
+        val server = mcpServers.firstOrNull { it.name == serverName }
+        val jsonRpc = message.request["message"] as? JsonObject
+        if (server == null || jsonRpc == null) {
+            writeQuietly(ClaudeInput.controlError(message.requestId, "No MCP server named $serverName"))
+            return
+        }
+        val reply =
+            try {
+                ClaudeInput.controlSuccess(message.requestId, buildJsonObject { put("mcp_response", SdkMcpDispatcher.handle(server, jsonRpc)) })
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // A tool that throws must still be answered, or the CLI waits on it.
+                ClaudeInput.controlError(message.requestId, "The tool failed: ${e.message}")
+            }
+        writeQuietly(reply)
+    }
+
     /** The permission prompts still waiting on an answer. */
     fun openPermissionRequests(): List<PermissionRequest> = openPrompts.values.toList()
 
     /** Sends the handshake; the CLI answers with its commands, models and pending prompts. */
-    suspend fun initialize(): ClaudeMessage.ControlResponse? = request("initialize")
+    suspend fun initialize(): ClaudeMessage.ControlResponse? =
+        request(
+            "initialize",
+            if (mcpServers.isEmpty()) emptyMap() else mapOf("sdkMcpServers" to SdkMcpDispatcher.names(mcpServers)),
+        )
 
     /** Starts a turn with [text], or queues it if a turn is running. */
     suspend fun send(text: String) = write(ClaudeInput.userText(text))

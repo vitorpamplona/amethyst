@@ -95,6 +95,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.claudecode.ChatError
 import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
+import com.vitorpamplona.amethyst.commons.claudecode.ChatKind
 import com.vitorpamplona.amethyst.commons.claudecode.ChatRow
 import com.vitorpamplona.amethyst.commons.claudecode.ChatStatus
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChat
@@ -128,6 +129,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_app_running
 import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_context_tooltip
 import com.vitorpamplona.amethyst.commons.resources.claude_code_context_used
+import com.vitorpamplona.amethyst.commons.resources.claude_code_context_used_little
 import com.vitorpamplona.amethyst.commons.resources.claude_code_deny
 import com.vitorpamplona.amethyst.commons.resources.claude_code_end_session
 import com.vitorpamplona.amethyst.commons.resources.claude_code_error_exited
@@ -157,6 +159,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_edit
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_keys
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_keys_deny
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_run
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_setting
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_merged
@@ -174,6 +177,12 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_review_verdict
 import com.vitorpamplona.amethyst.commons.resources.claude_code_run_app
 import com.vitorpamplona.amethyst.commons.resources.claude_code_run_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_session_missing
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant_desc
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_data
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_notifications
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_privacy
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_text
 import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_explain
 import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_review_branch
 import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_review_uncommitted
@@ -186,6 +195,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_faile
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_other
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_read
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_search
+import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_settings
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_web
 import com.vitorpamplona.amethyst.commons.resources.claude_code_update_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_view_proposal
@@ -316,7 +326,7 @@ fun ClaudeCodeChatScreen(
         topBar = {
             ChatTopBar(
                 title = state.title?.takeIf { it.isNotBlank() } ?: firstPrompt(state) ?: stringRes(Res.string.claude_code_new_session),
-                subtitle = subtitle(state),
+                subtitle = if (state.kind == ChatKind.SETTINGS) null else subtitle(state),
                 nav = nav,
             ) {
                 val git = state.git
@@ -391,6 +401,7 @@ fun ClaudeCodeChatScreen(
                 state.pendingPermissions.firstOrNull()?.let { request ->
                     PermissionCard(
                         request = request,
+                        note = state.permissionNotes[request.requestId],
                         cwd = state.cwd,
                         onAllow = { viewModel.approve(request, always = false) },
                         onAllowAlways = { viewModel.approve(request, always = true) },
@@ -729,6 +740,10 @@ private fun EmptyChatIntro(
     state: ClaudeChatState,
     onStarter: (String) -> Unit,
 ) {
+    if (state.kind == ChatKind.SETTINGS) {
+        SettingsAssistantIntro(onStarter)
+        return
+    }
     Column(
         Modifier.fillMaxWidth().padding(top = 48.dp, start = 8.dp, end = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -755,6 +770,45 @@ private fun EmptyChatIntro(
                 if (git != null && git.uncommitted > 0) add(stringRes(Res.string.claude_code_starter_review_uncommitted))
             }
         starters.forEach { text ->
+            Surface(
+                onClick = { onStarter(text) },
+                shape = RoundedCornerShape(12.dp),
+                color = Color.Transparent,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
+            ) {
+                Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+            }
+        }
+    }
+}
+
+/** The settings assistant before its first message: what it can do, and a few ways to start. */
+@Composable
+private fun SettingsAssistantIntro(onStarter: (String) -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().padding(top = 48.dp, start = 8.dp, end = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+            Icon(MaterialSymbols.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(24.dp))
+        }
+        Text(stringRes(Res.string.claude_code_settings_assistant), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        Text(
+            stringRes(Res.string.claude_code_settings_assistant_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.grayText,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.widthIn(max = 420.dp),
+        )
+        Spacer(Modifier.size(6.dp))
+        listOf(
+            stringRes(Res.string.claude_code_settings_starter_data),
+            stringRes(Res.string.claude_code_settings_starter_text),
+            stringRes(Res.string.claude_code_settings_starter_notifications),
+            stringRes(Res.string.claude_code_settings_starter_privacy),
+        ).forEach { text ->
             Surface(
                 onClick = { onStarter(text) },
                 shape = RoundedCornerShape(12.dp),
@@ -811,6 +865,7 @@ private fun ToolGroupRow(
                     ToolKind.SEARCH -> Res.plurals.claude_code_tool_group_search
                     ToolKind.WEB -> Res.plurals.claude_code_tool_group_web
                     ToolKind.AGENT -> Res.plurals.claude_code_tool_group_agent
+                    ToolKind.SETTINGS -> Res.plurals.claude_code_tool_group_settings
                     ToolKind.OTHER -> Res.plurals.claude_code_tool_group_other
                 },
                 n,
@@ -929,6 +984,8 @@ private fun alwaysLabel(request: PermissionRequest): String? {
 @Composable
 private fun PermissionCard(
     request: PermissionRequest,
+    /** What the call would do, from the chat's own tool (a setting's before and after). */
+    note: String?,
     cwd: String,
     onAllow: () -> Unit,
     onAllowAlways: () -> Unit,
@@ -945,10 +1002,11 @@ private fun PermissionCard(
                 Icon(ToolKind.of(request.toolName).symbol(), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    when (view) {
-                        is ToolView.FileChange ->
+                    when {
+                        note != null -> stringRes(Res.string.claude_code_permission_setting)
+                        view is ToolView.FileChange ->
                             stringRes(if (view.newFile) Res.string.claude_code_permission_create else Res.string.claude_code_permission_edit, view.path)
-                        is ToolView.Command -> stringRes(Res.string.claude_code_permission_run)
+                        view is ToolView.Command -> stringRes(Res.string.claude_code_permission_run)
                         else -> stringRes(Res.string.claude_code_permission_title, request.displayName ?: request.toolName)
                     },
                     style = MaterialTheme.typography.titleSmall,
@@ -956,10 +1014,14 @@ private fun PermissionCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            when (view) {
-                is ToolView.FileChange ->
+            when {
+                note != null ->
+                    Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        Text(note, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(12.dp))
+                    }
+                view is ToolView.FileChange ->
                     Box(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) { FileChangeDiff(view) }
-                is ToolView.Command -> {
+                view is ToolView.Command -> {
                     view.description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText) }
                     CodeBlock("$ " + view.command, maxHeight = 200)
                 }
@@ -968,7 +1030,9 @@ private fun PermissionCard(
             request.decisionReason?.takeIf { it.isNotBlank() }?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
             }
-            val always = alwaysLabel(request)
+            // The app's own tools (a setting) are approved one change at a time: "always" would let
+            // the assistant change any setting unasked.
+            val always = if (note != null) null else alwaysLabel(request)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (request.defaultToNo) {
                     Button(onClick = onDeny) { Text(stringRes(Res.string.claude_code_deny)) }
@@ -1060,7 +1124,8 @@ private fun ComposerFooter(
         Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 2.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ModeChip(state.permissionMode, onMode)
+        // The settings assistant asks before every change whatever the mode: no mode to pick.
+        if (state.kind != ChatKind.SETTINGS) ModeChip(state.permissionMode, onMode)
         Spacer(Modifier.weight(1f))
         val used = state.contextTokens
         val window = state.contextWindow
@@ -1095,7 +1160,11 @@ private fun ContextMeter(
                 trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
             )
             Spacer(Modifier.width(6.dp))
-            Text(stringRes(Res.string.claude_code_context_used, percent), style = MaterialTheme.typography.labelSmall, color = color)
+            Text(
+                if (percent == 0 && used > 0) stringRes(Res.string.claude_code_context_used_little) else stringRes(Res.string.claude_code_context_used, percent),
+                style = MaterialTheme.typography.labelSmall,
+                color = color,
+            )
         }
     }
 }

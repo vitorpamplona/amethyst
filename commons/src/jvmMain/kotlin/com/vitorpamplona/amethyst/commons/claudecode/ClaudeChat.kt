@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.claudecode
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.claudecode.mcp.SdkMcpServer
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
 import com.vitorpamplona.claudecode.process.ClaudeCodeNotFoundException
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
@@ -85,6 +86,9 @@ sealed interface ChatError {
     data object HeldElsewhere : ChatError
 }
 
+/** What a chat is for: work on code in a folder, or the settings assistant (no files, only settings tools). */
+enum class ChatKind { CODE, SETTINGS }
+
 @Immutable
 data class ClaudeChatState(
     val sessionId: String?,
@@ -115,6 +119,12 @@ data class ClaudeChatState(
     /** How much of the model's context the conversation fills, and how much it has, as the CLI last said. */
     val contextTokens: Long? = null,
     val contextWindow: Long? = null,
+    /**
+     * What a pending call to one of the chat's own tools would do, in words, by request id
+     * ("Theme: SYSTEM → DARK"): the approval card shows it in place of the tool's input.
+     */
+    val permissionNotes: Map<String, String> = emptyMap(),
+    val kind: ChatKind = ChatKind.CODE,
 ) {
     val isBusy: Boolean get() = status == ChatStatus.STARTING || status == ChatStatus.WORKING || status == ChatStatus.NEEDS_APPROVAL
 }
@@ -142,6 +152,11 @@ class ClaudeChat internal constructor(
     fork: Boolean = false,
     /** Whether another Claude Code process has this session open now. Called off the main thread. */
     private val heldElsewhere: (sessionId: String) -> Boolean = { false },
+    /** Tools the app runs itself in this chat ([SdkMcpServer]), e.g. the settings assistant's. */
+    private val mcpServers: List<SdkMcpServer> = emptyList(),
+    /** Changes to how the CLI starts for this chat: which tools it has, its system prompt. */
+    private val launchOptions: (ClaudeCodeOptions) -> ClaudeCodeOptions = { it },
+    kind: ChatKind = ChatKind.CODE,
 ) {
     private val workDir = cwd
     private val transcript = ChatTranscript()
@@ -175,6 +190,7 @@ class ClaudeChat internal constructor(
                 model = model,
                 historyLoaded = resumeSessionId == null,
                 forking = fork && resumeSessionId != null,
+                kind = kind,
             ),
         )
     val state: StateFlow<ClaudeChatState> = _state.asStateFlow()
@@ -340,7 +356,8 @@ class ClaudeChat internal constructor(
                     // A NIP-34 checkout: publishing is the user's step (CONTRIBUTING-WITH-AI.md), never the agent's.
                     disallowedTools = if (nostrCheckout) NO_PUBLISHING else emptyList(),
                     environment = if (nostrCheckout) noPushEnvironment() else emptyMap(),
-                )
+                    sdkMcpServers = mcpServers,
+                ).let(launchOptions)
             val started =
                 try {
                     launcher.start(options, scope)
@@ -434,7 +451,19 @@ class ClaudeChat internal constructor(
             }
             is ClaudeMessage.ControlRequest -> {
                 val permission = message.permission ?: return
-                publish { it.copy(pendingPermissions = it.pendingPermissions + permission, status = ChatStatus.NEEDS_APPROVAL) }
+                // A call to one of this chat's own tools: say what it would do, from the tool itself.
+                val note =
+                    mcpServers.firstNotNullOfOrNull { server ->
+                        val prefix = server.qualifiedName("")
+                        if (permission.toolName.startsWith(prefix)) server.describe(permission.toolName.removePrefix(prefix), permission.input) else null
+                    }
+                publish {
+                    it.copy(
+                        pendingPermissions = it.pendingPermissions + permission,
+                        status = ChatStatus.NEEDS_APPROVAL,
+                        permissionNotes = if (note != null) it.permissionNotes + (permission.requestId to note) else it.permissionNotes,
+                    )
+                }
             }
             is ClaudeMessage.ControlCancel -> {
                 publish { state ->

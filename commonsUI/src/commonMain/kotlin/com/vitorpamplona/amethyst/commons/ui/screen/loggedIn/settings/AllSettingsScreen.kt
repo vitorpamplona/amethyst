@@ -23,16 +23,23 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -55,6 +62,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant_ask
+import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_assistant_card
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_action
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_body
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_title
@@ -128,6 +138,9 @@ fun AllSettingsScreen(
     // stringRes reads from composition, so every label the filter could touch is
     // resolved up front and handed over as a plain map lookup. That keeps
     // filterSettings itself Compose-free and unit-testable.
+    // The settings assistant runs the user's own Claude Code: only where that exists (desktop).
+    val hasAssistant = remember(destinations) { destinations?.has(Route.ClaudeCodeSettingsAssistant()) == true }
+
     val labels = rememberCatalogLabels(catalog)
     val filtered =
         filterSettings(
@@ -161,6 +174,7 @@ fun AllSettingsScreen(
             if (filtered.isEmpty()) {
                 SettingsSearchEmptyState(
                     query = query,
+                    onAskAssistant = if (hasAssistant) ({ nav.nav(Route.ClaudeCodeSettingsAssistant(query)) }) else null,
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
@@ -173,6 +187,7 @@ fun AllSettingsScreen(
                             .padding(bottom = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
+                    if (hasAssistant && query.isBlank()) SettingsAssistantCard { nav.nav(Route.ClaudeCodeSettingsAssistant()) }
                     filtered.forEach { category -> SettingsCategoryCard(category) }
                 }
             }
@@ -195,16 +210,47 @@ fun AllSettingsScreen(
 @Composable
 private fun SettingsSearchEmptyState(
     query: String,
+    onAskAssistant: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Text(
-            text = stringRes(Res.string.settings_search_no_results, query),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(32.dp),
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = stringRes(Res.string.settings_search_no_results, query),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(32.dp),
+            )
+            // Words that match no setting's name may still describe one: the assistant reads descriptions.
+            if (onAskAssistant != null) {
+                OutlinedButton(onClick = onAskAssistant) {
+                    Icon(MaterialSymbols.Assistant, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringRes(Res.string.claude_code_settings_assistant_ask, query))
+                }
+            }
+        }
+    }
+}
+
+/** The way into the settings assistant, above the catalog. */
+@Composable
+private fun SettingsAssistantCard(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(MaterialSymbols.Assistant, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stringRes(Res.string.claude_code_settings_assistant), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(stringRes(Res.string.claude_code_settings_assistant_card), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+            }
+        }
     }
 }
 

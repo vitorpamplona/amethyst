@@ -111,6 +111,9 @@ internal fun FileChangeDiff(
     GitDiffView(change.patch, modifier, showSummary = false)
 }
 
+/** A tool's name for the chat: an in-app tool's own name (`search settings`), not `mcp__server__tool`. */
+internal fun displayName(toolName: String): String = if (toolName.startsWith("mcp__")) toolName.substringAfterLast("__").replace('_', ' ') else toolName
+
 /** What a call acts on, in one line, with paths from the session's folder. */
 @Composable
 internal fun toolLabel(
@@ -128,7 +131,13 @@ internal fun toolLabel(
         is ToolView.Search -> view.scope?.let { stringRes(Res.string.claude_code_tool_search_in, view.pattern, it) } ?: view.pattern
         is ToolView.Web -> view.target
         is ToolView.FileChange -> view.path
-        is ToolView.Raw, null -> call.summary ?: ""
+        // An in-app tool's arguments, plainly: `theme DARK`.
+        is ToolView.Raw, null ->
+            if (call.name.startsWith("mcp__")) {
+                ToolViews.argumentsLine(call.input)
+            } else {
+                call.summary ?: ""
+            }
     }
 
 /**
@@ -164,7 +173,7 @@ internal fun ToolCallRow(
     Column {
         ToolLine(
             symbol = ToolKind.of(call.name).symbol(),
-            text = listOf(call.name, toolLabel(view, call)).filter { it.isNotEmpty() }.joinToString("  "),
+            text = listOf(displayName(call.name), toolLabel(view, call)).filter { it.isNotEmpty() }.joinToString("  "),
             running = turnRunning && !call.isDone,
             error = call.isError,
             expanded = expanded,
@@ -222,6 +231,7 @@ internal fun ToolKind.symbol(): MaterialSymbol =
         ToolKind.SEARCH -> MaterialSymbols.Search
         ToolKind.WEB -> MaterialSymbols.Language
         ToolKind.AGENT -> MaterialSymbols.Assistant
+        ToolKind.SETTINGS -> MaterialSymbols.Settings
         ToolKind.OTHER -> MaterialSymbols.Apps
     }
 

@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.ClaudeCo
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.ClaudeCodeChatScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.ClaudeCodeProposeScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.ClaudeCodeSessionsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.ClaudeCodeSettingsAssistantScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.ClaudeCodeStartScreen
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
@@ -40,4 +41,5 @@ fun NavDestinations.desktopOnlyDestinations(accountViewModel: AccountViewModel) 
     composableFromEndArgs<Route.ClaudeCodeChanges>(capWidth = false) { ClaudeCodeChangesScreen(it.key, nav) }
     composableFromEndArgs<Route.ClaudeCodePropose>(capWidth = false) { ClaudeCodeProposeScreen(it.key, accountViewModel, nav) }
     composableFromEndArgs<Route.ClaudeCodeStart>(capWidth = false) { ClaudeCodeStartScreen(it, accountViewModel, nav) }
+    composableFromEndArgs<Route.ClaudeCodeSettingsAssistant>(capWidth = false) { ClaudeCodeSettingsAssistantScreen(it.question, accountViewModel, nav) }
 }

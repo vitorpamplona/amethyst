@@ -9674,6 +9674,20 @@
     <string name="claude_code_step_check">Run the checks</string>
     <string name="claude_code_step_confirm">Confirm</string>
     <string name="claude_code_browse">Choose a folder</string>
+    <string name="claude_code_settings_assistant">Settings assistant</string>
+    <string name="claude_code_context_used_little">under 1% of context</string>
+    <plurals name="claude_code_tool_group_settings">
+        <item quantity="one">looked up settings once</item>
+        <item quantity="other">looked up settings %1$d times</item>
+    </plurals>
+    <string name="claude_code_settings_assistant_desc">Ask what a setting does, or what to change to get what you want. Claude only sees Amethyst’s settings, and every change waits for your approval. Keys, wallets, relays and payments stay out of its reach.</string>
+    <string name="claude_code_settings_assistant_card">Not sure where something is? Ask the settings assistant.</string>
+    <string name="claude_code_settings_assistant_ask">Ask the assistant about “%1$s”</string>
+    <string name="claude_code_permission_setting">Claude wants to change a setting</string>
+    <string name="claude_code_settings_starter_data">Why does Amethyst use so much mobile data?</string>
+    <string name="claude_code_settings_starter_text">Make the text bigger and easier to read</string>
+    <string name="claude_code_settings_starter_notifications">My notifications are too noisy. What can I change?</string>
+    <string name="claude_code_settings_starter_privacy">Which settings matter for my privacy?</string>
     <string name="claude_code_switch_title">Go to a session</string>
     <string name="claude_code_remove_worktree_failed">Couldn't remove the worktree: %1$s</string>
     <string name="claude_code_view_proposal">View</string>

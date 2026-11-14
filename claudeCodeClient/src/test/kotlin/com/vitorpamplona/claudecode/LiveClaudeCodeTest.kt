@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.claudecode
 
+import com.vitorpamplona.claudecode.mcp.McpTool
+import com.vitorpamplona.claudecode.mcp.McpToolResult
+import com.vitorpamplona.claudecode.mcp.SdkMcpServer
 import com.vitorpamplona.claudecode.process.ClaudeCodeLauncher
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
@@ -32,6 +35,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test
@@ -86,6 +93,85 @@ class LiveClaudeCodeTest {
                     assertEquals("Live test", info.title)
                     assertTrue(store.transcript(sessionId!!).isNotEmpty())
                     store.delete(sessionId!!)
+                }
+            }
+        } finally {
+            scope.cancel()
+            dir.deleteRecursively()
+        }
+    }
+
+    /** A tool the test runs in-process: Claude reaches it over the session's own pipe. */
+    private class Counter : SdkMcpServer {
+        override val name = "probe"
+        val calls = mutableListOf<JsonObject>()
+        override val tools =
+            listOf(
+                McpTool(
+                    name = "secret_number",
+                    description = "Returns the secret number for a given word.",
+                    inputSchema =
+                        Json
+                            .parseToJsonElement(
+                                """{"type":"object","properties":{"word":{"type":"string"}},"required":["word"]}""",
+                            ).jsonObject,
+                ),
+            )
+
+        override suspend fun call(
+            tool: String,
+            arguments: JsonObject,
+        ): McpToolResult {
+            calls.add(arguments)
+            return McpToolResult("The secret number is 7341.")
+        }
+
+        override fun describe(
+            tool: String,
+            arguments: JsonObject,
+        ) = "secret number for ${arguments["word"]}"
+    }
+
+    @Test
+    fun aToolTheHostRunsIsCalledOverTheSessionPipe() {
+        if (!enabled) return
+        val dir = Files.createTempDirectory("claude-live-mcp").toFile()
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val server = Counter()
+        try {
+            runBlocking {
+                withTimeout(180_000) {
+                    val connection =
+                        ClaudeCodeLauncher().start(
+                            ClaudeCodeOptions(
+                                cwd = dir,
+                                model = "haiku",
+                                sdkMcpServers = listOf(server),
+                                strictMcpConfig = true,
+                                tools = emptyList(),
+                                includePartialMessages = false,
+                            ),
+                            scope,
+                        )
+                    connection.send("Call the secret_number tool with the word apple, then reply with only the number it gave you.")
+
+                    var askedFor: String? = null
+                    val result =
+                        connection.messages.first { message ->
+                            if (message is ClaudeMessage.ControlRequest) {
+                                message.permission?.let {
+                                    askedFor = it.toolName
+                                    connection.respond(it, PermissionDecision.Allow())
+                                }
+                            }
+                            message is ClaudeMessage.Result
+                        } as ClaudeMessage.Result
+
+                    assertEquals("mcp__probe__secret_number", askedFor, "the CLI asks the host before running a host tool")
+                    assertEquals("apple", (server.calls.single()["word"] as JsonPrimitive).content)
+                    assertTrue(result.result.orEmpty().contains("7341"), result.raw.toString())
+                    connection.close()
+                    result.sessionId?.let { ClaudeSessionStore().delete(it) }
                 }
             }
         } finally {

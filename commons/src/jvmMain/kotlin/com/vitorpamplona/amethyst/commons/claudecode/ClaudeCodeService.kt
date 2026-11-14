@@ -21,7 +21,10 @@
 package com.vitorpamplona.amethyst.commons.claudecode
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.util.appDataDir
+import com.vitorpamplona.claudecode.mcp.SdkMcpServer
 import com.vitorpamplona.claudecode.process.ClaudeCodeLauncher
+import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
 import com.vitorpamplona.claudecode.process.ClaudeExecutable
 import com.vitorpamplona.claudecode.protocol.PermissionMode
@@ -248,6 +251,9 @@ class ClaudeCodeService(
         mode: PermissionMode,
         model: String?,
         fork: Boolean = false,
+        mcpServers: List<SdkMcpServer> = emptyList(),
+        launchOptions: (ClaudeCodeOptions) -> ClaudeCodeOptions = { it },
+        kind: ChatKind = ChatKind.CODE,
     ): ClaudeChat {
         val chat =
             ClaudeChat(
@@ -263,6 +269,9 @@ class ClaudeCodeService(
                 onSessionChanged = { refreshInBackground() },
                 fork = fork,
                 heldElsewhere = ::isHeldElsewhere,
+                mcpServers = mcpServers,
+                launchOptions = launchOptions,
+                kind = kind,
             )
         chats.update { it + (key to chat) }
         watchers[key] =
@@ -392,6 +401,44 @@ class ClaudeCodeService(
         if (prompt.isNotBlank()) chat.send(prompt)
         return chat
     }
+
+    /**
+     * The settings assistant: a chat whose only tools are [settings] (no files, no shell, none of
+     * the user's own MCP servers), in a folder of its own. Reading a setting runs without asking;
+     * every change waits for the user's approval. The same chat comes back while it is open.
+     */
+    fun settingsAssistant(
+        settings: SettingsToolServer,
+        title: String,
+    ): ClaudeChat {
+        settingsAssistantKey?.let { key -> chats.value[key]?.let { return it } }
+        val dir = File(appDataDir, "claude-settings-assistant")
+        if (!dir.isDirectory && !dir.mkdirs()) Log.w(TAG) { "Could not create $dir" }
+        val chat =
+            open(
+                "settings-${UUID.randomUUID()}",
+                null,
+                dir,
+                title,
+                PermissionMode.DEFAULT,
+                null,
+                kind = ChatKind.SETTINGS,
+                mcpServers = listOf(settings),
+                launchOptions = { options ->
+                    options.copy(
+                        tools = emptyList(),
+                        strictMcpConfig = true,
+                        allowedTools = listOf(SettingsToolServer.SEARCH, SettingsToolServer.GET, SettingsToolServer.OPEN).map(settings::qualifiedName),
+                        appendSystemPrompt = SettingsToolServer.SYSTEM_PROMPT,
+                    )
+                },
+            )
+        settingsAssistantKey = chat.key
+        return chat
+    }
+
+    @Volatile
+    private var settingsAssistantKey: String? = null
 
     /** Stops every process this app started. */
     fun shutdown() {

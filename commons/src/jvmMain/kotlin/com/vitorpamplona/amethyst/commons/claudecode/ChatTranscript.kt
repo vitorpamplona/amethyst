@@ -235,11 +235,25 @@ enum class ToolKind {
     SEARCH,
     WEB,
     AGENT,
+
+    /** Looking up the app's own settings (the settings assistant). */
+    SETTINGS,
     OTHER,
     ;
 
     companion object {
         fun of(toolName: String): ToolKind =
+            when {
+                // The settings assistant's change is its edit: on a row of its own, like a file's.
+                toolName == SETTINGS_CHANGE -> EDIT
+                toolName.startsWith(SETTINGS_PREFIX) -> SETTINGS
+                else -> ofBuiltIn(toolName)
+            }
+
+        private val SETTINGS_PREFIX = "mcp__${SettingsToolServer.NAME}__"
+        private val SETTINGS_CHANGE = SETTINGS_PREFIX + SettingsToolServer.CHANGE
+
+        private fun ofBuiltIn(toolName: String): ToolKind =
             when (toolName) {
                 "Bash", "PowerShell", "BashOutput", "KillShell", "Monitor" -> COMMAND
                 "Read", "NotebookRead" -> READ

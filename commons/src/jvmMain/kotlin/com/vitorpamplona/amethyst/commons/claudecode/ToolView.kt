@@ -185,6 +185,17 @@ object ToolViews {
             else -> null
         } ?: ToolView.Raw(input.toString())
 
+    /** A tool input's values on one line (`app.theme DARK`), for tools the app doesn't draw itself. */
+    fun argumentsLine(input: String): String {
+        val obj =
+            try {
+                json.parseToJsonElement(input) as? JsonObject
+            } catch (e: IllegalArgumentException) {
+                null
+            } ?: return input
+        return obj.values.joinToString(" ") { (it as? JsonPrimitive)?.content ?: it.toString() }
+    }
+
     /** [path] from the session's folder when it is inside it, as the user thinks of the file. */
     fun relative(
         path: String,

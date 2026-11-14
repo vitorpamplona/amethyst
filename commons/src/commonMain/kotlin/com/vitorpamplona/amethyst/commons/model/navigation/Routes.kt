@@ -725,6 +725,14 @@ sealed class Route {
     /** The Claude Code sessions on this computer (desktop only: it runs the user's `claude`). */
     @Serializable object ClaudeCode : Route()
 
+    /**
+     * The settings assistant: a Claude Code chat that can only read and (with approval) change
+     * Amethyst's settings. [question], when given, is its first message.
+     */
+    @Serializable data class ClaudeCodeSettingsAssistant(
+        val question: String? = null,
+    ) : Route()
+
     /** One Claude Code chat; [key] is its session id, or the temporary id of a new chat. */
     @Serializable data class ClaudeCodeChat(
         val key: String,

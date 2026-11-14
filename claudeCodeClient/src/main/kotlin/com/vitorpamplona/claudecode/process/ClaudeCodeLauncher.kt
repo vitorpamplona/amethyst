@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.claudecode.process
 
+import com.vitorpamplona.claudecode.mcp.SdkMcpDispatcher
+import com.vitorpamplona.claudecode.mcp.SdkMcpServer
 import com.vitorpamplona.claudecode.protocol.PermissionMode
 import kotlinx.coroutines.CoroutineScope
 import java.io.File
@@ -46,6 +48,16 @@ data class ClaudeCodeOptions(
     val extraArgs: List<String> = emptyList(),
     /** Variables added to the process's environment, which every command it runs inherits. */
     val environment: Map<String, String> = emptyMap(),
+    /** Tools the host runs itself, over the session's own pipe ([SdkMcpServer]). */
+    val sdkMcpServers: List<SdkMcpServer> = emptyList(),
+    /** Only these MCP servers: none from the user's own config. */
+    val strictMcpConfig: Boolean = false,
+    /** The built-in tools the session has; null for all of them, empty for none. */
+    val tools: List<String>? = null,
+    /** Tool rules that run without asking, e.g. `mcp__amethyst-settings__search_settings`. */
+    val allowedTools: List<String> = emptyList(),
+    /** Added to Claude Code's own system prompt: what this session is for. */
+    val appendSystemPrompt: String? = null,
 )
 
 /** Starts sessions; [ClaudeCodeLauncher] in the app, a scripted one in tests. */
@@ -95,6 +107,23 @@ class ClaudeCodeLauncher(
                 add("--disallowedTools")
                 add(options.disallowedTools.joinToString(","))
             }
+            options.tools?.let {
+                add("--tools")
+                add(it.joinToString(","))
+            }
+            if (options.allowedTools.isNotEmpty()) {
+                add("--allowedTools")
+                add(options.allowedTools.joinToString(","))
+            }
+            if (options.sdkMcpServers.isNotEmpty()) {
+                add("--mcp-config")
+                add(SdkMcpDispatcher.mcpConfig(options.sdkMcpServers))
+            }
+            if (options.strictMcpConfig) add("--strict-mcp-config")
+            options.appendSystemPrompt?.let {
+                add("--append-system-prompt")
+                add(it)
+            }
             addAll(options.extraArgs)
         }
 
@@ -117,7 +146,7 @@ class ClaudeCodeLauncher(
                     environment().putAll(childEnvironment(exe))
                     environment().putAll(options.environment)
                 }.start()
-        val connection = ClaudeCodeConnection(ProcessTransport(process), scope)
+        val connection = ClaudeCodeConnection(ProcessTransport(process), scope, options.sdkMcpServers)
         connection.initialize()
         return connection
     }

@@ -102,6 +102,27 @@ new version published, merged in the app, the worktree removed; "Draft with Clau
 checkout" on a stand-in checkout; and a proposal to a repository with no GRASP server, its branch
 pushed to a plain remote first.
 
+## Settings assistant
+
+A Claude Code chat whose only tools are Amethyst's settings (Settings › "Settings assistant", or
+"Ask the assistant" when a settings search finds nothing; desktop only).
+
+- `commons/settings/registry`: `SettingsRegistry` describes each setting once (id, plain
+  description for the model, type and options, app or account, its screen, careful or not) with a
+  reader and a writer that goes through the same flows and setters the screens use.
+  `AmethystSettings` lists them. Keys, the signer, wallets, payment targets and relay lists are left
+  out on purpose.
+- The tools run inside the app: the CLI's stream-json mode carries MCP over the session's own pipe
+  (`sdkMcpServers` in `initialize`, `mcp_message` control requests answered with `mcp_response`), the
+  way the Agent SDK runs in-process tools. `claudeCodeClient/mcp` holds `SdkMcpServer` and the
+  JSON-RPC dispatcher; `SettingsToolServer` offers `search_settings`, `get_setting`,
+  `open_settings_screen` (allowed without asking) and `change_setting` (approved one at a time; the
+  approval card shows the setting's before and after, and offers no "always allow").
+- The session starts with no built-in tools (`--tools ""`), none of the user's MCP servers
+  (`--strict-mcp-config`) and a system prompt for the role, in a folder of its own.
+- Verified with a live CLI (`LiveClaudeCodeTest`) and in the desktop app: "everything is too small
+  to read" → Text size NORMAL → LARGE, approved with Enter, applied at once.
+
 ## Not done
 
 - Images in prompts, slash commands, model switching in the UI, forking from a given message.
