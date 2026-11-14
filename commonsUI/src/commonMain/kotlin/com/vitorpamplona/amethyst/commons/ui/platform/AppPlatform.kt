@@ -33,6 +33,8 @@ import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.front_page_can_leave
 import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
@@ -49,6 +51,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
+import org.jetbrains.compose.resources.StringResource
 
 /** A signer app that takes `nostrconnect://` addresses: [id] is what [AppPlatform.openNostrConnect] takes. */
 @Immutable
@@ -334,6 +337,35 @@ interface AppPlatform {
         modifier: Modifier,
     ) {}
 
+    /** Whether [InlinePaperSurface] shows the reader's front page here: wherever napplets run inline. */
+    val showsPapersInline: Boolean get() = runsNappletsInline
+
+    /**
+     * What The Observer says under a running print about leaving it: on a phone the reader can leave
+     * the app ("You can leave…"); on a desktop, whose window closing would quit, they can use the app
+     * meanwhile, and closing the window asks first.
+     */
+    val printLeaveNote: StringResource get() = Res.string.front_page_can_leave
+
+    /**
+     * Shows the reader's front page [html] — written, resolved and checked by commons `frontpage` —
+     * as instance [instanceId], filling [modifier]. It runs on the same sandboxed web surface as an
+     * nSite, under [com.vitorpamplona.amethyst.commons.napplet.HostProfile.PAPER]: no script runs,
+     * its art loads from where it was published, and its links open in the system browser.
+     *
+     * [takesWheel]: the paper fills the screen, so the mouse wheel scrolls it straight away. Inline,
+     * among other content, it takes the wheel only once clicked, and the screen scrolls otherwise.
+     */
+    @Composable
+    fun InlinePaperSurface(
+        html: String,
+        title: String,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+        takesWheel: Boolean = false,
+    ) {}
+
     /** The icon a napplet manifest by [author] / [identifier] declares, if cached. */
     @Composable
     fun rememberManifestIconModel(
@@ -454,6 +486,15 @@ enum class InlineNappletStatus {
 
     /** It could not start here: no server had its files, or the sandbox did not come up. */
     FAILED,
+
+    /** The user routes this content through Tor and Tor is still starting: nothing is fetched yet. */
+    WAITING_FOR_TOR,
+
+    /** Tor did not connect in time, so it was not opened rather than fetched around Tor. */
+    NO_TOR,
+
+    /** Too large to hand to the sandbox in one message (Android's binder limit): never sent. */
+    TOO_LARGE,
 }
 
 @Composable

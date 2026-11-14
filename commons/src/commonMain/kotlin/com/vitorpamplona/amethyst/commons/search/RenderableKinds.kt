@@ -98,6 +98,7 @@ import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.routstr.node.RoutstrNodeEvent
 
 /**
  * The kinds a search can put on screen, in one place.
@@ -261,6 +262,8 @@ object RenderableKinds {
             EmojiPackEvent.KIND,
             NNSEvent.KIND,
             WorkoutRecordEvent.KIND,
+            // Routstr nodes: a card with "Use for The Observer"; their name and about are indexed.
+            RoutstrNodeEvent.KIND,
         )
 
     /**

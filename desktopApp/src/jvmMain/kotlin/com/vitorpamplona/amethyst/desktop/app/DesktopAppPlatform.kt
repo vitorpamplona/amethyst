@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
@@ -37,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.front_page_can_leave_desktop
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_open_failed
 import com.vitorpamplona.amethyst.commons.resources.nsite_open_failed
 import com.vitorpamplona.amethyst.commons.resources.webxdc_open_failed
@@ -52,6 +54,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletHost
+import com.vitorpamplona.amethyst.desktop.napplet.HeldNappletPane
+import com.vitorpamplona.amethyst.desktop.napplet.HeldPaperSession
 import com.vitorpamplona.amethyst.desktop.napplet.InlineNappletPane
 import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
 import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
@@ -67,6 +71,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 import java.io.File
 import java.util.concurrent.TimeUnit
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as SharedAppBottomBar
@@ -167,6 +172,9 @@ class DesktopAppPlatform(
     // Off-screen Chromium, drawn by the note: wherever napplets can run at all.
     override val runsNappletsInline: Boolean get() = nappletHost != null
 
+    // Closing the window while a print runs asks first (AmethystDesktop), so the reader stays.
+    override val printLeaveNote: StringResource get() = Res.string.front_page_can_leave_desktop
+
     @Composable
     override fun InlineNappletSurface(
         manifest: NappletManifest,
@@ -176,6 +184,24 @@ class DesktopAppPlatform(
     ) {
         val host = nappletHost ?: return
         InlineNappletPane(host, manifest, instanceId, onStatus, modifier)
+    }
+
+    @Composable
+    override fun InlinePaperSurface(
+        html: String,
+        title: String,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+        takesWheel: Boolean,
+    ) {
+        val host = nappletHost ?: return
+        // The bundled Chromium, off screen, as for an inline nSite: drawn by the screen, no script runs.
+        // Held by the screen's back-stack entry, not the composition: a tab switch and back keeps the
+        // page, scrolled where the reader left it, instead of loading it again from the top.
+        val holder = viewModel(key = "front-page-paper") { HeldPaperSession(host) }
+        val session = remember(holder, instanceId, html, title) { holder.open(instanceId, html, title) }
+        HeldNappletPane(session, instanceId, onStatus, modifier, wheelNeedsFocus = !takesWheel)
     }
 
     @Composable

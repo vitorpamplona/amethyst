@@ -40,6 +40,7 @@ enum class NavBarItem {
     BOOKMARKS,
     WEB_BOOKMARKS,
     DRAFTS,
+    FRONT_PAGE,
     SCHEDULED_POSTS,
     INTEREST_SETS,
     BLOSSOM_DATA,

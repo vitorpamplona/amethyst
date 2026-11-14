@@ -178,6 +178,27 @@ fun isScanQrRoute(uri: String) =
 
 private val MARMOT_HEX = Regex("^[0-9a-fA-F]+$")
 
+private val FRONT_PAGE_DAY = Regex("^\\d{4}-\\d{2}-\\d{2}$")
+
+/**
+ * The URI a "your paper is ready" notification opens. With [accountNpub], opening it switches to that account first
+ * (`?account=`, as notifications do): a paper printed for one account never opens on another's.
+ */
+fun frontPageUri(
+    day: String? = null,
+    accountNpub: String? = null,
+): String {
+    val query = listOfNotNull(day?.let { "day=$it" }, accountNpub?.let { "account=$it" })
+    return if (query.isEmpty()) "amethyst:frontpage" else "amethyst:frontpage?" + query.joinToString("&")
+}
+
+/** `amethyst:frontpage`, optionally `?day=yyyy-MM-dd`: the front page, on that kept edition. */
+fun frontPageRoute(uri: String): Route.FrontPage? {
+    if (!uri.startsWith("amethyst:frontpage", ignoreCase = true)) return null
+    val day = uri.findQueryParameterValue("day")?.takeIf { FRONT_PAGE_DAY.matches(it) }
+    return Route.FrontPage(day)
+}
+
 fun uriToRoute(
     uri: String,
     account: Account,
@@ -192,6 +213,7 @@ fun uriToRoute(
     if (isScanQrRoute(uri)) {
         return Route.QRDisplay(account.signer.pubKey, startScanning = true)
     }
+    frontPageRoute(uri)?.let { return it }
     if (isHashtagRoute(uri)) {
         return Route.Hashtag(uri.removePrefix(NOSTR_URI_PREFIX).removePrefix("hashtag?id=").lowercase())
     }

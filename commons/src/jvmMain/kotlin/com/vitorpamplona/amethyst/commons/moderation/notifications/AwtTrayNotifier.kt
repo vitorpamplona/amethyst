@@ -53,6 +53,13 @@ class AwtTrayNotifier(
 
     val isSupported: Boolean get() = supported
 
+    /**
+     * Runs when the user clicks a message the tray showed (Windows, some Linux trays) or the
+     * tray icon itself. AWT does not say which message, so the caller remembers the last one.
+     */
+    @Volatile
+    var onAction: (() -> Unit)? = null
+
     fun send(
         title: String,
         message: String,
@@ -95,7 +102,11 @@ class AwtTrayNotifier(
                     // ignore the icon body when displayMessage is called.
                     Toolkit.getDefaultToolkit().createImage(EMPTY_ICON_PNG)
                 }
-            val icon = TrayIcon(image, appLabel).apply { isImageAutoSize = true }
+            val icon =
+                TrayIcon(image, appLabel).apply {
+                    isImageAutoSize = true
+                    addActionListener { onAction?.invoke() }
+                }
             tray.add(icon)
             trayIcon = icon
             icon

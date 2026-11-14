@@ -50,6 +50,18 @@ object BottomBarEditing {
             items + entry
         }
 
+    /** Adds [entry] to the end unless it is already there: a one-tap "add to bottom bar" from elsewhere. */
+    fun pin(
+        items: List<BottomBarEntry>,
+        entry: BottomBarEntry,
+    ): List<BottomBarEntry> = if (isPinned(items, entry)) items else items + entry
+
+    /** [items] without [entry] (by stable identity). */
+    fun unpin(
+        items: List<BottomBarEntry>,
+        entry: BottomBarEntry,
+    ): List<BottomBarEntry> = items.filter { it.stableKey != entry.stableKey }
+
     /** Moves the item at [from] to index [to]; a no-op if either index is out of bounds. */
     fun move(
         items: List<BottomBarEntry>,

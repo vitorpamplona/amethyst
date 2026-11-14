@@ -34,6 +34,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -80,6 +81,7 @@ import com.vitorpamplona.amethyst.desktop.platform.PlatformIconWeight
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.platform.ProvideTitleBarInsets
 import com.vitorpamplona.amethyst.desktop.platform.SavedWindowBounds
+import com.vitorpamplona.amethyst.desktop.platform.TakeOverTitleBar
 import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.platform.boundsToSave
@@ -87,6 +89,7 @@ import com.vitorpamplona.amethyst.desktop.platform.clickToActivate
 import com.vitorpamplona.amethyst.desktop.platform.defaultWindowSize
 import com.vitorpamplona.amethyst.desktop.platform.rememberSystemDark
 import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
+import com.vitorpamplona.amethyst.desktop.platform.titleBarWindowDrag
 import com.vitorpamplona.amethyst.desktop.platform.trackWheelScrolling
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
@@ -102,11 +105,15 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Taskbar
 import java.awt.Toolkit
@@ -116,6 +123,12 @@ import kotlin.system.exitProcess
 
 /** The app's own files: `~/.amethyst/app`, or `-Damethyst.dataDir=...`. */
 internal fun desktopDataDir(): File = File(System.getProperty("amethyst.dataDir") ?: File(System.getProperty("user.home"), ".amethyst/app").path)
+
+/** How long a kept-going print's notification has before the app quits after it. */
+private const val QUIT_AFTER_PRINT_GRACE_MS = 3_000L
+
+/** How long a window shown for a notification click gets to reach the screen before it is raised again. */
+private const val RAISE_SETTLE_MS = 150L
 
 /**
  * The desktop window of the shared app: the same [AmethystApp] Android renders, on the desktop graph.
@@ -177,9 +190,18 @@ fun main(args: Array<String>) {
     // Hand it to the running instance over the instance bus and exit; on a cold start, queue it so
     // the navigation host routes it once a logged-in shell exists. macOS delivers the URI to the
     // running app as an open-URI event instead (installed below), never as argv.
-    DesktopDeepLinks.extractFromArgs(args)?.let { uri ->
+    val linked = DesktopDeepLinks.extractFromArgs(args)
+    linked?.let { uri ->
         if (DesktopDeepLinks.forwardToRunningInstance(uri, filesDir)) exitProcess(0)
         DesktopDeepLinks.offer(uri)
+    }
+    // A copy whose window was closed while a print went on is still running, unseen: launching the
+    // app again brings it back, on The Observer, instead of opening a second copy beside it.
+    val keptForPrint = KeptForPrintMarker(filesDir)
+    if (linked == null && keptForPrint.present) {
+        if (DesktopDeepLinks.forwardToRunningInstance(KeptForPrintMarker.RESTORE_URI, filesDir)) exitProcess(0)
+        // Nobody answered: a copy that died hidden left it behind.
+        keptForPrint.set(false)
     }
     DesktopDeepLinks.installOsHandlers()
     // One listener per data folder: a later copy taking over the port file sent the links meant for
@@ -287,16 +309,74 @@ fun main(args: Array<String>) {
                 }
         }
 
-        // The updater quits through here, as the Quit menu does: windows close, then the JVM exits.
-        LaunchedEffect(Unit) { modules.quitRequests.collect { exitApplication() } }
-
         // Closing the main window while screen windows are open only hides it; the app quits once
         // the last of them closes too.
         val windows = root.navigator.windows
+
+        // A print runs in this process: quitting would stop it, and it may be paid for already. Every
+        // way out (the window's close, Quit, its shortcut, the updater) asks first while one runs.
+        val printers = modules.frontPagePrinters
+        var askQuit by remember { mutableStateOf(false) }
+        val printingNow = { PrintQuitRules.printing(printers.printing.value.values, printers.pressHeld.value) }
+        val quitScope = rememberCoroutineScope()
+        val quit: () -> Unit = {
+            keptForPrint.set(false)
+            exitApplication()
+        }
+        // The question shows in the main window, brought back for it.
+        val askInMainWindow: () -> Unit = {
+            windows.showMainWindow()
+            askQuit = true
+        }
+        val requestQuit: () -> Unit = {
+            when (PrintQuitRules.onQuit(printingNow())) {
+                CloseAction.ASK -> askInMainWindow()
+                else -> quit()
+            }
+        }
+
+        // The updater quits through here, as the Quit menu does: windows close, then the JVM exits.
+        LaunchedEffect(Unit) { modules.quitRequests.collect { requestQuit() } }
+
+        // Kept going with the window closed: nobody sees a screen, so the end is announced, and a
+        // relaunch finds this copy.
+        LaunchedEffect(windows) {
+            snapshotFlow { windows.keptForPrint }.collect { kept ->
+                printers.readerAway.value = kept
+                keptForPrint.set(kept)
+            }
+        }
+        // Once that print ends (its "ready" notification is out by then), the app quits, as the
+        // reader asked when they closed it, unless they came back meanwhile.
+        LaunchedEffect(windows) {
+            // Not until the press is let go: a scheduled run still writes its `ran` after the print.
+            combine(snapshotFlow { windows.keptForPrint to windows.anyShowing }, printers.printing, printers.pressHeld) { (kept, showing), jobs, held ->
+                PrintQuitRules.quitsAfterPrint(kept, PrintQuitRules.printing(jobs.values, held), showing)
+            }.distinctUntilChanged().collectLatest { done ->
+                if (done) {
+                    delay(QUIT_AFTER_PRINT_GRACE_MS)
+                    quit()
+                }
+            }
+        }
+        // A click on one of the app's notifications brings the window back, whether it was hidden
+        // for a print, minimized or behind another app. Showing it also calls off the quit waiting
+        // above: the reader is back.
+        LaunchedEffect(windows) {
+            modules.notifications.clicks.raises.collect {
+                windowState.isMinimized = false
+                windows.showMainWindow()
+                // Raised again once the OS has it on screen: a frame shown this instant ignores toFront.
+                delay(RAISE_SETTLE_MS)
+                windows.showMainWindow()
+                DesktopDeepLinks.requestForeground()
+            }
+        }
         LaunchedEffect(windows) {
             snapshotFlow { windows.allClosed }
                 .filter { it }
-                .collect { windows.onAllClosed(root.navigator.stacks?.arrangement, ::exitApplication) }
+                // The last screen window closed with the main one hidden: a print running asks first.
+                .collect { windows.onAllClosed(root.navigator.stacks?.arrangement, quit, printingNow(), ask = askInMainWindow) }
         }
 
         // Bumped to rebuild the window after a crash the user reports from the crash window: the
@@ -314,18 +394,18 @@ fun main(args: Array<String>) {
         CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides exceptionHandlerFactory) {
             key(windowGeneration) {
                 AppWindow(
-                    onCloseRequest = { windows.closeMainWindow(root.navigator.stacks?.arrangement, ::exitApplication) },
+                    onCloseRequest = { windows.closeMainWindow(root.navigator.stacks?.arrangement, quit, printingNow(), ask = { askQuit = true }) },
                     state = windowState,
                     title = "Amethyst",
                     icon = IconResources.adaptedBitmapPainter,
-                    onPreviewKeyEvent = { root.navigator.handleShortcut(it, onQuit = ::exitApplication) },
+                    onPreviewKeyEvent = { root.navigator.handleShortcut(it, onQuit = requestQuit) },
                     visible = windows.mainWindowVisible,
                 ) {
                     windows.MainWindowEffects(window)
                     // macOS: the title bar turns transparent over the app, which draws its own strip there.
                     frameScope?.applyNativeWindowChrome()
 
-                    frameScope?.DesktopMenuBar(root.navigator, onQuit = ::exitApplication)
+                    frameScope?.DesktopMenuBar(root.navigator, onQuit = requestQuit)
 
                     // The window's root store, the parent of the account-scoped one that AmethystApp
                     // nests under it per logged-in account.
@@ -363,13 +443,23 @@ fun main(args: Array<String>) {
                                 // handoff that goes nowhere can say so.
                                 LocalUriHandler provides DesktopUriHandler,
                             ) {
+                                // Under macOS's transparent title bar the screens draw their own top
+                                // bars, padded past the traffic lights by the caption-bar inset, as on
+                                // Android under the status bar. Full screen has no title bar.
+                                val titleBar = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else titleBarInsetTop
+                                // The app moves the window from that band once AppKit no longer does, so its
+                                // tabs can be dragged to a new place.
+                                var titleBarTakenOver by remember { mutableStateOf(false) }
+                                TakeOverTitleBar(window) { titleBarTakenOver = true }
                                 // A click on the window in the background only brings it forward.
-                                Box(Modifier.fillMaxSize().clickToActivate(window, LocalWindowInfo.current).trackWheelScrolling(wheelScrolling)) {
+                                Box(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .clickToActivate(window, LocalWindowInfo.current)
+                                        .trackWheelScrolling(wheelScrolling)
+                                        .titleBarWindowDrag(window, if (titleBarTakenOver) titleBar else 0.dp),
+                                ) {
                                     Column(Modifier.fillMaxSize()) {
-                                        // Under macOS's transparent title bar the screens draw their own top
-                                        // bars, padded past the traffic lights by the caption-bar inset, as on
-                                        // Android under the status bar. Full screen has no title bar.
-                                        val titleBar = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else titleBarInsetTop
                                         ProvideTitleBarInsets(titleBar) {
                                             // The window's size reads 0 x 0 until its first layout. Composed before
                                             // then, the app picked the phone layout, composed all of it and threw it
@@ -391,6 +481,25 @@ fun main(args: Array<String>) {
                                                 // Toasts show here unless a screen window has the focus (it shows them).
                                                 if (windows.focusedScreenWindow == null) {
                                                     SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
+                                                }
+                                                if (askQuit) {
+                                                    PrintQuitDialog(
+                                                        onKeepPrinting = {
+                                                            askQuit = false
+                                                            windows.hideForPrint()
+                                                        },
+                                                        onQuit = {
+                                                            askQuit = false
+                                                            // Quit once the cancelled runs have recorded it (or a few
+                                                            // seconds passed): a morning cancelled unrecorded resumes
+                                                            // at the next launch.
+                                                            quitScope.launch {
+                                                                printers.cancelAllAndSettle()
+                                                                quit()
+                                                            }
+                                                        },
+                                                        onDismiss = { askQuit = false },
+                                                    )
                                                 }
                                             }
                                         }

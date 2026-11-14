@@ -20,38 +20,56 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.agents.AgentProviderPresets
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.routstr_card_use
+import com.vitorpamplona.amethyst.commons.resources.routstr_mints_count
+import com.vitorpamplona.amethyst.commons.resources.routstr_onion_only
+import com.vitorpamplona.amethyst.commons.routstr.RoutstrNode
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.routstr.node.RoutstrNodeEvent
 
 /**
- * A Routstr node announcement (kind 38421): its name and about, and where it answers, read-only.
- * Nothing here contacts the node. [nav] is for the card that also offers to use the node.
+ * A Routstr node announcement (kind 38421): its name, about and endpoints, and "Use for The
+ * Observer", which opens it in the Routstr setup. Nothing here contacts the node.
  */
-@Suppress("UNUSED_PARAMETER")
 @Composable
 fun RenderRoutstrNode(
     baseNote: Note,
     nav: INav,
 ) {
     val event = baseNote.event as? RoutstrNodeEvent ?: return
-    val facts =
+    val node = remember(event) { RoutstrNode.from(event) }
+    val endpoints =
         remember(event) {
-            event.endpoints().map { hostOf(it.url) } + listOfNotNull(event.version())
+            listOfNotNull(
+                node.httpsUrl?.let { AgentProviderPresets.hostOf(it) },
+                node.onionUrl?.let { (AgentProviderPresets.hostOf(it)?.take(12) ?: "") + "….onion" },
+            )
         }
 
     KindCard(
         icon = MaterialSymbols.Dns,
-        title = event.name() ?: kindName(event.kind),
-        subtitle = event.about(),
+        title = node.name ?: kindName(event.kind),
+        subtitle = node.about,
     ) {
-        KindCardMeta(facts)
+        KindCardChips(endpoints + pluralStringRes(Res.plurals.routstr_mints_count, node.mints.size, node.mints.size))
+        if (node.hasHttps) {
+            OutlinedButton(onClick = { nav.nav(Route.RoutstrSetup(node = node.address)) }) {
+                Text(stringRes(Res.string.routstr_card_use))
+            }
+        } else {
+            Text(stringRes(Res.string.routstr_onion_only))
+        }
     }
 }
-
-/** The host of [url]: no scheme, path or port. */
-private fun hostOf(url: String): String = url.substringAfter("://").substringBefore('/').substringBefore(':')

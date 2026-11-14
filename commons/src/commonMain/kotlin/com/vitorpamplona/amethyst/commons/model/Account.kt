@@ -154,6 +154,12 @@ import com.vitorpamplona.amethyst.commons.model.nip89AppHandlers.AppRecommendati
 import com.vitorpamplona.amethyst.commons.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditKind
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditor
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyState
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.fetchOwnRelayList
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.readAgentKeysForRewrite
+import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ObserverScheduleState
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
@@ -374,6 +380,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTarget
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
@@ -1042,6 +1049,12 @@ class Account(
             scope = scope,
             backend = { cache.onchainBackend },
         )
+
+    /** The user's AI agent keys (kind 12000), first one preferred. */
+    val agentKeys = AgentKeyState(signer, cache, scope)
+
+    /** The morning front page's schedule (NIP-FB kind 34817, `d` = `observer`), shared by every device. */
+    val observerSchedule = ObserverScheduleState(signer, cache, scope, client, nip65RelayList.outboxFlowNoDefaults)
 
     val cashuWalletState =
         CashuWalletState(
@@ -3766,6 +3779,59 @@ class Account(
         relay: NormalizedRelayUrl,
         challenge: String,
     ): RelayAuthEvent = RelayAuthEvent.create(relay, challenge, signer)
+
+    /**
+     * NIP-FA's Editing: read the newest kind 12000 from the user's write relays before rewriting
+     * it, so a key added on another device survives. Starting from nothing because the relays
+     * could not be read would delete the user's other keys, so then nothing is written.
+     */
+    private suspend fun readAgentKeysBeforeWriting() {
+        client.readAgentKeysForRewrite(agentKeyWriteRelays(), signer.pubKey, agentKeys.getAgentKeyEvent()) { event, relay ->
+            cache.justConsume(event, relay, wasVerified = true)
+        }
+    }
+
+    /**
+     * The user's NIP-65 write relays, where NIP-FA reads and writes the keys: never a default or
+     * a bootstrap relay. A fresh login may not hold the list yet ("no list" and "not loaded yet"
+     * look the same), so it is asked of the bootstrap relays first; still none, there are none.
+     */
+    private suspend fun agentKeyWriteRelays(): Set<NormalizedRelayUrl> {
+        nip65RelayList.nip65Event(nip65RelayList.nip65ListNote)?.let { return it.allWriteRelaysNorm()?.toSet().orEmpty() }
+        val found =
+            client.fetchOwnRelayList(indexerRelayList.flow.value + Constants.eventFinderRelays, signer.pubKey) { event, relay ->
+                cache.justConsume(event, relay, wasVerified = true)
+            }
+        return found?.allWriteRelaysNorm()?.toSet().orEmpty()
+    }
+
+    /**
+     * Saves, re-orders and removes AI agent keys one edit at a time, with the edit's progress in
+     * its state: the settings screen shows it, and leaving the screen never drops a save halfway.
+     */
+    val agentKeyEditor =
+        AgentKeyEditor(
+            scope = scope,
+            readBeforeWriting = ::readAgentKeysBeforeWriting,
+            rewrite = { kind, key ->
+                when (kind) {
+                    AgentKeyEditKind.SAVE -> agentKeys.add(key)
+                    AgentKeyEditKind.MAKE_DEFAULT -> agentKeys.setPreferred(key)
+                    AgentKeyEditKind.REMOVE -> agentKeys.remove(key)
+                }
+            },
+            current = { agentKeys.getAgentKeyEvent() },
+            keepHere = { cache.justConsumeMyOwnEvent(it) },
+            // To the same relays the read came from (NIP-FA, Editing).
+            publish = { client.publishAndConfirm(it, agentKeyWriteRelays(), untilFirstAccept = true) },
+        )
+
+    /** Saves [key] as the preferred AI agent key (adding it if new) and publishes the event. */
+    suspend fun addAgentKey(key: AgentKeyTag) = agentKeyEditor.run(AgentKeyEditKind.SAVE, key)
+
+    suspend fun setPreferredAgentKey(key: AgentKeyTag) = agentKeyEditor.run(AgentKeyEditKind.MAKE_DEFAULT, key)
+
+    suspend fun removeAgentKey(key: AgentKeyTag) = agentKeyEditor.run(AgentKeyEditKind.REMOVE, key)
 
     suspend fun hideWord(word: String) {
         sendMyPublicAndPrivateOutbox(muteList.hideWord(word))

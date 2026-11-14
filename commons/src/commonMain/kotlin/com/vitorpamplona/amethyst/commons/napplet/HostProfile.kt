@@ -39,6 +39,14 @@ enum class HostProfile {
      * the user's — no NIP-07, no broker capabilities. Its `window.webxdc` is the messenger's own script.
      */
     WEBXDC,
+
+    /**
+     * The reader's front page (commons `frontpage`): one HTML document the app itself wrote and
+     * checked, run with NO scripts — a sandboxed frame without `allow-scripts` under a CSP with no
+     * script source — nothing of the user's, its art hotlinked from the open web the way a site's is,
+     * and links out to the system browser.
+     */
+    PAPER,
     ;
 
     /**
@@ -55,7 +63,7 @@ enum class HostProfile {
         when (this) {
             WEBSITE -> NappletCapability.WEBSITE_CAPABILITIES
             NAPPLET -> resolveRequiredCapabilities(requires).capabilities.toSet()
-            WEBXDC -> emptySet()
+            WEBXDC, PAPER -> emptySet()
         }
 
     /** Strict app CSP for a locked applet (connect-src 'none', etc.) or a webxdc app (its own origin only); null for a website, which sets its own. */
@@ -64,6 +72,7 @@ enum class HostProfile {
             when (this) {
                 NAPPLET -> NappletWebContract.APP_CSP
                 WEBXDC -> NappletWebContract.WEBXDC_CSP
+                PAPER -> NappletWebContract.PAPER_CSP
                 WEBSITE -> null
             }
 
@@ -74,13 +83,16 @@ enum class HostProfile {
     val injectsNip07: Boolean get() = this == WEBSITE
 
     /** Let off-origin requests reach the network (a locked applet 404s them — its CSP is connect-src 'none'). */
-    val allowsOffOrigin: Boolean get() = this == WEBSITE
+    val allowsOffOrigin: Boolean get() = this == WEBSITE || this == PAPER
 
     /**
      * Apply the WebView SOCKS proxy and expose the Tor/network toggle. A website can re-route over Tor
      * or the open web; a locked napplet is pinned to Tor with no toggle.
      */
-    val exposesNetwork: Boolean get() = this == WEBSITE
+    val exposesNetwork: Boolean get() = this == WEBSITE || this == PAPER
+
+    /** Whether anything the launch serves may run a script. A paper is a document, nothing more. */
+    val runsScripts: Boolean get() = this != PAPER
 
     /**
      * Hand a link the user clicks to the system browser. A webxdc app never leaves the device: a link

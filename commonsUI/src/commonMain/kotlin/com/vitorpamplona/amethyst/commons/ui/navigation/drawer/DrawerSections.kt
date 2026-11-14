@@ -85,6 +85,7 @@ private val DrawerNavigateItems: List<NavBarItem> =
 private val DrawerYouItems: List<NavBarItem> =
     listOf(
         NavBarItem.PROFILE,
+        NavBarItem.FRONT_PAGE,
         NavBarItem.MY_FITNESS,
         NavBarItem.MY_LISTS,
         NavBarItem.BOOKMARKS,

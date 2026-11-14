@@ -43,6 +43,7 @@ component, `ls` the folder and grep for the concept.
 | `ClickableBox(modifier, onClick, [onLongClick], content)`, `ToggleableBox(...)` | `ClickableBox.kt` | Click / long-click / toggle containers |
 | `RoundedDropdownMenu(expanded, onDismissRequest, ..., content: ColumnScope.() -> Unit)`, `RoundedMenuSection`, `RoundedMenuItemModifier` | `RoundedDropdownMenu.kt` | The app's dropdown menu style |
 | `M3ActionDialog(title, onDismiss, content)`, `M3ActionSection`, `M3ActionRow(icon, text, ...)` | `M3ActionDialog.kt` | Action-sheet style dialog |
+| `M3LazyActionDialog(title, onDismiss, header, content: LazyListScope.() -> Unit)`, `M3ActionSectionLabel(label)` | `M3ActionDialog.kt` | The same dialog for long grouped lists (feed selector, model picker), with a fixed header such as a search field |
 | `TextSpinner(...)`, `SpinnerSelectionDialog(...)` | `TextSpinner.kt` | Option pickers over `ImmutableList<TitleExplainer>` |
 | `SwipeToDeleteContainer(...)`, `SwipeToDeleteWithConfirmation(...)` | `SwipeToDelete.kt` | Swipe-to-delete rows |
 | `HoverTooltip(text, content)` | `HoverTooltip.kt` | Tooltip on pointer hover (desktop / laptops) |

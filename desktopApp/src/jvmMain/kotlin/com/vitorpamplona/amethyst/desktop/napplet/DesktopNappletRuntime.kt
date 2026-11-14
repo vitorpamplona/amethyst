@@ -54,6 +54,8 @@ class DesktopNappletRuntime(
     val torWaitMs: Long = 30_000L,
     /** Where webxdc apps are unpacked, one directory per archive. */
     val webxdcBundles: WebxdcBundles = WebxdcBundles(WebxdcBundles.dirFor(File(System.getProperty("java.io.tmpdir"), "amethyst"))),
+    /** The front page's pictures, which its session serves instead of Chromium. */
+    val paperArt: PaperArtCache = PaperArtCache(PaperArtCache.dirFor(File(System.getProperty("java.io.tmpdir"), "amethyst"))),
 ) {
     val attendance = NappletAttendance<CefNappletSession>()
 
@@ -77,7 +79,10 @@ class DesktopNappletRuntime(
 
     init {
         scope.launch(Dispatchers.IO) {
-            for (ignored in trims) blobCache.trimToSize(NappletBlobCache.DEFAULT_MAX_BYTES)
+            for (ignored in trims) {
+                blobCache.trimToSize(NappletBlobCache.DEFAULT_MAX_BYTES)
+                paperArt.trim()
+            }
         }
     }
 

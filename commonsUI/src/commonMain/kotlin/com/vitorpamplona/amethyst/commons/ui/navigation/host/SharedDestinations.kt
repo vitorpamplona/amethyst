@@ -159,6 +159,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.membersh
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.favorites.FavoriteAppsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.feed.FollowPackFeedScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.list.FollowPacksScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.frontpage.FrontPageScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.GeocachesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.create.NewGeocacheScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.detail.GeocacheDetailScreen
@@ -236,6 +237,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.vanish.Vanis
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.scheduledposts.ScheduledPostsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AccentColorSettingsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AgentKeysSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AllSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AudioVisualizerSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.BlockedUsersScreen
@@ -269,6 +271,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.Cord
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnMigrateScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.Nip46ConnectedAppsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.Nip46SignerScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.routstr.RoutstrSetupScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.wot.WebOfTrustScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.shorts.ShortsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.softwareapps.SoftwareAppDetailScreen
@@ -482,6 +485,10 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.HomeTabsSettings> { HomeTabsSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileUiSettings> { ProfileUiSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SearchEngineSettings> { SearchEngineSettingsScreen(accountViewModel, nav) }
+    composableFromEnd<Route.AgentKeysSettings> { AgentKeysSettingsScreen(accountViewModel, nav) }
+    composableFromEndArgs<Route.RoutstrSetup> { RoutstrSetupScreen(it, accountViewModel, nav) }
+    // The paper's own HTML sets its measure: the screen gets the whole pane (see PanelFreeRoutes).
+    composableFromEndArgs<Route.FrontPage>(capWidth = false) { FrontPageScreen(accountViewModel, nav, it.day) }
     composableFromEnd<Route.VideoPlayerSettings> { VideoPlayerSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.CallSettings> { CallSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.NotificationSettings> { NotificationSettingsScreen(accountViewModel, nav) }

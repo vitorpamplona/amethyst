@@ -41,6 +41,8 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import java.nio.ByteBuffer
 import javax.swing.SwingUtilities
+import javax.swing.Timer
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -99,11 +101,102 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         height: Int,
         scale: Double,
     ) {
-        if (width == this.width && height == this.height && scale == this.scale) return
-        this.width = width.coerceAtLeast(1)
-        this.height = height.coerceAtLeast(1)
+        val w = width.coerceAtLeast(1)
+        val h = height.coerceAtLeast(1)
+        // The first size goes at once: the page has nothing to show before it.
+        if (this.width <= 1 && this.height <= 1) {
+            apply(w, h, scale)
+            return
+        }
+        if (w == this.width && h == this.height && scale == this.scale) {
+            pending = null
+            return
+        }
+        // Held for a moment, the newest one winning: a screen that leaves takes its box with it in
+        // the same frame the layout around it changes (the notification panel snaps back as the
+        // nSite is left), and that last size, told to the page, was what it painted while away:
+        // coming back showed that frame, the wrong size, until it painted again.
+        pending = Triple(w, h, scale)
+        if (!applyPending.isRunning) applyPending.start()
+    }
+
+    /** The page's box left the screen: a size it reported on its way out is never sent. */
+    fun leave() {
+        pending = null
+        applyPending.stop()
+        settle.stop()
+        // A size applied just before leaving came with the leaving: the tab switch docks the
+        // notification panel a frame or more before the screen goes, and the hold above is not
+        // always long enough. Told to a page that stays alive out of sight, it was what that page
+        // painted, and what showed (on the left, or stuck there) when the reader came back.
+        val before = previous ?: return
+        if (System.currentTimeMillis() - appliedAtMs > LEAVE_REVERT_MS) return
+        previous = null
+        this.width = before.first
+        this.height = before.second
+        this.scale = before.third
+        browser?.resize(before.first, before.second, before.third)
+    }
+
+    /**
+     * The page is in sight again after being hidden: asks for a frame at its size now, rather than
+     * at the hidden page's next frame (up to a second away), and keeps checking until one comes.
+     */
+    fun shown() {
+        if (stopped) return
+        browser?.settle()
+        settleChecks = 0
+        settle.restart()
+    }
+
+    private fun apply(
+        width: Int,
+        height: Int,
+        scale: Double,
+    ) {
+        previous = if (this.width > 1 || this.height > 1) Triple(this.width, this.height, this.scale) else null
+        appliedAtMs = System.currentTimeMillis()
+        this.width = width
+        this.height = height
         this.scale = scale
-        browser?.resize(this.width, this.height, scale)
+        browser?.resize(width, height, scale)
+        settleChecks = 0
+        settle.restart()
+    }
+
+    // A size the box reported that the page has not been told yet. AWT thread, like [resize].
+    private var pending: Triple<Int, Int, Double>? = null
+
+    // The size before the last one applied, and when that was: see [leave]. AWT thread.
+    private var previous: Triple<Int, Int, Double>? = null
+    private var appliedAtMs = 0L
+
+    private val applyPending: Timer =
+        Timer(RESIZE_HOLD_MS) {
+            val (w, h, s) = pending ?: return@Timer
+            pending = null
+            apply(w, h, s)
+        }.apply { isRepeats = false }
+
+    // How many times the page was asked again for a frame at its size since it last resized.
+    private var settleChecks = 0
+
+    // Once a resize settles, checks the page painted at its new size and asks again when it didn't:
+    // Chromium drops resizes that come in a burst. AWT thread, like [resize].
+    private val settle: Timer =
+        Timer(SETTLE_MS) {
+            val frame = mutableFrame.value
+            val wantWidth = (width * scale).roundToInt()
+            val wantHeight = (height * scale).roundToInt()
+            if (frame == null || stopped || (abs(frame.width - wantWidth) <= 1 && abs(frame.height - wantHeight) <= 1)) return@Timer
+            if (++settleChecks > SETTLE_ATTEMPTS) return@Timer
+            Log.d(TAG) { "The page painted ${frame.width}x${frame.height}, not ${wantWidth}x$wantHeight: asking again" }
+            browser?.settle()
+            restartSettle()
+        }.apply { isRepeats = false }
+
+    private fun restartSettle() {
+        settle.restart()
     }
 
     /**
@@ -148,27 +241,19 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         y: Int,
     ) {
         val browser = browser ?: return
-        val delta = -(source.preciseWheelRotation * WHEEL_DELTA).roundToInt()
+        val delta = -(source.preciseWheelRotation * UNIT_PIXELS).roundToInt()
         if (delta == 0) return
-        browser.forwardWheel(
-            MouseWheelEvent(
-                EVENT_SOURCE,
-                MouseEvent.MOUSE_WHEEL,
-                source.`when`,
-                source.modifiersEx,
-                x,
-                y,
-                x,
-                y,
-                0,
-                false,
-                MouseWheelEvent.WHEEL_BLOCK_SCROLL,
-                1,
-                delta,
-                delta.toDouble(),
-            ),
-        )
+        browser.forwardWheel(wheelEvent(source.`when`, source.modifiersEx, x, y, delta))
     }
+
+    /** A wheel turn of [delta] in Chromium's terms (pixels, positive up), as a block scroll JCEF passes as it is. */
+    private fun wheelEvent(
+        time: Long,
+        modifiers: Int,
+        x: Int,
+        y: Int,
+        delta: Int,
+    ) = MouseWheelEvent(EVENT_SOURCE, MouseEvent.MOUSE_WHEEL, time, modifiers, x, y, x, y, 0, false, MouseWheelEvent.WHEEL_BLOCK_SCROLL, 1, delta, delta.toDouble())
 
     /**
      * Forwards a key event as AWT delivered it, so Chromium reads the platform's own key codes. A
@@ -184,7 +269,7 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
                 browser.forwardKey(event)
             }
             KeyEvent.KEY_PRESSED -> {
-                browser.forwardKey(event)
+                browser.forwardKey(named(event))
                 if (event.keyChar != KeyEvent.CHAR_UNDEFINED && !event.isControlDown && !event.isMetaDown) {
                     untyped = event
                     // AWT queues a press's typed event right behind it, so it has arrived by then.
@@ -195,8 +280,21 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
                     }
                 }
             }
-            else -> browser.forwardKey(event)
+            else -> browser.forwardKey(named(event))
         }
+    }
+
+    /**
+     * [event] as JCEF can name it. On Linux JCEF names only Backspace, Delete, the arrows, Enter,
+     * Escape and Tab itself, and takes every other key's X keysym from its character. A navigation
+     * key has none (`CHAR_UNDEFINED`, 0xFFFF, which is X's Delete), so Page Down, Page Up, Home and
+     * End all reached the page as Delete and scrolled nothing. Given its keysym as the character,
+     * each is read as itself. Only presses and releases carry it: no typed event follows these keys.
+     */
+    private fun named(event: KeyEvent): KeyEvent {
+        if (!IS_LINUX) return event
+        val keysym = linuxKeysym(event.keyCode) ?: return event
+        return KeyEvent(EVENT_SOURCE, event.id, event.`when`, event.modifiersEx, event.keyCode, keysym.toChar(), event.keyLocation)
     }
 
     /**
@@ -331,9 +429,36 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         // Chromium's wheel delta for one notch, as Windows reports it and CEF's own sample sends.
         const val WHEEL_DELTA = 120
 
+        // How long after a resize the page should have painted at its new size, and how often it is asked again.
+        const val SETTLE_MS = 150
+        const val SETTLE_ATTEMPTS = 20
+
+        // How long a new size waits before the page is told: one frame or so of a screen leaving.
+        const val RESIZE_HOLD_MS = 60
+
+        /** How soon before leaving a resize counts as part of the leaving: see [leave]. */
+        const val LEAVE_REVERT_MS = 300L
+
+        // What one unit of AWT's wheel rotation scrolls. On macOS a trackpad or a Magic Mouse reports
+        // fractions of a unit, many a second, and the rest of the app (Compose's MacOSCocoaConfig) moves
+        // 10 dp for each: at a notch's 120 the paper ran twelve times faster than the screen around it.
+        val UNIT_PIXELS: Double = if (OS.isMacintosh()) 10.0 else WHEEL_DELTA.toDouble()
+
         // Every forwarded event needs a source; Chromium reads only its fields.
         val EVENT_SOURCE = Canvas()
 
         private val IS_MAC = OS.isMacintosh()
+
+        private val IS_LINUX = OS.isLinux()
     }
 }
+
+/** The X keysym of an AWT key JCEF can't name on Linux by itself (see [OffscreenNappletView.key]), or null. */
+internal fun linuxKeysym(keyCode: Int): Int? =
+    when (keyCode) {
+        KeyEvent.VK_PAGE_UP -> 0xff55
+        KeyEvent.VK_PAGE_DOWN -> 0xff56
+        KeyEvent.VK_HOME -> 0xff50
+        KeyEvent.VK_END -> 0xff57
+        else -> null
+    }

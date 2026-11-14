@@ -75,6 +75,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.SwingUtilities
+import javax.swing.Timer
 import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -711,8 +712,19 @@ class CefBrowserSession(
      */
     fun setVisible(visible: Boolean) {
         this.visible = visible
-        browser?.setWindowlessFrameRate(if (visible) FRAME_RATE else HIDDEN_FRAME_RATE)
+        if (visible) {
+            slowDown.stop()
+            browser?.setWindowlessFrameRate(FRAME_RATE)
+            view.shown()
+        } else {
+            slowDown.restart()
+        }
     }
+
+    // Slows down a moment after hiding, so the size the page was put back to on leaving is painted
+    // at full rate: see CefNappletSession's slowDown. AWT thread, like [setVisible].
+    private val slowDown: Timer =
+        Timer(HIDE_SLOWDOWN_MS) { if (!visible && !closed) browser?.setWindowlessFrameRate(HIDDEN_FRAME_RATE) }.apply { isRepeats = false }
 
     fun stopFinding() {
         browser?.stopFinding(true)
@@ -835,6 +847,9 @@ class CefBrowserSession(
         /** What a page starts on, so DevTools has a renderer to set it up in before its address loads. */
         private const val PLACEHOLDER_URL = "about:blank"
         private const val HIDDEN_FRAME_RATE = 1
+
+        /** How long a hidden page keeps its full frame rate: see [slowDown]. */
+        private const val HIDE_SLOWDOWN_MS = 1000
 
         // Popups waiting for the screen; the host's budget keeps it at a handful anyway.
         private const val POPUP_QUEUE = 8

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.napplet
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.awtEventOrNull
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -42,7 +44,6 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntSize
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import kotlin.math.roundToInt
@@ -70,6 +71,8 @@ fun OffscreenPage(
     val density = LocalDensity.current.density
     val focus = remember { FocusRequester() }
     var focused by remember { mutableStateOf(false) }
+    // Leaving the screen, the box reports the layout it leaves in: that size never reaches the page.
+    DisposableEffect(view) { onDispose { view.leave() } }
 
     Box(
         modifier
@@ -123,8 +126,14 @@ fun OffscreenPage(
                         }
                     }
                 }
-            }.drawBehind {
-                frame.value?.let { drawImage(it, dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt())) }
+            }.clipToBounds()
+            .drawBehind {
+                // Pixel for pixel from the top left, never scaled: the page is told the box's size
+                // times the screen's density, so a frame that fits is exactly the box. One Chromium
+                // painted for the box's last size (the paper growing from its loading height, a pane
+                // that changed while the page was hidden) shows sharp, cropped or short, for the few
+                // frames until the next one; scaled to fit it showed stretched, or zoomed and blurred.
+                frame.value?.let { drawImage(it) }
             },
     )
 }

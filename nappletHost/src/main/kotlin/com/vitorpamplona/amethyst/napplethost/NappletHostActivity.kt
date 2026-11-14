@@ -756,9 +756,7 @@ class NappletHostActivity : ComponentActivity() {
             // gesture is required so a hostile site can't auto-redirect to spam-open the browser,
             // and only http(s) is honored so it can't fire arbitrary intent schemes.
             if (profile.opensLinks && request.hasGesture() && (uri.scheme == "https" || uri.scheme == "http")) {
-                runCatching {
-                    startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                }
+                runCatching { startActivity(linkIntent(profile, uri)) }
             }
             // Never navigate the sandbox WebView away from our internal origin.
             return true

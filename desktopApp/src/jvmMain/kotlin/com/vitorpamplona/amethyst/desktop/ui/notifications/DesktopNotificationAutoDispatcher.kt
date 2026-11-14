@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationD
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationSettings
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationSpec
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationTarget
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PermissionState
 import com.vitorpamplona.amethyst.commons.moderation.notifications.nowEpochSeconds
 import com.vitorpamplona.amethyst.commons.moderation.notifications.sanitizeForToast
@@ -42,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.resources.desktop_notification_repost
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_someone
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_zap
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_zap_amount
+import com.vitorpamplona.amethyst.commons.resources.front_page_ready_title
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
@@ -282,6 +284,8 @@ class DesktopNotificationAutoDispatcher(
                 NotifKind.FOLLOW -> loadStringRes(Res.string.desktop_notification_follow, displayName)
                 // Posted by DesktopCalendarReminders, never classified from an event here.
                 NotifKind.CALENDAR -> loadStringRes(Res.string.calendar_reminder_default_title)
+                // Posted by the front page printer, never classified from an event here.
+                NotifKind.FRONT_PAGE -> loadStringRes(Res.string.front_page_ready_title)
             }
 
         // Never leak DM ciphertext into the body — decryption pipeline
@@ -299,7 +303,8 @@ class DesktopNotificationAutoDispatcher(
             body = body,
             kind = kind,
             threadId = event.id,
-            deepLinkNoteId = event.id,
+            target = NotificationTarget.Note(event.id),
+            account = myPubKeyHex,
         )
     }
 }
