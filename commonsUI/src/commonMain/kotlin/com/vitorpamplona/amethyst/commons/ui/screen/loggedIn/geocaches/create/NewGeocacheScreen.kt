@@ -426,6 +426,8 @@ fun NewGeocacheScreen(
     if (pickingLocation) {
         GeohashLocationPickerDialog(
             initialGeohash = model.geohash.value.ifBlank { null },
+            // A cache is a point to walk up to, not an area: always the finest tag NIP-CC asks for.
+            precision = GeocacheGeohash.MAX_TAGGED,
             onDismiss = { pickingLocation = false },
             onConfirm = {
                 model.geohash.value = it

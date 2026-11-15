@@ -75,7 +75,7 @@ class ScreenShareCapturer(
     private var isDisposed = false
 
     private fun checkNotDisposed() {
-        if (isDisposed) throw IllegalStateException("capturer is disposed.")
+        check(!isDisposed) { "capturer is disposed." }
     }
 
     @Synchronized

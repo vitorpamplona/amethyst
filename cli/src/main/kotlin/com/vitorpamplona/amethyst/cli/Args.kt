@@ -95,7 +95,7 @@ class Args(
     ): String? {
         consumed.add(name)
         // Never echoes what followed: it may be a secret in the wrong place.
-        if (name in valueFlags && name in booleans) throw IllegalArgumentException("--$name needs a value")
+        require(name !in valueFlags || name !in booleans) { "--$name needs a value" }
         return flags[name] ?: default
     }
 
@@ -140,7 +140,7 @@ class Args(
     fun bool(name: String): Boolean {
         consumed.add(name)
         // `--key-stdin=x`: a flag that takes no value was given one. Not echoed (it may be a secret).
-        if (name in booleanFlags && name in flags) throw IllegalArgumentException("--$name takes no value")
+        require(name !in booleanFlags || name !in flags) { "--$name takes no value" }
         return name in booleans
     }
 
@@ -155,10 +155,8 @@ class Args(
     fun rejectUnknown(vararg alsoAllowed: String) {
         val known = consumed + alsoAllowed + setOf("help")
         val unknown = (flags.keys + booleans).filterNot { it in known }
-        if (unknown.isNotEmpty()) {
-            throw IllegalArgumentException(
-                "unknown flag${if (unknown.size > 1) "s" else ""}: ${unknown.joinToString(", ") { "--$it" }}",
-            )
+        require(unknown.isEmpty()) {
+            "unknown flag${if (unknown.size > 1) "s" else ""}: ${unknown.joinToString(", ") { "--$it" }}"
         }
     }
 
