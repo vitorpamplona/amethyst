@@ -252,6 +252,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
@@ -307,6 +308,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
@@ -3524,7 +3526,42 @@ class Account(
 
     suspend fun removeEmojiPack(emojiPack: Note) = sendMyPublicAndPrivateOutbox(emoji.removeEmojiPack(emojiPack))
 
-    suspend fun addEmojiPack(emojiPack: Note) = sendMyPublicAndPrivateOutbox(emoji.addEmojiPack(emojiPack))
+    /**
+     * Adds [emojiPack] to the kind 10030 emoji list. Returns false, publishing nothing, when the
+     * list is not on this device yet and no relay could say whether one exists: building on
+     * nothing would publish a list holding only this pack, replacing the user's real one.
+     */
+    suspend fun addEmojiPack(emojiPack: Note): Boolean {
+        if (!loadOwnEmojiListIfMissing()) return false
+        sendMyPublicAndPrivateOutbox(emoji.addEmojiPack(emojiPack))
+        return true
+    }
+
+    /**
+     * Before the first write of the kind 10030 on a device that has not received it (a fresh
+     * login, or relays still connecting), fetches the newest version from the outbox. True when
+     * the list is now in the cache, or when a relay answered and has none; false when nobody
+     * answered, so a missing list cannot be told from a list that has not arrived.
+     */
+    private suspend fun loadOwnEmojiListIfMissing(): Boolean {
+        if (emoji.getEmojiList() != null) return true
+        val relays = outboxRelays.flow.value
+        if (relays.isEmpty()) return false
+        val filter = Filter(kinds = listOf(EmojiListEvent.KIND), authors = listOf(signer.pubKey), limit = 1)
+        val result = client.fetchAllWithHooks(relays.associateWith { listOf(filter) }, idleTimeoutMs = 8_000) { _, _ -> true }
+        // The fetch neither verifies nor stores: newest first, the first that verifies.
+        val newest =
+            result.events
+                .map { it.second }
+                .filter { it.kind == EmojiListEvent.KIND && it.pubKey == signer.pubKey }
+                .sortedByDescending { it.createdAt }
+                .firstOrNull { it.verify() }
+        if (newest != null) {
+            cache.justConsumeMyOwnEvent(newest)
+            return emoji.getEmojiList() != null
+        }
+        return result.anyRelayServed
+    }
 
     suspend fun createOwnedEmojiPack(
         title: String,

@@ -20,9 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.cartridges
 
+import androidx.datastore.core.CorruptionException
+import androidx.datastore.preferences.core.PreferencesSerializer
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.kiko.player.KikoPlayer
 import com.vitorpamplona.kiko.player.KikoPlayerHost
+import kotlinx.coroutines.runBlocking
+import okio.Buffer
 import okio.Path.Companion.toPath
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -31,6 +35,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 /**
@@ -38,6 +43,11 @@ import java.util.concurrent.TimeUnit
  * (no shutdown hooks, no flush), and the next one must read the save back through `dget`.
  * How soon a save is written is kiko-player's own test, on virtual time: here a kill waits for the
  * write to reach the disk, so a busy machine cannot make the test flaky.
+ *
+ * "Reached the disk" is read the way the app reads it: the file decoded and the game's number
+ * checked. Waiting for the bytes to change from a snapshot raced the game, which could write before
+ * the snapshot was taken, and on Windows a read can hit the file while DataStore replaces it and
+ * fail with a sharing violation; both failed the Windows CI job.
  */
 class CartSaveKillTest {
     @get:Rule
@@ -53,15 +63,44 @@ class CartSaveKillTest {
 
     private fun saveFile() = File(folder.root, "datastore/cart_saves.preferences_pb")
 
-    /** Waits until the save file differs from [before], for up to 10 s. */
-    private fun awaitWrite(before: ByteArray?) {
+    /**
+     * The game's `dget(0)` as the save file holds it (raw 16:16 bits), or null while there is no
+     * readable save: no file yet, a file another process is replacing (Windows refuses the read),
+     * or one this read caught half-written.
+     */
+    private fun savedNumber(): Int? {
+        val bytes =
+            try {
+                saveFile().takeIf { it.exists() }?.readBytes()
+            } catch (_: IOException) {
+                null
+            } ?: return null
+        val prefs =
+            try {
+                runBlocking { PreferencesSerializer.readFrom(Buffer().write(bytes)) }
+            } catch (_: CorruptionException) {
+                return null
+            } catch (_: IOException) {
+                return null
+            }
+        val save =
+            prefs
+                .asMap()
+                .entries
+                .firstOrNull { it.key.name == SAVE_KEY }
+                ?.value as? String ?: return null
+        return CartSaveStore.decode(save)?.get(0)
+    }
+
+    /** Waits until the save on disk holds [number] in `dget(0)`, for up to 10 s. */
+    private fun awaitSaved(number: Int) {
+        val raw = number shl 16
         val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
         while (System.nanoTime() < deadline) {
-            val now = saveFile().takeIf { it.exists() }?.readBytes()
-            if (now != null && !now.contentEquals(before)) return
+            if (savedNumber() == raw) return
             Thread.sleep(10)
         }
-        error("the save never reached the disk")
+        error("the save never reached the disk: dget(0) is ${savedNumber()?.let { it shr 16 }}, expected $number")
     }
 
     @Test
@@ -69,10 +108,9 @@ class CartSaveKillTest {
         for (life in 0 until 3) {
             val game = play("checkpoint")
             assertEquals("loaded $life", game.waitFor { it.startsWith("loaded") })
-            val before = saveFile().takeIf { it.exists() }?.readBytes()
             game.waitFor { it == "checkpoint" }
             // A player who swipes the app away as soon as the checkpoint is on disk.
-            awaitWrite(before)
+            awaitSaved(life + 1)
             game.kill()
         }
         val last = play("checkpoint")
@@ -93,6 +131,11 @@ class CartSaveKillTest {
         // Some frame's save, whole: a kill in the middle of a write leaves the previous one. The game
         // keeps playing while the kill lands, so that frame can be a few past 90 (93 on a CI runner).
         assertTrue("reloaded $loaded", loaded >= 1)
+    }
+
+    companion object {
+        /** Where [CartSaveStore] keeps the `killtest` id of the cart [CartSaveKillChild] plays. */
+        private const val SAVE_KEY = "cart_test-cart_killtest"
     }
 
     /** One run of [CartSaveKillChild] in its own process. */

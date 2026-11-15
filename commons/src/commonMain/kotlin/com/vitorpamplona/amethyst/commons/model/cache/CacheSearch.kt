@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip50Search.EventSearchMatcher
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
 import com.vitorpamplona.quartz.utils.DualCase
@@ -193,8 +194,12 @@ class CacheSearch(
         hidden: LiveHiddenUsers,
     ): Boolean {
         if (excludeNoteEventFromSearchResults(note)) return false
-        // Encrypted content cannot be matched and must not be offered.
-        if (note.event?.isContentEncoded() != false) return false
+        val event = note.event ?: return false
+        // Encrypted content cannot be matched and must not be offered. A SearchableEvent is the
+        // exception: the matcher reads only the fields it indexes, never `content`, and those are
+        // public by design. Without it every NIP-51 set and emoji pack (their content holds the
+        // private items) was missing from local results while relays returned it by title.
+        if (event.isContentEncoded() && event !is SearchableEvent) return false
         return !note.isHiddenFor(hidden)
     }
 
