@@ -212,10 +212,15 @@ interface AppPlatform {
     @Composable
     fun SpeakNameButton(name: String) {}
 
-    /** A full-screen dialog to pick a place (map, search, "use my location"), as a geohash. */
+    /**
+     * A dialog to pick a place (map, search, "use my location"), as a geohash. The reader picks how
+     * big an area it names, unless [precision] fixes its length: then the picker picks a point at
+     * exactly that many characters (a geocache needs 9) and offers no area sizes.
+     */
     @Composable
     fun GeohashLocationPickerDialog(
         initialGeohash: String?,
+        precision: Int?,
         onDismiss: () -> Unit,
         onConfirm: (String) -> Unit,
     ) {}
@@ -418,7 +423,8 @@ fun GeohashLocationPickerDialog(
     initialGeohash: String?,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
-) = LocalAppPlatform.current.GeohashLocationPickerDialog(initialGeohash, onDismiss, onConfirm)
+    precision: Int? = null,
+) = LocalAppPlatform.current.GeohashLocationPickerDialog(initialGeohash, precision, onDismiss, onConfirm)
 
 @Composable
 fun GeohashLocationPickerContent(

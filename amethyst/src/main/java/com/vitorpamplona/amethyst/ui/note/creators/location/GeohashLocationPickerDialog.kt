@@ -97,6 +97,7 @@ import com.vitorpamplona.amethyst.commons.resources.location_picker_search_hint
 import com.vitorpamplona.amethyst.commons.resources.location_picker_title
 import com.vitorpamplona.amethyst.commons.resources.location_picker_use_mine
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults.WORLD_CENTER_LAT
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults.WORLD_CENTER_LON
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults.WORLD_ZOOM
@@ -137,6 +138,7 @@ fun GeohashLocationPickerDialog(
     initialGeohash: String?,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
+    precision: Int? = null,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -150,6 +152,7 @@ fun GeohashLocationPickerDialog(
                     confirmLabel = stringRes(Res.string.location_picker_confirm),
                     onConfirm = onConfirm,
                     modifier = Modifier.fillMaxWidth().weight(1f),
+                    precision = precision,
                 )
             }
         }
@@ -178,14 +181,19 @@ fun GeohashLocationPickerContent(
     confirmLabel: String,
     onConfirm: (String) -> Unit,
     modifier: Modifier = Modifier,
+    precision: Int? = null,
 ) {
     val context = LocalContext.current
     val keyboard = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
     val locationManager = LocalAppServices.current.deviceLocation
 
-    val seed = remember(initialGeohash) { initialGeohash?.takeIf { it.isNotBlank() }?.let { GeoHash.decode(it) } }
-    val seedLen = initialGeohash?.trim()?.length ?: 0
+    // A geohash is lowercase; an uppercase or otherwise invalid seed decodes to nothing.
+    val seedText = remember(initialGeohash) { initialGeohash?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } }
+    val seed = remember(seedText) { seedText?.let { GeoHash.decode(it) } }
+    val seedLen = if (seed != null) seedText?.length ?: 0 else 0
+    // A seed that matches no level exactly (3 characters, or a geocache's 9) shows the nearest one.
+    val seedLevel = remember(seed) { if (seed != null) GeohashPickerDefaults.nearestLevel(seedLen) else null }
 
     // The map opens centered here. Without a seed there is no real selection yet.
     val initialLat = seed?.centerLat ?: WORLD_CENTER_LAT
@@ -202,16 +210,21 @@ fun GeohashLocationPickerContent(
     // enabled Confirm with nothing chosen. Only map movement that follows a real finger
     // down on the map counts, so an automatic scroll can never become a selection.
     var mapTouched by remember { mutableStateOf(false) }
-    var level by remember {
-        mutableStateOf(GeohashChannelLevel.forChars(seedLen) ?: GeohashChannelLevel.CITY)
-    }
+    var level by remember { mutableStateOf(seedLevel ?: GeohashChannelLevel.CITY) }
     var recenter by remember { mutableStateOf<GeoPoint?>(null) }
 
     val cell =
-        remember(pickedLat, pickedLon, level, hasSelection) {
+        remember(pickedLat, pickedLon, level, hasSelection, precision) {
             val lat = pickedLat
             val lon = pickedLon
-            if (hasSelection && lat != null && lon != null) GeoHash.encode(lat, lon, level.chars).toString() else null
+            // Untouched, the seed comes back exactly as given: opening the picker and confirming must
+            // not turn a geocache's 9 characters into a coarser cell.
+            val untouched = seed != null && lat == seed.centerLat && lon == seed.centerLon
+            when {
+                untouched && (precision != null || level == seedLevel) -> seedText
+                hasSelection && lat != null && lon != null -> GeoHash.encode(lat, lon, precision ?: level.chars).toString()
+                else -> null
+            }
         }
 
     // Debounce the reverse-geocode: panning changes [cell] constantly, and we don't
@@ -399,6 +412,7 @@ fun GeohashLocationPickerContent(
             cell = cell,
             settledCell = settledCell,
             level = level,
+            showLevels = precision == null,
             confirmLabel = confirmLabel,
             onLevel = { level = it },
             onConfirm = { cell?.let(onConfirm) },
@@ -612,6 +626,7 @@ private fun PickerBottomBar(
     cell: String?,
     settledCell: String?,
     level: GeohashChannelLevel,
+    showLevels: Boolean,
     confirmLabel: String,
     onLevel: (GeohashChannelLevel) -> Unit,
     onConfirm: () -> Unit,
@@ -630,25 +645,28 @@ private fun PickerBottomBar(
                 .imePaddingSafe()
                 .padding(16.dp),
         ) {
-            Text(
-                text = stringRes(Res.string.location_picker_area),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            // Drop the 48dp minimum touch-target so wrapped chip rows sit 8dp apart
-            // (matching the horizontal gap) instead of ~24dp apart.
-            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    GeohashChannelLevel.ordered.forEach { lvl ->
-                        FilterChip(
-                            selected = lvl == level,
-                            onClick = { onLevel(lvl) },
-                            label = { Text("${lvl.label()} · ${lvl.areaSize()}") },
-                        )
+            // A caller that fixes the precision (a geocache) picks a point, not an area.
+            if (showLevels) {
+                Text(
+                    text = stringRes(Res.string.location_picker_area),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // Drop the 48dp minimum touch-target so wrapped chip rows sit 8dp apart
+                // (matching the horizontal gap) instead of ~24dp apart.
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        GeohashChannelLevel.ordered.forEach { lvl ->
+                            FilterChip(
+                                selected = lvl == level,
+                                onClick = { onLevel(lvl) },
+                                label = { Text("${lvl.label()} · ${lvl.areaSize()}") },
+                            )
+                        }
                     }
                 }
             }

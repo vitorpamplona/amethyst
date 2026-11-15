@@ -234,9 +234,10 @@ class DesktopAppPlatform(
     @Composable
     override fun GeohashLocationPickerDialog(
         initialGeohash: String?,
+        precision: Int?,
         onDismiss: () -> Unit,
         onConfirm: (String) -> Unit,
-    ) = DesktopGeohashLocationPickerDialog(initialGeohash, onDismiss, onConfirm)
+    ) = DesktopGeohashLocationPickerDialog(initialGeohash, onDismiss, onConfirm, precision)
 
     @Composable
     override fun GeohashLocationPickerContent(
