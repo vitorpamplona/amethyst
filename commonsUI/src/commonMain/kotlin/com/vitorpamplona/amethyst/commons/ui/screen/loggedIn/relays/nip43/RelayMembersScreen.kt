@@ -83,8 +83,10 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.fetchAsFlow
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -95,6 +97,7 @@ import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.tags.RelayMember
 import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRole
 import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRoleEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.lastOrNull
@@ -122,8 +125,9 @@ fun RelayMembersScreen(
     val scope = rememberCoroutineScope()
 
     // NIP-43 lists (13534) and roles (33534) MUST be signed by the relay's NIP-11 `self`. Resolve it
-    // first (loading state meanwhile) and fetch once, by that author only. A relay that publishes no
-    // `self` gets an explanatory state instead of lists anyone could have signed.
+    // first (loading state meanwhile), then read them by that author only and keep watching while the
+    // screen is open. A relay that publishes no `self` gets an explanatory state instead of lists
+    // anyone could have signed.
     LaunchedEffect(normalizedRelayUrl) {
         launch(Dispatchers.IO) {
             var relaySelf: HexKey? = null
@@ -149,32 +153,51 @@ fun RelayMembersScreen(
                     Filter(kinds = listOf(RelayMembershipListEvent.KIND), authors = authors, limit = 1),
                     Filter(kinds = listOf(RelayRoleEvent.KIND), authors = authors),
                 )
+            val client = accountViewModel.account.client.taggedAs(SubPurpose.RELAY_INFO, "Members")
 
-            val events =
-                accountViewModel.account.client
-                    .taggedAs(SubPurpose.RELAY_INFO, "Members")
-                    .fetchAsFlow(normalizedRelayUrl, filters)
-                    .lastOrNull()
+            // Everything the relay has served so far, by id (the live flow re-sends its whole list on
+            // each event): the newest list and each role's newest definition win, whichever read
+            // they came from.
+            val seenById = LinkedHashMap<String, Event>()
 
-            val membershipEvent =
-                events
-                    ?.mapNotNull { it as? RelayMembershipListEvent }
-                    ?.filter { it.pubKey == self }
-                    ?.maxByOrNull { it.createdAt }
+            fun show(events: Collection<Event>) {
+                events.forEach { seenById[it.id] = it }
+                val seen = seenById.values
+                val membershipEvent =
+                    seen
+                        .mapNotNull { it as? RelayMembershipListEvent }
+                        .filter { it.pubKey == self }
+                        .maxByOrNull { it.createdAt }
 
-            roles =
-                events
-                    ?.mapNotNull { it as? RelayRoleEvent }
-                    ?.filter { it.pubKey == self }
-                    ?.groupBy { it.roleId() }
-                    ?.mapValues { (_, versions) -> versions.maxBy { it.createdAt }.role() }
-                    ?: emptyMap()
+                roles =
+                    seen
+                        .mapNotNull { it as? RelayRoleEvent }
+                        .filter { it.pubKey == self }
+                        .groupBy { it.roleId() }
+                        .mapValues { (_, versions) -> versions.maxBy { it.createdAt }.role() }
 
-            val memberList = membershipEvent?.membersWithRoles() ?: emptyList()
-            members = memberList
-            isMember = memberList.any { it.pubKey == accountViewModel.account.signer.pubKey }
+                val memberList = membershipEvent?.membersWithRoles() ?: emptyList()
+                members = memberList
+                val nowMember = memberList.any { it.pubKey == accountViewModel.account.signer.pubKey }
+                if (nowMember != isMember) {
+                    // The relay answered: a pending join or leave is done, so the screen offers the
+                    // other action again. The invite code was spent on the join.
+                    joinRequestSent = false
+                    leaveRequestSent = false
+                    if (nowMember) inviteCode = ""
+                }
+                isMember = nowMember
+            }
+
+            // What the relay holds now, read to its EOSE so an empty answer still ends the loading.
+            val askedAt = TimeUtils.now()
+            show(client.fetchAsFlow(normalizedRelayUrl, filters).lastOrNull().orEmpty())
             isUnverifiable = false
             isLoading = false
+
+            // Then what it publishes while the screen is open: the relay answers a join or leave
+            // request (or an admin's change) with a new list, which used to show only on reopening.
+            client.subscribeAsFlow(normalizedRelayUrl, filters.map { it.copy(since = askedAt) }).collect { events -> show(events) }
         }
     }
 
