@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.resources.location_picker_area
 import com.vitorpamplona.amethyst.commons.resources.location_picker_confirm
 import com.vitorpamplona.amethyst.commons.resources.location_picker_hint_map_only
 import com.vitorpamplona.amethyst.commons.resources.location_picker_title
+import com.vitorpamplona.amethyst.commons.resources.location_picker_zoom_in
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.areaSize
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
@@ -87,6 +88,7 @@ fun DesktopGeohashLocationPickerDialog(
     initialGeohash: String?,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
+    precision: Int? = null,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -125,6 +127,7 @@ fun DesktopGeohashLocationPickerDialog(
                     confirmLabel = stringRes(Res.string.location_picker_confirm),
                     onConfirm = onConfirm,
                     modifier = Modifier.fillMaxWidth().weight(1f),
+                    precision = precision,
                 )
             }
         }
@@ -148,6 +151,7 @@ fun DesktopGeohashLocationPickerContent(
     confirmLabel: String,
     onConfirm: (String) -> Unit,
     modifier: Modifier = Modifier,
+    precision: Int? = null,
 ) {
     // A geohash is lowercase; an uppercase or otherwise invalid seed decodes to nothing and the picker
     // opens unseeded.
@@ -176,17 +180,23 @@ fun DesktopGeohashLocationPickerContent(
         moved = true
     }
 
-    val cell by remember(state, seed) {
+    val cell by remember(state, seed, precision) {
         derivedStateOf {
-            when {
-                moved -> GeoHash.encode(latitudeOf(state.centerY), longitudeOf(state.centerX), level.chars).toString()
-                // Untouched, the seed comes back exactly as given, whatever its length: opening the
-                // picker and confirming must not turn a geocache's 9 characters into a city.
-                seed != null && level == seedLevel -> seedText
-                seed != null -> GeoHash.encode(seed.centerLat, seed.centerLon, level.chars).toString()
-                else -> null
-            }
+            GeohashPickerDefaults.pickedCell(
+                seedText = if (seed != null) seedText else null,
+                seedLevel = seedLevel,
+                level = level,
+                precision = precision,
+                moved = moved,
+                // Untouched, the seed's own centre, not the map's, which Web Mercator clamps near the poles.
+                lat = if (moved) latitudeOf(state.centerY) else seed?.centerLat,
+                lon = if (moved) longitudeOf(state.centerX) else seed?.centerLon,
+                zoom = state.zoom.toDouble(),
+            )
         }
+    }
+    val needsZoomIn by remember(state, precision) {
+        derivedStateOf { GeohashPickerDefaults.needsZoomIn(precision, moved, state.zoom.toDouble()) }
     }
 
     // Choosing a coarser or finer area frames the new cell, once there is a place to frame. Not on
@@ -221,22 +231,25 @@ fun DesktopGeohashLocationPickerContent(
         }
 
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
-            Text(
-                text = stringRes(Res.string.location_picker_area),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                GeohashChannelLevel.ordered.forEach { option ->
-                    FilterChip(
-                        selected = option == level,
-                        onClick = { level = option },
-                        label = { Text("${option.label()} · ${option.areaSize()}") },
-                    )
+            // A caller that fixes the precision (a geocache) picks a point, not an area.
+            if (precision == null) {
+                Text(
+                    text = stringRes(Res.string.location_picker_area),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    GeohashChannelLevel.ordered.forEach { option ->
+                        FilterChip(
+                            selected = option == level,
+                            onClick = { level = option },
+                            label = { Text("${option.label()} · ${option.areaSize()}") },
+                        )
+                    }
                 }
             }
 
@@ -249,7 +262,7 @@ fun DesktopGeohashLocationPickerContent(
                     val current = cell
                     if (current == null) {
                         Text(
-                            text = stringRes(Res.string.location_picker_hint_map_only),
+                            text = stringRes(if (needsZoomIn) Res.string.location_picker_zoom_in else Res.string.location_picker_hint_map_only),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

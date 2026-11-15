@@ -206,7 +206,8 @@ object AndroidAppPlatform : AppPlatform {
         initialGeohash: String?,
         onDismiss: () -> Unit,
         onConfirm: (String) -> Unit,
-    ) = AppGeohashLocationPickerDialog(initialGeohash, onDismiss, onConfirm)
+        precision: Int?,
+    ) = AppGeohashLocationPickerDialog(initialGeohash, onDismiss, onConfirm, precision)
 
     @Composable
     override fun GeohashLocationPickerContent(

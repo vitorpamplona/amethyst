@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.resources.geohash_area_province
 import com.vitorpamplona.amethyst.commons.resources.geohash_area_region
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
 import kotlin.math.abs
 
 /**
@@ -72,6 +73,55 @@ object GeohashPickerDefaults {
      * default that has nothing to do with the seed.
      */
     fun nearestLevel(chars: Int): GeohashChannelLevel = GeohashChannelLevel.ordered.minBy { abs(it.chars - chars) }
+
+    /**
+     * How far in a map must be before a pin can claim [chars] characters: about one cell per few
+     * pixels. Zoom 15 for a geocache's 9 (~5 m), where a screen pixel is ~5 m at the equator; at
+     * world zoom a pixel spans tens of kilometres and a 9-character pick would be a made-up place.
+     */
+    fun minZoomForPrecision(chars: Int): Double = zoomForGeohashLength(chars) - 2.5
+
+    /**
+     * The geohash a picker hands back, or null while there is nothing to confirm. Both platforms'
+     * pickers run this one rule.
+     *
+     * @param seedText the geohash the picker opened on, lowercase, or null when there was none or it
+     *   did not decode.
+     * @param seedLevel the level shown for the seed ([nearestLevel] of its length).
+     * @param level the level the reader has chosen; ignored when [precision] is set.
+     * @param precision a fixed length the caller needs (a geocache's 9), or null to use [level].
+     * @param moved whether the reader moved the pin since the picker opened.
+     * @param lat the point under the pin (the seed's centre while untouched).
+     * @param zoom the map's zoom now.
+     */
+    fun pickedCell(
+        seedText: String?,
+        seedLevel: GeohashChannelLevel?,
+        level: GeohashChannelLevel,
+        precision: Int?,
+        moved: Boolean,
+        lat: Double?,
+        lon: Double?,
+        zoom: Double,
+    ): String? {
+        if (!moved) {
+            // Untouched, the seed comes back exactly as given, so opening the picker and confirming
+            // never coarsens it; under a fixed precision, only a seed that already meets it does.
+            if (seedText == null) return null
+            if (precision != null) return seedText.takeIf { it.length >= precision }
+            if (level == seedLevel) return seedText
+        }
+        if (lat == null || lon == null) return null
+        if (precision != null && zoom < minZoomForPrecision(precision)) return null
+        return GeoHash.encode(lat, lon, precision ?: level.chars).toString()
+    }
+
+    /** Whether the pin has moved but sits on a map too far out for [precision]: the picker asks to zoom in. */
+    fun needsZoomIn(
+        precision: Int?,
+        moved: Boolean,
+        zoom: Double,
+    ): Boolean = precision != null && moved && zoom < minZoomForPrecision(precision)
 }
 
 /** A rough physical size for a geohash cell at this precision, for the location pickers' chips. */
