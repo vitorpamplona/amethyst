@@ -61,6 +61,8 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.IComposerMediaTools
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.IComposerPostOptions
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
@@ -114,6 +116,8 @@ open class NewProductViewModel :
     ViewModel(),
     ILocationGrabber,
     IMessageField,
+    IComposerMediaTools,
+    IComposerPostOptions,
     IZapField,
     IZapRaiser,
     IExpiration {
@@ -124,7 +128,7 @@ open class NewProductViewModel :
     var draftNote: AddressableNote? = null
         private set
 
-    lateinit var accountViewModel: AccountViewModel
+    override lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
     init {
@@ -149,8 +153,8 @@ open class NewProductViewModel :
     val urlPreviews = PreviewState()
 
     val mediaUploadTracker = MediaUploadTracker()
-    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
-    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
+    override val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    override val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -171,39 +175,39 @@ open class NewProductViewModel :
     var condition by mutableStateOf(ConditionTag.CONDITION.USED_LIKE_NEW)
 
     // Invoices
-    var canAddInvoice by mutableStateOf(false)
-    var wantsInvoice by mutableStateOf(false)
+    override var canAddInvoice by mutableStateOf(false)
+    override var wantsInvoice by mutableStateOf(false)
 
-    var wantsSecretEmoji by mutableStateOf(false)
+    override var wantsSecretEmoji by mutableStateOf(false)
 
     // Forward Zap to
-    var wantsForwardZapTo by mutableStateOf(false)
+    override var wantsForwardZapTo by mutableStateOf(false)
     override var forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
     override val forwardZapToEditting = TextFieldState()
 
     // NSFW, Sensitive
-    var wantsToMarkAsSensitive by mutableStateOf(false)
+    override var wantsToMarkAsSensitive by mutableStateOf(false)
     var contentWarningDescription by mutableStateOf("")
 
     // Expiration Date (NIP-40)
-    var wantsExpirationDate by mutableStateOf(false)
+    override var wantsExpirationDate by mutableStateOf(false)
     override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // GeoHash
-    var wantsToAddGeoHash by mutableStateOf(false)
+    override var wantsToAddGeoHash by mutableStateOf(false)
     override var pickedGeoHash by mutableStateOf<String?>(null)
     var location: StateFlow<LocationResult>? = null
 
     // ZapRaiser
-    var canAddZapRaiser by mutableStateOf(false)
-    var wantsZapraiser by mutableStateOf(false)
+    override var canAddZapRaiser by mutableStateOf(false)
+    override var wantsZapRaiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
     var relayList by mutableStateOf<ImmutableList<NormalizedRelayUrl>?>(null)
 
     fun lnAddress(): String? = account.userProfile().lnAddress()
 
-    fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
+    override fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
 
     fun user(): User = account.userProfile()
 
@@ -294,7 +298,7 @@ open class NewProductViewModel :
         pickedGeoHash = geohash
 
         val zapraiser = draftEvent.zapraiserAmount()
-        wantsZapraiser = zapraiser != null
+        wantsZapRaiser = zapraiser != null
         zapRaiserAmount.value = null
         if (zapraiser != null) {
             zapRaiserAmount.value = zapraiser
@@ -365,7 +369,7 @@ open class NewProductViewModel :
         val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationResult.Success)?.geoHash?.toString()) else null
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
-        val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
+        val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
@@ -399,7 +403,7 @@ open class NewProductViewModel :
     }
 
     /** Uploads a hand drawing ([uploadDrawing]) and adds its GIF to the product's pictures. */
-    fun uploadDrawing(
+    override fun uploadDrawing(
         drawing: RenderedDrawing,
         alt: String?,
         onError: (title: String, message: String) -> Unit,
@@ -509,7 +513,7 @@ open class NewProductViewModel :
         mediaUploadTracker.finishUpload()
 
         wantsInvoice = false
-        wantsZapraiser = false
+        wantsZapRaiser = false
         zapRaiserAmount.value = null
 
         condition = ConditionTag.CONDITION.USED_LIKE_NEW
@@ -625,7 +629,7 @@ open class NewProductViewModel :
         message.text.isNotBlank() &&
             !mediaUploadTracker.isUploading &&
             !wantsInvoice &&
-            (!wantsZapraiser || zapRaiserAmount.value != null) &&
+            (!wantsZapRaiser || zapRaiserAmount.value != null) &&
             title.text.isNotBlank() &&
             price.text.isNotBlank() &&
             category.text.isNotBlank() &&
@@ -635,7 +639,7 @@ open class NewProductViewModel :
         message.insertUrlAtCursor(newElement)
     }
 
-    fun selectImage(uris: ImmutableList<SelectedMedia>) {
+    override fun selectImage(uris: ImmutableList<SelectedMedia>) {
         multiOrchestrator = MultiOrchestrator(uris)
     }
 
@@ -675,12 +679,12 @@ open class NewProductViewModel :
         draftTag.newVersion()
     }
 
-    fun toggleMarkAsSensitive() {
+    override fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
         draftTag.newVersion()
     }
 
-    fun toggleExpirationDate() {
+    override fun toggleExpirationDate() {
         wantsExpirationDate = !wantsExpirationDate
         if (wantsExpirationDate) {
             expirationDate = TimeUtils.oneDayAhead()

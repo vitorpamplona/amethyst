@@ -62,6 +62,8 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.IComposerMediaTools
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.IComposerPostOptions
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
@@ -125,6 +127,8 @@ class LongFormPostViewModel :
     ViewModel(),
     ILocationGrabber,
     IMessageField,
+    IComposerMediaTools,
+    IComposerPostOptions,
     IZapField,
     IZapRaiser,
     IExpiration {
@@ -135,7 +139,7 @@ class LongFormPostViewModel :
     var draftNote: AddressableNote? = null
         private set
 
-    lateinit var accountViewModel: AccountViewModel
+    override lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
     init {
@@ -176,8 +180,8 @@ class LongFormPostViewModel :
     val iMetaAttachments = IMetaAttachments()
 
     val mediaUploadTracker = MediaUploadTracker()
-    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
-    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
+    override val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    override val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
 
@@ -190,38 +194,38 @@ class LongFormPostViewModel :
     var emojiSuggestions: EmojiSuggestionState? = null
 
     // Invoices
-    var canAddInvoice by mutableStateOf(false)
-    var wantsInvoice by mutableStateOf(false)
+    override var canAddInvoice by mutableStateOf(false)
+    override var wantsInvoice by mutableStateOf(false)
 
-    var wantsSecretEmoji by mutableStateOf(false)
+    override var wantsSecretEmoji by mutableStateOf(false)
 
     // Forward Zap to
-    var wantsForwardZapTo by mutableStateOf(false)
+    override var wantsForwardZapTo by mutableStateOf(false)
     override var forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
     override val forwardZapToEditting = TextFieldState()
 
     // NSFW, Sensitive
-    var wantsToMarkAsSensitive by mutableStateOf(false)
+    override var wantsToMarkAsSensitive by mutableStateOf(false)
     var contentWarningDescription by mutableStateOf("")
 
     // Expiration Date (NIP-40)
-    var wantsExpirationDate by mutableStateOf(false)
+    override var wantsExpirationDate by mutableStateOf(false)
     override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // GeoHash
-    var wantsToAddGeoHash by mutableStateOf(false)
+    override var wantsToAddGeoHash by mutableStateOf(false)
     override var pickedGeoHash by mutableStateOf<String?>(null)
     var location: StateFlow<LocationResult>? = null
     var wantsExclusiveGeoPost by mutableStateOf(false)
 
     // ZapRaiser
-    var canAddZapRaiser by mutableStateOf(false)
-    var wantsZapRaiser by mutableStateOf(false)
+    override var canAddZapRaiser by mutableStateOf(false)
+    override var wantsZapRaiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
     fun lnAddress(): String? = account.userProfile().lnAddress()
 
-    fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
+    override fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
 
     // Editing existing article
     var existingDTag: String? = null
@@ -490,7 +494,7 @@ class LongFormPostViewModel :
         uploadToDefaultServer(galleryUri, account, uploader, onError, stripMetadata = false)
 
     /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the article as a markdown image. */
-    fun uploadDrawing(
+    override fun uploadDrawing(
         drawing: RenderedDrawing,
         alt: String?,
         onError: (title: String, message: String) -> Unit,
@@ -706,7 +710,7 @@ class LongFormPostViewModel :
         message.insertUrlAtCursor(newElement)
     }
 
-    fun selectImage(uris: ImmutableList<SelectedMedia>) {
+    override fun selectImage(uris: ImmutableList<SelectedMedia>) {
         multiOrchestrator = MultiOrchestrator(uris)
     }
 
@@ -747,12 +751,12 @@ class LongFormPostViewModel :
         draftTag.newVersion()
     }
 
-    fun toggleMarkAsSensitive() {
+    override fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
         draftTag.newVersion()
     }
 
-    fun toggleExpirationDate() {
+    override fun toggleExpirationDate() {
         wantsExpirationDate = !wantsExpirationDate
         if (wantsExpirationDate) {
             expirationDate = TimeUtils.oneDayAhead()

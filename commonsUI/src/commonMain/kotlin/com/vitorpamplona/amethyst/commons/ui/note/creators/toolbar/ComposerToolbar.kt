@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +39,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
+import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 
 /**
  * Whether a composer's tools wrap under the text rather than scroll in a strip at the bottom:
@@ -47,11 +51,20 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 @Composable
 fun composerToolsWrap(): Boolean = LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
 
-/** Lines the wrapped tools up with a composer's text: past the 10dp side padding and the 35dp avatar. */
-val ComposerToolsStartPadding = 45.dp
+/** Lines the wrapped tools up with a composer's text: past the side padding and the avatar beside it. */
+val ComposerToolsStartPadding: Dp = Size10dp + Size35dp
 
-/** A composer field's start without an avatar beside it: just the 10dp side padding. */
-val ComposerToolsFormStartPadding = 10.dp
+/** A composer field's start without an avatar beside it: just the side padding. */
+val ComposerToolsFormStartPadding: Dp = Size10dp
+
+/**
+ * The modifier for a composer's content above its [ComposerToolbar]: it fills the height left over
+ * while the tools sit in the bottom strip, and takes only the height it needs where they wrap, so
+ * the tools sit under the text instead of at the bottom of a tall window. Taller content scrolls
+ * inside it and the tools stay in view. Both read [composerToolsWrap], so they always agree.
+ */
+@Composable
+fun ColumnScope.composerBody(): Modifier = Modifier.weight(1f, fill = !composerToolsWrap())
 
 /**
  * A composer's tool buttons (gallery, files, drawing, emoji, zap split, content warning, …).
@@ -59,10 +72,13 @@ val ComposerToolsFormStartPadding = 10.dp
  * On a phone they scroll sideways in a 50dp strip at the bottom, above the keyboard. On the docked
  * tier they wrap under the text instead, lined up with it from [startPadding]: a mouse cannot drag
  * that strip, so its last tools were out of reach, and on a tall window the strip sat far below a
- * short text. The content above should then take only the height it needs, not fill the window:
- * give it `weight(1f, fill = !composerToolsWrap())` rather than `weight(1f)`.
+ * short text. Give the content above [composerBody] so it makes room for the tools the same way.
  *
- * [tools] is told whether it is [wrapped], for a tool that needs its own bounds there (the voice
+ * With a mouse ([com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform.hasFinePointer]) the
+ * wrapped tools drop Material's 48dp touch target and sit at their 40dp size; a finger keeps it,
+ * on a tablet's wide layout as on a phone.
+ *
+ * [tools] is told whether it is wrapped, for a tool that needs its own bounds there (the voice
  * recorder fills its parent). It is movable, so a window crossing tiers moves the tools' state (a
  * recording, an open picker) instead of disposing it.
  */
@@ -70,26 +86,30 @@ val ComposerToolsFormStartPadding = 10.dp
 fun ComposerToolbar(
     modifier: Modifier = Modifier,
     startPadding: Dp = ComposerToolsStartPadding,
-    wrapped: Boolean = composerToolsWrap(),
     tools: @Composable (wrapped: Boolean) -> Unit,
 ) {
+    val wrapped = composerToolsWrap()
+    // Read here, where it does not move, and handed to the tools as a parameter: content moved by
+    // movableContentOf keeps what it composed, so a local provided around only one of the two
+    // places it can land would not reliably reach buttons that already read the other value.
+    val touchTarget = LocalMinimumInteractiveComponentSize.current
+    val toolTarget = if (wrapped && LocalAppPlatform.current.hasFinePointer) Dp.Unspecified else touchTarget
+
     val movableTools =
         remember {
-            movableContentOf { content: @Composable (Boolean) -> Unit, isWrapped: Boolean ->
-                content(isWrapped)
+            movableContentOf { content: @Composable (Boolean) -> Unit, isWrapped: Boolean, target: Dp ->
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides target) {
+                    content(isWrapped)
+                }
             }
         }
 
     if (wrapped) {
-        // A mouse needs no 48dp touch target: without it each button is its 40dp self, and the tools
-        // sit closer together. The phone strip below keeps the touch target.
-        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-            FlowRow(
-                modifier = modifier.fillMaxWidth().padding(start = startPadding, end = 10.dp),
-                itemVerticalAlignment = CenterVertically,
-            ) {
-                movableTools(tools, true)
-            }
+        FlowRow(
+            modifier = modifier.fillMaxWidth().padding(start = startPadding, end = Size10dp),
+            itemVerticalAlignment = CenterVertically,
+        ) {
+            movableTools(tools, true, toolTarget)
         }
     } else {
         val scrollState = rememberScrollState()
@@ -101,7 +121,7 @@ fun ComposerToolbar(
                     .height(50.dp),
             verticalAlignment = CenterVertically,
         ) {
-            movableTools(tools, false)
+            movableTools(tools, false, toolTarget)
         }
     }
 }

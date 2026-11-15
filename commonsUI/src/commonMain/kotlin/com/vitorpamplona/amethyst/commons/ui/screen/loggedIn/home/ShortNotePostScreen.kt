@@ -66,7 +66,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.BooleanType
@@ -101,10 +100,6 @@ import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDial
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.OnIncomingShare
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePictureButton
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.VoiceAnonymizationSection
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
@@ -140,9 +135,10 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.scheduling.ScheduleAt
 import com.vitorpamplona.amethyst.commons.ui.note.creators.scheduling.roundUpToNextQuarterHour
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerMediaTools
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerToolbar
 import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerToolsStartPadding
-import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.composerToolsWrap
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.composerBody
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
@@ -356,7 +352,6 @@ private fun NewPostScreenBody(
 
         // Where the tools wrap, the text area takes only the height it needs, so the toolbar below
         // sits under the text rather than at the bottom of the window.
-        val toolsWrap = composerToolsWrap()
         Row(
             modifier =
                 Modifier
@@ -364,7 +359,7 @@ private fun NewPostScreenBody(
                     .padding(
                         start = Size10dp,
                         end = Size10dp,
-                    ).weight(1f, fill = !toolsWrap),
+                    ).then(composerBody()),
         ) {
             Column(
                 modifier =
@@ -770,43 +765,8 @@ private fun BottomRowActions(
             }
     },
 ) {
-    // Wrapped under the text on the docked tier, a strip at the bottom elsewhere: ComposerToolbar.
-    val vm = postViewModel
-    val onSchedule = onScheduleClicked
     ComposerToolbar { wrapped ->
-        SelectFromGallery(
-            isUploading = vm.isUploadingImage,
-            enabled = !vm.isUploadingFile,
-            tint = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier,
-        ) {
-            vm.selectImage(it)
-        }
-
-        SelectFromFiles(
-            isUploading = vm.isUploadingFile,
-            enabled = !vm.isUploadingImage,
-            tint = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier,
-        ) {
-            vm.selectImage(it)
-        }
-
-        TakePictureButton(
-            onPictureTaken = {
-                vm.selectImage(it)
-            },
-        )
-
-        TakeVideoButton(
-            onVideoTaken = {
-                vm.selectImage(it)
-            },
-        )
-
-        DrawingButton(vm.accountViewModel, enabled = !vm.isUploadingImage && !vm.isUploadingFile) { drawing, alt ->
-            vm.uploadDrawing(drawing, alt, vm.accountViewModel.toastManager::toast)
-        }
+        ComposerMediaTools(postViewModel)
 
         // The recorder fills its parent. The strip bounds it to 50dp tall and lets it take only
         // the width it needs; wrapped, a strip of its own does the same instead of letting it
@@ -816,25 +776,25 @@ private fun BottomRowActions(
         Row(if (wrapped) Modifier.height(50.dp).horizontalScroll(recorderScroll) else Modifier) {
             RecordVoiceButton(
                 onVoiceTaken = { recording ->
-                    vm.selectVoiceRecording(recording)
+                    postViewModel.selectVoiceRecording(recording)
                 },
                 maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
             )
         }
 
-        EmojiPickerButton(vm.emojiSuggestions?.emojiPacks, vm.emojiTarget)
+        EmojiPickerButton(postViewModel.emojiSuggestions?.emojiPacks, postViewModel.emojiTarget)
 
         // Polls publish kinds that can't travel inside a private wrap, so the
         // two toggles are mutually exclusive. Neither a private wrap nor a poll makes sense for a
         // NIP-29 group thread (it publishes plainly to the host relay), so hide both there.
-        if (!vm.wantsPoll && !vm.wantsZapPoll && vm.groupThreadTarget == null) {
+        if (!postViewModel.wantsPoll && !postViewModel.wantsZapPoll && postViewModel.groupThreadTarget == null) {
             val haptic = LocalHapticFeedback.current
             AddPrivateNoteButton(
-                isActive = vm.wantsPrivateNote,
-                isLocked = vm.privateNoteLocked,
+                isActive = postViewModel.wantsPrivateNote,
+                isLocked = postViewModel.privateNoteLocked,
             ) {
-                val nowPrivate = !vm.wantsPrivateNote
-                vm.togglePrivateNote()
+                val nowPrivate = !postViewModel.wantsPrivateNote
+                postViewModel.togglePrivateNote()
                 // Sealing a note changes what Send is about to do, so the change
                 // is confirmed in the hand as well as on screen — and in the
                 // direction it actually moved.
@@ -844,70 +804,70 @@ private fun BottomRowActions(
             }
         }
 
-        if ((vm.canUsePoll || vm.canUseZapPoll) &&
-            !vm.wantsPrivateNote &&
-            vm.groupThreadTarget == null
+        if ((postViewModel.canUsePoll || postViewModel.canUseZapPoll) &&
+            !postViewModel.wantsPrivateNote &&
+            postViewModel.groupThreadTarget == null
         ) {
-            AddPollButton(vm.wantsPoll || vm.wantsZapPoll) {
-                val isActive = vm.wantsPoll || vm.wantsZapPoll
+            AddPollButton(postViewModel.wantsPoll || postViewModel.wantsZapPoll) {
+                val isActive = postViewModel.wantsPoll || postViewModel.wantsZapPoll
                 if (isActive) {
-                    vm.disablePoll()
+                    postViewModel.disablePoll()
                 } else {
-                    vm.wantsPoll = true
+                    postViewModel.wantsPoll = true
                 }
             }
         }
 
-        ForwardZapToButton(vm.wantsForwardZapTo) {
-            vm.wantsForwardZapTo = !vm.wantsForwardZapTo
+        ForwardZapToButton(postViewModel.wantsForwardZapTo) {
+            postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
         }
 
-        if (vm.canAddZapRaiser) {
-            AddZapraiserButton(vm.wantsZapRaiser) {
-                vm.wantsZapRaiser = !vm.wantsZapRaiser
+        if (postViewModel.canAddZapRaiser) {
+            AddZapraiserButton(postViewModel.wantsZapRaiser) {
+                postViewModel.wantsZapRaiser = !postViewModel.wantsZapRaiser
             }
         }
 
         PowOverrideButton(
-            effectiveDifficulty = vm.effectivePowDifficulty(),
-            defaultDifficulty = vm.defaultPowDifficulty(),
-            isOverridden = vm.powOverride != null,
-            onSelect = { vm.powOverride = it },
+            effectiveDifficulty = postViewModel.effectivePowDifficulty(),
+            defaultDifficulty = postViewModel.defaultPowDifficulty(),
+            isOverridden = postViewModel.powOverride != null,
+            onSelect = { postViewModel.powOverride = it },
         )
 
         // A group thread's title is required, so the field is always shown for it — no toggle.
-        if (vm.groupThreadTarget == null) {
-            AddSubjectButton(vm.wantsSubject) {
-                vm.toggleSubject()
+        if (postViewModel.groupThreadTarget == null) {
+            AddSubjectButton(postViewModel.wantsSubject) {
+                postViewModel.toggleSubject()
             }
         }
 
-        MarkAsSensitiveButton(vm.wantsToMarkAsSensitive) {
-            vm.toggleMarkAsSensitive()
+        MarkAsSensitiveButton(postViewModel.wantsToMarkAsSensitive) {
+            postViewModel.toggleMarkAsSensitive()
         }
 
-        ExpirationDateButton(vm.wantsExpirationDate) {
-            vm.toggleExpirationDate()
+        ExpirationDateButton(postViewModel.wantsExpirationDate) {
+            postViewModel.toggleExpirationDate()
         }
 
         // Private wraps are built and sent immediately; scheduling them would
         // require wrapping at publish time, so the option is hidden for now. Scheduling also
         // bypasses the host-relay pin, so it's hidden for NIP-29 group threads too.
-        if (!vm.wantsPrivateNote && vm.groupThreadTarget == null) {
-            ScheduleAtButton(vm.scheduledForSec != null, onSchedule)
+        if (!postViewModel.wantsPrivateNote && postViewModel.groupThreadTarget == null) {
+            ScheduleAtButton(postViewModel.scheduledForSec != null, onScheduleClicked)
         }
 
-        AddGeoHashButton(vm.wantsToAddGeoHash) {
-            vm.wantsToAddGeoHash = !vm.wantsToAddGeoHash
+        AddGeoHashButton(postViewModel.wantsToAddGeoHash) {
+            postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash
         }
 
-        AddSecretEmojiButton(vm.wantsSecretEmoji) {
-            vm.wantsSecretEmoji = !vm.wantsSecretEmoji
+        AddSecretEmojiButton(postViewModel.wantsSecretEmoji) {
+            postViewModel.wantsSecretEmoji = !postViewModel.wantsSecretEmoji
         }
 
-        if (vm.canAddInvoice && vm.hasLnAddress()) {
-            AddLnInvoiceButton(vm.wantsInvoice) {
-                vm.wantsInvoice = !vm.wantsInvoice
+        if (postViewModel.canAddInvoice && postViewModel.hasLnAddress()) {
+            AddLnInvoiceButton(postViewModel.wantsInvoice) {
+                postViewModel.wantsInvoice = !postViewModel.wantsInvoice
             }
         }
     }
