@@ -1,0 +1,881 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ai_suggested_alt_text_dismiss
+import com.vitorpamplona.amethyst.commons.resources.ai_suggested_alt_text_hint
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.convert_gif_to_mp4_label
+import com.vitorpamplona.amethyst.commons.resources.file_server
+import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_original
+import com.vitorpamplona.amethyst.commons.resources.media_studio_add
+import com.vitorpamplona.amethyst.commons.resources.media_studio_alt_placeholder
+import com.vitorpamplona.amethyst.commons.resources.media_studio_hold_original
+import com.vitorpamplona.amethyst.commons.resources.media_studio_long_edge
+import com.vitorpamplona.amethyst.commons.resources.media_studio_no_options
+import com.vitorpamplona.amethyst.commons.resources.media_studio_position
+import com.vitorpamplona.amethyst.commons.resources.media_studio_remove_location
+import com.vitorpamplona.amethyst.commons.resources.media_studio_remove_location_description
+import com.vitorpamplona.amethyst.commons.resources.media_studio_retry_hint
+import com.vitorpamplona.amethyst.commons.resources.media_studio_sensitive
+import com.vitorpamplona.amethyst.commons.resources.media_studio_sensitive_description
+import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_alt
+import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_privacy
+import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_quality
+import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_label
+import com.vitorpamplona.amethyst.commons.resources.video_compression_needs_ffmpeg
+import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoAwareSliderSteps
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.FilePreviewPlaceholder
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberVideoThumbnail
+import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ComparisonImages
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.longEdge
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.qualityName
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.videoPhrase
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.util.formatFileSize
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.coroutines.delay
+import net.engawapg.lib.zoomable.MouseWheelZoom
+import net.engawapg.lib.zoomable.rememberZoomState
+import net.engawapg.lib.zoomable.zoomable
+import kotlin.math.min
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadingState as UploadingStateIndicator
+
+/**
+ * The media studio: what opens right after files are picked. Every choice belongs to one file
+ * ([SelectedMediaProcessing.options]) and is made on a picture of that file:
+ *
+ * - The preview is the upload: a still image is shown compressed exactly as it will be sent, zoomable
+ *   (pinch, double-tap, mouse wheel), and "Hold for original" flips to the source in place.
+ * - Quality lists the platform's levels with the size and long edge each one produces.
+ * - Alt text is per file, with the on-device suggestion when the platform has one.
+ * - Privacy: the content warning and the metadata strip.
+ *
+ * Add uploads every file with its own options to the chosen server ([onAdd]); the studio stays up
+ * while it runs and, if a file fails, shows why and lets Add try again. Design and the rest of the
+ * plan: `commonsUI/plans/2026-11-15-media-composer-redesign.md`.
+ */
+@Composable
+fun MediaStudioDialog(
+    media: MultiOrchestrator,
+    defaultServer: ServerName,
+    isUploading: Boolean,
+    onAdd: (ServerName) -> Unit,
+    onRemove: (SelectedMediaProcessing) -> Unit,
+    onCancel: () -> Unit,
+    accountViewModel: AccountViewModel,
+) {
+    val servers by accountViewModel.account.blossomServers.hostNameFlow
+        .collectAsState()
+    val appServices = LocalAppServices.current
+    val suggester = remember(appServices) { appServices.createAltTextSuggester() }
+    DisposableEffect(suggester) { onDispose { suggester?.close() } }
+
+    Dialog(
+        onDismissRequest = { if (!isUploading) onCancel() },
+        properties = edgeToEdgeDialogProperties(dismissOnBackPress = !isUploading, dismissOnClickOutside = false),
+    ) {
+        MediaStudio(
+            media = media,
+            servers = servers,
+            defaultServer = defaultServer,
+            isUploading = isUploading,
+            uploader = accountViewModel.mediaUploader,
+            altSuggester = suggester,
+            onAdd = onAdd,
+            onRemove = onRemove,
+            onCancel = onCancel,
+        )
+    }
+}
+
+enum class StudioTool { QUALITY, ALT, PRIVACY }
+
+/** The tools that do something for [media] on a platform with [support]. */
+fun studioToolsFor(
+    media: SelectedMedia,
+    support: VideoCompressionSupport,
+): List<StudioTool> =
+    buildList {
+        val hasQuality =
+            when {
+                media.isVideo() == true -> support != VideoCompressionSupport.Unsupported
+                media.isGif() -> support == VideoCompressionSupport.Supported
+                else -> media.isCompressible()
+            }
+        if (hasQuality) add(StudioTool.QUALITY)
+        if (media.isImage() == true || media.isVideo() == true) add(StudioTool.ALT)
+        add(StudioTool.PRIVACY)
+    }
+
+/** The studio's content, without the dialog: what [MediaStudioDialog] shows, and what tests render. */
+@Composable
+fun MediaStudio(
+    media: MultiOrchestrator,
+    servers: List<ServerName>,
+    defaultServer: ServerName,
+    isUploading: Boolean,
+    uploader: MediaUploader,
+    altSuggester: AltTextSuggester?,
+    onAdd: (ServerName) -> Unit,
+    onRemove: (SelectedMediaProcessing) -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+    initialTool: StudioTool = StudioTool.QUALITY,
+    holdingOriginal: Boolean = false,
+) {
+    val items = media.items()
+    if (items.isEmpty()) return
+
+    var selected by remember { mutableStateOf(items.first()) }
+    val current = if (selected in items) selected else items.first()
+
+    var pickedServer by remember { mutableStateOf<ServerName?>(null) }
+    val server = pickedServer ?: servers.firstOrNull { it == defaultServer } ?: servers.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0]
+
+    val previews = rememberCompressionPreviews(uploader)
+    val tools = studioToolsFor(current.media, uploader.videoCompression)
+    var tool by remember(current) { mutableStateOf(if (initialTool in tools) initialTool else tools.first()) }
+
+    SuggestAltText(items, altSuggester)
+    PreparePreviews(current, previews, isUploading)
+
+    Column(
+        modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .imePadding(),
+    ) {
+        StudioTopBar(
+            position = items.indexOf(current) + 1,
+            count = items.size,
+            isUploading = isUploading,
+            onCancel = onCancel,
+            onRemove = { onRemove(current) },
+            onAdd = { onAdd(server) },
+        )
+
+        Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black)) {
+            StudioPreview(current, previews, uploader, holdingOriginal)
+            UploadOverlay(current)
+        }
+
+        UploadErrorBanner(current)
+
+        if (items.size > 1) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            ) {
+                items.forEachIndexed { index, item ->
+                    key(item) {
+                        Thumbnail(item, item === current, stringRes(Res.string.media_studio_position, index + 1, items.size)) { selected = item }
+                    }
+                }
+            }
+        }
+
+        Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(top = 12.dp)) {
+                Box(Modifier.fillMaxWidth().heightIn(min = 112.dp).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                    when (tool) {
+                        StudioTool.QUALITY -> QualityTool(current, previews, uploader)
+                        StudioTool.ALT -> AltTool(current)
+                        StudioTool.PRIVACY -> PrivacyTool(current, uploader.videoCompression)
+                    }
+                }
+                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ServerChip(server, servers, enabled = !isUploading, onPick = { pickedServer = it })
+                    Spacer(Modifier.weight(1f))
+                    tools.forEach { t -> ToolTab(t, t == tool) { tool = t } }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StudioTopBar(
+    position: Int,
+    count: Int,
+    isUploading: Boolean,
+    onCancel: () -> Unit,
+    onRemove: () -> Unit,
+    onAdd: () -> Unit,
+) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onCancel, enabled = !isUploading) {
+            Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.cancel))
+        }
+        Text(
+            if (count > 1) stringRes(Res.string.media_studio_position, position, count) else "",
+            modifier = Modifier.weight(1f),
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        IconButton(onClick = onRemove, enabled = !isUploading) {
+            Icon(MaterialSymbols.Delete, contentDescription = stringRes(Res.string.remove))
+        }
+        Button(onClick = onAdd, enabled = !isUploading, modifier = Modifier.padding(end = 8.dp).height(36.dp)) {
+            if (isUploading) {
+                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(stringRes(Res.string.media_studio_add))
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Background work: alt suggestions and compressed previews
+// ---------------------------------------------------------------------------------------------
+
+/** Suggests alt text for each still image that has none, once per image, one at a time. */
+@Composable
+private fun SuggestAltText(
+    items: List<SelectedMediaProcessing>,
+    suggester: AltTextSuggester?,
+) {
+    if (suggester == null) return
+    val tried = remember { mutableSetOf<SelectedMediaProcessing>() }
+    LaunchedEffect(items, suggester) {
+        items.forEach { item ->
+            if (item in tried || item.media.isImage() != true || item.media.isGif()) return@forEach
+            tried += item
+            if (item.options.alt.isNotEmpty()) return@forEach
+            val suggestion = suggester.suggestAltText(item.media.uri)
+            if (suggestion != null && item.options.alt.isEmpty()) {
+                item.options = item.options.copy(alt = suggestion, altSuggested = true)
+            }
+        }
+    }
+}
+
+/**
+ * Compresses the current image at its chosen level first, then at every other level so each stop
+ * can show its real size. Stops while an upload runs: on desktop a preview encode would hold up
+ * the upload queued behind it.
+ */
+@Composable
+private fun PreparePreviews(
+    item: SelectedMediaProcessing,
+    previews: CompressionPreviews,
+    isUploading: Boolean,
+) {
+    val quality = item.options.quality
+    LaunchedEffect(item, quality, isUploading) {
+        if (isUploading || item.media.isImage() != true || !item.media.isCompressible()) return@LaunchedEffect
+        // Lets a fast tap through the levels settle before encoding.
+        delay(250)
+        previews.load(item.media, quality)
+        CompressorQuality.sliderSteps.forEach { previews.load(item.media, it) }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Preview
+// ---------------------------------------------------------------------------------------------
+
+@Composable
+private fun StudioPreview(
+    item: SelectedMediaProcessing,
+    previews: CompressionPreviews,
+    uploader: MediaUploader,
+    forceOriginal: Boolean,
+) {
+    val media = item.media
+    when {
+        media.isImage() == true && media.isCompressible() -> CompressedImagePreview(item, previews, forceOriginal)
+
+        media.isImage() == true -> {
+            val zoomState = rememberZoomState()
+            AsyncImage(
+                model = media.uri.toString(),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize().zoomable(zoomState, mouseWheelZoom = MouseWheelZoom.Enabled),
+            )
+        }
+
+        media.isVideo() == true -> VideoPreview(item, uploader)
+
+        else ->
+            FilePreviewPlaceholder(
+                icon = if (media.isAudio() == true) MaterialSymbols.AudioFile else MaterialSymbols.AutoMirrored.InsertDriveFile,
+                label = uploader.displayName(media.uri) ?: media.mimeType ?: "",
+            )
+    }
+}
+
+@Composable
+private fun CompressedImagePreview(
+    item: SelectedMediaProcessing,
+    previews: CompressionPreviews,
+    forceOriginal: Boolean,
+) {
+    val media = item.media
+    val quality = item.options.quality
+    val compresses = quality.imageMaxDimension != null
+    val preview = if (compresses) previews[media, quality] else null
+    val loading = compresses && !previews.isLoaded(media, quality)
+    val original = (preview ?: previews.anyOf(media))?.original
+    var holding by remember(item) { mutableStateOf(false) }
+    val showOriginal = holding || forceOriginal || preview == null
+    val zoomState = rememberZoomState()
+
+    // Pan limits follow the picture, not the letterboxed screen around it.
+    LaunchedEffect(original) {
+        val width = original?.width
+        val height = original?.height
+        if (width != null && height != null) zoomState.setContentSize(Size(width.toFloat(), height.toFloat()))
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        ComparisonImages(
+            originalUri = media.uri.toString(),
+            compressedUri = preview?.compressedUri?.toString(),
+            showOriginal = showOriginal,
+            fullResolution = true,
+            originalLongEdge = original?.longEdge(),
+            modifier = Modifier.fillMaxSize().zoomable(zoomState, mouseWheelZoom = MouseWheelZoom.Enabled),
+        )
+
+        val stats = if (showOriginal) original else preview.compressed
+        if (stats != null) {
+            val name = if (showOriginal) stringRes(Res.string.media_compression_preview_original) else qualityName(quality)
+            val parts =
+                listOfNotNull(
+                    name,
+                    if (stats.width != null && stats.height != null) "${stats.width}×${stats.height}" else null,
+                    stats.bytes?.let { formatFileSize(it) },
+                )
+            MediaPill(parts.joinToString(" · "), Modifier.align(Alignment.TopStart).padding(12.dp))
+        }
+
+        if (loading) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp)
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
+            }
+        }
+
+        if (preview != null) {
+            HoldForOriginal(
+                active = showOriginal,
+                onHold = { holding = it },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun HoldForOriginal(
+    active: Boolean,
+    onHold: (Boolean) -> Unit,
+    modifier: Modifier,
+) {
+    Row(
+        modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(if (active) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.6f))
+            .pointerInput(Unit) {
+                detectTapGestures(onPress = {
+                    onHold(true)
+                    tryAwaitRelease()
+                    onHold(false)
+                })
+            }.padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(MaterialSymbols.Visibility, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(stringRes(Res.string.media_studio_hold_original), color = Color.White, fontSize = 12.sp)
+    }
+}
+
+@Composable
+private fun VideoPreview(
+    item: SelectedMediaProcessing,
+    uploader: MediaUploader,
+) {
+    val thumbnail = rememberVideoThumbnail(item.media)
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        if (thumbnail != null) {
+            Image(thumbnail, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+        } else {
+            Icon(MaterialSymbols.Movie, contentDescription = null, tint = Color.White, modifier = Modifier.size(56.dp))
+        }
+        if (uploader.videoCompression == VideoCompressionSupport.Supported) {
+            val info by produceState<VideoInfo?>(null, item.media) { value = uploader.probeVideo(item.media.uri) }
+            val quality = item.options.quality
+            val label = listOfNotNull(levelName(quality.videoLevel), if (quality != CompressorQuality.UNCOMPRESSED) videoPhrase(quality.videoLevel, info) else null)
+            MediaPill(label.joinToString(" · "), Modifier.align(Alignment.TopStart).padding(12.dp))
+        }
+    }
+}
+
+/** A file's upload progress over its preview, while Add runs. */
+@Composable
+private fun UploadOverlay(item: SelectedMediaProcessing) {
+    val progress by item.orchestrator.progress.collectAsState()
+    val state by item.orchestrator.progressState.collectAsState()
+    if (state is UploadingState.Ready || state is UploadingState.Error) return
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f))) {
+        UploadingStateIndicator(progress, state)
+    }
+}
+
+@Composable
+private fun UploadErrorBanner(item: SelectedMediaProcessing) {
+    val state by item.orchestrator.progressState.collectAsState()
+    val error = state as? UploadingState.Error ?: return
+    Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(MaterialSymbols.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(stringRes(error.errorResource, *error.params), color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.SemiBold)
+                Text(stringRes(Res.string.media_studio_retry_hint), color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun Thumbnail(
+    item: SelectedMediaProcessing,
+    selected: Boolean,
+    label: String,
+    onClick: () -> Unit,
+) {
+    val state by item.orchestrator.progressState.collectAsState()
+    val shape = RoundedCornerShape(8.dp)
+    Box(
+        Modifier
+            .size(52.dp)
+            .clip(shape)
+            .border(
+                2.dp,
+                when {
+                    state is UploadingState.Error -> MaterialTheme.colorScheme.error
+                    selected -> MaterialTheme.colorScheme.primary
+                    else -> Color.Transparent
+                },
+                shape,
+            ).clickable(onClick = onClick)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        val media = item.media
+        when {
+            media.isImage() == true -> AsyncImage(media.uri.toString(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            media.isVideo() == true -> rememberVideoThumbnail(media)?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+            else -> Icon(MaterialSymbols.AutoMirrored.InsertDriveFile, contentDescription = null)
+        }
+        when (state) {
+            is UploadingState.Error -> Icon(MaterialSymbols.ErrorOutline, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp).clip(CircleShape).background(MaterialTheme.colorScheme.error))
+            is UploadingState.Finished -> Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = Color.White, filled = true, modifier = Modifier.size(20.dp))
+            is UploadingState.Ready -> Unit
+            else -> CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = Color.White)
+        }
+    }
+}
+
+@Composable
+private fun MediaPill(
+    text: String,
+    modifier: Modifier,
+) {
+    Text(
+        text,
+        color = Color.White,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier.clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 8.dp, vertical = 3.dp),
+    )
+}
+
+// ---------------------------------------------------------------------------------------------
+// Tools
+// ---------------------------------------------------------------------------------------------
+
+@Composable
+private fun ToolTab(
+    tool: StudioTool,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    val (symbol, label) =
+        when (tool) {
+            StudioTool.QUALITY -> MaterialSymbols.Tune to Res.string.media_studio_tool_quality
+            StudioTool.ALT -> MaterialSymbols.EditNote to Res.string.media_studio_tool_alt
+            StudioTool.PRIVACY -> MaterialSymbols.PrivacyTip to Res.string.media_studio_tool_privacy
+        }
+    ToolTabContent(symbol, stringRes(label), color, onClick)
+}
+
+@Composable
+private fun ToolTabContent(
+    symbol: MaterialSymbol,
+    label: String,
+    color: Color,
+    onClick: () -> Unit,
+) {
+    Column(
+        Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(symbol, contentDescription = null, tint = color)
+        Text(label, color = color, fontSize = 11.sp)
+    }
+}
+
+@Composable
+private fun ServerChip(
+    server: ServerName,
+    servers: List<ServerName>,
+    enabled: Boolean,
+    onPick: (ServerName) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .clickable(enabled = enabled && servers.size > 1) { open = true }
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(MaterialSymbols.CloudUpload, contentDescription = stringRes(Res.string.file_server), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.width(6.dp))
+            Text(server.name, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 140.dp))
+            if (servers.size > 1) Icon(MaterialSymbols.ExpandMore, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            servers.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.name) },
+                    leadingIcon = { if (option == server) Icon(MaterialSymbols.Check, contentDescription = null) },
+                    onClick = {
+                        onPick(option)
+                        open = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun QualityTool(
+    item: SelectedMediaProcessing,
+    previews: CompressionPreviews,
+    uploader: MediaUploader,
+) {
+    val media = item.media
+    val support = uploader.videoCompression
+    val isVideo = media.isVideo() == true
+    when {
+        isVideo && support == VideoCompressionSupport.NeedsFfmpeg ->
+            Text(stringRes(Res.string.video_compression_needs_ffmpeg), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+
+        media.isGif() ->
+            SwitchRow(stringRes(Res.string.convert_gif_to_mp4_label), null, item.options.convertGifToMp4) {
+                item.options = item.options.copy(convertGifToMp4 = it)
+            }
+
+        isVideo -> VideoQuality(item, uploader)
+
+        media.isCompressible() -> ImageQuality(item, previews, uploader)
+
+        else -> Text(stringRes(Res.string.media_studio_no_options), color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** One card per level, each with the size and long edge it produces, measured, not estimated. */
+@Composable
+private fun ImageQuality(
+    item: SelectedMediaProcessing,
+    previews: CompressionPreviews,
+    uploader: MediaUploader,
+) {
+    val media = item.media
+    val original = previews.anyOf(media)?.original
+    val originalBytes = original?.bytes ?: remember(media) { uploader.fileSize(media.uri) }
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        CompressorQuality.sliderSteps.forEach { level ->
+            val compressed = previews[media, level]?.compressed
+            val bytes = if (level == CompressorQuality.UNCOMPRESSED) originalBytes else compressed?.bytes
+            val edge =
+                when {
+                    level == CompressorQuality.UNCOMPRESSED -> original?.longEdge()
+                    compressed != null -> compressed.longEdge()
+                    else -> level.imageMaxDimension?.let { cap -> original?.longEdge()?.let { min(cap, it) } ?: cap }
+                }
+            LevelCard(
+                name = levelName(level),
+                detail = bytes?.let { formatFileSize(it) } ?: "…",
+                subDetail = edge?.let { stringRes(Res.string.media_studio_long_edge, it) },
+                selected = item.options.quality == level,
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                onClick = { item.options = item.options.copy(quality = level) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun VideoQuality(
+    item: SelectedMediaProcessing,
+    uploader: MediaUploader,
+) {
+    val info by produceState<VideoInfo?>(null, item.media) { value = uploader.probeVideo(item.media.uri) }
+    val steps = VideoAwareSliderSteps.stepsFor(CompressorQuality.sliderSteps, hasVideo = true)
+    val chosen = item.options.quality.videoLevel
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        // Rows, not cards: what a level does to a video ("1080p video → 720p, 2 Mbps") needs the width.
+        steps.forEach { level ->
+            LevelRow(
+                name = levelName(level),
+                detail = if (level == CompressorQuality.UNCOMPRESSED) null else videoPhrase(level, info),
+                selected = chosen == level,
+                onClick = { item.options = item.options.copy(quality = level) },
+            )
+        }
+        if (chosen != CompressorQuality.UNCOMPRESSED) {
+            SwitchRow(stringRes(Res.string.video_codec_h265_label), null, item.options.useH265) {
+                item.options = item.options.copy(useH265 = it)
+            }
+        }
+    }
+}
+
+/** In the studio the top level is "Original": the file as picked, the same word the preview uses. */
+@Composable
+private fun levelName(level: CompressorQuality): String = if (level == CompressorQuality.UNCOMPRESSED) stringRes(Res.string.media_compression_preview_original) else qualityName(level)
+
+@Composable
+private fun LevelRow(
+    name: String,
+    detail: String?,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(10.dp)
+    val color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest)
+            .border(if (selected) 2.dp else 0.dp, if (selected) MaterialTheme.colorScheme.primary else Color.Transparent, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(name, color = color, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        if (detail != null) Text(detail, color = color.copy(alpha = 0.8f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun LevelCard(
+    name: String,
+    detail: String?,
+    subDetail: String?,
+    selected: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(12.dp)
+    Column(
+        modifier
+            .clip(shape)
+            .background(if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest)
+            .border(if (selected) 2.dp else 0.dp, if (selected) MaterialTheme.colorScheme.primary else Color.Transparent, shape)
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp, horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        val color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+        Text(name, color = color, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 2, textAlign = TextAlign.Center, lineHeight = 15.sp)
+        if (detail != null) Text(detail, color = color, fontSize = 12.sp, textAlign = TextAlign.Center, maxLines = 2)
+        if (subDetail != null) Text(subDetail, color = color.copy(alpha = 0.6f), fontSize = 11.sp)
+    }
+}
+
+@Composable
+private fun AltTool(item: SelectedMediaProcessing) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        OutlinedTextField(
+            value = item.options.alt,
+            onValueChange = { item.options = item.options.copy(alt = it, altSuggested = false) },
+            placeholder = { Text(stringRes(Res.string.media_studio_alt_placeholder)) },
+            keyboardOptions = KeyboardOptions.Default.copy(capitalization = KeyboardCapitalization.Sentences),
+            maxLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (item.options.altSuggested) {
+            AssistChip(
+                onClick = { item.options = item.options.copy(alt = "", altSuggested = false) },
+                label = { Text(stringRes(Res.string.ai_suggested_alt_text_hint)) },
+                leadingIcon = { Icon(MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize)) },
+                trailingIcon = { Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.ai_suggested_alt_text_dismiss), modifier = Modifier.size(AssistChipDefaults.IconSize)) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun PrivacyTool(
+    item: SelectedMediaProcessing,
+    support: VideoCompressionSupport,
+) {
+    val media = item.media
+    // A video that will really be re-encoded loses its metadata anyway; the choice still reaches the
+    // uploader (the encode can fall back to the original), so only the switch is hidden.
+    val videoReencoded = media.isVideo() == true && support == VideoCompressionSupport.Supported && item.options.quality != CompressorQuality.UNCOMPRESSED
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        SwitchRow(stringRes(Res.string.media_studio_sensitive), stringRes(Res.string.media_studio_sensitive_description), item.options.sensitive) {
+            item.options = item.options.copy(sensitive = it)
+        }
+        if (!media.isNotMedia() && !videoReencoded) {
+            SwitchRow(stringRes(Res.string.media_studio_remove_location), stringRes(Res.string.media_studio_remove_location_description), item.options.stripMetadata) {
+                item.options = item.options.copy(stripMetadata = it)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SwitchRow(
+    title: String,
+    subtitle: String?,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}

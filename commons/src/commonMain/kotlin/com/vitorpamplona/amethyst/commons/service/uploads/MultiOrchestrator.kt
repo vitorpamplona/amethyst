@@ -39,10 +39,11 @@ import kotlinx.coroutines.launch
 @Stable
 class MultiOrchestrator(
     uris: List<SelectedMedia>,
+    defaults: (SelectedMedia) -> MediaUploadOptions = { MediaUploadOptions.defaultFor(it) },
 ) {
     // Snapshot state so a removal recomposes the gallery that draws it; as a plain var the
     // Remove on a failed upload dropped the item from the upload but left it on screen.
-    private var list: List<SelectedMediaProcessing> by mutableStateOf(uris.map { SelectedMediaProcessing(it) })
+    private var list: List<SelectedMediaProcessing> by mutableStateOf(uris.map { SelectedMediaProcessing(it, options = defaults(it)) })
 
     /** [keptEncrypted] are the files [upload] did not send again because [uploadEncrypted] already had. */
     @Stable
@@ -253,6 +254,104 @@ class MultiOrchestrator(
 
         return Result(finished.size == items.size, finished, errors)
     }
+
+    /** A file [uploadEach] sent, and the result the composer turns into a URL and an `imeta` tag. */
+    @Stable
+    class Uploaded(
+        val item: SelectedMediaProcessing,
+        val finished: UploadingState.Finished,
+    )
+
+    @Stable
+    class EachResult(
+        val allGood: Boolean,
+        val successful: List<Uploaded>,
+        val errors: List<UploadingState.Error>,
+    )
+
+    internal class SentPlain(
+        val options: MediaUploadOptions,
+        val server: ServerName,
+        val finished: UploadingState.Finished,
+    )
+
+    /**
+     * Uploads every file in plaintext with its own [SelectedMediaProcessing.options]. A file an
+     * earlier call already sent with the same options to the same [server] is not sent again, so
+     * after a partial failure a retry uploads only the files that failed.
+     */
+    suspend fun uploadEach(
+        server: ServerName,
+        account: Account,
+        uploader: MediaUploader,
+        onStrippingFailed: suspend () -> Boolean = { true },
+        forcedSigner: NostrSigner? = null,
+    ): EachResult {
+        val items = list
+        val reused =
+            items
+                .mapNotNull { item ->
+                    item.sentPlain
+                        ?.takeIf { it.options == item.options && it.server == server }
+                        ?.finished
+                        ?.let { finished ->
+                            // Something may have reset its bar since: show it finished again.
+                            if (item.orchestrator.progressState.value !== finished) item.orchestrator.updateState(1.0, finished)
+                            item to finished
+                        }
+                }.toMap()
+        val pending = items.filter { it !in reused }
+        val sent =
+            coroutineScope {
+                pending
+                    .map { item ->
+                        val options = item.options
+                        async(Dispatchers.IO) {
+                            options to
+                                item.orchestrator.upload(
+                                    item.media.uri,
+                                    item.media.mimeType,
+                                    options.altOrNull,
+                                    options.contentWarningReason,
+                                    options.quality,
+                                    server,
+                                    account,
+                                    uploader,
+                                    options.useH265,
+                                    options.stripMetadata,
+                                    onStrippingFailed,
+                                    convertGifToMp4 = options.convertGifToMp4,
+                                    forcedSigner = forcedSigner,
+                                )
+                        }
+                    }.awaitAll()
+            }
+
+        val finished = HashMap(reused)
+        val errors = HashMap<SelectedMediaProcessing, UploadingState.Error>()
+        pending.forEachIndexed { index, item ->
+            val (options, state) = sent[index]
+            when (state) {
+                is UploadingState.Finished -> {
+                    finished[item] = state
+                    item.sentPlain = SentPlain(options, server, state)
+                }
+
+                is UploadingState.Error -> {
+                    errors[item] = state
+                    item.sentPlain = null
+                }
+            }
+        }
+
+        // A file removed while the upload ran is left out.
+        val remaining = items.filter { it in list }
+        val successful = remaining.mapNotNull { item -> finished[item]?.let { Uploaded(item, it) } }
+        return EachResult(successful.size == remaining.size, successful, remaining.mapNotNull { errors[it] })
+    }
+
+    /** Every file, in order. */
+    fun items(): List<SelectedMediaProcessing> = list
 
     fun remove(selected: SelectedMediaProcessing) {
         list = list.filter { it != selected }

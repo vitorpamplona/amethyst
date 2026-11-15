@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadOptions
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
@@ -1575,34 +1576,7 @@ open class ShortNotePostViewModel :
             if (results.allGood) {
                 val urls =
                     results.successful.mapNotNull { state ->
-                        val uploaded = state.result
-                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                            val iMeta =
-                                IMetaTagBuilder(uploaded.url)
-                                    .apply {
-                                        hash(uploaded.fileHeader.hash)
-                                        size(uploaded.fileHeader.size)
-                                        uploaded.fileHeader.mimeType
-                                            ?.let { mimeType(it) }
-                                        uploaded.fileHeader.dim
-                                            ?.let { dims(it) }
-                                        uploaded.fileHeader.blurHash
-                                            ?.let { blurhash(it.blurhash) }
-                                        uploaded.fileHeader.thumbHash
-                                            ?.let { thumbhash(it.thumbhash) }
-                                        uploaded.magnet?.let { magnet(it) }
-                                        uploaded.uploadedHash?.let { originalHash(it) }
-
-                                        alt?.let { alt(it) }
-                                        contentWarningReason?.let { sensitiveContent(contentWarningReason) }
-                                    }.build()
-
-                            iMetaAttachments.replace(iMeta.url, iMeta)
-
-                            uploaded.url
-                        } else {
-                            null
-                        }
+                        (state.result as? UploadOrchestrator.OrchestratorResult.ServerResult)?.let { attach(it, alt, contentWarningReason) }
                     }
 
                 onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
@@ -1615,6 +1589,77 @@ open class ShortNotePostViewModel :
             }
 
             mediaUploadTracker.finishUpload()
+        }
+    }
+
+    /** Records [uploaded]'s `imeta` (with this file's [alt] and content warning) and returns its URL. */
+    private fun attach(
+        uploaded: UploadOrchestrator.OrchestratorResult.ServerResult,
+        alt: String?,
+        contentWarningReason: String?,
+    ): String {
+        val iMeta =
+            IMetaTagBuilder(uploaded.url)
+                .apply {
+                    hash(uploaded.fileHeader.hash)
+                    size(uploaded.fileHeader.size)
+                    uploaded.fileHeader.mimeType
+                        ?.let { mimeType(it) }
+                    uploaded.fileHeader.dim
+                        ?.let { dims(it) }
+                    uploaded.fileHeader.blurHash
+                        ?.let { blurhash(it.blurhash) }
+                    uploaded.fileHeader.thumbHash
+                        ?.let { thumbhash(it.thumbhash) }
+                    uploaded.magnet?.let { magnet(it) }
+                    uploaded.uploadedHash?.let { originalHash(it) }
+
+                    alt?.let { alt(it) }
+                    contentWarningReason?.let { sensitiveContent(contentWarningReason) }
+                }.build()
+
+        iMetaAttachments.replace(iMeta.url, iMeta)
+        return uploaded.url
+    }
+
+    /**
+     * The media studio's Add: uploads every picked file with its own options to [server]. When all
+     * succeed their URLs go in at the cursor and the studio closes ([multiOrchestrator] = null). When
+     * any fail, nothing is inserted and the studio stays open: each file shows its own error, and
+     * Add again resends only the files that failed.
+     */
+    fun uploadFromStudio(
+        server: ServerName,
+        uploader: MediaUploader,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val myMultiOrchestrator = multiOrchestrator ?: return@launch
+
+            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
+            try {
+                val results =
+                    myMultiOrchestrator.uploadEach(
+                        server,
+                        account,
+                        uploader,
+                        onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                        forcedSigner = if (wantsAnonymousPost) anonymousSigner() else null,
+                    )
+
+                if (results.allGood) {
+                    val urls =
+                        results.successful.mapNotNull { uploaded ->
+                            val options = uploaded.item.options
+                            (uploaded.finished.result as? UploadOrchestrator.OrchestratorResult.ServerResult)
+                                ?.let { attach(it, options.altOrNull, options.contentWarningReason) }
+                        }
+                    onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
+                    urlPreviews.update(message.text.toString())
+                    if (multiOrchestrator === myMultiOrchestrator) multiOrchestrator = null
+                }
+            } finally {
+                mediaUploadTracker.finishUpload()
+            }
         }
     }
 
@@ -1816,7 +1861,8 @@ open class ShortNotePostViewModel :
     }
 
     fun selectImage(uris: ImmutableList<SelectedMedia>) {
-        multiOrchestrator = MultiOrchestrator(uris)
+        val strip = account.settings.stripLocationOnUpload
+        multiOrchestrator = MultiOrchestrator(uris) { MediaUploadOptions.defaultFor(it, stripMetadata = strip) }
     }
 
     fun selectVoiceRecording(recording: RecordingResult) {

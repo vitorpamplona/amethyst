@@ -9924,4 +9924,18 @@
     <string name="nip_catalog_on_nostr">On Nostr</string>
     <string name="nip_catalog_official_failed">Couldn't load the official list.</string>
     <string name="nip_catalog_empty">No NIPs match your search.</string>
+    <string name="media_studio_add">Add</string>
+    <string name="media_studio_position">%1$d of %2$d</string>
+    <string name="media_studio_hold_original">Hold for original</string>
+    <string name="media_studio_tool_quality">Quality</string>
+    <string name="media_studio_tool_alt">Alt text</string>
+    <string name="media_studio_tool_privacy">Privacy</string>
+    <string name="media_studio_alt_placeholder">Describe it for people who can't see it</string>
+    <string name="media_studio_sensitive">Sensitive</string>
+    <string name="media_studio_sensitive_description">Blurred until tapped</string>
+    <string name="media_studio_remove_location">Remove location</string>
+    <string name="media_studio_remove_location_description">And camera details</string>
+    <string name="media_studio_long_edge">%1$d px</string>
+    <string name="media_studio_retry_hint">Nothing was added. Add tries again.</string>
+    <string name="media_studio_no_options">Uploaded as it is</string>
 </resources>

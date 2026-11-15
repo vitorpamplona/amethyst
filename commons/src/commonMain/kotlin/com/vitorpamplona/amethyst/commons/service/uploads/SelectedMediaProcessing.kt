@@ -20,12 +20,26 @@
  */
 package com.vitorpamplona.amethyst.commons.service.uploads
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import kotlin.concurrent.Volatile
 
 class SelectedMediaProcessing(
     val media: SelectedMedia,
     val orchestrator: UploadOrchestrator = UploadOrchestrator(),
+    options: MediaUploadOptions = MediaUploadOptions.defaultFor(media),
 ) {
+    /** This file's own upload options, edited in the media studio; snapshot state so its UI follows. */
+    var options: MediaUploadOptions by mutableStateOf(options)
+
+    /**
+     * What [MultiOrchestrator.uploadEach] last sent for this file in plaintext, kept so a retry after
+     * another file failed doesn't send this one again. Dropped when its options or the server change.
+     */
+    @Volatile
+    internal var sentPlain: MultiOrchestrator.SentPlain? = null
+
     /**
      * The encrypted blob [MultiOrchestrator.uploadEncrypted] last sent for this file, with its cipher,
      * kept so a retry reuses it instead of sealing the file again. Dropped when the file is sent again.

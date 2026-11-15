@@ -1,0 +1,202 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.ImageComposeScene
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asSkiaBitmap
+import androidx.compose.ui.unit.Density
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageFileStats
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.StringMediaUri
+import com.vitorpamplona.amethyst.commons.service.uploads.UnavailableMediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
+import com.vitorpamplona.amethyst.commons.ui.prototypes.mediacomposer.forestPhoto
+import com.vitorpamplona.amethyst.commons.ui.prototypes.mediacomposer.simulateQuality
+import com.vitorpamplona.amethyst.commons.ui.prototypes.mediacomposer.sunsetPhoto
+import com.vitorpamplona.amethyst.commons.ui.theme.AmethystPreviewTheme
+import org.jetbrains.skia.EncodedImageFormat
+import org.jetbrains.skia.Image
+import java.io.File
+import kotlin.math.max
+import kotlin.math.roundToInt
+import kotlin.math.roundToLong
+import kotlin.test.Test
+import kotlin.test.assertTrue
+import com.vitorpamplona.amethyst.commons.ui.prototypes.mediacomposer.QualityStop as SimulatedStop
+
+/**
+ * The production [MediaStudio], rendered offscreen with a fake uploader whose compression previews
+ * are real, smaller image files, so the preview, the sizes on each level and the upload states all
+ * show. Writes `commonsUI/build/media-studio/<name>.png`.
+ */
+class MediaStudioRenderTest {
+    private val outDir = File("build/media-studio").apply { mkdirs() }
+    private val tmp = File("build/media-studio/files").apply { mkdirs() }
+
+    private fun ImageBitmap.writePng(name: String): File {
+        val file = File(tmp, name)
+        val data = Image.makeFromBitmap(asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG) ?: error("encode")
+        file.writeBytes(data.bytes)
+        return file
+    }
+
+    private val sunset = sunsetPhoto().writePng("sunset.png")
+    private val forest = forestPhoto().writePng("forest.png")
+
+    /** Claims a 12 MP original; each level's preview is the stand-in scaled down as that level would. */
+    private inner class FakeUploader(
+        override val videoCompression: VideoCompressionSupport = VideoCompressionSupport.Supported,
+    ) : MediaUploader by UnavailableMediaUploader {
+        override suspend fun previewImageCompression(
+            uri: MediaUri,
+            mimeType: String?,
+            compressionQuality: CompressorQuality,
+        ): ImageCompressionPreview? {
+            val edge = compressionQuality.imageMaxDimension ?: return null
+            val portrait = uri.toString().contains("forest")
+            val (w, h) = if (portrait) 3024 to 4032 else 4032 to 3024
+            val scale = edge.toFloat() / max(w, h)
+            val source = if (portrait) forestPhoto() else sunsetPhoto()
+            val stop = SimulatedStop.entries.firstOrNull { (it.maxEdge ?: 0) >= edge } ?: SimulatedStop.HIGH
+            val file = simulateQuality(source, max(w, h), stop).writePng("${uri.toString().substringAfterLast('/')}-$compressionQuality.png")
+            val bytes = (3_840_000L * scale * scale * (compressionQuality.imageQuality / 100f)).roundToLong()
+            return ImageCompressionPreview(
+                original = ImageFileStats(w, h, 3_840_000),
+                compressed = ImageFileStats((w * scale).roundToInt(), (h * scale).roundToInt(), bytes),
+                compressedUri = StringMediaUri(file.absolutePath),
+            )
+        }
+
+        override fun fileSize(uri: MediaUri): Long = 3_840_000
+    }
+
+    private val suggester =
+        object : AltTextSuggester {
+            override suspend fun suggestAltText(uri: MediaUri) = "The sun setting over a calm sea behind a mountain ridge"
+
+            override fun close() = Unit
+        }
+
+    private val servers = listOf(ServerName("blossom.primal.net", "https://blossom.primal.net"), ServerName("nostr.download", "https://nostr.download"))
+
+    private fun photos() =
+        MultiOrchestrator(
+            listOf(SelectedMedia(StringMediaUri(sunset.absolutePath), "image/png"), SelectedMedia(StringMediaUri(forest.absolutePath), "image/png")),
+        )
+
+    @Test
+    fun quality() = render("quality") { Studio(photos()) }
+
+    @Test
+    fun qualityLight() = render("quality-light", dark = false) { Studio(photos()) }
+
+    @Test
+    fun holdForOriginal() = render("hold-original") { Studio(photos(), holding = true) }
+
+    @Test
+    fun altSuggested() = render("alt-suggested") { Studio(photos(), tool = StudioTool.ALT, withSuggester = true) }
+
+    @Test
+    fun privacy() = render("privacy") { Studio(photos(), tool = StudioTool.PRIVACY) }
+
+    @Test
+    fun video() =
+        render("video") {
+            Studio(MultiOrchestrator(listOf(SelectedMedia(StringMediaUri("/tmp/clip.mp4"), "video/mp4"))))
+        }
+
+    @Test
+    fun uploading() =
+        render("uploading") {
+            val media = photos()
+            media.get(0).orchestrator.updateState(0.42, UploadingState.Uploading)
+            media.get(1).orchestrator.updateState(0.1, UploadingState.Compressing)
+            Studio(media, uploading = true)
+        }
+
+    @Test
+    fun failed() =
+        render("failed") {
+            val media = photos()
+            media.get(0).orchestrator.error(UploadError.FAILED_TO_UPLOAD_MEDIA, "413 Payload Too Large")
+            Studio(media)
+        }
+
+    @Composable
+    private fun Studio(
+        media: MultiOrchestrator,
+        tool: StudioTool = StudioTool.QUALITY,
+        holding: Boolean = false,
+        uploading: Boolean = false,
+        withSuggester: Boolean = false,
+    ) = MediaStudio(
+        media = media,
+        servers = servers,
+        defaultServer = servers[0],
+        isUploading = uploading,
+        uploader = FakeUploader(),
+        altSuggester = if (withSuggester) suggester else null,
+        onAdd = {},
+        onRemove = {},
+        onCancel = {},
+        initialTool = tool,
+        holdingOriginal = holding,
+    )
+
+    private fun render(
+        name: String,
+        dark: Boolean = true,
+        content: @Composable () -> Unit,
+    ) {
+        val density = 2f
+        val scene =
+            ImageComposeScene(width = (400 * density).toInt(), height = (860 * density).toInt(), density = Density(density)) {
+                AmethystPreviewTheme(dark = dark) { Surface(color = MaterialTheme.colorScheme.background) { content() } }
+            }
+        try {
+            var image = scene.render(0)
+            // Long enough for the 250 ms settle, the fake encodes and Coil's decodes.
+            repeat(40) { frame ->
+                Thread.sleep(60)
+                image = scene.render((frame + 1) * 60 * 1_000_000L)
+            }
+            val png = image.encodeToData(EncodedImageFormat.PNG) ?: error("could not encode")
+            val file = File(outDir, "$name.png")
+            file.writeBytes(png.bytes)
+            assertTrue(file.length() > 0)
+        } finally {
+            scene.close()
+        }
+    }
+}

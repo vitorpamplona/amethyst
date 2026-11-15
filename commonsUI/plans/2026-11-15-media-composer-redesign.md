@@ -7,6 +7,29 @@ Chat, Profile, Failure; the add buttons open the Studio), or render them all wit
 `./gradlew :commonsUI:jvmTest --tests "*MediaComposerPrototypesRenderTest*"` (PNGs land in
 `commonsUI/build/media-composer-prototypes/`).
 
+## Status
+
+**Slice 1 (implemented): the Studio in the note composer.** Picking files in
+`ShortNotePostScreen` opens `MediaStudioDialog` (`commonsUI/.../note/creators/uploads/studio/`)
+instead of the `ImageVideoDescription` card.
+
+- Every file carries its own `MediaUploadOptions` (alt, sensitive, quality, strip metadata,
+  H.265, GIF→MP4) on `SelectedMediaProcessing.options`. `MultiOrchestrator.uploadEach` sends each
+  file with its own options. After a partial failure it re-sends only the files that failed,
+  unless their options or the server changed.
+- The preview is the real compressed file (`MediaUploader.previewImageCompression`), zoomable,
+  with hold-for-original. Each quality level shows the size and long edge it really produces.
+- Tools: Quality, Alt text (with the on-device suggestion, now for every image, not just the
+  first), Privacy. A server chip sits beside the tools.
+- **Add** still uploads at once and inserts the URLs as before
+  (`ShortNotePostViewModel.uploadFromStudio`). On failure the Studio stays open, shows the
+  reason on the file, and Add retries. There is no toast and nothing is inserted.
+- Tests: `MultiOrchestratorUploadEachTest` (commons), `MediaStudioRenderTest` (commonsUI, real
+  composable with a fake uploader), `MediaStudioUiTest` (desktopApp, clicks and typing).
+
+Not yet: crop and trim (step 3), markers + upload on Post (step 1 of the order below), blocks
+(B), and the other composers, which still use `ImageVideoDescription`.
+
 ## 1. What we have today
 
 Every screen that attaches a photo or video to text goes through one card,
