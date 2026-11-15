@@ -85,8 +85,11 @@ These reduce desktop reimplementation and prevent drift:
 
 ## Built (2026-10-29)
 
-Napplets and nSites open from the feed card's Open button and from favorites and the browser home,
-each in its own window. The card is the shared one every platform renders (`StaticWebsiteManifestCard`,
+Napplets and nSites open from the feed card's Open button and from favorites and the browser home.
+Since 2026-11-09 each is a screen (`Route.NostrApp`, `NostrAppScreen`) that the navigation layout
+places (stack, deck column, tab or window), painted off-screen like a napplet in a note; webxdc apps,
+intent handlers and launches with no screen to open from still get a window of their own
+(`2026-11-09-desktop-in-app-browser.md`). The card is the shared one every platform renders (`StaticWebsiteManifestCard`,
 with the favorite star and a prefetch of its files while on screen); Open goes through the shared
 `AppLauncher`, which `DesktopAppPlatform` implements with the host.
 

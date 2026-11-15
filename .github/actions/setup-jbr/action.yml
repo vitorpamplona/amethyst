@@ -1,11 +1,11 @@
 name: Set up JetBrains Runtime
 description: >-
-  Install a pinned JetBrains Runtime (JBR) 21 SDK on a Linux runner and make it the job's JDK.
+  Install a pinned JetBrains Runtime (JBR) 25 SDK on a Linux runner and make it the job's JDK.
   Linux desktop builds need JBR: jlink/jpackage bundle the JDK Gradle runs on, and only JBR's
   AWT draws natively on Wayland (see create-release.yml).
 
   setup-java's `jetbrains` distribution is not used on purpose: it first lists JetBrains'
-  releases to find the newest 21, and that lookup fails intermittently, leaving only JBR 11
+  releases to find the newest release, and that lookup fails intermittently, leaving only JBR 11
   builds to choose from ("No matching version found for SemVer '21'"). This action downloads
   one pinned archive instead, checks it against the SHA-512 pinned below, and hands the file to
   setup-java's `jdkfile` distribution.
@@ -20,23 +20,24 @@ runs:
       id: download
       shell: bash
       env:
-        JBR_VERSION: "21.0.11"
-        JBR_BUILD: "b1163.116"
+        JBR_VERSION: "25.0.4.1"
+        JBR_BUILD: "b635.79"
         RUNNER_ARCH: ${{ runner.arch }}
         RUNNER_OS: ${{ runner.os }}
       run: |
         set -euo pipefail
         [[ "$RUNNER_OS" == "Linux" ]] || { echo "::error::setup-jbr only installs Linux builds, not $RUNNER_OS"; exit 1; }
         case "$RUNNER_ARCH" in
-          X64)   arch=x64;     sha512=13d0aab4bcfa9e4f77a696b97d3998f7e82e22f7f1362d8ce97f0d50d69dddd9331a66ada3fe92c04e544795fc247bcbaf586ad0415df4eda5e0e0505753888f ;;
-          ARM64) arch=aarch64; sha512=88a1d5cabcdb258bcf2d9fc3fa3695e2321ed46633596e979250966a14a93ec08e2f285d3a5dbd2510965e5a9ef9c1f3b87a1b43b19d643caa5f1726f8f02958 ;;
+          X64)   arch=x64;     sha512=1ad3ba2aef8bb417cb3c15e51fda53a7f7fd3a53db44e55902e926541cbf170c53b241832136ad4ca78e4098cd328f7c59ffeb59ac86e230816fd4f9a0a5b097 ;;
+          ARM64) arch=aarch64; sha512=07b746512a26c7d459222644c35b1b01861bc81c9e28ce1b24b152e6081d1f4dec1a7214ef8ffd19f0a196d9daf25cfa69422def1f3b6c7dbad8a3a972c8265e ;;
           *)     echo "::error::no pinned JetBrains Runtime for $RUNNER_ARCH"; exit 1 ;;
         esac
         file="jbrsdk-${JBR_VERSION}-linux-${arch}-${JBR_BUILD}.tar.gz"
         curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/$file" "https://cache-redirector.jetbrains.com/intellij-jbr/$file"
         echo "$sha512  $RUNNER_TEMP/$file" | sha512sum -c -
         echo "file=$RUNNER_TEMP/$file" >> "$GITHUB_OUTPUT"
-        echo "version=$JBR_VERSION" >> "$GITHUB_OUTPUT"
+        # setup-java wants semver; JBR versions can carry a fourth part (25.0.4.1).
+        echo "version=$(cut -d. -f1-3 <<< "$JBR_VERSION")" >> "$GITHUB_OUTPUT"
 
     - name: Install JetBrains Runtime
       uses: actions/setup-java@v6.1.0

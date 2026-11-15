@@ -518,12 +518,15 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
+import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
 import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
 import com.vitorpamplona.quartz.openagents.nipExtExtensions.release.ExtensionReleaseEvent
+import com.vitorpamplona.quartz.routstr.node.RoutstrNodeEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -540,12 +543,15 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.coroutines.CoroutineContext
 import kotlin.time.TimeSource
+import kotlinx.coroutines.channels.Channel as CoroutineChannel
 
 /**
  * The in-memory event store: every `Note`, `User` and `Channel` the app has consumed, plus the
@@ -769,14 +775,16 @@ open class EventCache :
                 }
             }
 
+        // Regular events live in [notes], and only they match below. A filter that names no regular
+        // kind (a repository announcement, a list, a profile) can match none of them, so it skips the
+        // walk over every note in memory, which grows with the session: each git card in a feed
+        // opened several such lookups on the main thread as it scrolled into view.
+        val kinds = filter.kinds
         val noteMatches =
-            notes.filter { _, note ->
-                val event = note.event
-                if (event != null && event.kind.isRegular()) {
-                    filter.match(event) && predicate(note)
-                } else {
-                    false
-                }
+            if (kinds != null && kinds.none { it.isRegular() }) {
+                emptyList()
+            } else {
+                filterRegularNotes(filter, predicate)
             }
 
         // toSet() before sorting: a filter that repeats a kind scans that kind twice, and the
@@ -795,6 +803,19 @@ open class EventCache :
         return all.take(limit)
     }
 
+    private fun filterRegularNotes(
+        filter: Filter,
+        predicate: (Note) -> Boolean,
+    ): List<Note> =
+        notes.filter { _, note ->
+            val event = note.event
+            if (event != null && event.kind.isRegular()) {
+                filter.match(event) && predicate(note)
+            } else {
+                false
+            }
+        }
+
     fun observeNotes(filter: Filter): Flow<List<Note>> =
         callbackFlow {
             val newFilter =
@@ -802,14 +823,12 @@ open class EventCache :
                     trySend(it)
                 }
 
-            newFilter.init()
-
-            observables.register(filter, newFilter)
+            startObserving(filter, newFilter, newFilter::start)
 
             awaitClose {
                 observables.unregister(newFilter)
             }
-        }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
+        }.buffer(CoroutineChannel.CONFLATED).flowOn(observerScanContext)
 
     fun <T : Event> observeEvents(filter: Filter): Flow<List<T>> =
         callbackFlow {
@@ -818,14 +837,35 @@ open class EventCache :
                     trySend(it)
                 }
 
-            cachedFilter.init()
-
-            observables.register(filter, cachedFilter)
+            startObserving(filter, cachedFilter, cachedFilter::start)
 
             awaitClose {
                 observables.unregister(cachedFilter)
             }
-        }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
+        }.buffer(CoroutineChannel.CONFLATED).flowOn(observerScanContext)
+
+    /**
+     * Where [observeNotes] and [observeEvents] scan the cache for their first list: off the
+     * collector's thread, which is the main thread for a composable's `collectAsState`. That scan
+     * walks every note the filter can match, so it grows with the session; on the main thread a
+     * feed of cards that each observe something froze as it scrolled. Tests on a virtual clock set
+     * it to their own dispatcher.
+     */
+    var observerScanContext: CoroutineContext = Dispatchers.Default
+
+    /** Registers [observer] and fills it through [start], unregistering it if the scan fails. */
+    private fun startObserving(
+        filter: Filter,
+        observer: Observable,
+        start: (register: () -> Unit) -> Unit,
+    ) {
+        try {
+            start { observables.register(filter, observer) }
+        } catch (e: Throwable) {
+            observables.unregister(observer)
+            throw e
+        }
+    }
 
     /**
      * Starts keeping [observer] current: registers it first, so a note inserted during the walk is
@@ -4248,6 +4288,10 @@ open class EventCache :
                 is CalendarRSVPEvent,
                 is CashuWalletEvent,
                 is NutzapInfoEvent,
+                is AgentKeyEvent,
+                // Routstr node announcements (38421): the AI-key screen lists them; newest per address.
+                is RoutstrNodeEvent,
+                is ScheduledTaskEvent,
                 is PublicChatListEvent,
                 is DmRelayListEvent,
                 is Bolt12OfferListEvent,

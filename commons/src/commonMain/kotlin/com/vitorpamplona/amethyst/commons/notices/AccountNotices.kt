@@ -46,6 +46,12 @@ data class ActionFailed(
     val cause: Throwable,
 ) : UserNotice
 
+/** The kind 10030 emoji list could not be updated. */
+sealed interface EmojiListNotice : UserNotice {
+    /** The list has not arrived from any relay, so writing it now could replace it. */
+    data object NotLoaded : EmojiListNotice
+}
+
 /** A note action the user asked for that can't be done. */
 sealed interface NoteActionNotice : UserNotice {
     data object CannotQuoteDraft : NoteActionNotice

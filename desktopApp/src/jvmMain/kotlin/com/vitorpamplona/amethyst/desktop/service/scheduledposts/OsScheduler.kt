@@ -171,6 +171,8 @@ $argsXml
         <string>en_US.UTF-8</string>
         <key>LC_ALL</key>
         <string>en_US.UTF-8</string>
+        <key>$JVM_OPTIONS_ENV</key>
+        <string>$JVM_OPTIONS</string>
     </dict>
 </dict>
 </plist>
@@ -235,6 +237,7 @@ $argsXml
         // WScript.Shell.Run(command, windowStyle=0 (hidden), waitOnReturn=False)
         val cmd = appLaunchCommand.joinToString(separator = " ") { "\"\"${it.replace("\"", "")}\"\"" }
         return """Set WshShell = CreateObject("WScript.Shell")
+WshShell.Environment("Process")("$JVM_OPTIONS_ENV") = "$JVM_OPTIONS"
 WshShell.Run "$cmd", 0, False
 """
     }
@@ -322,6 +325,7 @@ Description=Amethyst scheduled-post publisher
 
 [Service]
 Type=oneshot
+Environment=$JVM_OPTIONS_ENV=$JVM_OPTIONS
 ExecStart=$execStart
 """
     }
@@ -354,7 +358,7 @@ WantedBy=timers.target
         val block =
             buildString {
                 append(CRON_MARKER_BEGIN).append('\n')
-                append("*/5 * * * * ").append(cmd).append('\n')
+                append("*/5 * * * * ").append("$JVM_OPTIONS_ENV=$JVM_OPTIONS ").append(cmd).append('\n')
                 append(CRON_MARKER_END).append('\n')
             }
         val next = (if (stripped.isBlank()) "" else stripped.trimEnd() + "\n") + block
@@ -514,6 +518,17 @@ WantedBy=timers.target
         private const val TASK_NAME = "Amethyst\\Scheduler"
         private const val LINUX_UNIT = "amethyst-scheduler"
         private const val INTERVAL_SECONDS = 300
+
+        /**
+         * Every scheduled run starts the app's launcher, which asks the JVM to write the per-user
+         * class archive when it finds none (see StartupArchive). A short headless run that got there
+         * first after an update would write an archive of its few classes, and the window would then
+         * map that one until the next update. These options, which the JVM reads after the
+         * launcher's (JAVA_TOOL_OPTIONS comes before them, so it can't override), keep the scheduled
+         * runs to reading the archive.
+         */
+        private const val JVM_OPTIONS_ENV = "_JAVA_OPTIONS"
+        private const val JVM_OPTIONS = "-XX:-AutoCreateSharedArchive"
 
         private const val CRON_MARKER_BEGIN = "# BEGIN amethyst-scheduler"
         private const val CRON_MARKER_END = "# END amethyst-scheduler"

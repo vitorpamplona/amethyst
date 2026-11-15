@@ -40,7 +40,10 @@ as of the review.
 - **Critical: desktop Chromium has no renderer sandbox** (JCEF hard-codes `no_sandbox`). A renderer
   exploit runs as the user beside the keys. Needs Chromium in a child process without keys (the
   deferred item of `desktopApp/plans/2026-06-21-napplet-desktop-host.md`, whose text is now
-  corrected) or OS-level confinement of `jcef_helper`.
+  corrected) or OS-level confinement of `jcef_helper`. The spike of 2026-11-10
+  (`desktopApp/plans/2026-11-10-chromium-sandbox.md`) narrows it: a child process alone doesn't
+  help (the keyring is open to any process of the user on Linux and Windows); Chromium's own
+  sandbox does, and JCEF turns it off with one line, which on Linux is all that stands in the way.
 - **Medium: `:napplet` shares the app's Linux uid.** A WebView browser-process escape reads the key
   stores; the broker also trusts `MSG_SET_SITE_PERMISSION`, `MSG_SET_WEB_TOR` and
   `MSG_MINT_BROWSER_TOKEN` from the sandbox. WebView can't run in an `isolatedProcess`, so the

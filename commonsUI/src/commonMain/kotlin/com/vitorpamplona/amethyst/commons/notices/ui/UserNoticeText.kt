@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.notices.Bolt12OfferNotice
 import com.vitorpamplona.amethyst.commons.notices.CashuRedeemNotice
 import com.vitorpamplona.amethyst.commons.notices.ClinkDebitFailed
 import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
+import com.vitorpamplona.amethyst.commons.notices.EmojiListNotice
 import com.vitorpamplona.amethyst.commons.notices.InvoiceNotice
 import com.vitorpamplona.amethyst.commons.notices.LnurlFailureDetail
 import com.vitorpamplona.amethyst.commons.notices.MarmotNotice
@@ -84,6 +85,8 @@ import com.vitorpamplona.amethyst.commons.resources.could_not_assemble_lnurl_fro
 import com.vitorpamplona.amethyst.commons.resources.could_not_fetch_invoice_from_details
 import com.vitorpamplona.amethyst.commons.resources.could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception
 import com.vitorpamplona.amethyst.commons.resources.draft_note
+import com.vitorpamplona.amethyst.commons.resources.emoji_list_not_loaded_description
+import com.vitorpamplona.amethyst.commons.resources.emoji_list_not_loaded_title
 import com.vitorpamplona.amethyst.commons.resources.emoji_packs_title
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_invoice_error
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
@@ -220,6 +223,8 @@ fun UserNotice.text(): NoticeText =
         is SignerNotice.Failed ->
             NoticeText(Res.string.signer_not_found_exception, str(Res.string.signer_illegal_state_exception_description), cause)
         is ActionFailed -> NoticeText(Res.string.action_failed_title, str(Res.string.action_failed_description), cause)
+
+        EmojiListNotice.NotLoaded -> text(Res.string.emoji_list_not_loaded_title, Res.string.emoji_list_not_loaded_description)
 
         NoteActionNotice.CannotQuoteDraft -> text(Res.string.draft_note, Res.string.it_s_not_possible_to_quote_to_a_draft_note)
         NoteActionNotice.ReadOnlyCannotBoost -> text(Res.string.read_only_user, Res.string.login_with_a_private_key_to_be_able_to_boost_posts)

@@ -115,6 +115,8 @@ fun NewCalendarEventScreen(
         topBar = {
             SavingTopBar(
                 titleRes = if (vm.isEditing) Res.string.edit_calendar_event else Res.string.new_calendar_event,
+                // Not while the cover is still uploading (the event would go out without it) or a publish is running.
+                isActive = { vm.isValid() && vm.isEndAfterStart() && !vm.isUploadingImage.value && !vm.isPublishing.value },
                 onCancel = { nav.popBack() },
                 onPost = {
                     accountViewModel.launchSigner {

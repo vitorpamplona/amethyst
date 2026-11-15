@@ -91,6 +91,19 @@ public final class OffscreenCefBrowser extends CefBrowser_N implements CefRender
     }
 
     /** A mouse event in the page's coordinates (device-independent pixels). */
+    /**
+     * Tells Chromium the view's size again and asks for a whole new frame. A burst of resizes (a
+     * pane that animates its width) left the page painted at a size from the start of the burst:
+     * Chromium took the first few and painted none of the rest, so the screen stretched a stale
+     * frame until something else made it paint.
+     */
+    public void settle() {
+        if (getNativeRef("CefBrowser") == 0) return;
+        Rectangle rect = viewRect;
+        wasResized(rect.width, rect.height);
+        invalidate();
+    }
+
     public void forwardMouse(MouseEvent event) {
         sendMouseEvent(event);
     }
@@ -114,6 +127,17 @@ public final class OffscreenCefBrowser extends CefBrowser_N implements CefRender
     public void setFocus(boolean enable) {
         if (focused.getAndSet(enable) == enable) return;
         super.setFocus(enable);
+    }
+
+    /**
+     * Tells Chromium again that the page has the focus, when this browser counts itself focused. A
+     * navigation hands the page to a new renderer, which starts unfocused while {@link #setFocus} still
+     * remembers true and passes nothing on: the page took typing but drew no caret, and
+     * {@code document.hasFocus()} was false, until the focus left the page and came back. Chromium's
+     * OnGotFocus answer reaches {@link #setFocus} with true and stops there.
+     */
+    public void refocus() {
+        if (focused.get()) super.setFocus(true);
     }
 
     @Override

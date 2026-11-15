@@ -154,6 +154,12 @@ import com.vitorpamplona.amethyst.commons.model.nip89AppHandlers.AppRecommendati
 import com.vitorpamplona.amethyst.commons.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditKind
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyEditor
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.AgentKeyState
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.fetchOwnRelayList
+import com.vitorpamplona.amethyst.commons.model.nipFAAgentKeys.readAgentKeysForRewrite
+import com.vitorpamplona.amethyst.commons.model.nipFBScheduledTasks.ObserverScheduleState
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
@@ -251,6 +257,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
@@ -306,6 +313,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
@@ -379,6 +387,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTarget
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
@@ -1070,6 +1079,12 @@ class Account(
             scope = scope,
             backend = { cache.onchainBackend },
         )
+
+    /** The user's AI agent keys (kind 12000), first one preferred. */
+    val agentKeys = AgentKeyState(signer, cache, scope)
+
+    /** The morning front page's schedule (NIP-FB kind 34817, `d` = `observer`), shared by every device. */
+    val observerSchedule = ObserverScheduleState(signer, cache, scope, client, nip65RelayList.outboxFlowNoDefaults)
 
     val cashuWalletState =
         CashuWalletState(
@@ -3539,7 +3554,42 @@ class Account(
 
     suspend fun removeEmojiPack(emojiPack: Note) = sendMyPublicAndPrivateOutbox(emoji.removeEmojiPack(emojiPack))
 
-    suspend fun addEmojiPack(emojiPack: Note) = sendMyPublicAndPrivateOutbox(emoji.addEmojiPack(emojiPack))
+    /**
+     * Adds [emojiPack] to the kind 10030 emoji list. Returns false, publishing nothing, when the
+     * list is not on this device yet and no relay could say whether one exists: building on
+     * nothing would publish a list holding only this pack, replacing the user's real one.
+     */
+    suspend fun addEmojiPack(emojiPack: Note): Boolean {
+        if (!loadOwnEmojiListIfMissing()) return false
+        sendMyPublicAndPrivateOutbox(emoji.addEmojiPack(emojiPack))
+        return true
+    }
+
+    /**
+     * Before the first write of the kind 10030 on a device that has not received it (a fresh
+     * login, or relays still connecting), fetches the newest version from the outbox. True when
+     * the list is now in the cache, or when a relay answered and has none; false when nobody
+     * answered, so a missing list cannot be told from a list that has not arrived.
+     */
+    private suspend fun loadOwnEmojiListIfMissing(): Boolean {
+        if (emoji.getEmojiList() != null) return true
+        val relays = outboxRelays.flow.value
+        if (relays.isEmpty()) return false
+        val filter = Filter(kinds = listOf(EmojiListEvent.KIND), authors = listOf(signer.pubKey), limit = 1)
+        val result = client.fetchAllWithHooks(relays.associateWith { listOf(filter) }, idleTimeoutMs = 8_000) { _, _ -> true }
+        // The fetch neither verifies nor stores: newest first, the first that verifies.
+        val newest =
+            result.events
+                .map { it.second }
+                .filter { it.kind == EmojiListEvent.KIND && it.pubKey == signer.pubKey }
+                .sortedByDescending { it.createdAt }
+                .firstOrNull { it.verify() }
+        if (newest != null) {
+            cache.justConsumeMyOwnEvent(newest)
+            return emoji.getEmojiList() != null
+        }
+        return result.anyRelayServed
+    }
 
     suspend fun createOwnedEmojiPack(
         title: String,
@@ -3794,6 +3844,59 @@ class Account(
         relay: NormalizedRelayUrl,
         challenge: String,
     ): RelayAuthEvent = RelayAuthEvent.create(relay, challenge, signer)
+
+    /**
+     * NIP-FA's Editing: read the newest kind 12000 from the user's write relays before rewriting
+     * it, so a key added on another device survives. Starting from nothing because the relays
+     * could not be read would delete the user's other keys, so then nothing is written.
+     */
+    private suspend fun readAgentKeysBeforeWriting() {
+        client.readAgentKeysForRewrite(agentKeyWriteRelays(), signer.pubKey, agentKeys.getAgentKeyEvent()) { event, relay ->
+            cache.justConsume(event, relay, wasVerified = true)
+        }
+    }
+
+    /**
+     * The user's NIP-65 write relays, where NIP-FA reads and writes the keys: never a default or
+     * a bootstrap relay. A fresh login may not hold the list yet ("no list" and "not loaded yet"
+     * look the same), so it is asked of the bootstrap relays first; still none, there are none.
+     */
+    private suspend fun agentKeyWriteRelays(): Set<NormalizedRelayUrl> {
+        nip65RelayList.nip65Event(nip65RelayList.nip65ListNote)?.let { return it.allWriteRelaysNorm()?.toSet().orEmpty() }
+        val found =
+            client.fetchOwnRelayList(indexerRelayList.flow.value + Constants.eventFinderRelays, signer.pubKey) { event, relay ->
+                cache.justConsume(event, relay, wasVerified = true)
+            }
+        return found?.allWriteRelaysNorm()?.toSet().orEmpty()
+    }
+
+    /**
+     * Saves, re-orders and removes AI agent keys one edit at a time, with the edit's progress in
+     * its state: the settings screen shows it, and leaving the screen never drops a save halfway.
+     */
+    val agentKeyEditor =
+        AgentKeyEditor(
+            scope = scope,
+            readBeforeWriting = ::readAgentKeysBeforeWriting,
+            rewrite = { kind, key ->
+                when (kind) {
+                    AgentKeyEditKind.SAVE -> agentKeys.add(key)
+                    AgentKeyEditKind.MAKE_DEFAULT -> agentKeys.setPreferred(key)
+                    AgentKeyEditKind.REMOVE -> agentKeys.remove(key)
+                }
+            },
+            current = { agentKeys.getAgentKeyEvent() },
+            keepHere = { cache.justConsumeMyOwnEvent(it) },
+            // To the same relays the read came from (NIP-FA, Editing).
+            publish = { client.publishAndConfirm(it, agentKeyWriteRelays(), untilFirstAccept = true) },
+        )
+
+    /** Saves [key] as the preferred AI agent key (adding it if new) and publishes the event. */
+    suspend fun addAgentKey(key: AgentKeyTag) = agentKeyEditor.run(AgentKeyEditKind.SAVE, key)
+
+    suspend fun setPreferredAgentKey(key: AgentKeyTag) = agentKeyEditor.run(AgentKeyEditKind.MAKE_DEFAULT, key)
+
+    suspend fun removeAgentKey(key: AgentKeyTag) = agentKeyEditor.run(AgentKeyEditKind.REMOVE, key)
 
     suspend fun hideWord(word: String) {
         sendMyPublicAndPrivateOutbox(muteList.hideWord(word))

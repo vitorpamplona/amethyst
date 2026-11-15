@@ -43,11 +43,13 @@ import com.vitorpamplona.amethyst.commons.notifications.composers.MentionNotific
 import com.vitorpamplona.amethyst.commons.notifications.composers.StandardNotificationComposer
 import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_open
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_denied
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_description
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_preview
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_preview_description
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.ui.notifications.DesktopNotificationAutoDispatcher
@@ -72,6 +74,9 @@ class DesktopNotifications(
 ) {
     val settings: NotificationSettings = PreferencesNotificationSettings()
 
+    /** Clicks on the notifications below: the window comes forward and opens what each was about. */
+    val clicks = NotificationClickRouter()
+
     // Built on first use: it loads the native notifier.
     val dispatcher: NotificationDispatcher by lazy {
         NucleusNotificationDispatcher(
@@ -79,8 +84,8 @@ class DesktopNotifications(
             appLabel = APP_LABEL,
             fallback = AwtTrayNotifier(),
             scope = scope,
-            // A click opens what the notification is about, in the account it is for.
-            onOpen = DesktopDeepLinks::openFromNotification,
+            openActionLabel = { loadStringRes(Res.string.desktop_notification_open) },
+            onClick = clicks::onClick,
         )
     }
 

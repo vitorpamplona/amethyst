@@ -165,11 +165,7 @@ class CefNappletSessionTest {
         private const val BURST = 100
 
         /** Chromium starts once per process, as in the app; every test shares it. */
-        private val sharedEngine by lazy {
-            val installDir = System.getenv("AMETHYST_CEF_DIR")?.let(::File) ?: File(System.getProperty("java.io.tmpdir"), "amethyst-jcef-test")
-            // Loopback allowed: the test's local server stands in for the web a site talks to.
-            DesktopCefEngine(installDir, createTempDirectory("napplet-cef-cache").toFile(), DesktopSocksRouter(allowLocal = true))
-        }
+        private val sharedEngine get() = SharedCefTestEngine.engine
     }
 
     @After
@@ -789,6 +785,7 @@ class CefNappletSessionTest {
         author: NostrSignerInternal,
         prompts: SitePrompts = SitePrompts(),
         useTor: Boolean = false,
+        offscreen: OffscreenNappletView? = null,
     ): CefNappletSession {
         files.values.forEach { blobs[sha256(it).toHexKey()] = it }
         val paths = files.map { (path, bytes) -> PathTag(path, sha256(bytes).toHexKey()) }
@@ -812,8 +809,51 @@ class CefNappletSessionTest {
                     },
             )
         val launch = NappletLaunch.fromSite(event).getOrThrow()
-        return CefNappletSession(launch, user.pubKey, useTor, account = null, broker = broker, runtime = runtime).also { sessions += it }
+        return CefNappletSession(
+            launch,
+            user.pubKey,
+            useTor,
+            account = null,
+            broker = broker,
+            runtime = runtime,
+            offscreen = offscreen,
+            frameRate = CefNappletSession.SCREEN_FRAME_RATE,
+            routeId = offscreen?.let { "35128:${author.pubKey}:blog" },
+        ).also { sessions += it }
     }
+
+    @Test
+    fun aSiteRunsAsAScreenOffScreenWithNip07() =
+        runBlocking {
+            val runtime = cefRuntime()
+            val user = NostrSignerInternal(KeyPair())
+            val author = NostrSignerInternal(KeyPair())
+            val index =
+                """
+                <!doctype html><html><body><p>SCREEN</p><script>
+                (async function () {
+                  function report(k, v) { return fetch('$serverUrl/report?' + k + '=' + encodeURIComponent(String(v)), { mode: 'no-cors' }).catch(function () {}); }
+                  try { await report('screenKey', await window.nostr.getPublicKey()); } catch (e) { await report('screenError', e.message || e); }
+                })();
+                </script></body></html>
+                """.trimIndent()
+            // As a screen runs it: no window, a view the screen draws, at a screen's frame rate.
+            val view = OffscreenNappletView()
+            view.resize(800, 600, 1.0)
+            val session = site(mapOf("/index.html" to index.encodeToByteArray()), runtime, user, author, offscreen = view)
+            session.start()
+            val state = withTimeout(600_000) { session.state.first { it is CefNappletSession.State.Showing || it is CefNappletSession.State.Failed } }
+            assertIs<CefNappletSession.State.Showing>(state, "the site did not open: $state")
+            assertEquals(null, state.component, "a screen's app has no window to place")
+            withTimeout(60_000) { view.frame.first { it != null } }
+
+            // Out of sight and back, as a tab behind another: the page keeps running.
+            session.setVisible(false)
+            session.setVisible(true)
+            withTimeout(60_000) { while (reports["screenKey"] == null && reports["screenError"] == null) delay(100) }
+            assertEquals(null, reports["screenError"])
+            assertEquals(user.pubKey, reports["screenKey"], "window.nostr reached the signer from the screen")
+        }
 
     @Test
     fun aTorSiteDoesNotOpenWhileTorIsDown() =

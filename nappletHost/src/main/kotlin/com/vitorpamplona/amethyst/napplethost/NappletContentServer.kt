@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobHttp
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
+import com.vitorpamplona.amethyst.commons.napplet.blobs.PaperFiles
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcFiles
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcRuntime
@@ -76,12 +77,16 @@ class NappletContentServer(
     imeProxy: Boolean = false,
     // A webxdc app's archive and who runs it; its files come from the unpacked archive instead of paths.
     webxdc: WebxdcLaunch? = null,
+    // A front page's one checked document; served from memory instead of paths.
+    paper: ByteArray? = null,
 ) {
     // This instance's own client (its threads and connections end with close()).
     private val client = NappletBlobHttp.client(proxyPort)
 
     private val blobs: NappletFiles =
-        if (webxdc != null) {
+        if (paper != null) {
+            PaperFiles(paper)
+        } else if (webxdc != null) {
             WebxdcFiles(
                 WebxdcBundles(WebxdcBundles.dirFor(cacheDir)),
                 WebxdcFiles.downloadClient(client),

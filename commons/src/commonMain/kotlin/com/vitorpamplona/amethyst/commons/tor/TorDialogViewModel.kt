@@ -43,6 +43,9 @@ class TorDialogViewModel : ViewModel() {
     val moneyOperationsViaTor = mutableStateOf(false)
     val nip05VerificationsViaTor = mutableStateOf(false)
     val mediaUploadsViaTor = mutableStateOf(false)
+    val appletsAndWebsitesViaTor = mutableStateOf(false)
+
+    val progressNotification = mutableStateOf(false)
 
     val preset =
         derivedStateOf {
@@ -61,6 +64,7 @@ class TorDialogViewModel : ViewModel() {
                     moneyOperationsViaTor = moneyOperationsViaTor.value,
                     nip05VerificationsViaTor = nip05VerificationsViaTor.value,
                     mediaUploadsViaTor = mediaUploadsViaTor.value,
+                    appletsAndWebsitesViaTor = appletsAndWebsitesViaTor.value,
                 ),
             )
         }
@@ -83,6 +87,8 @@ class TorDialogViewModel : ViewModel() {
         moneyOperationsViaTor.value = torSettings.moneyOperationsViaTor
         nip05VerificationsViaTor.value = torSettings.nip05VerificationsViaTor
         mediaUploadsViaTor.value = torSettings.mediaUploadsViaTor
+        appletsAndWebsitesViaTor.value = torSettings.appletsAndWebsitesViaTor
+        progressNotification.value = torSettings.progressNotification
     }
 
     /**
@@ -116,6 +122,8 @@ class TorDialogViewModel : ViewModel() {
             moneyOperationsViaTor = moneyOperationsViaTor.value,
             nip05VerificationsViaTor = nip05VerificationsViaTor.value,
             mediaUploadsViaTor = mediaUploadsViaTor.value,
+            appletsAndWebsitesViaTor = appletsAndWebsitesViaTor.value,
+            progressNotification = progressNotification.value,
         )
     }
 
@@ -141,5 +149,6 @@ class TorDialogViewModel : ViewModel() {
         moneyOperationsViaTor.value = torSettings.moneyOperationsViaTor
         nip05VerificationsViaTor.value = torSettings.nip05VerificationsViaTor
         mediaUploadsViaTor.value = torSettings.mediaUploadsViaTor
+        appletsAndWebsitesViaTor.value = torSettings.appletsAndWebsitesViaTor
     }
 }

@@ -20,29 +20,38 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.tor_connection_failed_body
 import com.vitorpamplona.amethyst.commons.resources.tor_connection_failed_title
 import com.vitorpamplona.amethyst.commons.resources.tor_continue_without_for_session
 import com.vitorpamplona.amethyst.commons.resources.tor_keep_waiting
+import com.vitorpamplona.amethyst.commons.resources.tor_restart
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Sticky alert that appears when Tor has been stuck connecting longer than
- * [TorManager.BOOTSTRAP_TIMEOUT_MS]. The user can either:
+ * [TorManager.BOOTSTRAP_TIMEOUT_MS]. The user can:
  *
  *  - Use a regular (non-Tor) connection for the rest of this session, with the choice
  *    remembered for [TorManager.APPROVAL_REMEMBER_MS] so subsequent failures within the
  *    window auto-fall-back without re-prompting.
+ *  - Restart Tor — drops the stuck client (see [TorManager.restartTor]) and starts a fresh
+ *    attempt, which gets its own full timeout before the dialog can return.
  *  - Keep waiting — the dialog hides until the next connecting span ends and a fresh
  *    timeout fires.
  */
@@ -66,13 +75,28 @@ fun TorConnectionFailureDialog(torManager: TorManager) {
         title = { Text(stringRes(Res.string.tor_connection_failed_title)) },
         text = { Text(stringRes(Res.string.tor_connection_failed_body)) },
         confirmButton = {
-            Button(onClick = { torManager.approveBypassForOneHour() }) {
-                Text(stringRes(Res.string.tor_continue_without_for_session))
-            }
-        },
-        dismissButton = {
-            Button(onClick = { dismissedForCurrentSpan = true }) {
-                Text(stringRes(Res.string.tor_keep_waiting))
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = { torManager.approveBypassForOneHour() },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringRes(Res.string.tor_continue_without_for_session))
+                }
+                OutlinedButton(
+                    onClick = { torManager.restartTor() },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringRes(Res.string.tor_restart))
+                }
+                OutlinedButton(
+                    onClick = { dismissedForCurrentSpan = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringRes(Res.string.tor_keep_waiting))
+                }
             }
         },
     )

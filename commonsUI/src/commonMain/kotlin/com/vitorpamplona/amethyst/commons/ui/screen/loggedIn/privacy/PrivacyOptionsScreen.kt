@@ -65,6 +65,10 @@ import com.vitorpamplona.amethyst.commons.resources.settings_section_tor_engine
 import com.vitorpamplona.amethyst.commons.resources.settings_section_tor_routing
 import com.vitorpamplona.amethyst.commons.resources.tor_preset
 import com.vitorpamplona.amethyst.commons.resources.tor_preset_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_progress_notification_description
+import com.vitorpamplona.amethyst.commons.resources.tor_progress_notification_title
+import com.vitorpamplona.amethyst.commons.resources.tor_use_applets_and_websites
+import com.vitorpamplona.amethyst.commons.resources.tor_use_applets_and_websites_explainer
 import com.vitorpamplona.amethyst.commons.resources.tor_use_dm_relays
 import com.vitorpamplona.amethyst.commons.resources.tor_use_dm_relays_explainer
 import com.vitorpamplona.amethyst.commons.resources.tor_use_images
@@ -102,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SegmentedChoiceTile
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsBlockTile
@@ -164,6 +169,18 @@ fun PrivacyOptionsContent(
                     OrbotPortTile(torSettings)
                 }
             }
+            if (LocalAppPlatform.current.hasTorProgressNotification) {
+                AnimatedVisibility(
+                    visible = torType == TorType.INTERNAL,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    Column {
+                        SettingsDivider()
+                        TorSwitchTile(torSettings.progressNotification, MaterialSymbols.Notifications, Res.string.tor_progress_notification_title, Res.string.tor_progress_notification_description)
+                    }
+                }
+            }
         }
 
         AnimatedVisibility(
@@ -195,6 +212,8 @@ fun PrivacyOptionsContent(
                     TorSwitchTile(torSettings.videosViaTor, MaterialSymbols.Videocam, Res.string.tor_use_videos, Res.string.tor_use_videos_explainer)
                     SettingsDivider()
                     TorSwitchTile(torSettings.mediaUploadsViaTor, MaterialSymbols.CloudUpload, Res.string.tor_use_media_uploads, Res.string.tor_use_media_uploads_explainer)
+                    SettingsDivider()
+                    TorSwitchTile(torSettings.appletsAndWebsitesViaTor, MaterialSymbols.Language, Res.string.tor_use_applets_and_websites, Res.string.tor_use_applets_and_websites_explainer)
                 }
             }
         }
@@ -342,6 +361,7 @@ private fun TorSettingsFlow.applyPreset(preset: TorPresetType) {
     moneyOperationsViaTor.tryEmit(settings.moneyOperationsViaTor)
     nip05VerificationsViaTor.tryEmit(settings.nip05VerificationsViaTor)
     mediaUploadsViaTor.tryEmit(settings.mediaUploadsViaTor)
+    appletsAndWebsitesViaTor.tryEmit(settings.appletsAndWebsitesViaTor)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -98,18 +98,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      # Linux packages bundle the JetBrains Runtime, the JDK Gradle runs on, for its native Wayland
-      # toolkit (see create-release.yml); build and test the .deb the same way.
-      - name: Set up JDK 21 (JetBrains Runtime)
+      # The packages bundle the JDK Gradle runs on, JDK 25 (see create-release.yml): the JetBrains
+      # Runtime on Linux, for its native Wayland toolkit, Temurin elsewhere. Build and test them the
+      # same way. The Linux leg also runs :cli:test, whose toolchain is JDK 21: installed first, so
+      # the JBR stays JAVA_HOME, and found through JAVA_HOME_21_* (gradle.properties).
+      - name: Set up JDK 21 (toolchain)
         if: runner.os == 'Linux'
-        uses: ./.github/actions/setup-jbr
-
-      - name: Set up JDK 21
-        if: runner.os != 'Linux'
         uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
+
+      - name: Set up JDK 25 (JetBrains Runtime)
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/setup-jbr
+
+      - name: Set up JDK 25
+        if: runner.os != 'Linux'
+        uses: actions/setup-java@v6.1.0
+        with:
+          distribution: 'temurin'
+          java-version: 25
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6

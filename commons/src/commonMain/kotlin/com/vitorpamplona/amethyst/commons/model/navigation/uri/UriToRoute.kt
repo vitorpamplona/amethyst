@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeForPointer
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.findQueryParameterValue
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipLinks
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.cordn.client.CordnLinkInspection
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
@@ -177,6 +178,27 @@ fun isScanQrRoute(uri: String) =
 
 private val MARMOT_HEX = Regex("^[0-9a-fA-F]+$")
 
+private val FRONT_PAGE_DAY = Regex("^\\d{4}-\\d{2}-\\d{2}$")
+
+/**
+ * The URI a "your paper is ready" notification opens. With [accountNpub], opening it switches to that account first
+ * (`?account=`, as notifications do): a paper printed for one account never opens on another's.
+ */
+fun frontPageUri(
+    day: String? = null,
+    accountNpub: String? = null,
+): String {
+    val query = listOfNotNull(day?.let { "day=$it" }, accountNpub?.let { "account=$it" })
+    return if (query.isEmpty()) "amethyst:frontpage" else "amethyst:frontpage?" + query.joinToString("&")
+}
+
+/** `amethyst:frontpage`, optionally `?day=yyyy-MM-dd`: the front page, on that kept edition. */
+fun frontPageRoute(uri: String): Route.FrontPage? {
+    if (!uri.startsWith("amethyst:frontpage", ignoreCase = true)) return null
+    val day = uri.findQueryParameterValue("day")?.takeIf { FRONT_PAGE_DAY.matches(it) }
+    return Route.FrontPage(day)
+}
+
 fun uriToRoute(
     uri: String,
     account: Account,
@@ -191,6 +213,7 @@ fun uriToRoute(
     if (isScanQrRoute(uri)) {
         return Route.QRDisplay(account.signer.pubKey, startScanning = true)
     }
+    frontPageRoute(uri)?.let { return it }
     if (isHashtagRoute(uri)) {
         return Route.Hashtag(uri.removePrefix(NOSTR_URI_PREFIX).removePrefix("hashtag?id=").lowercase())
     }
@@ -220,6 +243,9 @@ fun uriToRoute(
     concordInviteRoute(uri)?.let { return it }
     buzzInviteRoute(uri)?.let { return it }
     cordnLinkRoute(uri)?.let { return it }
+
+    // A link to an official NIP (the nips repo, nips.nostr.com) opens in the in-app reader.
+    NipLinks.numberFromUrl(uri)?.let { return Route.Nip(it, NipLinks.anchorFromUrl(uri)) }
 
     val parsedNip19 = Nip19Parser.uriToRoute(uri)
     val nip19 = parsedNip19?.entity

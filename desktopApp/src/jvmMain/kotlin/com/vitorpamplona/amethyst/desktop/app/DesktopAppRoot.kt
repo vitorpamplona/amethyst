@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.findQueryParameterValue
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.uriToRoute
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
@@ -54,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.ui.keystorage.LocalKeyStorage
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.LocalNavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.UnavailableScreen
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromEndArgs
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.jvmDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.navigation.windows.ScreenWindowSpec
@@ -61,8 +63,13 @@ import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.buildSettingsCatalog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletHost
+import com.vitorpamplona.amethyst.desktop.napplet.NostrAppScreen
+import com.vitorpamplona.amethyst.desktop.napplet.WebPageScreen
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -76,6 +83,8 @@ import java.io.File
  */
 class DesktopAppRoot(
     private val modules: DesktopAppModules,
+    /** Runs napplets, nSites and web pages; null where Chromium isn't offered. */
+    private val nappletHost: DesktopNappletHost? = null,
 ) : AppRoot {
     override val privacyLockSettings: PrivacyLockSettings get() = modules.privacyLockSettings
 
@@ -186,6 +195,16 @@ class DesktopAppRoot(
         accountViewModel: AccountViewModel,
     ) {
         destinations.jvmDestinations(accountViewModel)
+        // A web page, a napplet and an nSite are screens like any other: the layout puts each on the
+        // stack, in a deck column, a tab or a window.
+        nappletHost?.let { host ->
+            destinations.composableFromEndArgs<Route.WebPage>(capWidth = false) { route -> WebPageScreen(route, nav, host) }
+            destinations.composableFromEndArgs<Route.NostrApp>(capWidth = false) { route -> NostrAppScreen(route, nav, host) }
+            // A web app pinned to the bar: its page, one per app.
+            destinations.composableFromEndArgs<Route.WebApp>(capWidth = false) { route ->
+                WebPageScreen(Route.WebPage(route.url, id = PINNED_WEB_APP + route.url), nav, host)
+            }
+        }
         // Screens only Android has (Health Connect, the QR camera, share-as-image...) still have
         // ways in here: synced bar items, links, shared menus. Show a notice, not a crash.
         destinations.unavailable { UnavailableScreen(nav) }
@@ -247,19 +266,46 @@ class DesktopAppRoot(
         }
 
         // OS-opened nostr:/amethyst: links, queued by DesktopDeepLinks (main()'s argv, the macOS
-        // open-URI event, or a second launch forwarded over the instance bus) and clicked
-        // notifications, routed through the shared parser once a logged-in shell exists. A link
-        // for another saved account (`?account=`, which every notification carries) switches to it
-        // first and opens there, as on Android; this shell then goes away with its account.
+        // open-URI event, or a second launch forwarded over the instance bus), routed through the
+        // shared parser once a logged-in shell exists. A link for another saved account
+        // (`?account=`, as Android's notification links carry) switches to it first and opens there;
+        // this shell then goes away with its account.
         LaunchedEffect(nav, accountViewModel) {
             DesktopDeepLinks.pending.filterNotNull().collect { uri ->
                 DesktopDeepLinks.pending.value = null
                 val npub = uri.findQueryParameterValue("account")
-                val sessions = modules.sessionManager
-                if (npub != null && npub != sessions.currentAccountNPub()) {
-                    sessions.checkAndSwitchUserSync(npub) { account -> uriToRoute(uri, account) }
+                if (npub != null && npub != sessionManager.currentAccountNPub()) {
+                    sessionManager.checkAndSwitchUserSync(npub) { account -> uriToRoute(uri, account) }
                 } else {
                     uriToRoute(uri, accountViewModel.account)?.let { route -> nav.nav(route) }
+                }
+                // A link opens where it can be seen: a main window hidden (kept for a print, or closed
+                // beside screen windows) comes back.
+                navigator.windows.showMainWindow()
+            }
+        }
+
+        // A click on an OS notification (the window came forward already, NotificationClickRouter):
+        // open what it was about, in the account it was for.
+        LaunchedEffect(nav, accountViewModel) {
+            val clicks = modules.notifications.clicks
+            clicks.pending.filterNotNull().collect { click ->
+                clicks.pending.value = null
+                val account = accountViewModel.account
+                val savedNpubs = sessionManager.localPreferences.allSavedAccounts().mapTo(HashSet()) { it.npub }
+                val plan = NotificationClickRules.plan(click, account.signer.pubKey) { hex -> hex.hexToByteArray().toNpub() in savedNpubs }
+                when (plan) {
+                    is NotificationClickPlan.Open -> {
+                        // The Observer already on top, on a past edition: opening its route again does
+                        // nothing, so it is told to show today, the paper the notification is about.
+                        if (NotificationClickRules.showsToday(plan.target)) modules.frontPagePrinters.existing(account.signer.pubKey)?.showToday()
+                        NotificationClickRules.routeFor(plan.target, account)?.let { nav.nav(it) }
+                    }
+                    is NotificationClickPlan.SwitchAndOpen ->
+                        sessionManager.checkAndSwitchUserSync(plan.account.hexToByteArray().toNpub()) { switched ->
+                            plan.target?.let { NotificationClickRules.routeFor(it, switched) }
+                        }
+                    NotificationClickPlan.ShowOnly -> Unit
                 }
             }
         }
@@ -283,3 +329,6 @@ private fun KeyNotKeptDialog(modules: DesktopAppModules) {
         },
     )
 }
+
+// The id of a pinned web app's page: one per app, so its tab finds its title.
+internal const val PINNED_WEB_APP = "pinned:"

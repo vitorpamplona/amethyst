@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
+import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.datasource.AllNipsSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.badges.datasource.BadgesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
@@ -128,6 +129,8 @@ private fun PreloadFor(
 
         NavBarItem.NSITES -> {}
 
+        NavBarItem.NIPS -> AllNipsSubscription(accountViewModel)
+
         // The browser is a "new tab" launcher with no feed to preload.
         NavBarItem.BROWSER -> {}
 
@@ -201,6 +204,7 @@ private fun PreloadFor(
 
         // No relay feed to preload (loaded by the destination screen on demand).
         NavBarItem.PROFILE,
+        NavBarItem.FRONT_PAGE,
         NavBarItem.MY_LISTS,
         NavBarItem.BOOKMARKS,
         NavBarItem.WEB_BOOKMARKS,

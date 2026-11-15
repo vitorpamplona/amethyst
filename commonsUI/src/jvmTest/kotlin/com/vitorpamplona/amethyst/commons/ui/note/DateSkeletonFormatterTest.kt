@@ -98,7 +98,10 @@ class DateSkeletonFormatterTest {
         assertEquals(full, DateSkeletonFormatter("EEEEMMMMdy").format(millis(2024, 5, 28)))
         assertTrue(full, full.startsWith("Tue") && full.endsWith("May 28, 2024"))
         Locale.setDefault(Locale.UK)
-        assertEquals("Tue, 28 May", DateSkeletonFormatter("EEEMMMd").format(millis(2024, 5, 28)))
+        // The day before the month, in the UK's order. The comma after the weekday comes and goes with
+        // the JDK's CLDR data: JDK 21 writes "Tue, 28 May", JDK 25 "Tue 28 May".
+        val uk = DateSkeletonFormatter("EEEMMMd").format(millis(2024, 5, 28))
+        assertTrue(uk, uk.startsWith("Tue") && uk.endsWith("28 May"))
     }
 
     @Test

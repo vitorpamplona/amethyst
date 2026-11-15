@@ -67,10 +67,15 @@ dbus-java's ServiceLoader transport, and drop the signatures of jars it rewrites
 ## Run and package
 
 ```bash
-./gradlew :desktopApp:run                                   # JDK 21 toolchain (jvmToolchain(21))
+./gradlew :desktopApp:run                                   # on the JDK Gradle runs on (21+; packages: 25)
 ./gradlew :desktopApp:run -Damethyst.dataDir=/tmp/amy-test  # separate profile; -Damethyst.debug=true for DEBUG logs
 ./gradlew :desktopApp:packageDmg    # macOS; packageMsi (Windows), packageDeb / packageRpm (Linux)
+xvfb-run ./gradlew :desktopApp:trainReleaseAotCache        # AOT cache into the release image (Linux portable builds)
 ```
+
+- Startup class archives (runtime `classes.jsa`, per-user `AutoCreateSharedArchive`, trained AOT
+  cache): BUILDING.md "Startup archives". A packaged start loads ~10k classes; without an archive
+  it took ~8 s to the logged-in window.
 
 - `mainClass = "com.vitorpamplona.amethyst.desktop.app.AmethystDesktopKt"`. Data lives in
   `~/.amethyst/app` unless `amethyst.dataDir` is set.

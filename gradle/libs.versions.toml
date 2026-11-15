@@ -60,7 +60,7 @@ genaiRewriting = "1.0.0-beta1"
 genaiImageDescription = "1.0.0-beta1"
 languageId = "17.0.6"
 lifecycleRuntimeKtx = "2.11.0"
-lightcompressor-enhanced = "2.3.0"
+lightcompressor-enhanced = "2.4.0"
 jlatexmath = "1.5"
 markdown = "4d3b3dd173"
 # What richtext-commonmark parses with, and the URL finder its autolink extension uses.
@@ -81,13 +81,17 @@ kotlinx-coroutines-test = "1.11.0"
 # The Nostr protocol library, split out of this repo into vitorpamplona/quartz.
 # 2.13.0 reads and writes drss.io's listening progress as kind 30078 (DrssListenProgressAppDataEvent),
 # where drss moved it from 30054.
-quartzKmp = "2.16.0"
-# A quartz commit built by JitPack, used in place of the release above while no release carries what
-# the app needs (now: quartz main after vitorpamplona/quartz#94, the NIP-34 work, on top of 2.16.0,
-# plus the jitpack.yml change that also builds the iOS variants the metadata compiles need). The root
-# build swaps every quartz dependency for it, the bindings' included. Empty: the release.
-# -PquartzDir=../quartz still wins.
-quartzJitpack = "787f2b146cef86c0fee35dac8e9e88d786e73b56"
+quartzKmp = "2.17.0"
+# A quartz commit built by JitPack, used in place of the release above while Maven Central lacks it
+# (Central refused 2.17.0's upload for the month's release-size limit, which resets 2026-12-01).
+# Now: quartz main at vitorpamplona/quartz#110, on top of 2.17.0: the NIP-34 work, JVM bytecode target
+# 21, which every module here already targets, secp256k1 from libschnorr256k1-kotlin, also from JitPack
+# until it is on Maven Central, the Cashu nutzap-redeem fixes, and the trust network keyed by the whole
+# pubkey, not its first 128 bits, which let a made-up lookalike key take a real person's score. Quartz
+# main's jitpack.yml now also builds the iOS variants the metadata compiles need, so the pin is a plain
+# main commit. The root build swaps every quartz dependency for it, the bindings' included. Empty: the
+# release. -PquartzDir=../quartz still wins.
+quartzJitpack = "009e4c8dcb23578638f10f66ebc42c04ebaf0c88"
 # The two MLS bindings, split out of quartz into their own libraries: Marmot (vitorpamplona/marmot-kmp)
 # and cordn (vitorpamplona/cordn-kmp). Their current releases were built against quartz 2.7.3 and run on
 # the version above: 2.9.0 removed no public API they use.
@@ -110,6 +114,7 @@ navigation3 = "1.2.0"
 jetbrainsNavigationevent = "1.1.0"
 lifecycleNavigation3 = "2.11.0"
 okhttp = "5.5.1"
+jsoup = "1.21.1"
 osmdroid = "6.1.20"
 runner = "1.7.0"
 # The JNI bindings must match the secp256k1-kmp version quartz is built against (its secp256k1Kmp).
@@ -291,6 +296,7 @@ quic = { module = "com.vitorpamplona.quic:quic", version.ref = "quicKmp" }
 kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }
+jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktor" }
 ktor-server-cio = { group = "io.ktor", name = "ktor-server-cio", version.ref = "ktor" }

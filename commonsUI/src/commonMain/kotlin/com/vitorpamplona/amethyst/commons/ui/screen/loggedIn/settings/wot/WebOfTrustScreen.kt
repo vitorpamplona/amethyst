@@ -304,7 +304,7 @@ fun WebOfTrustScreen(
                 },
                 // Amethyst's own browser signs in to the provider's site with this account. A front
                 // end without one opens the system browser.
-                onOpenSite = { url -> if (appLauncher === AppLauncher.None) uriHandler.openUri(url) else appLauncher.launchUrl(url) },
+                onOpenSite = { url -> if (appLauncher === AppLauncher.None) uriHandler.openUri(url) else appLauncher.launchUrl(url, nav = nav) },
             )
         }
 

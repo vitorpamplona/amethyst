@@ -42,7 +42,17 @@ import kotlinx.coroutines.flow.merge
  * them, so what [com.vitorpamplona.amethyst.commons.nip34Git.authority.GitAuthority] decides about
  * the repository's items can change on each emission.
  */
-fun EventCache.observeGitAnnouncements(identifier: String): Flow<List<GitRepositoryEvent>> = observeEvents(Filter(kinds = listOf(GitRepositoryEvent.KIND), tags = mapOf("d" to listOf(identifier))))
+fun EventCache.observeGitAnnouncements(identifier: String): Flow<List<GitRepositoryEvent>> = observeEvents(gitAnnouncementsFilter(identifier))
+
+/**
+ * The announcements published under [identifier] that the cache holds now: the list
+ * [observeGitAnnouncements] emits first, read at once. A card seeds its state with it, so it
+ * composes with its repository's roles on the first frame instead of filling them in a frame
+ * later, while the flow's scan runs off the main thread. An indexed read of kind 30617 alone.
+ */
+fun EventCache.gitAnnouncements(identifier: String): List<GitRepositoryEvent> = filter(gitAnnouncementsFilter(identifier)).mapNotNull { it.event as? GitRepositoryEvent }
+
+private fun gitAnnouncementsFilter(identifier: String) = Filter(kinds = listOf(GitRepositoryEvent.KIND), tags = mapOf("d" to listOf(identifier)))
 
 /**
  * Emits whenever anything that decides the state of [identifier]'s items changes: an announcement,

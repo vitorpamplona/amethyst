@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.feeds
 import androidx.collection.LruCache
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -73,6 +74,7 @@ object ScrollStateKeys {
     const val PICTURES_SCREEN = "PicturesFeed"
     const val WORKOUTS_SCREEN = "WorkoutsFeed"
     const val GIT_REPOSITORIES_SCREEN = "GitRepositoriesFeed"
+    const val NIPS_SCREEN = "NipsFeed"
     const val HIGHLIGHTS_SCREEN = "HighlightsFeed"
     const val RELAY_GROUPS_DISCOVERY_SCREEN = "RelayGroupsDiscoveryFeed"
     const val CALENDARS_SCREEN = "CalendarsFeed"
@@ -120,6 +122,33 @@ fun rememberForeverLazyGridState(
             val savedOffset =
                 savedValue?.scrollOffsetFraction ?: initialFirstVisibleItemScrollOffset.toFloat()
             LazyGridState(
+                savedIndex,
+                savedOffset.roundToInt(),
+            )
+        }
+    DisposableEffect(scrollState) {
+        onDispose {
+            val lastIndex = scrollState.firstVisibleItemIndex
+            val lastOffset = scrollState.firstVisibleItemScrollOffset
+            savedScrollStates.put(key, ScrollState(lastIndex, lastOffset.toFloat()))
+        }
+    }
+    return scrollState
+}
+
+@Composable
+fun rememberForeverLazyStaggeredGridState(
+    key: String,
+    initialFirstVisibleItemIndex: Int = 0,
+    initialFirstVisibleItemScrollOffset: Int = 0,
+): LazyStaggeredGridState {
+    val scrollState =
+        rememberSaveable(saver = LazyStaggeredGridState.Saver) {
+            val savedValue = savedScrollStates[key]
+            val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
+            val savedOffset =
+                savedValue?.scrollOffsetFraction ?: initialFirstVisibleItemScrollOffset.toFloat()
+            LazyStaggeredGridState(
                 savedIndex,
                 savedOffset.roundToInt(),
             )

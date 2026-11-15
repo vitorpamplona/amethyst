@@ -85,6 +85,7 @@ private val DrawerNavigateItems: List<NavBarItem> =
 private val DrawerYouItems: List<NavBarItem> =
     listOf(
         NavBarItem.PROFILE,
+        NavBarItem.FRONT_PAGE,
         NavBarItem.MY_FITNESS,
         NavBarItem.MY_LISTS,
         NavBarItem.BOOKMARKS,
@@ -116,6 +117,7 @@ private val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.GEOCACHE_HUNTS,
         NavBarItem.WORKOUTS,
         NavBarItem.GIT_REPOSITORIES,
+        NavBarItem.NIPS,
         NavBarItem.HIGHLIGHTS,
         NavBarItem.LIVE_STREAMS,
         NavBarItem.NESTS,

@@ -62,6 +62,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -84,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.LocalEmojiSearchTerms
 import com.vitorpamplona.amethyst.commons.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.ephemeral_relay_chat
@@ -728,6 +730,8 @@ private fun DisplaySearchResults(
     val ephemeralChannels by searchBarViewModel.searchResultsEphemeralChannels.collectAsStateWithLifecycle()
     val liveActivityChannels by searchBarViewModel.searchResultsLiveActivityChannels.collectAsStateWithLifecycle()
     val notes by searchBarViewModel.searchResultsNotes.collectAsStateWithLifecycle()
+    val emojis by searchBarViewModel.emojiResults.collectAsStateWithLifecycle()
+    val emojiTerms by searchBarViewModel.emojiSearchTerms.collectAsStateWithLifecycle()
     val asksNothing by searchBarViewModel.queryAsksNothing.collectAsStateWithLifecycle()
     val settled by searchBarViewModel.searchSettled.collectAsStateWithLifecycle()
     val recent by searchBarViewModel.history.recent.collectAsStateWithLifecycle()
@@ -736,216 +740,226 @@ private fun DisplaySearchResults(
     // draws it, and the lazy list keys on it.
     val recentText = remember(recent) { recent.map { QuerySerializer.serialize(it) } }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxHeight(),
-        contentPadding = rememberFeedContentPadding(FeedPadding),
-        state = searchBarViewModel.listState,
-    ) {
-        item(key = "scaffold-header") { headerContent() }
+    // Pack cards in the results lead with, and ring, the emojis these terms matched.
+    CompositionLocalProvider(LocalEmojiSearchTerms provides emojiTerms) {
+        LazyColumn(
+            modifier = Modifier.fillMaxHeight(),
+            contentPadding = rememberFeedContentPadding(FeedPadding),
+            state = searchBarViewModel.listState,
+        ) {
+            item(key = "scaffold-header") { headerContent() }
 
-        if (!hasQuery) {
-            // An empty box used to render nothing at all. What a reader searched for before is
-            // the one thing worth offering there, and it is one tap from being re-run because a
-            // history entry is stored as the same text the box holds.
-            if (recent.isNotEmpty()) {
-                item(key = "recent-header") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringRes(Res.string.search_recent),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.placeholderText,
-                        )
-                        TextButton(onClick = { searchBarViewModel.history.clearRecent() }) {
-                            Text(stringRes(Res.string.search_recent_clear))
+            if (!hasQuery) {
+                // An empty box used to render nothing at all. What a reader searched for before is
+                // the one thing worth offering there, and it is one tap from being re-run because a
+                // history entry is stored as the same text the box holds.
+                if (recent.isNotEmpty()) {
+                    item(key = "recent-header") {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringRes(Res.string.search_recent),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.placeholderText,
+                            )
+                            TextButton(onClick = { searchBarViewModel.history.clearRecent() }) {
+                                Text(stringRes(Res.string.search_recent_clear))
+                            }
                         }
                     }
+                    itemsIndexed(recentText, key = { _, item -> "recent-$item" }) { _, asText ->
+                        Text(
+                            text = asText,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { searchBarViewModel.updateSearchValue(asText) }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                        )
+                        HorizontalDivider(thickness = DividerThickness)
+                    }
                 }
-                itemsIndexed(recentText, key = { _, item -> "recent-$item" }) { _, asText ->
-                    Text(
-                        text = asText,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { searchBarViewModel.updateSearchValue(asText) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                return@LazyColumn
+            }
+
+            // Every result list is empty. Which of the two things that means is not cosmetic: a box
+            // holding only a seeded `kind:` never asked a relay anything, and telling that reader
+            // "no results" would blame the network for a search they have not written yet.
+            val foundNothing =
+                hashTags.isEmpty() && relays.isEmpty() && users.isEmpty() && notes.isEmpty() && emojis.isEmpty() &&
+                    publicChatChannels.isEmpty() && ephemeralChannels.isEmpty() && liveActivityChannels.isEmpty()
+
+            if (foundNothing && (asksNothing || settled)) {
+                item(key = "empty-state") {
+                    SearchEmptyState(
+                        title = stringRes(if (asksNothing) Res.string.search_type_to_begin else Res.string.search_no_results),
+                        explainer = stringRes(if (asksNothing) Res.string.search_type_to_begin_explainer else Res.string.search_no_results_explainer),
                     )
+                }
+                return@LazyColumn
+            }
+
+            itemsIndexed(
+                hashTags,
+                key = { _, item -> "#$item" },
+            ) { _, item ->
+                HashtagLine(item.lowercase()) { nav.nav(Route.Hashtag(item.lowercase())) }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(top = 10.dp),
+                    thickness = DividerThickness,
+                )
+            }
+
+            itemsIndexed(
+                users,
+                key = { _, item -> "u" + item.pubkeyHex },
+            ) { _, item ->
+                UserCompose(item, accountViewModel = accountViewModel, nav = nav)
+
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                )
+            }
+
+            if (emojis.isNotEmpty()) {
+                item(key = "emoji-results") {
+                    EmojiSearchResults(emojis, accountViewModel, nav)
                     HorizontalDivider(thickness = DividerThickness)
                 }
             }
-            return@LazyColumn
-        }
 
-        // Every result list is empty. Which of the two things that means is not cosmetic: a box
-        // holding only a seeded `kind:` never asked a relay anything, and telling that reader
-        // "no results" would blame the network for a search they have not written yet.
-        val foundNothing =
-            hashTags.isEmpty() && relays.isEmpty() && users.isEmpty() && notes.isEmpty() &&
-                publicChatChannels.isEmpty() && ephemeralChannels.isEmpty() && liveActivityChannels.isEmpty()
-
-        if (foundNothing && (asksNothing || settled)) {
-            item(key = "empty-state") {
-                SearchEmptyState(
-                    title = stringRes(if (asksNothing) Res.string.search_type_to_begin else Res.string.search_no_results),
-                    explainer = stringRes(if (asksNothing) Res.string.search_type_to_begin_explainer else Res.string.search_no_results_explainer),
+            itemsIndexed(
+                relays,
+                key = { _, item -> "relay${item.relay.url}" },
+            ) { _, relayInfo ->
+                BasicRelaySetupInfoClickableRow(
+                    item = relayInfo,
+                    loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                    loadRobohash = LocalDisplaySettings.current.loadRobohash,
+                    onClick = { nav.nav(Route.RelayInfo(relayInfo.relay.url)) },
+                    onDelete = null,
+                    nip11CachedRetriever = LocalCache.appHost.nip11Cache,
+                    modifier = Modifier.padding(vertical = 5.dp, horizontal = 10.dp),
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
-            return@LazyColumn
-        }
 
-        itemsIndexed(
-            hashTags,
-            key = { _, item -> "#$item" },
-        ) { _, item ->
-            HashtagLine(item.lowercase()) { nav.nav(Route.Hashtag(item.lowercase())) }
+            itemsIndexed(
+                publicChatChannels,
+                key = { _, item -> "public" + item.idHex },
+            ) { _, item ->
+                ChannelName(
+                    channelIdHex = item.idHex,
+                    channelPicture = item.profilePicture(),
+                    channelTitle = {
+                        Text(
+                            item.toBestDisplayName(),
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
+                    channelLastTime = null,
+                    channelLastContent = item.summary(),
+                    hasNewMessages = false,
+                    loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                    loadRobohash = LocalDisplaySettings.current.loadRobohash,
+                    autoPlayGif =
+                        accountViewModel.settings.autoPlayVideosFlow
+                            .collectAsStateWithLifecycle()
+                            .value,
+                    onClick = { nav.nav(routeFor(item)) },
+                )
 
-            HorizontalDivider(
-                modifier = Modifier.padding(top = 10.dp),
-                thickness = DividerThickness,
-            )
-        }
+                HorizontalDivider(
+                    modifier = StdTopPadding,
+                    thickness = DividerThickness,
+                )
+            }
 
-        itemsIndexed(
-            users,
-            key = { _, item -> "u" + item.pubkeyHex },
-        ) { _, item ->
-            UserCompose(item, accountViewModel = accountViewModel, nav = nav)
+            itemsIndexed(
+                ephemeralChannels,
+                key = { _, item -> "ephem" + item.roomId.toKey() },
+            ) { _, item ->
+                val relayInfo by loadRelayInfo(item.roomId.relayUrl)
 
-            HorizontalDivider(
-                thickness = DividerThickness,
-            )
-        }
+                ChannelName(
+                    channelIdHex = item.roomId.toKey(),
+                    channelPicture = relayInfo.icon,
+                    channelTitle = {
+                        Text(
+                            item.toBestDisplayName(),
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
+                    channelLastTime = null,
+                    channelLastContent = stringRes(Res.string.ephemeral_relay_chat),
+                    hasNewMessages = false,
+                    loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                    loadRobohash = LocalDisplaySettings.current.loadRobohash,
+                    autoPlayGif =
+                        accountViewModel.settings.autoPlayVideosFlow
+                            .collectAsStateWithLifecycle()
+                            .value,
+                    onClick = { nav.nav(routeFor(item)) },
+                )
 
-        itemsIndexed(
-            relays,
-            key = { _, item -> "relay${item.relay.url}" },
-        ) { _, relayInfo ->
-            BasicRelaySetupInfoClickableRow(
-                item = relayInfo,
-                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
-                loadRobohash = LocalDisplaySettings.current.loadRobohash,
-                onClick = { nav.nav(Route.RelayInfo(relayInfo.relay.url)) },
-                onDelete = null,
-                nip11CachedRetriever = LocalCache.appHost.nip11Cache,
-                modifier = Modifier.padding(vertical = 5.dp, horizontal = 10.dp),
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+                HorizontalDivider(
+                    modifier = StdTopPadding,
+                    thickness = DividerThickness,
+                )
+            }
 
-        itemsIndexed(
-            publicChatChannels,
-            key = { _, item -> "public" + item.idHex },
-        ) { _, item ->
-            ChannelName(
-                channelIdHex = item.idHex,
-                channelPicture = item.profilePicture(),
-                channelTitle = {
-                    Text(
-                        item.toBestDisplayName(),
-                        fontWeight = FontWeight.Bold,
-                    )
-                },
-                channelLastTime = null,
-                channelLastContent = item.summary(),
-                hasNewMessages = false,
-                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
-                loadRobohash = LocalDisplaySettings.current.loadRobohash,
-                autoPlayGif =
-                    accountViewModel.settings.autoPlayVideosFlow
-                        .collectAsStateWithLifecycle()
-                        .value,
-                onClick = { nav.nav(routeFor(item)) },
-            )
+            itemsIndexed(
+                liveActivityChannels,
+                key = { _, item -> "live" + item.address.toValue() },
+            ) { _, item ->
+                ChannelName(
+                    channelIdHex = item.address.toValue(),
+                    channelPicture = item.profilePicture(),
+                    channelTitle = {
+                        Text(
+                            item.toBestDisplayName(),
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
+                    channelLastTime = null,
+                    channelLastContent = item.summary(),
+                    hasNewMessages = false,
+                    loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                    loadRobohash = LocalDisplaySettings.current.loadRobohash,
+                    autoPlayGif =
+                        accountViewModel.settings.autoPlayVideosFlow
+                            .collectAsStateWithLifecycle()
+                            .value,
+                    onClick = { nav.nav(routeFor(item)) },
+                )
 
-            HorizontalDivider(
-                modifier = StdTopPadding,
-                thickness = DividerThickness,
-            )
-        }
+                HorizontalDivider(
+                    modifier = StdTopPadding,
+                    thickness = DividerThickness,
+                )
+            }
 
-        itemsIndexed(
-            ephemeralChannels,
-            key = { _, item -> "ephem" + item.roomId.toKey() },
-        ) { _, item ->
-            val relayInfo by loadRelayInfo(item.roomId.relayUrl)
+            itemsIndexed(
+                notes,
+                key = { _, item -> "n" + item.idHex },
+            ) { _, item ->
+                NoteCompose(
+                    item,
+                    quotesLeft = 1,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
 
-            ChannelName(
-                channelIdHex = item.roomId.toKey(),
-                channelPicture = relayInfo.icon,
-                channelTitle = {
-                    Text(
-                        item.toBestDisplayName(),
-                        fontWeight = FontWeight.Bold,
-                    )
-                },
-                channelLastTime = null,
-                channelLastContent = stringRes(Res.string.ephemeral_relay_chat),
-                hasNewMessages = false,
-                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
-                loadRobohash = LocalDisplaySettings.current.loadRobohash,
-                autoPlayGif =
-                    accountViewModel.settings.autoPlayVideosFlow
-                        .collectAsStateWithLifecycle()
-                        .value,
-                onClick = { nav.nav(routeFor(item)) },
-            )
-
-            HorizontalDivider(
-                modifier = StdTopPadding,
-                thickness = DividerThickness,
-            )
-        }
-
-        itemsIndexed(
-            liveActivityChannels,
-            key = { _, item -> "live" + item.address.toValue() },
-        ) { _, item ->
-            ChannelName(
-                channelIdHex = item.address.toValue(),
-                channelPicture = item.profilePicture(),
-                channelTitle = {
-                    Text(
-                        item.toBestDisplayName(),
-                        fontWeight = FontWeight.Bold,
-                    )
-                },
-                channelLastTime = null,
-                channelLastContent = item.summary(),
-                hasNewMessages = false,
-                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
-                loadRobohash = LocalDisplaySettings.current.loadRobohash,
-                autoPlayGif =
-                    accountViewModel.settings.autoPlayVideosFlow
-                        .collectAsStateWithLifecycle()
-                        .value,
-                onClick = { nav.nav(routeFor(item)) },
-            )
-
-            HorizontalDivider(
-                modifier = StdTopPadding,
-                thickness = DividerThickness,
-            )
-        }
-
-        itemsIndexed(
-            notes,
-            key = { _, item -> "n" + item.idHex },
-        ) { _, item ->
-            NoteCompose(
-                item,
-                quotesLeft = 1,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-
-            HorizontalDivider(
-                thickness = DividerThickness,
-            )
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                )
+            }
         }
     }
 }

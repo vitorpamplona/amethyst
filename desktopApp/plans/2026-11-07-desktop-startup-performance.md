@@ -2,8 +2,8 @@
 
 Status: in progress. Nine of the changes below are merged, in two PRs: the desktop ones, and the
 drawer and label ones (shared with Android). Class preloading and the measuring tools stay on the
-measurement branch, `ccr-391ad394-xc470s`. The largest win (AppCDS) is on for the dev `run` only
-and still needs a packaging story.
+measurement branch, `ccr-391ad394-xc470s`. The largest win, class archives, is on for the dev
+`run`, and with the move to JDK 25 the packages ship them too (item 11).
 
 ## What is measured
 
@@ -151,6 +151,27 @@ processing takes the CPU the first layout and draw needed (the sampler itself go
 the "after" boots). On this saturated 4-core container less UI work does not show as an earlier
 frame; on a machine with spare cores it should.
 
+11. **Class archives in the packages** (JDK 25; BUILDING.md, "Startup archives"). The installed
+    app had no class archive at all, not even the JDK's: Compose's jlink strips `bin/java`, and
+    jlink makes `classes.jsa` only with it. Now every runtime image gets one dumped after jlink, the
+    installers (`.deb`, `.rpm`, `.dmg`, `.msi`) keep a per-user archive the JVM writes on the first
+    start (`AutoCreateSharedArchive` at `$HOME/...`, which only JDK 25's launcher expands), and the
+    tarball, AppImage and Flatpak carry an AOT cache trained in CI. Packaged build, launch to the
+    logged-in window, 6 alternating boots each, every archive made in one folder and run from a
+    copy in another:
+
+    | Packaged app | median | range |
+    |---|---|---|
+    | no archive (as shipped up to 1.21) | 8196 ms | 7416–8964 |
+    | runtime archive | 7818 ms | 7380–8276 |
+    | + per-user archive | 2376 ms | 2009–2468 |
+    | trained AOT cache | **1830 ms** | 1731–2086 |
+
+    Why JDK 25: JDK 21 drops an archive whose jars moved (it checks absolute paths); JDK 25 matches
+    the class path by its common prefix, so an archive survives the install, as long as each jar's
+    size and modification time hold. jpackage's installers reset those times, hence the per-user
+    archive there.
+
 ## Tried and dropped
 
 - `sample()` → a leading-edge throttle on the home REQ's outbox-set trigger and on the follows'
@@ -172,12 +193,10 @@ frame; on a machine with spare cores it should.
 
 ## Next
 
-1. **Ship AppCDS in the packages.** JDK 21 requires the archive's class path to match exactly
-   (checked: a moved app directory gets "Required classpath entry does not exist"), so an archive
-   made at build time breaks once installed elsewhere, and the JDK 21 jpackage launcher only expands
-   `$APPDIR`/`$BINDIR`/`$ROOTDIR` in `java-options` (checked in its binary), so it cannot point
-   `AutoCreateSharedArchive` at a per-user folder. Options: a newer JDK's launcher or AOT cache, a
-   first-run training step that writes next to the user's data, or a small native launcher.
+1. **A trained AOT cache in the installers too** (item 11 has it in the portable builds only).
+   The `.deb` is already unpacked and repacked in release CI (`fix-deb-desktop-entry.sh`), which
+   keeps file times, so it could be trained there; the `.rpm`, `.dmg` and `.msi` need their
+   packaging rebuilt around a trained image. Worth ~0.5 s a start, and the first start.
 2. Compose less in the first frame of the logged-in shell. Items 8–10 took the drawer from half
    of it to about a quarter; what remains is the notification side panel and the home screen, and
    generated string files touched one label at a time (each still builds 100 accessors). Android's

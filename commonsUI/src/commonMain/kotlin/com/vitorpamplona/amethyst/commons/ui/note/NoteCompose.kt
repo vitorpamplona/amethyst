@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderBidConfirmat
 import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderMarketplace
 import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderProduct
 import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderStall
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitSummaryEdits
 import com.vitorpamplona.amethyst.commons.nip69P2pOrderEvents.ui.RenderMostroInfo
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.RenderProductCollection
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.RenderProductReview
@@ -423,6 +424,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRequestToVanish
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventConfirmation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventReport
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoboSatsCoordinatorRating
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoutstrNode
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSiteSnapshot
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoAvatar
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoObject
@@ -958,6 +960,8 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipFAAgentKeys.AgentKeyEvent
+import com.vitorpamplona.quartz.nipFBScheduledTasks.ScheduledTaskEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
@@ -969,6 +973,7 @@ import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistra
 import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
 import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
 import com.vitorpamplona.quartz.openagents.nipExtExtensions.release.ExtensionReleaseEvent
+import com.vitorpamplona.quartz.routstr.node.RoutstrNodeEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -1990,18 +1995,18 @@ internal fun RenderNoteRow(
             }
 
             is RootSiteEvent -> {
-                StaticWebsiteManifestCard(noteEvent)
+                StaticWebsiteManifestCard(noteEvent, nav)
             }
 
             is NamedSiteEvent -> {
-                StaticWebsiteManifestCard(noteEvent)
+                StaticWebsiteManifestCard(noteEvent, nav)
             }
 
             // Other apps publish their own formats under these kinds: only a valid NIP-5D manifest
             // gets the napplet card, the rest get the fallback card that shows what they carry.
             is RootNappletEvent -> {
                 if (noteEvent.isValid()) {
-                    StaticWebsiteManifestCard(noteEvent)
+                    StaticWebsiteManifestCard(noteEvent, nav)
                 } else {
                     RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
@@ -2009,7 +2014,7 @@ internal fun RenderNoteRow(
 
             is NamedNappletEvent -> {
                 if (noteEvent.isValid()) {
-                    StaticWebsiteManifestCard(noteEvent)
+                    StaticWebsiteManifestCard(noteEvent, nav)
                 } else {
                     RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
@@ -2022,6 +2027,7 @@ internal fun RenderNoteRow(
                     canPreview,
                     quotesLeft,
                     backgroundColor,
+                    editState,
                     accountViewModel,
                     nav,
                 )
@@ -2034,6 +2040,7 @@ internal fun RenderNoteRow(
                     canPreview,
                     quotesLeft,
                     backgroundColor,
+                    editState,
                     accountViewModel,
                     nav,
                 )
@@ -2046,6 +2053,7 @@ internal fun RenderNoteRow(
                     canPreview,
                     quotesLeft,
                     backgroundColor,
+                    editState,
                     accountViewModel,
                     nav,
                 )
@@ -2960,6 +2968,10 @@ internal fun RenderNoteRow(
             is ManageEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Settings)
             // NIP-60 Cashu wallet
             is CashuWalletEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.AccountBalanceWallet)
+            // AI agent keys (kind 12000): encrypted to the author, never drawn
+            is AgentKeyEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Key)
+            // NIP-FB scheduled tasks (kind 34817): encrypted to the author, never drawn
+            is ScheduledTaskEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Schedule)
             is CashuTokenEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Paid)
             is CashuSpendingHistoryEvent -> RenderCashuSpendingHistory(baseNote, accountViewModel, nav)
             is CashuMintQuoteEvent -> RenderCashuMintQuote(baseNote)
@@ -3040,6 +3052,7 @@ internal fun RenderNoteRow(
             is ExtensionListingEvent -> RenderExtensionListing(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is ExtensionReleaseEvent -> RenderExtensionRelease(baseNote)
             is CvmServerAnnouncementEvent -> RenderCvmServerAnnouncement(baseNote, backgroundColor, accountViewModel, nav)
+            is RoutstrNodeEvent -> RenderRoutstrNode(baseNote, nav)
             is CvmToolsListEvent -> RenderCvmToolsList(baseNote, accountViewModel)
             is EventReminderEvent -> RenderEventReminder(baseNote)
             is AgentTurnMetricEvent -> RenderAgentTurnMetric(baseNote)
@@ -3464,7 +3477,12 @@ fun observeEdits(
     baseNote: Note,
     accountViewModel: AccountViewModel,
 ): State<GenericLoadable<EditState>> {
-    if (baseNote.event !is TextNoteEvent) {
+    val event = baseNote.event
+    // A git issue, patch or PR is edited by cover notes, presented as kind-1 edits are.
+    if (event is GitIssueEvent || event is GitPullRequestEvent || event is GitPatchEvent) {
+        return observeGitSummaryEdits(baseNote)
+    }
+    if (event !is TextNoteEvent) {
         return EmptyState
     }
 

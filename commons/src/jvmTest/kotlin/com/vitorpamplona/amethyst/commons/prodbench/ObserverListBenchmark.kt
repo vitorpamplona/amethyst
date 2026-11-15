@@ -97,7 +97,8 @@ class ObserverListBenchmark {
         }
     }
 
-    private fun cow(f: Filter) = NoteListMatchingFilter(f, { emptyList() }, ::sink)
+    // Started, as the cache starts every observer: an unstarted one does not emit.
+    private fun cow(f: Filter) = NoteListMatchingFilter(f, { emptyList() }, ::sink).also { it.init() }
 
     private fun skipList(f: Filter) = SkipListReference(f, ::sink)
 
@@ -146,7 +147,7 @@ class ObserverListBenchmark {
             val f = Filter(kinds = listOf(TextNoteEvent.KIND), limit = limit)
 
             var fromCow: List<Note> = emptyList()
-            val a = NoteListMatchingFilter(f, { emptyList() }, { fromCow = it })
+            val a = NoteListMatchingFilter(f, { emptyList() }, { fromCow = it }).also { it.init() }
             var fromSkipList: List<Note> = emptyList()
             val b = SkipListReference(f) { fromSkipList = it }
 

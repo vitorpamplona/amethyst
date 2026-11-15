@@ -134,6 +134,9 @@ import kotlin.uuid.Uuid
  *
  * [miningJobs] is the NIP-13 pre-send phase: posts waiting for (or in the
  * middle of) proof-of-work mining, before their per-relay send states exist.
+ * [backgroundWork] is any other job the app runs for the user while they are
+ * elsewhere (a front page printing), drawn between the two: one popup for all
+ * background work.
  */
 @Composable
 fun BroadcastBanner(
@@ -145,9 +148,10 @@ fun BroadcastBanner(
     onRetryAll: () -> Unit = {},
     onDismiss: () -> Unit = {},
     modifier: Modifier = Modifier,
+    backgroundWork: (@Composable () -> Unit)? = null,
 ) {
     AnimatedVisibility(
-        visible = broadcasts.isNotEmpty() || miningJobs.isNotEmpty(),
+        visible = broadcasts.isNotEmpty() || miningJobs.isNotEmpty() || backgroundWork != null,
         enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(200)),
         exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(150)),
         modifier = modifier,
@@ -157,10 +161,11 @@ fun BroadcastBanner(
             tonalElevation = 3.dp,
             shadowElevation = 6.dp,
             shape = RoundedCornerShape(20.dp),
+            // Tappable only for what a tap opens (the posts' details): a print's own row opens The Observer.
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onTap),
+                    .then(if (broadcasts.isNotEmpty()) Modifier.clickable(onClick = onTap) else Modifier),
         ) {
             Column(
                 modifier =
@@ -170,6 +175,14 @@ fun BroadcastBanner(
             ) {
                 if (miningJobs.isNotEmpty()) {
                     MiningContent(miningJobs, onCancelJob, onSendWithoutPow)
+
+                    if (broadcasts.isNotEmpty() || backgroundWork != null) {
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+
+                if (backgroundWork != null) {
+                    backgroundWork()
 
                     if (broadcasts.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))

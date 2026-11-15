@@ -27,11 +27,11 @@ import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationD
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationSettings
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationSpec
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationTarget
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PermissionState
 import com.vitorpamplona.amethyst.commons.moderation.notifications.nowEpochSeconds
 import com.vitorpamplona.amethyst.commons.moderation.notifications.sanitizeForToast
 import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
-import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_default_title
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_dm
@@ -43,18 +43,16 @@ import com.vitorpamplona.amethyst.commons.resources.desktop_notification_repost
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_someone
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_zap
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_zap_amount
+import com.vitorpamplona.amethyst.commons.resources.front_page_ready_title
 import com.vitorpamplona.amethyst.commons.resources.notification_for_account
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -210,7 +208,7 @@ class DesktopNotificationAutoDispatcher(
 
         scope.launch {
             try {
-                val spec = buildSpec(note, event, kind)
+                val spec = buildSpec(event, kind)
                 val result = dispatcher.send(spec)
                 Log.d(TAG) { "FIRED kind=$kind id=${eid.take(8)} result=$result" }
             } catch (e: CancellationException) {
@@ -252,7 +250,6 @@ class DesktopNotificationAutoDispatcher(
         }
 
     private suspend fun buildSpec(
-        note: Note,
         event: Event,
         kind: NotifKind,
     ): NotificationSpec {
@@ -291,6 +288,8 @@ class DesktopNotificationAutoDispatcher(
                 NotifKind.FOLLOW -> loadStringRes(Res.string.desktop_notification_follow, displayName)
                 // Posted by DesktopCalendarReminders, never classified from an event here.
                 NotifKind.CALENDAR -> loadStringRes(Res.string.calendar_reminder_default_title)
+                // Posted by the front page printer, never classified from an event here.
+                NotifKind.FRONT_PAGE -> loadStringRes(Res.string.front_page_ready_title)
             }
 
         // Never leak DM ciphertext into the body — decryption pipeline
@@ -308,30 +307,8 @@ class DesktopNotificationAutoDispatcher(
             body = body,
             kind = kind,
             threadId = event.id,
-            deepLinkNoteId = event.id,
-            openUri = composed?.uri ?: openUriFor(note, event, kind, myPubKeyHex),
+            target = NotificationTarget.Note(event.id),
+            account = myPubKeyHex,
         )
-    }
-}
-
-/**
- * Where a click goes when no composer named it: the same places Android's notifications open,
- * always for this account (`?account=`), so a click switches to it first.
- */
-internal fun openUriFor(
-    note: Note,
-    event: Event,
-    kind: NotifKind,
-    myPubKeyHex: String,
-): String {
-    val npub = myPubKeyHex.hexToByteArray().toNpub()
-    return when (kind) {
-        NotifKind.REPLY, NotifKind.MENTION -> NotificationRoutes.noteUri(note, npub)
-        NotifKind.DM -> {
-            // A gift wrap is still sealed: its room is not known until it is opened.
-            val room = (event as? ChatroomKeyable)?.chatroomKey(myPubKeyHex)
-            room?.let { NotificationRoutes.chatroomUri(it, npub) } ?: NotificationRoutes.notificationsUri(npub, event.id)
-        }
-        else -> NotificationRoutes.notificationsUri(npub, event.id)
     }
 }

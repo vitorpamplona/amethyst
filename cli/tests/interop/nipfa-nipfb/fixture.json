@@ -1,0 +1,93 @@
+{
+  "note": "TEST KEY ONLY: public in the Amethyst repository; never use it for anything real.",
+  "test_nsec": "nsec1xp8snzzlg9t5n5prld8tj9eqv7p3mrz06jm7qdkv5z68wza4ltts2jzkme",
+  "pubkey": "6836d50f5d7098d67b826e163b0e917671ee1f10d8fad7b2da91bfe0eb62d276",
+  "events": [
+    {
+      "id": "21acbdca0c4308d1033ca3e3756d0cc4b2663961e096cb1ebc49acd0887b451e",
+      "pubkey": "6836d50f5d7098d67b826e163b0e917671ee1f10d8fad7b2da91bfe0eb62d276",
+      "created_at": 1794355200,
+      "kind": 12000,
+      "tags": [],
+      "content": "ApMnWYjRc+KVGhZF1EWUsw7dZlWxNw734+PgUDXmDkCArt5Mb59+xJcyq77ig2p2TQUwgq8sjHwAKK6xQuGTu/YU1duH28JEY9+qMG25iOTezChnzQAhCfLwmwdeJeqFAxEYNCbXg168xFvLQK1ResHlNkg2ZjajVmmKLuI8/7nQjdJem20pNHHKMu4SRCCk3RZV0ZMr4u9/j14mqH4SgSmOsVyMJFYFYcLmTuu4G1ti+4rocTrhlQEqzwpz+XGbDbiN",
+      "sig": "8dddb24b1a6c1bcef18b33fdf071771a11c0c64ecc5e2f93df8fb1744a5f92ba27ae5f925558162a88f4ab0e8ff6d3f09b080f33bf289a0378be16f035b3d064"
+    },
+    {
+      "id": "0ae057bd39f133b871cca2c9d32119383ce3331459076ba5f8b265e8301562e2",
+      "pubkey": "6836d50f5d7098d67b826e163b0e917671ee1f10d8fad7b2da91bfe0eb62d276",
+      "created_at": 1794355200,
+      "kind": 34817,
+      "tags": [
+        [
+          "d",
+          "observer"
+        ]
+      ],
+      "content": "Ant78pI78aPDmJiB3YuMaLEYdUdhOieL8shIuPI5mnwWFHKGLC282PR4+C3K4gLuktNlsowm+kD1OJ9fgZ+rIEIIkWS1HoRxnimuX9c2TyIgQFuXdCIPaHepUyljlyqS/V21pczJt76AUoPk1EE4o2AgcUKUGLKYaAt7wQm9rN6M3d6AFLF+lpHLQJQP4K5TRw7dWrTY0Gg96uxWDewZ8bPRFgs17XZw54UWfmX1BXqZce20l8dDGz9J+t4dNikGIsS+AzSJ2IDD2PQzGLQLxgn1byhPWHbNa6viiFWUCnvPNsr9duHGO/ZGlpLnv4iXqXWubgEp/pSagB+dK2Y7Y86W1Q==",
+      "sig": "1a3d4b5b03eaf3f81a17e7e3684117334c8a182c20a399945dfef3677bcb0c0f718554a84b974ec1e1086503164e41705032b239442e81cd439308c63147dc63"
+    }
+  ],
+  "decrypted": {
+    "12000": [
+      [
+        "key",
+        "fake-test-key-not-a-provider-key",
+        "https://openrouter.ai/api/v1"
+      ],
+      [
+        "key",
+        "",
+        "http://localhost:11434/v1"
+      ]
+    ],
+    "34817": [
+      [
+        "task",
+        "observer"
+      ],
+      [
+        "cron",
+        "0 7 * * *",
+        "America/New_York",
+        "1794355200"
+      ],
+      [
+        "claim",
+        "1794398400",
+        "3f1c9a0e5b7d4c21",
+        "Desktop (Linux)",
+        "1794398431"
+      ],
+      [
+        "ran",
+        "1794398520"
+      ],
+      [
+        "length",
+        "short"
+      ]
+    ]
+  },
+  "expect": {
+    "12000": {
+      "default": {
+        "url": "https://openrouter.ai/api/v1"
+      },
+      "count": 2
+    },
+    "34817": {
+      "d": "observer",
+      "task": "observer",
+      "cron": "0 7 * * *",
+      "tz": "America/New_York",
+      "set_at": 1794355200,
+      "paused": false,
+      "claim": {
+        "due": 1794398400,
+        "id": "3f1c9a0e5b7d4c21",
+        "by": "Desktop (Linux)",
+        "finished": true
+      }
+    }
+  }
+}

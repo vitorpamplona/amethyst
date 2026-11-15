@@ -57,21 +57,35 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
  * which clears the stack). This keeps the shared [TopBarWithBackButton] untouched for every other
  * screen while giving Settings a search-as-app-bar layout.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsSearchTopBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onClear: () -> Unit,
     nav: INav,
+) = SearchTopBar(query, onQueryChange, onClear, stringRes(Res.string.settings_search_placeholder), nav)
+
+/**
+ * A top bar that is a search field: the [CompactSearchField] pill in place of a title, with the
+ * back arrow when there is something to pop. For screens whose list filters as you type.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchTopBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClear: () -> Unit,
+    placeholder: String,
+    nav: INav,
 ) {
     ShorterTopAppBar(
         expandedHeight = SettingsSearchTopBarHeight,
         title = {
-            CompactSettingsSearchField(
+            CompactSearchField(
                 query = query,
                 onQueryChange = onQueryChange,
                 onClear = onClear,
+                placeholder = placeholder,
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -91,16 +105,17 @@ fun SettingsSearchTopBar(
 }
 
 /**
- * A compact, pill-shaped search field sized to sit inside the app bar. It filters the settings
- * list in place rather than opening a results overlay, so it is a plain [BasicTextField] with a
+ * A compact, pill-shaped search field sized to sit inside the app bar. It filters a list in
+ * place rather than opening a results overlay, so it is a plain [BasicTextField] with a
  * custom decoration box (a full [androidx.compose.material3.TextField] enforces a ~56dp min height
  * that does not fit an app bar).
  */
 @Composable
-private fun CompactSettingsSearchField(
+fun CompactSearchField(
     query: String,
     onQueryChange: (String) -> Unit,
     onClear: () -> Unit,
+    placeholder: String,
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -137,7 +152,7 @@ private fun CompactSettingsSearchField(
                 ) {
                     if (query.isEmpty()) {
                         Text(
-                            text = stringRes(Res.string.settings_search_placeholder),
+                            text = placeholder,
                             style = MaterialTheme.typography.bodyLarge,
                             color = colorScheme.onSurfaceVariant,
                             maxLines = 1,

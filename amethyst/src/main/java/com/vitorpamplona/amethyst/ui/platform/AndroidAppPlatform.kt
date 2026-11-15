@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.platform
 import android.content.Context
 import android.os.Build
 import android.widget.Toast
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -181,6 +182,8 @@ object AndroidAppPlatform : AppPlatform {
     @Composable
     override fun NotificationCategorySettings() = AndroidNotificationCategorySettings()
 
+    override val hasTorProgressNotification: Boolean = true
+
     @Composable
     override fun rememberAppLanguages(): ImmutableMap<String, String> {
         val context = LocalContext.current
@@ -279,6 +282,32 @@ object AndroidAppPlatform : AppPlatform {
     }
 
     @Composable
+    override fun InlinePaperSurface(
+        html: String,
+        title: String,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+        // Touch scrolls the WebView directly; there is no wheel to route.
+        takesWheel: Boolean,
+    ) {
+        // The :napplet sandbox renders it, as it does an nSite: no WebView ever boots in this process.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val tooLarge = remember(html) { html.encodeToByteArray().size > NappletLauncher.MAX_PAPER_BYTES }
+            if (tooLarge) {
+                // Said as what it is, not as a failure Retry could fix.
+                LaunchedEffect(instanceId) { onStatus(InlineNappletStatus.TOO_LARGE) }
+                Box(modifier)
+                return
+            }
+            val context = LocalContext.current
+            InlineNappletView(html to instanceId, instanceId, onStatus, modifier) {
+                NappletLauncher.buildInlinePaperParams(context, html, title, instanceId)
+            }
+        }
+    }
+
+    @Composable
     override fun InlineWebxdcSurface(
         app: WebxdcApp,
         postId: HexKey,
@@ -332,27 +361,36 @@ object AndroidAppPlatform : AppPlatform {
 private class AndroidAppLauncher(
     private val context: Context,
 ) : AppLauncher {
+    // Android's browser is an activity of its own, in its own task: no screen of the app's to open on.
     override fun launch(
         app: FavoriteApp,
         stillLoading: String,
+        nav: INav?,
     ) = FavoriteAppLauncher.launch(context, app, stillLoading)
 
     override fun launchUrl(
         url: String,
         preferTor: Boolean,
+        nav: INav?,
     ) = FavoriteAppLauncher.launchUrl(context, url, preferTor)
 
     // Napplets and nSites hand off to the sandboxed :napplet process.
     override val opensNapplets: Boolean get() = true
 
-    override fun openNapplet(manifest: NappletManifest) {
+    override fun openNapplet(
+        manifest: NappletManifest,
+        nav: INav?,
+    ) {
         when (manifest) {
             is RootNappletEvent -> NappletLauncher.launch(context, manifest, manifest.pubKey, "")
             is NamedNappletEvent -> NappletLauncher.launch(context, manifest, manifest.pubKey, manifest.identifier())
         }
     }
 
-    override fun openSite(site: Event) = NappletLauncher.launchSite(context, site)
+    override fun openSite(
+        site: Event,
+        nav: INav?,
+    ) = NappletLauncher.launchSite(context, site)
 
     override fun openWebxdc(
         app: WebxdcApp,

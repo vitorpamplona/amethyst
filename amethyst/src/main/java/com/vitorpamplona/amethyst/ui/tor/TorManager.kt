@@ -133,6 +133,15 @@ class TorManager(
      */
     @Volatile private var failureRaised: Boolean = false
 
+    /**
+     * Whether this outage already got its automatic restart. The first time the
+     * [BOOTSTRAP_TIMEOUT_MS] deadline passes, [connectionFailure] restarts Tor itself (the same
+     * reset as [restartTor]) instead of prompting, and the user is only asked if that attempt
+     * also times out. Cleared where the outage genuinely ends: a bootstrapped Tor, a network
+     * change, a bypass, or a user change of [TorType].
+     */
+    @Volatile private var autoRestartedThisOutage: Boolean = false
+
     /** Consecutive gentle (state-preserving) self-heals with no successful bootstrap in between. */
     @Volatile private var consecutiveGentleResets: Int = 0
 
@@ -164,6 +173,7 @@ class TorManager(
                 lastBypassApprovalMs = 0L
                 tryingSinceMs = 0L
                 failureRaised = false
+                autoRestartedThisOutage = false
                 torPrefs.saveLastBypassApprovalMs(0L)
             }.launchIn(scope)
     }
@@ -238,7 +248,9 @@ class TorManager(
      * Emits true after [BOOTSTRAP_TIMEOUT_MS] of continuous [TorServiceStatus.Connecting]
      * (and we are not already bypassing). When the user has approved a bypass within the
      * last [APPROVAL_REMEMBER_MS] this auto-flips [sessionBypass] silently and stays at
-     * false; otherwise it emits true so the UI can show the prompt.
+     * false. Otherwise the first expiry in an outage restarts Tor automatically and stays at
+     * false; only when that restarted attempt also runs out its own [BOOTSTRAP_TIMEOUT_MS]
+     * does it emit true so the UI can show the prompt.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     val connectionFailure: StateFlow<Boolean> =
@@ -280,6 +292,13 @@ class TorManager(
                 if (rememberedApprovalActive()) {
                     sessionBypass.value = true
                     emit(false)
+                } else if (!autoRestartedThisOutage) {
+                    // Try the restart the dialog would offer before asking. The reset drives
+                    // status through Off, which cancels this block; the next attempt re-arms the
+                    // timer from scratch because restart() cleared [tryingSinceMs].
+                    autoRestartedThisOutage = true
+                    emit(false)
+                    restart(byUser = false)
                 } else {
                     failureRaised = true
                     emit(true)
@@ -336,6 +355,7 @@ class TorManager(
                     tryingSinceMs = 0L
                     lastTryingTransitionMs = 0L
                     failureRaised = false
+                    autoRestartedThisOutage = false
                     consecutiveGentleResets = 0
                 } else if (it.isTryingToConnect() && lastTryingTransitionMs == 0L) {
                     lastTryingTransitionMs = nowMs()
@@ -470,10 +490,44 @@ class TorManager(
         val now = nowMs()
         tryingSinceMs = 0L
         failureRaised = false
+        autoRestartedThisOutage = false
         lastBypassApprovalMs = now
         sessionBypass.value = true
         scope.launch(ioDispatcher) {
             torPrefs.saveLastBypassApprovalMs(now)
+        }
+    }
+
+    /**
+     * Called when the user picks "Restart Tor" on the connection-failure dialog. Unlike the
+     * watchdog this ignores the self-heal cooldown, because the user asked for it. The same
+     * restart runs once on its own before the dialog is ever shown (see [connectionFailure]).
+     *
+     * A stalled directory download gets the warm [TorBackend.reset], which keeps the partial
+     * consensus in `arti/cache` so the next attempt resumes instead of starting over. Any other
+     * stuck state (no client, no proxy) gets [TorBackend.resetWithCleanState], since the persisted
+     * state is then the likeliest culprit.
+     *
+     * Clears the failure flags so the dialog closes and the new attempt gets its own full
+     * [BOOTSTRAP_TIMEOUT_MS], and primes [lastSelfHealAtMs] so the watchdog doesn't reset the new
+     * attempt right away.
+     */
+    fun restartTor() = restart(byUser = true)
+
+    private fun restart(byUser: Boolean) {
+        val downloading = status.value is TorServiceStatus.Bootstrapping
+        tryingSinceMs = 0L
+        lastTryingTransitionMs = 0L
+        failureRaised = false
+        consecutiveGentleResets = 0
+        lastSelfHealAtMs = nowMs()
+        Log.w("TorManager") {
+            val who = if (byUser) "User restarted Tor" else "Tor not connecting — restarting it before asking the user"
+            "$who (${if (downloading) "drop client, keep cache" else "drop client + wipe state"})"
+        }
+        scope.launch(ioDispatcher) {
+            if (downloading) service.reset() else service.resetWithCleanState()
+            resetEpoch.update { it + 1 }
         }
     }
 
@@ -491,6 +545,7 @@ class TorManager(
         lastBypassApprovalMs = 0L
         tryingSinceMs = 0L
         failureRaised = false
+        autoRestartedThisOutage = false
         // Prevent the stuck-Connecting watchdog from firing a second reset while the
         // network-change bootstrap is still legitimately in progress (initial bootstrap
         // on a new network can take ~10–30s, sometimes longer).

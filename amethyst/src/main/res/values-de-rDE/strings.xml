@@ -212,4 +212,14 @@
     <string name="napplet_cap_fs">Dateien</string>
     <string name="napplet_cap_common">Soziale Aktionen</string>
     <string name="napplet_cap_intent">Andere Apps öffnen</string>
+    <string name="front_page_print_channel_name">The Observer, Druck</string>
+    <string name="front_page_print_channel_description">Zeigt The Observer während des Drucks an, damit er fertig werden kann, nachdem du die App verlassen hast.</string>
+    <string name="front_page_print_cancel">Abbrechen</string>
+    <string name="front_page_print_title">The Observer wird gedruckt</string>
+    <string name="front_page_print_step_probe">Deine Bewertung wird geprüft</string>
+    <string name="front_page_print_step_pull">Ressorts werden gelesen · %1$d von %2$d</string>
+    <string name="front_page_print_step_write">Schreibt</string>
+    <string name="front_page_print_step_fix">Seite wird korrigiert</string>
+    <string name="front_page_print_step_check">Zitate, Bilder und Links werden geprüft</string>
+    <string name="front_page_print_step_publish">Dein Observer wird veröffentlicht</string>
 </resources>

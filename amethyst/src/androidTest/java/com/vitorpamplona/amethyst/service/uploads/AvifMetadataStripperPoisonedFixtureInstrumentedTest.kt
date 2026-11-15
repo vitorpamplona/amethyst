@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.AvifInstrumentedTestSupport.appContext
 import com.vitorpamplona.amethyst.AvifInstrumentedTestSupport.contentUriFor
 import com.vitorpamplona.amethyst.AvifInstrumentedTestSupport.copyAssetToCache
 import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_MIME
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -48,7 +49,7 @@ class AvifMetadataStripperPoisonedFixtureInstrumentedTest {
         val uri = contentUriFor(avif)
         val ex =
             assertThrows(AvifMetadataNotVerifiableException::class.java) {
-                MetadataStripper.strip(uri, AVIF_MIME, appContext)
+                runBlocking { MetadataStripper.strip(uri, AVIF_MIME, appContext) }
             }
         assertNotNull("Exception must have a non-null message for UI display", ex.message)
     }

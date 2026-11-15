@@ -166,6 +166,27 @@ object NappletLauncher {
         return buildLaunchParams(context, launch.inline(instanceId))
     }
 
+    /**
+     * The launch parameters for showing the reader's front page [html] (already written, resolved and
+     * checked in this process) as instance [instanceId], or null when nobody is logged in or the page
+     * is too large to hand to the sandbox in one message.
+     */
+    fun buildInlinePaperParams(
+        context: Context,
+        html: String,
+        title: String,
+        instanceId: String,
+    ): Bundle? {
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return null
+        val launch = NappletLaunch.forPaper(account.pubKey, title, html)
+        // One binder transaction carries the whole launch; a page this size is not a front page.
+        if ((launch.paper?.size ?: 0) > MAX_PAPER_BYTES) {
+            Log.w(TAG) { "Refusing a ${launch.paper?.size}-byte front page" }
+            return null
+        }
+        return buildLaunchParams(context, launch.inline(instanceId))
+    }
+
     /** The launch parameters for a NIP-5A nSite, or null when the event is refused. */
     fun buildSiteLaunchParams(
         context: Context,
@@ -199,13 +220,16 @@ object NappletLauncher {
                 .orEmpty()
         val launchToken = NappletLaunchRegistry.register(identity, declared, launchAccountPubKey)
 
-        // Resolve the per-site network choice (Tor default; a site can be opted out to the open web).
-        // Locked napplets always keep Tor for their blob fetches — only nSites expose the toggle.
+        // Resolve the per-site network choice. An nSite follows the user's choice for it, else the Tor
+        // settings' "Applets and Websites" switch; a locked napplet's blob fetches follow that switch.
         NsiteNetworkRegistry.preload()
         // Whether Tor is ON, not whether its port is known yet: with Tor on and no port the host refuses to
         // fetch anything (fails closed) instead of going out directly while Tor is still starting.
-        val torEnabled = Amethyst.instance.torPrefs.torType.value != TorType.OFF
-        val useTor = torEnabled && (!profile.exposesNetwork || NsiteNetworkRegistry.useTor(identity.coordinate))
+        val torPrefs = Amethyst.instance.torPrefs
+        val torEnabled = torPrefs.torType.value != TorType.OFF
+        val useTor =
+            torEnabled &&
+                if (profile.exposesNetwork) NsiteNetworkRegistry.useTor(identity.coordinate) else torPrefs.value.appletsAndWebsitesViaTor.value
 
         // Resolve capability labels here (the app has the resources) so the sandbox module needs none.
         val capLabels = declared.map { stringRes(context, it.labelResId()) }
@@ -240,8 +264,15 @@ object NappletLauncher {
             // and localStorage into another. Derived here (the sandbox never sees the pubkey).
             putString(NappletHostContract.EXTRA_WEBVIEW_PROFILE, NappletWebViewProfiles.current())
             launch.webxdc?.let { NappletHostContract.putWebxdc(this, it) }
+            launch.paper?.let { putByteArray(NappletHostContract.EXTRA_PAPER_HTML, it) }
         }
     }
+
+    /**
+     * The largest page handed to the sandbox. The whole launch is one binder transaction, whose
+     * buffer (1 MB) is shared by everything the process has in flight: 600 KB left too little.
+     */
+    const val MAX_PAPER_BYTES = 400_000
 
     private const val TAG = "NappletLauncher"
 }

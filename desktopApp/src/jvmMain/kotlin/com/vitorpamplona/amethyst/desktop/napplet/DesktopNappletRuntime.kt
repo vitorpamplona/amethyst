@@ -41,7 +41,7 @@ import java.io.File
  *
  * [httpClient] fetches blobs, through Tor or not; [torPort] is the Tor SOCKS port while Tor runs
  * (null otherwise); [nappletBlobsUseTor] is whether a napplet's own blob downloads go through Tor,
- * which follows the app's Tor setting as on Android.
+ * which follows the Tor settings' "Applets and Websites" switch, as on Android.
  */
 class DesktopNappletRuntime(
     val engine: DesktopCefEngine,
@@ -54,6 +54,8 @@ class DesktopNappletRuntime(
     val torWaitMs: Long = 30_000L,
     /** Where webxdc apps are unpacked, one directory per archive. */
     val webxdcBundles: WebxdcBundles = WebxdcBundles(WebxdcBundles.dirFor(File(System.getProperty("java.io.tmpdir"), "amethyst"))),
+    /** The front page's pictures, which its session serves instead of Chromium. */
+    val paperArt: PaperArtCache = PaperArtCache(PaperArtCache.dirFor(File(System.getProperty("java.io.tmpdir"), "amethyst"))),
 ) {
     val attendance = NappletAttendance<CefNappletSession>()
 
@@ -67,12 +69,20 @@ class DesktopNappletRuntime(
 
     val routes = DesktopNappletRoutes(engine.router, torPort, scope)
 
+    /** The in-app browser's documents, each of which may hold live subscriptions of its own. */
+    val browserAttendance = NappletAttendance<CefBrowserSession.BrowserDocument>()
+
+    val browserSubscriptions = NappletLiveSubscriptions(scope, browserAttendance)
+
     // Windows close in bursts (logging out closes them all), and one trim covers them all.
     private val trims = Channel<Unit>(Channel.CONFLATED)
 
     init {
         scope.launch(Dispatchers.IO) {
-            for (ignored in trims) blobCache.trimToSize(NappletBlobCache.DEFAULT_MAX_BYTES)
+            for (ignored in trims) {
+                blobCache.trimToSize(NappletBlobCache.DEFAULT_MAX_BYTES)
+                paperArt.trim()
+            }
         }
     }
 

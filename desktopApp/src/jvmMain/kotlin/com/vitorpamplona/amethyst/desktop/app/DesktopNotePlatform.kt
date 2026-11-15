@@ -36,6 +36,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -75,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
+import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.LocalZoomSourceGroup
 import com.vitorpamplona.amethyst.commons.ui.components.MediaKind
@@ -97,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtag
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
+import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.note.types.rememberMediaTracks
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
@@ -693,9 +696,10 @@ object DesktopNotePlatform : NotePlatform {
         canPreview: Boolean,
         quotesLeft: Int,
         backgroundColor: MutableState<Color>,
+        editState: State<GenericLoadable<EditState>>,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) = SharedRenderGitPatchEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+    ) = SharedRenderGitPatchEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, editState, accountViewModel, nav)
 
     @Composable
     override fun RenderGitIssueEvent(
@@ -704,9 +708,10 @@ object DesktopNotePlatform : NotePlatform {
         canPreview: Boolean,
         quotesLeft: Int,
         backgroundColor: MutableState<Color>,
+        editState: State<GenericLoadable<EditState>>,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) = SharedRenderGitIssueEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+    ) = SharedRenderGitIssueEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, editState, accountViewModel, nav)
 
     @Composable
     override fun RenderGitPullRequestEvent(
@@ -715,9 +720,10 @@ object DesktopNotePlatform : NotePlatform {
         canPreview: Boolean,
         quotesLeft: Int,
         backgroundColor: MutableState<Color>,
+        editState: State<GenericLoadable<EditState>>,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) = SharedRenderGitPullRequestEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+    ) = SharedRenderGitPullRequestEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, editState, accountViewModel, nav)
 
     @Composable
     override fun RenderGitPullRequestUpdateEvent(

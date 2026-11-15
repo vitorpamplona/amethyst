@@ -24,14 +24,16 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,6 +42,8 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.EmojiPackCard
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.EmojiPackInListToggle
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.EmojiPackSheet
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
@@ -49,7 +53,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchScrollToTop
-import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyGridState
+import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyStaggeredGridState
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -98,7 +102,7 @@ fun BrowseEmojiSetsScreen(
         accountViewModel = accountViewModel,
     ) {
         RefresheableBox(feedContentState, true) {
-            val gridState = rememberForeverLazyGridState(ScrollStateKeys.BROWSE_EMOJI_SETS_SCREEN)
+            val gridState = rememberForeverLazyStaggeredGridState(ScrollStateKeys.BROWSE_EMOJI_SETS_SCREEN)
             WatchScrollToTop(feedContentState, gridState)
             RenderBrowseEmojiSetsGrid(
                 feedContentState = feedContentState,
@@ -113,7 +117,7 @@ fun BrowseEmojiSetsScreen(
 @Composable
 private fun RenderBrowseEmojiSetsGrid(
     feedContentState: FeedContentState,
-    gridState: LazyGridState,
+    gridState: LazyStaggeredGridState,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -151,7 +155,7 @@ private fun RenderBrowseEmojiSetsGrid(
 @Composable
 private fun BrowseEmojiSetsGridLoaded(
     loaded: FeedState.Loaded,
-    gridState: LazyGridState,
+    gridState: LazyStaggeredGridState,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -159,12 +163,16 @@ private fun BrowseEmojiSetsGridLoaded(
 
     StickToTopOnPrepend(gridState, items.list.firstOrNull()?.idHex)
 
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 160.dp),
+    var peek by remember { mutableStateOf<Note?>(null) }
+
+    // Staggered: a card is as tall as its pack needs, so a 2-emoji pack and a 175-emoji pack stop
+    // being the same box, and the columns interleave instead of lining up in rows.
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Adaptive(minSize = 160.dp),
         state = gridState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = rememberFeedContentPadding(PaddingValues(12.dp)),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalItemSpacing = 12.dp,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(
@@ -173,18 +181,26 @@ private fun BrowseEmojiSetsGridLoaded(
         ) { note ->
             BrowsedEmojiPackCard(
                 note = note,
+                accountViewModel = accountViewModel,
                 modifier = Modifier.animateItem(),
                 onClick = { nav.nav(Route.Note(note.idHex)) },
+                onLongClick = { peek = note },
             )
         }
+    }
+
+    peek?.let { note ->
+        EmojiPackSheet(note, accountViewModel) { peek = null }
     }
 }
 
 @Composable
 private fun BrowsedEmojiPackCard(
     note: Note,
+    accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
     val event = note.event as? EmojiPackEvent ?: return
 
@@ -205,7 +221,9 @@ private fun BrowsedEmojiPackCard(
         coverImage = coverImage,
         author = author,
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = modifier,
+        action = { EmojiPackInListToggle(note, accountViewModel) },
     )
 }
 

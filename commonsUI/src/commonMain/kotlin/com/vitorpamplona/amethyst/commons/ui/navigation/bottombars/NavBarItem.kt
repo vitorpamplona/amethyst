@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_sets
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps
 import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_title
 import com.vitorpamplona.amethyst.commons.resources.follow_packs
+import com.vitorpamplona.amethyst.commons.resources.front_page_title
 import com.vitorpamplona.amethyst.commons.resources.git_repositories
 import com.vitorpamplona.amethyst.commons.resources.highlights
 import com.vitorpamplona.amethyst.commons.resources.interest_sets_title
@@ -65,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.resources.my_lists
 import com.vitorpamplona.amethyst.commons.resources.napplets
 import com.vitorpamplona.amethyst.commons.resources.nests
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_title
+import com.vitorpamplona.amethyst.commons.resources.nip_catalog_title
 import com.vitorpamplona.amethyst.commons.resources.nsites
 import com.vitorpamplona.amethyst.commons.resources.pictures
 import com.vitorpamplona.amethyst.commons.resources.polls
@@ -207,6 +209,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Language,
                 resolveRoute = { Route.WebBookmarks },
             ),
+        NavBarItem.FRONT_PAGE to
+            NavBarItemDef(
+                id = NavBarItem.FRONT_PAGE,
+                label = { Res.string.front_page_title },
+                icon = MaterialSymbols.AutoMirrored.Article,
+                resolveRoute = { Route.FrontPage() },
+            ),
         NavBarItem.DRAFTS to
             NavBarItemDef(
                 id = NavBarItem.DRAFTS,
@@ -305,6 +314,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 label = { Res.string.git_repositories },
                 icon = MaterialSymbols.Code,
                 resolveRoute = { Route.GitRepositories },
+            ),
+        NavBarItem.NIPS to
+            NavBarItemDef(
+                id = NavBarItem.NIPS,
+                label = { Res.string.nip_catalog_title },
+                icon = MaterialSymbols.MenuBook,
+                resolveRoute = { Route.Nips },
             ),
         NavBarItem.HIGHLIGHTS to
             NavBarItemDef(
@@ -586,6 +602,7 @@ val BottomBarCategories: List<NavBarCategory> by lazy {
             MaterialSymbols.AccountCircle,
             listOf(
                 NavBarItem.PROFILE,
+                NavBarItem.FRONT_PAGE,
                 NavBarItem.MY_FITNESS,
                 NavBarItem.MY_LISTS,
                 NavBarItem.BOOKMARKS,
@@ -621,6 +638,7 @@ val BottomBarCategories: List<NavBarCategory> by lazy {
                 NavBarItem.GEOCACHE_HUNTS,
                 NavBarItem.WORKOUTS,
                 NavBarItem.GIT_REPOSITORIES,
+                NavBarItem.NIPS,
                 NavBarItem.HIGHLIGHTS,
                 NavBarItem.COMMUNITIES,
                 NavBarItem.FOLLOW_PACKS,

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.resourceusage
 
+import com.vitorpamplona.amethyst.commons.model.ForwardingNostrSigner
 import com.vitorpamplona.amethyst.commons.service.resourceusage.ResourceUsageAccountant
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -50,12 +51,13 @@ import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClient
  *
  * Wrapped INSIDE [NostrSignerWithClientTag] (metering the raw signer), so the
  * existing `signer is NostrSignerWithClientTag` call sites keep working;
- * anything that needs the raw signer should unwrap via [innermostSigner].
+ * anything that needs the raw signer should unwrap via [com.vitorpamplona.amethyst.commons.model.innermostSigner].
  */
 class MeteringNostrSigner(
-    val inner: NostrSigner,
+    override val inner: NostrSigner,
     private val accountant: ResourceUsageAccountant,
-) : NostrSigner(inner.pubKey) {
+) : NostrSigner(inner.pubKey),
+    ForwardingNostrSigner {
     private val signKey = UsageKeys.signs(signerKind(inner))
     private val meterCryptoTime = inner is NostrSignerInternal
 
@@ -126,15 +128,3 @@ class MeteringNostrSigner(
             }
     }
 }
-
-/**
- * Strips the app's signer decorators (client tag, metering) to reach the
- * concrete signer — for call sites that need the real type, like the NIP-55
- * activity-launcher registration.
- */
-fun NostrSigner.innermostSigner(): NostrSigner =
-    when (this) {
-        is NostrSignerWithClientTag -> inner.innermostSigner()
-        is MeteringNostrSigner -> inner.innermostSigner()
-        else -> this
-    }

@@ -57,12 +57,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -89,6 +92,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+import kotlin.reflect.KClass
 
 /**
  * The navigation shell around [content] at every window size: the modal drawer (phones), the rail
@@ -307,13 +312,22 @@ private fun MultiPaneShell(
 ) {
     val paneWidthPrefs = LocalAppServices.current.paneWidthPrefs
     val widths by paneWidthPrefs.flow.collectAsStateWithLifecycle()
-    // The deck takes the panel's place, so no room is kept for it.
-    val showPanel = deck == null && notificationPanelShown(nav)
+    // The deck takes the panel's place, so no room is kept for it. On a screen that keeps the
+    // panel away (PanelFreeRoutes) it stays composed and slides out of the way, and back.
+    val roomForPanel = deck == null && LocalScreenLayout.current.hasRoomForNotificationPanel
+    val panelAway = roomForPanel && panelAwayHere(nav)
+    val showPanel = roomForPanel
     // A folded panel leaves only its badged bell, wherever the panel docks.
     val collapsePrefs = notificationPanelCollapsePrefs
     val panelFolded by collapsePrefs.flow.collectAsStateWithLifecycle()
     val foldedAt by collapsePrefs.collapsedAt.collectAsStateWithLifecycle()
     val showFoldedStrip = showPanel && panelFolded
+    // 1 shown, 0 out of the way, at once: the screens that send the panel away (the paper, nSites,
+    // napplets, the browser) are pages Chromium draws off screen, and a centre pane that grew over a
+    // quarter second asked it for a new size every frame. It paints only some of them, so the page
+    // showed a stale frame stretched wider and blurrier until it caught up. A navigation swaps
+    // screens at once anyway; the panel stays composed, so it comes back as it was.
+    val panelShare = if (panelAway) 0f else 1f
     val windowWidth =
         with(LocalDensity.current) {
             LocalWindowInfo.current.containerSize.width
@@ -380,6 +394,9 @@ private fun MultiPaneShell(
                             modifier =
                                 Modifier
                                     .fillMaxHeight()
+                                    .widthShare(panelShare)
+                                    // Out of the way, it is no part of the screen for a screen reader either.
+                                    .then(if (panelAway) Modifier.clearAndSetSemantics {} else Modifier)
                                     .background(MaterialTheme.colorScheme.background)
                                     .consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current)),
                             contentAlignment = Alignment.TopStart,
@@ -463,19 +480,42 @@ private fun DeckSplit(
 }
 
 /**
- * Whether the docked notification feed shows: when there is room for it, and not while the user is
- * on the Notifications screen, which it would duplicate.
+ * Whether the current screen keeps the docked notification feed out of the way: one of
+ * [PanelFreeRoutes] (the Notifications screen, which it would duplicate, and the screens that want
+ * the whole pane). Only asked where there is room for the panel.
  *
- * The current route is read here, through [derivedStateOf], rather than in the shells, so
- * windows too narrow for the panel never observe it and a navigation recomposes only when it
- * enters or leaves Notifications.
+ * The current route is read here, through [derivedStateOf], rather than in the shells, so a
+ * navigation recomposes only when it enters or leaves one of those screens.
  */
 @Composable
-private fun notificationPanelShown(nav: Nav): Boolean {
-    if (!LocalScreenLayout.current.hasRoomForNotificationPanel) return false
-    val onNotifications by remember(nav) { derivedStateOf { nav.currentRoute is Route.Notification } }
-    return !onNotifications
+private fun panelAwayHere(nav: Nav): Boolean {
+    val panelFree by remember(nav) { derivedStateOf { nav.currentRoute::class in PanelFreeRoutes } }
+    return panelFree
 }
+
+/**
+ * Lays the content out at its own width and takes [share] of it, pinned to its leading edge and
+ * clipped: the panel keeps its layout (and its state) while it slides out of the way.
+ */
+private fun Modifier.widthShare(share: Float): Modifier =
+    clipToBounds().layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+        val width = (placeable.width * share.coerceIn(0f, 1f)).roundToInt()
+        layout(width, placeable.height) { placeable.placeRelative(0, 0) }
+    }
+
+/**
+ * Screens the docked notification panel stays away from: the notifications themselves, and the
+ * screens that want the whole pane (the paper and the nSite/napplet browser). A new full-width
+ * screen is one more entry here, plus `capWidth = false` where it is registered.
+ */
+val PanelFreeRoutes: Set<KClass<out Route>> =
+    setOf(
+        Route.Notification::class,
+        Route.FrontPage::class,
+        Route.NostrApp::class,
+        Route.Browser::class,
+    )
 
 /**
  * Wide, landscape, tall windows: the drawer is permanently docked on the left, the bottom bar

@@ -74,20 +74,27 @@ allprojects {
         }
     }
 
-    if (quartzJitpack != null) {
-        // JitPack rewrites the published module metadata and drops each file's classifier: the
-        // sources and metadata variants point at `quartz-jvm-<v>.jar` where the files it serves are
-        // `quartz-jvm-<v>-sources.jar` and `quartz-iosarm64-<v>-metadata.jar`. Point them back, so
-        // the KMP metadata compiles (iOS) and anything reading quartz's sources resolve.
+    // JitPack rewrites the published module metadata and drops each file's classifier: the sources and
+    // metadata variants point at `quartz-jvm-<v>.jar` where the files it serves are
+    // `quartz-jvm-<v>-sources.jar` and `quartz-iosarm64-<v>-metadata.jar`. Point them back, so the KMP
+    // metadata compiles (iOS) and anything reading the sources resolve. quartz's only while
+    // quartzJitpack is set; libschnorr256k1-kotlin's always, since quartz itself takes it from JitPack
+    // until 1.0.1 is on Maven Central.
+    val jitpackModules =
+        buildList {
+            if (quartzJitpack != null) add("com.github.vitorpamplona.quartz" to "quartz")
+            add("com.github.vitorpamplona.libschnorr256k1-kotlin" to "schnorr256k1-kotlin")
+        }
+    jitpackModules.forEach { (group, artifact) ->
         mapOf(
-            "quartz-jvm" to listOf("jvmSourcesElements-published" to "sources"),
-            "quartz-android" to listOf("androidSourcesElements-published" to "sources"),
-            "quartz-iosarm64" to
+            "$artifact-jvm" to listOf("jvmSourcesElements-published" to "sources"),
+            "$artifact-android" to listOf("androidSourcesElements-published" to "sources"),
+            "$artifact-iosarm64" to
                 listOf("iosArm64SourcesElements-published" to "sources", "iosArm64MetadataElements-published" to "metadata"),
-            "quartz-iossimulatorarm64" to
+            "$artifact-iossimulatorarm64" to
                 listOf("iosSimulatorArm64SourcesElements-published" to "sources", "iosSimulatorArm64MetadataElements-published" to "metadata"),
         ).forEach { (module, variants) ->
-            dependencies.components.withModule("com.github.vitorpamplona.quartz:$module") {
+            dependencies.components.withModule("$group:$module") {
                 val version = id.version
                 variants.forEach { (variant, classifier) ->
                     withVariant(variant) {

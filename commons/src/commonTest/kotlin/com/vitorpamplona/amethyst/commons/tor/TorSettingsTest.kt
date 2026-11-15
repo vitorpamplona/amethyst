@@ -94,6 +94,7 @@ class TorSettingsTest {
         assertFalse(torOnlyWhenNeededPreset.moneyOperationsViaTor)
         assertFalse(torOnlyWhenNeededPreset.nip05VerificationsViaTor)
         assertFalse(torOnlyWhenNeededPreset.mediaUploadsViaTor)
+        assertFalse(torOnlyWhenNeededPreset.appletsAndWebsitesViaTor)
     }
 
     @Test
@@ -103,7 +104,11 @@ class TorSettingsTest {
         assertTrue(torDefaultPreset.newRelaysViaTor)
         assertFalse(torDefaultPreset.trustedRelaysViaTor)
         assertFalse(torDefaultPreset.urlPreviewsViaTor)
+        assertFalse(torDefaultPreset.appletsAndWebsitesViaTor)
     }
+
+    @Test
+    fun appletsAndWebsitesViaTor_isPartOfThePreset() = assertEquals(TorPresetType.CUSTOM, whichPreset(torDefaultPreset.copy(appletsAndWebsitesViaTor = true)))
 
     @Test
     fun fullPrivacyPreset_allEnabled() {
@@ -117,6 +122,7 @@ class TorSettingsTest {
         assertTrue(torFullyPrivate.moneyOperationsViaTor)
         assertTrue(torFullyPrivate.nip05VerificationsViaTor)
         assertTrue(torFullyPrivate.mediaUploadsViaTor)
+        assertTrue(torFullyPrivate.appletsAndWebsitesViaTor)
     }
 
     @Test

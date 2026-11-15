@@ -53,6 +53,10 @@ import com.vitorpamplona.amethyst.commons.resources.orbot_socks_port
 import com.vitorpamplona.amethyst.commons.resources.privacy_options
 import com.vitorpamplona.amethyst.commons.resources.tor_preset
 import com.vitorpamplona.amethyst.commons.resources.tor_preset_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_progress_notification_description
+import com.vitorpamplona.amethyst.commons.resources.tor_progress_notification_title
+import com.vitorpamplona.amethyst.commons.resources.tor_use_applets_and_websites
+import com.vitorpamplona.amethyst.commons.resources.tor_use_applets_and_websites_explainer
 import com.vitorpamplona.amethyst.commons.resources.tor_use_dm_relays
 import com.vitorpamplona.amethyst.commons.resources.tor_use_dm_relays_explainer
 import com.vitorpamplona.amethyst.commons.resources.tor_use_images
@@ -88,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
@@ -234,6 +239,20 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
                 )
             }
         }
+
+        if (LocalAppPlatform.current.hasTorProgressNotification) {
+            AnimatedVisibility(
+                visible = dialogViewModel.torType.value == TorType.INTERNAL,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                SwitchSettingsRow(
+                    Res.string.tor_progress_notification_title,
+                    Res.string.tor_progress_notification_description,
+                    dialogViewModel.progressNotification,
+                )
+            }
+        }
     }
 
     AnimatedVisibility(
@@ -327,6 +346,12 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
                 Res.string.tor_use_media_uploads,
                 Res.string.tor_use_media_uploads_explainer,
                 dialogViewModel.mediaUploadsViaTor,
+            )
+
+            SwitchSettingsRow(
+                Res.string.tor_use_applets_and_websites,
+                Res.string.tor_use_applets_and_websites_explainer,
+                dialogViewModel.appletsAndWebsitesViaTor,
             )
         }
     }

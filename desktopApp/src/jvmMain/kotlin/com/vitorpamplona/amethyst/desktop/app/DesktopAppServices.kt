@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.cordn.BlossomCordnBlobStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduler
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
@@ -36,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Retriever
+import com.vitorpamplona.amethyst.commons.routstr.RoutstrService
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
@@ -80,6 +83,12 @@ class DesktopAppServices(
     override val notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences get() = modules.notificationPanelCollapsePrefs
 
     override val scheduledPostStore: ScheduledPostStore get() = modules.scheduledPostStore
+
+    override val frontPagePrinters: FrontPagePrinters get() = modules.frontPagePrinters
+
+    override val routstr: RoutstrService get() = modules.routstr
+
+    override val frontPageScheduler: FrontPageScheduler get() = modules.frontPageScheduler
 
     override val appStores: AppPreferenceStores get() = modules.appStores
 

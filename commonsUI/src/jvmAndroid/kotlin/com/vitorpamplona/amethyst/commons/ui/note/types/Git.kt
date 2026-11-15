@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -105,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_issues
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_patches
 import com.vitorpamplona.amethyst.commons.resources.kind_git_repo
 import com.vitorpamplona.amethyst.commons.ui.components.CommandLine
+import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.ScopedViewModelStore
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
@@ -506,8 +508,9 @@ private fun GitMarkdownBody(
 }
 
 /**
- * The summary of an issue or PR: its current cover note, with the edit pencil stepping back
- * through older ones to the item's own description ([GitVersionedSummary]).
+ * The summary of an issue or PR: the version of it [editState] shows, its current cover note
+ * unless the header's pencil stepped back to an older one or the item's own description
+ * ([GitVersionedSummary]).
  */
 @Composable
 private fun GitCoverNoteAndDescription(
@@ -516,11 +519,12 @@ private fun GitCoverNoteAndDescription(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
     renderedSubject: String?,
 ) {
-    GitVersionedSummary(note, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, CoverNoteSpacing) {
+    GitVersionedSummary(note, editState, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, CoverNoteSpacing) {
         GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject)
     }
 }
@@ -532,6 +536,7 @@ fun RenderGitPatchEvent(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -549,6 +554,7 @@ fun RenderGitPatchEvent(
         canPreview,
         quotesLeft,
         backgroundColor,
+        editState,
         accountViewModel,
         nav,
     )
@@ -562,6 +568,7 @@ private fun RenderGitPatchEvent(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -589,7 +596,7 @@ private fun RenderGitPatchEvent(
         Spacer(modifier = Modifier.height(12.dp))
 
         // A patch's body is its commit message and diff: a cover note sits above it, never in place of it.
-        GitVersionedSummary(note, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, CoverNoteSpacing, descriptionIsSummary = false) {
+        GitVersionedSummary(note, editState, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, CoverNoteSpacing, descriptionIsSummary = false) {
             // In a collapsed feed preview keep the lightweight markdown body. Otherwise parse the
             // patch: its thread draws the file-by-file diff, a feed or a notification only says
             // how big it is, since a diff is something to work through, not to scroll past.
@@ -634,6 +641,7 @@ fun RenderGitIssueEvent(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -651,6 +659,7 @@ fun RenderGitIssueEvent(
         canPreview,
         quotesLeft,
         backgroundColor,
+        editState,
         accountViewModel,
         nav,
     )
@@ -664,6 +673,7 @@ private fun RenderGitIssueEvent(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -687,7 +697,7 @@ private fun RenderGitIssueEvent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        GitCoverNoteAndDescription(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
+        GitCoverNoteAndDescription(note, makeItShort, canPreview, quotesLeft, backgroundColor, editState, accountViewModel, nav, renderedSubject = subject)
 
         if (!makeItShort && isGitThreadRoot(note)) {
             GitTriageBar(note, accountViewModel)
@@ -703,6 +713,7 @@ fun RenderGitPullRequestEvent(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -720,6 +731,7 @@ fun RenderGitPullRequestEvent(
         canPreview,
         quotesLeft,
         backgroundColor,
+        editState,
         accountViewModel,
         nav,
     )
@@ -733,6 +745,7 @@ private fun RenderGitPullRequestEvent(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -785,7 +798,7 @@ private fun RenderGitPullRequestEvent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        GitCoverNoteAndDescription(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
+        GitCoverNoteAndDescription(note, makeItShort, canPreview, quotesLeft, backgroundColor, editState, accountViewModel, nav, renderedSubject = subject)
 
         if (!makeItShort && isGitThreadRoot(note)) {
             GitCloneSection(cloneUrls)

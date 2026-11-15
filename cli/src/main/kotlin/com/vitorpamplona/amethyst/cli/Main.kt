@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli
 
 import com.vitorpamplona.amethyst.cli.commands.AdminCommand
+import com.vitorpamplona.amethyst.cli.commands.AgentCommands
 import com.vitorpamplona.amethyst.cli.commands.AwaitCommands
 import com.vitorpamplona.amethyst.cli.commands.BlossomCommands
 import com.vitorpamplona.amethyst.cli.commands.Bolt12Commands
@@ -75,6 +76,7 @@ import com.vitorpamplona.amethyst.cli.commands.PublishCommand
 import com.vitorpamplona.amethyst.cli.commands.RelayCommands
 import com.vitorpamplona.amethyst.cli.commands.RelayGroupCommands
 import com.vitorpamplona.amethyst.cli.commands.ReleasesCommands
+import com.vitorpamplona.amethyst.cli.commands.ScheduleCommands
 import com.vitorpamplona.amethyst.cli.commands.SearchCommand
 import com.vitorpamplona.amethyst.cli.commands.ServeCommand
 import com.vitorpamplona.amethyst.cli.commands.SnoCommands
@@ -355,6 +357,8 @@ private suspend fun dispatch(argv: Array<String>): Int {
             System.err.println("[amy] `wot` is deprecated — use `fof` (follows-of-follows). The computed web of trust is `graperank`.")
             FofCommand.dispatch(dataDir, tail)
         }
+        "agent" -> AgentCommands.dispatch(dataDir, tail)
+        "schedule" -> ScheduleCommands.dispatch(dataDir, tail)
         "concord" -> ConcordCommands.dispatch(dataDir, tail)
         "cordn" -> CordnCommands.dispatch(dataDir, tail)
         else -> {
@@ -387,6 +391,7 @@ private fun printVerbList() {
         |  games:       chess
         |  payments:    cashu offer debit
         |  signing:     bunker
+        |  agents:      agent schedule
         """.trimMargin(),
     )
 }
@@ -791,6 +796,23 @@ private fun printUsage() {
         |    [--timeout SECS]                          (Other providers: graperank register.)
         |  trust copy USER [--private]                copy USER's public kind:10040 rows into yours:
         |    [--timeout SECS]                          the network as USER sees it (_@brainstorm.world).
+        |
+        |AI agent keys (NIP-FA, kind 12000; keys are read from a file or stdin, never printed):
+        |  agent show                                 the keys, the default first, masked
+        |  agent set URL [--key-file PATH|--key-stdin] add or replace URL's key (no flag: no key)
+        |    [--default]                               (a new key goes last unless --default)
+        |  agent test [URL]                           check the default key (or URL's): ok / rejected /
+        |                                              unreachable (exit 1 unless ok)
+        |  agent default URL | remove URL | clear     reorder or drop keys (other tags are kept)
+        |
+        |Scheduled tasks (NIP-FB, kind 34817; amy edits them, never claims or runs one):
+        |  schedule list                              every task, decrypted, with its next run
+        |  schedule show [D]                          one task (D defaults to `observer`)
+        |  schedule set [D] --cron EXPR [--tz ZONE]   when D runs; ZONE is an IANA name (default: the
+        |    [--task NAME] [--paused]                  task's own, or this machine's for a new task)
+        |  schedule pause [D] | resume [D]            stop runs / run again from now on
+        |  schedule delete [D]                        NIP-09 deletion of the task's address
+        |  (both read and write your NIP-65 write relays only; tasks need more than half to answer)
         |
         |Web of Trust (GrapeRank):
         |  graperank [OBSERVER]                       crawl + score: subjective trust (0..1) over the

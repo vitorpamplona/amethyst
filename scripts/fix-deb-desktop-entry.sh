@@ -93,10 +93,13 @@ for deb in "$@"; do
         fi
     done
 
+    # JDK 21's jpackage calls it bare; JDK 25's prerm calls it through its own
+    # `do_if_file_belongs_to_single_package <file> xdg-desktop-menu uninstall ...`.
+    xdg_menu_call='^[[:space:]]*(do_if_file_belongs_to_single_package[[:space:]]+[^[:space:]]+[[:space:]]+)?xdg-desktop-menu[[:space:]]'
     for script in postinst prerm; do
         file="$work/pkg/DEBIAN/$script"
-        if [[ -f "$file" ]] && grep -qE '^[[:space:]]*xdg-desktop-menu[[:space:]]' "$file"; then
-            sed -i -E '/^[[:space:]]*xdg-desktop-menu[[:space:]]/d' "$file"
+        if [[ -f "$file" ]] && grep -qE "$xdg_menu_call" "$file"; then
+            sed -i -E "\\#$xdg_menu_call#d" "$file"
             changes+=("no xdg-desktop-menu in $script")
         fi
     done

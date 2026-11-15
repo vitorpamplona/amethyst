@@ -34,12 +34,18 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46Clie
 import com.vitorpamplona.amethyst.commons.cordn.SecretEncryptionCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageInstallStore
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageModelMemory
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreFrontPageScheduleStore
+import com.vitorpamplona.amethyst.commons.frontpage.DataStoreObserverPrefsStore
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageEditionStore
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPageInstallInfo
+import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorageVault
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -81,6 +87,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.health.FileRelayHealthPersistence
 import com.vitorpamplona.amethyst.commons.relays.health.RelayLatencyMonitor
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.commons.routstr.DataStoreRoutstrPurchaseStore
+import com.vitorpamplona.amethyst.commons.routstr.RoutstrService
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.commons.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.commons.service.crashreports.ReportAssembler
@@ -109,6 +117,9 @@ import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.util.restrictToOwner
 import com.vitorpamplona.amethyst.desktop.network.runSleepResumeMonitor
 import com.vitorpamplona.amethyst.desktop.service.calendar.DesktopCalendarReminders
+import com.vitorpamplona.amethyst.desktop.service.frontpage.DesktopFrontPageNotifier
+import com.vitorpamplona.amethyst.desktop.service.frontpage.DesktopFrontPageScheduler
+import com.vitorpamplona.amethyst.desktop.service.frontpage.desktopInstallName
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostScheduler
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostStore
@@ -208,7 +219,14 @@ class DesktopAppModules(
 
     private val filesPath: Path = filesDir.toOkioPath()
 
-    val appStores = AppPreferenceStores(rootFilesDir = { filesPath })
+    // Desktop runs the tabs layout: every install is moved to it once (see UiSettingsStore.desktopTabsLayout).
+    val appStores =
+        AppPreferenceStores(
+            rootFilesDir = { filesPath },
+            migrations = { name ->
+                if (name == AppPreferenceStores.SHARED_SETTINGS) listOf(UiSettingsStore.desktopTabsLayout()) else emptyList()
+            },
+        )
 
     private val sharedSettingsStore get() = appStores.sharedSettings()
 
@@ -508,6 +526,33 @@ class DesktopAppModules(
     /** OS notifications: the native notifier, its settings, and what is worth a notification. */
     val notifications by lazy { DesktopNotifications(applicationIOScope) }
 
+    /** Each account's front page: prints that outlive the screen, a week of editions, the morning schedule. */
+    val frontPagePrinters by lazy {
+        FrontPagePrinters(
+            http = roleBasedHttpClientBuilder,
+            memory = DataStoreFrontPageModelMemory(appStores),
+            store = FrontPageEditionStore(File(filesDir, FrontPageEditionStore.FOLDER).path),
+            schedules = DataStoreFrontPageScheduleStore(appStores),
+            notifier = DesktopFrontPageNotifier(notifications),
+            observerPrefs = DataStoreObserverPrefsStore(appStores),
+            installs = DataStoreFrontPageInstallStore(appStores),
+            // How this computer appears in the reader's synced schedule ("Desktop (Linux)").
+            installInfo = FrontPageInstallInfo(name = desktopInstallName(), app = "amethyst-desktop"),
+        )
+    }
+
+    val frontPageScheduler by lazy { DesktopFrontPageScheduler(frontPagePrinters, accountsCache.accounts, applicationIOScope) }
+
+    /** Routstr: each account's purchases, kept in DataStore until the key is saved, and followed again on launch. */
+    val routstr by lazy {
+        RoutstrService(
+            http = roleBasedHttpClientBuilder,
+            store = DataStoreRoutstrPurchaseStore(appStores),
+            torEnabled = { RoutstrService.onionsViaTor(torPrefs.value) },
+            scope = applicationIOScope,
+        )
+    }
+
     /** "Starting soon" notifications for the appointments the user is attending. */
     val calendarReminders by lazy { DesktopCalendarReminders(appStores, notifications, { accountsCache.accounts.value.keys }, applicationIOScope) }
 
@@ -535,8 +580,8 @@ class DesktopAppModules(
 
     private val legacyCustomFeedImport = LegacyCustomFeedImport(filesDir)
 
-    // A legacy user who ran the deck gets it on here too.
-    private val legacyDeckImport = LegacyDeckImport(filesDir) { uiPrefs.navigationLayout.tryEmit(NavigationLayoutType.DECK) }
+    // The legacy deck's columns come over; the layout stays tabs (UiSettingsStore.desktopTabsLayout).
+    private val legacyDeckImport = LegacyDeckImport(filesDir)
 
     // A NIP-46 signer's auth_url challenges, from logins and from the accounts' signers alike.
     val remoteSignerAuthPrompts = RemoteSignerAuthPrompts()
@@ -760,6 +805,9 @@ class DesktopAppModules(
             scheduledPostStore.removeForAccount(pubkey)
             powPublishQueue.cancelForOwner(pubkey)
             powJobStore.removeForAccount(pubkey)
+            frontPageScheduler.forget(pubkey)
+            frontPagePrinters.forget(pubkey)
+            routstr.forget(pubkey)
             // A login imported from the legacy app may still own a bunker transport key in the keyring.
             try {
                 keyStorage.deletePrivateKey(LegacyDesktopAccountImport.bunkerTransportKeyAlias(pubkey.hexToByteArray().toNpub()))
@@ -862,6 +910,8 @@ class DesktopAppModules(
         if (startupLocalRelays.isNotEmpty()) addStartupLocalRelays()
 
         calendarReminders.start()
+        frontPageScheduler.start()
+        routstr.start(accountsCache.accounts)
 
         // Web of Trust: Android brings the active account's network index up to date each time
         // the app comes to the foreground, and once a day from a worker. A desktop window stays

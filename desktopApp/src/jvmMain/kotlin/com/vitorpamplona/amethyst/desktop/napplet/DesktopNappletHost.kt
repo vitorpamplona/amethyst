@@ -21,8 +21,11 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.account.AccountState
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.DataStoreNappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletIntentCatalog
@@ -41,9 +44,12 @@ import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.note.InlineNappletPosters
 import com.vitorpamplona.amethyst.desktop.app.DesktopAppModules
+import com.vitorpamplona.amethyst.desktop.app.DesktopInstance
 import com.vitorpamplona.amethyst.desktop.service.media.ChromiumMediaSession
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +64,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.UUID
 
 /**
  * The desktop's napplet and nSite host: opens each NIP-5D napplet or NIP-5A site in its own window
@@ -76,20 +83,23 @@ class DesktopNappletHost(
 ) {
     val runtime =
         DesktopNappletRuntime(
-            engine = DesktopCefEngine(File(modules.filesDir, "jcef"), File(modules.filesDir, "jcef-cache"), onQuit = { modules.quitRequests.tryEmit(Unit) }),
+            engine = DesktopCefEngine(File(modules.filesDir, "jcef"), DesktopInstance.ownFolder(DesktopInstance.PerCopyFolder.BROWSER_PROFILE), onQuit = { modules.quitRequests.tryEmit(Unit) }),
             blobCache = NappletBlobCache(NappletBlobCache.dirFor(modules.filesDir)),
             httpClient = { useTor -> modules.okHttpClients.getHttpClient(useTor) },
             scope = modules.applicationIOScope,
             torPort = modules.torManager.activePortOrNull,
-            nappletBlobsUseTor = { torEnabled() },
+            // A napplet's files, as "Applets and Websites" in the Tor settings says (off by default).
+            nappletBlobsUseTor = { torEnabled() && appletsAndWebsitesViaTor() },
             webxdcBundles = WebxdcBundles(WebxdcBundles.dirFor(modules.filesDir)),
+            paperArt = PaperArtCache(PaperArtCache.dirFor(modules.filesDir)),
         )
 
     val engine get() = runtime.engine
 
     val consent = NappletPromptQueues()
 
-    val networkChoices = NsiteNetworkChoices(modules.appStores.getDataStore("napplet_network"), modules.applicationIOScope)
+    // nSites and web pages the user never set start where "Applets and Websites" says.
+    val networkChoices = NsiteNetworkChoices(modules.appStores.getDataStore("napplet_network"), modules.applicationIOScope) { appletsAndWebsitesViaTor() }
 
     private val accountScope: () -> String = { modules.sessionManager.loggedInAccount()?.pubKey ?: "" }
 
@@ -104,6 +114,29 @@ class DesktopNappletHost(
     private val mutableSessions = MutableStateFlow<List<CefNappletSession>>(emptyList())
     val sessions: StateFlow<List<CefNappletSession>> = mutableSessions.asStateFlow()
 
+    private val mutableBrowsers = MutableStateFlow<List<CefBrowserSession>>(emptyList())
+
+    /** The in-app browser's pages, each the content of a [Route.WebPage] screen. */
+    val browsers: StateFlow<List<CefBrowserSession>> = mutableBrowsers.asStateFlow()
+
+    private val popupGate = BrowserPopupGate()
+
+    private val mutableConsentWindows = MutableStateFlow<Map<String, CefBrowserSession>>(emptyMap())
+
+    /**
+     * Which page's screen shows each `browser:<origin>` app's questions: the last one that asked as
+     * that app. Two screens on the same site would otherwise both show the same question.
+     */
+    val consentWindows: StateFlow<Map<String, CefBrowserSession>> = mutableConsentWindows.asStateFlow()
+
+    private val mutableScreens = MutableStateFlow<List<CefNappletSession>>(emptyList())
+
+    /**
+     * Napplets and nSites run as screens ([Route.NostrApp]): the navigation layout places them, so no
+     * window of the host's draws them.
+     */
+    val screens: StateFlow<List<CefNappletSession>> = mutableScreens.asStateFlow()
+
     // Napplets running inside notes: no window, so they are kept apart from [sessions].
     private val inlineSessions = MutableStateFlow<Set<CefNappletSession>>(emptySet())
 
@@ -111,6 +144,7 @@ class DesktopNappletHost(
     private var themeColors = NappletThemeColors("#0E0E10", "#E6E6E6", "#9A82DB")
 
     init {
+        PageScrollbars.update(themeColors)
         // NAP-INTENT: a handler is one of the napplets the user pinned, opened in a window of its own.
         runtime.intents =
             NappletIntentDispatcher(
@@ -125,7 +159,11 @@ class DesktopNappletHost(
                 .distinctUntilChanged()
                 .collect { pubKey ->
                     sessions.value.filter { it.accountPubKey != pubKey }.forEach(::close)
+                    screens.value.filter { it.accountPubKey != pubKey }.forEach(::closeScreen)
+                    browsers.value.filter { it.accountPubKey != pubKey }.forEach(::closeBrowser)
                     inlineSessions.value.filter { it.accountPubKey != pubKey }.forEach(::closeInline)
+                    // Their sites' cookies and storage go with them.
+                    runtime.engine.retainWebContexts(pubKey)
                     // The last frames shown were the old account's screens.
                     InlineNappletPosters.clear()
                     synchronized(this@DesktopNappletHost) { brokers.keys.retainAll(setOfNotNull(pubKey)) }
@@ -143,6 +181,8 @@ class DesktopNappletHost(
             .stateIn(modules.applicationIOScope, SharingStarted.Eagerly, torEnabled())
 
     private fun torEnabled(): Boolean = modules.torPrefs.torType.value != TorType.OFF
+
+    private fun appletsAndWebsitesViaTor(): Boolean = modules.torPrefs.value.appletsAndWebsitesViaTor.value
 
     /** Validates [manifest] and opens it in a new window, or says why it can't. */
     fun open(manifest: NappletManifest): Result<CefNappletSession> {
@@ -197,6 +237,140 @@ class DesktopNappletHost(
         open(session.launch, account, session.useTor)
     }
 
+    /**
+     * Whether [url] can open as an in-app page: a web page, with someone logged in to sign for it.
+     * Otherwise the caller hands the link to the system.
+     */
+    fun canBrowse(url: String): Boolean =
+        modules.sessionManager.loggedInAccount() != null &&
+            BrowserChrome.originOf(url) != null &&
+            CefBrowserSession.navigationOf(url, isMainFrame = true) == CefBrowserSession.Navigation.LOAD
+
+    /**
+     * Starts the page of the [route] screen, with NIP-07 for the logged-in account. It goes through
+     * Tor when Tor is on, unless the user moved its host to the open web; [Route.WebPage.preferTor]
+     * keeps it on Tor whatever that choice (an `.onion`, a page a Tor page opened). Fails for anything
+     * but a web page, or with nobody logged in.
+     */
+    fun openBrowser(route: Route.WebPage): Result<CefBrowserSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to browse with Nostr"))
+        if (!canBrowse(route.url)) return Result.failure(IllegalArgumentException("Not a web page"))
+        val useTor = torEnabled() && (route.preferTor || OmniboxInput.isOnion(route.url) || networkChoices.useTor(webKey(route.url)))
+        return Result.success(openBrowser(route.url, route.id, account, useTor))
+    }
+
+    private fun openBrowser(
+        url: String,
+        routeId: String,
+        account: Account,
+        useTor: Boolean,
+    ): CefBrowserSession =
+        CefBrowserSession(
+            startUrl = url,
+            routeId = routeId,
+            accountPubKey = account.pubKey,
+            useTor = useTor,
+            account = account,
+            broker = brokerFor(account),
+            runtime = runtime,
+            onPopup = ::openPopup,
+            onVisit = { visited, title -> modules.browserHistory.record(visited, title) },
+            onAsk = { asker, app ->
+                if (mutableConsentWindows.value[app] !== asker) mutableConsentWindows.update { it + (app to asker) }
+            },
+            onZoom = { host, percent ->
+                browsers.value.forEach { other -> if (other.isOnHost(host)) other.refreshZoom(percent) }
+            },
+        ).also { session ->
+            // A popup's screen opened: it now counts against the budget until it closes.
+            synchronized(pendingPopups) { pendingPopups.remove(routeId) }
+            mutableBrowsers.update { it + session }
+            session.start()
+        }
+
+    // Popups the budget let through whose screens haven't opened yet, by route id, with their opener.
+    private val pendingPopups = HashMap<String, CefBrowserSession>()
+
+    /**
+     * A page asked for a window: within the shared budget, its opener's screen opens it as a screen of
+     * its own, on Tor if the opener was, signing as the same account while it is still logged in.
+     */
+    private fun openPopup(
+        opener: CefBrowserSession,
+        url: String,
+    ) {
+        if (modules.sessionManager.loggedInAccount()?.pubKey != opener.accountPubKey) return
+        popupGate.tryOpen {
+            val route = Route.WebPage(url, preferTor = opener.useTor, id = newPageId())
+            synchronized(pendingPopups) { pendingPopups[route.id] = opener }
+            opener.requestPopup(route)
+            route.id
+        }
+    }
+
+    /**
+     * Moves [session]'s host to Tor or the open web: remembers the choice, then starts the page it was
+     * showing again on the new route, for its screen to show instead.
+     */
+    fun setBrowserNetworkMode(
+        session: CefBrowserSession,
+        useTor: Boolean,
+    ): CefBrowserSession? {
+        val account = modules.sessionManager.loggedInAccount() ?: return null
+        val url =
+            session.page.value.url
+                .ifBlank { session.startUrl }
+        networkChoices.set(webKey(url), useTor)
+        closeBrowser(session, replaced = true)
+        return openBrowser(url, session.routeId, account, (useTor || OmniboxInput.isOnion(url)) && torEnabled())
+    }
+
+    /** Starts [session]'s page again, after a failure the user wants to retry. */
+    fun reopenBrowser(session: CefBrowserSession): CefBrowserSession? {
+        val account = modules.sessionManager.loggedInAccount() ?: return null
+        closeBrowser(session, replaced = true)
+        return openBrowser(session.startUrl, session.routeId, account, session.useTor)
+    }
+
+    /**
+     * Closes [session]'s page. [replaced] when its screen stays, with a new page in its place (a retry,
+     * a move to or from Tor): a popup's screen then keeps its place in the popup budget.
+     */
+    fun closeBrowser(
+        session: CefBrowserSession,
+        replaced: Boolean = false,
+    ) {
+        mutableBrowsers.update { it - session }
+        session.close()
+        if (!replaced) popupGate.closed(session.routeId)
+        // Popups it was let open that never became screens give their place back.
+        val unopened =
+            synchronized(pendingPopups) {
+                pendingPopups
+                    .filterValues { it === session }
+                    .keys
+                    .toList()
+                    .onEach(pendingPopups::remove)
+            }
+        unopened.forEach(popupGate::closed)
+        // Its questions move to another page on the same site, or are dismissed with it.
+        val others = browsers.value
+        mutableConsentWindows.update { owners ->
+            owners
+                .mapNotNull { (app, owner) ->
+                    if (owner !== session) app to owner else others.lastOrNull { app in it.apps.value }?.let { app to it }
+                }.toMap()
+        }
+        val asked = others.flatMapTo(HashSet()) { it.apps.value }
+        session.apps.value
+            .filter { it !in asked }
+            .forEach(consent::dismissApp)
+        if (sessions.value.isEmpty() && browsers.value.isEmpty()) modules.nappletPermissionLedger.endSession()
+    }
+
+    // A web host's network choice, kept beside the nSites' in the same store.
+    private fun webKey(url: String): String = "web:" + (OmniboxInput.hostOf(url)?.lowercase() ?: url)
+
     private fun open(
         launch: NappletLaunch,
         account: Account,
@@ -235,11 +409,27 @@ class DesktopNappletHost(
         return runCatching { startInline(launch, account) }
     }
 
+    /**
+     * Shows the reader's front page [html] (written, resolved and checked by commons `frontpage`) as
+     * instance [instanceId], on the same off-screen Chromium as an inline nSite. No script runs in it;
+     * its art follows the user's Tor choice the way a site's traffic does.
+     */
+    fun openInlinePaper(
+        html: String,
+        title: String,
+        instanceId: String,
+    ): Result<CefNappletSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to read your Observer"))
+        val launch = NappletLaunch.forPaper(account.pubKey, title, html).inline(instanceId)
+        return runCatching { startInline(launch, account, useTor = torEnabled() && networkChoices.useTor(launch.identity.coordinate)) }
+    }
+
     private fun startInline(
         launch: NappletLaunch,
         account: Account,
+        useTor: Boolean = false,
     ): CefNappletSession {
-        val session = CefNappletSession(launch, account.pubKey, useTor = false, account, brokerFor(account), runtime, OffscreenNappletView())
+        val session = CefNappletSession(launch, account.pubKey, useTor = useTor, account, brokerFor(account), runtime, OffscreenNappletView())
         inlineSessions.update { it + session }
         // The account may have left between reading it and listing the session, after the switch
         // closed what it found: this one would run on as someone who left.
@@ -258,11 +448,87 @@ class DesktopNappletHost(
 
     fun close(session: CefNappletSession) {
         mutableSessions.update { it - session }
-        session.close()
-        if (sessions.value.none { it.launch.identity.coordinate == session.launch.identity.coordinate }) {
-            consent.dismissApp(session.launch.identity.coordinate)
+        afterClose(session)
+    }
+
+    /**
+     * Whether [event] can run as an app screen: a napplet or nSite whose launch is valid, with someone
+     * logged in to act for it.
+     */
+    fun canRunAsScreen(event: Event): Boolean = modules.sessionManager.loggedInAccount() != null && launchOf(event).isSuccess
+
+    private fun launchOf(event: Event): Result<NappletLaunch> =
+        when (event) {
+            is NappletManifest -> NappletLaunch.fromManifest(event)
+            is RootSiteEvent, is NamedSiteEvent -> NappletLaunch.fromSite(event)
+            else -> Result.failure(IllegalArgumentException("Not a napplet or an nSite"))
         }
-        if (sessions.value.isEmpty()) modules.nappletPermissionLedger.endSession()
+
+    /**
+     * Starts the app of a [Route.NostrApp] screen ([routeId], its coordinate) from its [event]: painted off-screen for
+     * the screen to draw, at a screen's frame rate. An nSite goes through Tor when Tor is on, unless the
+     * user moved it to the open web, as its window would.
+     */
+    fun openScreen(
+        event: Event,
+        routeId: String,
+    ): Result<CefNappletSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to open apps"))
+        return launchOf(event).map { launch ->
+            val useTor = launch.profile.exposesNetwork && torEnabled() && networkChoices.useTor(launch.identity.coordinate)
+            startScreen(launch, account, useTor, routeId)
+        }
+    }
+
+    private fun startScreen(
+        launch: NappletLaunch,
+        account: Account,
+        useTor: Boolean,
+        routeId: String,
+    ): CefNappletSession =
+        CefNappletSession(
+            launch,
+            account.pubKey,
+            useTor,
+            account,
+            brokerFor(account),
+            runtime,
+            offscreen = OffscreenNappletView(),
+            frameRate = CefNappletSession.SCREEN_FRAME_RATE,
+            routeId = routeId,
+        ).also { session ->
+            mutableScreens.update { it + session }
+            session.start()
+        }
+
+    /** Moves an app screen's site to Tor or the open web: remembers the choice and starts it again there. */
+    fun setScreenNetworkMode(
+        session: CefNappletSession,
+        useTor: Boolean,
+    ): CefNappletSession? {
+        val account = modules.sessionManager.loggedInAccount() ?: return null
+        networkChoices.set(session.launch.identity.coordinate, useTor)
+        closeScreen(session)
+        return startScreen(session.launch, account, useTor && torEnabled(), session.routeId.orEmpty())
+    }
+
+    /** Starts an app screen's app again, after a failure the user wants to retry. */
+    fun reopenScreen(session: CefNappletSession): CefNappletSession? {
+        val account = modules.sessionManager.loggedInAccount() ?: return null
+        closeScreen(session)
+        return startScreen(session.launch, account, session.useTor, session.routeId.orEmpty())
+    }
+
+    fun closeScreen(session: CefNappletSession) {
+        mutableScreens.update { it - session }
+        afterClose(session)
+    }
+
+    private fun afterClose(session: CefNappletSession) {
+        session.close()
+        val coordinate = session.launch.identity.coordinate
+        if ((sessions.value + screens.value).none { it.launch.identity.coordinate == coordinate }) consent.dismissApp(coordinate)
+        if (sessions.value.isEmpty() && screens.value.isEmpty() && browsers.value.isEmpty()) modules.nappletPermissionLedger.endSession()
     }
 
     /**
@@ -290,13 +556,18 @@ class DesktopNappletHost(
     fun updateTheme(colors: NappletThemeColors) {
         if (colors == themeColors) return
         themeColors = colors
+        PageScrollbars.update(colors)
+        browsers.value.forEach { it.restyleScrollbars() }
         sessions.value.forEach { it.pushTheme(colors) }
+        screens.value.forEach { it.pushTheme(colors) }
         inlineSessions.value.forEach { it.pushTheme(colors) }
     }
 
     fun shutdown() {
         sessions.value.forEach(::close)
+        browsers.value.forEach(::closeBrowser)
         inlineSessions.value.forEach(::closeInline)
+        screens.value.forEach(::closeScreen)
         // Videos and audio that play in Chromium (they aren't napplets, but share its engine).
         ChromiumMediaSession.closeAll()
         runtime.engine.shutdown()
@@ -324,4 +595,9 @@ class DesktopNappletHost(
             theme = NappletThemeGateway { themeColors },
             upload = AccountNappletUploadGateway(account, modules.roleBasedHttpClientBuilder::okHttpClientForUploads),
         )
+
+    companion object {
+        /** A new [Route.WebPage.id]. */
+        fun newPageId(): String = UUID.randomUUID().toString()
+    }
 }

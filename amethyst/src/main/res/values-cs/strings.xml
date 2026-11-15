@@ -226,4 +226,14 @@
     <string name="napplet_cap_fs">Soubory</string>
     <string name="napplet_cap_common">Sociální akce</string>
     <string name="napplet_cap_intent">Otevírat jiné aplikace</string>
+    <string name="front_page_print_channel_name">The Observer – tisk</string>
+    <string name="front_page_print_channel_description">Zobrazuje The Observer během tisku, aby mohl dokončit i poté, co aplikaci opustíte.</string>
+    <string name="front_page_print_cancel">Zrušit</string>
+    <string name="front_page_print_title">Tisk vydání The Observer</string>
+    <string name="front_page_print_step_probe">Kontrola vašeho hodnocení</string>
+    <string name="front_page_print_step_pull">Čtení rubrik · %1$d z %2$d</string>
+    <string name="front_page_print_step_write">Psaní</string>
+    <string name="front_page_print_step_fix">Oprava stránky</string>
+    <string name="front_page_print_step_check">Kontrola citací, obrázků a odkazů</string>
+    <string name="front_page_print_step_publish">Zveřejňování vydání The Observer</string>
 </resources>

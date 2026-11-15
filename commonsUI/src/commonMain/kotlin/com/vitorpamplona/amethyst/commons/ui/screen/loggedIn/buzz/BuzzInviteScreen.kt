@@ -201,7 +201,7 @@ fun BuzzInviteScreen(
                             accountViewModel.account.buzzWorkspaces.join(relay)
                             scope.launch { accountViewModel.account.relayAuthLedger.setDecision(relay.url, RelayAuthDecision.ALLOW) }
                         }
-                        appLauncher.launchUrl(link)
+                        appLauncher.launchUrl(link, nav = nav)
                         launched = true
                     },
                     enabled = !expired,

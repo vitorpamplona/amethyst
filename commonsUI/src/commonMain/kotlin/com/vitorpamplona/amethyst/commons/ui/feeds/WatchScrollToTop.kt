@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.feeds
 
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,6 +35,23 @@ import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
 fun WatchScrollToTop(
     feedContentState: FeedContentState,
     listState: LazyListState,
+) {
+    val scrollToTop by feedContentState.scrollToTop.collectAsStateWithLifecycle()
+
+    LaunchedEffect(scrollToTop) {
+        if (scrollToTop > 0 && feedContentState.scrollToTopPending) {
+            listState.scrollToItem(index = 0)
+            feedContentState.sentToTop()
+        }
+    }
+
+    ReportToBackToTop(listState) { feedContentState.sendToTop() }
+}
+
+@Composable
+fun WatchScrollToTop(
+    feedContentState: FeedContentState,
+    listState: LazyStaggeredGridState,
 ) {
     val scrollToTop by feedContentState.scrollToTop.collectAsStateWithLifecycle()
 

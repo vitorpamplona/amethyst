@@ -62,8 +62,8 @@ flatpak run --command=flatpak-builder-lint org.flatpak.Builder repo <path-to>/re
 ## Local build
 
 ```bash
-# 1. Build the app tree the manifest packages, on the JetBrains Runtime 21 (jbrsdk)
-JAVA_HOME=/path/to/jbrsdk-21 ./gradlew :desktopApp:createReleaseDistributable
+# 1. Build the app tree the manifest packages, on the JetBrains Runtime 25 (jbrsdk)
+JAVA_HOME=/path/to/jbrsdk-25 ./gradlew :desktopApp:createReleaseDistributable
 
 # 2. Tooling + Flathub remote (one-time)
 sudo apt-get install -y flatpak flatpak-builder   # or distro equivalent
@@ -145,7 +145,7 @@ Status against Flathub's
 
 1. **Build from source: done.** `flathub/com.vitorpamplona.amethyst.Amethyst.yml`
    compiles the release tag offline with `:desktopApp:createReleaseDistributable`.
-   Its pinned sources are the tag's tarball, the JetBrains Runtime SDK 21 (it runs
+   Its pinned sources are the tag's tarball, the JetBrains Runtime SDK (it runs
    Gradle and jpackage, so the bundled runtime keeps JBR's Wayland toolkit), the
    Gradle distribution, and `gradle-sources.json`: every Maven file the build
    resolves, for x86_64 and aarch64. `flathub-offline.init.gradle` replaces every

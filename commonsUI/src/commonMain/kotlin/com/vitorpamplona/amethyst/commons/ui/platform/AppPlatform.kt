@@ -33,6 +33,8 @@ import com.vitorpamplona.amethyst.commons.model.NavigationLayoutType
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.front_page_can_leave
 import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
@@ -49,6 +51,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
+import org.jetbrains.compose.resources.StringResource
 
 /** A signer app that takes `nostrconnect://` addresses: [id] is what [AppPlatform.openNostrConnect] takes. */
 @Immutable
@@ -198,6 +201,13 @@ interface AppPlatform {
     @Composable
     fun NotificationCategorySettings() {}
 
+    /**
+     * Whether this platform can show a notification with Tor's startup progress
+     * ([com.vitorpamplona.amethyst.commons.tor.TorSettings.progressNotification]). Only Android has the
+     * notifier, so the Tor settings show the switch only where this is true.
+     */
+    val hasTorProgressNotification: Boolean get() = false
+
     /** A button that reads [name] aloud with the platform's text-to-speech; nothing where there is none. */
     @Composable
     fun SpeakNameButton(name: String) {}
@@ -229,6 +239,13 @@ interface AppPlatform {
     /** Opens favorite apps, web links, napplets and nSites in the platform's app surface. */
     @Composable
     fun rememberAppLauncher(): AppLauncher = AppLauncher.None
+
+    /**
+     * The live title of what a platform-run screen shows ([Route.WebPage], [Route.NostrApp]), for its
+     * tab or window: the page's or the app's own name. Null where the platform runs none as screens.
+     */
+    @Composable
+    fun platformScreenTitle(route: Route): String? = null
 
     /**
      * Starts a [callType] call with [peers], asking for the call permissions first where the
@@ -318,6 +335,35 @@ interface AppPlatform {
         instanceId: String,
         onStatus: (InlineNappletStatus) -> Unit,
         modifier: Modifier,
+    ) {}
+
+    /** Whether [InlinePaperSurface] shows the reader's front page here: wherever napplets run inline. */
+    val showsPapersInline: Boolean get() = runsNappletsInline
+
+    /**
+     * What The Observer says under a running print about leaving it: on a phone the reader can leave
+     * the app ("You can leave…"); on a desktop, whose window closing would quit, they can use the app
+     * meanwhile, and closing the window asks first.
+     */
+    val printLeaveNote: StringResource get() = Res.string.front_page_can_leave
+
+    /**
+     * Shows the reader's front page [html] — written, resolved and checked by commons `frontpage` —
+     * as instance [instanceId], filling [modifier]. It runs on the same sandboxed web surface as an
+     * nSite, under [com.vitorpamplona.amethyst.commons.napplet.HostProfile.PAPER]: no script runs,
+     * its art loads from where it was published, and its links open in the system browser.
+     *
+     * [takesWheel]: the paper fills the screen, so the mouse wheel scrolls it straight away. Inline,
+     * among other content, it takes the wheel only once clicked, and the screen scrolls otherwise.
+     */
+    @Composable
+    fun InlinePaperSurface(
+        html: String,
+        title: String,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+        takesWheel: Boolean = false,
     ) {}
 
     /** The icon a napplet manifest by [author] / [identifier] declares, if cached. */
@@ -440,6 +486,15 @@ enum class InlineNappletStatus {
 
     /** It could not start here: no server had its files, or the sandbox did not come up. */
     FAILED,
+
+    /** The user routes this content through Tor and Tor is still starting: nothing is fetched yet. */
+    WAITING_FOR_TOR,
+
+    /** Tor did not connect in time, so it was not opened rather than fetched around Tor. */
+    NO_TOR,
+
+    /** Too large to hand to the sandbox in one message (Android's binder limit): never sent. */
+    TOO_LARGE,
 }
 
 @Composable
@@ -453,29 +508,50 @@ fun rememberWebAppIconModel(url: String): String? = LocalAppPlatform.current.rem
 
 /**
  * Opens a favorite app, a web link, a napplet or an nSite in the platform's app surface (on Android,
- * the sandboxed full-screen WebView in its own task; on the desktop, a Chromium window).
+ * the sandboxed full-screen WebView in its own task; on the desktop, a web page is a screen that
+ * [nav] places as the navigation layout says, and a napplet or nSite a Chromium window).
  */
 interface AppLauncher {
-    /** [stillLoading] is shown when a Nostr app's defining event has not arrived yet. */
+    /**
+     * [stillLoading] is shown when a Nostr app's defining event has not arrived yet. [nav] is the
+     * calling screen's: a platform that draws the app as a screen opens it there.
+     */
     fun launch(
         app: FavoriteApp,
         stillLoading: String,
+        nav: INav? = null,
     )
 
-    /** [preferTor] forces Tor when available, e.g. for `.onion` hosts. */
+    /**
+     * [preferTor] forces Tor when available, e.g. for `.onion` hosts. [nav] is the calling screen's:
+     * a platform that draws web pages as screens opens one there ([Route.WebPage]).
+     */
     fun launchUrl(
         url: String,
         preferTor: Boolean = false,
+        nav: INav? = null,
     )
 
     /** Whether [openNapplet] and [openSite] run anything here; cards offer Open only where they do. */
     val opensNapplets: Boolean get() = false
 
-    /** Runs a NIP-5D napplet in the platform's sandbox, or tells the user why it can't. */
-    fun openNapplet(manifest: NappletManifest) {}
+    /**
+     * Runs a NIP-5D napplet in the platform's sandbox, or tells the user why it can't. [nav] is the
+     * calling screen's: a platform that runs apps as screens opens it there ([Route.NostrApp]).
+     */
+    fun openNapplet(
+        manifest: NappletManifest,
+        nav: INav? = null,
+    ) {}
 
-    /** Opens a NIP-5A nSite ([RootSiteEvent] or [NamedSiteEvent]), or tells the user why it can't. */
-    fun openSite(site: Event) {}
+    /**
+     * Opens a NIP-5A nSite ([RootSiteEvent] or [NamedSiteEvent]), or tells the user why it can't.
+     * [nav] is the calling screen's, as for [openNapplet].
+     */
+    fun openSite(
+        site: Event,
+        nav: INav? = null,
+    ) {}
 
     /**
      * Runs the webxdc [app] attached to post [postId] by [poster] in the platform's sandbox (when
@@ -492,11 +568,13 @@ interface AppLauncher {
         override fun launch(
             app: FavoriteApp,
             stillLoading: String,
+            nav: INav?,
         ) {}
 
         override fun launchUrl(
             url: String,
             preferTor: Boolean,
+            nav: INav?,
         ) {}
     }
 }

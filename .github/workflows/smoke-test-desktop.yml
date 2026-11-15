@@ -31,11 +31,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Set up JDK 21
+      # The JDK the packages bundle (see create-release.yml).
+      - name: Set up JDK 25
         uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
-          java-version: 21
+          java-version: 25
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
@@ -70,7 +71,7 @@ jobs:
         uses: actions/checkout@v7
 
       # As in create-release.yml: Linux packages bundle the JetBrains Runtime (native Wayland).
-      - name: Set up JDK 21 (JetBrains Runtime)
+      - name: Set up JDK 25 (JetBrains Runtime)
         uses: ./.github/actions/setup-jbr
 
       - name: Set up Gradle

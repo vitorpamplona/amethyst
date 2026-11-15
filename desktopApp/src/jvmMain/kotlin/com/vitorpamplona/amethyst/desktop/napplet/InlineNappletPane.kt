@@ -27,35 +27,19 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.awt.awtEventOrNull
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusTarget
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntSize
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.napplet.NappletInlineDownloads
 import com.vitorpamplona.amethyst.commons.ui.note.InlineNappletPosters
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import java.awt.event.MouseEvent
-import java.awt.event.MouseWheelEvent
-import kotlin.math.roundToInt
 
 /**
  * A napplet running inside a note on the desktop: an off-screen Chromium browser
@@ -78,16 +62,19 @@ fun InlineNappletPane(
 
 /**
  * [InlineNappletPane] for any app a note runs: [open] starts its off-screen session, and the last
- * frame is kept as the poster under [posterKey].
+ * frame is kept as the poster under [posterKey]. A null key keeps none: the front page is private
+ * and never shown as a poster, so its frames have no business in the shared cache.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun InlineNappletPane(
     host: DesktopNappletHost,
-    posterKey: String,
+    posterKey: String?,
     instanceId: String,
     onStatus: (InlineNappletStatus) -> Unit,
     modifier: Modifier,
+    // In a feed the wheel scrolls the feed until the app is clicked; a page that fills the screen takes it at once.
+    wheelNeedsFocus: Boolean = true,
     open: () -> Result<CefNappletSession>,
 ) {
     val status by rememberUpdatedState(onStatus)
@@ -102,7 +89,7 @@ fun InlineNappletPane(
                 val last = opened.offscreen?.keepLastFrame()
                 // A session the host already closed belonged to an account that left: its screen is
                 // never a poster for the next one.
-                if (last != null && !opened.isClosed) InlineNappletPosters.put(posterKey, last)
+                if (posterKey != null && last != null && !opened.isClosed) InlineNappletPosters.put(posterKey, last)
                 host.closeInline(opened)
             }
             session = null
@@ -116,78 +103,71 @@ fun InlineNappletPane(
         Box(modifier)
         return
     }
-    val state by current.state.collectAsState()
+    // Each session's own: a new one (Retry, another edition) must not inherit the last one's state
+    // and frame. It did, and when it came up Showing and painted before the pane looked, its status
+    // read just as the last one's had, so SHOWING was never said again and its frame stayed hidden.
+    key(current) { SessionPane(current, view, instanceId, onStatus, modifier, wheelNeedsFocus) }
+}
+
+/**
+ * [InlineNappletPane] for a session something else holds open ([HeldPaperSession], the front
+ * page's): leaving the composition hides the page instead of closing it, so the reader comes back to
+ * it as they left it, scrolled where they were. [session] is the open result: a failure says FAILED.
+ */
+@Composable
+fun HeldNappletPane(
+    session: Result<CefNappletSession>,
+    instanceId: String,
+    onStatus: (InlineNappletStatus) -> Unit,
+    modifier: Modifier,
+    wheelNeedsFocus: Boolean,
+) {
+    val status by rememberUpdatedState(onStatus)
+    val current = session.getOrNull()
+    val view = current?.offscreen
+    if (current == null || view == null) {
+        if (current == null) LaunchedEffect(session) { status(InlineNappletStatus.FAILED) }
+        Box(modifier)
+        return
+    }
+    // Out of sight, the page barely paints, as an app screen's does.
+    DisposableEffect(current) {
+        current.setVisible(true)
+        onDispose { current.setVisible(false) }
+    }
+    key(current) { SessionPane(current, view, instanceId, onStatus, modifier, wheelNeedsFocus) }
+}
+
+@Composable
+private fun SessionPane(
+    session: CefNappletSession,
+    view: OffscreenNappletView,
+    instanceId: String,
+    onStatus: (InlineNappletStatus) -> Unit,
+    modifier: Modifier,
+    wheelNeedsFocus: Boolean,
+) {
+    val status by rememberUpdatedState(onStatus)
+    val state by session.state.collectAsState()
     // The note's stage draws the bar; the run is known to it by its instance id.
-    LaunchedEffect(current, instanceId) { current.download.collect { NappletInlineDownloads.shared.report(instanceId, it) } }
+    LaunchedEffect(instanceId) { session.download.collect { NappletInlineDownloads.shared.report(instanceId, it) } }
     // Read only where it is drawn, so a new frame redraws the box instead of recomposing the pane.
     val frame = view.frame.collectAsState()
     val painted by remember(frame) { derivedStateOf { frame.value != null } }
-    val cursor by view.cursor.collectAsState()
 
     LaunchedEffect(state, painted) {
+        val now = state
         status(
             when {
-                state is CefNappletSession.State.Failed -> InlineNappletStatus.FAILED
-                state is CefNappletSession.State.Showing && painted -> InlineNappletStatus.SHOWING
+                // Tor said apart from other failures, so a caller can say why nothing is showing.
+                now is CefNappletSession.State.WaitingForTor -> InlineNappletStatus.WAITING_FOR_TOR
+                now is CefNappletSession.State.Failed && now.reason == CefNappletSession.Failure.ROUTE_BLOCKED -> InlineNappletStatus.NO_TOR
+                now is CefNappletSession.State.Failed -> InlineNappletStatus.FAILED
+                now is CefNappletSession.State.Showing && painted -> InlineNappletStatus.SHOWING
                 else -> InlineNappletStatus.LOADING
             },
         )
     }
 
-    val density = LocalDensity.current.density
-    val focus = remember { FocusRequester() }
-    var focused by remember { mutableStateOf(false) }
-
-    Box(
-        modifier
-            .onSizeChanged { view.resize((it.width / density).roundToInt(), (it.height / density).roundToInt(), density.toDouble()) }
-            // Before focusTarget(): key events reach the focused node and what wraps it, not what it wraps.
-            .onKeyEvent { event ->
-                // Not nativeKeyEvent: that is Compose's own event now, and a cast of it to AWT's failed
-                // for every key, so none reached the page and Enter went on to open the note.
-                val native = event.awtEventOrNull ?: return@onKeyEvent false
-                view.key(native)
-                true
-            }.focusRequester(focus)
-            .onFocusChanged {
-                focused = it.isFocused
-                view.focus(it.isFocused)
-            }
-            // Not focusable(): that pins the note in the feed while focused, so a clicked game would
-            // play on, unseen, after its note scrolled away.
-            .focusTarget()
-            .pointerHoverIcon(PointerIcon(cursor))
-            .pointerInput(view, density) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val native = event.nativeEvent as? MouseEvent ?: continue
-                        val position = event.changes.firstOrNull()?.position ?: continue
-                        val x = (position.x / density).roundToInt()
-                        val y = (position.y / density).roundToInt()
-                        when (event.type) {
-                            PointerEventType.Press -> {
-                                focus.requestFocus()
-                                view.mouse(native, MouseEvent.MOUSE_PRESSED, x, y)
-                                event.changes.forEach { it.consume() }
-                            }
-                            PointerEventType.Release -> {
-                                view.mouse(native, MouseEvent.MOUSE_RELEASED, x, y)
-                                event.changes.forEach { it.consume() }
-                            }
-                            PointerEventType.Move, PointerEventType.Enter ->
-                                view.mouse(native, if (native.id == MouseEvent.MOUSE_DRAGGED) MouseEvent.MOUSE_DRAGGED else MouseEvent.MOUSE_MOVED, x, y)
-                            PointerEventType.Exit -> view.mouse(native, MouseEvent.MOUSE_EXITED, x, y)
-                            PointerEventType.Scroll ->
-                                if (focused && native is MouseWheelEvent) {
-                                    view.wheel(native, x, y)
-                                    event.changes.forEach { it.consume() }
-                                }
-                        }
-                    }
-                }
-            }.drawBehind {
-                frame.value?.let { drawImage(it, dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt())) }
-            },
-    )
+    OffscreenPage(view, modifier, wheelNeedsFocus = wheelNeedsFocus)
 }

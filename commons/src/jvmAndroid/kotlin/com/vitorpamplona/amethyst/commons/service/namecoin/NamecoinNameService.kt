@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.service.namecoin
 
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NAMECOIN_LOOKUP_TIMEOUT_MS
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
@@ -55,6 +56,7 @@ class NamecoinNameService(
     private val resolver =
         NamecoinNameResolver(
             electrumxClient = electrumxClient,
+            lookupTimeoutMs = NAMECOIN_LOOKUP_TIMEOUT_MS,
             serverListProvider = { customServers.ifEmpty { DEFAULT_ELECTRUMX_SERVERS } },
         )
     private val cache = NamecoinLookupCache()

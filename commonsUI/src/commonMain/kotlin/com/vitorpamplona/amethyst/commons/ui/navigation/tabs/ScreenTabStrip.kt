@@ -24,7 +24,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -33,6 +34,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -42,6 +44,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,7 +53,9 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -76,11 +81,19 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.isTertiaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -112,10 +125,14 @@ import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 private val StripHeight = 40.dp
 private val TabHeight = 32.dp
 private val TabGap = 2.dp
+
+// How far a press goes sideways before it drags its tab instead of opening it: about a finger's slop.
+private val ReorderSlop = 8.dp
 private val PinnedTabWidth = 40.dp
 private val MinTabWidth = 120.dp
 private val MaxTabWidth = 220.dp
@@ -211,7 +228,8 @@ private fun ScreenTab(
     val colors = MaterialTheme.colorScheme
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    var menu by remember { mutableStateOf(false) }
+    // Where the right click landed, in the tab: the menu opens there, not at the tab's corner.
+    var menuAt by remember { mutableStateOf<IntOffset?>(null) }
 
     // A flash when the tab is asked for again while open, or opens in the background.
     val glow = remember { Animatable(0f) }
@@ -237,7 +255,6 @@ private fun ScreenTab(
     val background = colors.primary.copy(alpha = 0.35f * glow.value).compositeOver(base.compositeOver(colors.surfaceContainerLow))
     val accent = colors.primary
     val currentWidth by rememberUpdatedState(width)
-    val density = LocalDensity.current
 
     Box(
         Modifier
@@ -258,22 +275,46 @@ private fun ScreenTab(
                         val event = awaitPointerEvent()
                         if (event.type != PointerEventType.Press) continue
                         if (event.buttons.isTertiaryPressed) stacks.close(entry.id)
-                        if (event.buttons.isSecondaryPressed) menu = true
+                        if (event.buttons.isSecondaryPressed) {
+                            val at = event.changes.first().position
+                            menuAt = IntOffset(at.x.toInt(), at.y.toInt())
+                        }
                     }
                 }
             }.pointerInput(entry.id) {
-                // Dragging sideways moves the tab a place each time it crosses half a tab.
-                var dragged = 0f
-                detectHorizontalDragGestures(onDragEnd = { dragged = 0f }, onDragCancel = { dragged = 0f }) { change, amount ->
-                    change.consume()
-                    dragged += amount
-                    val step = with(density) { (currentWidth + TabGap).toPx() }
-                    if (dragged > step / 2) {
-                        stacks.move(entry.id, 1)
-                        dragged -= step
-                    } else if (dragged < -step / 2) {
-                        stacks.move(entry.id, -1)
-                        dragged += step
+                // Dragging sideways moves the tab a place each time it crosses half a tab, once the
+                // press has gone [ReorderSlop] sideways. Not Compose's horizontal drag: its slop for a
+                // mouse is an eighth of a finger's, about 2 px, so a click that wobbled became a drag
+                // and the tab showed its ripple but never opened (measured: still 0 px opened it,
+                // 2 px and more never did).
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val slop = ReorderSlop.toPx()
+                    var sideways = 0f
+                    var dragging = false
+                    var dragged = 0f
+                    while (true) {
+                        val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) break
+                        val dx = change.positionChange().x
+                        if (!dragging) {
+                            sideways += dx
+                            if (abs(sideways) < slop) continue
+                            dragging = true
+                            dragged = sideways
+                        } else {
+                            dragged += dx
+                        }
+                        // From here the gesture is a drag: the click it started as is cancelled.
+                        change.consume()
+                        val step = (currentWidth + TabGap).toPx()
+                        if (dragged > step / 2) {
+                            stacks.move(entry.id, 1)
+                            dragged -= step
+                        } else if (dragged < -step / 2) {
+                            stacks.move(entry.id, -1)
+                            dragged += step
+                        }
                     }
                 }
             }.clickable { stacks.activate(entry.id) },
@@ -314,7 +355,7 @@ private fun ScreenTab(
                     .background(colors.primary),
             )
         }
-        TabMenu(entry, stacks, expanded = menu, onDismiss = { menu = false })
+        menuAt?.let { at -> TabMenu(entry, stacks, at, onDismiss = { menuAt = null }) }
     }
 }
 
@@ -365,43 +406,90 @@ private fun SymbolIcon(
     Icon(symbol, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (selected) colors.primary else colors.onSurfaceVariant)
 }
 
-/** A tab's right-click menu. */
+/** A tab's right-click menu, opened at [at]: where the click landed in the tab. */
 @Composable
 private fun TabMenu(
     entry: NavStackEntry,
     stacks: TabsModel,
-    expanded: Boolean,
+    at: IntOffset,
     onDismiss: () -> Unit,
 ) {
-    if (!expanded) return
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val canMoveToWindow = NavigationLayoutType.WINDOWS in LocalAppPlatform.current.navigationLayouts
     val link = remember(entry.route) { routeLink(entry.route) }
     val opened = stacks.openedBy(entry.id)
 
-    DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
-        MenuItem(MaterialSymbols.Add, stringRes(Res.string.navigation_tab_duplicate), onDismiss) { stacks.duplicate(entry.id) }
-        MenuItem(MaterialSymbols.PushPin, stringRes(if (stacks.isPinned(entry)) Res.string.navigation_tab_unpin else Res.string.navigation_tab_pin), onDismiss) {
-            stacks.setPinned(entry.id, !stacks.isPinned(entry))
-        }
-        if (link != null) {
-            MenuItem(MaterialSymbols.Link, stringRes(Res.string.navigation_tab_copy_link), onDismiss) { scope.launch { clipboard.setText(link) } }
-        }
-        if (canMoveToWindow) {
-            MenuItem(MaterialSymbols.AutoMirrored.OpenInNew, stringRes(Res.string.navigation_tab_to_window), onDismiss) { stacks.setDetached(entry.id, true) }
-        }
-        HorizontalDivider()
-        MenuItem(MaterialSymbols.Close, stringRes(Res.string.navigation_close_tab), onDismiss) { stacks.close(entry.id) }
-        MenuItem(null, stringRes(Res.string.navigation_tab_close_others), onDismiss) { stacks.closeOthers(entry.id) }
-        MenuItem(null, stringRes(Res.string.navigation_tab_close_right), onDismiss) { stacks.closeToTheRight(entry.id) }
-        if (opened > 0) {
-            MenuItem(null, stringRes(Res.string.navigation_tab_close_opened, opened), onDismiss) { stacks.closeOpenedBy(entry.id) }
-        }
-        if (stacks.canReopen) {
+    // Material's DropdownMenu would open at the tab's corner and keep 48dp off the window's top
+    // edge, which the strip sits on: a long way from the cursor. This opens at the cursor itself.
+    val position = remember(at) { CursorMenuPositionProvider(at) }
+    Popup(popupPositionProvider = position, onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
+        CursorMenuSurface {
+            MenuItem(MaterialSymbols.Add, stringRes(Res.string.navigation_tab_duplicate), onDismiss) { stacks.duplicate(entry.id) }
+            MenuItem(MaterialSymbols.PushPin, stringRes(if (stacks.isPinned(entry)) Res.string.navigation_tab_unpin else Res.string.navigation_tab_pin), onDismiss) {
+                stacks.setPinned(entry.id, !stacks.isPinned(entry))
+            }
+            if (link != null) {
+                MenuItem(MaterialSymbols.Link, stringRes(Res.string.navigation_tab_copy_link), onDismiss) { scope.launch { clipboard.setText(link) } }
+            }
+            if (canMoveToWindow) {
+                MenuItem(MaterialSymbols.AutoMirrored.OpenInNew, stringRes(Res.string.navigation_tab_to_window), onDismiss) { stacks.setDetached(entry.id, true) }
+            }
             HorizontalDivider()
-            MenuItem(MaterialSymbols.History, stringRes(Res.string.navigation_reopen_closed), onDismiss) { stacks.reopenClosed() }
+            MenuItem(MaterialSymbols.Close, stringRes(Res.string.navigation_close_tab), onDismiss) { stacks.close(entry.id) }
+            MenuItem(null, stringRes(Res.string.navigation_tab_close_others), onDismiss) { stacks.closeOthers(entry.id) }
+            MenuItem(null, stringRes(Res.string.navigation_tab_close_right), onDismiss) { stacks.closeToTheRight(entry.id) }
+            if (opened > 0) {
+                MenuItem(null, stringRes(Res.string.navigation_tab_close_opened, opened), onDismiss) { stacks.closeOpenedBy(entry.id) }
+            }
+            if (stacks.canReopen) {
+                HorizontalDivider()
+                MenuItem(MaterialSymbols.History, stringRes(Res.string.navigation_reopen_closed), onDismiss) { stacks.reopenClosed() }
+            }
         }
+    }
+}
+
+/** Material's menu container (its colors, elevation, 112–280dp width and 8dp ends), for a menu in its own Popup. */
+@Composable
+private fun CursorMenuSurface(content: @Composable () -> Unit) {
+    Surface(
+        shape = MenuDefaults.shape,
+        color = MenuDefaults.containerColor,
+        tonalElevation = MenuDefaults.TonalElevation,
+        shadowElevation = MenuDefaults.ShadowElevation,
+    ) {
+        Column(Modifier.widthIn(min = 112.dp, max = 280.dp).width(IntrinsicSize.Max).padding(vertical = 8.dp)) {
+            content()
+        }
+    }
+}
+
+/**
+ * Places a context menu with its corner on the cursor, [at] from the anchor's top-left: below and
+ * after it when it fits, else above or before it, and always inside the window.
+ */
+private class CursorMenuPositionProvider(
+    private val at: IntOffset,
+) : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+    ): IntOffset {
+        val x = anchorBounds.left + at.x
+        val y = anchorBounds.top + at.y
+        val width = popupContentSize.width
+        val height = popupContentSize.height
+        val after = if (layoutDirection == LayoutDirection.Ltr) x else x - width
+        val before = if (layoutDirection == LayoutDirection.Ltr) x - width else x
+        val left = if (after >= 0 && after + width <= windowSize.width) after else before
+        val top = if (y + height <= windowSize.height) y else y - height
+        return IntOffset(
+            left.coerceAtMost(windowSize.width - width).coerceAtLeast(0),
+            top.coerceAtMost(windowSize.height - height).coerceAtLeast(0),
+        )
     }
 }
 
