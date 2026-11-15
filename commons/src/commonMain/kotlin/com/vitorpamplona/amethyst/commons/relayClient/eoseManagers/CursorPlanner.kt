@@ -224,15 +224,24 @@ object CursorPlanner {
         time: Long,
         source: CursorSource = CursorSource.DEFAULT,
         refusedKinds: Set<Int> = emptySet(),
+        /** Indices in [LiveShapes.filters] that the relay cut at their `limit` (see [CursorRoutingListener]). */
+        cut: Set<Int> = emptySet(),
     ) {
         holders.forEach { holder ->
             // Only what was asked for this holder: an answer planned for another (the feed it
             // replaced, another account in a merged REQ) fetched only what that one lacked.
             var all = true
+            var cutForHolder = false
             val accepted =
                 live.shapes.filterIndexed { i, shape ->
-                    holder.accepts(relay, source, shape, live.filters[i].since, refusedKinds).also { if (!it) all = false }
+                    holder.accepts(relay, source, shape, live.filters[i].since, refusedKinds).also {
+                        if (!it) all = false
+                        if (it && i in cut) cutForHolder = true
+                    }
                 }
+            // An answer cut at its limit may lack older events: the holder keeps the cursor it had,
+            // so the next plan asks that window again instead of only for what is newer.
+            if (cutForHolder) return@forEach
             // The same list when all of it is accepted, so the holder sees the same request again.
             if (accepted.isNotEmpty()) holder.newEose(relay, if (all) live.shapes else accepted, time, source)
         }
@@ -286,13 +295,70 @@ class CursorRoutingListener(
         relay: NormalizedRelayUrl,
         forFilters: List<Filter>?,
     ) {
+        if (forFilters.isNullOrEmpty()) return
+        lock.withLock { requestFor(relay, forFilters).answered() }
         record(relay, forFilters)
     }
 
-    private val shapesLock = KmpLock()
+    /**
+     * One REQ on one relay, as its answers report it: the shapes of its live filters, made once,
+     * and how many stored events each filter with a `limit` received before EOSE.
+     */
+    private class Request(
+        val filters: List<Filter>,
+    ) {
+        val live = CursorPlanner.LiveShapes.of(filters)
+        private val counts = IntArray(filters.size)
+        private var eose = false
+
+        /** Indices in [CursorPlanner.LiveShapes.filters] of the filters the relay cut at their limit. */
+        var cut: Set<Int> = emptySet()
+            private set
+
+        fun stored(event: Event) {
+            if (eose) return
+            filters.forEachIndexed { i, filter -> if (filter.limit != null && filter.match(event)) counts[i]++ }
+        }
+
+        fun answered() {
+            if (eose) return
+            eose = true
+            val liveFilters = live?.filters ?: return
+            // A relay sends the newest `limit` events and stops: as many as the limit means there
+            // may be more, older ones it never sent.
+            val cutFilters = filters.filterIndexed { i, filter -> filter.limit.let { it != null && counts[i] >= it } }
+            if (cutFilters.isNotEmpty()) {
+                cut = liveFilters.indices.filterTo(mutableSetOf()) { i -> cutFilters.any { it === liveFilters[i] } }
+            }
+        }
+
+        fun isCut(filter: Filter) = live != null && cut.any { live.filters[it] === filter }
+    }
+
+    private val lock = KmpLock()
 
     // The pool reports the same filter list for every answer to a request: its shapes are made once.
-    private val shapesByRelay = mutableMapOf<NormalizedRelayUrl, Pair<List<Filter>, CursorPlanner.LiveShapes?>>()
+    private val requests = mutableMapOf<NormalizedRelayUrl, Request>()
+
+    // Under [lock].
+    private fun requestFor(
+        relay: NormalizedRelayUrl,
+        forFilters: List<Filter>,
+    ): Request {
+        val known = requests[relay]
+        if (known != null && known.filters === forFilters) return known
+        return Request(forFilters).also { requests[relay] = it }
+    }
+
+    /**
+     * Whether [relay] cut [filter] (a filter of the REQ it is answering, by identity) at its
+     * `limit`: its answer may lack older events, so it must not stamp an entity's own cursor. False
+     * before EOSE.
+     */
+    fun wasCut(
+        relay: NormalizedRelayUrl,
+        filter: Filter,
+    ): Boolean = lock.withLock { requests[relay] }?.isCut(filter) == true
 
     private fun record(
         relay: NormalizedRelayUrl,
@@ -301,16 +367,19 @@ class CursorRoutingListener(
         if (forFilters.isNullOrEmpty()) return
         val holders = holders()
         if (holders.isEmpty()) return
-        val live =
-            shapesLock.withLock {
-                val cached = shapesByRelay[relay]
-                if (cached != null && cached.first === forFilters) {
-                    cached.second
-                } else {
-                    CursorPlanner.LiveShapes.of(forFilters).also { shapesByRelay[relay] = forFilters to it }
-                }
-            } ?: return
-        CursorPlanner.record(holders, relay, live, TimeUtils.now(), source, refusedKinds(relay))
+        val request = lock.withLock { requestFor(relay, forFilters) }
+        val live = request.live ?: return
+        CursorPlanner.record(holders, relay, live, TimeUtils.now(), source, refusedKinds(relay), cut = request.cut)
+    }
+
+    override fun filtersForSync(
+        relay: NormalizedRelayUrl,
+        filters: List<Filter>,
+    ): List<Filter>? {
+        // The REQ goes out again (a reconnect, an AUTH): its answer is counted from zero, even
+        // when the pool sends the same list instance.
+        lock.withLock { requests.remove(relay) }
+        return listener.filtersForSync(relay, filters)
     }
 
     override suspend fun onEvent(
@@ -319,7 +388,11 @@ class CursorRoutingListener(
         relay: NormalizedRelayUrl,
         forFilters: List<Filter>?,
     ) {
-        if (isLive) record(relay, forFilters)
+        if (isLive) {
+            record(relay, forFilters)
+        } else if (!forFilters.isNullOrEmpty()) {
+            lock.withLock { requestFor(relay, forFilters).stored(event) }
+        }
         listener.onEvent(event, isLive, relay, forFilters)
     }
 }

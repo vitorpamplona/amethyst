@@ -80,6 +80,39 @@ class SingleSubPerEntityCursorTest {
             ?.since
 
     @Test
+    fun communitiesWithNothingVouchedForAreBuiltTogether() {
+        var builds = 0
+        val manager =
+            object : SingleSubEoseManager<Community>(EmptyNostrClient(), { emptySet() }) {
+                override fun updateFilter(
+                    keys: List<Community>,
+                    since: SincePerRelayMap?,
+                ): List<RelayBasedFilter> {
+                    builds++
+                    return listOf(RelayBasedFilter(relay, Filter(kinds = listOf(1111), tags = mapOf("A" to keys.map { it.id }), since = since?.get(relay)?.time)))
+                }
+
+                override fun distinct(key: Community) = key.id
+
+                override fun cursorHoldersOf(key: Community) = key.feeds
+            }
+
+        manager.updateSubscriptions((1..20).mapTo(mutableSetOf()) { Community("c$it", listOf(Feed())) })
+
+        assertEquals(1, builds, "twenty new screens: one build for all, not one each and then the batch")
+        assertEquals(
+            20,
+            manager.sub
+                .filters()
+                ?.get(relay)
+                ?.single()
+                ?.tags
+                ?.get("A")
+                ?.size,
+        )
+    }
+
+    @Test
     fun aCommunityOpenedLaterIsAskedFromScratchAlone() {
         val first = Community("a", listOf(Feed()))
         var keys = setOf(first)

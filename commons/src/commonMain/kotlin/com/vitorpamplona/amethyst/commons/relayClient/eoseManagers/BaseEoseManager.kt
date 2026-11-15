@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -53,13 +54,29 @@ abstract class BaseEoseManager<T>(
      */
     fun requestNewSubscription(listener: SubscriptionListener): Subscription {
         val subId = newSubId()
-        return orchestrator.requestNewSubscription(subId, CursorRoutingListener(listener, cursorSource, refusedKinds) { cursorsServedBy(subId) })
+        val routing = CursorRoutingListener(listener, cursorSource, refusedKinds) { cursorsServedBy(subId) }
+        servedLock.withLock { routingBySub[subId] = routing }
+        return orchestrator.requestNewSubscription(subId, routing)
     }
 
     fun dismissSubscription(subId: String) {
         serve(subId, emptyList())
+        servedLock.withLock { routingBySub.remove(subId) }
         orchestrator.dismissSubscription(subId)
     }
+
+    // Each subscription's router, which knows which of its filters a relay cut at their limit.
+    private val routingBySub = mutableMapOf<String, CursorRoutingListener>()
+
+    /**
+     * Whether [relay] cut [filter] at its `limit` in answering [subId]'s REQ (see
+     * [CursorRoutingListener.wasCut]): a manager stamping an entity's own cursor skips what it names.
+     */
+    protected fun wasCut(
+        subId: String,
+        relay: NormalizedRelayUrl,
+        filter: Filter,
+    ): Boolean = servedLock.withLock { routingBySub[subId] }?.wasCut(relay, filter) == true
 
     /**
      * The kinds each relay refused: the pool never sends them there, so no answer covers them and

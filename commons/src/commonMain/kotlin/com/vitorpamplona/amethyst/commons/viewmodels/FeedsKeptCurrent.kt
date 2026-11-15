@@ -56,8 +56,8 @@ import kotlinx.coroutines.launch
  *   only remove notes, so the shown notes are checked again ([FeedContentState.refilterShown])
  *   without walking the cache; anything else (an unmute) rebuilds. Spam flags arrive in waves.
  * - Time: a note dated more than a minute ahead is hidden until then
- *   (`FilterByListParams.isNotInTheFuture`) and nothing new arrives when its time comes, so the
- *   feeds rebuild once at each such moment ([rebuildWhenVisible]).
+ *   (`FilterByListParams.isNotInTheFuture`) and nothing new arrives when its time comes, so it is
+ *   held here and handed to the feeds at that moment ([rebuildWhenVisible]).
  * - Relays: with a relay picked as the list, a note qualifies by having been seen on it, and a
  *   cached note seen there again brings no new event. The account hands such notes over
  *   ([seenOnSelectedRelay]) and they join the feeds in small batches.
@@ -131,10 +131,19 @@ class FeedsKeptCurrent(
     // Creation times (seconds) of hidden future notes this group could show, earliest first,
     // capped: past the cap the latest are dropped, and are caught by the rebuild before them.
     private val pending = ArrayList<Long>()
+
+    // The notes behind [pending], held until their time: the feeds reject them until then, nothing
+    // else need keep them, and the feeds' cursors already vouch for them, so a note the GC took in
+    // the meantime would never be asked for again. Handed to the feeds when they become visible.
+    private val waiting = LinkedHashSet<Note>()
+
+    // Set when the cap dropped a time: its note is not held, so those moments rebuild instead.
+    private var dropped = false
+
     private var scheduledAt: Long = Long.MAX_VALUE
     private var visibleJob: Job? = null
 
-    /** Rebuilds once each of [notes] (see [hiddenFuture]) stops being in the future. */
+    /** Shows each of [notes] (see [hiddenFuture]) once it stops being in the future. */
     fun rebuildWhenVisible(notes: List<Note>) {
         lock.withLock {
             notes.forEach { note ->
@@ -142,8 +151,14 @@ class FeedsKeptCurrent(
                 val createdAt = note.createdAt() ?: return@forEach
                 val at = pending.binarySearch(createdAt)
                 if (at < 0) pending.add(-at - 1, createdAt)
+                waiting.add(note)
             }
-            while (pending.size > MAX_PENDING) pending.removeAt(pending.lastIndex)
+            if (pending.size > MAX_PENDING) {
+                while (pending.size > MAX_PENDING) pending.removeAt(pending.lastIndex)
+                dropped = true
+                val latest = pending.last()
+                waiting.removeAll { (it.createdAt() ?: Long.MAX_VALUE) > latest }
+            }
             scheduleNextLocked()
         }
     }
@@ -157,15 +172,27 @@ class FeedsKeptCurrent(
             scope.launch(Dispatchers.IO) {
                 // isNotInTheFuture allows a minute of skew; one more second to be past it.
                 delay((next - TimeUtils.oneMinuteFromNow() + 1) * 1000)
-                lock.withLock {
-                    val visibleUpTo = TimeUtils.oneMinuteFromNow()
-                    pending.removeAll { it <= visibleUpTo }
-                    scheduledAt = Long.MAX_VALUE
-                    // This job is done: scheduling the next one must not cancel it before rebuild().
-                    visibleJob = null
-                    scheduleNextLocked()
+                val (visible, rebuildAll) =
+                    lock.withLock {
+                        val visibleUpTo = TimeUtils.oneMinuteFromNow()
+                        pending.removeAll { it <= visibleUpTo }
+                        val visible = waiting.filterTo(LinkedHashSet()) { (it.createdAt() ?: Long.MAX_VALUE) <= visibleUpTo }
+                        waiting.removeAll(visible)
+                        val rebuildAll = dropped
+                        if (pending.isEmpty()) dropped = false
+                        scheduledAt = Long.MAX_VALUE
+                        // This job is done: scheduling the next one must not cancel it before the hand-over.
+                        visibleJob = null
+                        scheduleNextLocked()
+                        visible to rebuildAll
+                    }
+                // The held notes join the feeds as new ones would: no walk of the cache, which may
+                // no longer have them.
+                if (rebuildAll) {
+                    rebuild()
+                } else if (visible.isNotEmpty()) {
+                    feeds.forEach { it.updateFeedWith(visible) }
                 }
-                rebuild()
             }
     }
 

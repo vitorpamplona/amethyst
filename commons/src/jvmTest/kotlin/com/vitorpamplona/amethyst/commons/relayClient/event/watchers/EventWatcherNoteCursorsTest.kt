@@ -23,10 +23,12 @@ package com.vitorpamplona.amethyst.commons.relayClient.event.watchers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderAccount
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -81,6 +83,31 @@ class EventWatcherNoteCursorsTest {
 
         watcher.answer()
         assertNotNull(rebuilt.childCursorsOrNull()?.since(relay), "its own from-scratch answer counts")
+    }
+
+    @Test
+    fun anAnswerCutAtItsLimitDoesNotCatchTheNoteUp() {
+        val note = note()
+        val keys = setOf(EventFinderQueryState(note, StubAccount()))
+        val watcher = EventWatcherSubAssembler(EmptyNostrClient()) { keys }
+        watcher.updateSubscriptions(keys)
+
+        // One of its filters gets as many stored events as its limit: the relay may have more.
+        val sent =
+            watcher.sub
+                .filters()
+                ?.get(relay)
+                .orEmpty()
+        val full = sent.filter { it.limit != null && it.tags?.get("e") != null }.minBy { it.limit!! }
+        runBlocking {
+            repeat(full.limit!!) { i ->
+                val event = Event(i.toString().padStart(64, '0'), "11".repeat(32), 1000L - i, full.kinds!!.first(), arrayOf(arrayOf("e", id)), "", "")
+                watcher.sub.listener.onEvent(event, false, relay, sent)
+            }
+        }
+        watcher.sub.listener.onEose(relay, sent)
+
+        assertNull(note.childCursorsOrNull()?.since(relay), "older replies or reactions may be missing: asked again")
     }
 
     @Test

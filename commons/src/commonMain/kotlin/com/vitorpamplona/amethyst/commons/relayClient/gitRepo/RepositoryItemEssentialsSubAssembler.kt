@@ -92,11 +92,13 @@ class RepositoryItemEssentialsSubAssembler(
         val refused = mutableSetOf<Note>()
         filters.orEmpty().forEach { filter ->
             if (filter.until != null) return@forEach
+            // Cut at its limit: what it names may lack older events.
+            val cut = wasCut(relay, filter)
             (filter.tags?.get("e").orEmpty() + filter.tags?.get("E").orEmpty()).forEach { id ->
                 val note = cache.getNoteIfExists(id) ?: return@forEach
                 val asked = filter.since
                 val own = note.childCursorsOrNull()?.since(relay, cursorSource)
-                if (asked == null || (own != null && own >= asked)) {
+                if (!cut && (asked == null || (own != null && own >= asked))) {
                     answered.getOrPut(note) { mutableListOf() }.add(filter)
                 } else {
                     refused.add(note)

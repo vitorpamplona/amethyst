@@ -71,13 +71,15 @@ class EventWatcherSubAssembler(
             val answered = mutableMapOf<Note, MutableList<Filter>>()
             val refused = mutableSetOf<Note>()
             live.forEach { filter ->
+                // Cut at its limit: what it names may lack older replies or reactions.
+                val cut = wasCut(relay, filter)
                 filter.tags?.forEach { (tag, values) ->
                     if (tag !in WATCHED_TAGS) return@forEach
                     values.forEach { id ->
                         val note = watched[id] ?: return@forEach
                         val since = filter.since
                         val own = note.childCursorsOrNull()?.since(relay, cursorSource)
-                        if (since == null || (own != null && own >= since)) {
+                        if (!cut && (since == null || (own != null && own >= since))) {
                             answered.getOrPut(note) { mutableListOf() }.add(filter)
                         } else {
                             refused.add(note)

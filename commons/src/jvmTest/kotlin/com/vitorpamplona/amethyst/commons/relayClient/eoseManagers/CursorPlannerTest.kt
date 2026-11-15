@@ -192,6 +192,63 @@ class CursorPlannerTest {
         assertEquals(1, inner.closed, "everything else reaches the wrapped listener")
     }
 
+    private fun stored(
+        id: Char,
+        createdAt: Long,
+    ) = Event(id.toString().repeat(64), alice, createdAt, 1, emptyArray(), "", "")
+
+    @Test
+    fun anAnswerCutAtItsLimitVouchesForNothing() {
+        val cursors = RelayCursors()
+        val listener = CursorRoutingListener(RecordingListener()) { listOf(cursors) }
+        val limited = listOf(notes(alice).copy(limit = 2))
+
+        runBlocking {
+            listener.onEvent(stored('1', 5), false, relay, limited)
+            listener.onEvent(stored('2', 4), false, relay, limited)
+        }
+        listener.onEose(relay, limited)
+        assertNull(cursors.since(relay), "the relay stopped at the limit: what is older may be missing")
+        assertTrue(listener.wasCut(relay, limited.single()), "and the filter is reported as cut")
+
+        runBlocking { listener.onEvent(stored('3', 6), true, relay, limited) }
+        assertNull(cursors.since(relay), "nor does a live event on that REQ vouch for it")
+    }
+
+    @Test
+    fun anAnswerUnderItsLimitVouches() {
+        val cursors = RelayCursors()
+        val listener = CursorRoutingListener(RecordingListener()) { listOf(cursors) }
+        val limited = listOf(notes(alice).copy(limit = 2), notes(bob).copy(limit = 1))
+
+        // Bob's filter gets nothing: Alice's events do not count against it.
+        runBlocking { listener.onEvent(stored('1', 5), false, relay, limited) }
+        listener.onEose(relay, limited)
+
+        assertTrue(cursors.since(relay) != null)
+        assertTrue(limited.none { listener.wasCut(relay, it) })
+    }
+
+    @Test
+    fun aResentRequestIsCountedAgain() {
+        val cursors = RelayCursors()
+        val listener = CursorRoutingListener(RecordingListener()) { listOf(cursors) }
+        val limited = listOf(notes(alice).copy(limit = 2))
+
+        runBlocking {
+            listener.onEvent(stored('1', 5), false, relay, limited)
+            listener.onEvent(stored('2', 4), false, relay, limited)
+        }
+        listener.onEose(relay, limited)
+        assertNull(cursors.since(relay))
+
+        // A reconnect writes the REQ again (the same filters): its answer starts a new count.
+        listener.filtersForSync(relay, limited)
+        runBlocking { listener.onEvent(stored('1', 5), false, relay, limited) }
+        listener.onEose(relay, limited)
+        assertTrue(cursors.since(relay) != null, "one event under a limit of two is the whole answer")
+    }
+
     private class RecordingListener : SubscriptionListener {
         var eoses = 0
         var events = 0

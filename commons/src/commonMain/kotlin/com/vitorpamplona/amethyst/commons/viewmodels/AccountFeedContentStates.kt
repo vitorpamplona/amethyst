@@ -206,7 +206,7 @@ class AccountFeedContentStates(
 
     val picturesFeed = FeedContentState(PictureFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
     val workoutsFeed = FeedContentState(WorkoutFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
-    val chessLobbyFeed = FeedContentState(ChessLobbyFeedFilter(account), scope, LocalCache, lazy = true)
+    val chessLobbyFeed = FeedContentState(ChessLobbyFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true)
 
     /**
      * The account's own chess games (started, moved in, or challenging it), held while these feeds

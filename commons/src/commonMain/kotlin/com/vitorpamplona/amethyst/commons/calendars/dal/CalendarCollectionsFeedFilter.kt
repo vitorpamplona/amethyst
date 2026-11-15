@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 
@@ -47,7 +48,7 @@ class CalendarCollectionsFeedFilter(
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
         val notes =
-            LocalCache.addressables.filterIntoSet { _, it ->
+            LocalCache.addressables.filterIntoSet(CalendarCollectionEvent.KIND) { _, it ->
                 val e = it.event
                 e is CalendarCollectionEvent && params.match(e, it.relays)
             }

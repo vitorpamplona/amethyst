@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -48,6 +49,11 @@ abstract class SingleSubEoseManager<T>(
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
+    /**
+     * [relay] answered [filters] up to [time] (its EOSE, or a live event after it). An override that
+     * stamps an entity's own cursor (a note's replies, a user's cards) leaves out what a filter the
+     * relay cut at its `limit` names ([wasCut]): that answer may lack older events.
+     */
     open fun newEose(
         relay: NormalizedRelayUrl,
         time: Long,
@@ -58,7 +64,7 @@ abstract class SingleSubEoseManager<T>(
         }
     }
 
-    val sub =
+    val sub: Subscription =
         requestNewSubscription(
             object : SubscriptionListener {
                 override fun onEose(
@@ -81,6 +87,12 @@ abstract class SingleSubEoseManager<T>(
             },
         )
 
+    /** Whether [relay] cut [filter], one of the filters it is answering, at its `limit`. */
+    protected fun wasCut(
+        relay: NormalizedRelayUrl,
+        filter: Filter,
+    ) = wasCut(sub.id, relay, filter)
+
     override fun updateSubscriptions(keys: Set<T>) {
         val groups = keys.groupBy { distinct(it) }.values.toList()
         val holders = groups.map { cursorsNamedBy(it) }
@@ -100,9 +112,16 @@ abstract class SingleSubEoseManager<T>(
         // channel on it) survives even when their relay sets differ elsewhere.
         val entities = groups.map { it.first() }
         val windowsPerRelay = mutableMapOf<NormalizedRelayUrl, MutableMap<Long?, MutableSet<Int>>>()
+        // An entity whose holders vouch for nothing yet (a screen just opened) is asked from scratch
+        // on every relay: it needs no build of its own to plan, and they are all built at once.
+        val fresh = mutableListOf<T>()
         entities.forEachIndexed { index, key ->
+            if (holders[index].all { it.isEmpty() }) {
+                fresh.add(key)
+                return@forEachIndexed
+            }
             val own = updateFilter(listOf(key), null).orEmpty()
-            val cursors = if (holders[index].isEmpty()) emptyMap() else CursorPlanner.cursorsByRelay(own, holders[index], cursorSource, refusedKinds)
+            val cursors = CursorPlanner.cursorsByRelay(own, holders[index], cursorSource, refusedKinds)
             own.mapTo(mutableSetOf()) { it.relay }.forEach { relay ->
                 windowsPerRelay.getOrPut(relay) { mutableMapOf() }.getOrPut(cursors[relay]) { mutableSetOf() }.add(index)
             }
@@ -123,7 +142,7 @@ abstract class SingleSubEoseManager<T>(
                     }
                     built
                 }
-            }
+            } + (if (fresh.isEmpty()) emptyList() else updateFilter(fresh, null).orEmpty())
         serve(sub.id, holders.flatten().distinct())
         sub.updateFilters(filters.ifEmpty { null }?.groupByRelay())
     }

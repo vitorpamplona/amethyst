@@ -47,6 +47,8 @@ class UserCardsSubAssembler(
         filters: List<Filter>?,
     ) {
         filters?.forEach { filter ->
+            // Cut at its limit: the users it names may lack older events.
+            if (wasCut(relay, filter)) return@forEach
             // kind:30382 addresses the target user in the d-tag (the key the
             // filter builder uses). Reading any other tag leaves the per-user
             // EOSEs unset and forces full re-downloads with since = null.
