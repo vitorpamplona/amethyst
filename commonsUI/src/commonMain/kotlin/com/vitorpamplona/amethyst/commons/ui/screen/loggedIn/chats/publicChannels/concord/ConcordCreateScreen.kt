@@ -112,6 +112,7 @@ fun ConcordCreateScreen(
                 isActive = { canCreate },
                 onCancel = { nav.popBack() },
                 onPost = create,
+                isBusy = { working },
             )
         },
     ) { padding ->

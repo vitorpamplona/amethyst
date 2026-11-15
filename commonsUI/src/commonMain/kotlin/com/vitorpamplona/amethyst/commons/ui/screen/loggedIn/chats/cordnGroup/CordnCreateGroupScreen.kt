@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_show_fewe
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_show_older
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_stale_note
 import com.vitorpamplona.amethyst.commons.resources.cordn_create_action
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_action_invite
 import com.vitorpamplona.amethyst.commons.resources.cordn_create_admin_count
 import com.vitorpamplona.amethyst.commons.resources.cordn_create_admin_only_me_on
 import com.vitorpamplona.amethyst.commons.resources.cordn_create_coordinator_change
@@ -197,12 +198,6 @@ fun CordnCreateGroupScreen(
     }
 
     val known by runtime.coordinators.collectAsStateWithLifecycle()
-    // Collected, not read as `.value` below: the exposure card counts the
-    // groups this coordinator already carries, and reading the flow inside
-    // composition would leave that count frozen at whatever it was when the
-    // screen opened — the one number on the card that can change while you
-    // are looking at it, since creating a group is what changes it.
-    val rooms by runtime.groups.all.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     val me = accountViewModel.account.signer.pubKey
@@ -249,20 +244,11 @@ fun CordnCreateGroupScreen(
 
     val config = remember(draft.selected, draft.pubKeyInput, draft.relaysInput, choices) { resolve(choices, draft.selected, draft.pubKeyInput, draft.relaysInput) }
 
-    val coverage by rememberCordnCoverage(runtime, draft.roster)
+    // Held, not read here: the coverage answers arrive one by one, and only the form below shows
+    // them. Reading them at this level would recompose the whole screen, top bar included, on each.
+    val coverageState = rememberCordnCoverage(runtime, draft.roster)
 
-    // The best-covering coordinator is offered, not imposed: the moment the
-    // user picks one themselves it stops moving under them, even if the
-    // roster later changes and a different one would now reach more people.
-    LaunchedEffect(coverage, draft.userPicked) {
-        if (draft.userPicked || coverage.isEmpty()) return@LaunchedEffect
-        val best = coverage.values.filter { it.answered }.maxByOrNull { it.reachable.size }
-        if (best != null && best.reachable.isNotEmpty()) draft.selected = best.coordinatorPubKey
-    }
-
-    val chosenCoverage = draft.selected?.let { coverage[it] }
-
-    val canCreate = !busy && config != null && draft.name.isNotBlank()
+    val canCreate = config != null && draft.name.isNotBlank()
     val create: () -> Unit = create@{
         val target = config ?: return@create
         busy = true
@@ -280,6 +266,7 @@ fun CordnCreateGroupScreen(
                 // "we could not ask" into "invite nobody" and create the
                 // group silently empty. Unknown means attempt everyone
                 // and let each call say what went wrong.
+                val chosenCoverage = draft.selected?.let { coverageState.value[it] }
                 val reachable = chosenCoverage?.takeIf { it.answered }?.reachable
                 val invitees = draft.roster.filter { reachable == null || it in reachable }
                 val result =
@@ -304,7 +291,11 @@ fun CordnCreateGroupScreen(
                 }
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
-                error = e.message ?: failureFallback
+                val message = e.message ?: failureFallback
+                error = message
+                // The action is in the top bar and the error line is at the bottom of a long form,
+                // so the failure is also said where the reader is looking.
+                accountViewModel.toastManager.toast(Res.string.cordn_create_title, message, e)
             } finally {
                 busy = false
             }
@@ -314,14 +305,40 @@ fun CordnCreateGroupScreen(
     Scaffold(
         topBar = {
             ActionTopBar(
-                postRes = Res.string.cordn_create_action,
+                // How many will be asked, as the button said when it closed the form.
+                postLabel =
+                    if (draft.roster.isEmpty()) {
+                        stringRes(Res.string.cordn_create_action)
+                    } else {
+                        pluralStringRes(Res.plurals.cordn_create_action_invite, draft.roster.size, draft.roster.size)
+                    },
                 titleRes = Res.string.cordn_create_title,
                 isActive = { canCreate },
                 onCancel = { nav.popBack() },
                 onPost = create,
+                isBusy = { busy },
             )
         },
     ) { padding ->
+        // Collected, not read as `.value` below: the exposure card counts the
+        // groups this coordinator already carries, and reading the flow inside
+        // composition would leave that count frozen at whatever it was when the
+        // screen opened — the one number on the card that can change while you
+        // are looking at it, since creating a group is what changes it.
+        val rooms by runtime.groups.all.collectAsStateWithLifecycle()
+        val coverage by coverageState
+
+        // The best-covering coordinator is offered, not imposed: the moment the
+        // user picks one themselves it stops moving under them, even if the
+        // roster later changes and a different one would now reach more people.
+        LaunchedEffect(coverage, draft.userPicked) {
+            if (draft.userPicked || coverage.isEmpty()) return@LaunchedEffect
+            val best = coverage.values.filter { it.answered }.maxByOrNull { it.reachable.size }
+            if (best != null && best.reachable.isNotEmpty()) draft.selected = best.coordinatorPubKey
+        }
+
+        val chosenCoverage = draft.selected?.let { coverage[it] }
+
         Column(
             modifier =
                 Modifier

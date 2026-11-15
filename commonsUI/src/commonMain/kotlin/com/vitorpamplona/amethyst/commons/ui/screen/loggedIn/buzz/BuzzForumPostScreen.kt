@@ -125,9 +125,10 @@ fun BuzzForumPostScreen(
             ActionTopBar(
                 postRes = Res.string.buzz_forum_post_action,
                 titleRes = Res.string.buzz_forum_new_title,
-                isActive = { body.isNotBlank() && !isPosting },
+                isActive = { body.isNotBlank() },
                 onCancel = { nav.popBack() },
                 onPost = post,
+                isBusy = { isPosting },
             )
         },
     ) { padding ->

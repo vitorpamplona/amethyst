@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.commons.ui.navigation.topbars
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.create
 import com.vitorpamplona.amethyst.commons.resources.post
@@ -49,6 +52,32 @@ fun ActionTopBar(
     isActive: () -> Boolean = { true },
     onCancel: () -> Unit,
     onPost: () -> Unit,
+    isBusy: () -> Boolean = { false },
+    additionalActions: @Composable (() -> Unit)? = null,
+) = ActionTopBar(
+    postLabel = stringRes(postRes),
+    titleRes = titleRes,
+    isActive = isActive,
+    onCancel = onCancel,
+    onPost = onPost,
+    isBusy = isBusy,
+    additionalActions = additionalActions,
+)
+
+/**
+ * A composer's top bar: Close on the left, the title in the middle, and the main action on the
+ * right, labelled [postLabel] for a label worked out at the call site (a plural, a count). While
+ * [isBusy] the action shows a spinner instead of its label and cannot be pressed again.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ActionTopBar(
+    postLabel: String,
+    titleRes: StringResource? = null,
+    isActive: () -> Boolean = { true },
+    onCancel: () -> Unit,
+    onPost: () -> Unit,
+    isBusy: () -> Boolean = { false },
     additionalActions: @Composable (() -> Unit)? = null,
 ) {
     ShorterTopAppBar(
@@ -73,12 +102,17 @@ fun ActionTopBar(
             if (additionalActions != null) {
                 additionalActions()
             }
+            val busy = isBusy()
             Button(
                 modifier = HalfHorzPadding,
-                enabled = isActive(),
+                enabled = isActive() && !busy,
                 onClick = onPost,
             ) {
-                Text(text = stringRes(postRes))
+                if (busy) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(text = postLabel)
+                }
             }
         },
         colors =

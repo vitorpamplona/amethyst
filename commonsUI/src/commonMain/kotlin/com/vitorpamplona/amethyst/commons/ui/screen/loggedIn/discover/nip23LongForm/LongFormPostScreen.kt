@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.resources.add_a_tag
 import com.vitorpamplona.amethyst.commons.resources.add_header_image
 import com.vitorpamplona.amethyst.commons.resources.article_description_placeholder
 import com.vitorpamplona.amethyst.commons.resources.article_summary
+import com.vitorpamplona.amethyst.commons.resources.edit_article
 import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive
 import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive_explainer
 import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
@@ -94,6 +95,8 @@ import com.vitorpamplona.amethyst.commons.resources.long_form_post_remove_tag
 import com.vitorpamplona.amethyst.commons.resources.markdown_edit
 import com.vitorpamplona.amethyst.commons.resources.markdown_preview
 import com.vitorpamplona.amethyst.commons.resources.new_long_form_post
+import com.vitorpamplona.amethyst.commons.resources.publish
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.resources.start_writing_article
 import com.vitorpamplona.amethyst.commons.resources.tags_label
 import com.vitorpamplona.amethyst.commons.resources.url_slug
@@ -111,7 +114,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PublishingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.commons.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.ExpirationDatePicker
@@ -175,8 +178,10 @@ fun LongFormPostScreen(
 
     Scaffold(
         topBar = {
-            PublishingTopBar(
-                titleRes = Res.string.new_long_form_post,
+            // A new version of an article already out is an edit: Save, as every other editor says.
+            ActionTopBar(
+                postRes = if (versionId != null) Res.string.save else Res.string.publish,
+                titleRes = if (versionId != null) Res.string.edit_article else Res.string.new_long_form_post,
                 isActive = postViewModel::canPost,
                 onPost = {
                     accountViewModel.launchSigner {
