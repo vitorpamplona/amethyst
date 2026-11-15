@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.claudecode
 
-import com.vitorpamplona.claudecode.process.ClaudeTransport
+import com.vitorpamplona.agents.LineTransport
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -45,7 +45,7 @@ object Fixtures {
 }
 
 /** A process that answers with lines the test pushes, and records what the host writes. */
-class FakeTransport : ClaudeTransport {
+class FakeTransport : LineTransport {
     private val stdout = Channel<String>(Channel.UNLIMITED)
     val written = CopyOnWriteArrayList<String>()
     var inputClosed = false

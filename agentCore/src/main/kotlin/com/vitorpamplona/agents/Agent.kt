@@ -74,6 +74,12 @@ sealed interface AgentEvent {
         val text: String,
     ) : AgentEvent
 
+    /** How full the context is: [tokens] of [window], when the agent says. */
+    data class ContextUsage(
+        val tokens: Long?,
+        val window: Long?,
+    ) : AgentEvent
+
     /** A subagent started by [toolUseId] runs in the background, or stopped. */
     data class SubagentRunning(
         val toolUseId: String,
@@ -159,6 +165,8 @@ data class AgentStartOptions(
     val instructions: String? = null,
     /** Shell commands (by prefix, e.g. `git push`) the agent may never run. */
     val blockedCommands: List<String> = emptyList(),
+    /** Only to learn the agent's commands and models: start no session. */
+    val probeOnly: Boolean = false,
 )
 
 /** A saved session, as the session list shows it. */

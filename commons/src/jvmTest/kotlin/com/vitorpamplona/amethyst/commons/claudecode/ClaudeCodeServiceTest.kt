@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.claudecode
 
+import com.vitorpamplona.agents.LineTransport
 import com.vitorpamplona.claudecode.ClaudeBackend
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
-import com.vitorpamplona.claudecode.process.ClaudeTransport
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -234,7 +234,7 @@ class ClaudeCodeServiceTest {
             assertEquals(0, asking.needsYou.value)
         }
 
-    private class AskingTransport : ClaudeTransport {
+    private class AskingTransport : LineTransport {
         private val out = Channel<String>(Channel.UNLIMITED)
         override val lines: Flow<String> = out.receiveAsFlow()
 

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.claudecode.process
+package com.vitorpamplona.agents
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -31,10 +31,10 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 /**
- * The pipe to one Claude Code process: lines in, lines out. A real process in the app, a
+ * The pipe to one agent process: lines in, lines out. A real process in the app, a
  * scripted one in tests.
  */
-interface ClaudeTransport {
+interface LineTransport {
     /** Every stdout line, until the process closes it. Collected once. */
     val lines: Flow<String>
 
@@ -55,7 +55,7 @@ interface ClaudeTransport {
 
 class ProcessTransport(
     private val process: Process,
-) : ClaudeTransport {
+) : LineTransport {
     private val stdin: BufferedWriter = process.outputStream.bufferedWriter(Charsets.UTF_8)
     private val stderr = StringBuilder()
 

@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.claudecode
 
+import com.vitorpamplona.agents.LineTransport
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.claudecode.ClaudeBackend
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
-import com.vitorpamplona.claudecode.process.ClaudeTransport
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -50,7 +50,7 @@ import kotlin.test.assertTrue
  * reply once it ran.
  */
 class ClaudeChatTest {
-    private class ScriptedCli : ClaudeTransport {
+    private class ScriptedCli : LineTransport {
         private val out = Channel<String>(Channel.UNLIMITED)
         val written = CopyOnWriteArrayList<String>()
         override val lines: Flow<String> = out.receiveAsFlow()

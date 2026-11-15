@@ -23,6 +23,7 @@ package com.vitorpamplona.claudecode.process
 import com.vitorpamplona.agents.AgentNotInstalledException
 import com.vitorpamplona.agents.HostToolServer
 import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.agents.ProcessTransport
 import com.vitorpamplona.claudecode.mcp.SdkMcpDispatcher
 import kotlinx.coroutines.CoroutineScope
 import java.io.File

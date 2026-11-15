@@ -374,7 +374,7 @@ class ClaudeChat internal constructor(
 
     private suspend fun probe(): AgentInfo? {
         if (!workDir.isDirectory || killed) return null
-        val options = AgentStartOptions(cwd = workDir, hostTools = mcpServers).let(launchOptions)
+        val options = AgentStartOptions(cwd = workDir, hostTools = mcpServers, probeOnly = true).let(launchOptions)
         val c =
             try {
                 backend.start(options, scope)
@@ -570,6 +570,7 @@ class ClaudeChat internal constructor(
                 }
             }
             is AgentEvent.Activity -> publish { it.copy(activity = event.text) }
+            is AgentEvent.ContextUsage -> publish { it.copy(contextTokens = event.tokens ?: it.contextTokens, contextWindow = event.window ?: it.contextWindow) }
             is AgentEvent.SubagentRunning -> {
                 transcript.setSubagentRunning(event.toolUseId, event.running)
                 publish { it }

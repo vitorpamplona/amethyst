@@ -25,6 +25,7 @@ import com.vitorpamplona.agents.AgentEvent
 import com.vitorpamplona.agents.AgentInfo
 import com.vitorpamplona.agents.HostToolServer
 import com.vitorpamplona.agents.ImageInput
+import com.vitorpamplona.agents.LineTransport
 import com.vitorpamplona.agents.PermissionDecision
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.PermissionRequest
@@ -65,7 +66,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * [ClaudeMessage.Result], send the next. [close] ends it.
  */
 class ClaudeCodeConnection(
-    private val transport: ClaudeTransport,
+    private val transport: LineTransport,
     private val scope: CoroutineScope,
     /** Tools the host runs itself, which the CLI reaches over this pipe (see [HostToolServer]). */
     private val mcpServers: List<HostToolServer> = emptyList(),
