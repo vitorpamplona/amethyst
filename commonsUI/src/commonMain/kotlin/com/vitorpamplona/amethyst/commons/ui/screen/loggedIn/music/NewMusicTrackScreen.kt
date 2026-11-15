@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.edit_music_track
 import com.vitorpamplona.amethyst.commons.resources.music_track_album_label
 import com.vitorpamplona.amethyst.commons.resources.music_track_artist_label
 import com.vitorpamplona.amethyst.commons.resources.music_track_artist_placeholder
@@ -78,6 +79,8 @@ import com.vitorpamplona.amethyst.commons.resources.music_track_title_label
 import com.vitorpamplona.amethyst.commons.resources.music_track_title_placeholder
 import com.vitorpamplona.amethyst.commons.resources.music_track_uploading_banner
 import com.vitorpamplona.amethyst.commons.resources.new_music_track
+import com.vitorpamplona.amethyst.commons.resources.publish
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.DocumentSelectSingle
@@ -87,7 +90,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.CoverImagePicker
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.UploadInProgressBanner
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.UploadPlaceholder
@@ -147,12 +150,13 @@ fun NewMusicTrackScreen(
 
     Scaffold(
         topBar = {
-            SendingTopBar(
-                titleRes = Res.string.new_music_track,
+            ActionTopBar(
+                postRes = if (vm.isEditing) Res.string.save else Res.string.publish,
+                titleRes = if (vm.isEditing) Res.string.edit_music_track else Res.string.new_music_track,
                 onCancel = { nav.popBack() },
                 isActive = { vm.isValid() && !isBusy },
                 onPost = {
-                    if (!vm.isValid() || isBusy) return@SendingTopBar
+                    if (!vm.isValid() || isBusy) return@ActionTopBar
                     vm.saveAndPublish(
                         accountViewModel = accountViewModel,
                     )

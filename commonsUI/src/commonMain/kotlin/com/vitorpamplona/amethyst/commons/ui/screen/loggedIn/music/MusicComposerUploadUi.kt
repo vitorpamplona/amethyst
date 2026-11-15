@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
+import com.vitorpamplona.amethyst.commons.ui.components.FormImageTile
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import org.jetbrains.compose.resources.StringResource
@@ -80,32 +81,34 @@ fun CoverImagePicker(
     ctaRes: StringResource,
     hintRes: StringResource,
 ) {
-    when {
-        cover != null ->
-            Box(modifier = if (enabled) Modifier.clickable(onClick = onPick) else Modifier) {
-                ShowImageUploadGallery(
-                    list = cover,
-                    onDelete = { if (enabled) onDelete() },
-                    accountViewModel = accountViewModel,
+    FormImageTile {
+        when {
+            cover != null ->
+                Box(modifier = if (enabled) Modifier.clickable(onClick = onPick) else Modifier) {
+                    ShowImageUploadGallery(
+                        list = cover,
+                        onDelete = { if (enabled) onDelete() },
+                        accountViewModel = accountViewModel,
+                    )
+                }
+
+            !existingUrl.isNullOrBlank() ->
+                ExistingCoverPreview(
+                    url = existingUrl,
+                    onPick = onPick,
+                    onDelete = onDelete,
+                    enabled = enabled,
                 )
-            }
 
-        !existingUrl.isNullOrBlank() ->
-            ExistingCoverPreview(
-                url = existingUrl,
-                onPick = onPick,
-                onDelete = onDelete,
-                enabled = enabled,
-            )
-
-        else ->
-            UploadPlaceholder(
-                iconSymbol = MaterialSymbols.AddPhotoAlternate,
-                ctaRes = ctaRes,
-                hintRes = hintRes,
-                onClick = onPick,
-                enabled = enabled,
-            )
+            else ->
+                UploadPlaceholder(
+                    iconSymbol = MaterialSymbols.AddPhotoAlternate,
+                    ctaRes = ctaRes,
+                    hintRes = hintRes,
+                    onClick = onPick,
+                    enabled = enabled,
+                )
+        }
     }
 }
 

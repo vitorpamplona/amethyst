@@ -27,13 +27,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,22 +41,20 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.concord_create_action
 import com.vitorpamplona.amethyst.commons.resources.concord_create_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_create_relays
 import com.vitorpamplona.amethyst.commons.resources.concord_create_relays_desc
 import com.vitorpamplona.amethyst.commons.resources.concord_create_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.launch
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
  * Create a new Concord Channel (encrypted community) from Amethyst. Mints the
@@ -79,17 +74,44 @@ fun ConcordCreateScreen(
     var working by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val canCreate = name.value.isNotBlank() && concordNameFits(name.value) && !working
+    val create: () -> Unit = create@{
+        if (name.value.isBlank() || working) return@create
+        working = true
+        scope.launch {
+            accountViewModel.reportSignerErrors {
+                val communityId =
+                    try {
+                        accountViewModel.account.concord.createConcordCommunity(
+                            name = name.value.trim(),
+                            description = about.value.trim().ifBlank { null },
+                            relays = relays.map { it.url },
+                            icon = icon.value,
+                        )
+                    } finally {
+                        // Always re-enable — a thrown create would otherwise strand the button.
+                        working = false
+                    }
+                // Replace this form with the new community, as the Marmot and relay-group creators
+                // do. newStack only popped up to the community route itself, which was not on the
+                // stack, so Back from the new community reopened a filled-in create form.
+                if (communityId != null) {
+                    nav.popUpTo(Route.ConcordServer(communityId), Route.ConcordCreate::class)
+                } else {
+                    accountViewModel.toastManager.toast(Res.string.concord_create_title, Res.string.concord_create_failed)
+                }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringRes(Res.string.concord_create_title)) },
-                navigationIcon = {
-                    if (nav.canPop()) {
-                        IconButton(onClick = { nav.popBack() }) {
-                            SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
-                        }
-                    }
-                },
+            ActionTopBar(
+                postRes = Res.string.concord_create_action,
+                titleRes = Res.string.concord_create_title,
+                isActive = { canCreate },
+                onCancel = { nav.popBack() },
+                onPost = create,
             )
         },
     ) { padding ->
@@ -121,41 +143,6 @@ fun ConcordCreateScreen(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
-
-            Button(
-                onClick = {
-                    if (name.value.isBlank() || working) return@Button
-                    working = true
-                    scope.launch {
-                        accountViewModel.reportSignerErrors {
-                            val communityId =
-                                try {
-                                    accountViewModel.account.concord.createConcordCommunity(
-                                        name = name.value.trim(),
-                                        description = about.value.trim().ifBlank { null },
-                                        relays = relays.map { it.url },
-                                        icon = icon.value,
-                                    )
-                                } finally {
-                                    // Always re-enable — a thrown create would otherwise strand the button.
-                                    working = false
-                                }
-                            // Replace this form with the new community, as the Marmot and relay-group creators
-                            // do. newStack only popped up to the community route itself, which was not on the
-                            // stack, so Back from the new community reopened a filled-in create form.
-                            if (communityId != null) {
-                                nav.popUpTo(Route.ConcordServer(communityId), Route.ConcordCreate::class)
-                            } else {
-                                accountViewModel.toastManager.toast(Res.string.concord_create_title, Res.string.concord_create_failed)
-                            }
-                        }
-                    }
-                },
-                enabled = name.value.isNotBlank() && concordNameFits(name.value) && !working,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            ) {
-                Text(stringRes(Res.string.concord_create_action))
-            }
         }
     }
 }

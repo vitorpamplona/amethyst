@@ -111,7 +111,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PublishingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.commons.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.ExpirationDatePicker
@@ -175,7 +175,7 @@ fun LongFormPostScreen(
 
     Scaffold(
         topBar = {
-            PostingTopBar(
+            PublishingTopBar(
                 titleRes = Res.string.new_long_form_post,
                 isActive = postViewModel::canPost,
                 onPost = {

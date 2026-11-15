@@ -77,7 +77,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedText
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.CoverImagePicker
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.UploadInProgressBanner
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -117,12 +117,12 @@ fun EditPodcastShowScreen(
 
     Scaffold(
         topBar = {
-            SendingTopBar(
+            SavingTopBar(
                 titleRes = Res.string.podcast_edit_show,
                 onCancel = { nav.popBack() },
                 isActive = { vm.isValid() && !isBusy },
                 onPost = {
-                    if (!vm.isValid() || isBusy) return@SendingTopBar
+                    if (!vm.isValid() || isBusy) return@SavingTopBar
                     vm.saveAndPublish(accountViewModel)
                 },
             )

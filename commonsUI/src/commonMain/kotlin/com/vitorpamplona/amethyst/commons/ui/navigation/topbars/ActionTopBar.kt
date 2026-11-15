@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.create
 import com.vitorpamplona.amethyst.commons.resources.post
+import com.vitorpamplona.amethyst.commons.resources.publish
 import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.resources.send
 import com.vitorpamplona.amethyst.commons.ui.note.buttons.CloseButton
@@ -137,6 +138,27 @@ fun SendingTopBar(
     onCancel = onCancel,
     onPost = onPost,
     additionalActions = additionalActions,
+)
+
+/**
+ * For a standalone piece people find and come back to (an article, a product, a track, an event).
+ * The labels follow one rule: Post for a public message in feeds, Send for one only its recipients
+ * read, Publish for a standalone piece, Create for a place others join, Save for changing something
+ * that already exists.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PublishingTopBar(
+    titleRes: StringResource? = null,
+    isActive: () -> Boolean = { true },
+    onCancel: () -> Unit,
+    onPost: () -> Unit,
+) = ActionTopBar(
+    titleRes = titleRes,
+    postRes = Res.string.publish,
+    isActive = isActive,
+    onCancel = onCancel,
+    onPost = onPost,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)

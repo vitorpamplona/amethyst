@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.badges.award.AwardBadgeViewModel
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.award_badge
+import com.vitorpamplona.amethyst.commons.resources.award_badge_action
 import com.vitorpamplona.amethyst.commons.resources.award_badge_loading
 import com.vitorpamplona.amethyst.commons.resources.award_badge_remove_recipient
 import com.vitorpamplona.amethyst.commons.resources.award_badge_search_label
@@ -59,7 +60,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
@@ -100,7 +101,8 @@ fun AwardBadgeScreen(
 
     Scaffold(
         topBar = {
-            SavingTopBar(
+            ActionTopBar(
+                postRes = Res.string.award_badge_action,
                 titleRes = Res.string.award_badge,
                 isActive = { vm.definition != null && selectedUsers.isNotEmpty() },
                 onCancel = { nav.popBack() },
