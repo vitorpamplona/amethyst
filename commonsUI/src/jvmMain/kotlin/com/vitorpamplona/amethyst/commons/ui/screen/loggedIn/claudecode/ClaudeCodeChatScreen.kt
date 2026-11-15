@@ -182,6 +182,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_merged
 import com.vitorpamplona.amethyst.commons.resources.claude_code_propose
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pull_requests
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_anyway
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_worktree
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_worktree_failed
@@ -374,6 +375,11 @@ fun ClaudeCodeChatScreen(
                     nav = nav,
                     onTitleClick = { renaming = true },
                 ) {
+                    // A workspace of fresh clones: its repositories' pull requests, which the user opens.
+                    val inWorkspace = remember(state.cwd) { ClaudeCodeService.shared.agentWorkspaces.of(File(state.cwd)) != null }
+                    if (inWorkspace) {
+                        TextButton(onClick = { nav.nav(Route.ClaudeCodePullRequests(key)) }) { Text(stringRes(Res.string.claude_code_pull_requests)) }
+                    }
                     val git = state.git
                     if (git != null && git.hasChanges) {
                         // A narrow window keeps the title readable: the counts alone stand for the button.

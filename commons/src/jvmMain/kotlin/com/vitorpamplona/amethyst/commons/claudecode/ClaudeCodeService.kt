@@ -111,6 +111,9 @@ class ClaudeCodeService(
 ) {
     constructor(backend: AgentBackend, scope: CoroutineScope) : this(listOf(backend), scope)
 
+    /** Each session's own clones of a group of repositories. */
+    val agentWorkspaces = AgentWorkspaces()
+
     /** The default agent: Claude Code. */
     val backend: AgentBackend get() = backends.first()
 
@@ -258,6 +261,21 @@ class ClaudeCodeService(
     ): ClaudeChat = open("new-${UUID.randomUUID()}", null, cwd, title?.trim()?.ifEmpty { null }, permissionMode, model, agent = agent)
 
     /**
+     * A new chat in a workspace of its own: fresh clones of [urls], each on a new branch. Blocks
+     * while the mirrors fetch and the clones are made; throws [IOException] when one fails.
+     */
+    suspend fun newWorkspaceChat(
+        urls: List<String>,
+        title: String?,
+        permissionMode: PermissionMode,
+        agent: AgentBackend = backend,
+    ): ClaudeChat {
+        val workspace = agentWorkspaces.create(urls, title)
+        agentWorkspaces.saveGroup(RepoGroup(LAST_GROUP, workspace.repos.map { it.url }))
+        return newChat(File(workspace.dir), permissionMode, title = workspace.title, agent = agent)
+    }
+
+    /**
      * A new chat that starts from [key]'s history and branches off it with its first message:
      * the way to go on with a session another Claude Code holds, without both writing to it.
      */
@@ -338,6 +356,7 @@ class ClaudeCodeService(
                 launchOptions = launchOptions,
                 kind = kind,
                 forkBefore = forkBefore,
+                publishingIsTheUsers = { agentWorkspaces.of(it) != null },
             )
         chats.update { it + (key to chat) }
         watchers[key] =
@@ -621,6 +640,9 @@ class ClaudeCodeService(
 
     companion object {
         private const val TAG = "ClaudeCodeService"
+
+        /** The repositories of the last workspace, offered first next time. */
+        const val LAST_GROUP = "Last used"
         private const val WORKTREES_SUFFIX = "-worktrees"
 
         /** The app's one service. Its processes end with the app. */

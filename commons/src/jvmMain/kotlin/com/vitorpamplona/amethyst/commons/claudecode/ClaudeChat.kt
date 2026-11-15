@@ -159,6 +159,8 @@ class ClaudeChat internal constructor(
     private val onSessionChanged: () -> Unit,
     /** Reads the folder's git state; tests replace it. */
     private val inspectGit: suspend (File) -> GitWorkInfo? = { GitWorkspace.inspect(it) },
+    /** Whether [File] is a workspace whose pushes and pull requests only the user makes. */
+    private val publishingIsTheUsers: (File) -> Boolean = { false },
     /** Starts as a copy of [resumeSessionId]: its history, and a session of its own from the first message. */
     fork: Boolean = false,
     /** Whether another Claude Code process has this session open now. Called off the main thread. */
@@ -440,7 +442,8 @@ class ClaudeChat internal constructor(
             }
             publish { it.copy(status = ChatStatus.STARTING) }
             val current = _state.value
-            val nostrCheckout = (current.git ?: inspectGit(workDir))?.repo != null
+            // A nostr checkout, or a workspace whose pull requests the user opens: publishing is theirs.
+            val nostrCheckout = (current.git ?: inspectGit(workDir))?.repo != null || publishingIsTheUsers(workDir)
             val options =
                 AgentStartOptions(
                     cwd = workDir,
@@ -625,6 +628,8 @@ class ClaudeChat internal constructor(
                 "ngit sync",
                 "amy git pr",
                 "amy git pr-update",
+                "gh pr create",
+                "gh pr merge",
             )
         private const val STDERR_SHOWN = 2_000
 

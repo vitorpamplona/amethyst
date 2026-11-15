@@ -122,6 +122,13 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_status_starting
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_working
 import com.vitorpamplona.amethyst.commons.resources.claude_code_switch_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_title
+import com.vitorpamplona.amethyst.commons.resources.claude_code_where_clones
+import com.vitorpamplona.amethyst.commons.resources.claude_code_where_clones_desc
+import com.vitorpamplona.amethyst.commons.resources.claude_code_where_folder
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_clone_failed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_cloning
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_name
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_repos
 import com.vitorpamplona.amethyst.commons.resources.claude_code_worktree
 import com.vitorpamplona.amethyst.commons.resources.claude_code_worktree_desc
 import com.vitorpamplona.amethyst.commons.resources.refresh
@@ -473,6 +480,19 @@ private fun NewSessionDialog(
     val agent = installed.firstOrNull { it.id == agentId } ?: installed.firstOrNull()
     val modes = agent?.capabilities?.modes?.filter { it in PICKABLE_MODES } ?: PICKABLE_MODES
     if (mode !in modes) mode = PermissionMode.DEFAULT
+    // A folder already on this computer, or a workspace of fresh clones made for the session.
+    var clones by remember { mutableStateOf(false) }
+    var repos by remember {
+        mutableStateOf(
+            viewModel
+                .repoGroups()
+                .firstOrNull()
+                ?.urls
+                ?.joinToString("\n")
+                .orEmpty(),
+        )
+    }
+    var workspaceName by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val browseTitle = stringRes(Res.string.claude_code_browse)
 
@@ -483,44 +503,78 @@ private fun NewSessionDialog(
             Column(Modifier.widthIn(min = 420.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 // Which agent works on it, when more than one is installed.
                 AgentPicker(installed, agent?.id) { agentId = it }
-                OutlinedTextField(
-                    value = folder,
-                    onValueChange = {
-                        folder = it
-                        viewModel.clearNewChatError()
-                    },
-                    label = { Text(stringRes(Res.string.claude_code_folder)) },
-                    trailingIcon = {
-                        HoverTooltip(browseTitle) {
-                            IconButton(onClick = {
-                                scope.launch {
-                                    pickFolder(browseTitle, folder)?.let {
-                                        folder = it
-                                        viewModel.clearNewChatError()
-                                    }
-                                }
-                            }) { Icon(MaterialSymbols.Folder, contentDescription = browseTitle) }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(selected = !clones, onClick = { clones = false }, label = { Text(stringRes(Res.string.claude_code_where_folder)) })
+                    FilterChip(selected = clones, onClick = { clones = true }, label = { Text(stringRes(Res.string.claude_code_where_clones)) })
+                }
+                if (clones) {
+                    Text(stringRes(Res.string.claude_code_where_clones_desc, viewModel.workspacesRoot), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+                    OutlinedTextField(
+                        value = repos,
+                        onValueChange = {
+                            repos = it
+                            viewModel.clearNewChatError()
+                        },
+                        label = { Text(stringRes(Res.string.claude_code_workspace_repos)) },
+                        minLines = 2,
+                        maxLines = 6,
+                        isError = error != null,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = workspaceName,
+                        onValueChange = { workspaceName = it },
+                        label = { Text(stringRes(Res.string.claude_code_workspace_name)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (creating) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Text(stringRes(Res.string.claude_code_workspace_cloning), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 8.dp))
                         }
-                    },
-                    singleLine = true,
-                    isError = error != null,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                if (suggestedFolders.size > 1) {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        suggestedFolders.take(6).forEach { cwd ->
-                            HoverTooltip(cwd) {
-                                FilterChip(selected = folder == cwd, onClick = { folder = cwd }, label = { Text(folderName(cwd)) })
+                    }
+                } else {
+                    OutlinedTextField(
+                        value = folder,
+                        onValueChange = {
+                            folder = it
+                            viewModel.clearNewChatError()
+                        },
+                        label = { Text(stringRes(Res.string.claude_code_folder)) },
+                        trailingIcon = {
+                            HoverTooltip(browseTitle) {
+                                IconButton(onClick = {
+                                    scope.launch {
+                                        pickFolder(browseTitle, folder)?.let {
+                                            folder = it
+                                            viewModel.clearNewChatError()
+                                        }
+                                    }
+                                }) { Icon(MaterialSymbols.Folder, contentDescription = browseTitle) }
+                            }
+                        },
+                        singleLine = true,
+                        isError = error != null,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (suggestedFolders.size > 1) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            suggestedFolders.take(6).forEach { cwd ->
+                                HoverTooltip(cwd) {
+                                    FilterChip(selected = folder == cwd, onClick = { folder = cwd }, label = { Text(folderName(cwd)) })
+                                }
                             }
                         }
                     }
-                }
-                Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable { worktree = !worktree }, verticalAlignment = Alignment.Top) {
-                    Checkbox(checked = worktree, onCheckedChange = { worktree = it })
-                    Column(Modifier.padding(top = 12.dp, end = 8.dp)) {
-                        Text(stringRes(Res.string.claude_code_worktree), style = MaterialTheme.typography.bodyMedium)
-                        Text(stringRes(Res.string.claude_code_worktree_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+                    Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable { worktree = !worktree }, verticalAlignment = Alignment.Top) {
+                        Checkbox(checked = worktree, onCheckedChange = { worktree = it })
+                        Column(Modifier.padding(top = 12.dp, end = 8.dp)) {
+                            Text(stringRes(Res.string.claude_code_worktree), style = MaterialTheme.typography.bodyMedium)
+                            Text(stringRes(Res.string.claude_code_worktree_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+                        }
                     }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -538,6 +592,7 @@ private fun NewSessionDialog(
                             NewChatError.NotAFolder -> stringRes(Res.string.claude_code_error_not_a_folder)
                             NewChatError.NotARepository -> stringRes(Res.string.claude_code_error_not_a_repository)
                             is NewChatError.WorktreeFailed -> stringRes(Res.string.claude_code_error_worktree, it.message ?: "")
+                            is NewChatError.CloneFailed -> stringRes(Res.string.claude_code_workspace_clone_failed, it.message ?: "")
                         },
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
@@ -546,7 +601,12 @@ private fun NewSessionDialog(
             }
         },
         confirmButton = {
-            TextButton(enabled = !creating && folder.isNotBlank(), onClick = { viewModel.newChat(folder, worktree, mode, agent?.id, onStarted) }) {
+            TextButton(
+                enabled = !creating && (if (clones) repos.isNotBlank() else folder.isNotBlank()),
+                onClick = {
+                    if (clones) viewModel.newWorkspaceChat(repos, workspaceName, mode, agent?.id, onStarted) else viewModel.newChat(folder, worktree, mode, agent?.id, onStarted)
+                },
+            ) {
                 Text(stringRes(Res.string.claude_code_start))
             }
         },

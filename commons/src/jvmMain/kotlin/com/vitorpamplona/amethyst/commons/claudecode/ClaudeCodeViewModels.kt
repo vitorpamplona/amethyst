@@ -60,6 +60,11 @@ sealed interface NewChatError {
     data class WorktreeFailed(
         val message: String?,
     ) : NewChatError
+
+    /** Cloning a repository for a workspace failed: git's words. */
+    data class CloneFailed(
+        val message: String?,
+    ) : NewChatError
 }
 
 /** The session list: every saved session, the chats open here, and the folders they ran in. */
@@ -152,6 +157,39 @@ class ClaudeCodeSessionsViewModel(
 
     /** The agents installed on this computer, to start a session with. */
     val installed = service.installed
+
+    /** The repository groups saved before, the last used first. */
+    fun repoGroups(): List<RepoGroup> = service.agentWorkspaces.groups()
+
+    /** Where workspaces live, to show the user. */
+    val workspacesRoot: String = service.agentWorkspaces.root.absolutePath
+
+    /**
+     * A session in a workspace of its own: a fresh clone of each repository in [urls] (one per
+     * line), each on a new branch. Cloning can take minutes the first time a repository is used.
+     */
+    fun newWorkspaceChat(
+        urls: String,
+        title: String,
+        permissionMode: PermissionMode,
+        agentId: String? = null,
+        onReady: (String) -> Unit,
+    ) {
+        if (_creating.value) return
+        _creating.value = true
+        _newChatError.value = null
+        viewModelScope.launch {
+            try {
+                val agent = agentId?.let { service.backend(it) } ?: service.backend
+                onReady(service.newWorkspaceChat(urls.lines(), title.trim().ifEmpty { null }, permissionMode, agent).key)
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not create the workspace", e)
+                _newChatError.value = NewChatError.CloneFailed(e.message)
+            } finally {
+                _creating.value = false
+            }
+        }
+    }
 
     /**
      * Starts a chat in [folder], or in a new worktree of the repository it is in when

@@ -769,6 +769,11 @@ sealed class Route {
         val key: String,
     ) : Route()
 
+    /** A workspace session's repositories: their branches, and the GitHub pull requests the user opens. */
+    @Serializable data class ClaudeCodePullRequests(
+        val key: String,
+    ) : Route()
+
     /**
      * Starts a Claude Code session on a NIP-34 repository, from the repository itself, one of its
      * issues ([issueId]) or one of its proposals ([proposalId]).

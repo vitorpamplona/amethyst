@@ -96,6 +96,29 @@ an OpenAI login or API key in the environment that records the fixtures.
   turn's failure (no credit) showed in Codex's words; the list showed it as Codex. Claude chats
   unchanged.
 
+## Workspaces: many sessions, one group of repositories
+
+For running many sessions (15+) on the same GitHub repositories at once, each session can work in
+a workspace of its own instead of a folder: New session › Fresh clones, with the repositories'
+URLs (the last list is offered again).
+
+- `AgentWorkspaces` keeps, under `~/AmethystAgents`: `mirrors/` (a bare mirror per repository,
+  fetched before each new workspace, one fetch at a time per mirror), `sessions/<id>/<repo>/`
+  (each session's clones) and `meta/` (what each workspace holds, outside the agent's folder).
+- A clone from the local mirror hardlinks the mirror's packs (seconds, almost no disk) yet is a
+  whole repository: config, hooks, refs and stashes of its own, unlike a git worktree, whose
+  `.git` is shared and whose branches can't be checked out twice. Its `origin` is the real
+  remote; each repository starts a new `agent/<time>` branch from its default branch.
+- The agent can't push or open pull requests (`git push`, `gh pr create`, `gh pr merge` are blocked
+  commands, and pushes from its process tree are disabled through git's settings). The user opens
+  them on the session's Pull requests screen: per repository, what the branch has to propose, a
+  title and description from its commits, "Push and open pull request" (the user's git push and
+  their `gh` login), then the PR's state and link. "Delete workspace" removes the clones; the
+  mirrors stay.
+- Checked in the app with local bare repositories standing in for GitHub: the workspace cloned
+  both, the agent committed and was refused the push, the user's push reached the remote, `gh`'s
+  refusal (not a GitHub remote here) showed in its own words, and deleting left the mirrors.
+
 ## Open
 
 - How Codex shows subagents, and whether its approvals carry enough to show a diff before applying.
