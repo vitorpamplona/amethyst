@@ -212,4 +212,14 @@
     <string name="napplet_cap_fs">Filer</string>
     <string name="napplet_cap_common">Sociala åtgärder</string>
     <string name="napplet_cap_intent">Öppna andra appar</string>
+    <string name="front_page_print_channel_name">The Observer, utskrift</string>
+    <string name="front_page_print_channel_description">Visar The Observer medan den skrivs ut, så att den kan bli klar efter att du lämnat appen.</string>
+    <string name="front_page_print_cancel">Avbryt</string>
+    <string name="front_page_print_title">Skriver ut The Observer</string>
+    <string name="front_page_print_step_probe">Kontrollerar din ranking</string>
+    <string name="front_page_print_step_pull">Läser redaktionerna · %1$d av %2$d</string>
+    <string name="front_page_print_step_write">Skriver</string>
+    <string name="front_page_print_step_fix">Rättar sidan</string>
+    <string name="front_page_print_step_check">Kontrollerar citat, bilder och länkar</string>
+    <string name="front_page_print_step_publish">Publicerar din The Observer</string>
 </resources>
