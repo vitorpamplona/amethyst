@@ -41,8 +41,16 @@ import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.Now
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.NowPlayingSource
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /** What another app on this device is playing, as reported by its media session. */
 object OtherAppsPlaybackRegistry {
@@ -55,6 +63,15 @@ object OtherAppsPlaybackRegistry {
         if (track != null && track.isSameMoment(playing.value)) return
         playing.value = track
     }
+
+    private val wantedState = MutableStateFlow<Boolean?>(null)
+
+    /** Whether the logged-in account shares other apps; null until it and its settings load. */
+    val wanted: StateFlow<Boolean?> = wantedState
+
+    fun setWanted(value: Boolean) {
+        wantedState.value = value
+    }
 }
 
 /**
@@ -66,12 +83,25 @@ object OtherAppsPlaybackRegistry {
  * "Notification access" screen ([openAccessSettings]); until then the system never binds it.
  * Whether anything is published is still up to the account's now-playing settings.
  *
+ * Once granted, the system keeps the listener bound for good, which holds the app's process out of
+ * the cache and restarts it after a reboot or a force stop. So it unbinds itself ([requestUnbind])
+ * whenever the logged-in account does not share other apps' playback, and [setWanted] asks for it
+ * back when one does. Disabling the component would not do: the system does not bind a granted
+ * listener again when it is re-enabled (seen on Android 17).
+ *
  * Runs in the main process (it is not declared in `:napplet`), where the account lives. The
  * system may start that process just to bind this listener; AppModules then logs the saved
  * account in on its own, as it does on every start, so the publisher has it.
  */
 class OtherAppsNowPlayingService : NotificationListenerService() {
     private val handler = Handler(Looper.getMainLooper())
+
+    // A failure here (the system service dying, a player's session throwing) must not crash the app.
+    private val scope =
+        CoroutineScope(
+            SupervisorJob() + Dispatchers.Main.immediate +
+                CoroutineExceptionHandler { _, e -> Log.w("OtherAppsNowPlaying", "Listener failed", e) },
+        )
     private var sessionManager: MediaSessionManager? = null
     private val watched = mutableMapOf<MediaSession.Token, Pair<MediaController, MediaController.Callback>>()
 
@@ -85,6 +115,27 @@ class OtherAppsNowPlayingService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        scope.coroutineContext.cancelChildren()
+        scope.launch {
+            // The system may have bound this right after a reboot or update, before the account
+            // loaded: only watch sessions once sharing is known to be on.
+            val wanted = OtherAppsPlaybackRegistry.wanted
+            if (wanted.first { it != null } == true) {
+                watchSessions()
+                wanted.first { it == false }
+            }
+            // Let go, so the process can be cached.
+            Log.i("OtherAppsNowPlaying", "Not sharing other apps' playback: unbinding")
+            try {
+                requestUnbind()
+            } catch (e: RuntimeException) {
+                // SecurityException, or the system's RemoteException rethrown.
+                Log.w("OtherAppsNowPlaying", "Could not unbind", e)
+            }
+        }
+    }
+
+    private fun watchSessions() {
         val manager = getSystemService(MediaSessionManager::class.java) ?: return
         sessionManager = manager
 
@@ -99,14 +150,19 @@ class OtherAppsNowPlayingService : NotificationListenerService() {
     }
 
     override fun onListenerDisconnected() {
+        scope.coroutineContext.cancelChildren()
         sessionManager?.removeOnActiveSessionsChangedListener(sessionsListener)
         sessionManager = null
         unwatchAll()
         OtherAppsPlaybackRegistry.update(null)
         super.onListenerDisconnected()
+        // Sharing came back on while the unbind was still in flight: that rebind request reached a
+        // listener that was still bound, so ask again.
+        if (OtherAppsPlaybackRegistry.wanted.value == true) rebind(this)
     }
 
     override fun onDestroy() {
+        scope.cancel()
         sessionManager?.removeOnActiveSessionsChangedListener(sessionsListener)
         unwatchAll()
         OtherAppsPlaybackRegistry.update(null)
@@ -196,6 +252,28 @@ class OtherAppsNowPlayingService : NotificationListenerService() {
 
     companion object {
         fun hasAccess(context: Context): Boolean = context.packageName in NotificationManagerCompat.getEnabledListenerPackages(context)
+
+        /**
+         * Records whether the logged-in account shares other apps. A bound listener unbinds itself
+         * when this turns false; turning it true undoes that [requestUnbind], so the system binds
+         * the listener again, now if access is granted, else as soon as it is.
+         */
+        fun setWanted(
+            context: Context,
+            wanted: Boolean,
+        ) {
+            OtherAppsPlaybackRegistry.setWanted(wanted)
+            if (wanted) rebind(context)
+        }
+
+        /** Undoes a [requestUnbind]. Does nothing while the listener is bound. */
+        private fun rebind(context: Context) {
+            try {
+                NotificationListenerService.requestRebind(ComponentName(context, OtherAppsNowPlayingService::class.java))
+            } catch (e: RuntimeException) {
+                Log.w("OtherAppsNowPlaying", "Could not rebind", e)
+            }
+        }
 
         /** Opens the system screen where the user grants or revokes access to this listener. */
         fun openAccessSettings(context: Context) {
