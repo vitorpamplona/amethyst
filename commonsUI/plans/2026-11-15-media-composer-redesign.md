@@ -2,7 +2,8 @@
 
 Status: proposal, with prototypes. Nothing in production changes yet.
 Prototypes: `commonsUI/src/jvmTest/kotlin/com/vitorpamplona/amethyst/commons/ui/prototypes/mediacomposer/`.
-Run `main` in `PrototypeGallery.kt` from the IDE to click through them, or render them all with
+Run `main` in `PrototypeGallery.kt` from the IDE to click through them (tabs: Post, Reply,
+Chat, Profile, Failure; the add buttons open the Studio), or render them all with
 `./gradlew :commonsUI:jvmTest --tests "*MediaComposerPrototypesRenderTest*"` (PNGs land in
 `commonsUI/build/media-composer-prototypes/`).
 
@@ -64,7 +65,33 @@ The flow on a note:
 
 ## 2. Proposal
 
-Four prototypes, one model. Each addresses the numbered request in brackets.
+**One flow on every screen that takes media: pick → MediaStudio → result in place → tap to
+reopen.** Picking files always opens the Studio, configured for the screen that asked. Its
+confirm button hands the edited files back, and the screen shows them where they belong:
+inline in a post, as a message in a chat, or in the avatar circle. Tapping a file reopens the
+Studio on it. The screens themselves carry no media settings.
+
+| 1. Pick → Studio ("Add") | 2. Added as an inline block | 3. A post with three files |
+|---|---|---|
+| ![](screenshots/1-post-pick-studio.png) | ![](screenshots/2-post-after-add.png) | ![](screenshots/3-post-inline.png) |
+
+The Studio (prototype `MediaStudio.kt`) knows nothing about its host. It takes a list of drafts,
+a `StudioConfig`, and confirm/cancel/remove callbacks:
+
+| Host | Config | Confirm | Then |
+|---|---|---|---|
+| Note, comment, long-form, issue, classified (after a pick) | `postPick()`: all tools | **Add** | markers go in the text at the cursor, drawn as blocks (B) |
+| Same, file tapped in the post | `postEdit()` | **Done** | closes; edits are already on the draft |
+| Reply sheets, other small composers | same configs | Add / Done | chips + filmstrip (A): a 210 dp block doesn't fit |
+| Chat / DM | `chat(caption)`: all tools + caption | **Send** (beside the caption) | the bubble uploads, then sends |
+| Avatar | `avatar()`: crop only, locked 1:1, circle mask | **Save** | uploads right away |
+| Banner | `banner()`: crop + quality, locked 3:1 | **Save** | uploads right away |
+
+Cancel (the ✕, shown only when the Studio was opened by a pick) undoes the pick. Nothing reaches
+the text or the chat until the user confirms, so backing out leaves no trace. Every option starts
+at a default, so a user who changes nothing taps the confirm button once.
+
+The prototypes below show each piece. Each addresses the numbered request in brackets.
 
 ### The model: a draft per file, uploaded on Post [1, 4]
 
@@ -91,21 +118,23 @@ runs right before signing; and `insertUrlAtCursor` becomes "replace marker *n* w
 draft store must save markers with the local URIs, so a draft restored after process death can
 re-resolve them, or drop them if the file is gone.
 
-### A. Chips + filmstrip (`MarkerStyle.CHIPS`) [1, 3]
+### A. Chips + filmstrip (`MarkerStyle.CHIPS`), for small composers [1, 3]
 
-![A](screenshots/a-chips-editing.png)
+![A](screenshots/4-reply-compact-chips.png)
 
 The marker reads as a chip in the text: `▣ Photo 1`, `▶ Video 2 · 0:15`. A filmstrip under the
 text shows the files, numbered to match. Each tile carries only what is uploaded: its size, an
 **ALT** badge (amber when missing, the nudge to add one), CW if sensitive, and remove. Tap a tile
-to open the Studio (C). The server is one chip in the toolbar (`☁ blossom.primal.net ⌄`), not a
+to reopen the Studio (C). The server is one chip in the toolbar (`☁ blossom.primal.net ⌄`), not a
 form field.
 
 Cheapest to build: a span style on a text replacement, plus a row of tiles.
 
-### B. Inline blocks inside the text field (`MarkerStyle.BLOCKS`) [1, 5]
+### B. Inline blocks inside the text field (`MarkerStyle.BLOCKS`), the default [1, 5]
 
-![B](screenshots/b-inline-editing.png)
+| Dark | Light |
+|---|---|
+| ![B](screenshots/3-post-inline.png) | ![B light](screenshots/3-post-inline-light.png) |
 
 The media is drawn inside the field, where it will appear in the note. The text reads top to
 bottom exactly as the posted note will. How: the transformation turns the marker into a single
@@ -125,8 +154,8 @@ Costs and risks, to check on device before choosing B over A:
 - The card has a fixed height (210 dp) for now. Using the real aspect ratio needs the field
   width, which is known after the first layout.
 
-**Recommendation: build B, behind the same draft model, and keep A's chip as the fallback** for
-the small composers (chat rows, comment sheets) where a 210 dp block doesn't fit.
+**Recommendation: B for full composers, A for small ones** (reply sheets) where a 210 dp
+block doesn't fit. Both reopen the same Studio.
 
 ### C. MediaStudio: the one place per-file choices live [2, 3, 5, 6]
 
@@ -134,8 +163,9 @@ the small composers (chat rows, comment sheets) where a 210 dp block doesn't fit
 |---|---|---|---|---|---|
 | ![](screenshots/c-studio-quality.png) | ![](screenshots/c-studio-hold-original.png) | ![](screenshots/c-studio-crop.png) | ![](screenshots/c-studio-trim.png) | ![](screenshots/c-studio-alt.png) | ![](screenshots/c-studio-privacy.png) |
 
-Tap any file to open it full screen. The tools are Crop, Trim (video), Quality, Alt text and
-Privacy, and a strip of thumbnails switches files without going back.
+It opens after every pick, and again when a file is tapped. The tools are Crop, Trim (video),
+Quality, Alt text and Privacy, filtered by the host's `StudioConfig`. A strip of thumbnails
+switches between the files of this pick (or of the post, when reopened).
 
 - **The big picture is the compression preview** [2, 5]. It shows the file as it will be
   uploaded at the chosen stop, with pinch, double-tap and wheel zoom (`net.engawapg` zoomable, as
@@ -158,7 +188,8 @@ Privacy, and a strip of thumbnails switches files without going back.
   line each. H.265 and GIF→MP4 leave the default screen. H.265 becomes an app setting (it is a
   device-compatibility choice, not a per-post one). GIF→MP4 becomes automatic when the server
   limit or the size would benefit, with a "Keep as GIF" option in Quality.
-- Edits are live on the draft. **Done** just closes, and nothing is uploaded here [4].
+- Edits are live on the draft, and nothing is uploaded here [4]. The confirm button belongs to
+  the host: Add, Done, Send or Save.
 
 Implementation notes:
 
@@ -209,27 +240,34 @@ Implementation notes:
 About 120 words of explainer before the first scroll become under 15, and the defaults on the
 composer screen are a single chip.
 
-## 4. Elsewhere
+## 4. The same Studio on the other screens
 
-- **Chats** (`ChatFileUploadDialog`): same draft and Studio. Send = upload then send, with the
-  same failure banner above the input. The marker style is the chip (A) inside the input row,
-  with a thumbnail tray above it.
-- **Picture posts** (`NewMediaView`, kind 20): the Studio is the screen, with the caption under it.
-- **Avatar, banner and group icon**: open the Studio with Crop locked to 1:1 (avatar) or 3:1
-  (banner) before the immediate upload. Today a wide photo becomes a squashed or centre-cut avatar.
+| Chat: caption + Send | Chat: sending | Avatar: 1:1, circle | Banner: 3:1 | Profile after Save |
+|---|---|---|---|---|
+| ![](screenshots/5-chat-studio.png) | ![](screenshots/6-chat-sending.png) | ![](screenshots/7-avatar-studio.png) | ![](screenshots/8-banner-studio.png) | ![](screenshots/9-profile-saved.png) |
+
+- **Chats** (replaces `ChatFileUploadDialog`): attach opens the Studio with a caption field and
+  Send. Text already typed in the input moves into the caption, and back again on Cancel. The
+  bubble appears at once and shows its upload, then sends (`HostPrototypes.kt`, `ChatPrototype`).
+- **Avatar, banner and group icon** (today's `UploadToDefaultServer`, no options): the Studio
+  locked to the shape the profile shows, with a circle mask for avatars. Today a wide photo
+  becomes a centre-cut avatar the user never chose.
+- **Picture posts** (`NewMediaView`, kind 20): the Studio is the screen, with the caption under
+  it; the same as the chat config with "Post" as the label.
 - **Long-form**: markers fit Markdown well (`![alt](url)` replaces the marker at publish).
 
 ## 5. Suggested order
 
 1. Draft model + upload-on-Post in `ShortNotePostViewModel`, with chips (A) and the failure banner
    (D). This is the behaviour change, and it can ship on its own.
-2. MediaStudio with Quality (real compression previews), Alt and Privacy. Retire
-   `ImageVideoDescription` and `CompressionZoomDialog`.
+2. MediaStudio as a shared composable with `StudioConfig`, opened after every pick: Quality
+   (real compression previews), Alt and Privacy. Retire `ImageVideoDescription`,
+   `ChatFileUploadDialog` and `CompressionZoomDialog`.
 3. Crop and rotate (both platforms), then Trim and mute (Media3 Transformer on Android, ffmpeg on
    desktop).
 4. Inline blocks (B) in the note composer, after an on-device IME check.
-5. Move the other composers (comments, chats, long-form, classifieds, git issues, group DMs) onto
-   the shared pieces.
+5. Move the other hosts (comments, chats, long-form, classifieds, git issues, group DMs, avatar,
+   banner, group icons) onto the Studio, each with its config.
 
 ## 6. What the prototypes are and aren't
 
@@ -242,6 +280,9 @@ remove, retry and server switching all work interactively in the gallery window.
 
 `PrototypeComposerBehaviourTest` checks the claims this doc makes about behaviour:
 
+- Picking puts nothing in the text until Add; Add inserts the markers at the cursor in pick
+  order; Cancel leaves the text and the draft list as they were.
+- The avatar and banner configs crop to exactly 1:1 and 3:1 in output pixels.
 - Post turns every marker into its URL only after all uploads succeed.
 - A failure leaves the text and markers byte-for-byte unchanged, and Retry then finishes the post.
 - Backspace after a chip, or after an inline block, removes the whole `[[media:n]]` marker

@@ -75,6 +75,41 @@ class PrototypeComposerBehaviourTest {
             assertEquals(ComposerPhase.PUBLISHED, c.phase)
         }
 
+    @Test
+    fun pickThenAddInsertsMarkersAtTheCursor() {
+        val c = PrototypeComposer(CoroutineScope(Dispatchers.Unconfined))
+        c.message.edit { append("Look:") }
+        val picked = listOf(MediaDraft(50, DraftKind.IMAGE, sunsetPhoto(80, 60), 4032, 3024, 1), MediaDraft(51, DraftKind.IMAGE, forestPhoto(60, 80), 3024, 4032, 1))
+        c.pick(picked)
+        assertEquals("Look:", c.message.text.toString(), "nothing lands in the text while the Studio is open")
+        c.confirmPick()
+        assertEquals("Look:\n[[media:50]]\n[[media:51]]\n", c.message.text.toString())
+        assertEquals(listOf(50, 51), c.orderedDrafts().map { it.id })
+    }
+
+    @Test
+    fun pickThenCancelLeavesNoTrace() {
+        val c = PrototypeComposer(CoroutineScope(Dispatchers.Unconfined))
+        c.message.edit { append("Look:") }
+        c.pick(listOf(MediaDraft(50, DraftKind.IMAGE, sunsetPhoto(80, 60), 4032, 3024, 1)))
+        c.cancelPick()
+        assertEquals("Look:", c.message.text.toString())
+        assertTrue(c.drafts.isEmpty())
+    }
+
+    @Test
+    fun lockedAspectsCropToTheShapeTheProfileShows() {
+        val avatar = MediaDraft(70, DraftKind.IMAGE, forestPhoto(60, 80), 3024, 4032, 1)
+        StudioConfig.avatar().prepare(listOf(avatar))
+        val (aw, ah) = avatar.outputSize(QualityStop.ORIGINAL)
+        assertEquals(aw, ah, "avatar is square in pixels")
+
+        val banner = MediaDraft(71, DraftKind.IMAGE, sunsetPhoto(80, 60), 4032, 3024, 1)
+        StudioConfig.banner().prepare(listOf(banner))
+        val (bw, bh) = banner.outputSize(QualityStop.ORIGINAL)
+        assertEquals(3f, bw.toFloat() / bh, 0.01f)
+    }
+
     /** Backspace right after a drawn chip deletes the whole raw marker, not its last character. */
     @OptIn(ExperimentalComposeUiApi::class)
     @Test

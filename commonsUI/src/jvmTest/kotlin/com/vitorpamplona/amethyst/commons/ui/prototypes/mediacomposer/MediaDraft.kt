@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.TextRange
@@ -74,6 +75,7 @@ enum class AspectPreset(
     SQUARE("1:1", 1f),
     PORTRAIT("4:5", 4f / 5f),
     LANDSCAPE("16:9", 16f / 9f),
+    BANNER("3:1", 3f),
 }
 
 /** The crop in normalized image coordinates (0..1), plus quarter turns and a mirror. */
@@ -197,6 +199,12 @@ class PrototypeComposer(
     var phase by mutableStateOf(ComposerPhase.EDITING)
     var editing by mutableStateOf<MediaDraft?>(null)
 
+    /**
+     * Files just picked, open in the Studio and not in the text yet. Done inserts their markers;
+     * Cancel drops them, so a pick the user backs out of leaves no trace in the post.
+     */
+    var picking by mutableStateOf<SnapshotStateList<MediaDraft>?>(null)
+
     /** Simulation knob: drafts with these ids fail on the next Post. */
     var failNext = mutableSetOf<Int>()
 
@@ -208,6 +216,19 @@ class PrototypeComposer(
     fun orderedDrafts(): List<MediaDraft> = MediaTokens.idsInOrder(message.text).mapNotNull(::draft)
 
     fun numberOf(draft: MediaDraft): Int = MediaTokens.idsInOrder(message.text).indexOf(draft.id) + 1
+
+    fun pick(newDrafts: List<MediaDraft>) {
+        picking = mutableStateListOf<MediaDraft>().apply { addAll(newDrafts) }
+    }
+
+    fun confirmPick() {
+        picking?.forEach(::addMedia)
+        picking = null
+    }
+
+    fun cancelPick() {
+        picking = null
+    }
 
     /** Inserts the marker at the cursor, on its own line, the way the URL used to land after upload. */
     fun addMedia(newDraft: MediaDraft) {
@@ -245,7 +266,7 @@ class PrototypeComposer(
             scope.launch {
                 orderedDrafts()
                     .filter { it.status !is DraftStatus.Uploaded }
-                    .mapIndexed { index, d -> launch { simulateUpload(d, index) } }
+                    .mapIndexed { index, d -> launch { simulateUpload(d, index, server, fail = d.id in failNext) } }
                     .joinAll()
 
                 if (orderedDrafts().any { it.status is DraftStatus.Failed }) {
@@ -278,29 +299,35 @@ class PrototypeComposer(
         post()
     }
 
-    private suspend fun simulateUpload(
-        d: MediaDraft,
-        index: Int,
-    ) {
-        delay(150L * index)
-        for (i in 1..6) {
-            d.status = DraftStatus.Preparing(i / 6f)
-            delay(90)
-        }
-        for (i in 1..10) {
-            d.status = DraftStatus.Uploading(i / 10f)
-            delay(110)
-            if (i == 6 && d.id in failNext) {
-                d.status = DraftStatus.Failed("$server refused the file: too large (413)")
-                return
-            }
-        }
-        d.status = DraftStatus.Uploaded("https://$server/${(d.id * 7919).toString(16)}e3b0c44298fc1c149afb.jpg")
-    }
-
     companion object {
         val SERVERS = listOf("blossom.primal.net", "nostr.download", "cdn.satellite.earth")
     }
+}
+
+/**
+ * A fake upload: compress, then send, with progress. Every host (post, chat, profile) uses it, as
+ * every host would use the same UploadOrchestrator.
+ */
+suspend fun simulateUpload(
+    d: MediaDraft,
+    index: Int,
+    server: String,
+    fail: Boolean = false,
+) {
+    delay(150L * index)
+    for (i in 1..6) {
+        d.status = DraftStatus.Preparing(i / 6f)
+        delay(90)
+    }
+    for (i in 1..10) {
+        d.status = DraftStatus.Uploading(i / 10f)
+        delay(110)
+        if (i == 6 && fail) {
+            d.status = DraftStatus.Failed("$server refused the file: too large (413)")
+            return
+        }
+    }
+    d.status = DraftStatus.Uploaded("https://$server/${(d.id * 7919).toString(16)}e3b0c44298fc1c149afb.jpg")
 }
 
 fun formatBytes(bytes: Long): String =

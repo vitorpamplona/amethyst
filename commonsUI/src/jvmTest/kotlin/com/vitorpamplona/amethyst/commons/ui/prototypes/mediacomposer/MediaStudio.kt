@@ -42,17 +42,21 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +69,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -82,18 +89,19 @@ import kotlin.math.abs
 import kotlin.math.max
 
 /*
- * PROTOTYPE ONLY. Prototype C: MediaStudio, the one place every per-file choice lives.
+ * PROTOTYPE ONLY. MediaStudio: the step after every pick, on every screen that takes media, and the
+ * screen a picked file reopens when tapped. It knows nothing about the screen that opened it: it
+ * edits a list of drafts under a [StudioConfig] and hands them back. The host decides what happens
+ * next (insert markers in a post, send a chat message, save an avatar).
  *
- * - The big picture IS the compression preview (requests 2 and 5): it shows the file as it will be
- *   uploaded at the chosen stop, pinch / double-tap / wheel zoomable like the ZoomableImageDialog,
- *   and press-and-hold "Original" flips to the source in place. Today's slider shows a separate
- *   small preview below the controls and a second full-screen dialog to zoom it.
- * - Crop (aspect presets, free drag, rotate, mirror) and Trim (filmstrip with two handles, remove
- *   sound) edit the same picture (request 6).
- * - Quality is four stops, each labelled with the size it produces, instead of a slider, a title
- *   and a 30-word explainer (request 3).
- * - Every edit is live on the draft; nothing is uploaded here (request 4). "Done" just closes.
- * - The strip of thumbnails switches files without going back to the composer.
+ * - The big picture IS the compression preview: the file as it will be uploaded at the chosen stop,
+ *   pinch / double-tap / wheel zoomable like ZoomableImageDialog, and press-and-hold "Original"
+ *   flips to the source in place.
+ * - Crop (aspect presets, free drag, rotate, mirror) and Trim (filmstrip with two handles, sound)
+ *   edit the same picture. A config can lock the aspect and mask a circle (avatars, banners).
+ * - Quality is four stops, each labelled with the size it produces.
+ * - Every edit is live on the draft; nothing is uploaded here. The confirm button ("Add", "Done",
+ *   "Save", or Send beside a caption) hands control back to the host.
  */
 
 enum class StudioTool(
@@ -106,50 +114,125 @@ enum class StudioTool(
     PRIVACY("Privacy"),
 }
 
+/** What one screen lets the Studio do. The presets below are the hosts in the prototypes. */
+data class StudioConfig(
+    val confirmLabel: String,
+    val tools: List<StudioTool> = StudioTool.entries,
+    val aspects: List<AspectPreset> = listOf(AspectPreset.FREE, AspectPreset.SQUARE, AspectPreset.PORTRAIT, AspectPreset.LANDSCAPE),
+    /** Forces this crop on open and hides the other presets: avatars are square, banners 3:1. */
+    val lockedAspect: AspectPreset? = null,
+    val circleMask: Boolean = false,
+    /** A caption field with a Send button replaces the confirm button (chats). */
+    val caption: TextFieldState? = null,
+    val initialTool: StudioTool = StudioTool.QUALITY,
+    val canRemove: Boolean = true,
+) {
+    companion object {
+        /** Right after a pick in a post-like composer: Add inserts the markers. */
+        fun postPick() = StudioConfig(confirmLabel = "Add")
+
+        /** Reopened from a block already in the post. */
+        fun postEdit() = StudioConfig(confirmLabel = "Done")
+
+        fun chat(caption: TextFieldState) = StudioConfig(confirmLabel = "Send", caption = caption)
+
+        fun avatar() =
+            StudioConfig(
+                confirmLabel = "Save",
+                tools = listOf(StudioTool.CROP),
+                lockedAspect = AspectPreset.SQUARE,
+                circleMask = true,
+                initialTool = StudioTool.CROP,
+                canRemove = false,
+            )
+
+        fun banner() =
+            StudioConfig(
+                confirmLabel = "Save",
+                tools = listOf(StudioTool.CROP, StudioTool.QUALITY),
+                lockedAspect = AspectPreset.BANNER,
+                initialTool = StudioTool.CROP,
+                canRemove = false,
+            )
+    }
+}
+
+/**
+ * Applies a locked aspect before the Studio opens, so the first frame already shows the crop that
+ * will be saved. Hosts call it when they hand files to the Studio.
+ */
+fun StudioConfig.prepare(drafts: List<MediaDraft>) {
+    val locked = lockedAspect ?: return
+    drafts.forEach { d ->
+        if (d.crop.aspect != locked) d.crop = CropSpec(rect = centeredCrop(d, locked), aspect = locked)
+    }
+}
+
 private val StudioBackground = Color(0xFF0E0E11)
 private val StudioPanel = Color(0xFF1A1A1F)
 
+/**
+ * @param drafts the files this session edits, in order; the thumbnail strip switches between them.
+ * @param onCancel shown as a close button when the Studio was opened by a pick, which it undoes.
+ * @param onRemove drops one file; the Studio moves to another, or cancels when none are left.
+ */
 @Composable
 fun MediaStudio(
-    composer: PrototypeComposer,
+    drafts: List<MediaDraft>,
     initial: MediaDraft,
-    onDone: () -> Unit,
+    config: StudioConfig,
+    onConfirm: () -> Unit,
+    onCancel: (() -> Unit)? = null,
+    onRemove: (MediaDraft) -> Unit = {},
     initialTool: StudioTool? = null,
     holdingOriginal: Boolean = false,
 ) {
     var current by remember { mutableStateOf(initial) }
-    val tools = remember(current) { StudioTool.entries.filter { it != StudioTool.TRIM || current.kind == DraftKind.VIDEO } }
-    var tool by remember(current) { mutableStateOf(initialTool?.takeIf { it in tools } ?: StudioTool.QUALITY) }
+    if (current !in drafts) drafts.firstOrNull()?.let { current = it }
+
+    val tools = remember(current, config) { config.tools.filter { it != StudioTool.TRIM || current.kind == DraftKind.VIDEO } }
+    var tool by remember(current) { mutableStateOf((initialTool ?: config.initialTool).takeIf { it in tools } ?: tools.first()) }
 
     Column(Modifier.fillMaxSize().background(StudioBackground)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onDone) { Text("Done", color = Color.White, fontWeight = FontWeight.SemiBold) }
+            if (onCancel != null) {
+                IconButton(onClick = onCancel) { Icon(MaterialSymbols.Close, contentDescription = "Cancel", tint = Color.White) }
+            } else {
+                Spacer(Modifier.width(48.dp))
+            }
             Spacer(Modifier.weight(1f))
-            val ordered = composer.orderedDrafts()
             val name = if (current.kind == DraftKind.VIDEO) "Video" else "Photo"
-            Text("$name ${composer.numberOf(current)} of ${ordered.size}", color = Color.White.copy(alpha = 0.8f))
+            Text(
+                if (drafts.size > 1) "$name ${drafts.indexOf(current) + 1} of ${drafts.size}" else name,
+                color = Color.White.copy(alpha = 0.8f),
+            )
             Spacer(Modifier.weight(1f))
-            TextButton(onClick = {
-                composer.remove(current)
-                composer.orderedDrafts().firstOrNull()?.let { current = it } ?: onDone()
-            }) { Text("Remove", color = Color(0xFFFF8A80)) }
+            if (config.canRemove) {
+                IconButton(onClick = { onRemove(current) }) {
+                    Icon(MaterialSymbols.Delete, contentDescription = "Remove", tint = Color.White.copy(alpha = 0.8f))
+                }
+            }
+            if (config.caption == null) {
+                Button(onClick = onConfirm, modifier = Modifier.padding(end = 8.dp).height(36.dp)) {
+                    Text(config.confirmLabel)
+                }
+            }
         }
 
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (tool == StudioTool.CROP) {
-                CropEditor(current, Modifier.fillMaxSize())
+                CropEditor(current, Modifier.fillMaxSize(), circleMask = config.circleMask)
             } else {
                 StudioPreview(current, holdingOriginal, Modifier.fillMaxSize())
             }
         }
 
-        val ordered = composer.orderedDrafts()
-        if (ordered.size > 1) {
+        if (drafts.size > 1) {
             Row(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
             ) {
-                ordered.forEach { d ->
+                drafts.forEach { d ->
                     DraftImage(
                         d,
                         Modifier
@@ -165,14 +248,54 @@ fun MediaStudio(
         Column(Modifier.fillMaxWidth().background(StudioPanel).padding(top = 12.dp)) {
             Box(Modifier.fillMaxWidth().height(132.dp).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                 when (tool) {
-                    StudioTool.CROP -> CropTools(current)
+                    StudioTool.CROP -> CropTools(current, config)
                     StudioTool.TRIM -> TrimTools(current)
                     StudioTool.QUALITY -> QualityTools(current)
                     StudioTool.ALT -> AltTools(current)
                     StudioTool.PRIVACY -> PrivacyTools(current)
                 }
             }
-            ToolTabs(tools, tool, onPick = { tool = it })
+            // One tool needs no tabs (the avatar crop).
+            if (tools.size > 1) ToolTabs(tools, tool, onPick = { tool = it })
+            config.caption?.let { CaptionRow(it, config.confirmLabel, onConfirm) }
+        }
+    }
+}
+
+/** Chat: the message goes with the media, so the caption and Send live in the Studio. */
+@Composable
+private fun CaptionRow(
+    caption: TextFieldState,
+    sendLabel: String,
+    onSend: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().background(StudioBackground).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BasicTextField(
+            state = caption,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            modifier = Modifier.weight(1f),
+            decorator = { inner ->
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(Color.White.copy(alpha = 0.1f))
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                ) {
+                    if (caption.text.isEmpty()) Text("Add a caption…", color = Color.White.copy(alpha = 0.5f))
+                    inner()
+                }
+            },
+        )
+        Spacer(Modifier.width(8.dp))
+        IconButton(
+            onClick = onSend,
+            modifier = Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
+        ) {
+            Icon(MaterialSymbols.AutoMirrored.Send, contentDescription = sendLabel, tint = MaterialTheme.colorScheme.onPrimary)
         }
     }
 }
@@ -318,6 +441,7 @@ private const val MIN_CROP = 0.12f
 fun CropEditor(
     draft: MediaDraft,
     modifier: Modifier,
+    circleMask: Boolean = false,
 ) {
     val density = LocalDensity.current
     BoxWithConstraints(modifier.padding(28.dp), contentAlignment = Alignment.Center) {
@@ -373,10 +497,22 @@ fun CropEditor(
                 val r = draft.crop.rect
                 val rect = Rect(r.left * size.width, r.top * size.height, r.right * size.width, r.bottom * size.height)
                 val dim = Color.Black.copy(alpha = 0.6f)
-                drawRect(dim, Offset.Zero, Size(size.width, rect.top))
-                drawRect(dim, Offset(0f, rect.bottom), Size(size.width, size.height - rect.bottom))
-                drawRect(dim, Offset(0f, rect.top), Size(rect.left, rect.height))
-                drawRect(dim, Offset(rect.right, rect.top), Size(size.width - rect.right, rect.height))
+                if (circleMask) {
+                    // An avatar is shown in a circle: dim everything the circle will hide.
+                    val hole =
+                        Path().apply {
+                            fillType = PathFillType.EvenOdd
+                            addRect(Rect(Offset.Zero, size))
+                            addOval(rect)
+                        }
+                    drawPath(hole, dim)
+                    drawOval(Color.White, rect.topLeft, rect.size, style = Stroke(2.dp.toPx()))
+                } else {
+                    drawRect(dim, Offset.Zero, Size(size.width, rect.top))
+                    drawRect(dim, Offset(0f, rect.bottom), Size(size.width, size.height - rect.bottom))
+                    drawRect(dim, Offset(0f, rect.top), Size(rect.left, rect.height))
+                    drawRect(dim, Offset(rect.right, rect.top), Size(size.width - rect.right, rect.height))
+                }
                 val grid = Color.White.copy(alpha = 0.35f)
                 for (i in 1..2) {
                     drawLine(grid, Offset(rect.left + rect.width * i / 3, rect.top), Offset(rect.left + rect.width * i / 3, rect.bottom), 1.dp.toPx())
@@ -474,10 +610,13 @@ fun centeredCrop(
 }
 
 @Composable
-private fun CropTools(draft: MediaDraft) {
+private fun CropTools(
+    draft: MediaDraft,
+    config: StudioConfig,
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AspectPreset.entries.forEach { preset ->
+            (config.lockedAspect?.let { listOf(it) } ?: config.aspects).forEach { preset ->
                 FilterChip(
                     selected = draft.crop.aspect == preset,
                     onClick = { draft.crop = draft.crop.copy(aspect = preset, rect = centeredCrop(draft, preset)) },
@@ -499,7 +638,7 @@ private fun CropTools(draft: MediaDraft) {
                 draft.crop = draft.crop.copy(mirrored = !draft.crop.mirrored)
             }
             StudioAction("Reset", { Icon(MaterialSymbols.AutoMirrored.Undo, contentDescription = null, tint = Color.White) }) {
-                draft.crop = CropSpec()
+                draft.crop = config.lockedAspect?.let { CropSpec(rect = centeredCropFor(draft, CropSpec(aspect = it)), aspect = it) } ?: CropSpec()
             }
         }
     }

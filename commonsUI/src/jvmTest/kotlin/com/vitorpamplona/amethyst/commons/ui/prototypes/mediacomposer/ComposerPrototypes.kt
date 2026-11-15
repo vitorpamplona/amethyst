@@ -78,20 +78,18 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import kotlin.math.roundToInt
 
 /*
- * PROTOTYPE ONLY. The composer with media, in two marker styles:
+ * PROTOTYPE ONLY. The post composer as a host of MediaStudio. Picking files opens the Studio
+ * (StudioConfig.postPick); "Add" puts each file in the text at the cursor; tapping a file reopens
+ * the Studio on it (StudioConfig.postEdit). The composer itself has no media settings at all.
  *
- *  A. MarkerStyle.CHIPS:  the text holds a chip ("▣ Photo 1") where the media goes, and a filmstrip
- *     under the text shows the files, numbered to match.
  *  B. MarkerStyle.BLOCKS: the media is drawn inside the text field, at its place in the text.
+ *     The default for full composers (notes, comments, long-form, issues, classifieds).
+ *  A. MarkerStyle.CHIPS:  the text holds a chip ("▣ Photo 1") and a filmstrip under the text shows
+ *     the files. For composers too small for a 210 dp block (reply sheets, chat rows).
  *
- * Both upload only on Post (prototype D): the field locks, every marker shows its progress, the Post
- * button counts the files, and a failure brings the composer back with the text untouched and the
- * failed file marked, with Retry / another server / remove.
- *
- * Gone, compared to ImageVideoDescription: the "Add Image" card, its title, the server spinner,
- * the alt-text field, five switches with explainer paragraphs, the quality explainer, and the
- * "Add to Message" button. Per-file choices moved into the file (tap it: MediaStudio); the server is
- * one chip in the toolbar.
+ * Both upload only on Post: the field locks, every marker shows its progress, the Post button
+ * counts the files, and a failure brings the composer back with the text untouched and the failed
+ * file marked, with Retry / another server / smaller.
  */
 
 enum class MarkerStyle { CHIPS, BLOCKS }
@@ -483,7 +481,7 @@ fun MediaCard(
 }
 
 @Composable
-private fun StatusOverlay(
+fun StatusOverlay(
     status: DraftStatus,
     compact: Boolean,
     onRetry: () -> Unit,
