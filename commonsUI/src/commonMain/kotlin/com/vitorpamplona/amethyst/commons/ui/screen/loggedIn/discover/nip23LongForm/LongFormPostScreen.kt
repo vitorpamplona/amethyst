@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip23Long
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -75,7 +74,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -106,10 +104,6 @@ import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDial
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePictureButton
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
@@ -119,22 +113,20 @@ import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.ContentSensitivityExplainer
-import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
-import com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.ExpirationDateButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.ExpirationDatePicker
-import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.InvoiceRequest
-import com.vitorpamplona.amethyst.commons.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeoHashPostSection
-import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerMediaTools
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerPostOptionTools
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerToolbar
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerToolsFormStartPadding
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.composerBody
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
-import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapTo
-import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.ObserveInboxRelayListAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
@@ -234,7 +226,7 @@ private fun MarkdownPostScreenBody(
                     .padding(
                         start = Size10dp,
                         end = Size10dp,
-                    ).weight(1f),
+                    ).then(composerBody()),
         ) {
             Column(
                 modifier =
@@ -766,79 +758,8 @@ private fun TagInputSection(
 
 @Composable
 private fun MarkdownBottomRowActions(postViewModel: LongFormPostViewModel) {
-    val scrollState = rememberScrollState()
-    Row(
-        modifier =
-            Modifier
-                .horizontalScroll(scrollState)
-                .fillMaxWidth()
-                .height(50.dp),
-        verticalAlignment = CenterVertically,
-    ) {
-        SelectFromGallery(
-            isUploading = postViewModel.isUploadingImage,
-            enabled = !postViewModel.isUploadingFile,
-            tint = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier,
-        ) {
-            postViewModel.selectImage(it)
-        }
-
-        SelectFromFiles(
-            isUploading = postViewModel.isUploadingFile,
-            enabled = !postViewModel.isUploadingImage,
-            tint = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier,
-        ) {
-            postViewModel.selectImage(it)
-        }
-
-        TakePictureButton(
-            onPictureTaken = {
-                postViewModel.selectImage(it)
-            },
-        )
-
-        TakeVideoButton(
-            onVideoTaken = {
-                postViewModel.selectImage(it)
-            },
-        )
-
-        DrawingButton(postViewModel.accountViewModel, enabled = !postViewModel.isUploadingImage && !postViewModel.isUploadingFile) { drawing, alt ->
-            postViewModel.uploadDrawing(drawing, alt, postViewModel.accountViewModel.toastManager::toast)
-        }
-
-        ForwardZapToButton(postViewModel.wantsForwardZapTo) {
-            postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
-        }
-
-        if (postViewModel.canAddZapRaiser) {
-            AddZapraiserButton(postViewModel.wantsZapRaiser) {
-                postViewModel.wantsZapRaiser = !postViewModel.wantsZapRaiser
-            }
-        }
-
-        MarkAsSensitiveButton(postViewModel.wantsToMarkAsSensitive) {
-            postViewModel.toggleMarkAsSensitive()
-        }
-
-        ExpirationDateButton(postViewModel.wantsExpirationDate) {
-            postViewModel.toggleExpirationDate()
-        }
-
-        AddGeoHashButton(postViewModel.wantsToAddGeoHash) {
-            postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash
-        }
-
-        AddSecretEmojiButton(postViewModel.wantsSecretEmoji) {
-            postViewModel.wantsSecretEmoji = !postViewModel.wantsSecretEmoji
-        }
-
-        if (postViewModel.canAddInvoice && postViewModel.hasLnAddress()) {
-            AddLnInvoiceButton(postViewModel.wantsInvoice) {
-                postViewModel.wantsInvoice = !postViewModel.wantsInvoice
-            }
-        }
+    ComposerToolbar(startPadding = ComposerToolsFormStartPadding) { _ ->
+        ComposerMediaTools(postViewModel)
+        ComposerPostOptionTools(postViewModel)
     }
 }
