@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideoButton
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.canCaptureFromCamera
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
@@ -442,7 +443,7 @@ private fun BottomRowActions(
             TakePictureButton(
                 onPictureTaken = { postViewModel.pickedMedia(it) },
             )
-        } else {
+        } else if (canCaptureFromCamera) {
             IconButton(
                 onClick = {
                     accountViewModel.toastManager.toast(Res.string.messages_cant_upload_title, Res.string.messages_cant_upload_explainer)
@@ -461,7 +462,7 @@ private fun BottomRowActions(
             TakeVideoButton(
                 onVideoTaken = { postViewModel.pickedMedia(it) },
             )
-        } else {
+        } else if (canCaptureFromCamera) {
             IconButton(
                 onClick = {
                     accountViewModel.toastManager.toast(Res.string.messages_cant_upload_title, Res.string.messages_cant_upload_explainer)

@@ -2025,6 +2025,7 @@
     <string name="relay_group_location_manual">Enter a geohash manually</string>
     <string name="location_picker_title">Choose location</string>
     <string name="location_picker_hint">Move the map, search for a place, or use your current location.</string>
+    <string name="location_picker_hint_map_only">Drag the map to put the pin on the place, or press and hold a spot to jump there.</string>
     <string name="location_picker_search_hint">Search for a city or address</string>
     <string name="location_picker_search_empty">No matching place found.</string>
     <string name="location_picker_use_mine">Use my current location</string>
@@ -2686,6 +2687,8 @@
     <string name="buzz_forum_new_title">New forum topic</string>
     <string name="buzz_forum_body_label">What do you want to discuss?</string>
     <string name="buzz_forum_post_action">Post topic</string>
+    <string name="buzz_forum_invalid_relay">This channel's relay address isn't valid, so the topic can't be posted there.</string>
+    <string name="buzz_forum_post_failed">Couldn't post the topic: %1$s</string>
     <string name="buzz_forum_thread_title">Forum thread</string>
     <string name="buzz_forum_no_replies">No replies yet. Be the first to respond.</string>
     <string name="buzz_dm_title">Direct Messages</string>
@@ -9114,6 +9117,13 @@
     <string name="geohash_level_building">Building</string>
     <string name="geohash_level_region">Region</string>
     <string name="geohash_level_block">Block</string>
+    <string name="geohash_area_continent">~5000 km</string>
+    <string name="geohash_area_region">~1250 km</string>
+    <string name="geohash_area_province">~39 km</string>
+    <string name="geohash_area_city">~5 km</string>
+    <string name="geohash_area_neighborhood">~1.2 km</string>
+    <string name="geohash_area_block">~150 m</string>
+    <string name="geohash_area_building">~38 m</string>
     <string name="geohash_chats_intro_title">Chat by location</string>
     <string name="geohash_chats_intro_description">Anonymous, ephemeral rooms shared with everyone in the same map cell. Interoperable with Bitchat.</string>
     <string name="geohash_chats_empty_title">No location channels yet</string>

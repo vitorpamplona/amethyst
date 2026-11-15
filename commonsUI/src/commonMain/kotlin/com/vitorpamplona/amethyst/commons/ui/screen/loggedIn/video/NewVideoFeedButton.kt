@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePicture
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideo
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.canCaptureFromCamera
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -216,9 +217,8 @@ fun NewVideoFeedButton(
         }
 
         FloatingActionButton(
-            onClick = {
-                isOpen = !isOpen
-            },
+            // With no camera (desktop), the gallery is the only choice: open it instead of a one-item menu.
+            onClick = { if (canCaptureFromCamera) isOpen = !isOpen else wantsToPostFromGallery = true },
             modifier = Size55Modifier,
             shape = CircleShape,
             containerColor = MaterialTheme.colorScheme.primary,

@@ -97,6 +97,11 @@ import com.vitorpamplona.amethyst.commons.resources.location_picker_search_hint
 import com.vitorpamplona.amethyst.commons.resources.location_picker_title
 import com.vitorpamplona.amethyst.commons.resources.location_picker_use_mine
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults.WORLD_CENTER_LAT
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults.WORLD_CENTER_LON
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults.WORLD_ZOOM
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeohashPickerDefaults.zoomForGeohashLength
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.areaSize
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.label
@@ -115,37 +120,6 @@ import org.osmdroid.util.GeoPoint
 
 /** Zoom the map animates to after a search hit or a "use my location" tap. */
 private const val RECENTER_ZOOM = 14.0
-
-/** How far out to start when the picker opens with nothing selected yet. */
-private const val WORLD_ZOOM = 2.5
-
-/**
- * A starting zoom so a seeded geohash cell roughly fills the view: a coarse cell
- * (few chars → large area) opens zoomed out, a fine cell zoomed in. Without this a
- * region-level seed would open uselessly tight and a building-level seed too loose.
- */
-private fun zoomForGeohashLength(length: Int): Double =
-    when {
-        length <= 1 -> 2.0
-        length == 2 -> 4.0
-        length == 3 -> 6.5
-        length == 4 -> 9.0
-        length == 5 -> 12.0
-        length == 6 -> 14.0
-        length == 7 -> 16.0
-        else -> 17.5
-    }
-
-/**
- * Neutral starting center when the picker opens with no seed: a genuinely unnamed
- * point in the mid-Atlantic, framing the Americas, Europe and Africa at [WORLD_ZOOM].
- *
- * Deliberately NOT 20N/0E — that is inland Mali (it reverse-geocodes to Tessalit) and
- * sits exactly on the prime meridian, where a sub-kilometre pan flips the geohash
- * between the `e…` and `s…` halves of the world and looks like a broken readout.
- */
-private const val WORLD_CENTER_LAT = 20.0
-private const val WORLD_CENTER_LON = -30.0
 
 /** Give up waiting for a GPS fix after this long so the button never spins forever. */
 private const val GPS_FIX_TIMEOUT_MS = 20_000L
@@ -774,15 +748,3 @@ private fun geohashBounds(geohash: String): BoundingBox? {
         gh.centerLon - lonWidth / 2,
     )
 }
-
-/** A rough physical size for a geohash cell at this precision, for the chip subtitle. */
-private fun GeohashChannelLevel.areaSize(): String =
-    when (this) {
-        GeohashChannelLevel.CONTINENT -> "~5000 km"
-        GeohashChannelLevel.REGION -> "~1250 km"
-        GeohashChannelLevel.PROVINCE -> "~39 km"
-        GeohashChannelLevel.CITY -> "~5 km"
-        GeohashChannelLevel.NEIGHBORHOOD -> "~1.2 km"
-        GeohashChannelLevel.BLOCK -> "~150 m"
-        GeohashChannelLevel.BUILDING -> "~38 m"
-    }
