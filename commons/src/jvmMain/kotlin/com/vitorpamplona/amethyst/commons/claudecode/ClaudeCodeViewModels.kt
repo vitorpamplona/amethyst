@@ -251,6 +251,18 @@ class ClaudeCodeChatViewModel(
 
     fun setModel(value: String?) = chat?.setModel(value)
 
+    /** Names the session, or, before it exists, the session it will become. */
+    fun rename(title: String) {
+        val key = chat?.key ?: return
+        viewModelScope.launch {
+            try {
+                service.renameChat(key, title)
+            } catch (e: IOException) {
+                Log.w("ClaudeCodeChatViewModel", "Could not rename the session", e)
+            }
+        }
+    }
+
     fun loadCliInfo() = chat?.loadCliInfo()
 
     /** The text a chat opened to ask a message again starts with, once. */

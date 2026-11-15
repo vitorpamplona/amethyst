@@ -264,6 +264,19 @@ class ChatTranscript {
     private fun attachResult(block: ContentBlock.ToolResult) = updateCall(block.toolUseId) { it.copy(result = block.text, isError = block.isError) }
 }
 
+/**
+ * What a chat with no name of its own is called: the first line of the first message the user
+ * wrote. A slash command (`/context`) says nothing about the conversation, so it is passed over.
+ */
+fun List<ChatItem>.firstPromptLine(): String? =
+    firstNotNullOfOrNull { item ->
+        (item as? ChatItem.UserText)
+            ?.text
+            ?.takeIf { it.isNotBlank() && !it.startsWith("/") }
+            ?.lineSequence()
+            ?.first { it.isNotBlank() }
+    }
+
 /** A row of the chat screen: a message, or a run of tool calls folded into one line. */
 @Immutable
 sealed interface ChatRow {

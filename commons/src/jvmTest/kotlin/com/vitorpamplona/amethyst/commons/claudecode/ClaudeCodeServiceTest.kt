@@ -160,6 +160,17 @@ class ClaudeCodeServiceTest {
         }
 
     @Test
+    fun renamingACopyBeforeItStartsLeavesItsSourceAlone() =
+        runBlocking {
+            service.refresh()
+            val fork = assertNotNull(service.fork(id))
+            service.renameChat(fork.key, "My copy")
+            assertEquals("My copy", fork.state.value.title)
+            // The copy still carries the source's id inside: nothing may be written to it.
+            assertTrue(sessionFile.readLines().none { it.contains("custom-title") })
+        }
+
+    @Test
     fun deletingAForkThatNeverStartedLeavesItsSourceAlone() =
         runBlocking {
             service.refresh()

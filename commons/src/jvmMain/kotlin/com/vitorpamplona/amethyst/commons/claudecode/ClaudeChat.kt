@@ -203,6 +203,7 @@ class ClaudeChat internal constructor(
     private var streamPublishedAt = 0L
 
     /** The name a new chat was given, for the CLI's session once it exists. */
+    @Volatile
     private var titleToApply: String? = if (resumeSessionId == null) title else null
 
     private val _state =
@@ -405,6 +406,12 @@ class ClaudeChat internal constructor(
     }
 
     internal fun titleChanged(title: String) = publish { it.copy(title = title) }
+
+    /** A name for a session that doesn't exist yet: shown now, given to the session when the CLI creates it. */
+    internal fun nameBeforeStart(title: String) {
+        titleToApply = title
+        publish { it.copy(title = title) }
+    }
 
     /** Ends the process after the running turn. */
     fun close() {

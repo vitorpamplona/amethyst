@@ -204,6 +204,37 @@ class ClaudeChatTest {
         }
 
     @Test
+    fun aNameGivenBeforeTheFirstMessageNamesTheSession() =
+        runTest {
+            val cli = ScriptedCli()
+            val chat = newChat(cli)
+            chat.nameBeforeStart("Relay list cleanup")
+            assertEquals("Relay list cleanup", chat.state.value.title)
+            // Nothing runs yet: the name waits for the session.
+            assertTrue(cli.written.isEmpty())
+
+            chat.send("Remove the dead relays")
+            advanceUntilIdle()
+
+            val renames = cli.written.filter { it.contains("\"subtype\":\"rename_session\"") }
+            assertEquals(1, renames.size)
+            assertTrue(renames.single().contains("Relay list cleanup"), renames.single())
+            chatScope.cancel()
+        }
+
+    @Test
+    fun aSlashCommandDoesNotNameAChat() {
+        val items =
+            listOf(
+                ChatItem.UserText(0, "/context"),
+                ChatItem.AssistantText(1, "usage"),
+                ChatItem.UserText(2, "\nFix the flaky relay test\nIt fails on CI"),
+            )
+        assertEquals("Fix the flaky relay test", items.firstPromptLine())
+        assertEquals(null, listOf<ChatItem>(ChatItem.UserText(0, "/compact")).firstPromptLine())
+    }
+
+    @Test
     fun aSessionAnotherClaudeCodeHoldsTakesNoMessage() =
         runTest {
             val cli = ScriptedCli()

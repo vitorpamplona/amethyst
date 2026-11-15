@@ -74,7 +74,9 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -375,7 +377,7 @@ private fun SessionRow(
             IconButton(onClick = { menu = true }) { Icon(MaterialSymbols.MoreVert, contentDescription = null, tint = MaterialTheme.colorScheme.grayText) }
             RoundedDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 RoundedMenuSection {
-                    MenuRow(stringRes(Res.string.rename), enabled = row.sessionId != null) {
+                    MenuRow(stringRes(Res.string.rename)) {
                         menu = false
                         onRename()
                     }
@@ -539,17 +541,36 @@ private fun NewSessionDialog(
 }
 
 @Composable
-private fun RenameDialog(
+internal fun RenameDialog(
     initial: String,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
 ) {
-    var title by remember { mutableStateOf(initial) }
+    // The whole name selected, so typing replaces it.
+    var title by remember { mutableStateOf(TextFieldValue(initial, TextRange(0, initial.length))) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringRes(Res.string.claude_code_rename_title)) },
-        text = { OutlinedTextField(value = title, onValueChange = { title = it }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
-        confirmButton = { TextButton(enabled = title.isNotBlank(), onClick = { onSave(title) }) { Text(stringRes(Res.string.save)) } },
+        text = {
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                singleLine = true,
+                modifier =
+                    Modifier.fillMaxWidth().focusRequester(focus).onPreviewKeyEvent { event ->
+                        // Enter saves.
+                        if (event.type == KeyEventType.KeyDown && event.key == Key.Enter && title.text.isNotBlank()) {
+                            onSave(title.text)
+                            true
+                        } else {
+                            false
+                        }
+                    },
+            )
+        },
+        confirmButton = { TextButton(enabled = title.text.isNotBlank(), onClick = { onSave(title.text) }) { Text(stringRes(Res.string.save)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) } },
     )
 }

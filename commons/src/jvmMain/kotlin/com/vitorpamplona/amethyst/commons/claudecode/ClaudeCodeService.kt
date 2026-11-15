@@ -320,7 +320,7 @@ class ClaudeCodeService(
                 // The list only shows these; streamed text must not rebuild it.
                 launch {
                     chat.state
-                        .map { Triple(it.sessionId, it.title, it.status) to (it.items.firstOrNull() as? ChatItem.UserText) }
+                        .map { Triple(it.sessionId, it.title, it.status) to it.items.firstPromptLine() }
                         .distinctUntilChanged()
                         .collect { if (chats.value[key] === chat) rebuildRows() }
                 }
@@ -378,9 +378,33 @@ class ClaudeCodeService(
         rebuildRows()
     }
 
+    /**
+     * Names the chat [key]. A session that exists is renamed the way the CLI does it; a chat
+     * whose session doesn't exist yet (new, or a copy before its first message) keeps the name
+     * and gives it to the session once the CLI creates it, never to the copy's source.
+     */
+    suspend fun renameChat(
+        key: String,
+        title: String,
+    ) {
+        val clean = title.trim().ifEmpty { return }
+        val chat = chats.value[key] ?: return
+        val state = chat.state.value
+        val sessionId = state.sessionId
+        if (sessionId == null || state.forking) {
+            chat.nameBeforeStart(clean)
+            return
+        }
+        if (!chat.renameLive(clean)) {
+            withContext(Dispatchers.IO) { store.rename(sessionId, clean) }
+            chat.titleChanged(clean)
+        }
+        refresh()
+    }
+
     private fun titleOf(state: ClaudeChatState): String =
         state.title?.takeIf { it.isNotBlank() }
-            ?: (state.items.firstOrNull { it is ChatItem.UserText } as? ChatItem.UserText)?.text?.lineSequence()?.first()
+            ?: state.items.firstPromptLine()
             ?: folderProject(File(state.cwd))
 
     suspend fun rename(
@@ -388,6 +412,8 @@ class ClaudeCodeService(
         title: String,
     ) {
         val clean = title.trim().ifEmpty { return }
+        // An open chat knows whether its session exists yet.
+        if (chats.value[row.key] != null) return renameChat(row.key, clean)
         val chat = chats.value[row.key]
         val renamedLive = chat?.renameLive(clean) ?: false
         val sessionId = row.sessionId
@@ -542,7 +568,7 @@ class ClaudeCodeService(
                         // A fork that hasn't started still holds its source's id: the row must not
                         // let a rename or a delete reach the source's file.
                         sessionId = state.sessionId.takeIf { !state.forking },
-                        title = state.title ?: (state.items.firstOrNull() as? ChatItem.UserText)?.text?.lineSequence()?.first() ?: "",
+                        title = state.title ?: state.items.firstPromptLine() ?: "",
                         lastPrompt = null,
                         cwd = state.cwd,
                         gitBranch = state.git?.branch,

@@ -116,6 +116,7 @@ import com.vitorpamplona.amethyst.commons.claudecode.SentImage
 import com.vitorpamplona.amethyst.commons.claudecode.ToolKind
 import com.vitorpamplona.amethyst.commons.claudecode.ToolView
 import com.vitorpamplona.amethyst.commons.claudecode.ToolViews
+import com.vitorpamplona.amethyst.commons.claudecode.firstPromptLine
 import com.vitorpamplona.amethyst.commons.claudecode.toChatRows
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -211,6 +212,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_update_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_view_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_waiting_approval
 import com.vitorpamplona.amethyst.commons.resources.claude_code_working
+import com.vitorpamplona.amethyst.commons.resources.rename
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.pickFiles
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
@@ -344,12 +346,26 @@ fun ClaudeCodeChatScreen(
         )
     }
 
+    var renaming by remember { mutableStateOf(false) }
+    val shownTitle = state.title?.takeIf { it.isNotBlank() } ?: state.items.firstPromptLine() ?: stringRes(Res.string.claude_code_new_session)
+    if (renaming) {
+        RenameDialog(
+            // A chat with no name yet starts from an empty field, not its placeholder.
+            initial = state.title?.takeIf { it.isNotBlank() } ?: state.items.firstPromptLine().orEmpty(),
+            onDismiss = { renaming = false },
+            onSave = {
+                viewModel.rename(it)
+                renaming = false
+            },
+        )
+    }
     Scaffold(
         topBar = {
             ChatTopBar(
-                title = state.title?.takeIf { it.isNotBlank() } ?: firstPrompt(state) ?: stringRes(Res.string.claude_code_new_session),
+                title = shownTitle,
                 subtitle = if (state.kind == ChatKind.SETTINGS) null else subtitle(state),
                 nav = nav,
+                onTitleClick = { renaming = true },
             ) {
                 val git = state.git
                 if (git != null && git.hasChanges) {
@@ -375,6 +391,7 @@ fun ClaudeCodeChatScreen(
                 ChatMenu(
                     canRunApp = canRunApp && !runningApp,
                     canEnd = state.status != ChatStatus.NOT_STARTED && state.status != ChatStatus.ENDED,
+                    onRename = { renaming = true },
                     onRunApp = { viewModel.runApp() },
                     onEnd = { viewModel.endSession() },
                 )
@@ -473,12 +490,6 @@ fun ClaudeCodeChatScreen(
     }
 }
 
-private fun firstPrompt(state: ClaudeChatState): String? =
-    (state.items.firstOrNull { it is ChatItem.UserText } as? ChatItem.UserText)
-        ?.text
-        ?.lineSequence()
-        ?.first()
-
 /** `amethyst · pr/feat/x` when the folder is a checkout, else the folder's name. */
 private fun subtitle(state: ClaudeChatState): String {
     val git = state.git ?: return folderName(state.cwd)
@@ -492,12 +503,26 @@ internal fun ChatTopBar(
     title: String,
     subtitle: String?,
     nav: INav,
+    onTitleClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit,
 ) {
     ShorterTopAppBar(
         title = {
             Column {
-                Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (onTitleClick != null) {
+                    // A click on the name renames the session.
+                    HoverTooltip(stringRes(Res.string.rename)) {
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = onTitleClick),
+                        )
+                    }
+                } else {
+                    Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
                 subtitle?.let {
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
@@ -1431,6 +1456,7 @@ internal fun MenuRow(
 private fun ChatMenu(
     canRunApp: Boolean,
     canEnd: Boolean,
+    onRename: () -> Unit,
     onRunApp: () -> Unit,
     onEnd: () -> Unit,
 ) {
@@ -1439,6 +1465,10 @@ private fun ChatMenu(
         IconButton(onClick = { open = true }) { Icon(MaterialSymbols.MoreVert, contentDescription = null) }
         RoundedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             RoundedMenuSection {
+                MenuRow(stringRes(Res.string.rename)) {
+                    open = false
+                    onRename()
+                }
                 MenuRow(stringRes(Res.string.claude_code_run_app), enabled = canRunApp) {
                     open = false
                     onRunApp()
