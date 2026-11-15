@@ -73,6 +73,9 @@ sealed interface StartError {
 class ClaudeCodeStartViewModel(
     private val service: ClaudeCodeService,
 ) : ViewModel() {
+    /** The agents installed on this computer, to start the session with. */
+    val installed = service.installed
+
     private val _checkout = MutableStateFlow<CheckoutState>(CheckoutState.Looking)
     val checkout: StateFlow<CheckoutState> = _checkout.asStateFlow()
 
@@ -145,6 +148,7 @@ class ClaudeCodeStartViewModel(
         permissionMode: PermissionMode,
         prompt: String,
         title: String?,
+        agentId: String? = null,
         onReady: (String) -> Unit,
     ) {
         val dir = (_checkout.value as? CheckoutState.Found)?.dir ?: return
@@ -153,7 +157,7 @@ class ClaudeCodeStartViewModel(
         _error.value = null
         viewModelScope.launch {
             try {
-                onReady(service.startFromNostr(dir, target, branch.trim(), permissionMode, prompt, title).key)
+                onReady(service.startFromNostr(dir, target, branch.trim(), permissionMode, prompt, title, agentId?.let { service.backend(it) } ?: service.backend).key)
             } catch (e: IOException) {
                 _error.value = StartError.Failed(e.message)
             } finally {

@@ -148,6 +148,11 @@ fun ClaudeCodeStartScreen(
         )
     }
     var mode by remember { mutableStateOf(PermissionMode.DEFAULT) }
+    val installed by viewModel.installed.collectAsStateWithLifecycle()
+    var agentId by remember { mutableStateOf<String?>(null) }
+    val agent = installed.firstOrNull { it.id == agentId } ?: installed.firstOrNull()
+    val modes = agent?.capabilities?.modes?.filter { it in PICKABLE_MODES } ?: PICKABLE_MODES
+    if (mode !in modes) mode = PermissionMode.DEFAULT
 
     val issuePrompt =
         issue?.let {
@@ -200,10 +205,11 @@ fun ClaudeCodeStartScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
+                AgentPicker(installed, agent?.id) { agentId = it }
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(stringRes(Res.string.claude_code_permissions), style = MaterialTheme.typography.labelLarge)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        PICKABLE_MODES.forEach { option ->
+                        modes.forEach { option ->
                             FilterChip(selected = option == mode, onClick = { mode = option }, label = { Text(modeLabel(option)) })
                         }
                     }
@@ -222,7 +228,7 @@ fun ClaudeCodeStartScreen(
                     Text(
                         when (it) {
                             StartError.NotARepository -> stringRes(Res.string.claude_code_error_not_a_repository)
-                            is StartError.Failed -> stringRes(Res.string.claude_code_error_start_failed, it.message ?: "")
+                            is StartError.Failed -> stringRes(Res.string.claude_code_error_start_failed, agent?.shortName ?: "Claude", it.message ?: "")
                         },
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
@@ -246,7 +252,7 @@ fun ClaudeCodeStartScreen(
                                 proposalCloneUrls = proposalClones,
                                 proposalBranch = proposal?.branchName(),
                             )
-                        viewModel.start(target, branch, mode, prompt, itemTitle) { key ->
+                        viewModel.start(target, branch, mode, prompt, itemTitle, agentId = agent?.id) { key ->
                             nav.popBack()
                             nav.nav(Route.ClaudeCodeChat(key))
                         }

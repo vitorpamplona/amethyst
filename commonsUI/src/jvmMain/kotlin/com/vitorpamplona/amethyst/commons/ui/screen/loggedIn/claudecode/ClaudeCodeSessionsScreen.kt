@@ -81,6 +81,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.agents.AgentBackend
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.amethyst.commons.claudecode.ChatStatus
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
@@ -93,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.claude_code_agent
 import com.vitorpamplona.amethyst.commons.resources.claude_code_browse
 import com.vitorpamplona.amethyst.commons.resources.claude_code_delete
 import com.vitorpamplona.amethyst.commons.resources.claude_code_delete_body
@@ -136,6 +138,7 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.claudecode.ClaudeBackend
 import kotlinx.coroutines.launch
 import java.awt.FileDialog
 import java.awt.Frame
@@ -350,6 +353,10 @@ private fun SessionRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Sessions with an agent other than the default say which.
+                if (row.agentId.isNotEmpty() && row.agentId != ClaudeBackend.ID) {
+                    Text(row.agentName + " • ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, maxLines = 1)
+                }
                 row.gitBranch?.let {
                     Text(
                         it,
@@ -461,6 +468,11 @@ private fun NewSessionDialog(
     var folder by remember { mutableStateOf(suggestedFolders.firstOrNull() ?: System.getProperty("user.home")) }
     var worktree by remember { mutableStateOf(false) }
     var mode by remember { mutableStateOf(PermissionMode.DEFAULT) }
+    val installed by viewModel.installed.collectAsStateWithLifecycle()
+    var agentId by remember { mutableStateOf<String?>(null) }
+    val agent = installed.firstOrNull { it.id == agentId } ?: installed.firstOrNull()
+    val modes = agent?.capabilities?.modes?.filter { it in PICKABLE_MODES } ?: PICKABLE_MODES
+    if (mode !in modes) mode = PermissionMode.DEFAULT
     val scope = rememberCoroutineScope()
     val browseTitle = stringRes(Res.string.claude_code_browse)
 
@@ -469,6 +481,8 @@ private fun NewSessionDialog(
         title = { Text(stringRes(Res.string.claude_code_new_session)) },
         text = {
             Column(Modifier.widthIn(min = 420.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                // Which agent works on it, when more than one is installed.
+                AgentPicker(installed, agent?.id) { agentId = it }
                 OutlinedTextField(
                     value = folder,
                     onValueChange = {
@@ -512,7 +526,7 @@ private fun NewSessionDialog(
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(stringRes(Res.string.claude_code_permissions), style = MaterialTheme.typography.labelLarge)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        PICKABLE_MODES.forEach { option ->
+                        modes.forEach { option ->
                             FilterChip(selected = option == mode, onClick = { mode = option }, label = { Text(modeLabel(option)) })
                         }
                     }
@@ -532,12 +546,30 @@ private fun NewSessionDialog(
             }
         },
         confirmButton = {
-            TextButton(enabled = !creating && folder.isNotBlank(), onClick = { viewModel.newChat(folder, worktree, mode, onStarted) }) {
+            TextButton(enabled = !creating && folder.isNotBlank(), onClick = { viewModel.newChat(folder, worktree, mode, agent?.id, onStarted) }) {
                 Text(stringRes(Res.string.claude_code_start))
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) } },
     )
+}
+
+/** Chips to pick the agent from the installed ones; nothing when there is only one. */
+@Composable
+internal fun AgentPicker(
+    installed: List<AgentBackend>,
+    selected: String?,
+    onPick: (String) -> Unit,
+) {
+    if (installed.size < 2) return
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(stringRes(Res.string.claude_code_agent), style = MaterialTheme.typography.labelLarge)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            installed.forEach { agent ->
+                FilterChip(selected = agent.id == selected, onClick = { onPick(agent.id) }, label = { Text(agent.displayName) })
+            }
+        }
+    }
 }
 
 @Composable

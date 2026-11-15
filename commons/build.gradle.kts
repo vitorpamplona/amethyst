@@ -176,6 +176,7 @@ kotlin {
                 // Drives the user's installed Claude Code CLI (claudecode/): the session list and
                 // chats. Desktop only: Android can't run the CLI.
                 api(project(":claudeCodeClient"))
+                api(project(":codexClient"))
 
                 // Secure key storage via OS keychain (macOS/Windows/Linux)
                 implementation(libs.java.keyring)

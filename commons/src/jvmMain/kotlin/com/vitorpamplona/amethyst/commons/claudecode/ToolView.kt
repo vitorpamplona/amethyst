@@ -171,6 +171,8 @@ object ToolViews {
             "Edit" -> edit(input, cwd, pending, listOf(input))
             "MultiEdit" -> edit(input, cwd, pending, (input["edits"] as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty())
             "Write" -> write(input, cwd, pending)
+            // Codex's file changes: each file with its unified diff.
+            "ApplyPatch" -> applyPatch(input, cwd)
             "Bash", "PowerShell" -> input.str("command")?.let { ToolView.Command(it, input.str("description")) }
             "Read", "NotebookRead" ->
                 (input.str("file_path") ?: input.str("notebook_path"))?.let { path ->
@@ -184,6 +186,42 @@ object ToolViews {
             "WebSearch" -> input.str("query")?.let { ToolView.Web(it) }
             else -> null
         } ?: ToolView.Raw(input.toString())
+
+    /**
+     * A patch of several files, as Codex reports one: each change has a path, a kind (`add`,
+     * `delete`, `update`) and a diff. An update's diff is hunks; an added or deleted file's
+     * may be its plain content, shown as all added or all removed.
+     */
+    private fun applyPatch(
+        input: JsonObject,
+        cwd: File?,
+    ): ToolView.FileChange? {
+        val changes = (input["changes"] as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
+        if (changes.isEmpty()) return null
+        var added = 0
+        var removed = 0
+        val text = StringBuilder()
+        changes.forEach { change ->
+            val path = relative(change.str("path") ?: return@forEach, cwd)
+            val kind = (change["kind"] as? JsonObject)?.str("type") ?: change.str("kind")
+            val diff = change.str("diff").orEmpty()
+            val body =
+                when {
+                    diff.startsWith("@@") || diff.contains("\n@@") -> diff
+                    kind == "add" -> lines(diff).joinToString("\n", prefix = "@@ -0,0 +1,${lines(diff).size} @@\n") { "+$it" }
+                    kind == "delete" -> lines(diff).joinToString("\n", prefix = "@@ -1,${lines(diff).size} +0,0 @@\n") { "-$it" }
+                    else -> diff
+                }
+            body.lineSequence().forEach { line ->
+                if (line.startsWith("+") && !line.startsWith("+++")) added++
+                if (line.startsWith("-") && !line.startsWith("---")) removed++
+            }
+            text.append(header(path, kind == "add")).append(body.trimEnd('\n')).append('\n')
+        }
+        val first = relative(changes.first().str("path").orEmpty(), cwd)
+        val newFile = changes.size == 1 && ((changes.first()["kind"] as? JsonObject)?.str("type") ?: changes.first().str("kind")) == "add"
+        return ToolView.FileChange(first, text.toString(), added, removed, newFile)
+    }
 
     /** A tool input's values on one line (`app.theme DARK`), for tools the app doesn't draw itself. */
     fun argumentsLine(input: String): String {

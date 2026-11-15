@@ -150,6 +150,9 @@ class ClaudeCodeSessionsViewModel(
         _newChatError.value = null
     }
 
+    /** The agents installed on this computer, to start a session with. */
+    val installed = service.installed
+
     /**
      * Starts a chat in [folder], or in a new worktree of the repository it is in when
      * [inWorktree], and hands its key to [onReady].
@@ -158,6 +161,7 @@ class ClaudeCodeSessionsViewModel(
         folder: String,
         inWorktree: Boolean,
         permissionMode: PermissionMode,
+        agentId: String? = null,
         onReady: (String) -> Unit,
     ) {
         val dir = File(expandHome(folder))
@@ -185,7 +189,7 @@ class ClaudeCodeSessionsViewModel(
                         dir
                     }
                 _newChatError.value = null
-                onReady(service.newChat(cwd, permissionMode).key)
+                onReady(service.newChat(cwd, permissionMode, agent = agentId?.let { service.backend(it) } ?: service.backend).key)
             } finally {
                 _creating.value = false
             }

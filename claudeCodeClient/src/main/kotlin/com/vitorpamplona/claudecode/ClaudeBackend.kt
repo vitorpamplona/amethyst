@@ -45,6 +45,7 @@ class ClaudeBackend(
 ) : AgentBackend {
     override val id = ID
     override val displayName = "Claude Code"
+    override val shortName = "Claude"
 
     override val capabilities =
         AgentCapabilities(

@@ -31,6 +31,7 @@ import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.TranscriptEntry
 import com.vitorpamplona.amethyst.commons.util.appDataDir
 import com.vitorpamplona.claudecode.ClaudeBackend
+import com.vitorpamplona.codex.CodexBackend
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -70,6 +71,9 @@ data class ClaudeSessionRow(
     val openElsewhere: AgentLiveSession?,
     /** The repository (or folder) the session belongs to, worktrees included: the list's sections. */
     val project: String,
+    /** Which agent the session is with ([AgentBackend.id]) and its name. */
+    val agentId: String = "",
+    val agentName: String = "",
     /** Its folder is gone (a removed worktree): kept for its history, out of the way. */
     val archived: Boolean = false,
 )
@@ -80,6 +84,8 @@ data class ChatAttention(
     val key: String,
     val title: String,
     val kind: Kind,
+    /** The agent, as a sentence names it ("Codex finished"). */
+    val agent: String = "Claude",
 ) {
     enum class Kind {
         NEEDS_APPROVAL,
@@ -99,10 +105,27 @@ data class ProjectInfo(
  * process ([shared]), so the chats outlive the screens that show them.
  */
 class ClaudeCodeService(
-    /** The agent the chats talk to. */
-    val backend: AgentBackend = ClaudeBackend(),
+    /** The agents the chats can talk to; the first is the default. */
+    val backends: List<AgentBackend> = listOf(ClaudeBackend(), CodexBackend()),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) {
+    constructor(backend: AgentBackend, scope: CoroutineScope) : this(listOf(backend), scope)
+
+    /** The default agent: Claude Code. */
+    val backend: AgentBackend get() = backends.first()
+
+    /** Which agent saved each session, as of the last [refresh]. */
+    private val owners = ConcurrentHashMap<String, AgentBackend>()
+
+    private fun backendOf(sessionId: String?): AgentBackend = sessionId?.let { owners[it] } ?: backend
+
+    fun backend(id: String): AgentBackend? = backends.firstOrNull { it.id == id }
+
+    private val _installed = MutableStateFlow<List<AgentBackend>>(emptyList())
+
+    /** The agents installed on this computer, as of the last [refresh]. */
+    val installed: StateFlow<List<AgentBackend>> = _installed.asStateFlow()
+
     private val chats = MutableStateFlow<Map<String, ClaudeChat>>(emptyMap())
     private val watchers = ConcurrentHashMap<String, Job>()
     private val saved = MutableStateFlow<List<AgentSessionInfo>>(emptyList())
@@ -173,14 +196,20 @@ class ClaudeCodeService(
     /** Re-reads the saved sessions and which ones are open elsewhere. */
     suspend fun refresh() {
         withContext(Dispatchers.IO) {
-            _executable.value = backend.executable()
+            val found = backends.filter { it.executable() != null }
+            _installed.value = found
+            _executable.value = found.firstNotNullOfOrNull { it.executable() }
+            // Every agent: Claude's saved sessions are files, readable even without `claude`.
             saved.value =
-                try {
-                    backend.listSessions()
-                } catch (e: IOException) {
-                    Log.w(TAG, "Could not list Claude Code sessions", e)
-                    emptyList()
-                }
+                backends
+                    .flatMap { agent ->
+                        try {
+                            agent.listSessions().onEach { owners[it.sessionId] = agent }
+                        } catch (e: IOException) {
+                            Log.w(TAG, "Could not list ${agent.displayName} sessions", e)
+                            emptyList()
+                        }
+                    }.sortedByDescending { it.lastModified }
             goneFolders =
                 saved.value
                     .mapNotNull { it.cwd }
@@ -190,13 +219,7 @@ class ClaudeCodeService(
                 .distinct()
                 .filter { !projects.containsKey(it) }
                 .forEach { cwd -> computeProject(cwd)?.let { projects[cwd] = it } }
-            elsewhere.value =
-                try {
-                    backend.liveSessions()
-                } catch (e: IOException) {
-                    Log.w(TAG, "Could not read the running Claude Code sessions", e)
-                    emptyMap()
-                }
+            elsewhere.value = liveSessions()
         }
         _loaded.value = true
         rebuildRows()
@@ -212,11 +235,14 @@ class ClaudeCodeService(
         chats.value.values
             .firstOrNull { it.state.value.sessionId == key }
             ?.let { return it }
-        val info = saved.value.firstOrNull { it.sessionId == key } ?: backend.session(key) ?: return null
+        val info =
+            saved.value.firstOrNull { it.sessionId == key }
+                ?: backends.firstNotNullOfOrNull { agent -> agent.session(key)?.also { owners[it.sessionId] = agent } }
+                ?: return null
         // A folder that is gone stays the chat's folder: the history reads, and the chat refuses
         // to start rather than resume in some other folder.
         val cwd = info.cwd?.let { File(it) } ?: File(System.getProperty("user.home"))
-        return open(key, info.sessionId, cwd, info.title, PermissionMode.DEFAULT, null)
+        return open(key, info.sessionId, cwd, info.title, PermissionMode.DEFAULT, null, agent = backendOf(info.sessionId))
     }
 
     /**
@@ -228,7 +254,8 @@ class ClaudeCodeService(
         permissionMode: PermissionMode = PermissionMode.DEFAULT,
         model: String? = null,
         title: String? = null,
-    ): ClaudeChat = open("new-${UUID.randomUUID()}", null, cwd, title?.trim()?.ifEmpty { null }, permissionMode, model)
+        agent: AgentBackend = backend,
+    ): ClaudeChat = open("new-${UUID.randomUUID()}", null, cwd, title?.trim()?.ifEmpty { null }, permissionMode, model, agent = agent)
 
     /**
      * A new chat that starts from [key]'s history and branches off it with its first message:
@@ -238,7 +265,8 @@ class ClaudeCodeService(
         val source = chats.value[key]?.state?.value
         val sessionId = source?.sessionId ?: saved.value.firstOrNull { it.sessionId == key }?.sessionId ?: return null
         val cwd = source?.cwd ?: saved.value.firstOrNull { it.sessionId == sessionId }?.cwd ?: return null
-        return open("fork-${UUID.randomUUID()}", sessionId, File(cwd), null, source?.permissionMode ?: PermissionMode.DEFAULT, null, fork = true)
+        val agent = chats.value[key]?.backend ?: backendOf(sessionId)
+        return open("fork-${UUID.randomUUID()}", sessionId, File(cwd), null, source?.permissionMode ?: PermissionMode.DEFAULT, null, fork = true, agent = agent)
     }
 
     /**
@@ -259,12 +287,13 @@ class ClaudeCodeService(
         val model = source?.modelChoice
         // The same prompt can be sent more than once: the one with as many before it as on screen.
         val repeats = source?.items?.takeWhile { it.id != message.id }?.count { it is ChatItem.UserText && it.text == message.text } ?: 0
-        val prompt = promptsIn(backend.transcript(sessionId)).filter { it.second == message.text }.getOrNull(repeats)?.first
+        val agent = chat?.backend ?: backendOf(sessionId)
+        val prompt = promptsIn(agent.transcript(sessionId)).filter { it.second == message.text }.getOrNull(repeats)?.first
         val copy =
             if (prompt?.parentUuid == null) {
-                open("new-${UUID.randomUUID()}", null, File(cwd), null, mode, model)
+                open("new-${UUID.randomUUID()}", null, File(cwd), null, mode, model, agent = agent)
             } else {
-                open("fork-${UUID.randomUUID()}", sessionId, File(cwd), null, mode, model, fork = true, forkBefore = prompt)
+                open("fork-${UUID.randomUUID()}", sessionId, File(cwd), null, mode, model, fork = true, forkBefore = prompt, agent = agent)
             }
         copy.draft = message.text
         return copy
@@ -290,6 +319,7 @@ class ClaudeCodeService(
         mcpServers: List<HostToolServer> = emptyList(),
         launchOptions: (AgentStartOptions) -> AgentStartOptions = { it },
         kind: ChatKind = ChatKind.CODE,
+        agent: AgentBackend = backend,
     ): ClaudeChat {
         val chat =
             ClaudeChat(
@@ -299,7 +329,7 @@ class ClaudeCodeService(
                 title,
                 mode,
                 model,
-                backend,
+                agent,
                 scope,
                 onSessionChanged = { refreshInBackground() },
                 fork = fork,
@@ -329,7 +359,7 @@ class ClaudeCodeService(
                             status == ChatStatus.NEEDS_APPROVAL -> ChatAttention.Kind.NEEDS_APPROVAL
                             wasRunning && (status == ChatStatus.READY || status == ChatStatus.ENDED) -> ChatAttention.Kind.FINISHED
                             else -> null
-                        }?.let { _attention.tryEmit(ChatAttention(chat.key, titleOf(chat.state.value), it)) }
+                        }?.let { _attention.tryEmit(ChatAttention(chat.key, titleOf(chat.state.value), it, chat.backend.shortName)) }
                         last = status
                         recountNeedsYou()
                     }
@@ -345,12 +375,26 @@ class ClaudeCodeService(
      * Whether a Claude Code process other than this app's own has [sessionId] open, read from the
      * CLI's registry now rather than from the last [refresh]: a terminal may have just opened it.
      */
+    private fun liveSessions(): Map<String, AgentLiveSession> =
+        backends
+            .filter { it.capabilities.liveSessions }
+            .flatMap { agent ->
+                try {
+                    agent.liveSessions().entries
+                } catch (e: IOException) {
+                    Log.w(TAG, "Could not read the running ${agent.displayName} sessions", e)
+                    emptySet()
+                }
+            }.associate { it.key to it.value }
+
     private fun isHeldElsewhere(sessionId: String): Boolean {
+        val agent = backendOf(sessionId)
+        if (!agent.capabilities.liveSessions) return false
         val live =
             try {
-                backend.liveSessions()[sessionId]
+                agent.liveSessions()[sessionId]
             } catch (e: IOException) {
-                Log.w(TAG, "Could not read the running Claude Code sessions", e)
+                Log.w(TAG, "Could not read the running ${agent.displayName} sessions", e)
                 null
             } ?: return false
         return ProcessHandle.current().descendants().noneMatch { it.pid() == live.pid }
@@ -362,13 +406,7 @@ class ClaudeCodeService(
      */
     suspend fun refreshLive() {
         withContext(Dispatchers.IO) {
-            elsewhere.value =
-                try {
-                    backend.liveSessions()
-                } catch (e: IOException) {
-                    Log.w(TAG, "Could not read the running Claude Code sessions", e)
-                    emptyMap()
-                }
+            elsewhere.value = liveSessions()
         }
         rebuildRows()
     }
@@ -391,7 +429,7 @@ class ClaudeCodeService(
             return
         }
         if (!chat.renameLive(clean)) {
-            withContext(Dispatchers.IO) { backend.rename(sessionId, clean) }
+            withContext(Dispatchers.IO) { backendOf(sessionId).rename(sessionId, clean) }
             chat.titleChanged(clean)
         }
         refresh()
@@ -413,7 +451,7 @@ class ClaudeCodeService(
         val renamedLive = chat?.renameLive(clean) ?: false
         val sessionId = row.sessionId
         if (!renamedLive && sessionId != null) {
-            withContext(Dispatchers.IO) { backend.rename(sessionId, clean) }
+            withContext(Dispatchers.IO) { backendOf(sessionId).rename(sessionId, clean) }
             chat?.titleChanged(clean)
         }
         refresh()
@@ -431,7 +469,7 @@ class ClaudeCodeService(
             rebuildRows()
         }
         val sessionId = row.sessionId
-        if (sessionId != null) withContext(Dispatchers.IO) { backend.delete(sessionId) }
+        if (sessionId != null) withContext(Dispatchers.IO) { backendOf(sessionId).delete(sessionId) }
         refresh()
     }
 
@@ -457,9 +495,10 @@ class ClaudeCodeService(
         permissionMode: PermissionMode,
         prompt: String,
         title: String? = null,
+        agent: AgentBackend = backend,
     ): ClaudeChat {
         val workspace = workspaces.prepare(checkout, target, branch)
-        val chat = newChat(workspace.dir, permissionMode, title = title)
+        val chat = newChat(workspace.dir, permissionMode, title = title, agent = agent)
         if (prompt.isNotBlank()) chat.send(prompt)
         return chat
     }
@@ -486,6 +525,7 @@ class ClaudeCodeService(
                 null,
                 kind = ChatKind.SETTINGS,
                 mcpServers = listOf(settings),
+                agent = backends.firstOrNull { it.capabilities.hostTools } ?: backend,
                 launchOptions = { options ->
                     options.copy(
                         onlyHostTools = true,
@@ -545,6 +585,8 @@ class ClaudeCodeService(
                     openElsewhere = live[info.sessionId]?.takeIf { it.pid !in ownPids },
                     project = projectOf(info.cwd),
                     archived = info.cwd in gone,
+                    agentId = backendOf(info.sessionId).id,
+                    agentName = backendOf(info.sessionId).displayName,
                 )
             }
         val savedIds = saved.value.mapTo(HashSet()) { it.sessionId }
@@ -570,6 +612,8 @@ class ClaudeCodeService(
                         appStatus = state.status,
                         openElsewhere = null,
                         project = projectOf(state.cwd),
+                        agentId = chat.backend.id,
+                        agentName = chat.backend.displayName,
                     )
                 }
         _rows.value = (unsaved + fromDisk).sortedByDescending { it.lastModified }

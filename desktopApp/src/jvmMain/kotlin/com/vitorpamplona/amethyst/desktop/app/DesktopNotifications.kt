@@ -150,6 +150,7 @@ class DesktopNotifications(
                             ChatAttention.Kind.NEEDS_APPROVAL -> Res.string.claude_code_notify_needs_you
                             ChatAttention.Kind.FINISHED -> Res.string.claude_code_notify_finished
                         },
+                        event.agent,
                     )
                 val notifier = withContext(Dispatchers.IO) { dispatcher }
                 val result = notifier.send(NotificationSpec(title = title, body = event.title, kind = NotifKind.AGENT, threadId = CLAUDE_CODE_THREAD))

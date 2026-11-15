@@ -212,6 +212,9 @@ interface AgentBackend {
     /** The agent's name for people: "Claude Code", "Codex". */
     val displayName: String
 
+    /** How a sentence names it: "Claude wants to run a command". */
+    val shortName: String get() = displayName
+
     val capabilities: AgentCapabilities
 
     /** The agent's program, or null when it isn't installed. */

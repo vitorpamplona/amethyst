@@ -343,7 +343,7 @@ enum class ToolKind {
             when (toolName) {
                 "Bash", "PowerShell", "BashOutput", "KillShell", "Monitor" -> COMMAND
                 "Read", "NotebookRead" -> READ
-                "Edit", "Write", "MultiEdit", "NotebookEdit" -> EDIT
+                "Edit", "Write", "MultiEdit", "NotebookEdit", "ApplyPatch" -> EDIT
                 "Grep", "Glob", "LS", "ToolSearch" -> SEARCH
                 "WebFetch", "WebSearch" -> WEB
                 "Task", "Agent", "Workflow" -> AGENT

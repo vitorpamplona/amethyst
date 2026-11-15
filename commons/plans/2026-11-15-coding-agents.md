@@ -1,7 +1,7 @@
 # Coding agents: Claude Code and Codex behind one chat
 
 **Date:** 2026-11-15
-**Status:** design, not started
+**Status:** steps 1–4 done (Codex turns not yet seen succeed: no API credit where it was built)
 **Owning modules:** `commons` (agent interface, chats), `claudeCodeClient` (Claude backend), a new
 `codexClient` (Codex backend), `commonsUI` (screens)
 
@@ -40,7 +40,7 @@ can be added later on the same interface if wanted.
 | Tool calls | `tool_use` blocks by tool name | items: `commandExecution`, `fileChange`, `mcpToolCall`, `webSearch`, … |
 | In-app tools | in-process MCP over the pipe (`mcp_message`) | `item/tool/call` server request (dynamic tools) |
 | System prompt | `--append-system-prompt` | `developerInstructions` |
-| Subagents | `parent_tool_use_id`, `subagents/` files | to check |
+| Subagents | `parent_tool_use_id`, `subagents/` files | not shown yet (`collabAgentToolCall` items show as an Agent call) |
 | Login | the user's own `claude` login | `account/read`, `account/login/start`; `requiresOpenaiAuth` |
 
 Checked so far: `codex app-server` 0.169.0 answers `initialize`, `model/list`, `skills/list` and
@@ -81,6 +81,20 @@ picks the agent (only installed ones show).
 Each client replays recorded output in unit tests. Live tests are gated by env vars
 (`CLAUDE_CODE_LIVE=1`, `CODEX_LIVE=1`) and spend a little of the user's account. Codex turns need
 an OpenAI login or API key in the environment that records the fixtures.
+
+## As built
+
+- `agentCore` holds the shared vocabulary and `AgentBackend` / `AgentConnection` / `AgentEvent`;
+  `claudeCodeClient` and `codexClient` each implement them and depend on nothing else of the app.
+- The service lists every agent's sessions (Claude's from its files even without `claude`; Codex's
+  through a short-lived `codex app-server`), rows carry the agent, New session and the nostr start
+  screen pick one, and a chat names its agent ("Message Codex", "Codex wants to run a command").
+- Codex: approvals are `accept` / `acceptForSession` / `decline` / `cancel`; file changes show as
+  `ApplyPatch` diffs; fork before a message is `thread/fork` through the turn before it; slash
+  commands, subagents, live-session detection and the settings assistant stay Claude-only.
+- Checked in the app: a Codex chat started, its model list showed, a message went out and the
+  turn's failure (no credit) showed in Codex's words; the list showed it as Codex. Claude chats
+  unchanged.
 
 ## Open
 

@@ -286,7 +286,7 @@ class DesktopNotificationAutoDispatcher(
                 // Posted by DesktopCalendarReminders, never classified from an event here.
                 NotifKind.CALENDAR -> loadStringRes(Res.string.calendar_reminder_default_title)
                 // Posted by DesktopNotifications.watchClaudeCode, never classified from an event.
-                NotifKind.AGENT -> loadStringRes(Res.string.claude_code_notify_finished)
+                NotifKind.AGENT -> loadStringRes(Res.string.claude_code_notify_finished, "Claude")
                 // Posted by the front page printer, never classified from an event here.
                 NotifKind.FRONT_PAGE -> loadStringRes(Res.string.front_page_ready_title)
             }
