@@ -150,20 +150,22 @@ class CursorPlannerTest {
         val asked = Filter(authors = listOf(alice), kinds = listOf(1, 30023))
         // The pool took 30023 out of what it sent, and its EOSE reports what it sent.
         val sent = Filter(authors = listOf(alice), kinds = listOf(1))
+        val refused = { relay: NormalizedRelayUrl -> if (relay == refusing) setOf(30023) else emptySet() }
         val cursors = RelayCursors()
-        val listener = CursorRoutingListener(RecordingListener(), asked = { listOf(asked) }) { listOf(cursors) }
+        val listener = CursorRoutingListener(RecordingListener(), refusedKinds = refused) { listOf(cursors) }
 
         listener.onEose(refusing, listOf(sent))
-        assertNull(cursors.plan(refusing, FilterShape.of(asked)).single().since, "one answer could be an older request's")
 
-        listener.onEose(refusing, listOf(sent))
-        val again = cursors.plan(refusing, FilterShape.of(asked)).single()
-        assertEquals(cursors.since(refusing), again.since, "asked again from the cursor, not from scratch")
-
-        // The relay takes the kind again: it is asked for in full.
-        listener.onEose(refusing, listOf(asked))
-        cursors.newEose(refusing, listOf(FilterShape.of(sent)), 1)
-        assertNull(cursors.plan(refusing, FilterShape.of(asked)).single().since)
+        val again = CursorPlanner.window(listOf(RelayBasedFilter(refusing, asked)), listOf(cursors), refusedKinds = refused).single()
+        assertEquals(cursors.since(refusing), again.filter.since, "asked again from the cursor, not from scratch")
+        assertEquals(listOf(1, 30023), again.filter.kinds, "the filter itself is left for the pool to narrow")
+        assertNull(
+            CursorPlanner
+                .window(listOf(RelayBasedFilter(refusing, asked)), listOf(cursors))
+                .single()
+                .filter.since,
+            "without the refusal, uncovered",
+        )
     }
 
     @Test

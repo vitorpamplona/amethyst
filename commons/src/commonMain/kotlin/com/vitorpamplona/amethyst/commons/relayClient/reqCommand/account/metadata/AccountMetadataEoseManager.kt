@@ -151,8 +151,8 @@ class AccountMetadataEoseManager(
             // Screens supply them; the background registry does not, so this is usually empty.
             fun othersOf(ids: List<HexKey>) = ids.flatMapTo(mutableSetOf()) { byPubkey[it]?.otherAccounts.orEmpty() }.minus(pubkeys)
 
-            CursorPlanner.windowPerMember(members, cursorSource) { ids, window -> ownEvents(relay, ids, window) } +
-                CursorPlanner.windowPerMember(members, cursorSource) { ids, window ->
+            CursorPlanner.windowPerMember(members, cursorSource, refusedKinds) { ids, window -> ownEvents(relay, ids, window) } +
+                CursorPlanner.windowPerMember(members, cursorSource, refusedKinds) { ids, window ->
                     filterBasicAccountInfoFromKeys(relay, othersOf(ids).toList(), window, ids)
                 }
         }

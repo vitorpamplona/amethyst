@@ -102,7 +102,7 @@ abstract class SingleSubEoseManager<T>(
         val windowsPerRelay = mutableMapOf<NormalizedRelayUrl, MutableMap<Long?, MutableSet<Int>>>()
         entities.forEachIndexed { index, key ->
             val own = updateFilter(listOf(key), null).orEmpty()
-            val cursors = if (holders[index].isEmpty()) emptyMap() else CursorPlanner.cursorsByRelay(own, holders[index], cursorSource)
+            val cursors = if (holders[index].isEmpty()) emptyMap() else CursorPlanner.cursorsByRelay(own, holders[index], cursorSource, refusedKinds)
             own.mapTo(mutableSetOf()) { it.relay }.forEach { relay ->
                 windowsPerRelay.getOrPut(relay) { mutableMapOf() }.getOrPut(cursors[relay]) { mutableSetOf() }.add(index)
             }

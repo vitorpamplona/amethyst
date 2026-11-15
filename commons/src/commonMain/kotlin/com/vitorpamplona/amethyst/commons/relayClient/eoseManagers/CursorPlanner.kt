@@ -52,6 +52,9 @@ interface KeyHeldCursors :
 }
 
 object CursorPlanner {
+    /** For callers with no client to ask: no relay refused anything. */
+    val NO_REFUSALS: (NormalizedRelayUrl) -> Set<Int> = { emptySet() }
+
     /**
      * The windows of a live request for [holders]: each filter without `until` is split into the
      * parts the holders' cursors call for, each `since` the later of the filter's own floor and the
@@ -61,6 +64,7 @@ object CursorPlanner {
         filters: List<RelayBasedFilter>,
         holders: List<RelayCursors>,
         source: CursorSource = CursorSource.DEFAULT,
+        refusedKinds: (NormalizedRelayUrl) -> Set<Int> = NO_REFUSALS,
     ): List<RelayBasedFilter> {
         val windows = mutableMapOf<NormalizedRelayUrl, MutableSet<Long>>()
         val windowed =
@@ -68,7 +72,7 @@ object CursorPlanner {
                 val filter = relayFilter.filter
                 if (filter.until != null) return@flatMap listOf(relayFilter)
                 val shape = FilterShape.of(filter)
-                plan(relayFilter.relay, shape, holders, source).map { part ->
+                plan(relayFilter.relay, shape, holders, source, refusedKinds(relayFilter.relay)).map { part ->
                     val applied = part.applyTo(filter, shape)
                     applied.since?.let { windows.getOrPut(relayFilter.relay) { mutableSetOf() }.add(it) }
                     RelayBasedFilter(relayFilter.relay, applied)
@@ -92,9 +96,10 @@ object CursorPlanner {
         requested: FilterShape,
         holders: List<RelayCursors>,
         source: CursorSource = CursorSource.DEFAULT,
+        refusedKinds: Set<Int> = emptySet(),
     ): List<CursorPart> {
-        if (holders.size == 1) return holders[0].plan(relay, requested, source)
-        val plans = holders.map { it.plan(relay, requested, source) }
+        if (holders.size == 1) return holders[0].plan(relay, requested, source, refusedKinds)
+        val plans = holders.map { it.plan(relay, requested, source, refusedKinds) }
 
         val authors = requested.authors
         if (authors == null) {
@@ -122,6 +127,7 @@ object CursorPlanner {
     fun <M> windowPerMember(
         members: List<Member<M>>,
         source: CursorSource = CursorSource.DEFAULT,
+        refusedKinds: (NormalizedRelayUrl) -> Set<Int> = NO_REFUSALS,
         build: (members: List<M>, since: Long?) -> List<RelayBasedFilter>,
     ): List<RelayBasedFilter> {
         // (which filter of [build], its `since`) -> the members asking it with that window.
@@ -130,7 +136,7 @@ object CursorPlanner {
 
         members.forEach { member ->
             val own = build(listOf(member.id), member.floor)
-            val windowed = window(own, member.holders, source)
+            val windowed = window(own, member.holders, source, refusedKinds)
             // A filter split by authors no longer lines up with [build]'s order: sent as planned.
             if (windowed.size != own.size) {
                 unshared.addAll(windowed)
@@ -151,12 +157,13 @@ object CursorPlanner {
         filters: List<RelayBasedFilter>,
         holders: List<RelayCursors>,
         source: CursorSource = CursorSource.DEFAULT,
+        refusedKinds: (NormalizedRelayUrl) -> Set<Int> = NO_REFUSALS,
     ): Map<NormalizedRelayUrl, Long> {
         val byRelay = mutableMapOf<NormalizedRelayUrl, Long>()
         val fromScratch = mutableSetOf<NormalizedRelayUrl>()
         filters.forEach { relayFilter ->
             if (relayFilter.filter.until != null) return@forEach
-            val since = oldest(plan(relayFilter.relay, FilterShape.of(relayFilter.filter), holders, source).map { it.since })
+            val since = oldest(plan(relayFilter.relay, FilterShape.of(relayFilter.filter), holders, source, refusedKinds(relayFilter.relay)).map { it.since })
             if (since == null) {
                 fromScratch.add(relayFilter.relay)
             } else {
@@ -203,9 +210,10 @@ object CursorPlanner {
         sent: List<Filter>?,
         time: Long,
         source: CursorSource = CursorSource.DEFAULT,
+        refusedKinds: Set<Int> = emptySet(),
     ) {
         if (holders.isEmpty() || sent.isNullOrEmpty()) return
-        record(holders, relay, LiveShapes.of(sent) ?: return, time, source)
+        record(holders, relay, LiveShapes.of(sent) ?: return, time, source, refusedKinds)
     }
 
     /** [record] with the shapes already made: a listener keeps them for as long as its request lasts. */
@@ -215,6 +223,7 @@ object CursorPlanner {
         live: LiveShapes,
         time: Long,
         source: CursorSource = CursorSource.DEFAULT,
+        refusedKinds: Set<Int> = emptySet(),
     ) {
         holders.forEach { holder ->
             // Only what was asked for this holder: an answer planned for another (the feed it
@@ -222,7 +231,7 @@ object CursorPlanner {
             var all = true
             val accepted =
                 live.shapes.filterIndexed { i, shape ->
-                    holder.accepts(relay, source, shape, live.filters[i].since).also { if (!it) all = false }
+                    holder.accepts(relay, source, shape, live.filters[i].since, refusedKinds).also { if (!it) all = false }
                 }
             // The same list when all of it is accepted, so the holder sees the same request again.
             if (accepted.isNotEmpty()) holder.newEose(relay, if (all) live.shapes else accepted, time, source)
@@ -252,8 +261,8 @@ object CursorPlanner {
 class CursorRoutingListener(
     private val listener: SubscriptionListener,
     private val source: CursorSource = CursorSource.DEFAULT,
-    /** What the subscription asks [NormalizedRelayUrl] for, before the pool narrows it. */
-    private val asked: (NormalizedRelayUrl) -> List<Filter>? = { null },
+    /** The kinds each relay refused, which the pool leaves out of what it reports (`INostrClient.disallowedKinds`). */
+    private val refusedKinds: (NormalizedRelayUrl) -> Set<Int> = CursorPlanner.NO_REFUSALS,
     private val holders: () -> List<RelayCursors>,
 ) : SubscriptionListener by listener {
     override fun onEose(
@@ -277,7 +286,6 @@ class CursorRoutingListener(
         relay: NormalizedRelayUrl,
         forFilters: List<Filter>?,
     ) {
-        RefusedKinds.shared.learn(relay, asked(relay), forFilters)
         record(relay, forFilters)
     }
 
@@ -302,7 +310,7 @@ class CursorRoutingListener(
                     CursorPlanner.LiveShapes.of(forFilters).also { shapesByRelay[relay] = forFilters to it }
                 }
             } ?: return
-        CursorPlanner.record(holders, relay, live, TimeUtils.now(), source)
+        CursorPlanner.record(holders, relay, live, TimeUtils.now(), source, refusedKinds(relay))
     }
 
     override suspend fun onEvent(

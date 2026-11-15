@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 
@@ -52,13 +53,19 @@ abstract class BaseEoseManager<T>(
      */
     fun requestNewSubscription(listener: SubscriptionListener): Subscription {
         val subId = newSubId()
-        return orchestrator.requestNewSubscription(subId, CursorRoutingListener(listener, cursorSource, { relay -> getSubscription(subId)?.filters()?.get(relay) }) { cursorsServedBy(subId) })
+        return orchestrator.requestNewSubscription(subId, CursorRoutingListener(listener, cursorSource, refusedKinds) { cursorsServedBy(subId) })
     }
 
     fun dismissSubscription(subId: String) {
         serve(subId, emptyList())
         orchestrator.dismissSubscription(subId)
     }
+
+    /**
+     * The kinds each relay refused: the pool never sends them there, so no answer covers them and
+     * planning leaves them out when it compares.
+     */
+    protected val refusedKinds: (NormalizedRelayUrl) -> Set<Int> = { relay -> client.disallowedKinds(relay) }
 
     /** Names this manager's entries in the holders' cursors (see [CursorSource]). */
     protected val cursorSource = CursorSource(this::class.simpleName ?: "EoseManager")
@@ -103,7 +110,7 @@ abstract class BaseEoseManager<T>(
     ): Pair<List<RelayBasedFilter>?, List<RelayCursors>> {
         val cursors = cursorsNamedBy(keys)
         if (cursors.isEmpty()) return build(null) to cursors
-        return build(null)?.let { CursorPlanner.window(it, cursors, cursorSource) } to cursors
+        return build(null)?.let { CursorPlanner.window(it, cursors, cursorSource, refusedKinds) } to cursors
     }
 
     // Refreshes observers in batches.

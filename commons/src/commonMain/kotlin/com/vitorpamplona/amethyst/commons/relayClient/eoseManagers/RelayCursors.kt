@@ -54,6 +54,18 @@ data class FilterShape(
         return hash
     }
 
+    /**
+     * This shape as a relay that refused [refused] is sent it (`INostrClient.disallowedKinds`): the
+     * pool strips those kinds from every REQ there, and from the filters its answers report. Unchanged
+     * when that would leave no kind, since the pool then sends nothing at all.
+     */
+    fun withoutKinds(refused: Set<Int>): FilterShape {
+        if (refused.isEmpty()) return this
+        val kinds = kinds ?: return this
+        val kept = kinds - refused
+        return if (kept.isEmpty() || kept.size == kinds.size) this else copy(kinds = kept)
+    }
+
     /** Whether everything [other] asks for was asked for by this one too. */
     fun covers(other: FilterShape): Boolean = coversExceptAuthors(other) && within(other.authors, authors)
 
@@ -187,13 +199,14 @@ class RelayCursors {
         source: CursorSource,
         shape: FilterShape,
         since: Long?,
+        refusedKinds: Set<Int> = emptySet(),
     ): Boolean {
         if (since == null) return true
         val slot = Slot(relay, source)
         return lock.withLock {
             planned[slot]?.any { window -> since <= window } == true ||
                 byRelay[slot]?.let { entry ->
-                    val askable = RefusedKinds.shared.askable(relay, shape)
+                    val askable = shape.withoutKinds(refusedKinds)
                     entry.time >= since && entry.shapes.any { stored -> stored.covers(askable) }
                 } == true
         }
@@ -232,9 +245,10 @@ class RelayCursors {
         relay: NormalizedRelayUrl,
         asked: FilterShape,
         source: CursorSource = CursorSource.DEFAULT,
+        refusedKinds: Set<Int> = emptySet(),
     ): List<CursorPart> {
         // The kinds this relay refused are never sent, so no cursor can have vouched for them.
-        val requested = RefusedKinds.shared.askable(relay, asked)
+        val requested = asked.withoutKinds(refusedKinds)
         val entry = lock.withLock { byRelay[Slot(relay, source)] } ?: return listOf(CursorPart(requested, null))
         if (entry.shapes.any { it.covers(requested) }) return listOf(CursorPart(requested, entry.time))
 
