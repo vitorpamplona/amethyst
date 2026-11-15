@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.claudecode.process
 
+import com.vitorpamplona.agents.AgentConnection
+import com.vitorpamplona.agents.AgentEvent
 import com.vitorpamplona.agents.AgentInfo
 import com.vitorpamplona.agents.HostToolServer
 import com.vitorpamplona.agents.ImageInput
@@ -27,6 +29,7 @@ import com.vitorpamplona.agents.PermissionDecision
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.claudecode.mcp.SdkMcpDispatcher
+import com.vitorpamplona.claudecode.protocol.ClaudeEvents
 import com.vitorpamplona.claudecode.protocol.ClaudeInfo
 import com.vitorpamplona.claudecode.protocol.ClaudeInput
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
@@ -35,6 +38,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -65,14 +69,19 @@ class ClaudeCodeConnection(
     private val scope: CoroutineScope,
     /** Tools the host runs itself, which the CLI reaches over this pipe (see [HostToolServer]). */
     private val mcpServers: List<HostToolServer> = emptyList(),
-) {
+) : AgentConnection {
     private val output = Channel<ClaudeMessage>(Channel.UNLIMITED)
     private val pending = ConcurrentHashMap<String, CompletableDeferred<ClaudeMessage.ControlResponse>>()
     private val openPrompts = ConcurrentHashMap<String, PermissionRequest>()
     private val ids = AtomicLong()
 
-    /** Every message, once. Collect it from one place. */
+    /** Every message, once. Collect it, or [events], from one place. */
     val messages: Flow<ClaudeMessage> = output.receiveAsFlow()
+
+    /** [messages], as the chat uses them. */
+    override val events: Flow<AgentEvent> = messages.mapNotNull { ClaudeEvents.of(it) }
+
+    override val isRunning: Boolean get() = reader.isActive
 
     /** Ends when stdout closes: the process exited or was killed. */
     val reader: Job =
@@ -144,17 +153,17 @@ class ClaudeCodeConnection(
 
     /** The commands and models the CLI offered when it started, once [initialize] answered. */
     @Volatile
-    var info: AgentInfo? = null
+    override var info: AgentInfo? = null
         private set
 
     /** Starts a turn with [text], or queues it if a turn is running. */
-    suspend fun send(
+    override suspend fun send(
         text: String,
-        images: List<ImageInput> = emptyList(),
+        images: List<ImageInput>,
     ) = write(ClaudeInput.userText(text, images))
 
     /** Answers a permission prompt. */
-    suspend fun respond(
+    override suspend fun respond(
         request: PermissionRequest,
         decision: PermissionDecision,
     ) {
@@ -163,19 +172,25 @@ class ClaudeCodeConnection(
     }
 
     /** Stops the running turn. */
-    suspend fun interrupt(): ClaudeMessage.ControlResponse? = request("interrupt")
+    override suspend fun interrupt() {
+        request("interrupt")
+    }
 
-    suspend fun setPermissionMode(mode: PermissionMode): ClaudeMessage.ControlResponse? = request("set_permission_mode", mapOf("mode" to JsonPrimitive(mode.wire)))
+    override suspend fun setPermissionMode(mode: PermissionMode) {
+        request("set_permission_mode", mapOf("mode" to JsonPrimitive(mode.wire)))
+    }
 
     /** Switches the model for the next turns; null goes back to the session's default. */
-    suspend fun setModel(model: String?): ClaudeMessage.ControlResponse? = request("set_model", mapOf("model" to (model?.let { JsonPrimitive(it) } ?: JsonNull)))
+    override suspend fun setModel(model: String?) {
+        request("set_model", mapOf("model" to (model?.let { JsonPrimitive(it) } ?: JsonNull)))
+    }
 
     /** Names the session; the CLI writes it to the session file as its title. */
-    suspend fun rename(title: String): ClaudeMessage.ControlResponse? =
+    override suspend fun rename(title: String): Boolean =
         request(
             "rename_session",
             mapOf("title" to JsonPrimitive(title), "source" to JsonPrimitive("host")),
-        )
+        )?.isSuccess == true
 
     /**
      * Sends a control request and waits for its answer; null if the process ended or did not
@@ -210,13 +225,13 @@ class ClaudeCodeConnection(
     }
 
     /** Ends the session after the running turn: closes stdin and waits for the process. */
-    suspend fun close(): Int? {
+    override suspend fun close(): Int? {
         transport.closeInput()
         return transport.awaitExit()
     }
 
     /** Stops the process now. */
-    fun kill() = transport.kill()
+    override fun kill() = transport.kill()
 
-    fun stderrTail(): String = transport.stderrTail()
+    override fun stderrTail(): String = transport.stderrTail()
 }

@@ -21,7 +21,12 @@
 package com.vitorpamplona.amethyst.commons.claudecode
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.agents.AgentBackend
+import com.vitorpamplona.agents.AgentConnection
+import com.vitorpamplona.agents.AgentEvent
 import com.vitorpamplona.agents.AgentInfo
+import com.vitorpamplona.agents.AgentNotInstalledException
+import com.vitorpamplona.agents.AgentStartOptions
 import com.vitorpamplona.agents.HostToolServer
 import com.vitorpamplona.agents.ImageInput
 import com.vitorpamplona.agents.ModelChoice
@@ -30,12 +35,6 @@ import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.agents.SlashCommand
 import com.vitorpamplona.agents.TranscriptEntry
-import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
-import com.vitorpamplona.claudecode.process.ClaudeCodeNotFoundException
-import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
-import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
-import com.vitorpamplona.claudecode.protocol.ClaudeMessage
-import com.vitorpamplona.claudecode.session.ClaudeSessionStore
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -154,8 +153,8 @@ class ClaudeChat internal constructor(
     title: String?,
     permissionMode: PermissionMode,
     model: String?,
-    private val store: ClaudeSessionStore,
-    private val launcher: ClaudeCodeStarter,
+    /** The agent the chat talks to: its saved sessions, and how to start it. */
+    val backend: AgentBackend,
     private val scope: CoroutineScope,
     private val onSessionChanged: () -> Unit,
     /** Reads the folder's git state; tests replace it. */
@@ -166,8 +165,8 @@ class ClaudeChat internal constructor(
     private val heldElsewhere: (sessionId: String) -> Boolean = { false },
     /** Tools the app runs itself in this chat ([HostToolServer]), e.g. the settings assistant's. */
     private val mcpServers: List<HostToolServer> = emptyList(),
-    /** Changes to how the CLI starts for this chat: which tools it has, its system prompt. */
-    private val launchOptions: (ClaudeCodeOptions) -> ClaudeCodeOptions = { it },
+    /** Changes to how the agent starts for this chat: which tools it has, its instructions. */
+    private val launchOptions: (AgentStartOptions) -> AgentStartOptions = { it },
     kind: ChatKind = ChatKind.CODE,
     /**
      * With [fork]: the copy is cut just before this message (its uuid), to ask it again
@@ -186,7 +185,7 @@ class ClaudeChat internal constructor(
     private var model: String? = model
     private val transcript = ChatTranscript()
     private val lock = Mutex()
-    private var connection: ClaudeCodeConnection? = null
+    private var connection: AgentConnection? = null
 
     /** Until the CLI names the copy's own session, the process starts with `--fork-session`. */
     private var forkOnStart = fork && resumeSessionId != null
@@ -227,8 +226,8 @@ class ClaudeChat internal constructor(
         if (resumeSessionId != null) {
             scope.launch(Dispatchers.IO) {
                 try {
-                    val history = store.transcript(resumeSessionId).let { all -> if (forkBefore != null) all.cutBefore(forkBefore.uuid) else all }
-                    val subagents = store.subagentTranscripts(resumeSessionId)
+                    val history = backend.transcript(resumeSessionId).let { all -> if (forkBefore != null) all.cutBefore(forkBefore.uuid) else all }
+                    val subagents = backend.subagentTranscripts(resumeSessionId)
                     lock.withLock {
                         transcript.addHistory(history)
                         transcript.addSubagentHistory(subagents)
@@ -303,7 +302,7 @@ class ClaudeChat internal constructor(
             try {
                 c.send(trimmed, images)
             } catch (e: IOException) {
-                Log.w(TAG, "Could not send to Claude Code", e)
+                Log.w(TAG, "Could not send to ${backend.displayName}", e)
                 publish { it.copy(status = ChatStatus.ENDED, error = ChatError.StartFailed(e.message)) }
             }
         }
@@ -367,7 +366,7 @@ class ClaudeChat internal constructor(
     fun loadCliInfo() {
         if (_state.value.commands.isNotEmpty() || connection != null) return
         scope.launch(Dispatchers.IO) {
-            val info = cliInfoCache[workDir.absolutePath] ?: probe() ?: return@launch
+            val info = cliInfoCache[infoKey()] ?: probe() ?: return@launch
             remember(info)
             lock.withLock { publish { if (it.commands.isEmpty()) it.copy(commands = info.commands, models = info.models) else it } }
         }
@@ -375,11 +374,11 @@ class ClaudeChat internal constructor(
 
     private suspend fun probe(): AgentInfo? {
         if (!workDir.isDirectory || killed) return null
-        val options = ClaudeCodeOptions(cwd = workDir, sdkMcpServers = mcpServers).let(launchOptions)
+        val options = AgentStartOptions(cwd = workDir, hostTools = mcpServers).let(launchOptions)
         val c =
             try {
-                launcher.start(options, scope)
-            } catch (e: ClaudeCodeNotFoundException) {
+                backend.start(options, scope)
+            } catch (e: AgentNotInstalledException) {
                 return null
             } catch (e: IOException) {
                 Log.w(TAG, "Could not ask Claude Code for its commands", e)
@@ -389,8 +388,11 @@ class ClaudeChat internal constructor(
         return c.info.also { c.close() }
     }
 
+    /** Each agent offers its own commands and models, per folder. */
+    private fun infoKey() = backend.id + ":" + workDir.absolutePath
+
     private fun remember(info: AgentInfo) {
-        cliInfoCache[workDir.absolutePath] = info
+        cliInfoCache[infoKey()] = info
     }
 
     fun setPermissionMode(mode: PermissionMode) {
@@ -400,9 +402,9 @@ class ClaudeChat internal constructor(
 
     /** Renames through the running process when there is one, so the CLI keeps the title. */
     internal suspend fun renameLive(title: String): Boolean {
-        val answer = connection?.rename(title) ?: return false
-        if (answer.isSuccess) publish { it.copy(title = title) }
-        return answer.isSuccess
+        val renamed = connection?.rename(title) ?: return false
+        if (renamed) publish { it.copy(title = title) }
+        return renamed
     }
 
     internal fun titleChanged(title: String) = publish { it.copy(title = title) }
@@ -427,9 +429,9 @@ class ClaudeChat internal constructor(
         connection?.kill()
     }
 
-    private suspend fun ensureStarted(): ClaudeCodeConnection? =
+    private suspend fun ensureStarted(): AgentConnection? =
         lock.withLock {
-            connection?.let { if (it.reader.isActive) return@withLock it }
+            connection?.let { if (it.isRunning) return@withLock it }
             if (killed) return@withLock null
             // A removed worktree: resuming elsewhere (the home folder) would run the session there.
             if (!workDir.isDirectory) {
@@ -440,22 +442,22 @@ class ClaudeChat internal constructor(
             val current = _state.value
             val nostrCheckout = (current.git ?: inspectGit(workDir))?.repo != null
             val options =
-                ClaudeCodeOptions(
+                AgentStartOptions(
                     cwd = workDir,
                     resumeSessionId = current.sessionId,
                     forkSession = forkOnStart,
-                    resumeSessionAt = if (forkOnStart) forkBefore?.parentUuid else null,
+                    forkAt = if (forkOnStart) forkBefore?.parentUuid else null,
                     model = model,
                     permissionMode = current.permissionMode,
                     // A NIP-34 checkout: publishing is the user's step (CONTRIBUTING-WITH-AI.md), never the agent's.
-                    disallowedTools = if (nostrCheckout) NO_PUBLISHING else emptyList(),
+                    blockedCommands = if (nostrCheckout) NO_PUBLISHING else emptyList(),
                     environment = if (nostrCheckout) noPushEnvironment() else emptyMap(),
-                    sdkMcpServers = mcpServers,
+                    hostTools = mcpServers,
                 ).let(launchOptions)
             val started =
                 try {
-                    launcher.start(options, scope)
-                } catch (e: ClaudeCodeNotFoundException) {
+                    backend.start(options, scope)
+                } catch (e: AgentNotInstalledException) {
                     publish { it.copy(status = ChatStatus.ENDED, error = ChatError.NotInstalled) }
                     return@withLock null
                 } catch (e: IOException) {
@@ -475,8 +477,8 @@ class ClaudeChat internal constructor(
             started
         }
 
-    private suspend fun collect(c: ClaudeCodeConnection) {
-        c.messages.collect { message -> lock.withLock { onMessage(message) } }
+    private suspend fun collect(c: AgentConnection) {
+        c.events.collect { event -> lock.withLock { onEvent(event) } }
         // stdout closed: the process ended.
         val code = c.close()
         lock.withLock {
@@ -492,22 +494,22 @@ class ClaudeChat internal constructor(
         onSessionChanged()
     }
 
-    private fun onMessage(message: ClaudeMessage) {
-        when (message) {
-            is ClaudeMessage.Init -> {
-                val isNewSession = _state.value.sessionId != message.sessionId
+    private fun onEvent(event: AgentEvent) {
+        when (event) {
+            is AgentEvent.SessionStarted -> {
+                val isNewSession = _state.value.sessionId != event.sessionId
                 // The copy has its own session now: later starts resume it, not the source.
                 if (isNewSession) forkOnStart = false
                 publish {
-                    // A turn the CLI started by itself (a background subagent reported back).
+                    // A turn the agent started by itself (a background subagent reported back).
                     val ownTurn = it.status == ChatStatus.READY
                     it.copy(
                         status = if (ownTurn) ChatStatus.WORKING else it.status,
                         turnStartedAt = if (ownTurn) System.currentTimeMillis() else it.turnStartedAt,
                         forking = it.forking && !isNewSession,
-                        sessionId = message.sessionId,
-                        model = message.model ?: it.model,
-                        permissionMode = message.permissionMode ?: it.permissionMode,
+                        sessionId = event.sessionId,
+                        model = event.model ?: it.model,
+                        permissionMode = event.permissionMode ?: it.permissionMode,
                     )
                 }
                 if (isNewSession) onSessionChanged()
@@ -516,49 +518,37 @@ class ClaudeChat internal constructor(
                     scope.launch { if (!renameLive(name)) Log.w(TAG) { "Could not name the session $name" } }
                 }
             }
-            is ClaudeMessage.Assistant -> {
-                // A subagent's own messages go inside the call that started it.
-                message.parentToolUseId?.let { parent ->
-                    transcript.addSubagentAssistant(parent, message.content)
-                    publish { it }
-                    return
-                }
-                transcript.addAssistantBlocks(message.content)
+            is AgentEvent.Reply -> {
+                transcript.addAssistantBlocks(event.content)
                 streamBuffer.setLength(0)
-                val used = message.contextTokens
+                val used = event.contextTokens
                 publish { it.copy(streamingText = "", contextTokens = used ?: it.contextTokens) }
             }
-            is ClaudeMessage.User -> {
-                message.parentToolUseId?.let { parent ->
-                    transcript.addSubagentUser(parent, message.content)
-                    publish { it }
-                    return
-                }
-                transcript.addUserBlocks(message.content, typedByUser = false)
+            is AgentEvent.ToolResults -> {
+                transcript.addUserBlocks(event.content, typedByUser = false)
                 publish { it }
             }
-            is ClaudeMessage.StreamEvent -> {
-                if (message.parentToolUseId != null) return
-                when (message.eventType) {
-                    "message_start", "content_block_start" -> {
-                        streamBuffer.setLength(0)
-                        publish { it.copy(streamingText = "") }
-                    }
-                    else ->
-                        message.textDelta?.let { delta ->
-                            // Many small deltas a second: each would re-lay the whole reply out.
-                            streamBuffer.append(delta)
-                            val now = System.currentTimeMillis()
-                            if (now - streamPublishedAt >= STREAM_PUBLISH_MS) {
-                                streamPublishedAt = now
-                                val text = streamBuffer.toString()
-                                publish { it.copy(streamingText = text) }
-                            }
-                        }
+            is AgentEvent.Subagent -> {
+                // A subagent's own messages go inside the call that started it.
+                if (event.fromAgent) transcript.addSubagentAssistant(event.toolUseId, event.content) else transcript.addSubagentUser(event.toolUseId, event.content)
+                publish { it }
+            }
+            AgentEvent.ReplyStarted -> {
+                streamBuffer.setLength(0)
+                publish { it.copy(streamingText = "") }
+            }
+            is AgentEvent.ReplyDelta -> {
+                // Many small deltas a second: each would re-lay the whole reply out.
+                streamBuffer.append(event.text)
+                val now = System.currentTimeMillis()
+                if (now - streamPublishedAt >= STREAM_PUBLISH_MS) {
+                    streamPublishedAt = now
+                    val text = streamBuffer.toString()
+                    publish { it.copy(streamingText = text) }
                 }
             }
-            is ClaudeMessage.ControlRequest -> {
-                val permission = message.permission ?: return
+            is AgentEvent.ApprovalRequested -> {
+                val permission = event.request
                 // A call to one of this chat's own tools: say what it would do, from the tool itself.
                 val note =
                     mcpServers.firstNotNullOfOrNull { server ->
@@ -573,35 +563,21 @@ class ClaudeChat internal constructor(
                     )
                 }
             }
-            is ClaudeMessage.ControlCancel -> {
+            is AgentEvent.ApprovalWithdrawn -> {
                 publish { state ->
-                    val left = state.pendingPermissions.filter { it.requestId != message.requestId }
+                    val left = state.pendingPermissions.filter { it.requestId != event.requestId }
                     state.copy(pendingPermissions = left, status = if (left.isEmpty() && state.status == ChatStatus.NEEDS_APPROVAL) ChatStatus.WORKING else state.status)
                 }
             }
-            is ClaudeMessage.System -> {
-                when (message.subtype) {
-                    "task_summary" -> message.detail?.let { detail -> publish { it.copy(activity = detail) } }
-                    // A subagent running in the background: its call shows it working until it reports.
-                    "task_started", "task_progress" ->
-                        message.toolUseId?.let { id ->
-                            transcript.setSubagentRunning(id, true)
-                            publish { it }
-                        }
-                    "task_notification" ->
-                        message.toolUseId?.let { id ->
-                            transcript.setSubagentRunning(id, false)
-                            publish { it }
-                        }
-                }
+            is AgentEvent.Activity -> publish { it.copy(activity = event.text) }
+            is AgentEvent.SubagentRunning -> {
+                transcript.setSubagentRunning(event.toolUseId, event.running)
+                publish { it }
             }
-            is ClaudeMessage.Result -> {
-                if (message.isError) {
-                    if (message.subtype == "error_during_execution" || message.terminalReason?.startsWith("aborted") == true) {
-                        transcript.addNotice(NoticeKind.INTERRUPTED)
-                    } else {
-                        transcript.addNotice(NoticeKind.TURN_FAILED, message.result ?: message.subtype)
-                    }
+            is AgentEvent.TurnEnded -> {
+                when {
+                    event.interrupted -> transcript.addNotice(NoticeKind.INTERRUPTED)
+                    event.failure != null -> transcript.addNotice(NoticeKind.TURN_FAILED, event.failure)
                 }
                 publish {
                     it.copy(
@@ -610,14 +586,13 @@ class ClaudeChat internal constructor(
                         turnStartedAt = null,
                         streamingText = "",
                         pendingPermissions = emptyList(),
-                        costUsd = message.totalCostUsd ?: it.costUsd,
-                        contextWindow = message.contextWindow ?: it.contextWindow,
+                        costUsd = event.costUsd ?: it.costUsd,
+                        contextWindow = event.contextWindow ?: it.contextWindow,
                     )
                 }
                 refreshGit()
                 onSessionChanged()
             }
-            else -> {}
         }
     }
 
@@ -640,15 +615,15 @@ class ClaudeChat internal constructor(
 
         private const val STREAM_PUBLISH_MS = 50L
 
-        /** What a session on a nostr repository may not run: pushing and publishing proposals. */
+        /** What a session on a nostr repository may not run (command prefixes): pushing and publishing proposals. */
         val NO_PUBLISHING =
             listOf(
-                "Bash(git push:*)",
-                "Bash(ngit send:*)",
-                "Bash(ngit pr merge:*)",
-                "Bash(ngit sync:*)",
-                "Bash(amy git pr:*)",
-                "Bash(amy git pr-update:*)",
+                "git push",
+                "ngit send",
+                "ngit pr merge",
+                "ngit sync",
+                "amy git pr",
+                "amy git pr-update",
             )
         private const val STDERR_SHOWN = 2_000
 

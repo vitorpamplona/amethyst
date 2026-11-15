@@ -21,18 +21,16 @@
 package com.vitorpamplona.amethyst.commons.claudecode
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.agents.AgentBackend
+import com.vitorpamplona.agents.AgentLiveSession
+import com.vitorpamplona.agents.AgentSessionInfo
+import com.vitorpamplona.agents.AgentStartOptions
 import com.vitorpamplona.agents.ContentBlock
 import com.vitorpamplona.agents.HostToolServer
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.TranscriptEntry
 import com.vitorpamplona.amethyst.commons.util.appDataDir
-import com.vitorpamplona.claudecode.process.ClaudeCodeLauncher
-import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
-import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
-import com.vitorpamplona.claudecode.process.ClaudeExecutable
-import com.vitorpamplona.claudecode.session.ClaudeLiveSession
-import com.vitorpamplona.claudecode.session.ClaudeSessionInfo
-import com.vitorpamplona.claudecode.session.ClaudeSessionStore
+import com.vitorpamplona.claudecode.ClaudeBackend
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -69,7 +67,7 @@ data class ClaudeSessionRow(
     /** Set while the chat is open in this app. */
     val appStatus: ChatStatus?,
     /** Set while another Claude Code process (a terminal) has the session open. */
-    val openElsewhere: ClaudeLiveSession?,
+    val openElsewhere: AgentLiveSession?,
     /** The repository (or folder) the session belongs to, worktrees included: the list's sections. */
     val project: String,
     /** Its folder is gone (a removed worktree): kept for its history, out of the way. */
@@ -101,15 +99,14 @@ data class ProjectInfo(
  * process ([shared]), so the chats outlive the screens that show them.
  */
 class ClaudeCodeService(
-    val store: ClaudeSessionStore = ClaudeSessionStore(),
-    private val launcher: ClaudeCodeStarter = ClaudeCodeLauncher(),
+    /** The agent the chats talk to. */
+    val backend: AgentBackend = ClaudeBackend(),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-    private val findExecutable: () -> File? = { ClaudeExecutable.find() },
 ) {
     private val chats = MutableStateFlow<Map<String, ClaudeChat>>(emptyMap())
     private val watchers = ConcurrentHashMap<String, Job>()
-    private val saved = MutableStateFlow<List<ClaudeSessionInfo>>(emptyList())
-    private val elsewhere = MutableStateFlow<Map<String, ClaudeLiveSession>>(emptyMap())
+    private val saved = MutableStateFlow<List<AgentSessionInfo>>(emptyList())
+    private val elsewhere = MutableStateFlow<Map<String, AgentLiveSession>>(emptyMap())
 
     /** Session folders that are gone, checked on each [refresh] rather than on every list rebuild. */
     @Volatile
@@ -176,10 +173,10 @@ class ClaudeCodeService(
     /** Re-reads the saved sessions and which ones are open elsewhere. */
     suspend fun refresh() {
         withContext(Dispatchers.IO) {
-            _executable.value = findExecutable()
+            _executable.value = backend.executable()
             saved.value =
                 try {
-                    store.listSessions()
+                    backend.listSessions()
                 } catch (e: IOException) {
                     Log.w(TAG, "Could not list Claude Code sessions", e)
                     emptyList()
@@ -195,7 +192,7 @@ class ClaudeCodeService(
                 .forEach { cwd -> computeProject(cwd)?.let { projects[cwd] = it } }
             elsewhere.value =
                 try {
-                    store.liveSessions()
+                    backend.liveSessions()
                 } catch (e: IOException) {
                     Log.w(TAG, "Could not read the running Claude Code sessions", e)
                     emptyMap()
@@ -215,8 +212,7 @@ class ClaudeCodeService(
         chats.value.values
             .firstOrNull { it.state.value.sessionId == key }
             ?.let { return it }
-        if (!ClaudeSessionStore.isSafeId(key)) return null
-        val info = saved.value.firstOrNull { it.sessionId == key } ?: store.session(key) ?: return null
+        val info = saved.value.firstOrNull { it.sessionId == key } ?: backend.session(key) ?: return null
         // A folder that is gone stays the chat's folder: the history reads, and the chat refuses
         // to start rather than resume in some other folder.
         val cwd = info.cwd?.let { File(it) } ?: File(System.getProperty("user.home"))
@@ -263,7 +259,7 @@ class ClaudeCodeService(
         val model = source?.modelChoice
         // The same prompt can be sent more than once: the one with as many before it as on screen.
         val repeats = source?.items?.takeWhile { it.id != message.id }?.count { it is ChatItem.UserText && it.text == message.text } ?: 0
-        val prompt = promptsIn(store.transcript(sessionId)).filter { it.second == message.text }.getOrNull(repeats)?.first
+        val prompt = promptsIn(backend.transcript(sessionId)).filter { it.second == message.text }.getOrNull(repeats)?.first
         val copy =
             if (prompt?.parentUuid == null) {
                 open("new-${UUID.randomUUID()}", null, File(cwd), null, mode, model)
@@ -292,7 +288,7 @@ class ClaudeCodeService(
         fork: Boolean = false,
         forkBefore: TranscriptEntry? = null,
         mcpServers: List<HostToolServer> = emptyList(),
-        launchOptions: (ClaudeCodeOptions) -> ClaudeCodeOptions = { it },
+        launchOptions: (AgentStartOptions) -> AgentStartOptions = { it },
         kind: ChatKind = ChatKind.CODE,
     ): ClaudeChat {
         val chat =
@@ -303,8 +299,7 @@ class ClaudeCodeService(
                 title,
                 mode,
                 model,
-                store,
-                launcher,
+                backend,
                 scope,
                 onSessionChanged = { refreshInBackground() },
                 fork = fork,
@@ -353,7 +348,7 @@ class ClaudeCodeService(
     private fun isHeldElsewhere(sessionId: String): Boolean {
         val live =
             try {
-                store.liveSessions()[sessionId]
+                backend.liveSessions()[sessionId]
             } catch (e: IOException) {
                 Log.w(TAG, "Could not read the running Claude Code sessions", e)
                 null
@@ -369,7 +364,7 @@ class ClaudeCodeService(
         withContext(Dispatchers.IO) {
             elsewhere.value =
                 try {
-                    store.liveSessions()
+                    backend.liveSessions()
                 } catch (e: IOException) {
                     Log.w(TAG, "Could not read the running Claude Code sessions", e)
                     emptyMap()
@@ -396,7 +391,7 @@ class ClaudeCodeService(
             return
         }
         if (!chat.renameLive(clean)) {
-            withContext(Dispatchers.IO) { store.rename(sessionId, clean) }
+            withContext(Dispatchers.IO) { backend.rename(sessionId, clean) }
             chat.titleChanged(clean)
         }
         refresh()
@@ -418,7 +413,7 @@ class ClaudeCodeService(
         val renamedLive = chat?.renameLive(clean) ?: false
         val sessionId = row.sessionId
         if (!renamedLive && sessionId != null) {
-            withContext(Dispatchers.IO) { store.rename(sessionId, clean) }
+            withContext(Dispatchers.IO) { backend.rename(sessionId, clean) }
             chat?.titleChanged(clean)
         }
         refresh()
@@ -436,7 +431,7 @@ class ClaudeCodeService(
             rebuildRows()
         }
         val sessionId = row.sessionId
-        if (sessionId != null) withContext(Dispatchers.IO) { store.delete(sessionId) }
+        if (sessionId != null) withContext(Dispatchers.IO) { backend.delete(sessionId) }
         refresh()
     }
 
@@ -493,10 +488,9 @@ class ClaudeCodeService(
                 mcpServers = listOf(settings),
                 launchOptions = { options ->
                     options.copy(
-                        tools = emptyList(),
-                        strictMcpConfig = true,
-                        allowedTools = listOf(SettingsToolServer.SEARCH, SettingsToolServer.GET, SettingsToolServer.OPEN).map(settings::qualifiedName),
-                        appendSystemPrompt = SettingsToolServer.SYSTEM_PROMPT,
+                        onlyHostTools = true,
+                        preApprovedTools = listOf(SettingsToolServer.SEARCH, SettingsToolServer.GET, SettingsToolServer.OPEN).map(settings::qualifiedName),
+                        instructions = SettingsToolServer.SYSTEM_PROMPT,
                     )
                 },
             )

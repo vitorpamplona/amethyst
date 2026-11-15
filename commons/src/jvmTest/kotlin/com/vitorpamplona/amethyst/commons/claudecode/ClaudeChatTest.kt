@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.claudecode
 
 import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.claudecode.ClaudeBackend
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
 import com.vitorpamplona.claudecode.process.ClaudeTransport
@@ -119,8 +120,7 @@ class ClaudeChatTest {
             title = title,
             permissionMode = PermissionMode.DEFAULT,
             model = null,
-            store = ClaudeSessionStore(config),
-            launcher = starter,
+            backend = ClaudeBackend(ClaudeSessionStore(config), starter),
             scope = chatScope,
             onSessionChanged = {},
             inspectGit = { null },
@@ -248,8 +248,7 @@ class ClaudeChatTest {
                     title = null,
                     permissionMode = PermissionMode.DEFAULT,
                     model = null,
-                    store = ClaudeSessionStore(config),
-                    launcher = ClaudeCodeStarter { _, scope -> ClaudeCodeConnection(cli, scope).also { it.initialize() } },
+                    backend = ClaudeBackend(ClaudeSessionStore(config), ClaudeCodeStarter { _, scope -> ClaudeCodeConnection(cli, scope).also { it.initialize() } }),
                     scope = chatScope,
                     onSessionChanged = {},
                     inspectGit = { null },

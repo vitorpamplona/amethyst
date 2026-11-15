@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
@@ -107,7 +108,7 @@ class ClaudeCodeConnectionTest {
             }
             val connection = ClaudeCodeConnection(transport, backgroundScope)
 
-            val answer = assertNotNull(connection.setPermissionMode(PermissionMode.PLAN))
+            val answer = assertNotNull(connection.request("set_permission_mode", mapOf("mode" to JsonPrimitive(PermissionMode.PLAN.wire))))
             assertTrue(answer.isSuccess)
 
             val sent = obj(transport.written.single())

@@ -85,7 +85,7 @@ class LiveClaudeCodeTest {
                     assertTrue(!result.isError, result.raw.toString())
                     assertEquals("hi", File(dir, "hello.txt").readText().trim())
 
-                    assertTrue(connection.rename("Live test")?.isSuccess == true)
+                    assertTrue(connection.rename("Live test"))
                     connection.close()
 
                     val store = ClaudeSessionStore()

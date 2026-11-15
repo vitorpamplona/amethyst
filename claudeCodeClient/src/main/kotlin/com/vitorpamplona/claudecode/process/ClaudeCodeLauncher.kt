@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.claudecode.process
 
+import com.vitorpamplona.agents.AgentNotInstalledException
 import com.vitorpamplona.agents.HostToolServer
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.claudecode.mcp.SdkMcpDispatcher
@@ -175,4 +176,4 @@ class ClaudeCodeLauncher(
     }
 }
 
-class ClaudeCodeNotFoundException : IOException("The claude executable was not found")
+class ClaudeCodeNotFoundException : AgentNotInstalledException("The claude executable was not found")

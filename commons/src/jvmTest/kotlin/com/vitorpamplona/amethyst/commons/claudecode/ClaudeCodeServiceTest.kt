@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.claudecode
 
+import com.vitorpamplona.claudecode.ClaudeBackend
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
@@ -75,10 +76,13 @@ class ClaudeCodeServiceTest {
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         service =
             ClaudeCodeService(
-                store = ClaudeSessionStore(config),
-                launcher = ClaudeCodeStarter { _, _ -> throw IOException("not in tests") },
+                backend =
+                    ClaudeBackend(
+                        ClaudeSessionStore(config),
+                        ClaudeCodeStarter { _, _ -> throw IOException("not in tests") },
+                        findExecutable = { null },
+                    ),
                 scope = scope,
-                findExecutable = { null },
             )
     }
 
@@ -115,14 +119,16 @@ class ClaudeCodeServiceTest {
             val started = mutableListOf<ClaudeCodeOptions>()
             val service =
                 ClaudeCodeService(
-                    store = ClaudeSessionStore(config),
-                    launcher =
-                        ClaudeCodeStarter { options, _ ->
-                            synchronized(started) { started.add(options) }
-                            throw IOException("not in tests")
-                        },
+                    backend =
+                        ClaudeBackend(
+                            ClaudeSessionStore(config),
+                            ClaudeCodeStarter { options, _ ->
+                                synchronized(started) { started.add(options) }
+                                throw IOException("not in tests")
+                            },
+                            findExecutable = { null },
+                        ),
                     scope = scope,
-                    findExecutable = { null },
                 )
             service.refresh()
             val chat = assertNotNull(service.chat(other))
@@ -209,13 +215,15 @@ class ClaudeCodeServiceTest {
             // A CLI that asks to write a file as soon as it gets a message.
             val asking =
                 ClaudeCodeService(
-                    store = ClaudeSessionStore(config),
-                    launcher =
-                        ClaudeCodeStarter { _, scope ->
-                            ClaudeCodeConnection(AskingTransport(), scope).also { it.initialize() }
-                        },
+                    backend =
+                        ClaudeBackend(
+                            ClaudeSessionStore(config),
+                            ClaudeCodeStarter { _, scope ->
+                                ClaudeCodeConnection(AskingTransport(), scope).also { it.initialize() }
+                            },
+                            findExecutable = { null },
+                        ),
                     scope = scope,
-                    findExecutable = { null },
                 )
             val chat = asking.newChat(work)
             chat.send("write it")
