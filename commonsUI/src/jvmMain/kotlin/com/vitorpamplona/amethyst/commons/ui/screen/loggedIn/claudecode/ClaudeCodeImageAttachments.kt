@@ -49,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -296,17 +297,18 @@ internal fun ComposerImageRow(
             Box {
                 ImageTile(image.thumbnail, 64.dp)
                 val remove = stringRes(Res.string.claude_code_attach_remove, image.file.name)
-                Box(Modifier.align(Alignment.TopEnd).padding(3.dp)) {
+                Box(Modifier.align(Alignment.TopEnd).padding(2.dp)) {
                     HoverTooltip(remove) {
+                        // Dark on any picture, light or dark theme, and big enough to hit.
                         Box(
                             Modifier
-                                .size(20.dp)
+                                .size(24.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.8f))
+                                .background(Color.Black.copy(alpha = 0.7f))
                                 .clickable { attachments.remove(image) },
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(MaterialSymbols.Close, contentDescription = remove, tint = MaterialTheme.colorScheme.inverseOnSurface, modifier = Modifier.size(14.dp))
+                            Icon(MaterialSymbols.Close, contentDescription = remove, tint = Color.White, modifier = Modifier.size(16.dp))
                         }
                     }
                 }

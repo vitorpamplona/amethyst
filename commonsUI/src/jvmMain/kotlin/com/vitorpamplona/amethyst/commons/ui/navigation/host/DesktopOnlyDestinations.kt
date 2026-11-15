@@ -39,7 +39,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 fun NavDestinations.desktopOnlyDestinations(accountViewModel: AccountViewModel) {
     composableFromEnd<Route.ClaudeCode> { ClaudeCodeSessionsScreen(nav) }
     composableFromEndArgs<Route.ClaudeCodeChat>(capWidth = false) { ClaudeCodeChatScreen(it.key, accountViewModel, nav) }
-    composableFromEndArgs<Route.ClaudeCodeChanges>(capWidth = false) { ClaudeCodeChangesScreen(it.key, nav) }
+    composableFromEndArgs<Route.ClaudeCodeChanges>(capWidth = false) { ClaudeCodeChangesScreen(it.key, nav, it.repo) }
     composableFromEndArgs<Route.ClaudeCodePropose>(capWidth = false) { ClaudeCodeProposeScreen(it.key, accountViewModel, nav) }
     composableFromEndArgs<Route.ClaudeCodePullRequests>(capWidth = false) { ClaudeCodePullRequestsScreen(it.key, nav) }
     composableFromEndArgs<Route.ClaudeCodeStart>(capWidth = false) { ClaudeCodeStartScreen(it, accountViewModel, nav) }

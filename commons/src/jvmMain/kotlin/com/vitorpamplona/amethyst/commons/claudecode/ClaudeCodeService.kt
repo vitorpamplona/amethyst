@@ -76,6 +76,8 @@ data class ClaudeSessionRow(
     val agentName: String = "",
     /** Its folder is gone (a removed worktree): kept for its history, out of the way. */
     val archived: Boolean = false,
+    /** The workspace of fresh clones the session works in, when it has one. */
+    val workspace: AgentWorkspace? = null,
 )
 
 /** A chat that wants the user: it waits on an approval, or its turn ended. */
@@ -108,11 +110,14 @@ class ClaudeCodeService(
     /** The agents the chats can talk to; the first is the default. */
     val backends: List<AgentBackend> = listOf(ClaudeBackend(), CodexBackend()),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-) {
-    constructor(backend: AgentBackend, scope: CoroutineScope) : this(listOf(backend), scope)
-
     /** Each session's own clones of a group of repositories. */
-    val agentWorkspaces = AgentWorkspaces()
+    val agentWorkspaces: AgentWorkspaces = AgentWorkspaces(),
+) {
+    constructor(
+        backend: AgentBackend,
+        scope: CoroutineScope,
+        agentWorkspaces: AgentWorkspaces,
+    ) : this(listOf(backend), scope, agentWorkspaces)
 
     /** The default agent: Claude Code. */
     val backend: AgentBackend get() = backends.first()
@@ -188,6 +193,104 @@ class ClaudeCodeService(
         return ProjectInfo(repo?.identifier ?: mainCheckout?.name ?: dir.name, repo)
     }
 
+    /** The workspaces as of the last [refresh] or change: rows look theirs up without reading the disk. */
+    @Volatile
+    private var knownWorkspaces: List<AgentWorkspace> = emptyList()
+
+    private fun workspaceOf(cwd: String?): AgentWorkspace? {
+        cwd ?: return null
+        val path = File(cwd).absoluteFile.normalize().path
+        return knownWorkspaces.firstOrNull { path == it.dir || path.startsWith(it.dir + File.separator) }
+    }
+
+    /** When each workspace's pull requests were last asked of GitHub, by its id. */
+    private val prCheckedAt = ConcurrentHashMap<String, Long>()
+
+    @Volatile
+    private var prCheck: Job? = null
+
+    /**
+     * Asks GitHub, now and then, about the pull requests of the workspaces whose branch went to
+     * their remote: so a merged one shows as merged in the list. In the background; never blocks.
+     */
+    private fun checkPullRequests() {
+        if (prCheck?.isActive == true) return
+        val now = System.currentTimeMillis()
+        // A workspace whose every pull request is merged or closed has nothing more to learn.
+        val due =
+            knownWorkspaces.filter { ws ->
+                now - (prCheckedAt[ws.id] ?: 0L) > PR_CHECK_MS && !ws.repos.all { ws.pullRequests[it.name]?.isOpen == false }
+            }
+        if (due.isEmpty()) return
+        prCheck =
+            scope.launch {
+                val gh = GitHubPullRequests.find() ?: return@launch
+                var changed = false
+                due.forEach { workspace ->
+                    prCheckedAt[workspace.id] = System.currentTimeMillis()
+                    workspace.repos.forEach { repo ->
+                        val dir = File(workspace.dir, repo.name)
+                        val saved = workspace.pullRequests[repo.name]
+                        // A branch never pushed has no pull request to look for.
+                        val pushed = saved != null || withContext(Dispatchers.IO) { GitWorkspace.git(dir, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/${repo.branch}") } != null
+                        if (pushed && saved?.isOpen != false) {
+                            val pr = GitHubPullRequests.state(dir, repo.branch, gh)
+                            // No answer is not "no pull request": gh may be offline. Keep what was seen.
+                            if (pr != null && (saved?.state != pr.state || saved.url != pr.url || saved.isDraft != pr.isDraft)) {
+                                recordPullRequest(workspace.id, repo.name, pr, notify = false)
+                                changed = true
+                            }
+                        }
+                    }
+                }
+                if (changed) rebuildRows()
+            }
+    }
+
+    /** Saves what GitHub said about [repo]'s pull request in workspace [id], for the list's badge. */
+    fun recordPullRequest(
+        id: String,
+        repo: String,
+        pr: PullRequestInfo?,
+        notify: Boolean = true,
+    ) {
+        val updated = agentWorkspaces.recordPullRequest(id, repo, pr) ?: return
+        knownWorkspaces = knownWorkspaces.map { if (it.id == id) updated else it }
+        if (notify) rebuildRows()
+    }
+
+    /**
+     * Ends the chats working in [workspace] and removes its clones and record; the mirrors stay.
+     * The sessions' histories stay too, listed with the archived ones.
+     */
+    suspend fun deleteWorkspace(workspace: AgentWorkspace) {
+        val inside =
+            chats.value.values.filter { chat ->
+                val path = File(chat.state.value.cwd).absoluteFile.normalize().path
+                path == workspace.dir || path.startsWith(workspace.dir + File.separator)
+            }
+        // Waits for the processes to exit: not on the main thread.
+        withContext(Dispatchers.IO) { inside.forEach { it.kill() } }
+        inside.forEach { chat ->
+            watchers.remove(chat.key)?.cancel()
+            chats.update { it - chat.key }
+        }
+        recountNeedsYou()
+        agentWorkspaces.delete(workspace)
+        knownWorkspaces = knownWorkspaces.filter { it.id != workspace.id }
+        refresh()
+    }
+
+    /** The agent to offer first for a new session: the one the last session started with, if installed. */
+    fun preferredAgent(): AgentBackend? {
+        val installed = _installed.value
+        return agentWorkspaces.lastAgent?.let { id -> installed.firstOrNull { it.id == id } } ?: installed.firstOrNull()
+    }
+
+    private fun rememberAgent(agent: AgentBackend) {
+        if (agentWorkspaces.lastAgent != agent.id) agentWorkspaces.lastAgent = agent.id
+    }
+
     private val _executable = MutableStateFlow<File?>(null)
 
     /** The `claude` the chats run, or null when it isn't installed (or not found yet). */
@@ -223,9 +326,11 @@ class ClaudeCodeService(
                 .filter { !projects.containsKey(it) }
                 .forEach { cwd -> computeProject(cwd)?.let { projects[cwd] = it } }
             elsewhere.value = liveSessions()
+            knownWorkspaces = agentWorkspaces.list()
         }
         _loaded.value = true
         rebuildRows()
+        checkPullRequests()
     }
 
     fun refreshInBackground() {
@@ -235,6 +340,7 @@ class ClaudeCodeService(
     /** The chat for [key]: an open one, or a saved session opened from its file. */
     fun chat(key: String): ClaudeChat? {
         chats.value[key]?.let { return it }
+        if (key.startsWith(WORKSPACE_KEY)) return workspaceChat(key)
         chats.value.values
             .firstOrNull { it.state.value.sessionId == key }
             ?.let { return it }
@@ -249,6 +355,19 @@ class ClaudeCodeService(
     }
 
     /**
+     * A chat for a workspace whose session never started (no message was sent before the app
+     * closed): the one open in it, or a new one with the agent it was made for.
+     */
+    private fun workspaceChat(key: String): ClaudeChat? {
+        val workspace = knownWorkspaces.firstOrNull { WORKSPACE_KEY + it.id == key } ?: return null
+        chats.value.values
+            .firstOrNull { it.state.value.cwd == workspace.dir }
+            ?.let { return it }
+        val agent = workspace.agentId?.let { backend(it) } ?: backend
+        return newChat(File(workspace.dir), title = workspace.title, agent = agent)
+    }
+
+    /**
      * A new chat in [cwd]; its process starts with the first message. A [title] names the
      * session from the start, instead of its first message.
      */
@@ -258,7 +377,10 @@ class ClaudeCodeService(
         model: String? = null,
         title: String? = null,
         agent: AgentBackend = backend,
-    ): ClaudeChat = open("new-${UUID.randomUUID()}", null, cwd, title?.trim()?.ifEmpty { null }, permissionMode, model, agent = agent)
+    ): ClaudeChat {
+        rememberAgent(agent)
+        return open("new-${UUID.randomUUID()}", null, cwd, title?.trim()?.ifEmpty { null }, permissionMode, model, agent = agent)
+    }
 
     /**
      * A new chat in a workspace of its own: fresh clones of [urls], each on a new branch. Blocks
@@ -270,8 +392,9 @@ class ClaudeCodeService(
         permissionMode: PermissionMode,
         agent: AgentBackend = backend,
     ): ClaudeChat {
-        val workspace = agentWorkspaces.create(urls, title)
+        val workspace = agentWorkspaces.create(urls, title, agentId = agent.id)
         agentWorkspaces.saveGroup(RepoGroup(LAST_GROUP, workspace.repos.map { it.url }))
+        knownWorkspaces = listOf(workspace) + knownWorkspaces.filter { it.id != workspace.id }
         return newChat(File(workspace.dir), permissionMode, title = workspace.title, agent = agent)
     }
 
@@ -604,6 +727,7 @@ class ClaudeCodeService(
                     openElsewhere = live[info.sessionId]?.takeIf { it.pid !in ownPids },
                     project = projectOf(info.cwd),
                     archived = info.cwd in gone,
+                    workspace = workspaceOf(info.cwd),
                     agentId = backendOf(info.sessionId).id,
                     agentName = backendOf(info.sessionId).displayName,
                 )
@@ -631,11 +755,36 @@ class ClaudeCodeService(
                         appStatus = state.status,
                         openElsewhere = null,
                         project = projectOf(state.cwd),
+                        workspace = workspaceOf(state.cwd),
                         agentId = chat.backend.id,
                         agentName = chat.backend.displayName,
                     )
                 }
-        _rows.value = (unsaved + fromDisk).sortedByDescending { it.lastModified }
+        // Workspaces no session works in: made, but the app closed before their first message.
+        // Listed so they can be opened, or deleted, rather than sit unseen on disk.
+        val rowDirs = (unsaved + fromDisk).mapNotNull { it.cwd?.let { cwd -> File(cwd).absoluteFile.normalize().path } }
+        val idle =
+            knownWorkspaces
+                .filter { ws -> rowDirs.none { it == ws.dir || it.startsWith(ws.dir + File.separator) } }
+                .map { ws ->
+                    val agent = ws.agentId?.let { backend(it) } ?: backend
+                    ClaudeSessionRow(
+                        key = WORKSPACE_KEY + ws.id,
+                        sessionId = null,
+                        title = ws.title,
+                        lastPrompt = null,
+                        cwd = ws.dir,
+                        gitBranch = ws.repos.firstOrNull()?.branch,
+                        lastModified = ws.createdAt,
+                        appStatus = null,
+                        openElsewhere = null,
+                        project = ws.title,
+                        workspace = ws,
+                        agentId = agent.id,
+                        agentName = agent.displayName,
+                    )
+                }
+        _rows.value = (unsaved + fromDisk + idle).sortedByDescending { it.lastModified }
     }
 
     companion object {
@@ -644,6 +793,10 @@ class ClaudeCodeService(
         /** The repositories of the last workspace, offered first next time. */
         const val LAST_GROUP = "Last used"
         private const val WORKTREES_SUFFIX = "-worktrees"
+        private const val PR_CHECK_MS = 10 * 60_000L
+
+        /** The key of a workspace's row when no session works in it yet. */
+        const val WORKSPACE_KEY = "workspace:"
 
         /** The app's one service. Its processes end with the app. */
         val shared: ClaudeCodeService by lazy {

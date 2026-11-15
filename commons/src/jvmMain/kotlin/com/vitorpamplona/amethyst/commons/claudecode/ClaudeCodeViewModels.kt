@@ -158,18 +158,58 @@ class ClaudeCodeSessionsViewModel(
     /** The agents installed on this computer, to start a session with. */
     val installed = service.installed
 
+    private val savedGroups = MutableStateFlow(service.agentWorkspaces.groups())
+
     /** The repository groups saved before, the last used first. */
-    fun repoGroups(): List<RepoGroup> = service.agentWorkspaces.groups()
+    val repoGroups: StateFlow<List<RepoGroup>> = savedGroups.asStateFlow()
+
+    /** Saves [urls] under [name], to pick together next time. */
+    fun saveGroup(
+        name: String,
+        urls: List<String>,
+    ) {
+        val clean = name.trim().ifEmpty { return }
+        try {
+            service.agentWorkspaces.saveGroup(RepoGroup(clean, urls))
+        } catch (e: IOException) {
+            Log.w(TAG, "Could not save the group", e)
+        }
+        savedGroups.value = service.agentWorkspaces.groups()
+    }
+
+    fun deleteGroup(name: String) {
+        try {
+            service.agentWorkspaces.deleteGroup(name)
+        } catch (e: IOException) {
+            Log.w(TAG, "Could not remove the group", e)
+        }
+        savedGroups.value = service.agentWorkspaces.groups()
+    }
+
+    /** The agent a new session starts with unless the user picks another: the last one used. */
+    fun preferredAgentId(): String? = service.preferredAgent()?.id
+
+    /** Ends the row's session and removes the workspace of clones it works in. */
+    fun deleteWorkspace(row: ClaudeSessionRow) {
+        val workspace = row.workspace ?: return
+        viewModelScope.launch {
+            try {
+                service.deleteWorkspace(workspace)
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not remove the workspace", e)
+            }
+        }
+    }
 
     /** Where workspaces live, to show the user. */
     val workspacesRoot: String = service.agentWorkspaces.root.absolutePath
 
     /**
-     * A session in a workspace of its own: a fresh clone of each repository in [urls] (one per
-     * line), each on a new branch. Cloning can take minutes the first time a repository is used.
+     * A session in a workspace of its own: a fresh clone of each repository in [urls], each on a
+     * new branch. Cloning can take minutes the first time a repository is used.
      */
     fun newWorkspaceChat(
-        urls: String,
+        urls: List<String>,
         title: String,
         permissionMode: PermissionMode,
         agentId: String? = null,
@@ -181,7 +221,7 @@ class ClaudeCodeSessionsViewModel(
         viewModelScope.launch {
             try {
                 val agent = agentId?.let { service.backend(it) } ?: service.backend
-                onReady(service.newWorkspaceChat(urls.lines(), title.trim().ifEmpty { null }, permissionMode, agent).key)
+                onReady(service.newWorkspaceChat(urls, title.trim().ifEmpty { null }, permissionMode, agent).key)
             } catch (e: IOException) {
                 Log.w(TAG, "Could not create the workspace", e)
                 _newChatError.value = NewChatError.CloneFailed(e.message)

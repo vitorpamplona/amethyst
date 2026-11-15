@@ -759,9 +759,13 @@ sealed class Route {
         val key: String,
     ) : Route()
 
-    /** What a Claude Code chat's branch changed: its commits and diff. */
+    /**
+     * What a Claude Code chat's branch changed: its commits and diff. In a workspace of several
+     * repositories, [repo] names the one (its folder in the workspace).
+     */
     @Serializable data class ClaudeCodeChanges(
         val key: String,
+        val repo: String? = null,
     ) : Route()
 
     /** Publishes a Claude Code chat's branch as a NIP-34 proposal, or a new version of one. */

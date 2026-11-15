@@ -201,6 +201,8 @@ sealed interface ChangesState {
 class ClaudeCodeChangesViewModel(
     service: ClaudeCodeService,
     key: String,
+    /** A repository's folder inside the chat's folder (a workspace's), or null for the chat's folder itself. */
+    val repo: String? = null,
 ) : ViewModel() {
     val chat: ClaudeChat? = service.chat(key)
 
@@ -220,12 +222,13 @@ class ClaudeCodeChangesViewModel(
     }
 
     fun reload() {
-        val dir =
+        val cwd =
             chat
                 ?.state
                 ?.value
                 ?.cwd
                 ?.let(::File) ?: return
+        val dir = repo?.let { File(cwd, it) } ?: cwd
         viewModelScope.launch {
             val info = GitWorkspace.inspect(dir)
             // First open: what isn't committed when there is some (what Claude just did), else the branch.
@@ -249,7 +252,9 @@ class ClaudeCodeChangesViewModel(
         code: String,
         question: String,
     ) {
-        val where = if (line != null) "$path:$line" else path
+        // The agent works in the workspace's folder: a repository's paths start with its folder.
+        val relative = repo?.let { "$it/$path" } ?: path
+        val where = if (line != null) "$relative:$line" else relative
         chat?.send("$where\n```\n$code\n```\n$question")
     }
 }

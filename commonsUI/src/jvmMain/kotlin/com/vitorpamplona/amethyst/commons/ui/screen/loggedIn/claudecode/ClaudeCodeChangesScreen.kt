@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_ask_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_commits
 import com.vitorpamplona.amethyst.commons.resources.claude_code_no_changes
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_scope_branch
 import com.vitorpamplona.amethyst.commons.resources.claude_code_scope_uncommitted
 import com.vitorpamplona.amethyst.commons.resources.claude_code_uncommitted
@@ -97,8 +98,9 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitDiffLine
 fun ClaudeCodeChangesScreen(
     key: String,
     nav: INav,
+    repo: String? = null,
 ) {
-    val viewModel = rememberViewModel(key = "ClaudeCodeChanges-$key") { ClaudeCodeChangesViewModel(ClaudeCodeService.shared, key) }
+    val viewModel = rememberViewModel(key = "ClaudeCodeChanges-$key-$repo") { ClaudeCodeChangesViewModel(ClaudeCodeService.shared, key, repo) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val info = (state as? ChangesState.Loaded)?.info
     var asking by remember { mutableStateOf<Pair<GitDiffFile, GitDiffLine>?>(null) }
@@ -106,7 +108,7 @@ fun ClaudeCodeChangesScreen(
     Scaffold(
         topBar = {
             ChatTopBar(
-                title = stringRes(Res.string.claude_code_changes),
+                title = repo?.let { stringRes(Res.string.claude_code_pr_changes, it) } ?: stringRes(Res.string.claude_code_changes),
                 subtitle =
                     info?.let {
                         val base = it.base

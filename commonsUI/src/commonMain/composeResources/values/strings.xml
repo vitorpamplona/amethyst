@@ -9678,7 +9678,7 @@
     <string name="claude_code_where_folder">A folder on this computer</string>
     <string name="claude_code_where_clones">Fresh clones</string>
     <string name="claude_code_where_clones_desc">The session gets its own clone of each repository, on a new branch, in %1$s. You open the pull requests.</string>
-    <string name="claude_code_workspace_repos">Repositories, one URL per line</string>
+    <string name="claude_code_workspace_repos">Repositories</string>
     <string name="claude_code_workspace_name">Name (optional)</string>
     <string name="claude_code_workspace_cloning">Cloning the repositories…</string>
     <string name="claude_code_workspace_clone_failed">Couldn’t clone: %1$s</string>
@@ -9722,6 +9722,32 @@
     <string name="claude_code_attach_pick">Choose images to send</string>
     <string name="claude_code_attach_remove">Remove %1$s</string>
     <string name="claude_code_attach_failed">Couldn’t attach %1$s: images must be PNG, JPEG, GIF or WebP.</string>
+    <string name="claude_code_section_workspaces">Workspaces</string>
+    <plurals name="claude_code_pr_badge_open">
+        <item quantity="one">%1$d PR open</item>
+        <item quantity="other">%1$d PRs open</item>
+    </plurals>
+    <string name="claude_code_workspace_delete_title">Delete this workspace?</string>
+    <string name="claude_code_workspace_last_used">Last used</string>
+    <string name="claude_code_workspace_forget_group">Forget %1$s</string>
+    <string name="claude_code_workspace_remove_repo">Remove %1$s</string>
+    <string name="claude_code_workspace_add_repo">Repository URL, then Enter</string>
+    <string name="claude_code_workspace_add">Add</string>
+    <string name="claude_code_workspace_group_name">Group name</string>
+    <string name="claude_code_workspace_save_group">Save as group</string>
+    <plurals name="claude_code_workspace_subtitle">
+        <item quantity="one">%1$s · %2$d repository</item>
+        <item quantity="other">%1$s · %2$d repositories</item>
+    </plurals>
+    <string name="claude_code_starter_explain_repos">Explain how these repositories are organized and how they depend on each other</string>
+    <string name="claude_code_starter_tests_repos">Run the tests in each repository and fix what fails</string>
+    <string name="claude_code_pr_details">Details</string>
+    <string name="claude_code_pr_hide_details">Hide details</string>
+    <string name="claude_code_pr_pushed">Pushed %1$s. The pull request didn’t open: try again, or open it on GitHub.</string>
+    <string name="claude_code_pr_open_repo">Open %1$s on the web</string>
+    <string name="claude_code_pr_changes">Changes in %1$s</string>
+    <string name="claude_code_model_other">Other models</string>
+    <string name="claude_code_model_default_named">Default (%1$s)</string>
     <string name="claude_code_settings_assistant">Settings assistant</string>
     <string name="claude_code_context_used_little">under 1% of context</string>
     <plurals name="claude_code_tool_group_settings">

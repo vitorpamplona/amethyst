@@ -179,4 +179,64 @@ class AgentWorkspacesTest {
         val info = assertNotNull(GitHubPullRequests.parseState("""{"isDraft":false,"state":"MERGED","url":"https://github.com/o/r/pull/7"}"""))
         assertTrue(info.isMerged)
     }
+
+    @Test
+    fun repositoriesAreShownAsOwnerAndName() {
+        assertEquals("vitorpamplona/amethyst", AgentWorkspaces.ownerAndName("https://github.com/vitorpamplona/amethyst.git"))
+        assertEquals("vitorpamplona/amethyst", AgentWorkspaces.ownerAndName("git@github.com:vitorpamplona/amethyst.git"))
+        assertEquals("vitorpamplona/amethyst", AgentWorkspaces.ownerAndName("ssh://git@github.com/vitorpamplona/amethyst"))
+        assertEquals("https://github.com/vitorpamplona/amethyst", AgentWorkspaces.webUrl("git@github.com:vitorpamplona/amethyst.git"))
+        assertEquals("https://github.com/vitorpamplona/amethyst", AgentWorkspaces.webUrl("https://github.com/vitorpamplona/amethyst.git"))
+        assertEquals("https://github.com/o/r", AgentWorkspaces.webUrl("ssh://git@github.com:22/o/r.git"))
+        // A local remote has no page to open.
+        assertEquals(null, AgentWorkspaces.webUrl("/srv/git/app.git"))
+    }
+
+    @Test
+    fun aPullRequestIsKeptWithItsWorkspace() =
+        runBlocking {
+            val ws = workspaces.create(listOf(appUrl, libUrl), null)
+            val saved = assertNotNull(workspaces.recordPullRequest(ws.id, "app", PullRequestInfo("https://github.com/o/app/pull/1", "OPEN", isDraft = true)))
+            assertTrue(saved.pullRequests.getValue("app").isOpen)
+            // It survives a re-read from disk, and a state change replaces it.
+            assertEquals(
+                "https://github.com/o/app/pull/1",
+                workspaces
+                    .list()
+                    .single()
+                    .pullRequests["app"]
+                    ?.url,
+            )
+            workspaces.recordPullRequest(ws.id, "app", PullRequestInfo("https://github.com/o/app/pull/1", "MERGED", isDraft = false))
+            assertTrue(
+                workspaces
+                    .list()
+                    .single()
+                    .pullRequests
+                    .getValue("app")
+                    .isMerged,
+            )
+            assertEquals(null, workspaces.recordPullRequest("gone", "app", null))
+        }
+
+    @Test
+    fun theLastAgentAndGroupsAreRemembered() {
+        assertEquals(null, workspaces.lastAgent)
+        workspaces.lastAgent = "codex"
+        assertEquals("codex", AgentWorkspaces(workspaces.root).lastAgent)
+        workspaces.saveGroup(RepoGroup("stack", listOf(appUrl, libUrl)))
+        workspaces.saveGroup(RepoGroup("app only", listOf(appUrl)))
+        workspaces.deleteGroup("stack")
+        assertEquals(listOf("app only"), workspaces.groups().map { it.name })
+        // The agent's record is not a workspace.
+        assertTrue(workspaces.list().isEmpty())
+    }
+
+    @Test
+    fun ghsErrorsShowTheirFirstLine() {
+        val error = PullRequestError("\nfatal: could not read Username for 'https://github.com'\nhint: set up a credential helper\n", pushed = false)
+        assertEquals("fatal: could not read Username for 'https://github.com'", error.summary)
+        assertTrue(error.hasDetails)
+        assertFalse(PullRequestError("one line", pushed = true).hasDetails)
+    }
 }

@@ -118,8 +118,23 @@ URLs (the last list is offered again).
 - Checked in the app with local bare repositories standing in for GitHub: the workspace cloned
   both, the agent committed and was refused the push, the user's push reached the remote, `gh`'s
   refusal (not a GitHub remote here) showed in its own words, and deleting left the mirrors.
+- The session list has a Workspaces section: each row shows its repositories (`owner/name`) and
+  a pull request badge ("2 PRs open", "Merged") read from the workspace's record. The record
+  learns a pull request's state when the Pull requests screen loads, and every ten minutes in the
+  background for branches that reached the remote. A row's menu deletes the workspace. A
+  workspace whose first message was never sent is still listed, and opens a chat in it with the
+  agent it was made for.
+- A mirror is fetched with git's automatic maintenance off and repacked in step, under its lock,
+  and clones are made under the same lock: a detached maintenance run would otherwise rewrite the
+  objects a parallel session is cloning (seen as a failed clone in the concurrency test).
+- New session remembers the last agent; repositories are rows (owner/name plus remove), with the
+  last-used list and named groups as chips. Each repository card on the Pull requests screen has
+  its own Changes view; questions asked from it name the file by its path inside the workspace.
 
 ## Open
+
+- A pull request opened outside the app (the user's own `gh pr create`) shows once its branch is
+  on the remote; one opened from a branch renamed by hand does not.
 
 - How Codex shows subagents, and whether its approvals carry enough to show a diff before applying.
 - Whether to offer Codex's ChatGPT login in the app or leave login to `codex login` (as with Claude).

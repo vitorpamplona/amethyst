@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -41,8 +42,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -58,6 +61,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -83,11 +87,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.agents.AgentBackend
 import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspace
+import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspaces
 import com.vitorpamplona.amethyst.commons.claudecode.ChatStatus
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeSessionsViewModel
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeSessionRow
 import com.vitorpamplona.amethyst.commons.claudecode.NewChatError
+import com.vitorpamplona.amethyst.commons.claudecode.RepoGroup
 import com.vitorpamplona.amethyst.commons.claudecode.expandHome
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -110,10 +117,14 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_no_matches
 import com.vitorpamplona.amethyst.commons.resources.claude_code_no_sessions
 import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_warning
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permissions
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_badge_open
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_closed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_merged
 import com.vitorpamplona.amethyst.commons.resources.claude_code_rename_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_search_hint
 import com.vitorpamplona.amethyst.commons.resources.claude_code_section_archived
 import com.vitorpamplona.amethyst.commons.resources.claude_code_section_needs_you
+import com.vitorpamplona.amethyst.commons.resources.claude_code_section_workspaces
 import com.vitorpamplona.amethyst.commons.resources.claude_code_start
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_in_terminal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_status_needs_approval
@@ -125,10 +136,20 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_where_clones
 import com.vitorpamplona.amethyst.commons.resources.claude_code_where_clones_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_where_folder
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_add
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_add_repo
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_clone_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_cloning
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete_body
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete_title
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_forget_group
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_group_name
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_last_used
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_name
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_remove_repo
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_repos
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_save_group
 import com.vitorpamplona.amethyst.commons.resources.claude_code_worktree
 import com.vitorpamplona.amethyst.commons.resources.claude_code_worktree_desc
 import com.vitorpamplona.amethyst.commons.resources.refresh
@@ -172,6 +193,7 @@ fun ClaudeCodeSessionsScreen(nav: INav) {
     var showNew by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<ClaudeSessionRow?>(null) }
     var deleting by remember { mutableStateOf<ClaudeSessionRow?>(null) }
+    var deletingWorkspace by remember { mutableStateOf<ClaudeSessionRow?>(null) }
 
     Scaffold(
         topBar = {
@@ -209,7 +231,7 @@ fun ClaudeCodeSessionsScreen(nav: INav) {
                     !loaded -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     executable == null && rows.isEmpty() -> InstallState()
                     rows.isEmpty() -> EmptyState(stringRes(if (query.isBlank()) Res.string.claude_code_no_sessions else Res.string.claude_code_no_matches))
-                    else -> SessionList(rows, nav, onRename = { renaming = it }, onDelete = { deleting = it })
+                    else -> SessionList(rows, nav, onRename = { renaming = it }, onDelete = { deleting = it }, onDeleteWorkspace = { deletingWorkspace = it })
                 }
             }
         }
@@ -256,6 +278,33 @@ fun ClaudeCodeSessionsScreen(nav: INav) {
             dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringRes(Res.string.cancel)) } },
         )
     }
+
+    deletingWorkspace?.let { row ->
+        DeleteWorkspaceDialog(
+            onDismiss = { deletingWorkspace = null },
+            onConfirm = {
+                viewModel.deleteWorkspace(row)
+                deletingWorkspace = null
+            },
+        )
+    }
+}
+
+/** Asks before a workspace's clones go: commits never pushed go with them. */
+@Composable
+internal fun DeleteWorkspaceDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(Res.string.claude_code_workspace_delete_title)) },
+        text = { Text(stringRes(Res.string.claude_code_workspace_delete_body)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(stringRes(Res.string.claude_code_workspace_delete), color = MaterialTheme.colorScheme.error) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) } },
+    )
 }
 
 @Composable
@@ -264,15 +313,19 @@ private fun SessionList(
     nav: INav,
     onRename: (ClaudeSessionRow) -> Unit,
     onDelete: (ClaudeSessionRow) -> Unit,
+    onDeleteWorkspace: (ClaudeSessionRow) -> Unit,
 ) {
-    // Sessions waiting on the user first; then a section per project, in the order of its newest
-    // session; sessions whose folder is gone last, folded.
+    // Sessions waiting on the user first; then the ones in workspaces of their own, newest first;
+    // then a section per project, in the order of its newest session; sessions whose folder is
+    // gone last, folded.
     val needsYou = remember(rows) { rows.filter { it.appStatus == ChatStatus.NEEDS_APPROVAL } }
     val archived = remember(rows) { rows.filter { it.archived && it.appStatus != ChatStatus.NEEDS_APPROVAL } }
+    val active = remember(rows) { rows.filter { it.appStatus != ChatStatus.NEEDS_APPROVAL && !it.archived } }
+    val inWorkspaces = remember(active) { active.filter { it.workspace != null } }
     val sections =
-        remember(rows) {
-            rows
-                .filter { it.appStatus != ChatStatus.NEEDS_APPROVAL && !it.archived }
+        remember(active) {
+            active
+                .filter { it.workspace == null }
                 .groupBy { it.project }
                 .toList()
         }
@@ -285,12 +338,17 @@ private fun SessionList(
             onOpen = { nav.nav(Route.ClaudeCodeChat(row.key)) },
             onRename = { onRename(row) },
             onDelete = { onDelete(row) },
+            onDeleteWorkspace = { onDeleteWorkspace(row) },
         )
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
         if (needsYou.isNotEmpty()) {
             item(key = "section-needs-you") { SectionHeader(stringRes(Res.string.claude_code_section_needs_you), MaterialTheme.colorScheme.error) }
             items(needsYou, key = { "needs-" + it.key }) { Item(it) }
+        }
+        if (inWorkspaces.isNotEmpty()) {
+            item(key = "section-workspaces") { SectionHeader(stringRes(Res.string.claude_code_section_workspaces)) }
+            items(inWorkspaces, key = { "ws-" + it.key }) { Item(it) }
         }
         sections.forEach { (project, sessions) ->
             item(key = "section-$project") { SectionHeader(project) }
@@ -337,6 +395,7 @@ private fun SessionRow(
     onOpen: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
+    onDeleteWorkspace: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
     val hover = remember { MutableInteractionSource() }
@@ -364,19 +423,22 @@ private fun SessionRow(
                 if (row.agentId.isNotEmpty() && row.agentId != ClaudeBackend.ID) {
                     Text(row.agentName + " • ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, maxLines = 1)
                 }
-                row.gitBranch?.let {
+                // A workspace's branch is the app's own name for it: its repositories say more.
+                val where = row.workspace?.repoLabels?.joinToString(", ") ?: row.gitBranch
+                where?.let {
                     Text(
                         it,
                         style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = if (row.workspace == null) FontFamily.Monospace else null,
                         color = MaterialTheme.colorScheme.grayText,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
                 }
+                row.workspace?.let { PullRequestBadge(it) }
                 Text(
-                    timeAgo(row.lastModified / 1000, prefix = if (row.gitBranch != null) " • " else ""),
+                    timeAgo(row.lastModified / 1000, prefix = if (where != null) " • " else ""),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.grayText,
                     maxLines = 1,
@@ -391,18 +453,51 @@ private fun SessionRow(
             IconButton(onClick = { menu = true }) { Icon(MaterialSymbols.MoreVert, contentDescription = null, tint = MaterialTheme.colorScheme.grayText) }
             RoundedDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 RoundedMenuSection {
-                    MenuRow(stringRes(Res.string.rename)) {
-                        menu = false
-                        onRename()
+                    // A workspace no session works in yet has only itself to remove.
+                    if (!row.key.startsWith(ClaudeCodeService.WORKSPACE_KEY)) {
+                        MenuRow(stringRes(Res.string.rename)) {
+                            menu = false
+                            onRename()
+                        }
+                        MenuRow(stringRes(Res.string.claude_code_delete)) {
+                            menu = false
+                            onDelete()
+                        }
                     }
-                    MenuRow(stringRes(Res.string.claude_code_delete)) {
-                        menu = false
-                        onDelete()
+                    if (row.workspace != null) {
+                        MenuRow(stringRes(Res.string.claude_code_workspace_delete)) {
+                            menu = false
+                            onDeleteWorkspace()
+                        }
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * Where the workspace's pull requests stand, as last seen: how many are open, else merged or
+ * closed. Nothing before the first one is opened.
+ */
+@Composable
+private fun PullRequestBadge(workspace: AgentWorkspace) {
+    val prs = workspace.pullRequests.values
+    if (prs.isEmpty()) return
+    val open = prs.count { it.isOpen }
+    val (label, color) =
+        when {
+            open > 0 -> pluralStringRes(Res.plurals.claude_code_pr_badge_open, open, open) to AddedColor
+            prs.any { it.isMerged } -> stringRes(Res.string.claude_code_pr_state_merged) to MaterialTheme.colorScheme.primary
+            else -> stringRes(Res.string.claude_code_pr_state_closed) to MaterialTheme.colorScheme.error
+        }
+    Text(
+        label,
+        style = MaterialTheme.typography.labelSmall,
+        color = color,
+        maxLines = 1,
+        modifier = Modifier.padding(start = 6.dp).border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(50)).padding(horizontal = 6.dp, vertical = 1.dp),
+    )
 }
 
 /**
@@ -476,31 +571,36 @@ private fun NewSessionDialog(
     var worktree by remember { mutableStateOf(false) }
     var mode by remember { mutableStateOf(PermissionMode.DEFAULT) }
     val installed by viewModel.installed.collectAsStateWithLifecycle()
-    var agentId by remember { mutableStateOf<String?>(null) }
+    // The agent the last session started with, until the user picks another.
+    var agentId by remember { mutableStateOf(viewModel.preferredAgentId()) }
     val agent = installed.firstOrNull { it.id == agentId } ?: installed.firstOrNull()
     val modes = agent?.capabilities?.modes?.filter { it in PICKABLE_MODES } ?: PICKABLE_MODES
     if (mode !in modes) mode = PermissionMode.DEFAULT
     // A folder already on this computer, or a workspace of fresh clones made for the session.
     var clones by remember { mutableStateOf(false) }
-    var repos by remember {
-        mutableStateOf(
-            viewModel
-                .repoGroups()
-                .firstOrNull()
-                ?.urls
-                ?.joinToString("\n")
-                .orEmpty(),
-        )
-    }
+    val groups by viewModel.repoGroups.collectAsStateWithLifecycle()
+    // The repositories of the last workspace to start with: most sessions continue where the last left off.
+    val repos = remember { mutableStateListOf<String>().apply { addAll((groups.firstOrNull { it.name == ClaudeCodeService.LAST_GROUP } ?: groups.firstOrNull())?.urls.orEmpty()) } }
+    var adding by remember { mutableStateOf("") }
     var workspaceName by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val browseTitle = stringRes(Res.string.claude_code_browse)
+
+    // What a click on Start clones: the rows, and a URL still in the field.
+    fun pendingRepos(): List<String> = (repos + splitUrls(adding)).distinct()
+
+    fun addTyped() {
+        splitUrls(adding).forEach { if (it !in repos) repos.add(it) }
+        adding = ""
+        viewModel.clearNewChatError()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringRes(Res.string.claude_code_new_session)) },
         text = {
-            Column(Modifier.widthIn(min = 420.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            // Scrolls on a short window: the Start button must never be pushed off screen.
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 // Which agent works on it, when more than one is installed.
                 AgentPicker(installed, agent?.id) { agentId = it }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -509,18 +609,30 @@ private fun NewSessionDialog(
                 }
                 if (clones) {
                     Text(stringRes(Res.string.claude_code_where_clones_desc, viewModel.workspacesRoot), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
-                    OutlinedTextField(
-                        value = repos,
-                        onValueChange = {
-                            repos = it
+                    RepoGroupChips(
+                        groups = groups,
+                        current = repos.toList(),
+                        onPick = { group ->
+                            repos.clear()
+                            repos.addAll(group.urls)
                             viewModel.clearNewChatError()
                         },
-                        label = { Text(stringRes(Res.string.claude_code_workspace_repos)) },
-                        minLines = 2,
-                        maxLines = 6,
+                        onForget = { viewModel.deleteGroup(it.name) },
+                    )
+                    RepoList(
+                        repos = repos,
+                        adding = adding,
+                        onAddingChange = {
+                            adding = it
+                            viewModel.clearNewChatError()
+                        },
+                        onAdd = ::addTyped,
+                        onRemove = { repos.remove(it) },
                         isError = error != null,
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                        modifier = Modifier.fillMaxWidth(),
+                        onSaveGroup = { name ->
+                            addTyped()
+                            viewModel.saveGroup(name, repos.toList())
+                        },
                     )
                     OutlinedTextField(
                         value = workspaceName,
@@ -561,10 +673,11 @@ private fun NewSessionDialog(
                         modifier = Modifier.fillMaxWidth(),
                     )
                     if (suggestedFolders.size > 1) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            suggestedFolders.take(6).forEach { cwd ->
+                        // One row that scrolls sideways: the dialog keeps its height however many there are.
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            suggestedFolders.take(12).forEach { cwd ->
                                 HoverTooltip(cwd) {
-                                    FilterChip(selected = folder == cwd, onClick = { folder = cwd }, label = { Text(folderName(cwd)) })
+                                    FilterChip(selected = folder == cwd, onClick = { folder = cwd }, label = { Text(folderName(cwd), maxLines = 1) })
                                 }
                             }
                         }
@@ -602,9 +715,14 @@ private fun NewSessionDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = !creating && (if (clones) repos.isNotBlank() else folder.isNotBlank()),
+                enabled = !creating && (if (clones) pendingRepos().isNotEmpty() else folder.isNotBlank()),
                 onClick = {
-                    if (clones) viewModel.newWorkspaceChat(repos, workspaceName, mode, agent?.id, onStarted) else viewModel.newChat(folder, worktree, mode, agent?.id, onStarted)
+                    if (clones) {
+                        addTyped()
+                        viewModel.newWorkspaceChat(repos.toList(), workspaceName, mode, agent?.id, onStarted)
+                    } else {
+                        viewModel.newChat(folder, worktree, mode, agent?.id, onStarted)
+                    }
                 },
             ) {
                 Text(stringRes(Res.string.claude_code_start))
@@ -612,6 +730,132 @@ private fun NewSessionDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) } },
     )
+}
+
+/** URLs typed or pasted into the field: one or many, split on spaces, commas and new lines. */
+private fun splitUrls(text: String): List<String> = text.split(Regex("[\\s,]+")).map { it.trim() }.filter { it.isNotEmpty() }
+
+/** The saved groups, to fill the list in one click: the last used first, then the named ones. */
+@Composable
+private fun RepoGroupChips(
+    groups: List<RepoGroup>,
+    current: List<String>,
+    onPick: (RepoGroup) -> Unit,
+    onForget: (RepoGroup) -> Unit,
+) {
+    if (groups.isEmpty()) return
+    val last = stringRes(Res.string.claude_code_workspace_last_used)
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // "Last used" leads; the named groups follow, the most recently saved first.
+        groups.sortedByDescending { it.name == ClaudeCodeService.LAST_GROUP }.forEach { group ->
+            val isLast = group.name == ClaudeCodeService.LAST_GROUP
+            HoverTooltip(group.urls.joinToString("\n") { AgentWorkspaces.ownerAndName(it) }) {
+                FilterChip(
+                    selected = group.urls == current,
+                    onClick = { onPick(group) },
+                    label = { Text(if (isLast) last else group.name, maxLines = 1) },
+                    trailingIcon =
+                        if (isLast) {
+                            null
+                        } else {
+                            {
+                                val forget = stringRes(Res.string.claude_code_workspace_forget_group, group.name)
+                                Icon(MaterialSymbols.Close, contentDescription = forget, modifier = Modifier.size(16.dp).clip(CircleShape).clickable { onForget(group) })
+                            }
+                        },
+                )
+            }
+        }
+    }
+}
+
+/** The repositories to clone, one row each, and a field to add more; the list can be saved as a group. */
+@Composable
+private fun RepoList(
+    repos: List<String>,
+    adding: String,
+    onAddingChange: (String) -> Unit,
+    onAdd: () -> Unit,
+    onRemove: (String) -> Unit,
+    isError: Boolean,
+    onSaveGroup: (String) -> Unit,
+) {
+    var naming by remember { mutableStateOf(false) }
+    var groupName by remember { mutableStateOf("") }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringRes(Res.string.claude_code_workspace_repos), style = MaterialTheme.typography.labelLarge)
+        repos.forEach { url ->
+            // Outlined: the dialog's own surface is the same tone as a filled row.
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                    .padding(start = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
+                    Text(AgentWorkspaces.ownerAndName(url), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(url, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.grayText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                val remove = stringRes(Res.string.claude_code_workspace_remove_repo, AgentWorkspaces.ownerAndName(url))
+                HoverTooltip(remove) {
+                    IconButton(onClick = { onRemove(url) }) { Icon(MaterialSymbols.Close, contentDescription = remove, modifier = Modifier.size(18.dp)) }
+                }
+            }
+        }
+        OutlinedTextField(
+            value = adding,
+            onValueChange = onAddingChange,
+            placeholder = { Text(stringRes(Res.string.claude_code_workspace_add_repo), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            singleLine = true,
+            isError = isError,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+            trailingIcon = {
+                if (adding.isNotBlank()) TextButton(onClick = onAdd) { Text(stringRes(Res.string.claude_code_workspace_add)) }
+            },
+            modifier =
+                Modifier.fillMaxWidth().onPreviewKeyEvent { event ->
+                    // Enter adds the URL as a row.
+                    if (event.type == KeyEventType.KeyDown && event.key == Key.Enter && adding.isNotBlank()) {
+                        onAdd()
+                        true
+                    } else {
+                        false
+                    }
+                },
+        )
+        if (naming) {
+            // Typing goes to the name as soon as the field appears; Enter saves.
+            val focus = remember { FocusRequester() }
+            LaunchedEffect(Unit) { focus.requestFocus() }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = groupName,
+                    onValueChange = { groupName = it },
+                    label = { Text(stringRes(Res.string.claude_code_workspace_group_name)) },
+                    singleLine = true,
+                    modifier =
+                        Modifier.weight(1f).focusRequester(focus).onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown && event.key == Key.Enter && groupName.isNotBlank()) {
+                                onSaveGroup(groupName)
+                                naming = false
+                                groupName = ""
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                )
+                TextButton(enabled = groupName.isNotBlank(), onClick = {
+                    onSaveGroup(groupName)
+                    naming = false
+                    groupName = ""
+                }) { Text(stringRes(Res.string.save)) }
+            }
+        } else if (repos.isNotEmpty()) {
+            TextButton(onClick = { naming = true }) { Text(stringRes(Res.string.claude_code_workspace_save_group)) }
+        }
+    }
 }
 
 /** Chips to pick the agent from the installed ones; nothing when there is only one. */

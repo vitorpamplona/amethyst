@@ -54,6 +54,8 @@ object GitHubPullRequests {
 
         data class Failed(
             val reason: String,
+            /** The branch reached the remote before `gh` failed: only the pull request is missing. */
+            val pushed: Boolean = false,
         ) : Result
     }
 
@@ -100,7 +102,10 @@ object GitHubPullRequests {
                     if (draft) add("--draft")
                 }
             val created = GitWorkspace.run(dir, command, timeoutSeconds = 120)
-            parseCreated(created.code, created.output)
+            when (val result = parseCreated(created.code, created.output)) {
+                is Result.Failed -> result.copy(pushed = true)
+                is Result.Opened -> result
+            }
         }
 
     /** The pull request [branch] opened, or null when it has none (or `gh` can't say). */

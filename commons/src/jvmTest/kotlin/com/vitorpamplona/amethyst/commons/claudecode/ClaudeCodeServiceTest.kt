@@ -83,6 +83,7 @@ class ClaudeCodeServiceTest {
                         findExecutable = { null },
                     ),
                 scope = scope,
+                agentWorkspaces = AgentWorkspaces(File(config, "agents")),
             )
     }
 
@@ -129,6 +130,7 @@ class ClaudeCodeServiceTest {
                             findExecutable = { null },
                         ),
                     scope = scope,
+                    agentWorkspaces = AgentWorkspaces(File(config, "agents")),
                 )
             service.refresh()
             val chat = assertNotNull(service.chat(other))
@@ -224,6 +226,7 @@ class ClaudeCodeServiceTest {
                             findExecutable = { null },
                         ),
                     scope = scope,
+                    agentWorkspaces = AgentWorkspaces(File(config, "agents")),
                 )
             val chat = asking.newChat(work)
             chat.send("write it")
@@ -262,4 +265,48 @@ class ClaudeCodeServiceTest {
 
         override fun stderrTail(): String = ""
     }
+
+    @Test
+    fun aWorkspaceWithoutASessionIsListedAndOpensAChatInIt() =
+        runBlocking {
+            // A workspace the app made, whose first message was never sent.
+            val remote = File(work, "remote.git")
+            val seed = File(work, "seed").apply { mkdirs() }
+
+            fun git(
+                dir: File,
+                vararg args: String,
+            ) = check(
+                ProcessBuilder(listOf("git") + args)
+                    .directory(dir)
+                    .redirectErrorStream(true)
+                    .start()
+                    .waitFor() == 0,
+            ) { args.joinToString(" ") }
+            git(work, "init", "--quiet", "--bare", "--initial-branch=main", remote.absolutePath)
+            git(seed, "init", "--quiet", "--initial-branch=main")
+            File(seed, "README.md").writeText("app\n")
+            git(seed, "add", ".")
+            git(seed, "-c", "user.name=T", "-c", "user.email=t@example.invalid", "commit", "--quiet", "-m", "init")
+            git(seed, "push", "--quiet", remote.absolutePath, "main")
+            val ws = service.agentWorkspaces.create(listOf("file://" + remote.absolutePath), "Idle one", agentId = "claude")
+
+            service.refresh()
+            val row = assertNotNull(service.rows.value.firstOrNull { it.workspace?.id == ws.id })
+            assertEquals(ClaudeCodeService.WORKSPACE_KEY + ws.id, row.key)
+            assertEquals("Idle one", row.title)
+
+            // Opening it gives a chat in the workspace, the same one each time.
+            val chat = assertNotNull(service.chat(row.key))
+            assertEquals(ws.dir, chat.state.value.cwd)
+            assertEquals(chat, service.chat(row.key))
+            // The chat's own row stands for the workspace now.
+            waitFor { service.rows.value.none { it.key == row.key } }
+            assertEquals(
+                chat.key,
+                service.rows.value
+                    .single { it.workspace?.id == ws.id }
+                    .key,
+            )
+        }
 }

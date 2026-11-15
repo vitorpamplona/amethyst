@@ -60,7 +60,27 @@ data class AgentWorkspace(
     val dir: String,
     val repos: List<WorkspaceRepo>,
     val createdAt: Long,
-)
+    /** The pull request each repository's branch opened, by its folder name, as last seen. */
+    val pullRequests: Map<String, SavedPullRequest> = emptyMap(),
+    /** The agent it was made for ([com.vitorpamplona.agents.AgentBackend.id]): a chat reopened in it uses the same. */
+    val agentId: String? = null,
+) {
+    /** The repositories, as the user knows them: `owner/name` from each URL. */
+    val repoLabels: List<String> get() = repos.map { AgentWorkspaces.ownerAndName(it.url) }
+}
+
+/** A pull request as last seen, kept so the session list can show it without asking GitHub. */
+@Immutable
+@Serializable
+data class SavedPullRequest(
+    val url: String,
+    val state: String,
+    val isDraft: Boolean = false,
+    val checkedAt: Long = 0,
+) {
+    val isOpen get() = state == "OPEN"
+    val isMerged get() = state == "MERGED"
+}
 
 /** A named list of repositories that sessions often need together. */
 @Immutable
@@ -99,26 +119,39 @@ class AgentWorkspaces(
     val sessionsDir = File(root, "sessions")
     private val metaDir = File(root, "meta")
     private val groupsFile = File(root, "groups.json")
+    private val lastAgentFile = File(metaDir, "last-agent.txt")
 
     /** One fetch at a time per mirror: fifteen sessions starting together share one. */
     private val mirrorLocks = ConcurrentHashMap<String, Mutex>()
 
     /** The mirror of [url], made or brought up to date. Blocks on the network: minutes for a big first clone. */
-    suspend fun refreshMirror(url: String): File {
+    suspend fun refreshMirror(url: String): File = withMirror(url) { it }
+
+    /**
+     * Brings [url]'s mirror up to date, then runs [use] on it while no other session can fetch
+     * into it: a clone copying its object files must not race a fetch or its maintenance.
+     */
+    private suspend fun <T> withMirror(
+        url: String,
+        use: (File) -> T,
+    ): T {
         val mirror = mirrorDir(url)
-        mirrorLocks.getOrPut(mirror.path) { Mutex() }.withLock {
+        return mirrorLocks.getOrPut(mirror.path) { Mutex() }.withLock {
             withContext(Dispatchers.IO) {
                 if (File(mirror, "HEAD").isFile) {
-                    val fetched = GitWorkspace.run(mirror, listOf("git", "fetch", "--prune", "origin"), timeoutSeconds = NETWORK_TIMEOUT)
+                    // Git's automatic maintenance would run detached, past the lock, and repack
+                    // the objects a clone is copying: off here, and run in step below instead.
+                    val fetched = GitWorkspace.run(mirror, listOf("git", "-c", "maintenance.auto=false", "-c", "gc.auto=0", "fetch", "--prune", "origin"), timeoutSeconds = NETWORK_TIMEOUT)
                     if (fetched.code != 0) throw IOException(fetched.output.trim().ifEmpty { "git fetch failed" })
+                    GitWorkspace.run(mirror, listOf("git", "-c", "gc.autoDetach=false", "gc", "--auto", "--quiet"), timeoutSeconds = NETWORK_TIMEOUT)
                 } else {
                     if (!mirrorsDir.mkdirs() && !mirrorsDir.isDirectory) throw IOException("Could not create $mirrorsDir")
                     val cloned = GitWorkspace.run(mirrorsDir, listOf("git", "clone", "--mirror", url, mirror.absolutePath), timeoutSeconds = NETWORK_TIMEOUT)
                     if (cloned.code != 0) throw IOException(cloned.output.trim().ifEmpty { "git clone --mirror failed" })
                 }
+                use(mirror)
             }
         }
-        return mirror
     }
 
     /**
@@ -129,6 +162,7 @@ class AgentWorkspaces(
         urls: List<String>,
         title: String?,
         branch: String = defaultBranchName(),
+        agentId: String? = null,
     ): AgentWorkspace {
         val clean = urls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         if (clean.isEmpty()) throw IOException("No repositories")
@@ -149,12 +183,12 @@ class AgentWorkspaces(
                 val names = HashSet<String>()
                 val repos =
                     clean.map { url ->
-                        val mirror = refreshMirror(url)
                         // Two repositories with the same name get distinct folders.
                         var name = repoName(url)
                         while (!names.add(name)) name += "-2"
                         val target = File(dir, name)
-                        git(dir, "clone", "--quiet", mirror.absolutePath, target.absolutePath, timeout = NETWORK_TIMEOUT)
+                        // Hardlinks the mirror's objects: seconds, so other sessions barely wait.
+                        withMirror(url) { mirror -> git(dir, "clone", "--quiet", mirror.absolutePath, target.absolutePath, timeout = NETWORK_TIMEOUT) }
                         git(target, "remote", "set-url", "origin", url)
                         val base =
                             GitWorkspace
@@ -164,7 +198,15 @@ class AgentWorkspaces(
                         git(target, "checkout", "--quiet", "-b", branch)
                         WorkspaceRepo(url, name, base, branch)
                     }
-                val workspace = AgentWorkspace(id, title?.takeIf { it.isNotBlank() } ?: repos.joinToString(" + ") { it.name }, dir.absolutePath, repos, System.currentTimeMillis())
+                val workspace =
+                    AgentWorkspace(
+                        id = id,
+                        title = title?.takeIf { it.isNotBlank() } ?: repos.joinToString(" + ") { it.name },
+                        dir = dir.absolutePath,
+                        repos = repos,
+                        createdAt = System.currentTimeMillis(),
+                        agentId = agentId,
+                    )
                 save(workspace)
                 workspace
             } catch (e: IOException) {
@@ -188,6 +230,42 @@ class AgentWorkspaces(
         if (!path.startsWith(sessionsDir.absoluteFile.normalize().path + File.separator)) return null
         return list().firstOrNull { path == it.dir || path.startsWith(it.dir + File.separator) }
     }
+
+    /**
+     * Records [pr] as the pull request of [repo] in the workspace [id] (null: it has none), and
+     * returns the workspace as saved. Nothing happens to a workspace that is gone.
+     */
+    @Synchronized
+    fun recordPullRequest(
+        id: String,
+        repo: String,
+        pr: PullRequestInfo?,
+    ): AgentWorkspace? {
+        val file = File(metaDir, "$id.json")
+        val workspace = read(file) ?: return null
+        val next =
+            if (pr == null) {
+                workspace.pullRequests - repo
+            } else {
+                workspace.pullRequests + (repo to SavedPullRequest(pr.url, pr.state, pr.isDraft, System.currentTimeMillis()))
+            }
+        if (next == workspace.pullRequests) return workspace
+        val updated = workspace.copy(pullRequests = next)
+        save(updated)
+        return updated
+    }
+
+    /** The agent the last session started with ([com.vitorpamplona.agents.AgentBackend.id]), offered first next time. */
+    var lastAgent: String?
+        get() = if (lastAgentFile.isFile) lastAgentFile.readText().trim().ifEmpty { null } else null
+        set(value) {
+            try {
+                if (!metaDir.mkdirs() && !metaDir.isDirectory) throw IOException("Could not create $metaDir")
+                lastAgentFile.writeText(value.orEmpty())
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not save the last agent", e)
+            }
+        }
 
     /** Commits each repository has beyond its base, and files not yet committed. */
     suspend fun status(workspace: AgentWorkspace): List<WorkspaceRepoStatus> =
@@ -221,10 +299,19 @@ class AgentWorkspaces(
         }
 
     /** Saves [group], replacing one of the same name; the most recent first. */
+    @Synchronized
     fun saveGroup(group: RepoGroup) {
         val groups = listOf(group) + groups().filter { it.name != group.name }
         if (!root.mkdirs() && !root.isDirectory) throw IOException("Could not create $root")
         groupsFile.writeText(json.encodeToString(groups))
+    }
+
+    /** Forgets the group named [name]. */
+    @Synchronized
+    fun deleteGroup(name: String) {
+        val groups = groups()
+        if (groups.none { it.name == name }) return
+        groupsFile.writeText(json.encodeToString(groups.filter { it.name != name }))
     }
 
     private fun save(workspace: AgentWorkspace) {
@@ -277,6 +364,36 @@ class AgentWorkspaces(
                 .substringAfterLast('/')
                 .substringAfterLast(':')
                 .ifEmpty { "repo" }
+
+        /** `owner/name` for a repository URL (`vitorpamplona/amethyst`); the name alone when it has no owner. */
+        fun ownerAndName(url: String): String {
+            val path =
+                url
+                    .trim()
+                    .removeSuffix("/")
+                    .removeSuffix(".git")
+                    .substringAfter("://")
+                    .replace(Regex("^[^@/]*@"), "")
+                    .replace(':', '/')
+                    .split('/')
+                    .filter { it.isNotEmpty() }
+            // The first part is the host, except for a local path.
+            val parts = if (url.contains("://") || url.contains('@')) path.drop(1) else path
+            return parts.takeLast(2).joinToString("/").ifEmpty { repoName(url) }
+        }
+
+        /** The web page of a repository URL, for a link: `https://github.com/owner/name`; null when it has none. */
+        fun webUrl(url: String): String? {
+            val clean = url.trim().removeSuffix("/").removeSuffix(".git")
+            return when {
+                clean.startsWith("https://") -> clean
+                clean.startsWith("http://") -> clean
+                // git@github.com:owner/name
+                Regex("^[^@/]+@[^:/]+:.+").matches(clean) -> "https://" + clean.substringAfter('@').replaceFirst(':', '/')
+                clean.startsWith("ssh://") -> "https://" + clean.removePrefix("ssh://").replace(Regex("^[^@/]*@"), "").replace(Regex(":\\d+/"), "/")
+                else -> null
+            }
+        }
 
         fun defaultBranchName(): String = "agent/" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
 

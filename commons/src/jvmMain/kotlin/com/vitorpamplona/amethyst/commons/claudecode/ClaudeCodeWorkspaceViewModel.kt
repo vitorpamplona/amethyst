@@ -45,6 +45,18 @@ data class WorkspaceRepoRow(
     val name get() = status.repo.name
 }
 
+/** Why a repository's pull request didn't open: `gh`'s or git's words, and whether the push got through. */
+@Immutable
+data class PullRequestError(
+    val reason: String,
+    val pushed: Boolean,
+) {
+    /** The first line, for the card; the rest behind "Details". */
+    val summary: String get() = reason.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: reason
+
+    val hasDetails: Boolean get() = reason.trim().contains('\n')
+}
+
 /** A workspace session's repositories and their pull requests. */
 class ClaudeCodeWorkspaceViewModel(
     private val service: ClaudeCodeService,
@@ -68,8 +80,10 @@ class ClaudeCodeWorkspaceViewModel(
     private val _opening = MutableStateFlow<String?>(null)
     val opening: StateFlow<String?> = _opening.asStateFlow()
 
-    private val _errors = MutableStateFlow<Map<String, String>>(emptyMap())
-    val errors: StateFlow<Map<String, String>> = _errors.asStateFlow()
+    private val _errors = MutableStateFlow<Map<String, PullRequestError>>(emptyMap())
+
+    /** By repository folder; the workspace's own (removing it) under "". */
+    val errors: StateFlow<Map<String, PullRequestError>> = _errors.asStateFlow()
 
     /** Whether the user's `gh` is installed: without it, pull requests can't be opened from here. */
     val hasGh: Boolean = GitHubPullRequests.find() != null
@@ -92,9 +106,12 @@ class ClaudeCodeWorkspaceViewModel(
                                 ?.lines()
                                 ?.filter { it.isNotBlank() }
                                 .orEmpty()
+                        val pr = GitHubPullRequests.state(dir, status.repo.branch)
+                        // The session list shows it from the saved record, without asking GitHub.
+                        if (pr != null) service.recordPullRequest(ws.id, status.repo.name, pr)
                         WorkspaceRepoRow(
                             status = status,
-                            pullRequest = GitHubPullRequests.state(dir, status.repo.branch),
+                            pullRequest = pr,
                             draftTitle = subjects.lastOrNull() ?: ws.title,
                             draftBody = subjects.reversed().joinToString("\n") { "- $it" },
                         )
@@ -120,7 +137,11 @@ class ClaudeCodeWorkspaceViewModel(
         viewModelScope.launch {
             try {
                 when (val result = GitHubPullRequests.open(File(ws.dir, repo), row.status.repo.baseBranch, row.status.repo.branch, title.trim(), body.trim(), draft)) {
-                    is GitHubPullRequests.Result.Failed -> _errors.update { it + (repo to result.reason) }
+                    is GitHubPullRequests.Result.Failed -> {
+                        _errors.update { it + (repo to PullRequestError(result.reason, result.pushed)) }
+                        // gh may have failed because the pull request already exists: it shows.
+                        if (result.pushed) refresh()
+                    }
                     is GitHubPullRequests.Result.Opened -> refresh()
                 }
             } finally {
@@ -139,12 +160,11 @@ class ClaudeCodeWorkspaceViewModel(
         val ws = workspace ?: return
         viewModelScope.launch {
             try {
-                chat?.close()
-                service.agentWorkspaces.delete(ws)
+                service.deleteWorkspace(ws)
                 onDone()
             } catch (e: IOException) {
                 Log.w("ClaudeCodeWorkspace", "Could not remove the workspace", e)
-                _errors.update { it + ("" to (e.message ?: "Could not remove the workspace")) }
+                _errors.update { it + ("" to PullRequestError(e.message ?: ws.dir, pushed = false)) }
             }
         }
     }

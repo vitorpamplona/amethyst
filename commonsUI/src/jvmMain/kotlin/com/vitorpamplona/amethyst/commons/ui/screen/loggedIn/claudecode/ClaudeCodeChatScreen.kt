@@ -28,6 +28,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -80,6 +81,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -105,6 +107,7 @@ import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.agents.PermissionSuggestion
 import com.vitorpamplona.agents.SlashCommand
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
+import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspace
 import com.vitorpamplona.amethyst.commons.claudecode.ChatError
 import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
 import com.vitorpamplona.amethyst.commons.claudecode.ChatKind
@@ -203,9 +206,11 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter
 import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_privacy
 import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_text
 import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_explain
+import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_explain_repos
 import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_review_branch
 import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_review_uncommitted
 import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_tests
+import com.vitorpamplona.amethyst.commons.resources.claude_code_starter_tests_repos
 import com.vitorpamplona.amethyst.commons.resources.claude_code_stop
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_agent
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_group_command
@@ -220,6 +225,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_update_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_view_proposal
 import com.vitorpamplona.amethyst.commons.resources.claude_code_waiting_approval
 import com.vitorpamplona.amethyst.commons.resources.claude_code_working
+import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_subtitle
 import com.vitorpamplona.amethyst.commons.resources.rename
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.pickFiles
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
@@ -365,19 +371,20 @@ fun ClaudeCodeChatScreen(
             },
         )
     }
+    // A workspace of fresh clones: its name and repositories stand for the folder's id.
+    val workspace = remember(state.cwd) { ClaudeCodeService.shared.agentWorkspaces.of(File(state.cwd)) }
     // Sentences in the chat name the agent ("Codex wants to run a command").
-    CompositionLocalProvider(LocalAgentName provides chat.backend.shortName) {
+    CompositionLocalProvider(LocalAgentName provides chat.backend.shortName, LocalWorkspace provides workspace) {
         Scaffold(
             topBar = {
                 ChatTopBar(
                     title = shownTitle,
-                    subtitle = if (state.kind == ChatKind.SETTINGS) null else subtitle(state),
+                    subtitle = if (state.kind == ChatKind.SETTINGS) null else subtitle(state, workspace),
                     nav = nav,
                     onTitleClick = { renaming = true },
                 ) {
                     // A workspace of fresh clones: its repositories' pull requests, which the user opens.
-                    val inWorkspace = remember(state.cwd) { ClaudeCodeService.shared.agentWorkspaces.of(File(state.cwd)) != null }
-                    if (inWorkspace) {
+                    if (workspace != null) {
                         TextButton(onClick = { nav.nav(Route.ClaudeCodePullRequests(key)) }) { Text(stringRes(Res.string.claude_code_pull_requests)) }
                     }
                     val git = state.git
@@ -505,8 +512,22 @@ fun ClaudeCodeChatScreen(
     }
 }
 
-/** `amethyst · pr/feat/x` when the folder is a checkout, else the folder's name. */
-private fun subtitle(state: ClaudeChatState): String {
+/** The workspace the chat works in, for the parts of the screen that name where it works. */
+internal val LocalWorkspace = staticCompositionLocalOf<AgentWorkspace?> { null }
+
+/**
+ * `amethyst · pr/feat/x` when the folder is a checkout; `webapp + corelib · 2 repositories` in a
+ * workspace; else the folder's name.
+ */
+@Composable
+private fun subtitle(
+    state: ClaudeChatState,
+    workspace: AgentWorkspace?,
+): String {
+    if (workspace != null) {
+        val names = workspace.repos.joinToString(" + ") { it.name }
+        return pluralStringRes(Res.plurals.claude_code_workspace_subtitle, workspace.repos.size, names, workspace.repos.size)
+    }
     val git = state.git ?: return folderName(state.cwd)
     val name = git.repo?.identifier ?: folderName(git.root)
     return listOfNotNull(name, git.branch).joinToString(" · ")
@@ -525,15 +546,28 @@ internal fun ChatTopBar(
         title = {
             Column {
                 if (onTitleClick != null) {
-                    // A click on the name renames the session.
+                    // A click on the name renames the session; a pencil on hover says it can.
+                    val hover = remember { MutableInteractionSource() }
+                    val hovered by hover.collectIsHoveredAsState()
                     HoverTooltip(stringRes(Res.string.rename)) {
-                        Text(
-                            title,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = onTitleClick),
-                        )
+                        Row(
+                            Modifier.clip(RoundedCornerShape(6.dp)).hoverable(hover).clickable(onClick = onTitleClick),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                title,
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                            Icon(
+                                MaterialSymbols.Edit,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.grayText,
+                                modifier = Modifier.padding(start = 6.dp).size(16.dp).alpha(if (hovered) 1f else 0f),
+                            )
+                        }
                     }
                 } else {
                     Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -828,7 +862,8 @@ private fun EmptyChatIntro(
         Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
             Icon(MaterialSymbols.Assistant, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(24.dp))
         }
-        Text(stringRes(Res.string.claude_code_intro_title, subtitle(state)), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        val workspace = LocalWorkspace.current
+        Text(stringRes(Res.string.claude_code_intro_title, workspace?.title ?: subtitle(state, null)), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         Text(
             listOf(ToolViews.relative(state.cwd, File(System.getProperty("user.home"))).let { if (it != state.cwd) "~/$it" else it }, modeLabel(state.permissionMode)).joinToString(" · "),
             style = MaterialTheme.typography.bodySmall,
@@ -839,8 +874,10 @@ private fun EmptyChatIntro(
         Spacer(Modifier.size(6.dp))
         val starters =
             buildList {
-                add(stringRes(Res.string.claude_code_starter_explain))
-                add(stringRes(Res.string.claude_code_starter_tests))
+                // A workspace of several repositories asks about all of them.
+                val several = (workspace?.repos?.size ?: 0) > 1
+                add(stringRes(if (several) Res.string.claude_code_starter_explain_repos else Res.string.claude_code_starter_explain))
+                add(stringRes(if (several) Res.string.claude_code_starter_tests_repos else Res.string.claude_code_starter_tests))
                 val git = state.git
                 if (git != null && git.ahead > 0) add(stringRes(Res.string.claude_code_starter_review_branch, git.base ?: "main"))
                 if (git != null && git.uncommitted > 0) add(stringRes(Res.string.claude_code_starter_review_uncommitted))
@@ -920,12 +957,16 @@ private fun UserBubble(
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Shown on hover: ask this again differently, in a copy of the session cut just before it.
+        // Ask this again differently, in a copy of the session cut just before it. Faint until
+        // the message is hovered or the button has the keyboard's focus, but always there: a
+        // touch screen or a keyboard reaches it too.
         Box(Modifier.width(48.dp), contentAlignment = Alignment.Center) {
-            if (onEdit != null && hovered) {
+            if (onEdit != null) {
                 val label = stringRes(Res.string.claude_code_edit_message)
+                val buttonInteractions = remember { MutableInteractionSource() }
+                val focused by buttonInteractions.collectIsFocusedAsState()
                 HoverTooltip(label) {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = onEdit, interactionSource = buttonInteractions, modifier = Modifier.size(32.dp).alpha(if (hovered || focused) 1f else 0.35f)) {
                         Icon(MaterialSymbols.Edit, contentDescription = label, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(16.dp))
                     }
                 }
@@ -1444,6 +1485,7 @@ internal fun MenuRow(
     description: String? = null,
     selected: Boolean = false,
     enabled: Boolean = true,
+    descriptionMaxLines: Int = Int.MAX_VALUE,
     onClick: () -> Unit,
 ) {
     Row(
@@ -1460,7 +1502,7 @@ internal fun MenuRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.placeholderText,
             )
-            description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText) }
+            description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = descriptionMaxLines, overflow = TextOverflow.Ellipsis) }
         }
         if (selected) {
             Spacer(Modifier.width(8.dp))

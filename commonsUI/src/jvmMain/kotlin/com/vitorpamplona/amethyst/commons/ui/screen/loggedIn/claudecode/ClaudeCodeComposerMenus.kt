@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -51,6 +52,8 @@ import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChatState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.claude_code_model_default_named
+import com.vitorpamplona.amethyst.commons.resources.claude_code_model_other
 import com.vitorpamplona.amethyst.commons.resources.claude_code_model_tooltip
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
@@ -123,13 +126,58 @@ internal fun SlashCommandMenu(
     }
 }
 
+/** How many models the menu lists before the rest fold under "Other models". */
+private const val MODELS_SHOWN = 6
+
 /** The model the chat runs, as the CLI names it ("Opus 5.5"), or what the CLI said it is. */
-internal fun modelLabel(state: ClaudeChatState): String? {
-    val choice =
-        state.models.firstOrNull { it.value == state.modelChoice }
-            ?: state.models.firstOrNull { state.modelChoice == null && it.resolvedModel != null && it.resolvedModel == state.model && it.value != "default" }
-            ?: state.models.firstOrNull { state.modelChoice == null && it.value == "default" }
-    return choice?.displayName?.substringBefore(" (") ?: state.model
+internal fun currentModel(state: ClaudeChatState): ModelChoice? =
+    state.models.firstOrNull { it.value == state.modelChoice }
+        ?: state.models.firstOrNull { state.modelChoice == null && it.resolvedModel != null && it.resolvedModel == state.model && it.value != DEFAULT }
+        ?: state.models.firstOrNull { state.modelChoice == null && it.value == DEFAULT }
+
+private const val DEFAULT = "default"
+
+/**
+ * The model a choice runs, by name: its own, or for "default" the model it stands for now, as
+ * another choice names it or as its description begins ("Opus 5.5 · Best for…").
+ */
+internal fun modelName(
+    choice: ModelChoice,
+    models: List<ModelChoice>,
+): String? {
+    if (choice.value != DEFAULT) return choice.displayName.substringBefore(" (")
+    return models.firstOrNull { it.value != DEFAULT && it.resolvedModel != null && it.resolvedModel == choice.resolvedModel }?.displayName?.substringBefore(" (")
+        ?: choice.description
+            .substringBefore(" · ")
+            .trim()
+            .takeIf { it.isNotEmpty() && it.length <= 24 && it != choice.description }
+}
+
+/** "Default (Opus 5.5)" for the default choice, the model's name for the others: on the chip and in the menu alike. */
+@Composable
+internal fun modelTitle(
+    choice: ModelChoice,
+    models: List<ModelChoice>,
+): String {
+    val name = modelName(choice, models)
+    return when {
+        choice.value != DEFAULT -> name ?: choice.displayName
+        name != null -> stringRes(Res.string.claude_code_model_default_named, name)
+        else -> choice.displayName.substringBefore(" (")
+    }
+}
+
+/**
+ * The models the menu leads with: all of them when there are few; else the CLI's aliases that
+ * follow releases (`opus`, `sonnet`: no version in the name), with the one in use.
+ */
+internal fun leadingModels(
+    models: List<ModelChoice>,
+    selected: String,
+): List<ModelChoice> {
+    if (models.size <= MODELS_SHOWN) return models
+    val aliases = models.filter { m -> m.value.none { it.isDigit() } || m.value == selected }
+    return if (aliases.size > 1) aliases else models.take(MODELS_SHOWN)
 }
 
 /** Which model the next message goes to: a chip under the composer, with the CLI's own list. */
@@ -138,17 +186,20 @@ internal fun ModelChip(
     state: ClaudeChatState,
     onModel: (String?) -> Unit,
 ) {
-    val label = modelLabel(state) ?: return
     if (state.models.isEmpty()) return
+    val label = currentModel(state)?.let { modelTitle(it, state.models) } ?: state.model ?: return
     var open by remember { mutableStateOf(false) }
+    var showOthers by remember { mutableStateOf(false) }
     val color = MaterialTheme.colorScheme.grayText
     Box {
         HoverTooltip(stringRes(Res.string.claude_code_model_tooltip)) {
             Row(
                 Modifier
                     .clip(RoundedCornerShape(50))
-                    .clickable { open = true }
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                    .clickable {
+                        showOthers = false
+                        open = true
+                    }.padding(horizontal = 10.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(MaterialSymbols.Assistant, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
@@ -158,13 +209,37 @@ internal fun ModelChip(
             }
         }
         RoundedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            val selectedValue = state.modelChoice ?: DEFAULT
+            val leading = leadingModels(state.models, selectedValue)
+            val others = state.models - leading.toSet()
+
+            @Composable
+            fun Option(option: ModelChoice) {
+                // The default's title already names its model: its description need not repeat it.
+                val description = modelName(option, state.models)?.let { option.description.removePrefix("$it · ") } ?: option.description
+                MenuRow(title = modelTitle(option, state.models), description = description.takeIf { it.isNotBlank() }, selected = option.value == selectedValue, descriptionMaxLines = 1) {
+                    open = false
+                    onModel(option.value.takeIf { it != DEFAULT })
+                }
+            }
             RoundedMenuSection {
-                state.models.forEach { option: ModelChoice ->
-                    val selected = option.value == (state.modelChoice ?: "default")
-                    MenuRow(title = option.displayName, description = option.description, selected = selected) {
-                        open = false
-                        onModel(option.value.takeIf { it != "default" })
+                leading.forEach { Option(it) }
+            }
+            if (others.isNotEmpty()) {
+                RoundedMenuSection {
+                    // Dated and older models, folded: few people want them, and they are many.
+                    Row(
+                        Modifier
+                            .widthIn(min = 220.dp, max = 340.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { showOthers = !showOthers }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(stringRes(Res.string.claude_code_model_other), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.grayText, modifier = Modifier.weight(1f))
+                        Icon(if (showOthers) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(18.dp))
                     }
+                    if (showOthers) others.forEach { Option(it) }
                 }
             }
         }

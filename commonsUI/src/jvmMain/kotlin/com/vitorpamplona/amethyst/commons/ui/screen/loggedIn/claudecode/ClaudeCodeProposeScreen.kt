@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalResult
 import com.vitorpamplona.amethyst.commons.nip34Git.proposal.GitProposalUiState
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.claude_code_ask_to_commit
@@ -129,6 +130,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -426,7 +428,7 @@ private fun ProposeForm(
                         }
                     },
                 ) {
-                    Text(stringRes(Res.string.claude_code_publish_ngit, account.name.ifBlank { account.npub.take(16) + "…" }))
+                    Text(stringRes(Res.string.claude_code_publish_ngit, ngitAccountName(account, accountViewModel)))
                 }
                 ngitError?.let { Text(stringRes(Res.string.claude_code_publish_failed, it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             }
@@ -588,4 +590,20 @@ private fun CheckRow(
         Checkbox(checked = checked, onCheckedChange = onChange)
         Text(text, style = MaterialTheme.typography.bodyMedium)
     }
+}
+
+/**
+ * Who ngit signs as, by the name Amethyst knows for that key (its profile, loaded or cached), so
+ * the user sees whether it is the account they are logged in with; ngit's own name, else the npub.
+ */
+@Composable
+private fun ngitAccountName(
+    account: Ngit.Account,
+    accountViewModel: AccountViewModel,
+): String {
+    val user = remember(account.npub) { decodePublicKeyAsHexOrNull(account.npub)?.let { LocalCache.checkGetOrCreateUser(it) } }
+    val fallback = account.name.ifBlank { account.npub.take(16) + "…" }
+    if (user == null) return fallback
+    val info by observeUserInfo(user, accountViewModel)
+    return info?.info?.bestName()?.takeIf { it.isNotBlank() } ?: fallback
 }

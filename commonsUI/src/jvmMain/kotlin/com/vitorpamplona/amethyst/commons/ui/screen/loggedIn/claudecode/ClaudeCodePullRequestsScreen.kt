@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,7 +35,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
@@ -54,25 +56,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspaces
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeWorkspaceViewModel
+import com.vitorpamplona.amethyst.commons.claudecode.PullRequestError
 import com.vitorpamplona.amethyst.commons.claudecode.PullRequestInfo
 import com.vitorpamplona.amethyst.commons.claudecode.WorkspaceRepoRow
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_ahead
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_ask_commit
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_body
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_branch
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_details
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_failed
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_hide_details
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_no_gh
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_nothing
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open_draft
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_open_repo
+import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_pushed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_rules
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_state_draft
@@ -83,9 +93,11 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_uncommitted
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pr_view
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pull_requests
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete
-import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_delete_body
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_none
+import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -109,12 +121,27 @@ fun ClaudeCodePullRequestsScreen(
     val opening by viewModel.opening.collectAsStateWithLifecycle()
     val errors by viewModel.errors.collectAsStateWithLifecycle()
     var deleting by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             ChatTopBar(stringRes(Res.string.claude_code_pull_requests), workspace?.title, nav) {
                 if (workspace != null) {
-                    IconButton(onClick = { viewModel.refresh() }) { Icon(MaterialSymbols.Refresh, contentDescription = null) }
+                    HoverTooltip(stringRes(Res.string.refresh)) {
+                        IconButton(onClick = { viewModel.refresh() }) { Icon(MaterialSymbols.Refresh, contentDescription = stringRes(Res.string.refresh)) }
+                    }
+                    // Removing the workspace is rare and final: in the menu, not next to the work.
+                    Box {
+                        IconButton(onClick = { menu = true }) { Icon(MaterialSymbols.MoreVert, contentDescription = null) }
+                        RoundedDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            RoundedMenuSection {
+                                MenuRow(stringRes(Res.string.claude_code_workspace_delete)) {
+                                    menu = false
+                                    deleting = true
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -143,38 +170,29 @@ fun ClaudeCodePullRequestsScreen(
                         opening = opening == row.name,
                         error = errors[row.name],
                         onOpen = { title, body, draft -> viewModel.openPullRequest(row.name, title, body, draft) },
+                        onChanges = { nav.nav(Route.ClaudeCodeChanges(key, row.name)) },
                         onAskToCommit = {
                             viewModel.askToCommit(row.name)
                             nav.popBack()
                         },
                     )
                 }
-                item(key = "delete") {
-                    errors[""]?.let { Banner(it) }
-                    TextButton(onClick = { deleting = true }) {
-                        Text(stringRes(Res.string.claude_code_workspace_delete), color = MaterialTheme.colorScheme.error)
-                    }
-                }
+                errors[""]?.let { error -> item(key = "delete-error") { Banner(error.reason) } }
             }
         }
     }
 
     if (deleting) {
-        AlertDialog(
-            onDismissRequest = { deleting = false },
-            title = { Text(stringRes(Res.string.claude_code_workspace_delete)) },
-            text = { Text(stringRes(Res.string.claude_code_workspace_delete_body)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    deleting = false
-                    // Back past the chat too: its folder is gone.
-                    viewModel.deleteWorkspace {
-                        nav.popBack()
-                        nav.popBack()
-                    }
-                }) { Text(stringRes(Res.string.claude_code_workspace_delete), color = MaterialTheme.colorScheme.error) }
+        DeleteWorkspaceDialog(
+            onDismiss = { deleting = false },
+            onConfirm = {
+                deleting = false
+                // Back past the chat too: its folder is gone.
+                viewModel.deleteWorkspace {
+                    nav.popBack()
+                    nav.popBack()
+                }
             },
-            dismissButton = { TextButton(onClick = { deleting = false }) { Text(stringRes(Res.string.cancel)) } },
         )
     }
 }
@@ -185,8 +203,9 @@ private fun RepoCard(
     row: WorkspaceRepoRow,
     canOpen: Boolean,
     opening: Boolean,
-    error: String?,
+    error: PullRequestError?,
     onOpen: (title: String, body: String, draft: Boolean) -> Unit,
+    onChanges: () -> Unit,
     onAskToCommit: () -> Unit,
 ) {
     val status = row.status
@@ -194,7 +213,21 @@ private fun RepoCard(
     var body by remember(row.draftBody) { mutableStateOf(row.draftBody) }
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(row.name, style = MaterialTheme.typography.titleMedium)
+            // owner/name, as GitHub shows it, with a link to the repository's page.
+            val label = AgentWorkspaces.ownerAndName(status.repo.url)
+            val web = AgentWorkspaces.webUrl(status.repo.url)
+            val uriHandler = LocalUriHandler.current
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(label, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                if (web != null) {
+                    val open = stringRes(Res.string.claude_code_pr_open_repo, label)
+                    HoverTooltip(open) {
+                        IconButton(onClick = { uriHandler.openUri(web) }, modifier = Modifier.size(32.dp)) {
+                            Icon(MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = open, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
             Text(
                 stringRes(Res.string.claude_code_pr_branch, status.repo.branch, status.repo.baseBranch),
                 style = MaterialTheme.typography.bodySmall,
@@ -207,8 +240,14 @@ private fun RepoCard(
                     status.uncommitted.takeIf { it > 0 }?.let { pluralStringRes(Res.plurals.claude_code_pr_uncommitted, it, it) },
                 )
             Text(parts.joinToString(" · ").ifEmpty { stringRes(Res.string.claude_code_pr_nothing) }, style = MaterialTheme.typography.bodyMedium)
-            if (status.uncommitted > 0) {
-                OutlinedButton(onClick = onAskToCommit) { Text(stringRes(Res.string.claude_code_pr_ask_commit)) }
+            if (status.ahead > 0 || status.uncommitted > 0) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // This repository's diff, before proposing it.
+                    OutlinedButton(onClick = onChanges) { Text(stringRes(Res.string.claude_code_changes)) }
+                    if (status.uncommitted > 0) {
+                        OutlinedButton(onClick = onAskToCommit) { Text(stringRes(Res.string.claude_code_pr_ask_commit)) }
+                    }
+                }
             }
             val pr = row.pullRequest
             if (pr != null) {
@@ -222,7 +261,7 @@ private fun RepoCard(
                     if (opening) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 }
             }
-            error?.let { Text(stringRes(Res.string.claude_code_pr_failed, it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+            error?.let { PullRequestErrorView(it, status.repo.branch) }
         }
     }
 }
@@ -241,6 +280,41 @@ private fun PullRequestLine(pr: PullRequestInfo) {
         Text(label, color = color, style = MaterialTheme.typography.labelLarge)
         HoverTooltip(pr.url) {
             TextButton(onClick = { uriHandler.openUri(pr.url) }) { Text(stringRes(Res.string.claude_code_pr_view)) }
+        }
+    }
+}
+
+/**
+ * Why the pull request didn't open: the first line of what git or `gh` said, the rest behind
+ * "Details"; and, when the branch got pushed anyway, that it did, so the user knows only the
+ * pull request is missing.
+ */
+@Composable
+private fun PullRequestErrorView(
+    error: PullRequestError,
+    branch: String,
+) {
+    var details by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (error.pushed) {
+            Text(stringRes(Res.string.claude_code_pr_pushed, branch), style = MaterialTheme.typography.bodySmall)
+        }
+        Text(stringRes(Res.string.claude_code_pr_failed, error.summary), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        if (error.hasDetails) {
+            TextButton(onClick = { details = !details }, contentPadding = PaddingValues(horizontal = 4.dp)) {
+                Text(stringRes(if (details) Res.string.claude_code_pr_hide_details else Res.string.claude_code_pr_details), style = MaterialTheme.typography.labelMedium)
+            }
+            if (details) {
+                SelectionContainer {
+                    Text(
+                        error.reason.trim(),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.grayText,
+                        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(8.dp)).padding(8.dp),
+                    )
+                }
+            }
         }
     }
 }
