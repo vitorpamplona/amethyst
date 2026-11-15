@@ -8,7 +8,7 @@ unless they start with `commonsUI/`.
 | Layer | File | Role |
 |---|---|---|
 | Query state | `chess/ChessGameFilterAssembler.kt` — `class ChessGameQueryState(gameId, account) : AccountScopedQuery` | what one on-screen consumer needs; equality decides dedup |
-| Filter builder | `ChessGameSubAssembler.updateFilter(key, since)` in the same file | state + per-relay `since` → filters (`#e` the game on every relay it lives on) |
+| Filter builder | `ChessGameSubAssembler.updateFilter(key, since)` in the same file | state → filters (`#e` the game on every relay it lives on); the game's start note holds the moves, so its cursors set each relay's `since` (`cursorHoldersOf`) |
 | Sub-assembler | `ChessGameSubAssembler(cache, client, allKeys) : PerUniqueIdEoseManager<ChessGameQueryState, HexKey>` | owns the REQ, overrides `updateFilter(key, since)`, `id(key)`, optionally `newSub(key)` to hook events/EOSE |
 | Filter assembler | `chess/ChessGameFilterAssembler.kt` — `: ComposeSubscriptionManager<ChessGameQueryState>()` | holds the live states, fans `invalidateFilters`/`destroy` to its `group` of sub-assemblers |
 | Registration | `reqCommand/RelaySubscriptionsCoordinator.kt` — `val chessGame = ChessGameFilterAssembler(cache, client)` | one instance per account session |
@@ -20,18 +20,39 @@ a `TopNavFeedFilterAssembler` over a `SingleTopNavFeedSubAssembler` and a pure
 
 ## Recipe for a new screen
 
-1. Query state: a `data class` with exactly the inputs (ids, pubkeys, relays, account) the
-   filters need. Remember it per screen (`remember(key) { State(...) }`).
-2. Filter function: `filterXxx(key, since: SincePerRelayMap?): List<RelayBasedFilter>` —
-   one `RelayBasedFilter(relay, ExplainedFilter(..., purpose = SubPurpose.X))` per relay, with
-   `since = since?.get(relay)?.time`. Pick or add a `SubPurpose` (`subscriptions/SubPurpose.kt`).
-3. Sub-assembler: extend the EOSE manager that matches how cursors should be shared (below).
-4. Assembler: `class XxxFilterAssembler(client) : ComposeSubscriptionManager<XxxQueryState>()`
-   grouping the sub-assemblers (copy `ChessGameFilterAssembler`).
-5. Add it to `RelaySubscriptionsCoordinator`.
-6. In `commonsUI/.../relayClient/<feature>/`, a `@Composable XxxFilterAssemblerSubscription`
-   that calls `LifecycleAwareKeyDataSourceSubscription(state, assembler)` (or
-   `KeyDataSourceSubscription` for light, always-on data).
+The URL screen is the worked example of every step: `url/UrlFilterAssembler.kt`,
+`url/UrlFeedFilterSubAssembler.kt`, and `commonsUI/.../ui/screen/loggedIn/url/UrlScreen.kt`.
+
+1. **Decide what holds the notes the subscription loads.** Usually the screen's feed
+   (`feedViewModel.feedState`), which keeps what it shows. Otherwise a `Channel`, a `User`, a
+   `Note` (its children), the `Account`, or the key itself: see "Where the cursor lives" below.
+   This decides when the relays are asked again from scratch, so it is not optional: a manager
+   whose keys name nothing asks every relay from scratch on every rebuild.
+2. **Query state:** a class with exactly the inputs (ids, pubkeys, relays, account) the filters
+   need, plus that holder (`feeds: List<RelayCursorHolder>`, or implement `CursorHoldingQuery` /
+   `KeyHeldCursors`). Remember it per screen (`remember(key, feed) { State(...) }`): a key made
+   again on recomposition starts over.
+3. **Filter function:** `filterXxx(key, since: SincePerRelayMap?): List<RelayBasedFilter>`, one
+   `RelayBasedFilter(relay, ExplainedFilter(..., purpose = SubPurpose.X))` per relay, with
+   `since = since?.get(relay)?.time`. `since` is null when holders set the windows: the planner
+   then sets each filter's `since` to the later of its own floor and the holder's cursor, so put
+   a floor in the filter only if the screen needs one. Pick or add a `SubPurpose`
+   (`subscriptions/SubPurpose.kt`).
+4. **Sub-assembler:** extend the EOSE manager that splits the REQs the way you need (below) and
+   override `cursorHoldersOf(key)` to return the holders from step 1 (`= key.feeds`), unless the
+   key already names them. A lazy account feed must be woken before it vouches
+   (`(it as? FeedContentState)?.activate()`).
+5. **Assembler:** `class XxxFilterAssembler(client) : ComposeSubscriptionManager<XxxQueryState>()`
+   grouping the sub-assemblers (copy `ChessGameFilterAssembler`), added to
+   `RelaySubscriptionsCoordinator`.
+6. **Composable:** in `commonsUI/.../relayClient/<feature>/`, a `@Composable XxxFilterAssemblerSubscription`
+   taking the holder (`feeds = listOf(feedViewModel.feedState)`) and calling
+   `LifecycleAwareKeyDataSourceSubscription(state, assembler)` (or `KeyDataSourceSubscription` for
+   light, always-on data).
+7. **`CursorHolderCoverageTest`** (`commons/src/jvmTest/.../eoseManagers/`) fails when a manager
+   names no holder. If yours never reads a cursor (a history pager bounded by `until`, a tail from
+   a fixed floor, a request that ignores `since`), add it to that test's `NEEDS_NO_HOLDER` with
+   the reason.
 
 ## Choosing the EOSE manager (`eoseManagers/`)
 

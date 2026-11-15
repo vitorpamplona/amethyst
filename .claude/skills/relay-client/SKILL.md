@@ -86,8 +86,8 @@ which batches invalidations): `SingleSubEoseManager` (one REQ for all keys), `Pe
 `AccountScopedSingleSubNoEoseCacheEoseManager`. Pick by how the REQs are split. The EOSE cursors
 never live in the manager: they live on the object that holds the notes (`cursorHoldersOf(key)`:
 a feed, a `Channel`, a `User`, a `Note`'s children, the `Account`, or the key itself via
-`KeyHeldCursors`). A key that names no holder is asked from scratch. Details and the new-screen
-recipe: `references/filter-assemblers.md`.
+`KeyHeldCursors`). A key that names no holder is asked from scratch, and `CursorHolderCoverageTest`
+fails on it. Details and the new-screen recipe: `references/filter-assemblers.md`.
 
 ## Wiring a composable
 
