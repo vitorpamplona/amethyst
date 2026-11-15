@@ -106,6 +106,13 @@ interface AppPlatform {
     val supportsRemoteSignerLogin: Boolean get() = false
 
     /**
+     * Whether a mouse or trackpad is the main pointer (the desktop), so dense controls need not be
+     * padded out to Material's 48dp touch target. False wherever a finger is the pointer, including
+     * Android tablets on the wide layouts.
+     */
+    val hasFinePointer: Boolean get() = false
+
+    /**
      * The signer apps that take a `nostrconnect://` address, for the login dialog to let the user
      * pick one when there are several. Empty where the platform picks the app itself (Desktop's
      * registered handler) or none is installed.

@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.IComposerPostOptions
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileSender
@@ -133,6 +134,7 @@ class ChatNewMessageViewModel :
     ViewModel(),
     ILocationGrabber,
     IMessageField,
+    IComposerPostOptions,
     IZapField,
     IZapRaiser,
     IExpiration {
@@ -243,37 +245,37 @@ class ChatNewMessageViewModel :
     val subject = TextFieldState()
 
     // Invoices
-    var canAddInvoice by mutableStateOf(false)
-    var wantsInvoice by mutableStateOf(false)
+    override var canAddInvoice by mutableStateOf(false)
+    override var wantsInvoice by mutableStateOf(false)
 
-    var wantsSecretEmoji by mutableStateOf(false)
+    override var wantsSecretEmoji by mutableStateOf(false)
 
     // Forward Zap to
-    var wantsForwardZapTo by mutableStateOf(false)
+    override var wantsForwardZapTo by mutableStateOf(false)
     override val forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
     override val forwardZapToEditting = TextFieldState()
 
     // NSFW, Sensitive
-    var wantsToMarkAsSensitive by mutableStateOf(false)
+    override var wantsToMarkAsSensitive by mutableStateOf(false)
     var contentWarningDescription by mutableStateOf("")
 
     // Expiration Date (NIP-40)
-    var wantsExpirationDate by mutableStateOf(false)
+    override var wantsExpirationDate by mutableStateOf(false)
     override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // GeoHash
-    var wantsToAddGeoHash by mutableStateOf(false)
+    override var wantsToAddGeoHash by mutableStateOf(false)
     override var pickedGeoHash by mutableStateOf<String?>(null)
     var location: StateFlow<LocationResult>? = null
 
     // ZapRaiser
-    var canAddZapRaiser by mutableStateOf(false)
-    var wantsZapraiser by mutableStateOf(false)
+    override var canAddZapRaiser by mutableStateOf(false)
+    override var wantsZapRaiser by mutableStateOf(false)
     override var zapRaiserAmount = mutableStateOf<Long?>(null)
 
     fun lnAddress(): String? = account.userProfile().lnAddress()
 
-    fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
+    override fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
 
     fun user(): User = account.userProfile()
 
@@ -391,7 +393,7 @@ class ChatNewMessageViewModel :
         pickedGeoHash = geohash
 
         val zapraiser = draftEvent.zapraiserAmount()
-        wantsZapraiser = zapraiser != null
+        wantsZapRaiser = zapraiser != null
         zapRaiserAmount.value = null
         if (zapraiser != null) {
             zapRaiserAmount.value = zapraiser
@@ -724,7 +726,7 @@ class ChatNewMessageViewModel :
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
-        val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
+        val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
 
         val replyHint = replyTo.value?.toEventHint<BaseDMGroupEvent>()
@@ -782,7 +784,7 @@ class ChatNewMessageViewModel :
         replyTo.value = null
 
         wantsInvoice = false
-        wantsZapraiser = false
+        wantsZapRaiser = false
         zapRaiserAmount.value = null
 
         wantsForwardZapTo = false
@@ -926,7 +928,7 @@ class ChatNewMessageViewModel :
         (message.text.isNotBlank() || uploadsWaitingToBeSent.isNotEmpty()) &&
             uploadState?.mediaUploadTracker?.isUploading != true &&
             !wantsInvoice &&
-            (!wantsZapraiser || zapRaiserAmount.value != null) &&
+            (!wantsZapRaiser || zapRaiserAmount.value != null) &&
             (toUsers.text.isNotBlank()) &&
             uploadState?.multiOrchestrator == null &&
             recipientsMissingDmRelays.value.isEmpty()
@@ -969,12 +971,12 @@ class ChatNewMessageViewModel :
         draftTag.newVersion()
     }
 
-    fun toggleMarkAsSensitive() {
+    override fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
         draftTag.newVersion()
     }
 
-    fun toggleExpirationDate() {
+    override fun toggleExpirationDate() {
         wantsExpirationDate = !wantsExpirationDate
         if (wantsExpirationDate) {
             expirationDate = TimeUtils.oneDayAhead()
