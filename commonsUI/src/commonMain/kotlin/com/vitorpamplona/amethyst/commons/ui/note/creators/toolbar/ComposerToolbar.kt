@@ -27,7 +27,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment.Companion.CenterVertically
@@ -79,11 +81,15 @@ fun ComposerToolbar(
         }
 
     if (wrapped) {
-        FlowRow(
-            modifier = modifier.fillMaxWidth().padding(start = startPadding, end = 10.dp),
-            itemVerticalAlignment = CenterVertically,
-        ) {
-            movableTools(tools, true)
+        // A mouse needs no 48dp touch target: without it each button is its 40dp self, and the tools
+        // sit closer together. The phone strip below keeps the touch target.
+        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+            FlowRow(
+                modifier = modifier.fillMaxWidth().padding(start = startPadding, end = 10.dp),
+                itemVerticalAlignment = CenterVertically,
+            ) {
+                movableTools(tools, true)
+            }
         }
     } else {
         val scrollState = rememberScrollState()
