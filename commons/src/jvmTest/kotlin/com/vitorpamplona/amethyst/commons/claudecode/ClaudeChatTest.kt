@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.claudecode
 
+import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
 import com.vitorpamplona.claudecode.process.ClaudeTransport
-import com.vitorpamplona.claudecode.protocol.PermissionMode
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob

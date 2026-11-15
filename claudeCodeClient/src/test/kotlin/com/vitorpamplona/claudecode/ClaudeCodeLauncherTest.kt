@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.claudecode
 
+import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.claudecode.process.ClaudeCodeLauncher
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
-import com.vitorpamplona.claudecode.protocol.PermissionMode
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals

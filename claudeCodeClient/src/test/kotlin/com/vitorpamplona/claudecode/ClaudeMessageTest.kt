@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.claudecode
 
+import com.vitorpamplona.agents.ContentBlock
+import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.agents.PermissionSuggestion
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
-import com.vitorpamplona.claudecode.protocol.ContentBlock
-import com.vitorpamplona.claudecode.protocol.PermissionMode
-import com.vitorpamplona.claudecode.protocol.PermissionSuggestion
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals

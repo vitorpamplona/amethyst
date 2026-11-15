@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.claudecode
 
+import com.vitorpamplona.agents.PermissionDecision
+import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
-import com.vitorpamplona.claudecode.protocol.PermissionDecision
-import com.vitorpamplona.claudecode.protocol.PermissionMode
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json

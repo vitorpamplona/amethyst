@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.claudecode
 
-import com.vitorpamplona.claudecode.protocol.ContentBlock
+import com.vitorpamplona.agents.ContentBlock
+import com.vitorpamplona.agents.TranscriptEntry
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
-import com.vitorpamplona.claudecode.session.TranscriptEntry
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest

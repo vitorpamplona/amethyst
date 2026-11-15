@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.claudecode.session
 
+import com.vitorpamplona.agents.ContentBlock
+import com.vitorpamplona.agents.TranscriptEntry
+import com.vitorpamplona.claudecode.protocol.ClaudeContent
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
-import com.vitorpamplona.claudecode.protocol.ContentBlock
 import com.vitorpamplona.claudecode.protocol.boolean
 import com.vitorpamplona.claudecode.protocol.long
 import com.vitorpamplona.claudecode.protocol.obj
@@ -64,22 +66,6 @@ data class ClaudeLiveSession(
     val kind: String?,
     val name: String?,
 )
-
-/** One message of a session's history, from its file. */
-data class TranscriptEntry(
-    val uuid: String,
-    val role: Role,
-    val content: List<ContentBlock>,
-    val timestamp: Long?,
-    val model: String?,
-    /**
-     * The message before this one on the conversation's chain, whatever its kind (a reply, a
-     * local command's output): where a copy cut just before this message ends.
-     */
-    val parentUuid: String? = null,
-) {
-    enum class Role { USER, ASSISTANT }
-}
 
 /**
  * The sessions Claude Code saved on this machine: one JSONL file per session under
@@ -401,7 +387,7 @@ class ClaudeSessionStore(
         if (obj.boolean("isMeta") == true) return null
         if (obj.boolean("isCompactSummary") == true) return null
         val message = obj.obj("message") ?: return null
-        val content = ContentBlock.listOf(message["content"])
+        val content = ClaudeContent.listOf(message["content"])
         if (content.isEmpty()) return null
         return TranscriptEntry(
             uuid = obj.string("uuid") ?: return null,
@@ -417,7 +403,7 @@ class ClaudeSessionStore(
     private fun promptText(obj: JsonObject): String? {
         if (obj.boolean("isMeta") == true || obj.boolean("isSidechain") == true || obj.boolean("isCompactSummary") == true) return null
         val text =
-            ContentBlock
+            ClaudeContent
                 .listOf(obj.obj("message")?.get("content"))
                 .firstNotNullOfOrNull { (it as? ContentBlock.Text)?.text }
                 ?.trim()

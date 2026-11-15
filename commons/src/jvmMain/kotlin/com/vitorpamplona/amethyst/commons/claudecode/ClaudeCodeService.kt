@@ -21,18 +21,18 @@
 package com.vitorpamplona.amethyst.commons.claudecode
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.agents.ContentBlock
+import com.vitorpamplona.agents.HostToolServer
+import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.agents.TranscriptEntry
 import com.vitorpamplona.amethyst.commons.util.appDataDir
-import com.vitorpamplona.claudecode.mcp.SdkMcpServer
 import com.vitorpamplona.claudecode.process.ClaudeCodeLauncher
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
 import com.vitorpamplona.claudecode.process.ClaudeExecutable
-import com.vitorpamplona.claudecode.protocol.ContentBlock
-import com.vitorpamplona.claudecode.protocol.PermissionMode
 import com.vitorpamplona.claudecode.session.ClaudeLiveSession
 import com.vitorpamplona.claudecode.session.ClaudeSessionInfo
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
-import com.vitorpamplona.claudecode.session.TranscriptEntry
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -291,7 +291,7 @@ class ClaudeCodeService(
         model: String?,
         fork: Boolean = false,
         forkBefore: TranscriptEntry? = null,
-        mcpServers: List<SdkMcpServer> = emptyList(),
+        mcpServers: List<HostToolServer> = emptyList(),
         launchOptions: (ClaudeCodeOptions) -> ClaudeCodeOptions = { it },
         kind: ChatKind = ChatKind.CODE,
     ): ClaudeChat {

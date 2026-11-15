@@ -22,7 +22,7 @@ package com.vitorpamplona.claudecode
 
 import com.vitorpamplona.claudecode.process.ClaudeCodeLauncher
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
-import com.vitorpamplona.claudecode.protocol.CliInfo
+import com.vitorpamplona.claudecode.protocol.ClaudeInfo
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import java.io.File
@@ -48,13 +48,13 @@ class CliInfoTest {
 
     @Test
     fun readsCommandsAndModels() {
-        val info = CliInfo.parse(Json.parseToJsonElement(answer).jsonObject)!!
+        val info = ClaudeInfo.parse(Json.parseToJsonElement(answer).jsonObject)!!
         assertEquals(listOf("context", "startup-hook-skill"), info.commands.map { it.name })
         assertEquals(listOf("session-start-hook"), info.commands[1].aliases)
         assertEquals(listOf("default", "haiku"), info.models.map { it.value })
         assertEquals("claude-haiku-5-5", info.models[1].resolvedModel)
         assertEquals("2.1.325", info.version)
-        assertNull(CliInfo.parse(null))
+        assertNull(ClaudeInfo.parse(null))
     }
 
     @Test

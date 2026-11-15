@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.claudecode
 
+import com.vitorpamplona.agents.ImageInput
 import com.vitorpamplona.claudecode.protocol.ClaudeInput
-import com.vitorpamplona.claudecode.protocol.ImageInput
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

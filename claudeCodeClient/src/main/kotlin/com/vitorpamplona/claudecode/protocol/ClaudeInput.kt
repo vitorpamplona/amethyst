@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.claudecode.protocol
 
+import com.vitorpamplona.agents.ImageInput
+import com.vitorpamplona.agents.PermissionDecision
+import com.vitorpamplona.agents.PermissionRequest
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject

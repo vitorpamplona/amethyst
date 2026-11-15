@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.claudecode.protocol
 
+import com.vitorpamplona.agents.ContentBlock
+import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.agents.PermissionRequest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
@@ -145,7 +148,7 @@ sealed interface ClaudeMessage {
         override val raw: JsonObject,
     ) : ClaudeMessage {
         /** Set when this is a permission prompt (`can_use_tool`). */
-        val permission: PermissionRequest? get() = if (subtype == "can_use_tool") PermissionRequest.parse(requestId, request) else null
+        val permission: PermissionRequest? get() = if (subtype == "can_use_tool") ClaudePermissions.request(requestId, request) else null
     }
 
     /** The answer to a control request the host sent. */
@@ -210,7 +213,7 @@ sealed interface ClaudeMessage {
                         sessionId = sessionId,
                         messageId = message?.string("id"),
                         model = message?.string("model"),
-                        content = ContentBlock.listOf(message?.get("content")),
+                        content = ClaudeContent.listOf(message?.get("content")),
                         parentToolUseId = obj.string("parent_tool_use_id"),
                         raw = obj,
                     )
@@ -219,7 +222,7 @@ sealed interface ClaudeMessage {
                     User(
                         uuid = obj.string("uuid"),
                         sessionId = sessionId,
-                        content = ContentBlock.listOf(obj.obj("message")?.get("content")),
+                        content = ClaudeContent.listOf(obj.obj("message")?.get("content")),
                         parentToolUseId = obj.string("parent_tool_use_id"),
                         isSynthetic = obj.boolean("isSynthetic") ?: false,
                         raw = obj,

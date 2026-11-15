@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.commons.claudecode
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.claudecode.protocol.ImageInput
-import com.vitorpamplona.claudecode.protocol.PermissionMode
-import com.vitorpamplona.claudecode.protocol.PermissionRequest
+import com.vitorpamplona.agents.ImageInput
+import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext

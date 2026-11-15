@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.commons.claudecode
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.claudecode.protocol.ContentBlock
-import com.vitorpamplona.claudecode.session.TranscriptEntry
+import com.vitorpamplona.agents.ContentBlock
+import com.vitorpamplona.agents.TranscriptEntry
 
 /** One row of a Claude Code conversation as the chat screen shows it. */
 @Immutable

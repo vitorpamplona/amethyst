@@ -97,6 +97,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.agents.ImageInput
+import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.agents.PermissionRequest
+import com.vitorpamplona.agents.PermissionSuggestion
+import com.vitorpamplona.agents.SlashCommand
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.claudecode.ChatError
 import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
@@ -231,11 +236,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.claudecode.protocol.ImageInput
-import com.vitorpamplona.claudecode.protocol.PermissionMode
-import com.vitorpamplona.claudecode.protocol.PermissionRequest
-import com.vitorpamplona.claudecode.protocol.PermissionSuggestion
-import com.vitorpamplona.claudecode.protocol.SlashCommand
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent

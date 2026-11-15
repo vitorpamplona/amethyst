@@ -81,6 +81,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.amethyst.commons.claudecode.ChatStatus
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeSessionsViewModel
@@ -135,7 +136,6 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.claudecode.protocol.PermissionMode
 import kotlinx.coroutines.launch
 import java.awt.FileDialog
 import java.awt.Frame

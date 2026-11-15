@@ -45,6 +45,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.agents.ModelChoice
+import com.vitorpamplona.agents.SlashCommand
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeChatState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -55,8 +57,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
-import com.vitorpamplona.claudecode.protocol.ModelChoice
-import com.vitorpamplona.claudecode.protocol.SlashCommand
 
 /** How many commands the menu lists at once: past that, typing narrows it. */
 private const val COMMANDS_SHOWN = 8

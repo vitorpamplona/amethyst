@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.agents.ImageInput
 import com.vitorpamplona.amethyst.commons.claudecode.SentImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -62,7 +63,6 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_attach_remove
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
-import com.vitorpamplona.claudecode.protocol.ImageInput
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

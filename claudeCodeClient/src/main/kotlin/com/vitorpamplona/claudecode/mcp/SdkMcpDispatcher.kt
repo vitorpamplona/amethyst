@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.claudecode.mcp
 
+import com.vitorpamplona.agents.HostToolResult
+import com.vitorpamplona.agents.HostToolServer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -29,56 +31,14 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-/** A tool the host offers Claude: its name, what it does, and the JSON schema of its input. */
-data class McpTool(
-    val name: String,
-    val description: String,
-    val inputSchema: JsonObject,
-)
-
-/** What a tool call gave back: text for Claude to read; [isError] when it failed. */
-data class McpToolResult(
-    val text: String,
-    val isError: Boolean = false,
-)
-
-/**
- * Tools that run inside the host app, which Claude Code reaches over the same stdin/stdout pipe
- * as the chat: no process and no port of their own. The CLI acts as an MCP client and sends
- * its JSON-RPC messages as `mcp_message` control requests; [SdkMcpDispatcher] answers them.
- * Claude sees each tool as `mcp__<name>__<tool>`.
- */
-interface SdkMcpServer {
-    val name: String
-    val version: String get() = "1.0"
-    val tools: List<McpTool>
-
-    suspend fun call(
-        tool: String,
-        arguments: JsonObject,
-    ): McpToolResult
-
-    /**
-     * The call in words, for the approval prompt ("Theme: System → Dark"), or null to show its
-     * input. Called before the call runs, so it can show what would change.
-     */
-    fun describe(
-        tool: String,
-        arguments: JsonObject,
-    ): String? = null
-
-    /** `mcp__<server>__<tool>`, the name Claude Code gives [tool]. */
-    fun qualifiedName(tool: String) = "mcp__${name}__$tool"
-}
-
-/** Answers the JSON-RPC messages Claude Code sends an [SdkMcpServer]. */
+/** Answers the JSON-RPC messages Claude Code sends an [HostToolServer]. */
 object SdkMcpDispatcher {
     /**
      * The JSON-RPC response to [message], or the acknowledgement Claude Code expects for a
      * notification (a message without an id), which has no response of its own.
      */
     suspend fun handle(
-        server: SdkMcpServer,
+        server: HostToolServer,
         message: JsonObject,
     ): JsonObject {
         val id = message["id"]
@@ -121,12 +81,12 @@ object SdkMcpDispatcher {
                 val arguments = params["arguments"] as? JsonObject ?: JsonObject(emptyMap())
                 val outcome =
                     if (name == null || server.tools.none { it.name == name }) {
-                        McpToolResult("No tool named $name", isError = true)
+                        HostToolResult("No tool named $name", isError = true)
                     } else {
                         try {
                             server.call(name, arguments)
                         } catch (e: IllegalArgumentException) {
-                            McpToolResult(e.message ?: "Invalid arguments", isError = true)
+                            HostToolResult(e.message ?: "Invalid arguments", isError = true)
                         }
                     }
                 result(id) {
@@ -182,7 +142,7 @@ object SdkMcpDispatcher {
     }
 
     /** The `--mcp-config` entry that declares [servers] as living in the host. */
-    fun mcpConfig(servers: List<SdkMcpServer>): String =
+    fun mcpConfig(servers: List<HostToolServer>): String =
         buildJsonObject {
             put(
                 "mcpServers",
@@ -201,7 +161,7 @@ object SdkMcpDispatcher {
         }.toString()
 
     /** [servers]' names, for the `initialize` request's `sdkMcpServers`. */
-    fun names(servers: List<SdkMcpServer>): JsonArray = JsonArray(servers.map { JsonPrimitive(it.name) })
+    fun names(servers: List<HostToolServer>): JsonArray = JsonArray(servers.map { JsonPrimitive(it.name) })
 
     private const val DEFAULT_PROTOCOL = "2025-06-18"
 }

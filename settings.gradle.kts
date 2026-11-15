@@ -57,6 +57,7 @@ include(":nestsClient")
 include(":desktopApp")
 include(":cli")
 include(":relayBench")
+include(":agentCore")
 include(":claudeCodeClient")
 
 // quartz lives in its own repo (vitorpamplona/quartz) and comes from Maven Central, like crypto

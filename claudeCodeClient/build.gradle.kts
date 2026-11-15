@@ -18,6 +18,7 @@ kotlin {
 
 dependencies {
     implementation(libs.kotlin.stdlib)
+    api(project(":agentCore"))
     api(libs.kotlinx.coroutines.core)
     api(libs.kotlinx.serialization.json)
 

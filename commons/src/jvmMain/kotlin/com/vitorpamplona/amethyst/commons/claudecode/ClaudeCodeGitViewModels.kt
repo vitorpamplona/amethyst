@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.commons.claudecode
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.claudecode.process.ClaudeExecutable
-import com.vitorpamplona.claudecode.protocol.PermissionMode
 import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
 import com.vitorpamplona.quartz.nip34Git.patch.UnifiedDiffParser
 import com.vitorpamplona.quartz.utils.Log

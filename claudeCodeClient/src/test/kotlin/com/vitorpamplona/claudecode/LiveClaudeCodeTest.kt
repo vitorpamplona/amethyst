@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.claudecode
 
-import com.vitorpamplona.claudecode.mcp.McpTool
-import com.vitorpamplona.claudecode.mcp.McpToolResult
-import com.vitorpamplona.claudecode.mcp.SdkMcpServer
+import com.vitorpamplona.agents.HostTool
+import com.vitorpamplona.agents.HostToolResult
+import com.vitorpamplona.agents.HostToolServer
+import com.vitorpamplona.agents.PermissionDecision
 import com.vitorpamplona.claudecode.process.ClaudeCodeLauncher
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
-import com.vitorpamplona.claudecode.protocol.PermissionDecision
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -102,12 +102,12 @@ class LiveClaudeCodeTest {
     }
 
     /** A tool the test runs in-process: Claude reaches it over the session's own pipe. */
-    private class Counter : SdkMcpServer {
+    private class Counter : HostToolServer {
         override val name = "probe"
         val calls = mutableListOf<JsonObject>()
         override val tools =
             listOf(
-                McpTool(
+                HostTool(
                     name = "secret_number",
                     description = "Returns the secret number for a given word.",
                     inputSchema =
@@ -121,9 +121,9 @@ class LiveClaudeCodeTest {
         override suspend fun call(
             tool: String,
             arguments: JsonObject,
-        ): McpToolResult {
+        ): HostToolResult {
             calls.add(arguments)
-            return McpToolResult("The secret number is 7341.")
+            return HostToolResult("The secret number is 7341.")
         }
 
         override fun describe(

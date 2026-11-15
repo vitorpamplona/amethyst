@@ -18,38 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.claudecode.protocol
+package com.vitorpamplona.agents
 
-/** How Claude Code decides on tool calls. [wire] is the value the CLI takes and reports. */
-enum class PermissionMode(
-    val wire: String,
-) {
-    /** Ask before anything that isn't read-only or already allowed. */
-    DEFAULT("default"),
+/** A slash command the CLI offers in a folder: a built-in, a skill, a plugin's or the user's own. */
+data class SlashCommand(
+    val name: String,
+    val description: String,
+    val argumentHint: String = "",
+    val aliases: List<String> = emptyList(),
+)
 
-    /** Edits in the working directory go through; commands still ask. */
-    ACCEPT_EDITS("acceptEdits"),
+/** A model the user can pick: [value] goes to `--model` and `set_model`. */
+data class ModelChoice(
+    val value: String,
+    val displayName: String,
+    val description: String,
+    /** The model [value] stands for now ("default" and aliases move with releases). */
+    val resolvedModel: String?,
+)
 
-    /** Read and plan only, no changes. */
-    PLAN("plan"),
-
-    /** A classifier approves or escalates each call. */
-    AUTO("auto"),
-
-    /** Anything not already allowed is denied, nothing asks. */
-    DONT_ASK("dontAsk"),
-
-    /** Every call runs without a check. */
-    BYPASS("bypassPermissions"),
-    ;
-
-    companion object {
-        fun fromWire(value: String?): PermissionMode? =
-            when (value) {
-                null -> null
-                // The interactive CLI calls the default mode "manual" in places.
-                "manual", "normal" -> DEFAULT
-                else -> entries.firstOrNull { it.wire == value }
-            }
-    }
-}
+/** What an agent offers in a folder: its commands (or skills) and its models. */
+data class AgentInfo(
+    val commands: List<SlashCommand>,
+    val models: List<ModelChoice>,
+    val version: String?,
+)

@@ -20,15 +20,16 @@
  */
 package com.vitorpamplona.claudecode.process
 
+import com.vitorpamplona.agents.AgentInfo
+import com.vitorpamplona.agents.HostToolServer
+import com.vitorpamplona.agents.ImageInput
+import com.vitorpamplona.agents.PermissionDecision
+import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.claudecode.mcp.SdkMcpDispatcher
-import com.vitorpamplona.claudecode.mcp.SdkMcpServer
+import com.vitorpamplona.claudecode.protocol.ClaudeInfo
 import com.vitorpamplona.claudecode.protocol.ClaudeInput
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
-import com.vitorpamplona.claudecode.protocol.CliInfo
-import com.vitorpamplona.claudecode.protocol.ImageInput
-import com.vitorpamplona.claudecode.protocol.PermissionDecision
-import com.vitorpamplona.claudecode.protocol.PermissionMode
-import com.vitorpamplona.claudecode.protocol.PermissionRequest
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -62,8 +63,8 @@ import kotlin.coroutines.cancellation.CancellationException
 class ClaudeCodeConnection(
     private val transport: ClaudeTransport,
     private val scope: CoroutineScope,
-    /** Tools the host runs itself, which the CLI reaches over this pipe (see [SdkMcpServer]). */
-    private val mcpServers: List<SdkMcpServer> = emptyList(),
+    /** Tools the host runs itself, which the CLI reaches over this pipe (see [HostToolServer]). */
+    private val mcpServers: List<HostToolServer> = emptyList(),
 ) {
     private val output = Channel<ClaudeMessage>(Channel.UNLIMITED)
     private val pending = ConcurrentHashMap<String, CompletableDeferred<ClaudeMessage.ControlResponse>>()
@@ -139,11 +140,11 @@ class ClaudeCodeConnection(
         request(
             "initialize",
             if (mcpServers.isEmpty()) emptyMap() else mapOf("sdkMcpServers" to SdkMcpDispatcher.names(mcpServers)),
-        ).also { answer -> if (answer?.isSuccess == true) info = CliInfo.parse(answer.response) }
+        ).also { answer -> if (answer?.isSuccess == true) info = ClaudeInfo.parse(answer.response) }
 
     /** The commands and models the CLI offered when it started, once [initialize] answered. */
     @Volatile
-    var info: CliInfo? = null
+    var info: AgentInfo? = null
         private set
 
     /** Starts a turn with [text], or queues it if a turn is running. */

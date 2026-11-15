@@ -21,21 +21,21 @@
 package com.vitorpamplona.amethyst.commons.claudecode
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.claudecode.mcp.SdkMcpServer
+import com.vitorpamplona.agents.AgentInfo
+import com.vitorpamplona.agents.HostToolServer
+import com.vitorpamplona.agents.ImageInput
+import com.vitorpamplona.agents.ModelChoice
+import com.vitorpamplona.agents.PermissionDecision
+import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.agents.PermissionRequest
+import com.vitorpamplona.agents.SlashCommand
+import com.vitorpamplona.agents.TranscriptEntry
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
 import com.vitorpamplona.claudecode.process.ClaudeCodeNotFoundException
 import com.vitorpamplona.claudecode.process.ClaudeCodeOptions
 import com.vitorpamplona.claudecode.process.ClaudeCodeStarter
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
-import com.vitorpamplona.claudecode.protocol.CliInfo
-import com.vitorpamplona.claudecode.protocol.ImageInput
-import com.vitorpamplona.claudecode.protocol.ModelChoice
-import com.vitorpamplona.claudecode.protocol.PermissionDecision
-import com.vitorpamplona.claudecode.protocol.PermissionMode
-import com.vitorpamplona.claudecode.protocol.PermissionRequest
-import com.vitorpamplona.claudecode.protocol.SlashCommand
 import com.vitorpamplona.claudecode.session.ClaudeSessionStore
-import com.vitorpamplona.claudecode.session.TranscriptEntry
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -164,8 +164,8 @@ class ClaudeChat internal constructor(
     fork: Boolean = false,
     /** Whether another Claude Code process has this session open now. Called off the main thread. */
     private val heldElsewhere: (sessionId: String) -> Boolean = { false },
-    /** Tools the app runs itself in this chat ([SdkMcpServer]), e.g. the settings assistant's. */
-    private val mcpServers: List<SdkMcpServer> = emptyList(),
+    /** Tools the app runs itself in this chat ([HostToolServer]), e.g. the settings assistant's. */
+    private val mcpServers: List<HostToolServer> = emptyList(),
     /** Changes to how the CLI starts for this chat: which tools it has, its system prompt. */
     private val launchOptions: (ClaudeCodeOptions) -> ClaudeCodeOptions = { it },
     kind: ChatKind = ChatKind.CODE,
@@ -373,7 +373,7 @@ class ClaudeChat internal constructor(
         }
     }
 
-    private suspend fun probe(): CliInfo? {
+    private suspend fun probe(): AgentInfo? {
         if (!workDir.isDirectory || killed) return null
         val options = ClaudeCodeOptions(cwd = workDir, sdkMcpServers = mcpServers).let(launchOptions)
         val c =
@@ -389,7 +389,7 @@ class ClaudeChat internal constructor(
         return c.info.also { c.close() }
     }
 
-    private fun remember(info: CliInfo) {
+    private fun remember(info: AgentInfo) {
         cliInfoCache[workDir.absolutePath] = info
     }
 
@@ -630,7 +630,7 @@ class ClaudeChat internal constructor(
         private const val TAG = "ClaudeChat"
 
         /** What the CLI offered in each folder: commands and models change rarely, and asking starts a process. */
-        private val cliInfoCache = ConcurrentHashMap<String, CliInfo>()
+        private val cliInfoCache = ConcurrentHashMap<String, AgentInfo>()
 
         /** The history before the message [uuid], or all of it when it isn't there. */
         internal fun List<TranscriptEntry>.cutBefore(uuid: String): List<TranscriptEntry> {

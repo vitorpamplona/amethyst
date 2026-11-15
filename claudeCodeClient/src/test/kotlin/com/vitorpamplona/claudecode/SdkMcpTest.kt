@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.claudecode
 
-import com.vitorpamplona.claudecode.mcp.McpTool
-import com.vitorpamplona.claudecode.mcp.McpToolResult
+import com.vitorpamplona.agents.HostTool
+import com.vitorpamplona.agents.HostToolResult
+import com.vitorpamplona.agents.HostToolServer
 import com.vitorpamplona.claudecode.mcp.SdkMcpDispatcher
-import com.vitorpamplona.claudecode.mcp.SdkMcpServer
 import com.vitorpamplona.claudecode.process.ClaudeCodeConnection
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
@@ -38,17 +38,17 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class SdkMcpTest {
-    private class Echo : SdkMcpServer {
+    private class Echo : HostToolServer {
         override val name = "echo"
-        override val tools = listOf(McpTool("say", "Says it back", obj("""{"type":"object","properties":{"text":{"type":"string"}}}""")))
+        override val tools = listOf(HostTool("say", "Says it back", obj("""{"type":"object","properties":{"text":{"type":"string"}}}""")))
 
         override suspend fun call(
             tool: String,
             arguments: JsonObject,
-        ): McpToolResult {
+        ): HostToolResult {
             val text = arguments["text"]!!.jsonPrimitive.content
             require(text.isNotBlank()) { "Say something." }
-            return McpToolResult("you said $text")
+            return HostToolResult("you said $text")
         }
     }
 

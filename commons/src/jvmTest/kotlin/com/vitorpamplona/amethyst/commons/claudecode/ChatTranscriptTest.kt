@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.claudecode
 
-import com.vitorpamplona.claudecode.protocol.ContentBlock
-import com.vitorpamplona.claudecode.session.TranscriptEntry
+import com.vitorpamplona.agents.ContentBlock
+import com.vitorpamplona.agents.TranscriptEntry
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test

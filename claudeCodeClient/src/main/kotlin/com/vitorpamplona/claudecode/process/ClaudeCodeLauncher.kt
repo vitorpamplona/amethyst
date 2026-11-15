@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.claudecode.process
 
+import com.vitorpamplona.agents.HostToolServer
+import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.claudecode.mcp.SdkMcpDispatcher
-import com.vitorpamplona.claudecode.mcp.SdkMcpServer
-import com.vitorpamplona.claudecode.protocol.PermissionMode
 import kotlinx.coroutines.CoroutineScope
 import java.io.File
 import java.io.IOException
@@ -53,8 +53,8 @@ data class ClaudeCodeOptions(
     val extraArgs: List<String> = emptyList(),
     /** Variables added to the process's environment, which every command it runs inherits. */
     val environment: Map<String, String> = emptyMap(),
-    /** Tools the host runs itself, over the session's own pipe ([SdkMcpServer]). */
-    val sdkMcpServers: List<SdkMcpServer> = emptyList(),
+    /** Tools the host runs itself, over the session's own pipe ([HostToolServer]). */
+    val sdkMcpServers: List<HostToolServer> = emptyList(),
     /** Only these MCP servers: none from the user's own config. */
     val strictMcpConfig: Boolean = false,
     /** The built-in tools the session has; null for all of them, empty for none. */
