@@ -220,9 +220,9 @@ interface AppPlatform {
     @Composable
     fun GeohashLocationPickerDialog(
         initialGeohash: String?,
-        precision: Int?,
         onDismiss: () -> Unit,
         onConfirm: (String) -> Unit,
+        precision: Int?,
     ) {}
 
     /** The picker's body, for screens that host it in their own scaffold. */
@@ -424,7 +424,7 @@ fun GeohashLocationPickerDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
     precision: Int? = null,
-) = LocalAppPlatform.current.GeohashLocationPickerDialog(initialGeohash, precision, onDismiss, onConfirm)
+) = LocalAppPlatform.current.GeohashLocationPickerDialog(initialGeohash, onDismiss, onConfirm, precision)
 
 @Composable
 fun GeohashLocationPickerContent(
