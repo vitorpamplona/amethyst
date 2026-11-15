@@ -36,8 +36,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -51,7 +49,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_banner
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_description
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_move_down
@@ -64,10 +61,12 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_new_publish
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
 import com.vitorpamplona.amethyst.commons.resources.route_edit_geocache_hunt
 import com.vitorpamplona.amethyst.commons.resources.route_new_geocache_hunt
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -111,26 +110,12 @@ fun NewGeocacheHuntScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(stringRes(if (model.isEditing) Res.string.route_edit_geocache_hunt else Res.string.route_new_geocache_hunt))
-                },
-                navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        Icon(
-                            symbol = MaterialSymbols.Close,
-                            contentDescription = stringRes(Res.string.back),
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                },
-                actions = {
-                    TextButton(
-                        enabled = model.isValid() && !model.isPublishing.value,
-                        onClick = { scope.launch { if (model.publish()) nav.popBack() } },
-                    ) { Text(stringRes(Res.string.geocache_new_publish)) }
-                },
+            ActionTopBar(
+                postRes = if (model.isEditing) Res.string.save else Res.string.geocache_new_publish,
+                titleRes = if (model.isEditing) Res.string.route_edit_geocache_hunt else Res.string.route_new_geocache_hunt,
+                isActive = { model.isValid() && !model.isPublishing.value },
+                onCancel = { nav.popBack() },
+                onPost = { scope.launch { if (model.publish()) nav.popBack() } },
             )
         },
     ) { pad ->

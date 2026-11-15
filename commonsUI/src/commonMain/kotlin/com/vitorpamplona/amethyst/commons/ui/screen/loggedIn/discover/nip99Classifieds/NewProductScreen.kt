@@ -51,7 +51,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PublishingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.commons.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
@@ -140,7 +140,7 @@ fun NewProductScreen(
 
     Scaffold(
         topBar = {
-            PostingTopBar(
+            PublishingTopBar(
                 titleRes = Res.string.new_product,
                 isActive = postViewModel::canPost,
                 onCancel = {

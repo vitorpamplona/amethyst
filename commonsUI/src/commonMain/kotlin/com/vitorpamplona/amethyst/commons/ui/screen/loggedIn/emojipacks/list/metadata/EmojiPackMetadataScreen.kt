@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_pack_upload_image_cta
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_upload_image_hint
 import com.vitorpamplona.amethyst.commons.resources.new_emoji_pack
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.FormImageTile
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -206,26 +207,28 @@ private fun PackImagePicker(
     viewModel: EmojiPackMetadataViewModel,
     onPickImage: () -> Unit,
 ) {
-    val picked = viewModel.pickedMedia
-    val currentUrl = viewModel.picture.value.text
+    FormImageTile {
+        val picked = viewModel.pickedMedia
+        val currentUrl = viewModel.picture.value.text
 
-    when {
-        picked != null -> {
-            HeroImagePreview(
-                model = picked.uri,
-                onClick = onPickImage,
-            )
-        }
+        when {
+            picked != null -> {
+                HeroImagePreview(
+                    model = picked.uri,
+                    onClick = onPickImage,
+                )
+            }
 
-        currentUrl.isNotBlank() -> {
-            HeroImagePreview(
-                model = currentUrl,
-                onClick = onPickImage,
-            )
-        }
+            currentUrl.isNotBlank() -> {
+                HeroImagePreview(
+                    model = currentUrl,
+                    onClick = onPickImage,
+                )
+            }
 
-        else -> {
-            UploadPlaceholder(onClick = onPickImage)
+            else -> {
+                UploadPlaceholder(onClick = onPickImage)
+            }
         }
     }
 }
