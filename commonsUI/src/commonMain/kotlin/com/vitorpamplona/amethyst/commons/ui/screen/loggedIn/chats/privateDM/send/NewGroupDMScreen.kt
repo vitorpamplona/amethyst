@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -117,6 +116,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.PrepareLinke
 import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.PreviewUrl
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerToolbar
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.composerToolsWrap
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
@@ -227,7 +228,7 @@ fun GroupDMScreenContent(
     val scrollState = rememberScrollState()
 
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = Size10dp).weight(1f)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = Size10dp).weight(1f, fill = !composerToolsWrap())) {
             Column(
                 Modifier.fillMaxWidth().verticalScroll(scrollState, reverseScrolling = true),
                 verticalArrangement = spacedBy(Size10dp),
@@ -397,15 +398,7 @@ private fun BottomRowActions(
     postViewModel: ChatNewMessageViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    val scrollState = rememberScrollState()
-    Row(
-        modifier =
-            Modifier
-                .horizontalScroll(scrollState)
-                .fillMaxWidth()
-                .height(50.dp),
-        verticalAlignment = CenterVertically,
-    ) {
+    ComposerToolbar { _ ->
         val room by postViewModel.room.collectAsStateWithLifecycle()
 
         if (room != null) {

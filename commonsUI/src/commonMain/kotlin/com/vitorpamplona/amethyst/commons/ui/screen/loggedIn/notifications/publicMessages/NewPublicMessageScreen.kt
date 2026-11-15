@@ -20,14 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.publicMessages
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -49,7 +47,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
@@ -85,6 +82,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeoHashPostS
 import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.DisplayPreviews
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerToolbar
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.composerToolsWrap
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
@@ -200,7 +199,7 @@ fun PublicMessageScreenContent(
     val scrollState = rememberScrollState()
 
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = Size10dp).weight(1f)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = Size10dp).weight(1f, fill = !composerToolsWrap())) {
             Column(
                 Modifier.fillMaxWidth().verticalScroll(scrollState, reverseScrolling = true),
                 verticalArrangement = spacedBy(Size10dp),
@@ -332,15 +331,7 @@ private fun BottomRowActions(
     postViewModel: NewPublicMessageViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    val scrollState = rememberScrollState()
-    Row(
-        modifier =
-            Modifier
-                .horizontalScroll(scrollState)
-                .fillMaxWidth()
-                .height(50.dp),
-        verticalAlignment = CenterVertically,
-    ) {
+    ComposerToolbar { _ ->
         SelectFromGallery(
             isUploading = postViewModel.isUploadingImage,
             enabled = !postViewModel.isUploadingFile,

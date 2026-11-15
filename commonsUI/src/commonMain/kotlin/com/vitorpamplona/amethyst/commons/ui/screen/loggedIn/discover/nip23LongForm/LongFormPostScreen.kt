@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip23Long
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -129,6 +128,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.location.AddGeoHashBu
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeoHashPostSection
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerToolbar
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.ComposerToolsFormStartPadding
+import com.vitorpamplona.amethyst.commons.ui.note.creators.toolbar.composerToolsWrap
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
@@ -234,7 +236,7 @@ private fun MarkdownPostScreenBody(
                     .padding(
                         start = Size10dp,
                         end = Size10dp,
-                    ).weight(1f),
+                    ).weight(1f, fill = !composerToolsWrap()),
         ) {
             Column(
                 modifier =
@@ -766,15 +768,7 @@ private fun TagInputSection(
 
 @Composable
 private fun MarkdownBottomRowActions(postViewModel: LongFormPostViewModel) {
-    val scrollState = rememberScrollState()
-    Row(
-        modifier =
-            Modifier
-                .horizontalScroll(scrollState)
-                .fillMaxWidth()
-                .height(50.dp),
-        verticalAlignment = CenterVertically,
-    ) {
+    ComposerToolbar(startPadding = ComposerToolsFormStartPadding) { _ ->
         SelectFromGallery(
             isUploading = postViewModel.isUploadingImage,
             enabled = !postViewModel.isUploadingFile,
