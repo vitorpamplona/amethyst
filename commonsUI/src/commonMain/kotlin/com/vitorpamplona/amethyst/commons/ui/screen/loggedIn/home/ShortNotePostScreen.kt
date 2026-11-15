@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive_explainer
 import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_question
+import com.vitorpamplona.amethyst.commons.resources.media_studio_done
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject_caption
 import com.vitorpamplona.amethyst.commons.resources.poll
@@ -101,6 +102,7 @@ import com.vitorpamplona.amethyst.commons.resources.schedule_post_always_on_prom
 import com.vitorpamplona.amethyst.commons.resources.what_s_on_your_mind
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.OnIncomingShare
@@ -145,7 +147,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.scheduling.ScheduleAt
 import com.vitorpamplona.amethyst.commons.ui.note.creators.scheduling.roundUpToNextQuarterHour
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaStrip
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.MediaStudioDialog
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.rememberMediaMarkerChips
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
@@ -263,8 +267,8 @@ internal fun NewPostScreenInner(
         // uses the accountViewModel scope to avoid cancelling this
         // function when the postViewModel is released
         accountViewModel.launchSigner {
-            postViewModel.sendPostSync()
-            nav.popBack()
+            // False when an attached file failed to upload: nothing was posted, so stay.
+            if (postViewModel.sendPostSync()) nav.popBack()
         }
     }
 
@@ -486,9 +490,18 @@ private fun NewPostScreenBody(
                                     ),
                                 )
                             },
+                            mediaChips = rememberMediaMarkerChips(remember(postViewModel) { { id: Int -> postViewModel.attachedMedia[id]?.media } }),
                         )
                     }
                 }
+
+                AttachedMediaStrip(
+                    items = postViewModel.attachedInOrder(),
+                    locked = postViewModel.mediaUploadTracker.isUploading,
+                    onOpen = { postViewModel.reopenedMedia = it },
+                    onRemove = postViewModel::removeAttachedMedia,
+                    modifier = Modifier.padding(start = ComposerToolsStartPadding, end = Size10dp, bottom = Size10dp),
+                )
 
                 if (postViewModel.wantsPoll || postViewModel.wantsZapPoll) {
                     // Lined up with the text above and the tools below: the post's text is the poll's question.
@@ -562,18 +575,43 @@ private fun NewPostScreenBody(
                     }
                 }
 
+                // Just picked: Add puts them in the text; nothing uploads until Post.
                 postViewModel.multiOrchestrator?.let {
                     MediaStudioDialog(
                         media = it,
-                        defaultServer = accountViewModel.account.settings.defaultFileServer,
-                        isUploading = postViewModel.mediaUploadTracker.isUploading,
+                        defaultServer = postViewModel.mediaServer ?: accountViewModel.account.settings.defaultFileServer,
+                        isUploading = false,
                         onAdd = { server ->
-                            postViewModel.uploadFromStudio(server, accountViewModel.mediaUploader)
+                            postViewModel.attachPickedMedia(server)
                             accountViewModel.account.settings.changeDefaultFileServer(server)
                         },
                         onRemove = postViewModel::deleteMediaToUpload,
                         onCancel = { postViewModel.multiOrchestrator = null },
                         accountViewModel = accountViewModel,
+                    )
+                }
+
+                // A file of the post, tapped: edits apply as they're made, Done closes.
+                postViewModel.reopenedMedia?.let { item ->
+                    val batch = remember(item) { MultiOrchestrator.of(postViewModel.attachedInOrder()) }
+                    MediaStudioDialog(
+                        media = batch,
+                        defaultServer = postViewModel.mediaServer ?: accountViewModel.account.settings.defaultFileServer,
+                        isUploading = postViewModel.mediaUploadTracker.isUploading,
+                        onAdd = { server ->
+                            postViewModel.mediaServer = server
+                            postViewModel.reopenedMedia = null
+                        },
+                        onRemove = { removed ->
+                            batch.remove(removed)
+                            postViewModel.removeAttachedMedia(removed)
+                            if (batch.size() == 0) postViewModel.reopenedMedia = null
+                        },
+                        onCancel = { postViewModel.reopenedMedia = null },
+                        accountViewModel = accountViewModel,
+                        initial = item,
+                        confirmLabel = Res.string.media_studio_done,
+                        canCancel = false,
                     )
                 }
 

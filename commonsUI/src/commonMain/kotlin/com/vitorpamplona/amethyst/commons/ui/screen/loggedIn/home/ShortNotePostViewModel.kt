@@ -27,9 +27,11 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.text.TextRange
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.actions.ReplyActions
@@ -60,7 +62,6 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error
-import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.upload_error_title
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_exception
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_failed
@@ -74,8 +75,8 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaMarkers
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadOptions
-import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
@@ -95,7 +96,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
-import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawingIntoText
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -287,6 +287,20 @@ open class ShortNotePostViewModel :
 
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
+
+    /**
+     * Files added to the post, each under the id of its [MediaMarkers] marker in [message]. Nothing
+     * is uploaded until Post. A file shows while its marker is in the text: deleting the marker
+     * (or undoing its insertion) drops it from the post, undo brings it back.
+     */
+    val attachedMedia = mutableStateMapOf<Int, SelectedMediaProcessing>()
+    private var nextMediaId = 1
+
+    /** Where attached files go on Post: the server last chosen in the media studio. */
+    var mediaServer by mutableStateOf<ServerName?>(null)
+
+    /** A file of the post reopened in the media studio. */
+    var reopenedMedia by mutableStateOf<SelectedMediaProcessing?>(null)
 
     // Stripping failure dialog
     val strippingFailureConfirmation = SuspendableConfirmation()
@@ -806,7 +820,7 @@ open class ShortNotePostViewModel :
             }
         }
 
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
     }
 
     /**
@@ -820,7 +834,7 @@ open class ShortNotePostViewModel :
 
         appliedSignature = signature
         message.appendSignature(signature)
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
     }
 
     private fun loadFromDraft(draft: Note) {
@@ -955,7 +969,7 @@ open class ShortNotePostViewModel :
 
         iMetaAttachments.addAll(draftEvent.imetas())
 
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
     }
 
     private fun loadFromDraft(draftEvent: PollEvent) {
@@ -1035,7 +1049,7 @@ open class ShortNotePostViewModel :
 
         iMetaAttachments.addAll(draftEvent.imetas())
 
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
     }
 
     private fun loadFromDraft(draftEvent: ZapPollEvent) {
@@ -1113,10 +1127,21 @@ open class ShortNotePostViewModel :
 
         iMetaAttachments.addAll(draftEvent.imetas())
 
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
     }
 
-    suspend fun sendPostSync() {
+    /**
+     * Uploads the attached files, then publishes. False when an upload failed: nothing was posted,
+     * the text and the files are as they were, and the failed file says why; Post tries again and
+     * resends only what failed. True when the composer is done (posted, or had nothing to post).
+     */
+    suspend fun sendPostSync(): Boolean {
+        if (!uploadAttachedMediaSync()) return false
+        publishPostSync()
+        return true
+    }
+
+    private suspend fun publishPostSync() {
         // Upload voice message first if it hasn't been uploaded yet
         if (voiceRecording != null && voiceMetadata == null) {
             val serverToUse = voiceSelectedServer ?: accountViewModel.account.settings.defaultFileServer
@@ -1356,7 +1381,7 @@ open class ShortNotePostViewModel :
 
         val tagger =
             NewMessageTagger(
-                message.text.toString().trim(),
+                MediaMarkers.strip(message.text.toString()).trim(),
                 activeAudience(),
                 eTags,
                 accountViewModel,
@@ -1528,70 +1553,6 @@ open class ShortNotePostViewModel :
         return ReplyActions.repliesAsComment(replyingToEvent)
     }
 
-    fun upload(
-        alt: String?,
-        contentWarningReason: String?,
-        mediaQuality: Int,
-        server: ServerName,
-        onError: (title: String, message: String) -> Unit,
-        uploader: MediaUploader,
-        useH265: Boolean,
-        stripMetadata: Boolean = true,
-        convertGifToMp4: Boolean = false,
-    ) {
-        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
-    }
-
-    fun uploadUnsafe(
-        alt: String?,
-        contentWarningReason: String?,
-        mediaQuality: Int,
-        server: ServerName,
-        onError: (title: String, message: String) -> Unit,
-        uploader: MediaUploader,
-        useH265: Boolean,
-        stripMetadata: Boolean = true,
-        convertGifToMp4: Boolean = false,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val myMultiOrchestrator = multiOrchestrator ?: return@launch
-
-            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
-
-            val results =
-                myMultiOrchestrator.upload(
-                    alt,
-                    contentWarningReason,
-                    CompressorQuality.fromSlider(mediaQuality),
-                    server,
-                    account,
-                    uploader,
-                    useH265,
-                    stripMetadata,
-                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
-                    convertGifToMp4 = convertGifToMp4,
-                    forcedSigner = if (wantsAnonymousPost) anonymousSigner() else null,
-                )
-
-            if (results.allGood) {
-                val urls =
-                    results.successful.mapNotNull { state ->
-                        (state.result as? UploadOrchestrator.OrchestratorResult.ServerResult)?.let { attach(it, alt, contentWarningReason) }
-                    }
-
-                onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
-                urlPreviews.update(message.text.toString())
-
-                multiOrchestrator = null
-            } else {
-                val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
-                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
-            }
-
-            mediaUploadTracker.finishUpload()
-        }
-    }
-
     /** Records [uploaded]'s `imeta` (with this file's [alt] and content warning) and returns its URL. */
     private fun attach(
         uploaded: UploadOrchestrator.OrchestratorResult.ServerResult,
@@ -1622,45 +1583,92 @@ open class ShortNotePostViewModel :
         return uploaded.url
     }
 
-    /**
-     * The media studio's Add: uploads every picked file with its own options to [server]. When all
-     * succeed their URLs go in at the cursor and the studio closes ([multiOrchestrator] = null). When
-     * any fail, nothing is inserted and the studio stays open: each file shows its own error, and
-     * Add again resends only the files that failed.
-     */
-    fun uploadFromStudio(
-        server: ServerName,
-        uploader: MediaUploader,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val myMultiOrchestrator = multiOrchestrator ?: return@launch
+    /** The attached files, in the order their markers appear in the text: the numbers the user sees. */
+    fun attachedInOrder(): List<SelectedMediaProcessing> = MediaMarkers.idsIn(message.text).mapNotNull { attachedMedia[it] }
 
-            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
-            try {
-                val results =
-                    myMultiOrchestrator.uploadEach(
-                        server,
+    private fun markerIdOf(item: SelectedMediaProcessing): Int? = attachedMedia.entries.firstOrNull { it.value === item }?.key
+
+    /**
+     * The media studio's Add: each picked file gets a marker at the cursor, on a line of its own,
+     * and joins [attachedMedia]. Nothing is uploaded until Post.
+     */
+    fun attachPickedMedia(server: ServerName) {
+        val picked = multiOrchestrator ?: return
+        mediaServer = server
+        message.edit {
+            var cursor = selection.max
+            picked.items().forEach { item ->
+                val id = nextMediaId++
+                attachedMedia[id] = item
+                val insertion = MediaMarkers.insertion(asCharSequence(), cursor, id)
+                replace(cursor, cursor, insertion)
+                cursor += insertion.length
+            }
+            selection = TextRange(cursor)
+        }
+        multiOrchestrator = null
+        draftTag.newVersion()
+    }
+
+    /** Takes [item] out of the post: its marker and the line it sat on. */
+    fun removeAttachedMedia(item: SelectedMediaProcessing) {
+        val id = markerIdOf(item) ?: return
+        attachedMedia.remove(id)
+        message.edit {
+            val text = asCharSequence().toString()
+            val marker = MediaMarkers.of(id)
+            val start = text.indexOf(marker)
+            if (start >= 0) {
+                var end = start + marker.length
+                if (end < text.length && text[end] == '\n') end++
+                replace(start, end, "")
+            }
+        }
+        draftTag.newVersion()
+    }
+
+    /**
+     * Uploads every attached file with its own options and swaps each marker for its URL, recording
+     * its `imeta`. Markers whose file is gone are dropped, so none is ever published. False, with
+     * the text untouched, when any upload failed.
+     */
+    private suspend fun uploadAttachedMediaSync(): Boolean {
+        val ids = MediaMarkers.idsIn(message.text)
+        if (ids.isEmpty()) return true
+        val items = ids.mapNotNull { attachedMedia[it] }
+
+        val urlById = HashMap<Int, String>()
+        if (items.isNotEmpty()) {
+            val batch = MultiOrchestrator.of(items)
+            mediaUploadTracker.startUpload(batch.hasNonMedia())
+            val results =
+                try {
+                    batch.uploadEach(
+                        mediaServer ?: account.settings.defaultFileServer,
                         account,
-                        uploader,
+                        accountViewModel.mediaUploader,
                         onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                         forcedSigner = if (wantsAnonymousPost) anonymousSigner() else null,
                     )
-
-                if (results.allGood) {
-                    val urls =
-                        results.successful.mapNotNull { uploaded ->
-                            val options = uploaded.item.options
-                            (uploaded.finished.result as? UploadOrchestrator.OrchestratorResult.ServerResult)
-                                ?.let { attach(it, options.altOrNull, options.contentWarningReason) }
-                        }
-                    onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
-                    urlPreviews.update(message.text.toString())
-                    if (multiOrchestrator === myMultiOrchestrator) multiOrchestrator = null
+                } finally {
+                    mediaUploadTracker.finishUpload()
                 }
-            } finally {
-                mediaUploadTracker.finishUpload()
+            if (!results.allGood) return false
+
+            results.successful.forEach { uploaded ->
+                val id = markerIdOf(uploaded.item) ?: return@forEach
+                val options = uploaded.item.options
+                (uploaded.finished.result as? UploadOrchestrator.OrchestratorResult.ServerResult)
+                    ?.let { urlById[id] = attach(it, options.altOrNull, options.contentWarningReason) }
             }
         }
+
+        onUiThread {
+            message.edit { replace(0, length, MediaMarkers.replace(asCharSequence().toString()) { urlById[it] }) }
+        }
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
+        attachedMedia.clear()
+        return true
     }
 
     /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the note. */
@@ -1683,6 +1691,9 @@ open class ShortNotePostViewModel :
         forkedFromNote = null
 
         multiOrchestrator = null
+        attachedMedia.clear()
+        reopenedMedia = null
+        mediaServer = null
         mediaUploadTracker.finishUpload()
         // cancel() is UI-thread confined -- the TextFieldState writes below require it -- and
         // this cleanup deletes files, so the disk work goes to IO. The path is captured here
@@ -1758,7 +1769,7 @@ open class ShortNotePostViewModel :
 
     override fun onMessageChanged() {
         activePollOption = null
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
 
         if (message.selection.collapsed) {
             val lastWord = message.currentWord()
@@ -1790,7 +1801,7 @@ open class ShortNotePostViewModel :
             if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
                 val lastWord = message.currentWord()
                 userSuggestions.replaceCurrentWord(message, lastWord, item)
-                urlPreviews.update(message.text.toString())
+                urlPreviews.update(MediaMarkers.strip(message.text.toString()))
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.POLL_OPTION) {
                 activePollOption?.let { userSuggestions.replaceCurrentWord(it.state, it.state.currentWord(), item) }
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
@@ -1810,7 +1821,7 @@ open class ShortNotePostViewModel :
 
     open fun autocompleteWithEmoji(item: EmojiMedia) {
         emojiSuggestions?.autocompleteInto(emojiTarget, item)
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
 
         draftTag.newVersion()
     }
@@ -1823,7 +1834,7 @@ open class ShortNotePostViewModel :
         }
 
         emojiTarget.replaceCurrentWord(wordToInsert)
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
 
         emojiSuggestions?.reset()
 

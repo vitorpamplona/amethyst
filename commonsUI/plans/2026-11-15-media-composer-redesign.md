@@ -9,26 +9,39 @@ Chat, Profile, Failure; the add buttons open the Studio), or render them all wit
 
 ## Status
 
-**Slice 1 (implemented): the Studio in the note composer.** Picking files in
-`ShortNotePostScreen` opens `MediaStudioDialog` (`commonsUI/.../note/creators/uploads/studio/`)
-instead of the `ImageVideoDescription` card.
+**Implemented in the note composer (`ShortNotePostScreen`):**
 
-- Every file carries its own `MediaUploadOptions` (alt, sensitive, quality, strip metadata,
-  H.265, GIF→MP4) on `SelectedMediaProcessing.options`. `MultiOrchestrator.uploadEach` sends each
-  file with its own options. After a partial failure it re-sends only the files that failed,
-  unless their options or the server changed.
-- The preview is the real compressed file (`MediaUploader.previewImageCompression`), zoomable,
-  with hold-for-original. Each quality level shows the size and long edge it really produces.
-- Tools: Quality, Alt text (with the on-device suggestion, now for every image, not just the
-  first), Privacy. A server chip sits beside the tools.
-- **Add** still uploads at once and inserts the URLs as before
-  (`ShortNotePostViewModel.uploadFromStudio`). On failure the Studio stays open, shows the
-  reason on the file, and Add retries. There is no toast and nothing is inserted.
-- Tests: `MultiOrchestratorUploadEachTest` (commons), `MediaStudioRenderTest` (commonsUI, real
-  composable with a fake uploader), `MediaStudioUiTest` (desktopApp, clicks and typing).
+1. **Studio after every pick.** Picking files opens `MediaStudioDialog`
+   (`commonsUI/.../note/creators/uploads/studio/`) instead of the `ImageVideoDescription` card.
+   - Every file carries its own `MediaUploadOptions` (alt, sensitive, quality, strip metadata,
+     H.265, GIF→MP4) on `SelectedMediaProcessing.options`.
+   - The preview is the real compressed file (`MediaUploader.previewImageCompression`),
+     zoomable, with hold-for-original. Each level shows the size and long edge it really produces.
+   - Tools: Quality, Alt text (on-device suggestion for every image), Privacy. A server chip.
+2. **Markers and upload on Post.** Add uploads nothing:
+   - Each file leaves a `[[media:N]]` marker (`MediaMarkers`, commons) at the cursor, on its own
+     line, drawn as a chip ("Photo 1") by `UrlUserTagOutputTransformation`. It's one replacement
+     list with the mentions, so the spell checker stays aligned.
+   - `MentionPreservingInputTransformation` keeps markers whole against IME partial edits.
+   - `AttachedMediaStrip` under the text shows the files numbered like their chips, with an ALT
+     badge (amber when missing), CW, and remove. Tapping a tile reopens the Studio ("Done").
+   - `sendPostSync()` now returns a Boolean. It first uploads every attached file with its own
+     options (`MultiOrchestrator.uploadEach`), then swaps markers for URLs and records each
+     file's `imeta`, and only then builds and signs the event. If any upload fails it returns
+     false: the screen stays, the text and the files are untouched, the strip names the file and
+     the server's reason, and Post retries only what failed.
+   - Markers never leave the device. Drafts save the text without them (the picked files can't
+     travel with a draft), and link previews ignore them. A marker whose file is gone is
+     dropped at Post.
+   - Tests: `MediaMarkersTest`, `MultiOrchestratorUploadEachTest` (commons);
+     `MediaStudioRenderTest` (commonsUI); `MediaStudioUiTest`, `MediaMarkerFieldUiTest`
+     (desktopApp, real clicks and keys).
 
-Not yet: crop and trim (step 3), markers + upload on Post (step 1 of the order below), blocks
-(B), and the other composers, which still use `ImageVideoDescription`.
+Not yet:
+- crop and trim (step 3)
+- inline blocks (B)
+- the other composers, which still use `ImageVideoDescription`
+- keeping attached files in a draft across app restarts
 
 ## 1. What we have today
 

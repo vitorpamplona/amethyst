@@ -40,6 +40,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
+import com.vitorpamplona.amethyst.commons.ui.actions.MediaMarkerChips
 import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
@@ -57,6 +58,7 @@ fun MessageField(
     requestFocus: Boolean = true,
     onContentReceived: ((MediaUri, String?) -> Unit)? = null,
     onFocused: (() -> Unit)? = null,
+    mediaChips: MediaMarkerChips? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -101,7 +103,7 @@ fun MessageField(
                 unfocusedBorderColor = Color.Transparent,
             ),
         spellCheck = true,
-        outputTransformation = rememberUrlUserTagOutputTransformation(),
+        outputTransformation = rememberUrlUserTagOutputTransformation(mediaChips = mediaChips),
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
         contentPadding =
             TextFieldDefaults.contentPaddingWithoutLabel(

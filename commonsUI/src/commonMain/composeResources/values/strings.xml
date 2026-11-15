@@ -9936,6 +9936,14 @@
     <string name="media_studio_remove_location">Remove location</string>
     <string name="media_studio_remove_location_description">And camera details</string>
     <string name="media_studio_long_edge">%1$d px</string>
-    <string name="media_studio_retry_hint">Nothing was added. Add tries again.</string>
     <string name="media_studio_no_options">Uploaded as it is</string>
+    <string name="media_studio_done">Done</string>
+    <string name="media_marker_photo">Photo %1$d</string>
+    <string name="media_marker_video">Video %1$d</string>
+    <string name="media_marker_file">File %1$d</string>
+    <string name="media_marker_missing">Missing file</string>
+    <string name="media_alt_badge">ALT</string>
+    <string name="media_cw_badge">CW</string>
+    <string name="media_post_upload_failed">%1$s didn't upload</string>
+    <string name="media_post_nothing_posted">Nothing was posted. Post tries again.</string>
 </resources>

@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.convert_gif_to_mp4_label
 import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_original
+import com.vitorpamplona.amethyst.commons.resources.media_post_nothing_posted
 import com.vitorpamplona.amethyst.commons.resources.media_studio_add
 import com.vitorpamplona.amethyst.commons.resources.media_studio_alt_placeholder
 import com.vitorpamplona.amethyst.commons.resources.media_studio_hold_original
@@ -107,7 +108,6 @@ import com.vitorpamplona.amethyst.commons.resources.media_studio_no_options
 import com.vitorpamplona.amethyst.commons.resources.media_studio_position
 import com.vitorpamplona.amethyst.commons.resources.media_studio_remove_location
 import com.vitorpamplona.amethyst.commons.resources.media_studio_remove_location_description
-import com.vitorpamplona.amethyst.commons.resources.media_studio_retry_hint
 import com.vitorpamplona.amethyst.commons.resources.media_studio_sensitive
 import com.vitorpamplona.amethyst.commons.resources.media_studio_sensitive_description
 import com.vitorpamplona.amethyst.commons.resources.media_studio_tool_alt
@@ -142,6 +142,7 @@ import kotlinx.coroutines.delay
 import net.engawapg.lib.zoomable.MouseWheelZoom
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
+import org.jetbrains.compose.resources.StringResource
 import kotlin.math.min
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadingState as UploadingStateIndicator
 
@@ -168,6 +169,9 @@ fun MediaStudioDialog(
     onRemove: (SelectedMediaProcessing) -> Unit,
     onCancel: () -> Unit,
     accountViewModel: AccountViewModel,
+    initial: SelectedMediaProcessing? = null,
+    confirmLabel: StringResource = Res.string.media_studio_add,
+    canCancel: Boolean = true,
 ) {
     val servers by accountViewModel.account.blossomServers.hostNameFlow
         .collectAsState()
@@ -189,6 +193,9 @@ fun MediaStudioDialog(
             onAdd = onAdd,
             onRemove = onRemove,
             onCancel = onCancel,
+            initial = initial,
+            confirmLabel = confirmLabel,
+            canCancel = canCancel,
         )
     }
 }
@@ -225,13 +232,16 @@ fun MediaStudio(
     onRemove: (SelectedMediaProcessing) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
+    initial: SelectedMediaProcessing? = null,
+    confirmLabel: StringResource = Res.string.media_studio_add,
+    canCancel: Boolean = true,
     initialTool: StudioTool = StudioTool.QUALITY,
     holdingOriginal: Boolean = false,
 ) {
     val items = media.items()
     if (items.isEmpty()) return
 
-    var selected by remember { mutableStateOf(items.first()) }
+    var selected by remember { mutableStateOf(initial?.takeIf { it in items } ?: items.first()) }
     val current = if (selected in items) selected else items.first()
 
     var pickedServer by remember { mutableStateOf<ServerName?>(null) }
@@ -256,7 +266,8 @@ fun MediaStudio(
             position = items.indexOf(current) + 1,
             count = items.size,
             isUploading = isUploading,
-            onCancel = onCancel,
+            confirmLabel = confirmLabel,
+            onCancel = onCancel.takeIf { canCancel },
             onRemove = { onRemove(current) },
             onAdd = { onAdd(server) },
         )
@@ -305,13 +316,18 @@ private fun StudioTopBar(
     position: Int,
     count: Int,
     isUploading: Boolean,
-    onCancel: () -> Unit,
+    confirmLabel: StringResource,
+    onCancel: (() -> Unit)?,
     onRemove: () -> Unit,
     onAdd: () -> Unit,
 ) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onCancel, enabled = !isUploading) {
-            Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.cancel))
+        if (onCancel != null) {
+            IconButton(onClick = onCancel, enabled = !isUploading) {
+                Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.cancel))
+            }
+        } else {
+            Spacer(Modifier.width(48.dp))
         }
         Text(
             if (count > 1) stringRes(Res.string.media_studio_position, position, count) else "",
@@ -327,7 +343,7 @@ private fun StudioTopBar(
                 CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.width(8.dp))
             }
-            Text(stringRes(Res.string.media_studio_add))
+            Text(stringRes(confirmLabel))
         }
     }
 }
@@ -549,7 +565,7 @@ private fun UploadErrorBanner(item: SelectedMediaProcessing) {
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(stringRes(error.errorResource, *error.params), color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.SemiBold)
-                Text(stringRes(Res.string.media_studio_retry_hint), color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall)
+                Text(stringRes(Res.string.media_post_nothing_posted), color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall)
             }
         }
     }

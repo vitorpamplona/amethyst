@@ -27,8 +27,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaMarkers
 import com.vitorpamplona.amethyst.commons.ui.spellcheck.TextReplacement
 import com.vitorpamplona.amethyst.commons.ui.spellcheck.VisualOffsetMapping
 import com.vitorpamplona.amethyst.commons.ui.text.MENTION_REGEX
@@ -42,10 +44,25 @@ import kotlin.coroutines.cancellation.CancellationException
  * focused field's keyboard session and drops the mention cache.
  */
 @Composable
-fun rememberUrlUserTagOutputTransformation(color: Color = MaterialTheme.colorScheme.primary): UrlUserTagOutputTransformation = remember(color) { UrlUserTagOutputTransformation(color) }
+fun rememberUrlUserTagOutputTransformation(
+    color: Color = MaterialTheme.colorScheme.primary,
+    mediaChips: MediaMarkerChips? = null,
+): UrlUserTagOutputTransformation = remember(color, mediaChips) { UrlUserTagOutputTransformation(color, mediaChips) }
+
+/**
+ * How a composer that holds media markers ([MediaMarkers]) draws them: [label] names the marker
+ * with [id] that is the [ordinal]-th (1-based) in the text, e.g. "Photo 2", inside a chip of
+ * [chip] / [onChip] colors.
+ */
+class MediaMarkerChips(
+    val chip: Color,
+    val onChip: Color,
+    val label: (id: Int, ordinal: Int) -> String,
+)
 
 class UrlUserTagOutputTransformation(
     val color: Color,
+    val mediaChips: MediaMarkerChips? = null,
 ) : OutputTransformation,
     VisualOffsetMapping {
     override fun TextFieldBuffer.transformOutput() {
@@ -60,10 +77,11 @@ class UrlUserTagOutputTransformation(
 
         // Phase 2: style the display names, front to back, tracking the shift of earlier replacements.
         val style = SpanStyle(color = color, textDecoration = TextDecoration.None)
+        val chipStyle = mediaChips?.let { SpanStyle(color = it.onChip, background = it.chip, fontWeight = FontWeight.Medium) }
         var cumulativeShift = 0
         for (replacement in replacements) {
             val adjustedStart = replacement.rawStart + cumulativeShift
-            addStyle(style, adjustedStart, adjustedStart + replacement.visual.length)
+            addStyle(if (replacement.isMediaMarker && chipStyle != null) chipStyle else style, adjustedStart, adjustedStart + replacement.visual.length)
             cumulativeShift += replacement.visual.length - (replacement.rawEnd - replacement.rawStart)
         }
 
@@ -77,7 +95,10 @@ class UrlUserTagOutputTransformation(
     private var lastText: String? = null
     private var lastReplacements: List<TextReplacement> = emptyList()
 
-    /** Each `@npub…`/`nostr:nprofile…` mention and the `@Name` the field draws instead, in order. */
+    /**
+     * Each `@npub…`/`nostr:nprofile…` mention and the `@Name` the field draws instead, and, when
+     * [mediaChips] is set, each media marker and its chip, in order.
+     */
     override fun replacements(rawText: String): List<TextReplacement> {
         if (rawText == lastText) return lastReplacements
         return findReplacements(rawText).also {
@@ -86,7 +107,19 @@ class UrlUserTagOutputTransformation(
         }
     }
 
-    private fun findReplacements(rawText: String): List<TextReplacement> =
+    private fun findReplacements(rawText: String): List<TextReplacement> {
+        val mentions = findMentions(rawText)
+        val chips = mediaChips ?: return mentions
+        if (!rawText.contains(MediaMarkers.PREFIX)) return mentions
+        val markers =
+            MediaMarkers.REGEX.findAll(rawText).mapIndexedTo(ArrayList()) { index, match ->
+                // Non-breaking spaces pad the chip's background on both sides.
+                TextReplacement(match.range.first, match.range.last + 1, "\u00A0${chips.label(match.groupValues[1].toInt(), index + 1)}\u00A0", isMediaMarker = true)
+            }
+        return (mentions + markers).sortedBy { it.rawStart }
+    }
+
+    private fun findMentions(rawText: String): List<TextReplacement> =
         MENTION_REGEX.findAll(rawText).mapNotNullTo(ArrayList()) { match ->
             try {
                 val bech32 =

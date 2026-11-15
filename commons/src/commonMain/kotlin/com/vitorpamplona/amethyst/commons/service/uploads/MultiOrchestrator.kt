@@ -353,6 +353,11 @@ class MultiOrchestrator(
     /** Every file, in order. */
     fun items(): List<SelectedMediaProcessing> = list
 
+    companion object {
+        /** A view over files already picked, with their own options and upload state: reopening them in the studio, or uploading them on Post. */
+        fun of(items: List<SelectedMediaProcessing>): MultiOrchestrator = MultiOrchestrator(emptyList()).also { it.list = items }
+    }
+
     fun remove(selected: SelectedMediaProcessing) {
         list = list.filter { it != selected }
     }
