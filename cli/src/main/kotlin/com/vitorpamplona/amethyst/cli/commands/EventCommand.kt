@@ -124,7 +124,7 @@ private fun parseTags(json: String): Array<Array<String>> {
             parts
                 .map { part ->
                     val p = part as? JsonPrimitive
-                    if (p == null || p is JsonNull) throw IllegalArgumentException("a tag entry is not a string")
+                    require(p != null && p !is JsonNull) { "a tag entry is not a string" }
                     p.content
                 }.toTypedArray()
         }.toTypedArray()
