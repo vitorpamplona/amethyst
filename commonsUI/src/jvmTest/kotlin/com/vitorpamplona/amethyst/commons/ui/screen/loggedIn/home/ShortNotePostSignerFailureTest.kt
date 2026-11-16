@@ -88,6 +88,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -96,6 +97,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -207,9 +209,13 @@ class ShortNotePostSignerFailureTest {
 
             // No auto-save was skipped, so the signer is not asked again: an offline bunker would
             // only time out a second time, and a signer app would prompt right after a refusal.
-            withContext(Dispatchers.Default) { delay(2_000) }
+            // Three times the 1 s debounce a re-save would wait for.
             val draft = accountViewModel.account.getOrCreateDraftNote(postViewModel.draftTag.current)
-            assertFalse(draft.event is DraftWrapEvent)
+            val saved =
+                withContext(Dispatchers.Default) {
+                    withTimeoutOrNull(3_000) { while (draft.event !is DraftWrapEvent) delay(50) }
+                }
+            assertNull(saved, "no draft may be saved")
         }
 
     @Test

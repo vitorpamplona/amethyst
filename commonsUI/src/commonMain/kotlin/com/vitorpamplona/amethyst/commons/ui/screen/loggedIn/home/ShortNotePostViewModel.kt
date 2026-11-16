@@ -1148,6 +1148,14 @@ open class ShortNotePostViewModel :
     }
 
     /**
+     * Ends posting once the coroutine started for it has finished, in case it never got to run
+     * [sendPostSync] (its scope already gone), which would leave the composer locked. Any thread.
+     */
+    fun postingJobFinished() {
+        if (isPosting) isPosting = false
+    }
+
+    /**
      * Sends the note started by [tryStartPosting]. Returns true once it has left the composer,
      * which is then cleared. Returns false when it was not sent: the text stays and, when the signer
      * did not sign it, the user is told why (a NIP-46 bunker that is offline only gives up after its
@@ -1169,7 +1177,12 @@ open class ShortNotePostViewModel :
                     isPosting = false
                     if (sent) {
                         cancel()
-                        onSent()
+                        try {
+                            onSent()
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            Log.w("ShortNotePostViewModel", "Post sent, but leaving the composer failed", e)
+                        }
                     }
                 }
             }
@@ -1382,7 +1395,9 @@ open class ShortNotePostViewModel :
         // deletes its draft and outlive it. If the post fails, sendPostSync asks for this save again.
         if (isPosting) {
             draftSaveSkipped = true
-            return
+            // Posting may have ended between the check and the flag, after sendPostSync looked at
+            // it: then nobody will ask again, so save now.
+            if (isPosting) return
         }
 
         val text = message.text.toString()

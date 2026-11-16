@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,6 +60,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
@@ -270,10 +272,11 @@ internal fun NewPostScreenInner(
             focusManager.clearFocus()
             // uses the accountViewModel scope to avoid cancelling this
             // function when the postViewModel is released
-            accountViewModel.launchSigner {
-                // Not sent: stay, with the text, so Post can be pressed again.
-                postViewModel.sendPostSync(onSent = { nav.popBack() })
-            }
+            accountViewModel
+                .launchSigner {
+                    // Not sent: stay, with the text, so Post can be pressed again.
+                    postViewModel.sendPostSync(onSent = { nav.popBack() })
+                }.invokeOnCompletion { postViewModel.postingJobFinished() }
         }
     }
 
@@ -296,13 +299,17 @@ internal fun NewPostScreenInner(
                     .consumeWindowInsets(pad)
                     .imePaddingSafe(),
         ) {
-            // Read-only while posting; drags still pass, so the text can be scrolled.
-            Box(if (postViewModel.isPosting) Modifier.blockInteractions() else Modifier) {
+            // Read-only while posting: no taps, and no keyboard focus (Tab would reach the fields).
+            // Drags still pass, so the text can be scrolled.
+            Box(if (postViewModel.isPosting) Modifier.blockInteractions().refuseFocus() else Modifier) {
                 NewPostScreenBody(postViewModel, accountViewModel, nav)
             }
         }
     }
 }
+
+/** Keeps keyboard focus out of everything inside, Tab included. */
+private fun Modifier.refuseFocus(): Modifier = focusProperties { onEnter = { cancelFocusChange() } }.focusGroup()
 
 @Composable
 private fun NewPostScreenBody(
