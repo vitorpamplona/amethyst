@@ -275,7 +275,9 @@ class AgentWorkspaces(
                 save(workspace)
                 countUses(workspace.repos.map { it.url })
                 workspace
-            } catch (e: IOException) {
+            } catch (e: Throwable) {
+                // Any failure, cancellation included (the user left the start screen mid-clone):
+                // a folder with no meta is one no list, cleanup or storage screen ever sees.
                 if (!deleteTree(dir)) Log.w(TAG) { "Could not remove the half-made $dir" }
                 throw e
             }

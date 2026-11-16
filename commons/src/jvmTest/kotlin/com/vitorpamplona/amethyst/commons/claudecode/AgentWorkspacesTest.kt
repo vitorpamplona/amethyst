@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.claudecode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.nio.file.FileSystems
@@ -147,6 +149,23 @@ class AgentWorkspacesTest {
         runBlocking {
             val failed = runCatching { workspaces.create(listOf(appUrl, fileUrl(File(tmp, "missing.git"))), "broken") }
             assertTrue(failed.isFailure)
+            assertTrue(
+                workspaces.sessionsDir
+                    .listFiles()
+                    .orEmpty()
+                    .isEmpty(),
+            )
+            assertTrue(workspaces.list().isEmpty())
+        }
+
+    @Test
+    fun aCancelledStartLeavesNothingBehind() =
+        runBlocking {
+            workspaces.delete(workspaces.create(listOf(libUrl), null))
+            git(workspaces.mirrorDir(libUrl), "config", "remote.origin.uploadpack", "sleep 2; git-upload-pack")
+            val starting = launch(Dispatchers.IO) { workspaces.create(listOf(libUrl), "left") }
+            delay(500)
+            starting.cancelAndJoin()
             assertTrue(
                 workspaces.sessionsDir
                     .listFiles()
