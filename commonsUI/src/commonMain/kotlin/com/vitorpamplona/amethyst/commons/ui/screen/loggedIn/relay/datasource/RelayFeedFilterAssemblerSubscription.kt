@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relay.datasource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.relay.RelayFeedQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -32,11 +33,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 fun RelayFeedFilterAssemblerSubscription(
     tag: Route.RelayFeed,
     accountViewModel: AccountViewModel,
+    /** The screen's feeds: they hold what this loads, and a new set asks the relays from scratch. */
+    feeds: List<RelayCursorHolder> = emptyList(),
 ) {
     val state =
-        remember(tag) {
+        remember(tag, feeds) {
             val normalizedUrl = RelayUrlNormalizer.normalizeOrNull(tag.url) ?: return@remember null
-            RelayFeedQueryState(normalizedUrl)
+            RelayFeedQueryState(normalizedUrl, feeds)
         } ?: return
 
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().relayFeed)

@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -79,4 +80,7 @@ class PollResponsesSubAssembler(
     }
 
     override fun id(key: PollResponsesQueryState) = key.pollId
+
+    /** The poll note holds its responses. */
+    override fun cursorHoldersOf(key: PollResponsesQueryState): List<RelayCursorHolder> = listOfNotNull(cache.getNoteIfExists(key.pollId))
 }

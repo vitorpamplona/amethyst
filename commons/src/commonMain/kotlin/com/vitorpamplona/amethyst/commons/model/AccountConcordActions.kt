@@ -120,6 +120,8 @@ import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -141,6 +143,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** Name of the default Concord community Admin role minted by "Make admin". */
@@ -3224,8 +3227,14 @@ class AccountConcordActions(
      * Concord drain; AUTH is the shared stream-key handler. Merging communities that share a relay into
      * one filter is safe here precisely because we page — the cap no longer truncates. The live control
      * subscription still carries brand-new editions in real time; this is the periodic completeness pass.
+     *
+     * Main-safe: its callers are composition effects, which run on the main thread, and folding a
+     * busy Control Plane (`ingest` → `refold` → the edition fold) took the UI thread for over five
+     * seconds on a cold start, an input-dispatch ANR.
      */
-    suspend fun syncConcordControlPlanes(entries: List<ConcordCommunityListEntry>) {
+    suspend fun syncConcordControlPlanes(entries: List<ConcordCommunityListEntry>) = withContext(Dispatchers.IO) { syncConcordControlPlanesHere(entries) }
+
+    private suspend fun syncConcordControlPlanesHere(entries: List<ConcordCommunityListEntry>) {
         if (entries.isEmpty()) return
         val authorsByRelay = HashMap<NormalizedRelayUrl, MutableSet<String>>()
         for (entry in entries) {

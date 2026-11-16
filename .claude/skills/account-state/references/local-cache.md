@@ -77,9 +77,12 @@ Locally signed events enter through `justConsumeMyOwnEvent(event)`; embedded eve
 
 ## Pruning and memory
 
-- `CachePruner` (`pruner`): `pruneOldMessages`, `pruneHiddenMessages`, `pruneExpiredEvents`,
-  `prunePastVersionsOfReplaceables`, `pruneRepliesAndReactions`, `cleanObservers` (calls
-  `clearFlow()` on every note).
+- `CachePruner` (`pruner`): `pruneOldMessages`, `pruneHiddenMessages` (channels and DMs, the
+  stores held strongly; they rewind the history cursors of what they drop), `pruneExpiredEvents`,
+  `prunePastVersionsOfReplaceables`, `cleanObservers` (calls `clearFlow()` on every note).
+- Never prune what a feed, a channel or a screen holds (replies, reactions, zaps of their notes):
+  those go with their holder, and removing them earlier leaves counters and feeds short while
+  their relay cursors still say covered.
 - `MemoryTrimmingService` (`model/cache/MemoryTrimmingService.kt`) drives it; `AppModules.kt` and
   `DesktopAppModules.kt` each create one.
 - No TTL beyond that. A long session accumulates; bound retention in the feed (`limit()`), not by

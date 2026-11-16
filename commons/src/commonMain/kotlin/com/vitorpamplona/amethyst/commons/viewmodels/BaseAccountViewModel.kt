@@ -97,7 +97,6 @@ import com.vitorpamplona.amethyst.commons.util.DebouncedPublisher
 import com.vitorpamplona.amethyst.commons.util.cache.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.util.cache.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.commons.util.logSignerErrors
-import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.util.logUnusableData
 import com.vitorpamplona.amethyst.commons.util.notifySignerErrors
 import com.vitorpamplona.amethyst.commons.util.showAmount
@@ -198,9 +197,11 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -249,7 +250,11 @@ open class BaseAccountViewModel(
                     .filterNotTo(HashSet()) { host.relayStats.get(it).hasNeverConnected }
             },
         )
-    val feedStates = AccountFeedContentStates(account, viewModelScope, host.memoryPressure)
+
+    // The account's feeds outlive this view model: switching away and back finds them warm, with
+    // their notes and relay cursors (see AccountFeeds). Released in onCleared.
+    private val feedsLease = AccountFeeds.lease(account, host.memoryPressure)
+    val feedStates = feedsLease.states
 
     /**
      * `true` when the local Blossom cache is enabled and the probe sees it up. Only drives the
@@ -465,14 +470,32 @@ open class BaseAccountViewModel(
             emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
         }
 
+    // Collecting a tab's feed builds it (the Home feeds are lazy), so a hidden tab's is never
+    // collected: the badge would otherwise build Everything, the costliest Home feed, for nothing.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun tabHasNewItemsIfShown(
+        shown: Flow<Boolean>,
+        route: String,
+        feedContent: StateFlow<FeedState>,
+    ): Flow<Boolean> = shown.distinctUntilChanged().flatMapLatest { if (it) tabHasNewItems(route, feedContent) else flowOf(false) }
+
     val homeHasNewItems: Flow<Boolean> =
         combine(
             settings.uiSettingsFlow.showHomeNewThreadsTab,
             settings.uiSettingsFlow.showHomeConversationsTab,
             settings.uiSettingsFlow.showHomeEverythingTab,
-            tabHasNewItems("HomeFollows", feedStates.homeNewThreads.feedContent),
-            tabHasNewItems("HomeFollowsReplies", feedStates.homeReplies.feedContent),
-            tabHasNewItems("HomeFollowsEverything", feedStates.homeEverything.feedContent),
+            tabHasNewItemsIfShown(
+                // HomeScreen falls back to New Threads when every tab is off.
+                combine(
+                    settings.uiSettingsFlow.showHomeNewThreadsTab,
+                    settings.uiSettingsFlow.showHomeConversationsTab,
+                    settings.uiSettingsFlow.showHomeEverythingTab,
+                ) { threads, replies, everything -> threads || !(replies || everything) },
+                "HomeFollows",
+                feedStates.homeNewThreads.feedContent,
+            ),
+            tabHasNewItemsIfShown(settings.uiSettingsFlow.showHomeConversationsTab, "HomeFollowsReplies", feedStates.homeReplies.feedContent),
+            tabHasNewItemsIfShown(settings.uiSettingsFlow.showHomeEverythingTab, "HomeFollowsEverything", feedStates.homeEverything.feedContent),
         ) { values ->
             val showThreads = values[0]
             val showReplies = values[1]
@@ -2365,23 +2388,7 @@ open class BaseAccountViewModel(
 
     init {
         Log.d("AccountViewModel", "Init")
-        viewModelScope.launch(Dispatchers.IO) {
-            feedStates.init()
-            // awaits for init to finish before starting to capture new events.
-            LocalCache.live.newEventBundles.collect { newNotes ->
-                logTime("AccountViewModel newEventBundle Update with ${newNotes.size} new notes") {
-                    feedStates.updateFeedsWith(newNotes)
-                }
-            }
-        }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.deletedEventBundles.collect { newNotes ->
-                logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
-                    feedStates.deleteNotes(newNotes)
-                }
-            }
-        }
+        // Event bundles reach the feeds through AccountFeeds while any view model leases them.
     }
 
     /**
@@ -2871,7 +2878,7 @@ open class BaseAccountViewModel(
         // Real logout / account switch tears the call down via CallSessionBridge.clear(),
         // called from AccountSessionManager alongside NestBridge.clear(). The UI subclass drops
         // its references from both bridges.
-        feedStates.destroy()
+        feedsLease.release()
     }
 
     fun loadMentions(

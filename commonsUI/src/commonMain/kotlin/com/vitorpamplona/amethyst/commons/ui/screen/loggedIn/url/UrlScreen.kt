@@ -87,7 +87,7 @@ fun UrlScreen(
     nav: INav,
 ) {
     WatchLifecycleAndUpdateModel(feedViewModel)
-    UrlFilterAssemblerSubscription(url, accountViewModel)
+    UrlFilterAssemblerSubscription(url, accountViewModel, feeds = listOf(feedViewModel.feedState))
 
     DisappearingScaffold(
         isInvertedLayout = false,

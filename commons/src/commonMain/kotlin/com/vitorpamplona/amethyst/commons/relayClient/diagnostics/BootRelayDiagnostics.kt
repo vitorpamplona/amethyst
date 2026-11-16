@@ -244,11 +244,13 @@ class BootRelayDiagnostics(
         Log.i(TAG) { "census @${atSeconds}s closed_by_prefix=${closedTotals.byCountDesc()}" }
 
         // Relays that cost us dials and gave nothing back, worst first: the wasted-effort list.
+        // Each sort key is read once, before sorting: the counters keep moving while relays
+        // connect, and a key that changes mid-sort breaks TimSort's contract and throws.
         Log.d(TAG, "--- top wasted dials (no events received) ---")
         snapshot
             .filter { it.value.events.load() == 0 }
             .entries
-            .sortedByDescending { it.value.tentatives.load() }
+            .sortedByFrozenDesc { it.value.tentatives.load() }
             .take(25)
             .forEach { (url, r) ->
                 Log.d(TAG) {
@@ -263,7 +265,7 @@ class BootRelayDiagnostics(
         // coverage loss rather than just CLOSED reduction.
         Log.d(TAG, "--- top event providers ---")
         served.entries
-            .sortedByDescending { it.value.events.load() }
+            .sortedByFrozenDesc { it.value.events.load() }
             .take(20)
             .forEach { (url, r) ->
                 Log.d(TAG) {
@@ -274,6 +276,16 @@ class BootRelayDiagnostics(
         Log.d(TAG) { "===== end census @${atSeconds}s =====" }
     }
 }
+
+/**
+ * Sorts by a key read once per element, highest first. [sortedByDescending] reads the key on every
+ * comparison, so a live counter that moves during the sort gives an inconsistent order and TimSort
+ * throws "Comparison method violates its general contract".
+ */
+internal inline fun <T> Iterable<T>.sortedByFrozenDesc(crossinline key: (T) -> Int): List<T> =
+    map { it to key(it) }
+        .sortedByDescending { it.second }
+        .map { it.first }
 
 /** Buckets rendered highest-count first — the shape both census summary lines want. */
 private fun Map<String, Int>.byCountDesc() = entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" }

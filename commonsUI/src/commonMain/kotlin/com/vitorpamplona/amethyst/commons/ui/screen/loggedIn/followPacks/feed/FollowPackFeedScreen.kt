@@ -158,7 +158,11 @@ fun FollowPackFeedScreen(
     WatchLifecycleAndUpdateModel(conversationsFeedViewModel)
     WatchLifecycleAndUpdateModel(membersFeedViewModel)
 
-    FollowPackFeedFilterAssemblerSubscription(note, accountViewModel)
+    FollowPackFeedFilterAssemblerSubscription(
+        note,
+        accountViewModel,
+        feeds = listOf(newThreadFeedViewModel.feedState, conversationsFeedViewModel.feedState),
+    )
 
     val pagerState = rememberForeverPagerState(note.idHex + "FollowPackScreenPagerState") { 3 }
 

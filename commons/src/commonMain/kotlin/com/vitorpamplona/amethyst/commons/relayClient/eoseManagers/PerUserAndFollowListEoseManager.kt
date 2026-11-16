@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.attributedTo
-import com.vitorpamplona.amethyst.commons.relays.EOSEAccountKey
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -42,30 +41,16 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * It is ideal for the home, video, discovery and notification screens
  * since they all have lists to choose from.
  *
- * This class keeps EOSEs for each user & list for as long as possible and
- * does NOT share EOSEs with other users. Changing the list will not make the
- * app reuse the EOSE because it assumes the filter is going to be different
+ * The cursors live on the holders the keys name ([cursorHoldersOf]), the feeds that render
+ * what the subscription loads; picking another list asks for another shape, which those cursors
+ * do not cover. A key that names none is asked from scratch.
  */
-abstract class PerUserAndFollowListEoseManager<T, U : Any>(
+abstract class PerUserAndFollowListEoseManager<T>(
     client: INostrClient,
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
-    private val latestEOSEs = EOSEAccountKey<U>()
     private val userSubscriptionMap = mutableMapOf<User, String>()
-
-    fun since(key: T) = latestEOSEs.since(user(key), list(key))
-
-    /**
-     * Drops the EOSE state for the (user, list) pair this key resolves to so the next subscription
-     * assembly will ask the relay from scratch instead of carrying over a stale `since` cursor.
-     * Use when the in-memory note store may have evicted previously-loaded events (e.g.
-     * [LargeSoftCache]'s WeakReference store under memory pressure) and a list switch needs to
-     * re-fetch them rather than rely on a cache that's no longer there.
-     */
-    protected fun clearEoseFor(key: T) {
-        latestEOSEs.clear(user(key), list(key))
-    }
 
     fun newEose(
         key: T,
@@ -73,7 +58,6 @@ abstract class PerUserAndFollowListEoseManager<T, U : Any>(
         time: Long,
         filters: List<Filter>? = null,
     ) {
-        latestEOSEs.newEose(user(key), list(key), relay, time)
         if (invalidateAfterEose) {
             invalidateFilters()
         }
@@ -121,17 +105,30 @@ abstract class PerUserAndFollowListEoseManager<T, U : Any>(
         }
     }
 
+    /**
+     * Wakes the lazy feeds this key's subscription fills (see
+     * [com.vitorpamplona.amethyst.commons.feeds.FeedContentState.activate]). A subscription that
+     * loads notes into the cache while no feed holds them would let the GC take them while the
+     * cursor says they are here. Called for every key, not just one per user. Idempotent.
+     */
+    protected open fun activateFeeds(key: T) {}
+
     override fun updateSubscriptions(keys: Set<T>) {
-        val uniqueSubscribedAccounts = keys.distinctBy { user(it) }
+        keys.forEach(::activateFeeds)
+
+        val keysByUser = keys.groupBy { user(it) }
 
         val updated = mutableSetOf<User>()
 
-        uniqueSubscribedAccounts.forEach {
-            val user = user(it)
+        keysByUser.forEach { (user, userKeys) ->
+            val it = userKeys.first()
             watchChatFeeds(user, it)
             val sub = findOrCreateSubFor(it)
+            // Every key of this user shares the subscription, so every holder they name gets its answers.
+            val (filters, cursors) = filtersFor(userKeys) { s -> updateFilter(it, s) }
+            serve(sub.id, cursors)
             val newFilters =
-                updateFilter(it, since(it))
+                filters
                     ?.ifEmpty { null }
                     // Attribute to the account that owns this subscription, once, here — rather than
                     // threading a pubkey through every filter builder underneath. Builders that already
@@ -152,8 +149,6 @@ abstract class PerUserAndFollowListEoseManager<T, U : Any>(
     ): List<RelayBasedFilter>?
 
     abstract fun user(key: T): User
-
-    abstract fun list(key: T): U
 
     /**
      * The account behind [key], when the key is account-scoped. Null for keys about other users.

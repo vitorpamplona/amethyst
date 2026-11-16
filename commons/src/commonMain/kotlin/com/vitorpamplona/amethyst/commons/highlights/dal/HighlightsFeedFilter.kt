@@ -22,10 +22,14 @@ package com.vitorpamplona.amethyst.commons.highlights.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 
@@ -38,7 +42,13 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
  */
 class HighlightsFeedFilter(
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    OwnedUniverseFeedFilter {
+    // Highlights, whoever wrote them: the list and the mutes are checked at each rebuild.
+    override val universe = IFilter { it.event is HighlightEvent }
+
+    override var candidates: CandidateSet? = null
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
 
     override fun limit() = 200
@@ -56,9 +66,11 @@ class HighlightsFeedFilter(
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
         val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
-                val noteEvent = it.event
-                noteEvent is HighlightEvent && params.match(noteEvent, it.relays)
+            rebuildFeed("highlights", candidates, keep = { it.event?.let { e -> params.match(e, it.relays) } == true }) {
+                LocalCache.notes.filterIntoSet { _, it ->
+                    val noteEvent = it.event
+                    noteEvent is HighlightEvent && params.match(noteEvent, it.relays)
+                }
             }
 
         return sort(notes)

@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.InlineReplyTarget
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.ParentMessage
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.notificationAccountFor
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.replyGroupKeyFor
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.replySummaryIdFor
@@ -107,6 +108,7 @@ object ReplyNotification {
                 }
             nm.postConversation(
                 category = NotificationCategory.REPLY,
+                forAccount = notificationAccountFor(account),
                 id = event.id,
                 senderName = user,
                 pictureUrl = author.profilePicture(),

@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.frontpage.FrontPageEditionStore
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageInstallInfo
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
+import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorageVault
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -81,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryStat
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.preload.AccountRelayPreconnect
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountSubscriptionRegistry
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.health.FileRelayHealthPersistence
 import com.vitorpamplona.amethyst.commons.relays.health.RelayLatencyMonitor
@@ -158,6 +160,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
@@ -169,6 +172,7 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -644,6 +648,27 @@ class DesktopAppModules(
             remoteSignerAuthPrompts = remoteSignerAuthPrompts,
         )
 
+    /** Whether the main window has the focus; the account on screen holds its toasts back meanwhile. */
+    val mainWindowFocused = MutableStateFlow(false)
+
+    /** Every saved account that can sign pulls its notifications and raises its own OS notifications. */
+    val accountsNotified =
+        DesktopAccountsNotified(
+            scope = applicationIOScope,
+            accountsCache = accountsCache,
+            sessionStore = sessionStore,
+            subscriptions = AccountSubscriptionRegistry(sources.account),
+            notifications = notifications,
+            cache = cache,
+            windowFocused = mainWindowFocused,
+            onScreen =
+                sessionManager.accountContent
+                    .map { (it as? AccountState.LoggedIn)?.account?.pubKey }
+                    .stateIn(applicationIOScope, SharingStarted.Eagerly, null),
+            keysReadableSilently =
+                keyStorage.status.map { it is KeyStorageStatus.Keyring || (it is KeyStorageStatus.PasswordFile && it.unlocked) },
+        )
+
     private val _appUpdates = MutableStateFlow<AppUpdateManager?>(null)
 
     /**
@@ -826,7 +851,7 @@ class DesktopAppModules(
                     lastRunAt = now
                     Log.w("DesktopAppModules") { "Heap at ${(ratio * 100).toInt()}% (${used shr 20} MB of ${max shr 20} MB): reclaiming" }
                     memoryPressureEvents.tryEmit(Unit)
-                    trimmingService.run(accountsCache.accounts.value.values, sessionStore.allSavedAccounts())
+                    trimmingService.run(accountsCache.accounts.value.values)
                 }
             }
         }
@@ -835,6 +860,13 @@ class DesktopAppModules(
     /** Starts the process-wide work: the saved account's session and the PoW jobs left on disk. */
     fun initiate() {
         startHeapWatchdog()
+
+        // Every account notified, once the first login is in: by then the keyring or the password
+        // file has been opened, so the other accounts' keys load without a prompt of their own.
+        applicationIOScope.launch {
+            sessionManager.accountContent.first { it is AccountState.LoggedIn }
+            accountsNotified.start()
+        }
 
         // Starts measuring relay response times from the first connection; it reads its file on
         // creation, so off the main thread.

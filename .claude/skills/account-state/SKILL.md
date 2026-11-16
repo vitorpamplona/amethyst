@@ -1,6 +1,6 @@
 ---
 name: account-state
-description: Account, LocalCache, User/Note and feeds in commons/model + commons/feeds: per-user XState objects (.flow), FeedFilter/AdditiveFeedFilter, FeedViewModel. Use when adding an account setting or list, a feed, or choosing LocalCache vs account flows.
+description: Account, LocalCache, User/Note and feeds in commons/model + commons/feeds: per-user XState objects (.flow), FeedFilter/AdditiveFeedFilter, UniverseFeedFilter/CandidateSet, FeedViewModel, AccountFeeds. Use when adding an account setting or list, a feed, or choosing LocalCache vs account flows.
 ---
 
 # Account, LocalCache and Feeds
@@ -83,8 +83,11 @@ incremental merges), `AdditiveComplexFeedFilter<T, U>` (incoming type differs fr
 `sortedByDefaultFeedOrder()`, `FeedContentState`, `FeedState`. Concrete filters are **shared**, in
 `commons/…/<feature>/dal/` (`home/dal/`, `hashtag/dal/`, `notifications/dal/`, ~55 of them). The
 account's main-tab feeds are long-lived `FeedContentState`s in `viewmodels/AccountFeedContentStates.kt`
-(owned by `BaseAccountViewModel.feedStates`); per-screen feeds use a `FeedViewModel` subclass. Recipe,
-real code and traps: `references/feeds.md`.
+(owned by `BaseAccountViewModel.feedStates`, kept warm by `AccountFeeds` across account switches);
+per-screen feeds use a `FeedViewModel` subclass. A feed showing a small part of the cache splits its
+check into a `universe` (`OwnedUniverseFeedFilter`) and rebuilds from a `CandidateSet`. A feed also
+holds the relay cursors of the subscription that fills it: pass it to that subscription's key.
+Recipe, real code and traps: `references/feeds.md`.
 
 ## Gotchas
 

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.profile
 
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -42,4 +43,7 @@ class UserProfileFollowersFilterSubAssembler(
         }
 
     override fun user(key: UserProfileQueryState) = key.user
+
+    /** The followers view model holds the follow lists, for as long as the profile screen. */
+    override fun cursorHoldersOf(key: UserProfileQueryState): List<RelayCursorHolder> = listOf(key)
 }

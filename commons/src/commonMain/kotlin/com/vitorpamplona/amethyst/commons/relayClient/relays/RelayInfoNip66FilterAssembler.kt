@@ -21,13 +21,18 @@
 package com.vitorpamplona.amethyst.commons.relayClient.relays
 
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.KeyHeldCursors
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class RelayInfoNip66QueryState(
     val relayUrl: NormalizedRelayUrl,
     val relays: Set<NormalizedRelayUrl>,
-)
+) : KeyHeldCursors {
+    /** Only the screen that made this key holds what it loads, so the cursors live with the key. */
+    override val relayCursors = RelayCursors()
+}
 
 class RelayInfoNip66FilterAssembler(
     client: INostrClient,

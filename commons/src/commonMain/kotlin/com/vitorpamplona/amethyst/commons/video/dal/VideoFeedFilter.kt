@@ -22,13 +22,17 @@ package com.vitorpamplona.amethyst.commons.video.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.SupportedContent
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.video.SUPPORTED_VIDEO_FEED_MIME_TYPES_SET
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -44,7 +48,14 @@ import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 
 class VideoFeedFilter(
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    OwnedUniverseFeedFilter {
+    // Videos and pictures in a format the feed plays, whoever posted them: the list, the mutes and
+    // the reports are checked at each rebuild.
+    override val universe = IFilter { isPlayable(it) }
+
+    override var candidates: CandidateSet? = null
+
     val videoFeedSupport =
         SupportedContent(
             blockedUrls = listOf("youtu.be", "youtube.com"),
@@ -68,19 +79,21 @@ class VideoFeedFilter(
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
-
-        val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it, params)
-            } +
-                LocalCache.addressables.filterIntoSet(AddressableNormalVideoEvent.KIND) { _, it ->
-                    acceptableEvent(it, params)
-                } +
-                LocalCache.addressables.filterIntoSet(AddressableShortVideoEvent.KIND) { _, it ->
-                    acceptableEvent(it, params)
-                }
-
-        return sort(notes)
+        return sort(
+            rebuildFeed("video", candidates, keep = { acceptableEvent(it, params) }) {
+                val notes =
+                    LocalCache.notes.filterIntoSet { _, it ->
+                        acceptableEvent(it, params)
+                    } +
+                        LocalCache.addressables.filterIntoSet(AddressableNormalVideoEvent.KIND) { _, it ->
+                            acceptableEvent(it, params)
+                        } +
+                        LocalCache.addressables.filterIntoSet(AddressableShortVideoEvent.KIND) { _, it ->
+                            acceptableEvent(it, params)
+                        }
+                notes
+            },
+        )
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
@@ -112,24 +125,27 @@ class VideoFeedFilter(
 
     fun acceptanceEvent(noteEvent: VideoShortEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
 
-    fun acceptableEvent(
-        note: Note,
-        params: FilterByListParams,
-    ): Boolean {
+    fun isPlayable(note: Note): Boolean {
         val noteEvent = note.event
 
         if (noteEvent is AddressableEvent && note !is AddressableNote) {
             return false
         }
 
-        return (
-            (noteEvent is FileMetadataEvent && acceptanceEvent(noteEvent)) ||
-                (noteEvent is AddressableShortVideoEvent && acceptanceEvent(noteEvent)) ||
-                (noteEvent is AddressableNormalVideoEvent && acceptanceEvent(noteEvent)) ||
-                (noteEvent is VideoNormalEvent && acceptanceEvent(noteEvent)) ||
-                (noteEvent is VideoShortEvent && acceptanceEvent(noteEvent)) ||
-                (noteEvent is PictureEvent && acceptanceEvent(noteEvent))
-        ) &&
+        return (noteEvent is FileMetadataEvent && acceptanceEvent(noteEvent)) ||
+            (noteEvent is AddressableShortVideoEvent && acceptanceEvent(noteEvent)) ||
+            (noteEvent is AddressableNormalVideoEvent && acceptanceEvent(noteEvent)) ||
+            (noteEvent is VideoNormalEvent && acceptanceEvent(noteEvent)) ||
+            (noteEvent is VideoShortEvent && acceptanceEvent(noteEvent)) ||
+            (noteEvent is PictureEvent && acceptanceEvent(noteEvent))
+    }
+
+    fun acceptableEvent(
+        note: Note,
+        params: FilterByListParams,
+    ): Boolean {
+        val noteEvent = note.event ?: return false
+        return isPlayable(note) &&
             params.match(noteEvent, note.relays) &&
             (params.isHiddenList || account.isAcceptable(note))
     }

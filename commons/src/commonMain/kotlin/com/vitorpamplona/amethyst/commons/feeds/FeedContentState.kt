@@ -23,14 +23,18 @@ package com.vitorpamplona.amethyst.commons.feeds
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.commons.model.HiddenSetWidenings
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
 import com.vitorpamplona.amethyst.commons.service.BasicBundledUpdate
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -39,16 +43,58 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 @Stable
 class FeedContentState(
     val localFilter: IFeedFilter<Note>,
     val viewModelScope: CoroutineScope,
     val cacheProvider: ICacheProvider,
-) : InvalidatableContent {
+    /**
+     * Builds nothing until [activate] is called or something collects [feedContent]. Until then,
+     * new events, deletions and invalidations are ignored: the first build reads everything from
+     * the cache anyway. For the account-wide feeds, most of which belong to screens the user never
+     * opens; a screen's own feed is wanted from the start and stays eager.
+     */
+    lazy: Boolean = false,
+    /**
+     * Whether coming back to the screen rebuilds the feed. False for feeds that stay current on
+     * their own: every new event reaches them, and their owner rebuilds them when something they
+     * read changes (mutes, the selected list, time-based visibility). Such a feed is only built
+     * on resume if it has never been built.
+     */
+    private val refreshOnResume: Boolean = true,
+) : InvalidatableContent,
+    RelayCursorHolder {
+    /**
+     * What the relays already sent for this feed, held here because it is only true while this
+     * feed keeps the notes: a new feed object starts empty and asks from scratch.
+     */
+    override val relayCursors = RelayCursors()
+
     private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
+
+    @OptIn(ExperimentalAtomicApi::class)
+    private val active = AtomicBoolean(!lazy)
+
+    /** Whether this feed is being built and kept up to date; false while a lazy feed is dormant. */
+    @OptIn(ExperimentalAtomicApi::class)
+    fun isActive() = active.load()
+
+    /**
+     * Wakes a lazy feed: builds it from the cache and keeps it updated from now on. Call it from
+     * whatever fills the feed while nothing shows it (a relay subscription that preloads a tab),
+     * so the notes that subscription loads have a holder. Idempotent.
+     */
+    @OptIn(ExperimentalAtomicApi::class)
+    fun activate() {
+        if (active.compareAndSet(expectedValue = false, newValue = true)) invalidateData()
+    }
 
     // Simple counter that changes when it needs to invalidate everything
     private val _scrollToTop = MutableStateFlow<Int>(0)
@@ -56,6 +102,29 @@ class FeedContentState(
     var scrollToTopPending = false
 
     private var lastFeedKey: Any? = null
+
+    // Set by [keyChanging] until the next build: the cursors were already cleared for it.
+    @Volatile
+    private var clearedForNextKey = false
+
+    /** Records the key this build used; another list or filter makes the cursors vouch for nothing. */
+    private fun builtWithKey(key: Any?) {
+        val alreadyCleared = clearedForNextKey
+        clearedForNextKey = false
+        if (lastFeedKey != null && lastFeedKey != key && !alreadyCleared) relayCursors.clear()
+        lastFeedKey = key
+    }
+
+    /**
+     * The feed is about to be built for another key (the user picked another list). Clears the
+     * cursors now, before the subscription that fills it plans the new list: clearing them only when
+     * the rebuild runs had that subscription plan once from the old cursors and then again from
+     * scratch, and could wipe the new list's first answer if it came before the rebuild.
+     */
+    fun keyChanging() {
+        clearedForNextKey = true
+        relayCursors.clear()
+    }
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
 
@@ -143,7 +212,7 @@ class FeedContentState(
         isRefreshing.value = true
         try {
             write {
-                lastFeedKey = localFilter.feedKey()
+                builtWithKey(localFilter.feedKey())
                 localFilter.loadTop().distinctBy { it.idHex }.toImmutableList()
             }
         } finally {
@@ -182,6 +251,22 @@ class FeedContentState(
                 updateFeed((feed.feed.value.list - deletedNotes).toImmutableList())
             }
         }
+
+    /**
+     * Drops the shown notes that no longer pass the filter (an author just reported or muted),
+     * without walking the cache: only the shown list is checked again. Only removes; whatever the
+     * change may add needs a rebuild.
+     */
+    fun refilterShown() {
+        if (!isActive()) return
+        val filter = localFilter as? AdditiveFeedFilter ?: return invalidateData()
+        write {
+            val shown = (_feedContent.value as? FeedState.Loaded)?.feed?.value?.list ?: return@write null
+            val keep = filter.applyFilter(shown.toSet())
+            Log.d("FeedRebuild") { "${localFilter::class.simpleName} rechecked ${shown.size} shown: ${keep.size} kept" }
+            if (keep.size == shown.size) null else shown.filter { it in keep }.toImmutableList()
+        }
+    }
 
     fun trimToSize(maxItems: Int) =
         commitLock.withLock {
@@ -252,6 +337,7 @@ class FeedContentState(
     private val bundlerInsert = BasicBundledInsert<Set<Note>>(250, Dispatchers.IO, viewModelScope)
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
+        if (!isActive()) return
         viewModelScope.launch(Dispatchers.IO) {
             bundler.invalidate(ignoreIfDoing) {
                 // adds the time to perform the refresh into this delay
@@ -261,7 +347,14 @@ class FeedContentState(
         }
     }
 
+    override fun onResume() {
+        if (refreshOnResume) return invalidateData(true)
+        val current = _feedContent.value
+        if (current !is FeedState.Loaded && current !is FeedState.Empty) invalidateData(true)
+    }
+
     fun checkKeysInvalidateDataAndSendToTop() {
+        if (!isActive()) return
         if (lastFeedKey != localFilter.feedKey()) {
             bundler.invalidate(false) {
                 // adds the time to perform the refresh into this delay
@@ -273,12 +366,14 @@ class FeedContentState(
     }
 
     fun invalidateInsertData(newItems: Set<Note>) {
+        if (!isActive()) return
         bundlerInsert.invalidateList(newItems) {
             refreshFromOldState(it.flattenToSet())
         }
     }
 
     fun updateFeedWith(newNotes: Set<Note>) {
+        if (!isActive()) return
         if (
             localFilter is AdditiveFeedFilter &&
             (_feedContent.value is FeedState.Loaded || _feedContent.value is FeedState.Empty)
@@ -288,5 +383,20 @@ class FeedContentState(
             // Refresh Everything
             invalidateData()
         }
+    }
+
+    // Last in the class: the coroutine may build the feed before the constructor returns, and the
+    // bundlers above must exist by then.
+    init {
+        if (lazy) {
+            // Whatever shows the feed collects it: that is the moment to build it.
+            viewModelScope.launch(Dispatchers.IO) {
+                _feedContent.subscriptionCount.first { it > 0 }
+                activate()
+            }
+        }
+        // A feed rejects what an account hides, and nothing holds a rejected note: when an account
+        // shows it again, it may be gone while these cursors still vouch for it.
+        viewModelScope.launch(Dispatchers.IO) { HiddenSetWidenings.flow.collect { relayCursors.clear() } }
     }
 }

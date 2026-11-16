@@ -42,7 +42,7 @@ import kotlinx.coroutines.flow.StateFlow
 class ChatroomNip04SubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChatroomQueryState>,
-) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<ChatroomQueryState>(client, allKeys) {
     private val windowLoad = WindowLoadTracker("convo.nip04.live")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
@@ -63,8 +63,6 @@ class ChatroomNip04SubAssembler(
         }
 
     override fun user(key: ChatroomQueryState) = key.account.userProfile()
-
-    override fun list(key: ChatroomQueryState) = key.listId
 
     override val watchedChatFeeds = setOf(ChatFeedType.NIP04)
 

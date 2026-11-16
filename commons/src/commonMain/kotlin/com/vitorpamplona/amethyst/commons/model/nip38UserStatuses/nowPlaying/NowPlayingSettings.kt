@@ -22,8 +22,14 @@ package com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
 /**
@@ -59,10 +65,24 @@ data class NowPlayingSettings(
 @Stable
 class NowPlayingSettingsState {
     private val state = MutableStateFlow(NowPlayingSettings())
+    private val restored = MutableStateFlow(false)
 
     val flow: StateFlow<NowPlayingSettings> = state
 
-    fun restore(settings: NowPlayingSettings) = state.update { settings }
+    fun restore(settings: NowPlayingSettings) {
+        state.update { settings }
+        restored.value = true
+    }
+
+    /**
+     * [NowPlayingSettings.shareOtherApps], silent until the saved settings are restored, so the
+     * all-off defaults an account starts with never read as the user turning sharing off.
+     */
+    fun sharesOtherApps(): Flow<Boolean> =
+        flow {
+            restored.first { it }
+            emitAll(state)
+        }.map { it.shareOtherApps }.distinctUntilChanged()
 
     fun setShareInApp(enabled: Boolean) = state.update { it.copy(shareInApp = enabled) }
 
