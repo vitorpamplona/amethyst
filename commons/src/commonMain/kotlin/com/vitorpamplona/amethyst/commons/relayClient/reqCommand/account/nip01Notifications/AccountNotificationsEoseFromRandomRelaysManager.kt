@@ -46,6 +46,10 @@ class AccountNotificationsEoseFromRandomRelaysManager(
 ) : PerUserEoseManager<AccountUiQueryState>(client, allKeys) {
     override fun user(key: AccountUiQueryState) = key.account.userProfile()
 
+    // The screen's notification feeds hold what this loads: a new AccountViewModel's feeds start
+    // empty, with empty cursors, so they are asked from scratch.
+    override fun cursorHoldersOf(key: AccountUiQueryState) = key.notificationCursorHolders
+
     /**
      * Most notifications arrive on the user's own inbox relays. This is the straggler probe for the
      * rest: other clients sometimes deliver a mention to the author's own relays instead of the
@@ -71,7 +75,7 @@ class AccountNotificationsEoseFromRandomRelaysManager(
         // behind it: this probe is `#p`-scoped to me with `limit = 20`, so relays answer with the 20
         // newest either way — the floor only ever hid notifications older than a week, and since the
         // boundary above needs a full page to arm, a quiet inbox could never page past it.
-        val defaultSince = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled()
+        val defaultSince = key.feedContentStates?.notifications?.lastNoteCreatedAtIfFilled()
         val candidates =
             (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value)
                 .sortedBy { it.url }
@@ -80,9 +84,10 @@ class AccountNotificationsEoseFromRandomRelaysManager(
         val start = (passIndex * RELAYS_PER_PASS).mod(candidates.size)
         val window = List(minOf(RELAYS_PER_PASS, candidates.size)) { candidates[(start + it).mod(candidates.size)] }
 
+        // The feeds' cursors set the windows on top of this floor ([cursorHoldersOf]); the manager's
+        // own map is never read, so a screen whose feeds are already gone asks from the floor.
         return window.flatMap {
-            val since = since?.get(it)?.time ?: defaultSince
-            filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, since)
+            filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, defaultSince)
         }
     }
 
@@ -98,17 +103,21 @@ class AccountNotificationsEoseFromRandomRelaysManager(
     override fun newSub(key: AccountUiQueryState): Subscription {
         val user = user(key)
         userJobMap[user]?.forEach { it.cancel() }
+        // The flow, not the feed set: this job lives as long as the user's subscription.
+        val feedDepth = key.feedContentStates?.notifications?.lastNoteCreatedAtWhenFullyLoaded
         userJobMap[user] =
-            listOf(
+            listOfNotNull(
                 key.account.scope.launch(Dispatchers.IO) {
                     // no need to hurry here. we can wait the app stabilize
                     key.account.followsPerRelay.debounce(5000).collectLatest {
                         invalidateFilters()
                     }
                 },
-                key.account.scope.launch(Dispatchers.IO) {
-                    key.feedContentStates.notifications.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
-                        invalidateFilters()
+                feedDepth?.let { depth ->
+                    key.account.scope.launch(Dispatchers.IO) {
+                        depth.sample(5000).collectLatest {
+                            invalidateFilters()
+                        }
                     }
                 },
                 // Slides the window. Cancelled with the others in endSub, so it stops with the account.

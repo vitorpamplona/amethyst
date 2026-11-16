@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.relayClient.nips.NipsQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
@@ -30,7 +31,8 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 /** Keeps every NIP on Nostr arriving while the NIPs screen (or its bottom-bar tab) is on screen. */
 @Composable
 fun AllNipsSubscription(accountViewModel: AccountViewModel) {
-    val state = remember(accountViewModel.account) { NipsQueryState.All(accountViewModel.account) }
+    val feed = accountViewModel.feedStates.nipsFeed
+    val state = remember(accountViewModel.account, feed) { NipsQueryState.All(accountViewModel.account, feed) }
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().nips)
 }
 
@@ -44,13 +46,14 @@ fun NipsDefiningKindSubscription(
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().nips)
 }
 
-/** Keeps recent events of [kind] arriving while the kind page is on screen. */
+/** Keeps recent events of [kind] arriving while the kind page is on screen; [feed] is the page's, which holds them. */
 @Composable
 fun KindEventsSubscription(
     kind: Int,
+    feed: FeedContentState,
     accountViewModel: AccountViewModel,
 ) {
-    val state = remember(kind, accountViewModel.account) { NipsQueryState.KindEvents(kind, accountViewModel.account) }
+    val state = remember(kind, accountViewModel.account, feed) { NipsQueryState.KindEvents(kind, accountViewModel.account, feed) }
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().nips)
 }
 

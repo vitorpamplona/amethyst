@@ -23,13 +23,18 @@ package com.vitorpamplona.amethyst.commons.relayClient.podcasts
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.KeyHeldCursors
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // Keyed by the logged-in creator's own pubkey. Drives the authoring hub's REQ for the creator's
 // own Podcasting-2.0 catalog (episodes, trailers, and the show-metadata event).
 class MyPodcastQueryState(
     val user: User,
-)
+) : KeyHeldCursors {
+    /** Only the screen that made this key holds what it loads, so the cursors live with the key. */
+    override val relayCursors = RelayCursors()
+}
 
 class MyPodcastFilterAssembler(
     cache: ICacheProvider,

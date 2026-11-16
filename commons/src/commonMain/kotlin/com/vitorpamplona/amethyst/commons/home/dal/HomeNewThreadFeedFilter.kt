@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.home.dal
 import com.vitorpamplona.amethyst.commons.audio.hasPlayableAudio
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.UniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.isRenderableRepost
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
@@ -32,6 +34,8 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.isLatestAnswerIn
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.latestRsvpAnswers
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
@@ -88,7 +92,14 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 class HomeNewThreadFeedFilter(
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    UniverseFeedFilter {
+    override val universe = IFilter { note -> note.event?.let { isThreadKind(it) || it is CalendarRSVPEvent } == true }
+
+    // Home walks the cache: its universe is most of it, so a candidate set would only copy it.
+    // The universe still tells FeedsKeptCurrent which future-dated notes could ever show here.
+    override val candidates: CandidateSet? get() = null
+
     companion object {
         val ADDRESSABLE_KINDS =
             listOf(
@@ -118,77 +129,12 @@ class HomeNewThreadFeedFilter(
                 CalendarDateSlotEvent.KIND,
                 PublicationIndexEvent.KIND,
             )
-    }
 
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
-
-    override fun showHiddenKey(): Boolean =
-        account.liveHomeFollowLists.value is MutedAuthorsByOutboxTopNavFilter ||
-            account.liveHomeFollowLists.value is MutedAuthorsByProxyTopNavFilter
-
-    fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.create(
-            followLists = account.liveHomeFollowLists.value,
-            hiddenUsers = account.hiddenUsers.flow.value,
-        )
-
-    override fun feed(): List<Note> {
-        val filterParams = buildFilterParams(account)
-        val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
-        val latestRsvps = lazy(LazyThreadSafetyMode.NONE) { cachedRsvpAnswers() }
-
-        val notes =
-            LocalCache.notes.filterIntoSet { _, note ->
-                // Avoids processing addressables twice.
-                (note.event?.kind ?: 99999) < 10000 && acceptableEvent(note, filterParams, disabledKinds, latestRsvps)
-            }
-
-        val longFormNotes =
-            LocalCache.addressables.filterIntoSet(
-                kinds = ADDRESSABLE_KINDS,
-            ) { _, note ->
-                acceptableEvent(note, filterParams, disabledKinds, latestRsvps)
-            }
-
-        return sort(notes + longFormNotes)
-    }
-
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
-
-    /**
-     * The additive merge only ever adds, so a "Going" card already on screen would outlive the
-     * author changing their mind: when a batch carries RSVPs, the old list first loses every
-     * RSVP that is no longer its author's latest answer.
-     */
-    override fun updateListWith(
-        oldList: List<Note>,
-        newItems: Set<Note>,
-    ): List<Note> {
-        if (newItems.none { it.event is CalendarRSVPEvent }) return super.updateListWith(oldList, newItems)
-        val latest = cachedRsvpAnswers()
-        val stillCurrent = oldList.filter { (it.event as? CalendarRSVPEvent)?.isLatestAnswerIn(latest) ?: true }
-        return super.updateListWith(stillCurrent, newItems)
-    }
-
-    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val filterParams = buildFilterParams(account)
-        val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
-        val latestRsvps = lazy(LazyThreadSafetyMode.NONE) { cachedRsvpAnswers() }
-
-        return collection.filterTo(HashSet()) {
-            acceptableEvent(it, filterParams, disabledKinds, latestRsvps)
-        }
-    }
-
-    private fun acceptableEvent(
-        it: Note,
-        filterParams: FilterByListParams,
-        disabledKinds: Set<Int>,
-        latestRsvps: Lazy<Map<Pair<Address, HexKey>, CalendarRSVPEvent>>,
-    ): Boolean {
-        val noteEvent = it.event ?: return false
-        if (noteEvent.kind in disabledKinds) return false
-        return (
+        /**
+         * The event types Home shows as new threads, with their per-event conditions. Does not
+         * change once an event is in the cache, so the Home candidate set can use it.
+         */
+        fun isThreadKind(noteEvent: Event): Boolean =
             noteEvent is TextNoteEvent ||
                 noteEvent is ClassifiedsEvent ||
                 noteEvent is FundraiserEvent ||
@@ -234,7 +180,91 @@ class HomeNewThreadFeedFilter(
                 noteEvent is LiveActivitiesClipEvent ||
                 noteEvent is GitIssueEvent ||
                 noteEvent is GitPullRequestEvent ||
-                noteEvent is PublicationIndexEvent ||
+                noteEvent is PublicationIndexEvent
+    }
+
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
+
+    override fun showHiddenKey(): Boolean =
+        account.liveHomeFollowLists.value is MutedAuthorsByOutboxTopNavFilter ||
+            account.liveHomeFollowLists.value is MutedAuthorsByProxyTopNavFilter
+
+    fun buildFilterParams(account: Account): FilterByListParams =
+        FilterByListParams.create(
+            followLists = account.liveHomeFollowLists.value,
+            hiddenUsers = account.hiddenUsers.flow.value,
+        )
+
+    override fun feed(): List<Note> {
+        val filterParams = buildFilterParams(account)
+        val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
+        val latestRsvps = lazy(LazyThreadSafetyMode.NONE) { cachedRsvpAnswers() }
+
+        return sort(
+            rebuildFeed("home/threads") {
+                val notes =
+                    LocalCache.notes.filterIntoSet { _, note ->
+                        // Avoids processing addressables twice.
+                        (note.event?.kind ?: 99999) < 10000 && acceptableEvent(note, filterParams, disabledKinds, latestRsvps)
+                    }
+
+                val longFormNotes =
+                    LocalCache.addressables.filterIntoSet(
+                        kinds = ADDRESSABLE_KINDS,
+                    ) { _, note ->
+                        acceptableEvent(note, filterParams, disabledKinds, latestRsvps)
+                    }
+
+                notes + longFormNotes
+            },
+        )
+    }
+
+    /** This feed's check with its parameters built once, for a walk shared with another feed. */
+    fun acceptor(): (Note) -> Boolean {
+        val filterParams = buildFilterParams(account)
+        val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
+        val latestRsvps = lazy(LazyThreadSafetyMode.NONE) { cachedRsvpAnswers() }
+        return { note -> acceptableEvent(note, filterParams, disabledKinds, latestRsvps) }
+    }
+
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
+
+    /**
+     * The additive merge only ever adds, so a "Going" card already on screen would outlive the
+     * author changing their mind: when a batch carries RSVPs, the old list first loses every
+     * RSVP that is no longer its author's latest answer.
+     */
+    override fun updateListWith(
+        oldList: List<Note>,
+        newItems: Set<Note>,
+    ): List<Note> {
+        if (newItems.none { it.event is CalendarRSVPEvent }) return super.updateListWith(oldList, newItems)
+        val latest = cachedRsvpAnswers()
+        val stillCurrent = oldList.filter { (it.event as? CalendarRSVPEvent)?.isLatestAnswerIn(latest) ?: true }
+        return super.updateListWith(stillCurrent, newItems)
+    }
+
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+        val filterParams = buildFilterParams(account)
+        val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
+        val latestRsvps = lazy(LazyThreadSafetyMode.NONE) { cachedRsvpAnswers() }
+
+        return collection.filterTo(HashSet()) {
+            acceptableEvent(it, filterParams, disabledKinds, latestRsvps)
+        }
+    }
+
+    private fun acceptableEvent(
+        it: Note,
+        filterParams: FilterByListParams,
+        disabledKinds: Set<Int>,
+        latestRsvps: Lazy<Map<Pair<Address, HexKey>, CalendarRSVPEvent>>,
+    ): Boolean {
+        val noteEvent = it.event ?: return false
+        if (noteEvent.kind in disabledKinds) return false
+        return (
+            isThreadKind(noteEvent) ||
                 noteEvent.isGoingRsvp(latestRsvps)
         ) &&
             filterParams.match(noteEvent, it.relays) &&

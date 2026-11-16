@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.hashtag.datasource
 
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -37,10 +38,14 @@ class HashtagLabelSubAssembler(
     override fun updateFilter(
         key: HashtagQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> = filterHashtagLabels(key.account, key.lowercaseHashtag, key.relays, since)
+    ): List<RelayBasedFilter> = filterHashtagLabels(key.account, key.lowercaseHashtag, key.relays, since, key.labels?.snapshot())
 
     /**
      * Only one key per hashtag. Prefixed so it doesn't collide with the main feed sub-assembler.
      */
     override fun id(key: HashtagQueryState) = "label-" + key.lowercaseHashtag
+
+    // What this loads is labels: the screen's set of them holds them, so its cursors vouch for
+    // them. A key made without one (no screen) falls back to the feeds.
+    override fun cursorHoldersOf(key: HashtagQueryState): List<RelayCursorHolder> = key.labels?.let { listOf(it) } ?: key.feeds
 }

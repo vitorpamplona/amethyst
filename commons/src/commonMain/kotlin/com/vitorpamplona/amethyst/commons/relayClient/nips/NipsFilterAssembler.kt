@@ -20,12 +20,17 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.nips
 
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipsOnNostr
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.CursorHoldingQuery
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.KeyHeldCursors
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -39,40 +44,57 @@ import kotlin.concurrent.Volatile
 
 /**
  * What a NIPs screen keeps live while it is open. Each is one relay subscription, shared by every
- * screen asking the same question ([id]); after the first EOSE a relay is only asked for what is
- * newer, so new NIPs, new versions and deletions keep arriving.
+ * screen asking the same question ([id]). Each names what holds the notes it loads
+ * ([cursorHolders]): their relay cursors set its windows, so after the first EOSE a relay is only
+ * asked for what is newer, for as long as that holder keeps what was loaded.
  */
 sealed class NipsQueryState(
     override val account: Account,
-) : AccountScopedQuery {
+) : AccountScopedQuery,
+    CursorHoldingQuery {
     abstract val id: String
 
-    /** Every NIP: the NIPs screen. No time window: NIPs are few and long-lived. */
+    /**
+     * Every NIP: the NIPs screen. No time window: NIPs are few and long-lived. [feed] is the
+     * account's NIPs feed (`AccountFeedContentStates.nipsFeed`), which holds them.
+     */
     class All(
         account: Account,
+        val feed: FeedContentState,
     ) : NipsQueryState(account) {
         override val id = "all"
+        override val cursorHolders: List<RelayCursorHolder> get() = listOf(feed)
     }
 
-    /** The NIPs whose `k` tags define [kind]: the kind page and the "Defined by" row of an unknown event. */
+    /**
+     * The NIPs whose `k` tags define [kind]: the kind page and the "Defined by" row of an unknown
+     * event. They are NIPs, so the account's NIPs feed holds them, but this asks a narrower question
+     * than [All] on the same relays: it keeps its own cursors, for as long as the screen keeps it,
+     * rather than overwrite the feed's.
+     */
     class DefiningKind(
         val kind: Int,
         account: Account,
-    ) : NipsQueryState(account) {
+    ) : NipsQueryState(account),
+        KeyHeldCursors {
         override val id = "k:$kind"
+        override val relayCursors = RelayCursors()
     }
 
-    /** Recent events of [kind]: the kind page's sample. */
+    /** Recent events of [kind]: the kind page's sample, held by that page's [feed]. */
     class KindEvents(
         val kind: Int,
         account: Account,
+        val feed: FeedContentState,
     ) : NipsQueryState(account) {
         override val id = "kind:$kind"
+        override val cursorHolders: List<RelayCursorHolder> get() = listOf(feed)
     }
 
     /**
      * One NIP, watched for new versions while it is read. The relays it has been seen on are read
-     * each time the filters are rebuilt, so ones it turns up on later are asked too.
+     * each time the filters are rebuilt, so ones it turns up on later are asked too. The note holds
+     * its newest version, and the cursors that vouch for it.
      */
     class Watch(
         val note: AddressableNote,
@@ -80,6 +102,7 @@ sealed class NipsQueryState(
     ) : NipsQueryState(account) {
         val address: Address get() = note.address
         override val id = "a:" + note.address.toValue()
+        override val cursorHolders: List<RelayCursorHolder> get() = listOf(note)
     }
 }
 
@@ -136,6 +159,13 @@ class NipsSubAssembler(
     }
 
     override fun id(key: NipsQueryState) = key.id
+
+    /**
+     * The key's holders, the lazy feeds among them woken first: a subscription that loads notes into
+     * the cache while no feed holds them would let the GC take them while the cursor says they are
+     * here.
+     */
+    override fun cursorHoldersOf(key: NipsQueryState): List<RelayCursorHolder> = key.cursorHolders.onEach { (it as? FeedContentState)?.activate() }
 }
 
 /** The REQ a [NipsQueryState] sends, apart from the relays and the per-relay `since`. */

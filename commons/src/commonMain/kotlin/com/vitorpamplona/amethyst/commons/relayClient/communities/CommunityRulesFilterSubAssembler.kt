@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.relayClient.communities
 
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
@@ -80,4 +81,7 @@ class CommunityRulesFilterSubAssembler(
     }
 
     override fun distinct(key: CommunityQueryState) = key.community.idHex
+
+    /** The screen that opened the community holds its rules, and these cursors with them. */
+    override fun cursorHoldersOf(key: CommunityQueryState): List<RelayCursorHolder> = listOf(key.rules)
 }

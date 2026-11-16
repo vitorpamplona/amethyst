@@ -71,7 +71,7 @@ fun CalendarsScreen(
     // itself goes. See [CalendarsViewModel].
     val model: CalendarsViewModel = rememberViewModel { CalendarsViewModel() }
     model.init(accountViewModel.userProfile().pubkeyHex, feedState)
-    model.bindAttendeeFilter(accountViewModel.account.liveCalendarsFollowLists, accountViewModel.account.hiddenUsers.flow)
+    model.bindAttendeeFilter(accountViewModel.account.liveCalendarsFollowLists, accountViewModel.account.hiddenUsers.flow, accountViewModel.feedStates.calendarRsvps)
 
     val filterDTag by model.filterDTag.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()

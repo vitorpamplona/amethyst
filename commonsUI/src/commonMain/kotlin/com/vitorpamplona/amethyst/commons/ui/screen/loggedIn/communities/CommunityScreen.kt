@@ -129,7 +129,11 @@ fun CommunityScreen(
 ) {
     WatchLifecycleAndUpdateModel(feedViewModel)
     WatchLifecycleAndUpdateModel(modFeedViewModel)
-    CommunityFilterAssemblerSubscription(note, accountViewModel.dataSources().community)
+    CommunityFilterAssemblerSubscription(
+        note,
+        accountViewModel.dataSources().community,
+        feeds = listOf(feedViewModel.feedState, modFeedViewModel.feedState),
+    )
 
     val pagerState = rememberForeverPagerState(note.idHex + "CommunityScreenPagerState") { 2 }
     val expanded = remember { mutableStateOf(false) }

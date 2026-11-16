@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.utils.flattenToSet
 
@@ -34,10 +35,12 @@ class UserProfileAppRecommendationsFeedFilter(
     override fun feedKey(): String = user.pubkeyHex
 
     override fun feed(): List<Note> {
+        // The user's own recommendation lists only: the addressable cache is sorted by kind and
+        // author, so this reads one small slice instead of walking every addressable event.
         val recommendations =
-            LocalCache.addressables.mapFlattenIntoSet { _, note ->
-                filterMap(note)
-            }
+            LocalCache.addressables
+                .filterIntoSet(AppRecommendationEvent.KIND, user.pubkeyHex)
+                .flatMapTo(HashSet()) { filterMap(it).orEmpty() }
 
         return sort(recommendations)
     }

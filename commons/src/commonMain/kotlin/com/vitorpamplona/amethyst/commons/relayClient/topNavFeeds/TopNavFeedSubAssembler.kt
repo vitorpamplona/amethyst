@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds
 
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -55,10 +57,21 @@ typealias TopNavFeedFilterMaker = (
 abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
     client: INostrClient,
     allKeys: () -> Set<K>,
-) : PerUserAndFollowListEoseManager<K, TopFilter>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<K>(client, allKeys) {
     override fun user(key: K) = key.account.userProfile()
 
-    override fun list(key: K) = key.listName.value
+    /**
+     * The feeds that hold what this manager loads for [key]: their cursors set its windows and
+     * receive its EOSEs, so a new feed (an account switched away and back, a window reopened, another
+     * list picked) asks from scratch, and the cursors go with the feed. Defaults to every feed on the
+     * key; a manager that fills only some of them names those.
+     */
+    protected open fun cursorFeeds(key: K): List<FeedContentState> = key.feeds
+
+    /** The feeds and what else the key names; for a key with none, the key itself, which lives as long as its screen. */
+    override fun cursorHoldersOf(key: K): List<RelayCursorHolder> = (cursorFeeds(key) + key.alsoHeldBy).ifEmpty { listOf(key) }
+
+    override fun activateFeeds(key: K) = key.feeds.forEach { it.activate() }
 
     /** Runs when the key's top-nav selection changes, right before the filters are re-issued. */
     protected open fun onListChanged(key: K) {}
@@ -66,8 +79,8 @@ abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
     /** How often (ms) a moving feed floor may re-issue the REQ; the video swipe feed wants a tighter cadence. */
     protected open val floorSampleMs: Long = 5000
 
-    /** The feed floors that re-issue the REQ (sampled) when they move. Defaults to every feed on the key. */
-    protected open fun floors(key: K): List<StateFlow<Long?>> = key.feeds.map { it.lastNoteCreatedAtWhenFullyLoaded }
+    /** The feed floors that re-issue the REQ (sampled) when they move: those of the feeds it fills. */
+    protected open fun floors(key: K): List<StateFlow<Long?>> = cursorFeeds(key).map { it.lastNoteCreatedAtWhenFullyLoaded }
 
     /** Additional flows whose every emission re-issues the REQ, unsampled. */
     protected open fun extraInvalidators(key: K): List<Flow<*>> = emptyList()
@@ -82,7 +95,11 @@ abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
             buildList {
                 add(
                     key.scope.launch(Dispatchers.IO) {
-                        key.listName.collectLatest {
+                        var previous: TopFilter? = null
+                        key.listName.collectLatest { list ->
+                            // Another list: the feeds forget their cursors before this plans it.
+                            if (previous != null && previous != list) cursorFeeds(key).forEach { it.keyChanging() }
+                            previous = list
                             onListChanged(key)
                             invalidateFilters()
                         }
@@ -132,10 +149,10 @@ abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
  * A top-nav feed whose REQ is one [makeFilter] dispatcher over the selection, bounded by the
  * key's (single) feed floor.
  *
- * @param resetEoseOnListChange drop the per-relay EOSE cursor when the user switches lists. Needed
- *   when the feed shows addressables held only weakly by the cache: while the user views list B the
- *   strong refs from list A's UI are gone and the GC may reclaim those notes; a cursor that still
- *   says "you have everything up to T" would then stop the relay from re-sending them.
+ * @param resetEoseOnListChange drop the cursors a key with no feed keeps on itself when the user
+ *   switches lists. Needed when the screen shows addressables held only weakly by the cache: while
+ *   the user views list B the strong refs from list A's UI are gone and the GC may reclaim those
+ *   notes. Keys with a feed need nothing: the feed holds what its cursors vouch for.
  */
 open class SingleTopNavFeedSubAssembler(
     client: INostrClient,
@@ -150,6 +167,6 @@ open class SingleTopNavFeedSubAssembler(
     ): List<RelayBasedFilter> = makeFilter(key.followsPerRelay.value, since, key.feeds.firstOrNull()?.lastNoteCreatedAtIfFilled())
 
     override fun onListChanged(key: TopNavFeedQueryState) {
-        if (resetEoseOnListChange) clearEoseFor(key)
+        if (resetEoseOnListChange && key.feeds.isEmpty()) key.relayCursors.clear()
     }
 }

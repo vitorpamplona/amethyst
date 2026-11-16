@@ -22,11 +22,15 @@ package com.vitorpamplona.amethyst.commons.podcasts.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
@@ -39,7 +43,14 @@ import com.vitorpamplona.quartz.podcasts.PodcastEpisode
  */
 class PodcastEpisodesFeedFilter(
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    OwnedUniverseFeedFilter {
+    // Episodes of either kind, whoever posted them: the list, the mutes and the reports are
+    // checked at each rebuild.
+    override val universe = IFilter { it.event is PodcastEpisode }
+
+    override var candidates: CandidateSet? = null
+
     override fun feedKey(): String = "podcast-episodes-" + account.userProfile().pubkeyHex + "-" + followList().code
 
     override fun limit() = 200
@@ -56,15 +67,16 @@ class PodcastEpisodesFeedFilter(
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
-        val regular =
-            LocalCache.notes.filterIntoSet { _, it ->
-                accept(it, params)
+        val notes =
+            rebuildFeed("podcast-episodes", candidates, keep = { accept(it, params) }) {
+                LocalCache.notes.filterIntoSet { _, it ->
+                    accept(it, params)
+                } +
+                    LocalCache.addressables.filterIntoSet(Podcasting20EpisodeEvent.KIND) { _, it ->
+                        accept(it, params)
+                    }
             }
-        val addressable =
-            LocalCache.addressables.filterIntoSet(Podcasting20EpisodeEvent.KIND) { _, it ->
-                accept(it, params)
-            }
-        return sort(regular + addressable)
+        return sort(notes)
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)

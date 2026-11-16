@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs
 
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.relayClient.discover.DiscoveryQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
@@ -33,7 +34,6 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.StateFlow
 
 /** How many DVM outbox relays the fetcher may open at once; coverage-ranked, so the top relays carry most authors. */
 private const val MAX_OUTBOX_RELAYS = 12
@@ -132,7 +132,8 @@ class DiscoveryDvmHeartbeatSubAssembler(
             now = TimeUtils.now(),
         )
 
-    override fun floors(key: DiscoveryQueryState): List<StateFlow<Long?>> = emptyList()
+    // Fills no tab: the announcement set drives it, and it keeps its own cursors.
+    override fun cursorFeeds(key: DiscoveryQueryState): List<FeedContentState> = emptyList()
 
     override fun extraInvalidators(key: DiscoveryQueryState): List<Flow<*>> = sources.changes
 }

@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.relayClient.drss
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.KeyHeldCursors
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -34,7 +36,10 @@ import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 /** A drss.io show's bot, whose latest episodes (kind 30023) a show card lists. */
 class DrssShowEpisodesQueryState(
     val bot: User,
-)
+) : KeyHeldCursors {
+    /** Only the screen that made this key holds what it loads, so the cursors live with the key. */
+    override val relayCursors = RelayCursors()
+}
 
 /** How many of a show's latest episodes a card asks for. */
 const val DRSS_SHOW_EPISODES_LIMIT = 5

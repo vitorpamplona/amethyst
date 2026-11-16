@@ -35,4 +35,6 @@ class UrlFeedFilterSubAssembler(
     ): List<RelayBasedFilter> = filterPostsByUrl(key.normalizedUrl, key.relays, since)
 
     override fun id(key: UrlQueryState) = key.normalizedUrl
+
+    override fun cursorHoldersOf(key: UrlQueryState) = key.feeds
 }

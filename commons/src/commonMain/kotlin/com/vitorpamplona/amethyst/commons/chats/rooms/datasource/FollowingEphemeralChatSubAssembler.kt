@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.chatrooms.filterFollowingEphemeralChats
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -53,6 +54,9 @@ class FollowingEphemeralChatSubAssembler(
         }
 
     override fun user(key: ChatroomListState) = key.account.userProfile()
+
+    /** The followed channels hold their messages, for as long as the account follows them. */
+    override fun cursorHoldersOf(key: ChatroomListState): List<RelayCursorHolder> = listOf(key.account)
 
     override val watchedChatFeeds = setOf(ChatFeedType.EPHEMERAL)
 

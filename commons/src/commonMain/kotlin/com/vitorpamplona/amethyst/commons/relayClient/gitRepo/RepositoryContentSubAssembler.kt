@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
-import com.vitorpamplona.quartz.utils.mapOfSet
 
 class RepositoryContentSubAssembler(
     val cache: ICacheProvider,
@@ -49,16 +48,9 @@ class RepositoryContentSubAssembler(
                 Triple(key, repoEvent, repositoryRelays(cache, key.repository, repoEvent))
             }
 
-        // One cursor per relay is shared by every repository opened on it.
-        val sinceNow =
-            sinceDroppingGrownRelays(
-                mapOfSet { relaysPerRepo.forEach { (key, _, relays) -> relays.forEach { add(it, key.repository.idHex) } } },
-                since,
-            )
-
         return relaysPerRepo.flatMap { (_, repoEvent, repoRelays) ->
             repoRelays.flatMap { relay ->
-                val relaySince = sinceNow?.get(relay)?.time
+                val relaySince = since?.get(relay)?.time
                 filterRepositoryContent(relay, repoEvent, relaySince) + filterRepositoryCi(relay, repoEvent, relaySince)
             }
         }

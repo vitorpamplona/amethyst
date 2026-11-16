@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds.TopNavFeedSubA
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import kotlinx.coroutines.flow.StateFlow
 
 class DiscoveryPublicChatsAndCommunitiesSubAssembler3(
     client: INostrClient,
@@ -41,5 +40,6 @@ class DiscoveryPublicChatsAndCommunitiesSubAssembler3(
             makeCommunitiesFilter(feedSettings, since, key.communities.lastNoteCreatedAtIfFilled())
     }
 
-    override fun floors(key: DiscoveryQueryState): List<StateFlow<Long?>> = listOf(key.publicChats, key.communities).map { it.lastNoteCreatedAtWhenFullyLoaded }
+    // The tabs this REQ fills: their cursors set its windows and their floors re-issue it.
+    override fun cursorFeeds(key: DiscoveryQueryState) = listOf(key.publicChats, key.communities)
 }

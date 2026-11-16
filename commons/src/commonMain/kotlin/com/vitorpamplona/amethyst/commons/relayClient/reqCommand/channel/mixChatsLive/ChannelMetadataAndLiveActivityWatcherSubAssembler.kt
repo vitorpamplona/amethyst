@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.relayClient.channel.nip28PublicChats.filterChannelMetadataUpdatesById
 import com.vitorpamplona.amethyst.commons.relayClient.channel.nip53LiveActivities.filterLiveStreamUpdatesByAddress
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.ChannelFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -68,25 +69,19 @@ class ChannelMetadataAndLiveActivityWatcherSubAssembler(
                 }
             }
 
-        // One cursor per relay is shared by every channel watched on it: a channel that joins a relay
-        // later would otherwise be asked only for metadata newer than the others' EOSE, and keep the
-        // name and picture of its kind 40 even when a kind 41 renamed it.
-        val relaySince =
-            sinceDroppingGrownRelays(
-                mapOfSet {
-                    perRelayPublicChannelFilter.forEach { (relay, channels) -> channels.forEach { add(relay, it.idHex) } }
-                    perRelayLiveActivityFilter.forEach { (relay, channels) -> channels.forEach { add(relay, it.address.toValue()) } }
-                },
-                since,
-            )
-
         return perRelayPublicChannelFilter.flatMap { (relay, channels) ->
-            filterChannelMetadataUpdatesById(relay, channels.toList(), relaySince?.get(relay)?.time)
+            filterChannelMetadataUpdatesById(relay, channels.toList(), since?.get(relay)?.time)
         } +
             perRelayLiveActivityFilter.flatMap { (relay, channels) ->
-                filterLiveStreamUpdatesByAddress(relay, channels.toList(), relaySince?.get(relay)?.time)
+                filterLiveStreamUpdatesByAddress(relay, channels.toList(), since?.get(relay)?.time)
             }
     }
 
     override fun distinct(key: ChannelFinderQueryState) = key.channel
+
+    /**
+     * Each channel holds its own metadata, so each is windowed by its own cursors: one watched on a
+     * relay later is asked from scratch there, and keeps no name its kind 41 already replaced.
+     */
+    override fun cursorHoldersOf(key: ChannelFinderQueryState): List<RelayCursorHolder> = listOf(key.channel)
 }

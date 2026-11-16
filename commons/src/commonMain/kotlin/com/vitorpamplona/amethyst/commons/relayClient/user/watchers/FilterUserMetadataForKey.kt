@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.forEachChunk
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
-import com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -69,7 +68,7 @@ fun filterUserMetadataForKey(
     relayHints: HintIndexer,
     indexRelays: Set<NormalizedRelayUrl>,
     cannotConnectRelays: Set<NormalizedRelayUrl>,
-    since: EOSEAccountFast<User>,
+    since: (User, NormalizedRelayUrl) -> Long?,
     accountPubKey: HexKey? = null,
 ): List<RelayBasedFilter> {
     val perRelayUsers =
@@ -85,7 +84,7 @@ fun filterUserMetadataForKey(
                         // widen to indexers so a misconfigured outbox doesn't strand
                         // the user's profile.
                         key.metadataOrNull()?.flow?.value == null &&
-                            outbox.all { it in cannotConnectRelays || since.since(key)?.get(it) != null } ->
+                            outbox.all { it in cannotConnectRelays || since(key, it) != null } ->
                             outbox + indexRelays
                         else -> outbox
                     }
@@ -105,7 +104,7 @@ fun filterUserMetadataForKey(
         var minimumTime: Long = Long.MAX_VALUE
 
         users.forEach { user ->
-            val time = since.since(user)?.get(relay)?.time
+            val time = since(user, relay)
             if (time == null || user.metadataOrNull()?.flow?.value == null) {
                 firstTimers.add(user.pubkeyHex)
             } else {

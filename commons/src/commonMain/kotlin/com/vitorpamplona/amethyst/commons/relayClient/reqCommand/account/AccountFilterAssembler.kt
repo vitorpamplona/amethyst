@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.buzz.BuzzMembershipEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.drafts.AccountDraftsEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.marmot.MarmotGroupEventsEoseManager
@@ -35,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip59Gi
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsHistoryEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip60Cashu.CashuWalletEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip60Cashu.CashuWalletHistoryEoseManager
+import com.vitorpamplona.amethyst.commons.util.WeakReference
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -63,19 +65,49 @@ open class AccountQueryState(
      * rather than pretending there is a feed to consult.
      */
     open val feedContentStates: AccountFeedContentStates? = null
+
+    /**
+     * What the live notification tail's relay cursors are kept on: the feeds that hold those notes
+     * when a screen is attached. A background account renders nothing, so its tail only vouches that
+     * everything up to the cursor was seen (and notified): that cursor lives on the [Account], which
+     * a screen's key serves too, so it is current when the screen leaves.
+     */
+    open val notificationCursorHolders: List<RelayCursorHolder> get() = listOf(account)
 }
 
 /**
  * The key for an account with a screen attached. Adds the feed states, which
  * lets the notification loaders floor their cold-start queries at the depth the
  * rendered feed already reaches instead of asking all-time again.
+ *
+ * Held weakly. The relay managers keep one subscription per user for as long as the account
+ * stays subscribed (always, for an account notified in the background), and its listeners and
+ * jobs capture the key that opened it. A strong reference here kept that screen's whole feed set,
+ * with its notes, alive after the screen was gone, until the account itself was dropped.
  */
 @Stable
 class AccountUiQueryState(
     account: Account,
-    override val feedContentStates: AccountFeedContentStates,
+    feedContentStates: AccountFeedContentStates,
     otherAccounts: Set<HexKey>,
-) : AccountQueryState(account, otherAccounts)
+) : AccountQueryState(account, otherAccounts) {
+    private val feeds = WeakReference(feedContentStates)
+
+    override val feedContentStates: AccountFeedContentStates? get() = feeds.get()
+
+    /**
+     * The notification feeds being built: they hold what the tail loads. A lazy split tab joins when
+     * it wakes, with empty cursors, so the account's tail is asked from scratch once. With them, the
+     * account's own "seen up to" cursor, kept current for when the screen leaves; only it once the
+     * screen's feed set is gone.
+     */
+    override val notificationCursorHolders: List<RelayCursorHolder>
+        get() {
+            val feeds = feedContentStates ?: return listOf(account)
+            // The account's own tail cursor rides along, so it stays current for when the screen leaves.
+            return listOf(feeds.notifications, feeds.notificationsFollowing, feeds.notificationsEveryone).filter { it.isActive() } + account
+        }
+}
 
 /**
  * Always-on account loaders: metadata, gift wraps, drafts, inbox-relay
