@@ -64,6 +64,48 @@ object CodexModes {
 
     /** For `turn/start`, which takes the policy as an object. */
     fun sandboxPolicy(mode: PermissionMode) = buildJsonObject { put("type", if (mode == PermissionMode.PLAN) "readOnly" else "workspaceWrite") }
+
+    /**
+     * Whether [command] runs one of [blocked] (command prefixes such as `gh pr create`) anywhere
+     * in it: inside a shell wrapper (`/bin/zsh -lc 'gh pr create'`), a chain (`a && git push`),
+     * by a full path (`/usr/bin/git push`), or past git's own options (`git -C . push`).
+     * Matching words anywhere errs toward declining: `echo git push` is declined too.
+     */
+    fun runsBlocked(
+        command: String,
+        blocked: List<String>,
+    ): Boolean {
+        if (blocked.isEmpty()) return false
+        val words =
+            command
+                .split(SEPARATORS)
+                .filter { it.isNotEmpty() }
+                .map { it.substringAfterLast('/') }
+                .let(::withoutGitOptions)
+        return blocked.any { rule ->
+            val ruleWords = rule.split(' ').filter { it.isNotEmpty() }
+            ruleWords.isNotEmpty() && words.windowed(ruleWords.size).any { it == ruleWords }
+        }
+    }
+
+    /** Shell quoting, chaining and substitution: what can stand between two commands' words. */
+    private val SEPARATORS = Regex("[\\s\"'`;&|()${'$'}{}<>]+")
+
+    /** Git's options before its subcommand (`-C dir`, `-c key=value`, `--no-pager`), dropped. */
+    private fun withoutGitOptions(words: List<String>): List<String> {
+        val out = ArrayList<String>(words.size)
+        var i = 0
+        while (i < words.size) {
+            val word = words[i++]
+            out.add(word)
+            if (word != "git") continue
+            while (i < words.size && words[i].startsWith("-")) {
+                val option = words[i++]
+                if ((option == "-C" || option == "-c" || option == "--git-dir" || option == "--work-tree" || option == "--namespace") && i < words.size) i++
+            }
+        }
+        return out
+    }
 }
 
 /**
@@ -103,6 +145,14 @@ class CodexConnection(
     private val items = ConcurrentHashMap<String, JsonObject>()
     private val shownCalls = ConcurrentHashMap.newKeySet<String>()
 
+    /**
+     * Commands this thread may not run ([AgentStartOptions.blockedCommands]): asked for one,
+     * the connection declines it before the user sees it. In the workspace-write sandbox, which
+     * has no network, a command that publishes can only run through such a request.
+     */
+    @Volatile
+    private var blocked: List<String> = emptyList()
+
     /** Approvals waiting on the user: Codex's request id, by the id the chat knows. */
     private val openApprovals = ConcurrentHashMap<String, JsonElement>()
 
@@ -140,6 +190,7 @@ class CodexConnection(
         info = AgentInfo(commands = emptyList(), models = models(), version = hello.text("userAgent"))
         // Asked only for the models: no thread, nothing saved.
         if (options.probeOnly) return
+        blocked = options.blockedCommands
         val mode = options.permissionMode
         val common =
             buildMap<String, JsonElement> {
@@ -240,6 +291,11 @@ class CodexConnection(
             when (request.method) {
                 "item/commandExecution/requestApproval" -> {
                     val command = params.text("command") ?: items[itemId]?.text("command").orEmpty()
+                    if (CodexModes.runsBlocked(command, blocked)) {
+                        // Publishing is the user's step here: Codex hears no, the user isn't asked.
+                        rpc.reply(request.id, buildJsonObject { put("decision", "decline") })
+                        return
+                    }
                     approval(key, itemId, "Bash", buildJsonObject { put("command", command) }, params.text("reason"), PermissionSuggestion.Rule("Bash", command))
                 }
                 "item/fileChange/requestApproval" -> {

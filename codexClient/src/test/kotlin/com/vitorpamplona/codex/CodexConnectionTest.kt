@@ -129,6 +129,47 @@ class CodexConnectionTest {
         }
 
     @Test
+    fun aBlockedCommandIsDeclinedWithoutAskingTheUser() =
+        runBlocking {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val server = server()
+            val codex = CodexConnection(server, scope)
+            codex.open(AgentStartOptions(cwd = File("/w"), blockedCommands = listOf("git push", "gh pr create")))
+            server.push("""{"id":"r1","method":"item/commandExecution/requestApproval","params":{"threadId":"t1","turnId":"turn-1","itemId":"c1","command":"/bin/zsh -lc 'gh pr create --fill'"}}""")
+            withTimeout(5_000) { while (server.written.none { it["id"]?.toString() == "\"r1\"" }) kotlinx.coroutines.delay(10) }
+            val reply = server.written.last { it["id"]?.toString() == "\"r1\"" }
+            assertEquals("decline", reply["result"]!!.jsonObject["decision"]!!.jsonPrimitive.content)
+            // Any other command still goes to the user.
+            server.push("""{"id":"r2","method":"item/commandExecution/requestApproval","params":{"threadId":"t1","turnId":"turn-1","itemId":"c2","command":"gh pr view 12"}}""")
+            val asked = withTimeout(5_000) { codex.events.first { it is AgentEvent.ApprovalRequested } } as AgentEvent.ApprovalRequested
+            assertEquals("r2", asked.request.requestId)
+            scope.cancel()
+        }
+
+    @Test
+    fun blockedCommandsAreFoundInsideWrappersAndPastGitOptions() {
+        val blocked = listOf("git push", "gh pr create", "ngit send", "amy git pr")
+        listOf(
+            "git push origin HEAD",
+            "/usr/bin/git push",
+            "git -C . push",
+            "git -c core.hooksPath=/dev/null --no-pager push origin x",
+            "/bin/zsh -lc 'cd repo && git push'",
+            "bash -c \"npm test; gh pr create --fill\"",
+            "echo ${'$'}(ngit send)",
+            "amy git pr --title x",
+        ).forEach { assertTrue(CodexModes.runsBlocked(it, blocked), it) }
+        listOf(
+            "git pull",
+            "git status",
+            "gh pr view 1",
+            "git pushd",
+            "ngit list",
+        ).forEach { assertTrue(!CodexModes.runsBlocked(it, blocked), it) }
+        assertTrue(!CodexModes.runsBlocked("git push", emptyList()))
+    }
+
+    @Test
     fun approvalsGoBackAsCodexDecisions() =
         runBlocking {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
