@@ -119,7 +119,8 @@ class StackModel(
 
     override fun shown(wide: Boolean): List<NavStackEntry> = stack.toList()
 
-    override fun retained(): List<NavStackEntry> = stack + savedTabs.values
+    /** The moved-out composers too: their window draws them with the state the main window kept. */
+    override fun retained(): List<NavStackEntry> = stack + savedTabs.values + screenWindows
 
     /** Pushes [route], unless it is already the screen on top. Returns whether it pushed. */
     fun push(

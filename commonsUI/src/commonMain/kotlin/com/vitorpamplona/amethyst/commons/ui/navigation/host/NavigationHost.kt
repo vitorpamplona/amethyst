@@ -27,6 +27,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -68,6 +69,7 @@ fun NavigationHost(
 ) {
     // Every layout asks the destinations which routes are composers, before the first request.
     remember(nav.stacks, destinations) { nav.stacks.opensOver = destinations::isComposer }
+    val windows = nav.stacks.windows()
     NavigationHost(
         visible = nav.shownEntries(),
         retained = nav.stacks.retained(),
@@ -79,6 +81,11 @@ fun NavigationHost(
         modifier = modifier,
         composerDialogs = composerDialogs,
         popOut = popOut,
+        onHosted = { hosted ->
+            // The screens in windows of their own, for the windows to draw.
+            val byId = windows.mapNotNull { window -> hosted.firstOrNull { it.contentKey == window.contentKey }?.let { window.id to it } }.toMap()
+            if (byId != nav.hostedEntries) nav.hostedEntries = byId
+        },
     )
 }
 
@@ -98,6 +105,7 @@ fun NavigationHost(
     modifier: Modifier = Modifier,
     composerDialogs: Boolean = false,
     popOut: ((NavStackEntry) -> Unit)? = null,
+    onHosted: ((List<NavEntry<NavStackEntry>>) -> Unit)? = null,
 ) {
     val currentNavFor = rememberUpdatedState(navFor)
     // The shown entries first: the display takes the head of the decorated list.
@@ -121,6 +129,11 @@ fun NavigationHost(
             visible.size
         }
     Display(decorated.subList(0, screens), destinations, animated, onBack, modifier)
+
+    if (onHosted != null) {
+        val hidden = decorated.subList(visible.size, decorated.size)
+        SideEffect { onHosted(hidden) }
+    }
 
     if (screens < visible.size) {
         // Only the newest composer shows; one it opened over another keeps the other's state.

@@ -100,7 +100,10 @@ sealed class NavModel(
     /** What the main window's host displays, bottom to top. */
     abstract fun shown(wide: Boolean): List<NavStackEntry>
 
-    /** Every entry whose state the main window's host keeps alive. Windows keep theirs in their own. */
+    /**
+     * Every entry whose state the main window's host keeps alive. A screen window of the stack or the
+     * tabs is among them, so moving a screen out keeps its state; the windows layout's keep their own.
+     */
     abstract fun retained(): List<NavStackEntry>
 
     /** The screens with an OS window of their own. */

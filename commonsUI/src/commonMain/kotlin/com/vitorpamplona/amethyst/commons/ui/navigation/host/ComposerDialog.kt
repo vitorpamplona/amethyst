@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.navigation.host
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
@@ -135,7 +136,8 @@ fun ComposerCard(
                     // The card sits clear of the status bar and cutouts: the composer's own bars skip them.
                     .consumeWindowInsets(WindowInsets.systemBars.union(WindowInsets.displayCutout)),
             shape = MaterialTheme.shapes.extraLarge,
-            tonalElevation = 6.dp,
+            // A dark theme's top bar is as dark as the scrim: the outline keeps the card's edge in view.
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             CompositionLocalProvider(LocalComposerFrame provides frame) {
                 // The emoji panel docks inside the card, not under it in the window behind.

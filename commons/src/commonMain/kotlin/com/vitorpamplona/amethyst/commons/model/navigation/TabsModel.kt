@@ -94,7 +94,8 @@ class TabsModel(
 
     override fun shown(wide: Boolean): List<NavStackEntry> = (if (wide) listOf(top) else chain(top).filter(::isMainScreen)) + overlays
 
-    override fun retained(): List<NavStackEntry> = strip() + overlays
+    /** Every tab, the moved-out ones too: a window draws its tab with the state the main window kept, so moving it loses nothing. */
+    override fun retained(): List<NavStackEntry> = tabs + overlays
 
     override fun open(request: NavRequest) {
         // A request a composer makes: its flow, a link in it, or another composer.

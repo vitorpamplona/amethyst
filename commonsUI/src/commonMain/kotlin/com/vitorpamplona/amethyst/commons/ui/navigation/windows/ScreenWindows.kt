@@ -119,16 +119,26 @@ private fun ScreenWindowContent(
             EmojiPanelHost {
                 // A Ctrl/Cmd-click here opens what it reaches without taking the focus.
                 Box(Modifier.fillMaxSize().openInBackgroundOnModifiedClick(nav)) {
-                    // The main window's destinations, drawn with this screen's navigation: back
-                    // closes the window, a replace swaps its screen, anything else opens beside it.
-                    NavigationHost(
-                        visible = listOf(entry),
-                        retained = listOf(entry),
-                        destinations = checkNotNull(LocalNavDestinations.current),
-                        navFor = nav::forEntry,
-                        animated = false,
-                        onBack = {},
-                    )
+                    val hosted = nav.hostedEntries[entry.id]
+                    if (hosted != null) {
+                        // A tab or a composer moved out of the main window: the main window keeps its
+                        // state, so it goes on with the ViewModels and the draft it had there.
+                        hosted.Content()
+                    } else if (entry in nav.stacks.retained()) {
+                        // Kept by the main window, which hands it over once it has composed: build
+                        // nothing of its own in the meantime, or the window would start a fresh copy.
+                    } else {
+                        // The main window's destinations, drawn with this screen's navigation: back
+                        // closes the window, a replace swaps its screen, anything else opens beside it.
+                        NavigationHost(
+                            visible = listOf(entry),
+                            retained = listOf(entry),
+                            destinations = checkNotNull(LocalNavDestinations.current),
+                            navFor = nav::forEntry,
+                            animated = false,
+                            onBack = {},
+                        )
+                    }
                 }
             }
         }
