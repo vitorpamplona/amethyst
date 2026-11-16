@@ -95,6 +95,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
@@ -207,6 +208,15 @@ class AccountFeedContentStates(
     val picturesFeed = FeedContentState(PictureFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
     val workoutsFeed = FeedContentState(WorkoutFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true, refreshOnResume = false)
     val chessLobbyFeed = FeedContentState(ChessLobbyFeedFilter(account).withCandidates(), scope, LocalCache, lazy = true)
+
+    /**
+     * Every calendar RSVP (kind 31925) the account has seen, held while these feeds live. The
+     * calendar subscription loads them for the "Friends going" lens, but its feed lists
+     * appointments, not answers: without this the cache could let them go while that
+     * subscription's cursors (on the calendar feed, which outlives the screen) said they were
+     * loaded. Holds that subscription's cursors too. Made when the calendar opens.
+     */
+    val calendarRsvps by lazy { HeldNotes(LocalCache, scope) { note -> note.event is CalendarRSVPEvent } }
 
     /**
      * The account's own chess games (started, moved in, or challenging it), held while these feeds
@@ -324,7 +334,7 @@ class AccountFeedContentStates(
 
     val notificationsOpenPolls = OpenPollsState(account, scope)
 
-    val notificationSummary = NotificationSummaryState(account)
+    val notificationSummary = NotificationSummaryState(account, notificationCandidates)
 
     val feedListOptions = TopNavFilterState(account, scope)
 

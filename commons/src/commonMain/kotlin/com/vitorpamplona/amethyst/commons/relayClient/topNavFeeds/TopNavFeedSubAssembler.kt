@@ -68,8 +68,8 @@ abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
      */
     protected open fun cursorFeeds(key: K): List<FeedContentState> = key.feeds
 
-    /** The feeds; for a key with none, the key itself, which lives as long as its screen. */
-    override fun cursorHoldersOf(key: K): List<RelayCursorHolder> = cursorFeeds(key).ifEmpty { listOf(key) }
+    /** The feeds and what else the key names; for a key with none, the key itself, which lives as long as its screen. */
+    override fun cursorHoldersOf(key: K): List<RelayCursorHolder> = (cursorFeeds(key) + key.alsoHeldBy).ifEmpty { listOf(key) }
 
     override fun activateFeeds(key: K) = key.feeds.forEach { it.activate() }
 

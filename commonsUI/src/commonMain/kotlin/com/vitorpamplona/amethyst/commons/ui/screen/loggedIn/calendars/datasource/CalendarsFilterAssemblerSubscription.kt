@@ -22,9 +22,10 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.datasour
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.relayClient.calendars.CalendarsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.topNavFeedQueryState
+import com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds.TopNavFeedQueryState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable
@@ -43,10 +44,14 @@ fun CalendarsFilterAssemblerSubscription(
     val state =
         remember(accountViewModel.account) {
             val account = accountViewModel.account
-            accountViewModel.topNavFeedQueryState(
+            // The RSVPs this loads for "Friends going" are held by their own set, not the feed.
+            TopNavFeedQueryState(
+                account,
                 account.settings.defaultCalendarsFollowList,
                 account.liveCalendarsFollowListsPerRelay,
-                accountViewModel.feedStates.calendarAppointmentsFeed,
+                accountViewModel.viewModelScope,
+                listOf(accountViewModel.feedStates.calendarAppointmentsFeed),
+                alsoHeldBy = listOf(accountViewModel.feedStates.calendarRsvps),
             )
         }
 

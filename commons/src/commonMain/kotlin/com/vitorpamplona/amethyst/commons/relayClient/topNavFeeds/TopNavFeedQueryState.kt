@@ -45,6 +45,11 @@ open class TopNavFeedQueryState(
     val followsPerRelay: StateFlow<IFeedTopNavPerRelayFilterSet>,
     val scope: CoroutineScope,
     val feeds: List<FeedContentState> = emptyList(),
+    /**
+     * What else holds notes this subscription loads, besides [feeds]: a set kept for a lens of the
+     * screen (the calendar's RSVPs, which its feed does not list). Their cursors set its windows too.
+     */
+    val alsoHeldBy: List<RelayCursorHolder> = emptyList(),
 ) : AccountScopedQuery,
     RelayCursorHolder {
     /**

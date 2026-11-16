@@ -23,11 +23,14 @@ package com.vitorpamplona.amethyst.commons.hashtag.dal
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.HeldNotes
 import com.vitorpamplona.amethyst.commons.viewmodels.AndroidFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import kotlin.reflect.KClass
 
 @Stable
@@ -38,6 +41,16 @@ class HashtagFeedViewModel(
 ) : AndroidFeedViewModel(
         HashtagFeedFilter(hashtag, relays, account, LocalCache),
     ) {
+    /**
+     * The NIP-32 labels that tag a post with this hashtag, held while the screen lives: the label
+     * subscription's cursors vouch for them, and its next pass reads them to fetch the posts they
+     * label. Before, nothing held them, and that pass walked every note in the cache.
+     */
+    val labels: HeldNotes =
+        hashtag.lowercase().let { tag ->
+            HeldNotes(LocalCache, viewModelScope) { note -> (note.event as? LabelEvent)?.let { tag in it.hashtagAssociations() } == true }
+        }
+
     @Suppress("UNCHECKED_CAST")
     class Factory(
         val hashtag: String,
