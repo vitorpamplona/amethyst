@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.commons.util.replace
@@ -111,7 +113,8 @@ class AddressableNote(
 @Stable
 open class Note(
     val idHex: HexKey,
-) : NotesGatherer {
+) : NotesGatherer,
+    RelayCursorHolder {
     // Per-instance lock shared by the previously @Synchronized methods (zap /
     // onchain-zap / zap-payment / relay-add / flowSet lifecycle). Replaces the
     // JVM-only @Synchronized annotation so this class compiles on iOS.
@@ -195,6 +198,25 @@ open class Note(
      */
     @Volatile
     var otsVerification: VerificationState? = null
+
+    /**
+     * How far each relay has been asked for this note's replies, reactions, boosts and zaps
+     * (`EventWatcherSubAssembler`). It lives here because this object holds those children: when
+     * `LocalCache` drops the note and builds a new one for the same id, the new one has none of
+     * them and no cursor, so it is asked from scratch. Created on first watch: most notes are never
+     * watched.
+     */
+    @Volatile
+    private var childCursors: RelayCursors? = null
+
+    fun childCursorsOrNull(): RelayCursors? = childCursors
+
+    // Under the lock: a second instance made by a racing thread would take EOSEs (and the managers
+    // serving it) that the kept one never sees.
+    fun childCursors(): RelayCursors = childCursors ?: syncLock.withLock { childCursors ?: RelayCursors().also { childCursors = it } }
+
+    /** A note holds its children, so a subscription for them (a thread, a poll's votes) keeps its cursors here. */
+    override val relayCursors: RelayCursors get() = childCursors()
 
     // These fields are updated every time an event related to this note is received.
     @Volatile
@@ -1061,11 +1083,12 @@ open class Note(
 
     fun hasRelay(relay: NormalizedRelayUrl) = relay in relays
 
-    fun addRelay(relay: NormalizedRelayUrl) {
-        if (relay !in relays) {
-            addRelaySync(relay)
-            flowSet?.relays?.invalidateData()
-        }
+    /** Returns true when [relay] is new for this note. */
+    fun addRelay(relay: NormalizedRelayUrl): Boolean {
+        if (relay in relays) return false
+        addRelaySync(relay)
+        flowSet?.relays?.invalidateData()
+        return true
     }
 
     private suspend fun isPaidByCalculation(

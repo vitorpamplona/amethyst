@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.relayClient.dlists
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.KeyHeldCursors
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedListEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.STANDARD_ITEM_KINDS
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.acceptedItemKinds
@@ -33,7 +35,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 /** A D-list header on screen whose items should be loaded. */
 class DListItemsQueryState(
     val header: Note,
-)
+) : KeyHeldCursors {
+    /** Only the screen that made this key holds what it loads, so the cursors live with the key. */
+    override val relayCursors = RelayCursors()
+}
 
 /**
  * What an item writes in its `z` tag to be filed under [header]: the header's own pointer (its

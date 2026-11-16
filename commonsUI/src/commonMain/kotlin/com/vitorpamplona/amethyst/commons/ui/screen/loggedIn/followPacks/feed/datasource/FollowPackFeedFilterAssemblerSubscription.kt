@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.followPacks.feed.datasource.FollowPackFeedQueryState
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
@@ -31,12 +32,14 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 fun FollowPackFeedFilterAssemblerSubscription(
     pack: AddressableNote,
     accountViewModel: AccountViewModel,
+    /** The screen's feeds: they hold what this loads, and a new set asks the relays from scratch. */
+    feeds: List<RelayCursorHolder> = emptyList(),
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
-        remember(pack) {
-            FollowPackFeedQueryState(pack, accountViewModel.account)
+        remember(pack, feeds) {
+            FollowPackFeedQueryState(pack, accountViewModel.account, feeds)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().followPacks)

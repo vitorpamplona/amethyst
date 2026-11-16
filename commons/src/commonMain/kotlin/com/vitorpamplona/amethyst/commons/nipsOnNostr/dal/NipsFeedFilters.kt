@@ -21,12 +21,16 @@
 package com.vitorpamplona.amethyst.commons.nipsOnNostr.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipsOnNostr
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.nip01Core.core.isAddressable
@@ -64,23 +68,36 @@ class NipsFeedFilter(
 class KindEventsFeedFilter(
     val kind: Int,
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    OwnedUniverseFeedFilter {
     private val atAddress = kind.isAddressable() || kind.isReplaceable()
+
+    // The events of this kind, whoever wrote them; the screen's view model keeps them as its
+    // candidates, so a regular kind's rebuild no longer walks every note in the cache.
+    override val universe = IFilter { isOfKind(it) }
+
+    override var candidates: CandidateSet? = null
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-kind" + kind
 
     override fun limit() = 50
 
     override fun feed(): List<Note> =
-        if (atAddress) {
-            sort(LocalCache.addressables.filterIntoSet(kind) { _, note -> accept(note) })
-        } else {
-            sort(LocalCache.notes.filterIntoSet { _, note -> accept(note) })
-        }
+        sort(
+            rebuildFeed("kind $kind", candidates, keep = { accept(it) }) {
+                if (atAddress) {
+                    LocalCache.addressables.filterIntoSet(kind) { _, note -> accept(note) }
+                } else {
+                    LocalCache.notes.filterIntoSet { _, note -> accept(note) }
+                }
+            },
+        )
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { accept(it) }
 
-    private fun accept(note: Note): Boolean = note.event?.kind == kind && (!atAddress || note is AddressableNote) && NipsOnNostr.isListable(note, account)
+    private fun isOfKind(note: Note): Boolean = note.event?.kind == kind && (!atAddress || note is AddressableNote)
+
+    private fun accept(note: Note): Boolean = isOfKind(note) && NipsOnNostr.isListable(note, account)
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
 }

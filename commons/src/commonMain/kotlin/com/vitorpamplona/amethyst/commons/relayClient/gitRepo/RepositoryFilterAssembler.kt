@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.KeyHeldCursors
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -46,7 +48,11 @@ import kotlinx.coroutines.flow.onEach
 class RepositoryQueryState(
     var repository: AddressableNote,
     itemIds: Flow<Set<HexKey>>,
-) : MutableQueryState {
+) : MutableQueryState,
+    KeyHeldCursors {
+    /** The key holds what it loads (its item flow keeps the item notes), so the cursors live with it. */
+    override val relayCursors = RelayCursors()
+
     /** The item ids [itemIds] last emitted, read when the filters are built. */
     val currentItemIds = MutableStateFlow<Set<HexKey>>(emptySet())
 

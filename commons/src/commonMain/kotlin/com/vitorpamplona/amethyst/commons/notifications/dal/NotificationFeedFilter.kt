@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.notifications.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.UniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -31,6 +33,8 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.wot.curatedHidesByTrust
@@ -110,7 +114,12 @@ import kotlinx.coroutines.flow.StateFlow
 class NotificationFeedFilter(
     val account: Account,
     val modeOverride: TopFilter? = null,
-) : AdditiveFeedFilter<Note>() {
+    /** Where a full rebuild looks: the account's candidates when given, else the whole cache. */
+    override val candidates: CandidateSet? = null,
+) : AdditiveFeedFilter<Note>(),
+    UniverseFeedFilter {
+    override val universe: IFilter = universeFor(account)
+
     // Pin to modeOverride for split-tab mode; otherwise follow the spinner.
     // Lazy so the eagerly-collected topNavFilter pipeline is only built when
     // the split UI actually opens this filter.
@@ -389,6 +398,69 @@ class NotificationFeedFilter(
 
             return true
         }
+
+        /** What could be one of [account]'s notifications: [mightBeANotification] for its key. */
+        fun universeFor(account: Account) = IFilter { mightBeANotification(it, account.userProfile().pubkeyHex) }
+
+        /**
+         * A cheap necessary condition for [acceptableEvent]: false only for notes it would reject.
+         *
+         * [acceptableEvent] ends with a kind check and a "does this reach me" check (tags me, a
+         * public-chat reply into my messages, a bare reaction to my note, a Buzz thread reply), but
+         * computes the expensive parts first: the zap sender, the thread root for mutes, Concord
+         * membership, Buzz tag parsing. A full rebuild runs it over every note in the cache, and most of
+         * those are Home notes that tag nobody, so each one paid for all of that just to fail at the end.
+         *
+         * The types whose relevance is not a tag (Marmot messages, agent jobs, channel invites, workflow
+         * approvals, Buzz chat) always go to the full check.
+         */
+        fun mightBeANotification(
+            note: Note,
+            me: HexKey,
+        ): Boolean {
+            if (note.inGatherers?.any { it is MarmotGroupChatroom } == true) return true
+            val event = note.event ?: return false
+            // Agent jobs and approvals reach me by naming me, which the full check then confirms.
+            // Letting every one through kept other people's job results in the candidate set.
+            if (event is JobResultEvent) return event.requester() == me
+            if (event is JobErrorEvent) return event.requester() == me
+            if (event.kind !in NOTIFICATION_KINDS) return false
+            if (event is MemberAddedNotificationEvent) return true
+            if (event is WorkflowApprovalRequestedEvent) return event.approver() == me
+            // Buzz chat reaches me without a tag only inside a group channel (a DM, a thread reply to my
+            // message), which holds those messages anyway. Chat outside one must tag me.
+            if (event is ChatEvent || event is StreamMessageV2Event) {
+                if (note.replyTo?.any { it.author?.pubkeyHex == me } == true) return true
+                if (LocalCache.getRelayGroupChannelForContent(note) != null) return true
+            }
+            return event.isTaggedUser(me) || isNotifiablePublicChatReply(note, me) || isReactionToMyEvent(note, me)
+        }
+
+        /**
+         * A reaction/repost that carries NO `p` tag — so neither the follow filter nor the p-tag gate can
+         * route it — but whose reacted target (the LAST `e` tag, already loaded) is MY note. Buzz likes are a
+         * bare `["e", <id>]` with no author `p` tag (unlike NIP-25, which p-tags the reacted author), so being
+         * the author of the liked post is the only relevance signal. Restricted to the no-`p`-tag case so a
+         * well-formed reaction keeps its normal p-tag routing, and to an already-loaded target so it can't
+         * accept blindly.
+         */
+        private fun isReactionToMyEvent(
+            note: Note,
+            me: HexKey,
+        ): Boolean {
+            val namesAuthor =
+                when (val event = note.event) {
+                    is ReactionEvent -> event.originalAuthor().isNotEmpty()
+                    is RepostEvent -> event.originalAuthorKeys().isNotEmpty()
+                    is GenericRepostEvent -> event.originalAuthorKeys().isNotEmpty()
+                    else -> return false
+                }
+            if (namesAuthor) return false
+            return note.replyTo
+                ?.lastOrNull()
+                ?.author
+                ?.pubkeyHex == me
+        }
     }
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code + "-" + account.settings.showMessagesInNotifications.value
@@ -413,12 +485,14 @@ class NotificationFeedFilter(
         val filterParams = buildFilterParams(account)
 
         val notifications =
-            LocalCache.notes.filterIntoSet { _, note ->
-                note.event !is AddressableEvent && acceptableEvent(note, filterParams)
-            } +
-                LocalCache.addressables.filterIntoSet(ADDRESSABLE_KINDS) { _, note ->
-                    acceptableEvent(note, filterParams)
-                }
+            rebuildFeed("notifications/${followList().code}", candidates, keep = { acceptableEvent(it, filterParams) }) {
+                LocalCache.notes.filterIntoSet { _, note ->
+                    note.event !is AddressableEvent && acceptableEvent(note, filterParams)
+                } +
+                    LocalCache.addressables.filterIntoSet(ADDRESSABLE_KINDS) { _, note ->
+                        acceptableEvent(note, filterParams)
+                    }
+            }
 
         // Include marmot group messages as notifications (like DMs)
         val loggedInUserHex = account.userProfile().pubkeyHex
@@ -456,32 +530,6 @@ class NotificationFeedFilter(
     ): Boolean {
         val md = LocalCache.getRelayGroupChannelForContent(note)?.event ?: return false
         return md.isBuzzDm() && md.buzzParticipants().contains(me)
-    }
-
-    /**
-     * A reaction/repost that carries NO `p` tag — so neither the follow filter nor the p-tag gate can
-     * route it — but whose reacted target (the LAST `e` tag, already loaded) is MY note. Buzz likes are a
-     * bare `["e", <id>]` with no author `p` tag (unlike NIP-25, which p-tags the reacted author), so being
-     * the author of the liked post is the only relevance signal. Restricted to the no-`p`-tag case so a
-     * well-formed reaction keeps its normal p-tag routing, and to an already-loaded target so it can't
-     * accept blindly.
-     */
-    private fun isReactionToMyEvent(
-        note: Note,
-        me: HexKey,
-    ): Boolean {
-        val namesAuthor =
-            when (val event = note.event) {
-                is ReactionEvent -> event.originalAuthor().isNotEmpty()
-                is RepostEvent -> event.originalAuthorKeys().isNotEmpty()
-                is GenericRepostEvent -> event.originalAuthorKeys().isNotEmpty()
-                else -> return false
-            }
-        if (namesAuthor) return false
-        return note.replyTo
-            ?.lastOrNull()
-            ?.author
-            ?.pubkeyHex == me
     }
 
     /**
@@ -541,6 +589,11 @@ class NotificationFeedFilter(
     }
 
     fun acceptableEvent(
+        it: Note,
+        filterParams: FilterByListParams,
+    ): Boolean = mightBeANotification(it, account.userProfile().pubkeyHex) && acceptableEventFull(it, filterParams)
+
+    private fun acceptableEventFull(
         it: Note,
         filterParams: FilterByListParams,
     ): Boolean {

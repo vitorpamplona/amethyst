@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.datasource
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.buildRelayGroupAuxFilter
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.buildRelayGroupOpenChatTailFilter
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -88,6 +90,9 @@ class RelayGroupOpenChatTailSubAssembler(
     }
 
     override fun id(key: RelayGroupOpenChatTailQueryState) = key.groupId
+
+    /** The group's channel holds what this loads, so its cursors set the windows. */
+    override fun cursorHoldersOf(key: RelayGroupOpenChatTailQueryState): List<RelayCursorHolder> = listOf(LocalCache.getOrCreateRelayGroupChannel(key.groupId))
 
     override fun newSub(key: RelayGroupOpenChatTailQueryState): Subscription {
         windowLoad.startLoading(key.account.scope)

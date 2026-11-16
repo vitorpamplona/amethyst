@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.commons.hashtag.datasource
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.filterMissingEvents
 import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.potentialRelaysToFindEvent
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
@@ -51,6 +53,8 @@ fun filterHashtagLabels(
     hashtag: String,
     relays: Set<NormalizedRelayUrl>,
     since: SincePerRelayMap?,
+    /** The screen's held labels for [hashtag]; null walks the cache (no screen, or its first walk still running). */
+    heldLabels: Set<Note>? = null,
 ): List<RelayBasedFilter> {
     val labelValues = hashtagAlts(hashtag).sorted()
 
@@ -78,13 +82,7 @@ fun filterHashtagLabels(
 
     // Collect the posts that a followed user labeled with this hashtag but that we don't
     // have the full event for yet, and ask their likely relays for them.
-    val labelNotes =
-        LocalCache.notes.filterIntoSet { _, note ->
-            val noteEvent = note.event
-            noteEvent is LabelEvent &&
-                noteEvent.pubKey in follows &&
-                hashtag in noteEvent.hashtagAssociations()
-        }
+    val labelNotes = followLabelsFor(hashtag, follows, heldLabels)
 
     val missingTargets =
         mapOfSet {
@@ -103,3 +101,20 @@ fun filterHashtagLabels(
 
     return labelFilters + filterMissingEvents(missingTargets)
 }
+
+/**
+ * The labels by [follows] that tag a post with [hashtag]: from [heldLabels], the screen's held
+ * labels for it, when given; else a walk over the cache.
+ */
+internal fun followLabelsFor(
+    hashtag: String,
+    follows: Set<HexKey>,
+    heldLabels: Set<Note>?,
+): Set<Note> =
+    heldLabels?.filterTo(HashSet()) { note -> (note.event as? LabelEvent)?.pubKey in follows }
+        ?: LocalCache.notes.filterIntoSet { _, note ->
+            val noteEvent = note.event
+            noteEvent is LabelEvent &&
+                noteEvent.pubKey in follows &&
+                hashtag in noteEvent.hashtagAssociations()
+        }

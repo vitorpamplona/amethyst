@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.hashtag.datasource
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.HeldNotes
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -31,6 +33,10 @@ class HashtagQueryState(
     val hashtag: String,
     val relays: Set<NormalizedRelayUrl>,
     override val account: Account,
+    /** The screen's feeds, which hold what this subscription loads: their cursors set its windows. */
+    val feeds: List<RelayCursorHolder> = emptyList(),
+    /** The screen's labels for this hashtag, which hold what the label subscription loads. */
+    val labels: HeldNotes? = null,
 ) : AccountScopedQuery {
     val lowercaseHashtag = hashtag.lowercase()
 }

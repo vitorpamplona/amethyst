@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuWalletFilters
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -61,6 +62,9 @@ class CashuWalletEoseManager(
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     override fun user(key: AccountQueryState) = key.account.userProfile()
+
+    /** The wallet state on the account holds these events. */
+    override fun cursorHoldersOf(key: AccountQueryState): List<RelayCursorHolder> = listOf(key.account)
 
     override fun updateFilter(
         key: AccountQueryState,

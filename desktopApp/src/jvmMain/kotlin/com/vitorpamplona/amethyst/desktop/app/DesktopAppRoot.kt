@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.uri.findQueryParameterValue
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.uriToRoute
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -71,7 +72,6 @@ import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.withContext
@@ -136,20 +136,17 @@ class DesktopAppRoot(
         }
     }
 
-    /** OS notifications for the logged-in account, held back while the window has focus. */
+    /** Tells the account notifications whether the main window has the focus. */
     @Composable
     override fun LoggedInEffects(accountViewModel: AccountViewModel) {
+        // Every account is notified (DesktopAccountsNotified); the one on screen holds its toasts
+        // back while this window has the focus.
         val windowInfo = LocalWindowInfo.current
-        val focused = remember { MutableStateFlow(windowInfo.isWindowFocused) }
         LaunchedEffect(windowInfo) {
-            snapshotFlow { windowInfo.isWindowFocused }.collect { focused.value = it }
-        }
-        DisposableEffect(accountViewModel.account) {
-            val job = modules.notifications.watch(accountViewModel.account, modules.cache, focused)
-            onDispose { job.cancel() }
+            snapshotFlow { windowInfo.isWindowFocused }.collect { modules.mainWindowFocused.value = it }
         }
         DisposableEffect(Unit) {
-            val job = modules.notifications.watchClaudeCode(focused)
+            val job = modules.notifications.watchClaudeCode(modules.mainWindowFocused)
             onDispose { job.cancel() }
         }
 
@@ -276,11 +273,18 @@ class DesktopAppRoot(
 
         // OS-opened nostr:/amethyst: links, queued by DesktopDeepLinks (main()'s argv, the macOS
         // open-URI event, or a second launch forwarded over the instance bus), routed through the
-        // shared parser once a logged-in shell exists.
+        // shared parser once a logged-in shell exists. A link for another saved account
+        // (`?account=`, as Android's notification links carry) switches to it first and opens there;
+        // this shell then goes away with its account.
         LaunchedEffect(nav, accountViewModel) {
             DesktopDeepLinks.pending.filterNotNull().collect { uri ->
                 DesktopDeepLinks.pending.value = null
-                uriToRoute(uri, accountViewModel.account)?.let { route -> nav.nav(route) }
+                val npub = uri.findQueryParameterValue("account")
+                if (npub != null && npub != sessionManager.currentAccountNPub()) {
+                    sessionManager.checkAndSwitchUserSync(npub) { account -> uriToRoute(uri, account) }
+                } else {
+                    uriToRoute(uri, accountViewModel.account)?.let { route -> nav.nav(route) }
+                }
                 // A link opens where it can be seen: a main window hidden (kept for a print, or closed
                 // beside screen windows) comes back.
                 navigator.windows.showMainWindow()

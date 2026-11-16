@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.buildRelayGroupDirectoryFilter
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -68,4 +69,7 @@ class RelayGroupsOnRelaySubAssembler(
     ): List<RelayBasedFilter> = listOf(buildRelayGroupDirectoryFilter(key.relay, since?.get(key.relay)?.time))
 
     override fun id(key: RelayGroupsOnRelayQueryState) = key.relay
+
+    /** Each group found is a channel, which keeps its state; the accounts browsing the relay keep the cursors. */
+    override fun cursorHoldersOf(key: RelayGroupsOnRelayQueryState): List<RelayCursorHolder> = listOf(key.account)
 }

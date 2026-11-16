@@ -22,9 +22,13 @@ package com.vitorpamplona.amethyst.commons.nip64Chess.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 
 /**
@@ -36,7 +40,14 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
  */
 class ChessLobbyFeedFilter(
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    OwnedUniverseFeedFilter {
+    // Game challenges, whoever made them: the list, "Mine" and the mutes are checked at each
+    // rebuild. A rebuild reads these instead of walking every note in the cache.
+    override val universe = IFilter { it.isChessGameStart() }
+
+    override var candidates: CandidateSet? = null
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
 
     override fun limit() = 200
@@ -47,7 +58,10 @@ class ChessLobbyFeedFilter(
 
     override fun feed(): List<Note> {
         val matches = matcher()
-        val games = LocalCache.notes.filterIntoSet { _, note -> note.isChessGameStart() && matches(note) }
+        val games =
+            rebuildFeed("chess lobby", candidates, keep = matches) {
+                LocalCache.notes.filterIntoSet { _, note -> note.isChessGameStart() && matches(note) }
+            }
         return sort(games)
     }
 

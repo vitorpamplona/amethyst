@@ -27,6 +27,8 @@ import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.UserNip05Cac
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusCache
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.UserCardsCache
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursors
 import com.vitorpamplona.amethyst.commons.relays.dialableReadRelays
 import com.vitorpamplona.amethyst.commons.relays.dialableRelays
 import com.vitorpamplona.amethyst.commons.relays.dialableWriteRelays
@@ -66,7 +68,7 @@ fun interface UserContext {
 class User(
     val pubkeyHex: String,
     context: UserContext,
-) {
+) : RelayCursorHolder {
     // ============================================================
     // Per-user pinned replaceable notes (kind:10002 / 10050 / 10019)
     // ============================================================
@@ -104,6 +106,14 @@ class User(
     @Volatile private var reports: UserReportCache? = null
 
     @Volatile private var cards: UserCardsCache? = null
+
+    /**
+     * How far each relay has been asked for what this object holds: the profile's metadata, relay
+     * lists, follows and badges, and the zaps it received. When `LocalCache` drops this user and
+     * builds a new one for the same key, the new one holds none of it and has no cursor, so it is
+     * asked from scratch. Created on first watch.
+     */
+    @Volatile private var cursors: RelayCursors? = null
 
     @Volatile private var nip05: UserNip05Cache? = null
 
@@ -216,6 +226,11 @@ class User(
         // doesn't create Nip05 unless needed.
         nip05StateOrNull()?.newMetadata(newUserInfo.nip05, metaEvent.pubKey)
     }
+
+    fun relayCursorsOrNull(): RelayCursors? = cursors
+
+    override val relayCursors: RelayCursors
+        get() = cursors ?: lazyCacheLock.withLock { cursors ?: RelayCursors().also { cursors = it } }
 
     fun reportsOrNull(): UserReportCache? = reports
 

@@ -1,0 +1,398 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
+
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.TimeUtils
+
+/**
+ * A query key that names the holders of the notes its subscription loads: their [RelayCursors] set
+ * the windows of its filters and receive its EOSEs. A key that does not implement it (or names none)
+ * keeps the manager's own cursor map. See `commons/plans/2026-11-09-account-feed-lifecycle.md`,
+ * section 1.
+ */
+interface CursorHoldingQuery {
+    val cursorHolders: List<RelayCursorHolder>
+}
+
+/**
+ * A query key that is itself the holder of its cursors: for what only the screen that made the key
+ * holds (a composable or view model collecting the notes), so the cursors go when the screen does.
+ * The key must be remembered for the screen's lifetime, or every recomposition asks from scratch.
+ * Implementers declare `override val relayCursors = RelayCursors()`.
+ */
+interface KeyHeldCursors :
+    CursorHoldingQuery,
+    RelayCursorHolder {
+    override val cursorHolders: List<RelayCursorHolder> get() = listOf(this)
+}
+
+object CursorPlanner {
+    /** For callers with no client to ask: no relay refused anything. */
+    val NO_REFUSALS: (NormalizedRelayUrl) -> Set<Int> = { emptySet() }
+
+    /**
+     * The windows of a live request for [holders]: each filter without `until` is split into the
+     * parts the holders' cursors call for, each `since` the later of the filter's own floor and the
+     * part's cursor. Filters with `until` ask for older pages, which no cursor governs: unchanged.
+     */
+    fun window(
+        filters: List<RelayBasedFilter>,
+        holders: List<RelayCursors>,
+        source: CursorSource = CursorSource.DEFAULT,
+        refusedKinds: (NormalizedRelayUrl) -> Set<Int> = NO_REFUSALS,
+    ): List<RelayBasedFilter> {
+        val windows = mutableMapOf<NormalizedRelayUrl, MutableSet<Long>>()
+        val windowed =
+            filters.flatMap { relayFilter ->
+                val filter = relayFilter.filter
+                if (filter.until != null) return@flatMap listOf(relayFilter)
+                val shape = FilterShape.of(filter)
+                plan(relayFilter.relay, shape, holders, source, refusedKinds(relayFilter.relay)).map { part ->
+                    val applied = part.applyTo(filter, shape)
+                    applied.since?.let { windows.getOrPut(relayFilter.relay) { mutableSetOf() }.add(it) }
+                    RelayBasedFilter(relayFilter.relay, applied)
+                }
+            }
+        // Each holder accepts answers to the windows planned for it (see [RelayCursors.accepts]).
+        val relays = filters.mapTo(mutableSetOf()) { it.relay }
+        holders.forEach { holder -> relays.forEach { relay -> holder.planned(relay, source, windows[relay].orEmpty()) } }
+        return windowed
+    }
+
+    /**
+     * One plan for several holders: every author (or the whole request, without authors) is asked
+     * from the oldest cursor any holder has for it, from scratch if one has none, so no holder misses
+     * anything; authors with the same window share a part. A holder keeps one time per relay, so
+     * an author is either covered by every holder (the oldest of their times) or asked from scratch:
+     * at most two parts per filter, well within what relays allow per REQ.
+     */
+    fun plan(
+        relay: NormalizedRelayUrl,
+        requested: FilterShape,
+        holders: List<RelayCursors>,
+        source: CursorSource = CursorSource.DEFAULT,
+        refusedKinds: Set<Int> = emptySet(),
+    ): List<CursorPart> {
+        if (holders.size == 1) return holders[0].plan(relay, requested, source, refusedKinds)
+        val plans = holders.map { it.plan(relay, requested, source, refusedKinds) }
+
+        val authors = requested.authors
+        if (authors == null) {
+            return listOf(CursorPart(requested, oldest(plans.map { parts -> parts.singleOrNull()?.since })))
+        }
+
+        val windowByAuthor =
+            authors.associateWith { author ->
+                oldest(plans.map { parts -> parts.firstOrNull { author in it.shape.authors.orEmpty() }?.since })
+            }
+        return windowByAuthor.entries
+            .groupBy({ it.value }, { it.key })
+            .map { (since, group) -> CursorPart(requested.copy(authors = group.toSet()), since) }
+            .sortedWith(compareByDescending(nullsFirst()) { it.since })
+    }
+
+    /**
+     * The windows of one relay's request that names several members (accounts in a `#p` filter),
+     * each with its own holders: every member is planned against its own cursors on top of its own
+     * floor, and members whose windows agree share a filter. [build] makes the relay's filters for a
+     * set of members from one `since`, in the same order whatever the members, so a member that is new
+     * (or back with an empty feed) is asked from scratch without making the others refetch, and one
+     * that joins a relay inherits no other member's cursor.
+     */
+    fun <M> windowPerMember(
+        members: List<Member<M>>,
+        source: CursorSource = CursorSource.DEFAULT,
+        refusedKinds: (NormalizedRelayUrl) -> Set<Int> = NO_REFUSALS,
+        build: (members: List<M>, since: Long?) -> List<RelayBasedFilter>,
+    ): List<RelayBasedFilter> {
+        // (which filter of [build], its `since`) -> the members asking it with that window.
+        val shared = LinkedHashMap<Pair<Int, Long?>, MutableList<M>>()
+        val unshared = mutableListOf<RelayBasedFilter>()
+
+        members.forEach { member ->
+            val own = build(listOf(member.id), member.floor)
+            val windowed = window(own, member.holders, source, refusedKinds)
+            // A filter split by authors no longer lines up with [build]'s order: sent as planned.
+            if (windowed.size != own.size) {
+                unshared.addAll(windowed)
+            } else {
+                windowed.forEachIndexed { index, it -> shared.getOrPut(index to it.filter.since) { mutableListOf() }.add(member.id) }
+            }
+        }
+
+        return shared.map { (slot, ids) -> build(ids, slot.second)[slot.first] } + unshared
+    }
+
+    /**
+     * How far [holders] have each relay of [filters]: the oldest window any live filter on it is
+     * planned from, and no entry for a relay that one of them asks from scratch. Two entities with
+     * the same answer can share one request built from it.
+     */
+    fun cursorsByRelay(
+        filters: List<RelayBasedFilter>,
+        holders: List<RelayCursors>,
+        source: CursorSource = CursorSource.DEFAULT,
+        refusedKinds: (NormalizedRelayUrl) -> Set<Int> = NO_REFUSALS,
+    ): Map<NormalizedRelayUrl, Long> {
+        val byRelay = mutableMapOf<NormalizedRelayUrl, Long>()
+        val fromScratch = mutableSetOf<NormalizedRelayUrl>()
+        filters.forEach { relayFilter ->
+            if (relayFilter.filter.until != null) return@forEach
+            val since = oldest(plan(relayFilter.relay, FilterShape.of(relayFilter.filter), holders, source, refusedKinds(relayFilter.relay)).map { it.since })
+            if (since == null) {
+                fromScratch.add(relayFilter.relay)
+            } else {
+                byRelay[relayFilter.relay] = byRelay[relayFilter.relay]?.let { minOf(it, since) } ?: since
+            }
+        }
+        return byRelay - fromScratch
+    }
+
+    /** One member of a merged request: [floor] is its own lower bound, [holders] its own cursors. */
+    class Member<M>(
+        val id: M,
+        val floor: Long?,
+        val holders: List<RelayCursors>,
+    )
+
+    /** The oldest of [windows]; null (from scratch) when any of them is. */
+    private fun oldest(windows: List<Long?>): Long? = if (windows.any { it == null }) null else windows.filterNotNull().minOrNull()
+
+    private fun CursorPart.applyTo(
+        filter: Filter,
+        requested: FilterShape,
+    ): Filter {
+        val floor = filter.since
+        val window =
+            if (since == null) {
+                floor
+            } else if (floor == null) {
+                since
+            } else {
+                maxOf(floor, since)
+            }
+        val authors = if (shape.authors == requested.authors) filter.authors else shape.authors?.toList()
+        return filter.copy(authors = authors, since = window)
+    }
+
+    /**
+     * What [relay] answered for the live filters in [sent], up to [time], goes to every holder in
+     * [holders] it was asked for. Older-page filters (with `until`) vouch for no cursor.
+     */
+    fun record(
+        holders: List<RelayCursors>,
+        relay: NormalizedRelayUrl,
+        sent: List<Filter>?,
+        time: Long,
+        source: CursorSource = CursorSource.DEFAULT,
+        refusedKinds: Set<Int> = emptySet(),
+    ) {
+        if (holders.isEmpty() || sent.isNullOrEmpty()) return
+        record(holders, relay, LiveShapes.of(sent) ?: return, time, source, refusedKinds)
+    }
+
+    /** [record] with the shapes already made: a listener keeps them for as long as its request lasts. */
+    fun record(
+        holders: List<RelayCursors>,
+        relay: NormalizedRelayUrl,
+        live: LiveShapes,
+        time: Long,
+        source: CursorSource = CursorSource.DEFAULT,
+        refusedKinds: Set<Int> = emptySet(),
+        /** Indices in [LiveShapes.filters] that the relay cut at their `limit` (see [CursorRoutingListener]). */
+        cut: Set<Int> = emptySet(),
+    ) {
+        holders.forEach { holder ->
+            // Only what was asked for this holder: an answer planned for another (the feed it
+            // replaced, another account in a merged REQ) fetched only what that one lacked.
+            var all = true
+            var cutForHolder = false
+            val accepted =
+                live.shapes.filterIndexed { i, shape ->
+                    holder.accepts(relay, source, shape, live.filters[i].since, refusedKinds).also {
+                        if (!it) all = false
+                        if (it && i in cut) cutForHolder = true
+                    }
+                }
+            // An answer cut at its limit may lack older events: the holder keeps the cursor it had,
+            // so the next plan asks that window again instead of only for what is newer.
+            if (cutForHolder) return@forEach
+            // The same list when all of it is accepted, so the holder sees the same request again.
+            if (accepted.isNotEmpty()) holder.newEose(relay, if (all) live.shapes else accepted, time, source)
+        }
+    }
+
+    /** The live filters (no `until`) of a request, with their shapes. */
+    class LiveShapes(
+        val filters: List<Filter>,
+        val shapes: List<FilterShape>,
+    ) {
+        companion object {
+            fun of(sent: List<Filter>): LiveShapes? {
+                val live = sent.filter { it.until == null }
+                if (live.isEmpty()) return null
+                return LiveShapes(live, live.map { FilterShape.of(it) })
+            }
+        }
+    }
+}
+
+/**
+ * Wraps a subscription's listener so its EOSEs and live events reach the cursors of the holders the
+ * subscription serves at that moment ([holders], read on each call), not the ones that existed when
+ * it opened. Everything else goes to [listener] unchanged.
+ */
+class CursorRoutingListener(
+    private val listener: SubscriptionListener,
+    private val source: CursorSource = CursorSource.DEFAULT,
+    /** The kinds each relay refused, which the pool leaves out of what it reports (`INostrClient.disallowedKinds`). */
+    private val refusedKinds: (NormalizedRelayUrl) -> Set<Int> = CursorPlanner.NO_REFUSALS,
+    private val holders: () -> List<RelayCursors>,
+) : SubscriptionListener by listener {
+    override fun onEose(
+        relay: NormalizedRelayUrl,
+        forFilters: List<Filter>?,
+    ) {
+        onAnswered(relay, forFilters)
+        listener.onEose(relay, forFilters)
+    }
+
+    override fun onEose(
+        relay: NormalizedRelayUrl,
+        forFilters: List<Filter>?,
+        eventIds: List<String>?,
+    ) {
+        onAnswered(relay, forFilters)
+        listener.onEose(relay, forFilters, eventIds)
+    }
+
+    private fun onAnswered(
+        relay: NormalizedRelayUrl,
+        forFilters: List<Filter>?,
+    ) {
+        if (forFilters.isNullOrEmpty()) return
+        lock.withLock { requestFor(relay, forFilters).answered() }
+        record(relay, forFilters)
+    }
+
+    /**
+     * One REQ on one relay, as its answers report it: the shapes of its live filters, made once,
+     * and how many stored events each filter with a `limit` received before EOSE.
+     */
+    private class Request(
+        val filters: List<Filter>,
+    ) {
+        val live = CursorPlanner.LiveShapes.of(filters)
+        private val counts = IntArray(filters.size)
+        private var eose = false
+
+        /** Indices in [CursorPlanner.LiveShapes.filters] of the filters the relay cut at their limit. */
+        var cut: Set<Int> = emptySet()
+            private set
+
+        fun stored(event: Event) {
+            if (eose) return
+            filters.forEachIndexed { i, filter -> if (filter.limit != null && filter.match(event)) counts[i]++ }
+        }
+
+        fun answered() {
+            if (eose) return
+            eose = true
+            val liveFilters = live?.filters ?: return
+            // A relay sends the newest `limit` events and stops: as many as the limit means there
+            // may be more, older ones it never sent.
+            val cutFilters = filters.filterIndexed { i, filter -> filter.limit.let { it != null && counts[i] >= it } }
+            if (cutFilters.isNotEmpty()) {
+                cut = liveFilters.indices.filterTo(mutableSetOf()) { i -> cutFilters.any { it === liveFilters[i] } }
+            }
+        }
+
+        fun isCut(filter: Filter) = live != null && cut.any { live.filters[it] === filter }
+    }
+
+    private val lock = KmpLock()
+
+    // The pool reports the same filter list for every answer to a request: its shapes are made once.
+    private val requests = mutableMapOf<NormalizedRelayUrl, Request>()
+
+    // Under [lock].
+    private fun requestFor(
+        relay: NormalizedRelayUrl,
+        forFilters: List<Filter>,
+    ): Request {
+        val known = requests[relay]
+        if (known != null && known.filters === forFilters) return known
+        return Request(forFilters).also { requests[relay] = it }
+    }
+
+    /**
+     * Whether [relay] cut [filter] (a filter of the REQ it is answering, by identity) at its
+     * `limit`: its answer may lack older events, so it must not stamp an entity's own cursor. False
+     * before EOSE.
+     */
+    fun wasCut(
+        relay: NormalizedRelayUrl,
+        filter: Filter,
+    ): Boolean = lock.withLock { requests[relay] }?.isCut(filter) == true
+
+    private fun record(
+        relay: NormalizedRelayUrl,
+        forFilters: List<Filter>?,
+    ) {
+        if (forFilters.isNullOrEmpty()) return
+        val holders = holders()
+        if (holders.isEmpty()) return
+        val request = lock.withLock { requestFor(relay, forFilters) }
+        val live = request.live ?: return
+        CursorPlanner.record(holders, relay, live, TimeUtils.now(), source, refusedKinds(relay), cut = request.cut)
+    }
+
+    override fun filtersForSync(
+        relay: NormalizedRelayUrl,
+        filters: List<Filter>,
+    ): List<Filter>? {
+        // The REQ goes out again (a reconnect, an AUTH): its answer is counted from zero, even
+        // when the pool sends the same list instance.
+        lock.withLock { requests.remove(relay) }
+        return listener.filtersForSync(relay, filters)
+    }
+
+    override suspend fun onEvent(
+        event: Event,
+        isLive: Boolean,
+        relay: NormalizedRelayUrl,
+        forFilters: List<Filter>?,
+    ) {
+        if (isLive) {
+            record(relay, forFilters)
+        } else if (!forFilters.isNullOrEmpty()) {
+            lock.withLock { requestFor(relay, forFilters).stored(event) }
+        }
+        listener.onEvent(event, isLive, relay, forFilters)
+    }
+}

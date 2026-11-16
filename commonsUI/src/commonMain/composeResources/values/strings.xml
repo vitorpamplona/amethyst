@@ -3936,6 +3936,8 @@
     <string name="app_notification_group_social">Social</string>
     <string name="app_notification_mark_read_label">Mark Read</string>
     <string name="app_notification_me">Me</string>
+    <!-- A notification's conversation title when several accounts are logged in: the chat (%1$s) and the account it reached (%2$s). -->
+    <string name="app_notification_conversation_for_account">%1$s · %2$s</string>
     <string name="app_notification_media_channel_description">Notifies you when somebody mentions you in a photo or video</string>
     <string name="app_notification_media_channel_id" translatable="false">MediaID</string>
     <string name="app_notification_media_channel_message_photo">%1$s shared a photo</string>
@@ -9805,6 +9807,8 @@
     <string name="claude_code_install_body">Amethyst runs the Claude Code you have installed. Install it on this computer and sign in once in a terminal, then refresh. If it's installed somewhere unusual, set CLAUDE_CODE_EXECUTABLE to the claude program.</string>
     <string name="claude_code_resume_hint">Send a message to continue this session.</string>
     <string name="claude_code_loading_history">Loading the history</string>
+    <!-- An OS notification's title when more than one account is notified: %1$s is the account it is for, %2$s the usual title. -->
+    <string name="notification_for_account">For %1$s: %2$s</string>
     <string name="agent_keys_title">AI agent</string>
     <string name="agent_keys_search_keywords" translatable="false">ai, agent, llm, model, api key, openrouter, anthropic, claude, openai, chatgpt, gemini, ollama</string>
     <string name="agent_keys_tagline">Bring your own AI. Encrypted to you.</string>

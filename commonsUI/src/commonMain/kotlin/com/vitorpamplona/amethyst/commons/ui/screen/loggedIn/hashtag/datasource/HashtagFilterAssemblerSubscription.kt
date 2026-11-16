@@ -24,6 +24,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.hashtag.datasource.HashtagQueryState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.HeldNotes
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
@@ -31,15 +33,21 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 fun HashtagFilterAssemblerSubscription(
     tag: Route.Hashtag,
     accountViewModel: AccountViewModel,
+    /** The screen's feeds: they hold what this loads, and a new set asks the relays from scratch. */
+    feeds: List<RelayCursorHolder> = emptyList(),
+    /** The screen's held labels for this hashtag, which hold what the label subscription loads. */
+    labels: HeldNotes? = null,
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
-        remember(tag) {
+        remember(tag, feeds, labels) {
             HashtagQueryState(
                 tag.hashtag,
                 accountViewModel.account.followOutboxesOrProxy.flow.value,
                 accountViewModel.account,
+                feeds,
+                labels,
             )
         }
 

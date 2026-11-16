@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.nip64Chess.dal
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.HeldNotes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
@@ -64,10 +65,23 @@ fun Note.isChessGameOf(pubkey: String): Boolean {
  * on no list the screen asked for (an open seat taken from Global, then the top bar changed to
  * Mine). The lobby fetches these by id. Emits the current set on collection, then on every change.
  */
-fun chessGamesMissingTheirStart(me: HexKey): Flow<Set<HexKey>> =
+fun chessGamesMissingTheirStart(
+    me: HexKey,
+    /**
+     * The account's own games ([com.vitorpamplona.amethyst.commons.viewmodels.AccountFeedContentStates.chessMine]),
+     * which hold every move by or naming [me]: the first pass reads them instead of every note in the
+     * cache. Null, or still on its first walk, walks the cache.
+     */
+    mine: HeldNotes? = null,
+): Flow<Set<HexKey>> =
     flow {
         val missing = HashSet<HexKey>()
-        LocalCache.notes.forEach { _, note -> note.unloadedChessStartOf(me)?.let(missing::add) }
+        val held = mine?.snapshot()
+        if (held != null) {
+            held.forEach { note -> note.unloadedChessStartOf(me)?.let(missing::add) }
+        } else {
+            LocalCache.notes.forEach { _, note -> note.unloadedChessStartOf(me)?.let(missing::add) }
+        }
         emit(missing.toSet())
         LocalCache.getEventStream().newEventBundles.collect { bundle ->
             var changed = false

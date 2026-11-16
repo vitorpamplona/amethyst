@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.relayClient.profile
 
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.RelayCursorHolder
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -50,15 +51,18 @@ class UserProfileMetadataFilterSubAssembler(
                 }
             }
 
-        // One cursor per relay is shared by every profile opened on it.
-        val relaySince = sinceDroppingGrownRelays(userPerRelay, since)
-
         return listOfNotNull(
-            filterUserProfileMetadata(userPerRelay, relaySince),
-            filterUserProfileLists(userPerRelay, relaySince),
-            filterUserProfileLastSeen(userPerRelay, relaySince),
+            filterUserProfileMetadata(userPerRelay, since),
+            filterUserProfileLists(userPerRelay, since),
+            filterUserProfileLastSeen(userPerRelay, since),
         ).flatten()
     }
 
     override fun distinct(key: UserProfileQueryState) = key.user
+
+    /**
+     * The user holds its metadata, relay lists and follows, so each profile is windowed by its own
+     * cursors: one opened later is asked from scratch, and a user the GC took is asked again.
+     */
+    override fun cursorHoldersOf(key: UserProfileQueryState): List<RelayCursorHolder> = listOf(key.user)
 }

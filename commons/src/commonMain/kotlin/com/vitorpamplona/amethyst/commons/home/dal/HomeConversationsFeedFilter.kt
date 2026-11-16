@@ -22,11 +22,15 @@ package com.vitorpamplona.amethyst.commons.home.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.UniverseFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -43,7 +47,14 @@ import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 
 class HomeConversationsFeedFilter(
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    UniverseFeedFilter {
+    override val universe = IFilter { note -> note.event?.let { isConversationKind(it) } == true }
+
+    // Home walks the cache: its universe is most of it, so a candidate set would only copy it.
+    // The universe still tells FeedsKeptCurrent which future-dated notes could ever show here.
+    override val candidates: CandidateSet? get() = null
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
 
     override fun showHiddenKey(): Boolean =
@@ -55,10 +66,19 @@ class HomeConversationsFeedFilter(
         val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
 
         return sort(
-            LocalCache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it, filterParams, disabledKinds)
+            rebuildFeed("home/replies") {
+                LocalCache.notes.filterIntoSet { _, it ->
+                    acceptableEvent(it, filterParams, disabledKinds)
+                }
             },
         )
+    }
+
+    /** This feed's check with its parameters built once, for a walk shared with another feed. */
+    fun acceptor(): (Note) -> Boolean {
+        val filterParams = buildFilterParams(account)
+        val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
+        return { note -> acceptableEvent(note, filterParams, disabledKinds) }
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
@@ -88,17 +108,7 @@ class HomeConversationsFeedFilter(
     ): Boolean =
         event != null &&
             event.kind !in disabledKinds &&
-            (
-                event is TextNoteEvent ||
-                    event is ZapPollEvent ||
-                    event is PollResponseEvent ||
-                    event is ChannelMessageEvent ||
-                    event is CommentEvent ||
-                    event is VoiceReplyEvent ||
-                    event is PublicMessageEvent ||
-                    event is LiveActivitiesChatMessageEvent ||
-                    event is TorrentCommentEvent
-            ) &&
+            isConversationKind(event) &&
             filterParams.match(event, relays)
 
     fun acceptableEvent(
@@ -108,4 +118,19 @@ class HomeConversationsFeedFilter(
     ): Boolean = acceptableEvent(note.event, note.relays, filterParams, disabledKinds) && !note.isNewThread()
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
+
+    companion object {
+        /** The event types Home shows as conversations. Does not change once an event is cached. */
+        @Suppress("DEPRECATION")
+        fun isConversationKind(event: Event): Boolean =
+            event is TextNoteEvent ||
+                event is ZapPollEvent ||
+                event is PollResponseEvent ||
+                event is ChannelMessageEvent ||
+                event is CommentEvent ||
+                event is VoiceReplyEvent ||
+                event is PublicMessageEvent ||
+                event is LiveActivitiesChatMessageEvent ||
+                event is TorrentCommentEvent
+    }
 }

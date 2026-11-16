@@ -60,11 +60,11 @@ fun ChessLobbyFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
 
     val listed by remember(accountViewModel) { gameIds(accountViewModel.feedStates.chessLobbyFeed) }.collectAsStateWithLifecycle(emptyList())
     val missingStarts by remember(accountViewModel) {
-        chessGamesMissingTheirStart(accountViewModel.account.userProfile().pubkeyHex)
+        chessGamesMissingTheirStart(accountViewModel.account.userProfile().pubkeyHex, accountViewModel.feedStates.chessMine)
     }.collectAsStateWithLifecycle(emptySet())
 
     val watched = remember(listed) { listed.take(WATCHED_GAMES).toSet() }
-    val games = remember(accountViewModel.account, watched, missingStarts) { ChessLobbyGamesQueryState(accountViewModel.account, watched, missingStarts) }
+    val games = remember(accountViewModel.account, watched, missingStarts) { ChessLobbyGamesQueryState(accountViewModel.account, watched, missingStarts, accountViewModel.feedStates.chessMine) }
     LifecycleAwareKeyDataSourceSubscription(games, accountViewModel.dataSources().chessLobbyGames)
 }
 

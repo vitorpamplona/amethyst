@@ -23,13 +23,17 @@ package com.vitorpamplona.amethyst.commons.followPacks.feed.dal
 import com.vitorpamplona.amethyst.commons.audio.hasPlayableAudio
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.OwnedUniverseFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.isRenderableRepost
+import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
+import com.vitorpamplona.amethyst.commons.model.observables.CandidateSet
+import com.vitorpamplona.amethyst.commons.model.observables.IFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allUserFollows.AllUserFollowsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allUserFollows.AllUserFollowsByProxyTopNavFilter
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
@@ -45,6 +49,7 @@ import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
 import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
 import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -61,7 +66,14 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 class FollowPackFeedNewThreadFeedFilter(
     val followPackNote: AddressableNote,
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    OwnedUniverseFeedFilter {
+    // What the pack's people posted, of the kinds this tab shows. The pack is read once, when the
+    // screen opens; relays, mutes and whether it starts a thread are checked at each rebuild.
+    override val universe = IFilter { note -> note.event.let { it != null && it.pubKey in follows && isThreadContent(it) } }
+
+    override var candidates: CandidateSet? = null
+
     companion object {
         val ADDRESSABLE_KINDS =
             listOf(
@@ -113,19 +125,19 @@ class FollowPackFeedNewThreadFeedFilter(
         val filterParams = buildFilterParams(account)
 
         val notes =
-            LocalCache.notes.filterIntoSet { _, note ->
-                // Avoids processing addressables twice.
-                (note.event?.kind ?: 99999) < 10000 && acceptableEvent(note, filterParams)
+            rebuildFeed("follow-pack/threads", candidates, keep = { acceptableEvent(it, filterParams) }) {
+                LocalCache.notes.filterIntoSet { _, note ->
+                    // Avoids processing addressables twice.
+                    (note.event?.kind ?: 99999) < 10000 && acceptableEvent(note, filterParams)
+                } +
+                    LocalCache.addressables.filterIntoSet(
+                        kinds = ADDRESSABLE_KINDS,
+                    ) { _, note ->
+                        acceptableEvent(note, filterParams)
+                    }
             }
 
-        val longFormNotes =
-            LocalCache.addressables.filterIntoSet(
-                kinds = ADDRESSABLE_KINDS,
-            ) { _, note ->
-                acceptableEvent(note, filterParams)
-            }
-
-        return sort(notes + longFormNotes)
+        return sort(notes)
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
@@ -142,8 +154,14 @@ class FollowPackFeedNewThreadFeedFilter(
         it: Note,
         filterParams: FilterByListParams,
     ): Boolean {
-        val noteEvent = it.event
-        return (
+        val noteEvent = it.event ?: return false
+        return isThreadContent(noteEvent) &&
+            filterParams.match(noteEvent, it.relays) &&
+            it.isNewThread()
+    }
+
+    private fun isThreadContent(noteEvent: Event): Boolean =
+        (
             noteEvent is TextNoteEvent ||
                 noteEvent is ClassifiedsEvent ||
                 noteEvent is FundraiserEvent ||
@@ -166,10 +184,7 @@ class FollowPackFeedNewThreadFeedFilter(
                 noteEvent is PodcastMetadataEvent ||
                 noteEvent is VoiceEvent ||
                 noteEvent is AudioHeaderEvent
-        ) &&
-            filterParams.match(noteEvent, it.relays) &&
-            it.isNewThread()
-    }
+        )
 
     override fun sort(items: Set<Note>): List<Note> =
         items

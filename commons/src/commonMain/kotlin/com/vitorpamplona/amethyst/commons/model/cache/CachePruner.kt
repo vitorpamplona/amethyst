@@ -23,9 +23,13 @@ package com.vitorpamplona.amethyst.commons.model.cache
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.IAccount
-import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_GROUP_THREAD_KINDS
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
@@ -33,21 +37,16 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.supersedes
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
-import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
-import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
@@ -89,7 +88,10 @@ class CachePruner(
         channel: Channel,
         account: IAccount,
     ) {
+        // No rewind: these are hidden, and asking for them again would only bring them back to be
+        // pruned. Showing more again (an unmute) asks again: see [restoreHiddenPrunes].
         val toBeRemoved = channel.pruneHiddenMessages(account)
+        recordHiddenPrune(channel, toBeRemoved)
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -105,6 +107,71 @@ class CachePruner(
             println(
                 "PRUNE: ${toBeRemoved.size} hidden messages removed from ${channel.toBestDisplayName()}. ${channel.notes.size()} kept",
             )
+        }
+    }
+
+    private val hiddenPrunesLock = KmpLock()
+
+    /** Where a channel lost hidden messages: what to ask again once they are shown. */
+    private class HiddenBands {
+        /** The oldest dropped message: the live tail asks again from there. */
+        var tailFrom: Long = Long.MAX_VALUE
+
+        /** Per relay, the newest dropped message below each history's floor. */
+        val chat = HashMap<NormalizedRelayUrl, Long>()
+        val threads = HashMap<NormalizedRelayUrl, Long>()
+    }
+
+    // Channels that lost hidden messages here, until an account shows them again.
+    private val prunedHidden = mutableMapOf<Channel, HiddenBands>()
+
+    /** Remembers what [removed], hidden messages of [channel], took out of its windows. */
+    internal fun recordHiddenPrune(
+        channel: Channel,
+        removed: Set<Note>,
+    ) {
+        if (removed.isEmpty()) return
+        val oldest = removed.mapNotNull { it.createdAt() }.minOrNull() ?: return
+        hiddenPrunesLock.withLock {
+            val bands = prunedHidden.getOrPut(channel) { HiddenBands() }
+            bands.tailFrom = minOf(bands.tailFrom, oldest)
+            when (channel) {
+                is RelayGroupChannel -> {
+                    val (threads, chat) = removed.partition { it.event?.kind in RELAY_GROUP_THREAD_KINDS }
+                    bandsBelowFloor(channel.history, chat).forEach { (relay, at) -> bands.chat.mergeMax(relay, at) }
+                    bandsBelowFloor(channel.threadsHistory, threads).forEach { (relay, at) -> bands.threads.mergeMax(relay, at) }
+                }
+
+                is ConcordChannel -> {
+                    bandsBelowFloor(channel.history, removed).forEach { (relay, at) -> bands.chat.mergeMax(relay, at) }
+                }
+
+                else -> {}
+            }
+        }
+    }
+
+    /**
+     * An account shows what it hid: the channels this pruned hidden messages from ask their relays
+     * again for exactly what was dropped, the live tail from the oldest of it and each history
+     * from the newest of it below its floor.
+     */
+    fun restoreHiddenPrunes() {
+        val pruned = hiddenPrunesLock.withLock { prunedHidden.toList().also { prunedHidden.clear() } }
+        pruned.forEach { (channel, bands) ->
+            when (channel) {
+                is RelayGroupChannel -> {
+                    if (bands.chat.isNotEmpty()) channel.history.rewindTo(bands.chat)
+                    if (bands.threads.isNotEmpty()) channel.threadsHistory.rewindTo(bands.threads)
+                }
+
+                is ConcordChannel -> {
+                    if (bands.chat.isNotEmpty()) channel.history.rewindTo(bands.chat)
+                }
+
+                else -> {}
+            }
+            channel.relayCursorsOrNull()?.rewindTo(bands.tailFrom)
         }
     }
 
@@ -141,6 +208,7 @@ class CachePruner(
 
     private fun pruneOldMessagesChannel(channel: Channel) {
         val toBeRemoved = channel.pruneOldMessages()
+        rewindHistoryFor(channel, toBeRemoved)
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -165,6 +233,57 @@ class CachePruner(
                 "PRUNE: ${toBeRemoved.size} old messages removed from ${channel.toBestDisplayName()}. ${channel.notes.size()} kept",
             )
         }
+    }
+
+    /**
+     * Realigns the history windows of [channel] for the messages just dropped from it, as
+     * [pruneOldMessages] does for DMs: a relay that already paged past (or finished below) the
+     * dropped band asks for it again on the next scroll instead of leaving a hole. Only bands below
+     * a window's floor are its own. The live tail's cursors on the channel stay: the prune keeps
+     * the newest messages, so what it dropped is older than everything kept, and asking for it
+     * again would only refill what the prune freed (as `trimFeedsToSize` leaves a feed's cursors).
+     * Relay groups page their chat and their Threads tab apart; Concord channels page one history.
+     */
+    private fun rewindHistoryFor(
+        channel: Channel,
+        removed: Set<Note>,
+    ) {
+        if (removed.isEmpty()) return
+        when (channel) {
+            is RelayGroupChannel -> {
+                val (threads, chat) = removed.partition { it.event?.kind in RELAY_GROUP_THREAD_KINDS }
+                rewind(channel.history, chat)
+                rewind(channel.threadsHistory, threads)
+            }
+
+            is ConcordChannel -> {
+                rewind(channel.history, removed)
+            }
+
+            else -> {}
+        }
+    }
+
+    private fun rewind(
+        history: RelayLoadingCursors,
+        removed: Collection<Note>,
+    ) {
+        val bands = bandsBelowFloor(history, removed)
+        if (bands.isNotEmpty()) history.rewindTo(bands)
+    }
+
+    /** Per relay, the newest of [removed] below [history]'s floor; empty when it never paged. */
+    private fun bandsBelowFloor(
+        history: RelayLoadingCursors,
+        removed: Collection<Note>,
+    ): Map<NormalizedRelayUrl, Long> {
+        val floor = history.floor ?: return emptyMap()
+        val newestPrunedPerRelay = HashMap<NormalizedRelayUrl, Long>()
+        removed.forEach { note ->
+            val createdAt = note.createdAt() ?: return@forEach
+            if (createdAt < floor) note.relays.forEach { newestPrunedPerRelay.mergeMax(it, createdAt) }
+        }
+        return newestPrunedPerRelay
     }
 
     fun pruneOldMessages() {
@@ -328,41 +447,6 @@ class CachePruner(
         }
     }
 
-    fun pruneRepliesAndReactions(accounts: Set<HexKey>) {
-        val toBeRemoved =
-            cache.notes.filter { _, note ->
-                (
-                    (note.event is TextNoteEvent && !note.isNewThread()) ||
-                        note.event is ReactionEvent ||
-                        note.event is ZapReceiptEvent ||
-                        note.event is ZapRequestEvent ||
-                        note.event is ReportEvent ||
-                        note.event is GenericRepostEvent
-                ) &&
-                    note.replyTo?.any { it.flowSet?.isInUse() == true } != true &&
-                    note.flowSet?.isInUse() != true &&
-                    // don't delete if observing.
-                    note.author?.pubkeyHex !in
-                    accounts &&
-                    // don't delete if it is the logged in account
-                    note.event?.isTaggedUsers(accounts) !=
-                    true // don't delete if it's a notification to the logged in user
-            }
-
-        val childrenToBeRemoved = mutableListOf<Note>()
-
-        toBeRemoved.forEach {
-            unlinkAndRemove(it)
-            childrenToBeRemoved.addAll(it.clearChildLinks())
-        }
-
-        unlinkAndRemove(childrenToBeRemoved)
-
-        if (toBeRemoved.size > 1) {
-            println("PRUNE: ${toBeRemoved.size} thread replies removed.")
-        }
-    }
-
     /**
      * Unlinks [note] from everything in the cache that references it, then drops it
      * from the notes map and notifies observers. This is the shared "unlink from
@@ -495,37 +579,6 @@ class CachePruner(
         if (versionsToBeRemoved.size > 1 || addressesToBeRemoved.size > 1) {
             println("PRUNE: ${versionsToBeRemoved.size} events and ${addressesToBeRemoved.size} expired.")
         }
-    }
-
-    /**
-     * Drops every event authored by a muted or blocked user.
-     *
-     * Takes the mute list by value rather than the account that holds it: the pubkeys are all
-     * this needs, and [IAccount] exposes hidden users only as hash codes, which would match
-     * authors the reader never muted.
-     */
-    fun pruneHiddenEvents(hidden: LiveHiddenUsers) {
-        val childrenToBeRemoved = mutableListOf<Note>()
-
-        val hiddenUsers = hidden.hiddenUsers
-        if (hiddenUsers.isEmpty()) return
-
-        // One pass per store, each author looked up in the set. A pass per muted user made every
-        // trim cost (mutes x cache size), and mute lists run into the hundreds.
-        val toBeRemoved =
-            cache.notes.filter { _, it -> it.event?.pubKey?.let { author -> author in hiddenUsers } == true } +
-                cache.addressables.filter { _, it -> it.event?.pubKey?.let { author -> author in hiddenUsers } == true }
-
-        toBeRemoved.forEach {
-            unlinkAndRemove(it)
-            // unlinkAndRemove only clears `notes`; every address lookup reads `addressables`.
-            if (it is AddressableNote) cache.addressables.remove(it.address)
-            childrenToBeRemoved.addAll(it.clearChildLinks())
-        }
-
-        unlinkAndRemove(childrenToBeRemoved)
-
-        println("PRUNE: ${toBeRemoved.size} messages removed because they were Hidden")
     }
 }
 
