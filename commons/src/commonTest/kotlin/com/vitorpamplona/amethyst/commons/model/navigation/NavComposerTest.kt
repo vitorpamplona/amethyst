@@ -105,7 +105,8 @@ class NavComposerTest {
 
         assertEquals(listOf(Route.Home, profile), stacks.tabs.strip().map { it.route })
         assertEquals(home, stacks.top)
-        assertEquals(listOf(composer), stacks.tabs.overlays)
+        // A copy: a SnapshotStateList compares by identity, and Native asserts actual == expected.
+        assertEquals(listOf(composer), stacks.tabs.overlays.toList())
         // Opened beside the tab the composer was opened from.
         assertEquals(home, stacks.tabs.openerOf(stacks.tabs.strip().last()))
     }
