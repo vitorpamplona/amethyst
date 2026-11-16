@@ -715,15 +715,10 @@ class ClaudeCodeService(
         title: String,
     ) {
         val clean = title.trim().ifEmpty { return }
-        // An open chat knows whether its session exists yet.
+        // An open chat knows whether its session exists yet, and renames a live process itself.
         if (chats.value[row.key] != null) return renameChat(row.key, clean)
-        val chat = chats.value[row.key]
-        val renamedLive = chat?.renameLive(clean) ?: false
-        val sessionId = row.sessionId
-        if (!renamedLive && sessionId != null) {
-            withContext(Dispatchers.IO) { backendOf(sessionId).rename(sessionId, clean) }
-            chat?.titleChanged(clean)
-        }
+        val sessionId = row.sessionId ?: return
+        withContext(Dispatchers.IO) { backendOf(sessionId).rename(sessionId, clean) }
         refresh()
     }
 
