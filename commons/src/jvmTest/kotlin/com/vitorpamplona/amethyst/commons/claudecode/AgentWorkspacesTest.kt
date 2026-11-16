@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.claudecode
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.nio.file.FileSystems
@@ -426,6 +428,25 @@ class AgentWorkspacesTest {
             workspaces.delete(kept)
             val again = workspaces.create(listOf(appUrl, libUrl), null)
             assertEquals(listOf("app", "lib"), again.repos.map { it.name })
+        }
+
+    @Test
+    fun cleanupLeavesAMirrorANewWorkspaceIsFetchingInto() =
+        runBlocking {
+            workspaces.delete(workspaces.create(listOf(libUrl), null))
+            val usage = File(tmp, "AmethystAgents/usage.json")
+            val old = System.currentTimeMillis() - 90 * 24 * 60 * 60_000L
+            usage.writeText("""{"$libUrl":{"count":1,"lastUsed":$old}}""".replace("\\", "\\\\"))
+            val mirror = workspaces.mirrorDir(libUrl)
+            assertEquals(listOf(mirror.absolutePath), workspaces.unusedMirrors().map { it.absolutePath })
+            // The next fetch takes a while, as one over the network does.
+            git(mirror, "config", "remote.origin.uploadpack", "sleep 2; git-upload-pack")
+            val starting = async(Dispatchers.IO) { workspaces.create(listOf(libUrl), "new") }
+            delay(500)
+            assertTrue(workspaces.unusedMirrors().isEmpty(), "a mirror being fetched is in use")
+            assertEquals(0, workspaces.removeUnusedMirrors())
+            assertEquals(listOf("lib"), starting.await().repos.map { it.name })
+            assertTrue(mirror.isDirectory)
         }
 
     @Test

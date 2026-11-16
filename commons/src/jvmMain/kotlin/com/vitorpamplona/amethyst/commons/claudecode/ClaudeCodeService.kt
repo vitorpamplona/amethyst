@@ -375,9 +375,8 @@ class ClaudeCodeService(
                 val removed = cleanUp(due)
                 if (removed.isNotEmpty()) Log.i(TAG) { "Cleaned up ${removed.size} finished workspaces" }
             }
-            agentWorkspaces.unusedMirrors().forEach { mirror ->
-                if (!AgentWorkspaces.deleteTree(mirror)) Log.w(TAG) { "Could not remove the unused mirror $mirror" }
-            }
+            val mirrors = agentWorkspaces.removeUnusedMirrors()
+            if (mirrors > 0) Log.i(TAG) { "Removed $mirrors unused mirrors" }
         }
     }
 

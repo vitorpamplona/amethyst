@@ -166,6 +166,12 @@ class AgentWorkspaces(
     /** One fetch at a time per mirror: fifteen sessions starting together share one. */
     private val mirrorLocks = ConcurrentHashMap<String, Mutex>()
 
+    /**
+     * Calls waiting on or inside [withMirror], by mirror path: a mirror a new workspace is about
+     * to clone from is in use before its workspace's meta is saved, and cleanup must not take it.
+     */
+    private val mirrorUsers = ConcurrentHashMap<String, Int>()
+
     /** The mirror of [url], made or brought up to date. Blocks on the network: minutes for a big first clone. */
     suspend fun refreshMirror(url: String): File = withMirror(url) { it }
 
@@ -178,7 +184,20 @@ class AgentWorkspaces(
         use: (File) -> T,
     ): T {
         val mirror = mirrorDir(url)
-        return mirrorLocks.getOrPut(mirror.path) { Mutex() }.withLock {
+        mirrorUsers.merge(mirror.absolutePath, 1, Int::plus)
+        try {
+            return lockedMirror(url, mirror, use)
+        } finally {
+            mirrorUsers.compute(mirror.absolutePath) { _, n -> if (n == null || n <= 1) null else n - 1 }
+        }
+    }
+
+    private suspend fun <T> lockedMirror(
+        url: String,
+        mirror: File,
+        use: (File) -> T,
+    ): T =
+        mirrorLocks.getOrPut(mirror.path) { Mutex() }.withLock {
             withContext(Dispatchers.IO) {
                 if (File(mirror, "HEAD").isFile) {
                     // Git's automatic maintenance would run detached, past the lock, and repack
@@ -194,7 +213,6 @@ class AgentWorkspaces(
                 use(mirror)
             }
         }
-    }
 
     /**
      * A new workspace with a clone of each of [urls], every one on [branch] from its default
@@ -449,8 +467,25 @@ class AgentWorkspaces(
             .filter { mirror ->
                 val path = mirror.absolutePath
                 val lastUsed = usage[path]?.lastUsed ?: File(mirror, "FETCH_HEAD").takeIf { it.isFile }?.lastModified() ?: mirror.lastModified()
-                path !in inUse && lastUsed < cutoff
+                path !in inUse && (mirrorUsers[path] ?: 0) == 0 && lastUsed < cutoff
             }
+    }
+
+    /**
+     * Removes the mirrors [unusedMirrors] names, each under its lock and checked again there: a
+     * session that started cloning from one meanwhile keeps it. Returns how many were removed.
+     */
+    suspend fun removeUnusedMirrors(days: Int = UNUSED_MIRROR_DAYS): Int {
+        var removed = 0
+        unusedMirrors(days).forEach { candidate ->
+            mirrorLocks.getOrPut(candidate.path) { Mutex() }.withLock {
+                withContext(Dispatchers.IO) {
+                    if (unusedMirrors(days).none { it.absolutePath == candidate.absolutePath }) return@withContext
+                    if (deleteTree(candidate)) removed++ else Log.w(TAG) { "Could not remove the unused mirror $candidate" }
+                }
+            }
+        }
+        return removed
     }
 
     /**
@@ -458,12 +493,12 @@ class AgentWorkspaces(
      * removed. Under each mirror's lock: no session clones from one while it is repacked.
      */
     suspend fun tidyMirrors(): Int {
-        val unused = unusedMirrors().map { it.absolutePath }.toSet()
         var removed = 0
         mirrorsDir.listFiles { f -> f.isDirectory && f.name.endsWith(".git") }.orEmpty().forEach { mirror ->
             mirrorLocks.getOrPut(mirror.path) { Mutex() }.withLock {
                 withContext(Dispatchers.IO) {
-                    if (mirror.absolutePath in unused) {
+                    // Checked under the lock: a session may have started using it since.
+                    if (unusedMirrors().any { it.absolutePath == mirror.absolutePath }) {
                         if (deleteTree(mirror)) removed++ else Log.w(TAG) { "Could not remove $mirror" }
                     } else {
                         GitWorkspace.run(mirror, listOf("git", "-c", "gc.autoDetach=false", "gc", "--quiet", "--prune=now"), timeoutSeconds = NETWORK_TIMEOUT)
