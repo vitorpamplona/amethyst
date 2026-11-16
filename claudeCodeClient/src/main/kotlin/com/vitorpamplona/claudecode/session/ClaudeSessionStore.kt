@@ -22,6 +22,7 @@ package com.vitorpamplona.claudecode.session
 
 import com.vitorpamplona.agents.ContentBlock
 import com.vitorpamplona.agents.TranscriptEntry
+import com.vitorpamplona.agents.deleteTree
 import com.vitorpamplona.claudecode.protocol.ClaudeContent
 import com.vitorpamplona.claudecode.protocol.ClaudeMessage
 import com.vitorpamplona.claudecode.protocol.boolean
@@ -185,7 +186,8 @@ class ClaudeSessionStore(
     fun delete(sessionId: String): Boolean {
         val file = sessionFile(sessionId) ?: return false
         val extras = File(file.parentFile, sessionId)
-        if (extras.isDirectory && !extras.deleteRecursively()) throw IOException("Could not delete $extras")
+        // Links in it (a tool output, a subagent folder) go, never what they point to.
+        if (extras.isDirectory && !deleteTree(extras)) throw IOException("Could not delete $extras")
         val deleted = file.delete()
         cache.remove(file.absolutePath)
         return deleted

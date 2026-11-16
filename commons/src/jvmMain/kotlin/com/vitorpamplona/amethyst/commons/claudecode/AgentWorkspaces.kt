@@ -41,6 +41,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
+import com.vitorpamplona.agents.deleteTree as removeTree
 
 /** One repository of a workspace: where it comes from, its folder, and the branch the session works on. */
 @Immutable
@@ -576,16 +577,8 @@ class AgentWorkspaces(
             }
         }
 
-        /**
-         * Removes [dir] and everything in it. Git makes its pack files read-only, and Windows
-         * refuses to delete a read-only file: each file is made writable first.
-         */
-        fun deleteTree(dir: File): Boolean {
-            dir.walkBottomUp().forEach { file ->
-                if (!file.canWrite() && !file.setWritable(true)) Log.w(TAG) { "Could not make $file writable" }
-            }
-            return dir.deleteRecursively()
-        }
+        /** Removes [dir] and everything in it, links but never what they point to: see [com.vitorpamplona.agents.deleteTree]. */
+        fun deleteTree(dir: File): Boolean = removeTree(dir)
 
         private const val DAY_MS = 24 * 60 * 60 * 1000L
         const val UNUSED_MIRROR_DAYS = 60
