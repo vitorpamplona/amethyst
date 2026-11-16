@@ -86,7 +86,6 @@ import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive_explainer
 import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_question
-import com.vitorpamplona.amethyst.commons.resources.media_studio_done
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject_caption
 import com.vitorpamplona.amethyst.commons.resources.poll
@@ -102,7 +101,6 @@ import com.vitorpamplona.amethyst.commons.resources.schedule_post_always_on_prom
 import com.vitorpamplona.amethyst.commons.resources.what_s_on_your_mind
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
-import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.OnIncomingShare
@@ -135,7 +133,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.AddLnInvoiceB
 import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeoHashPostSection
-import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.MediaBlocks
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceFlap
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceSheet
@@ -148,10 +145,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.scheduling.ScheduleAt
 import com.vitorpamplona.amethyst.commons.ui.note.creators.scheduling.roundUpToNextQuarterHour
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
-import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaCard
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaFailureBanner
-import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.MediaStudioDialog
-import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.MissingMediaCard
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaStudioDialogs
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.rememberAttachedMediaBlocks
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
@@ -492,31 +488,14 @@ private fun NewPostScreenBody(
                                     ),
                                 )
                             },
-                            refocusKey = postViewModel.attachCount.takeIf { it > 0 },
-                            mediaBlocks =
-                                remember(postViewModel) {
-                                    MediaBlocks(aspectRatio = { id -> postViewModel.attachedMedia[id]?.displayAspectRatio }) { id, selected, modifier ->
-                                        val item = postViewModel.attachedMedia[id]
-                                        if (item != null) {
-                                            AttachedMediaCard(
-                                                item = item,
-                                                selected = selected,
-                                                locked = postViewModel.mediaUploadTracker.isUploading,
-                                                onOpen = { postViewModel.reopenedMedia = item },
-                                                onRemove = { postViewModel.removeAttachedMedia(item) },
-                                                modifier = modifier,
-                                            )
-                                        } else {
-                                            MissingMediaCard(onRemove = { postViewModel.removeMediaMarker(id) }, modifier = modifier)
-                                        }
-                                    }
-                                },
+                            refocusKey = postViewModel.media.attachCount.takeIf { it > 0 },
+                            mediaBlocks = rememberAttachedMediaBlocks(postViewModel.media) { postViewModel.mediaUploadTracker.isUploading },
                         )
                     }
                 }
 
                 AttachedMediaFailureBanner(
-                    items = postViewModel.attachedInOrder(),
+                    items = postViewModel.media.inOrder(),
                     modifier = Modifier.padding(start = ComposerToolsStartPadding, end = Size10dp, bottom = Size10dp),
                 )
 
@@ -592,45 +571,7 @@ private fun NewPostScreenBody(
                     }
                 }
 
-                // Just picked: Add puts them in the text; nothing uploads until Post.
-                postViewModel.multiOrchestrator?.let {
-                    MediaStudioDialog(
-                        media = it,
-                        defaultServer = postViewModel.mediaServer ?: accountViewModel.account.settings.defaultFileServer,
-                        isUploading = false,
-                        onAdd = { server ->
-                            postViewModel.attachPickedMedia(server)
-                            accountViewModel.account.settings.changeDefaultFileServer(server)
-                        },
-                        onRemove = postViewModel::deleteMediaToUpload,
-                        onCancel = { postViewModel.multiOrchestrator = null },
-                        accountViewModel = accountViewModel,
-                    )
-                }
-
-                // A file of the post, tapped: edits apply as they're made, Done closes.
-                postViewModel.reopenedMedia?.let { item ->
-                    val batch = remember(item) { MultiOrchestrator.of(postViewModel.attachedInOrder()) }
-                    MediaStudioDialog(
-                        media = batch,
-                        defaultServer = postViewModel.mediaServer ?: accountViewModel.account.settings.defaultFileServer,
-                        isUploading = postViewModel.mediaUploadTracker.isUploading,
-                        onAdd = { server ->
-                            postViewModel.mediaServer = server
-                            postViewModel.reopenedMedia = null
-                        },
-                        onRemove = { removed ->
-                            batch.remove(removed)
-                            postViewModel.removeAttachedMedia(removed)
-                            if (batch.size() == 0) postViewModel.reopenedMedia = null
-                        },
-                        onCancel = { postViewModel.reopenedMedia = null },
-                        accountViewModel = accountViewModel,
-                        initial = item,
-                        confirmLabel = Res.string.media_studio_done,
-                        canCancel = false,
-                    )
-                }
+                AttachedMediaStudioDialogs(postViewModel.media, postViewModel.mediaUploadTracker.isUploading, accountViewModel)
 
                 // Show preview for both uploaded messages (voiceMetadata) and pending recordings
                 (postViewModel.voiceMetadata ?: postViewModel.getVoicePreviewMetadata())?.let { metadata ->

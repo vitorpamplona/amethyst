@@ -112,6 +112,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.NewPostInvoic
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeoHashPostSection
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.MediaBlocks
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.PrepareLinkedImageMetadata
 import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.PreviewUrl
@@ -352,6 +353,8 @@ fun MessageFieldRow(
     accountViewModel: AccountViewModel,
     requestFocus: Boolean = false,
     onContentReceived: ((MediaUri, String?) -> Unit)? = null,
+    mediaBlocks: MediaBlocks? = null,
+    refocusKey: Any? = null,
 ) {
     Row {
         BaseUserPicture(
@@ -359,7 +362,7 @@ fun MessageFieldRow(
             Size35dp,
             accountViewModel,
         )
-        MessageField(Res.string.write_a_message, postViewModel, requestFocus, onContentReceived)
+        MessageField(Res.string.write_a_message, postViewModel, requestFocus, onContentReceived, mediaBlocks = mediaBlocks, refocusKey = refocusKey)
     }
 }
 

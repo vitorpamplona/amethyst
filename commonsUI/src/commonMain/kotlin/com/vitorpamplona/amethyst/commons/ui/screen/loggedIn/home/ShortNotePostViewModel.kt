@@ -25,14 +25,11 @@ import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.compose.ui.text.TextRange
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.actions.ReplyActions
@@ -77,7 +74,6 @@ import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaMarkers
-import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadOptions
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
@@ -88,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.IAudience
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
@@ -154,18 +151,11 @@ import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
-import com.vitorpamplona.quartz.nip94FileMetadata.blurhash
-import com.vitorpamplona.quartz.nip94FileMetadata.dims
 import com.vitorpamplona.quartz.nip94FileMetadata.hash
-import com.vitorpamplona.quartz.nip94FileMetadata.magnet
 import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
-import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
-import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
-import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
@@ -287,24 +277,16 @@ open class ShortNotePostViewModel :
     var emojiSuggestions: EmojiSuggestionState? = null
 
     // Images and Videos
-    var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
 
-    /**
-     * Files added to the post, each under the id of its [MediaMarkers] marker in [message]. Nothing
-     * is uploaded until Post. A file shows while its marker is in the text: deleting the marker
-     * (or undoing its insertion) drops it from the post, undo brings it back.
-     */
-    val attachedMedia = mutableStateMapOf<Int, SelectedMediaProcessing>()
-    private var nextMediaId = 1
+    /** The media attached to [message]: picked, in the text as markers, uploaded on Post. */
+    val media = AttachedMediaState(message)
 
-    /** Where attached files go on Post: the server last chosen in the media studio. */
-    var mediaServer by mutableStateOf<ServerName?>(null)
-
-    /** Bumped when files go into the text, so the field takes the focus back from the studio. */
-    var attachCount by mutableIntStateOf(0)
-
-    /** A file of the post reopened in the media studio. */
-    var reopenedMedia by mutableStateOf<SelectedMediaProcessing?>(null)
+    /** The files just picked, open in the media studio. */
+    var multiOrchestrator: MultiOrchestrator?
+        get() = media.picking
+        set(value) {
+            media.picking = value
+        }
 
     // Stripping failure dialog
     val strippingFailureConfirmation = SuspendableConfirmation()
@@ -1140,7 +1122,17 @@ open class ShortNotePostViewModel :
      * resends only what failed. True when the composer is done (posted, or had nothing to post).
      */
     suspend fun sendPostSync(): Boolean {
-        if (!uploadAttachedMediaSync()) return false
+        val uploaded =
+            media.uploadAll(
+                defaultServer = account.settings.defaultFileServer,
+                account = account,
+                uploader = accountViewModel.mediaUploader,
+                tracker = mediaUploadTracker,
+                onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                forcedSigner = if (wantsAnonymousPost) anonymousSigner() else null,
+            ) { result, options -> attach(result, options.altOrNull, options.contentWarningReason) }
+        if (!uploaded) return false
+        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
         publishPostSync()
         return true
     }
@@ -1563,121 +1555,8 @@ open class ShortNotePostViewModel :
         alt: String?,
         contentWarningReason: String?,
     ): String {
-        val iMeta =
-            IMetaTagBuilder(uploaded.url)
-                .apply {
-                    hash(uploaded.fileHeader.hash)
-                    size(uploaded.fileHeader.size)
-                    uploaded.fileHeader.mimeType
-                        ?.let { mimeType(it) }
-                    uploaded.fileHeader.dim
-                        ?.let { dims(it) }
-                    uploaded.fileHeader.blurHash
-                        ?.let { blurhash(it.blurhash) }
-                    uploaded.fileHeader.thumbHash
-                        ?.let { thumbhash(it.thumbhash) }
-                    uploaded.magnet?.let { magnet(it) }
-                    uploaded.uploadedHash?.let { originalHash(it) }
-
-                    alt?.let { alt(it) }
-                    contentWarningReason?.let { sensitiveContent(contentWarningReason) }
-                }.build()
-
-        iMetaAttachments.replace(iMeta.url, iMeta)
+        iMetaAttachments.add(uploaded, alt, contentWarningReason)
         return uploaded.url
-    }
-
-    /** The attached files, in the order their markers appear in the text: the numbers the user sees. */
-    fun attachedInOrder(): List<SelectedMediaProcessing> = MediaMarkers.idsIn(message.text).mapNotNull { attachedMedia[it] }
-
-    private fun markerIdOf(item: SelectedMediaProcessing): Int? = attachedMedia.entries.firstOrNull { it.value === item }?.key
-
-    /**
-     * The media studio's Add: each picked file gets a marker at the cursor, on a line of its own,
-     * and joins [attachedMedia]. Nothing is uploaded until Post.
-     */
-    fun attachPickedMedia(server: ServerName) {
-        val picked = multiOrchestrator ?: return
-        mediaServer = server
-        message.edit {
-            var cursor = selection.max
-            picked.items().forEach { item ->
-                val id = nextMediaId++
-                attachedMedia[id] = item
-                val insertion = MediaMarkers.insertion(asCharSequence(), cursor, id)
-                replace(cursor, cursor, insertion)
-                cursor += insertion.length
-            }
-            selection = TextRange(cursor)
-        }
-        multiOrchestrator = null
-        attachCount++
-        draftTag.newVersion()
-    }
-
-    /** Takes [item] out of the post: its marker and the line it sat on. */
-    fun removeAttachedMedia(item: SelectedMediaProcessing) {
-        removeMediaMarker(markerIdOf(item) ?: return)
-    }
-
-    /** Takes the marker [id] and its file out of the post, with the line the marker sat on. */
-    fun removeMediaMarker(id: Int) {
-        attachedMedia.remove(id)
-        message.edit {
-            val text = asCharSequence().toString()
-            val marker = MediaMarkers.of(id)
-            val start = text.indexOf(marker)
-            if (start >= 0) {
-                var end = start + marker.length
-                if (end < text.length && text[end] == '\n') end++
-                replace(start, end, "")
-            }
-        }
-        draftTag.newVersion()
-    }
-
-    /**
-     * Uploads every attached file with its own options and swaps each marker for its URL, recording
-     * its `imeta`. Markers whose file is gone are dropped, so none is ever published. False, with
-     * the text untouched, when any upload failed.
-     */
-    private suspend fun uploadAttachedMediaSync(): Boolean {
-        val ids = MediaMarkers.idsIn(message.text)
-        if (ids.isEmpty()) return true
-        val items = ids.mapNotNull { attachedMedia[it] }
-
-        val urlById = HashMap<Int, String>()
-        if (items.isNotEmpty()) {
-            val batch = MultiOrchestrator.of(items)
-            mediaUploadTracker.startUpload(batch.hasNonMedia())
-            val results =
-                try {
-                    batch.uploadEach(
-                        mediaServer ?: account.settings.defaultFileServer,
-                        account,
-                        accountViewModel.mediaUploader,
-                        onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
-                        forcedSigner = if (wantsAnonymousPost) anonymousSigner() else null,
-                    )
-                } finally {
-                    mediaUploadTracker.finishUpload()
-                }
-            if (!results.allGood) return false
-
-            results.successful.forEach { uploaded ->
-                val id = markerIdOf(uploaded.item) ?: return@forEach
-                val options = uploaded.item.options
-                (uploaded.finished.result as? UploadOrchestrator.OrchestratorResult.ServerResult)
-                    ?.let { urlById[id] = attach(it, options.altOrNull, options.contentWarningReason) }
-            }
-        }
-
-        onUiThread {
-            message.edit { replace(0, length, MediaMarkers.replace(asCharSequence().toString()) { urlById[it] }) }
-        }
-        urlPreviews.update(MediaMarkers.strip(message.text.toString()))
-        attachedMedia.clear()
-        return true
     }
 
     /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the note. */
@@ -1700,9 +1579,7 @@ open class ShortNotePostViewModel :
         forkedFromNote = null
 
         multiOrchestrator = null
-        attachedMedia.clear()
-        reopenedMedia = null
-        mediaServer = null
+        media.clear()
         mediaUploadTracker.finishUpload()
         // cancel() is UI-thread confined -- the TextFieldState writes below require it -- and
         // this cleanup deletes files, so the disk work goes to IO. The path is captured here
@@ -1769,12 +1646,7 @@ open class ShortNotePostViewModel :
         resetAiState()
     }
 
-    fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
-        val orchestrator = multiOrchestrator ?: return
-        orchestrator.remove(selected)
-        // An empty orchestrator still renders the gallery, which reads its first item.
-        if (orchestrator.size() == 0) multiOrchestrator = null
-    }
+    fun deleteMediaToUpload(selected: SelectedMediaProcessing) = media.removePicked(selected)
 
     override fun onMessageChanged() {
         activePollOption = null
@@ -1880,10 +1752,7 @@ open class ShortNotePostViewModel :
         message.insertUrlAtCursor(newElement)
     }
 
-    fun selectImage(uris: ImmutableList<SelectedMedia>) {
-        val strip = account.settings.stripLocationOnUpload
-        multiOrchestrator = MultiOrchestrator(uris) { MediaUploadOptions.defaultFor(it, stripMetadata = strip) }
-    }
+    fun selectImage(uris: ImmutableList<SelectedMedia>) = media.pick(uris, stripMetadata = account.settings.stripLocationOnUpload)
 
     fun selectVoiceRecording(recording: RecordingResult) {
         // Cancel any ongoing processing and delete existing files

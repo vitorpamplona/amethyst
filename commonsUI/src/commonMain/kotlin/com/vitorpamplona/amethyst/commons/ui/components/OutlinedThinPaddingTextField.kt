@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.ui.components
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.rememberScrollState
@@ -44,15 +46,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.privacylock.LocalUserActivity
@@ -83,6 +90,9 @@ fun OutlinedThinPaddingTextField(
     inputTransformation: InputTransformation? = null,
     outputTransformation: OutputTransformation? = null,
     spellCheck: Boolean = false,
+    cursorBrush: Brush? = null,
+    /** Drawn over the text, in the text layout's coordinates: see `ThinPaddingTextField`. */
+    textOverlay: (@Composable BoxScope.(TextLayoutResult) -> Unit)? = null,
     onKeyboardAction: KeyboardActionHandler? = null,
     label: @Composable (() -> Unit)? = null,
     placeholder: @Composable (() -> Unit)? = null,
@@ -151,6 +161,18 @@ fun OutlinedThinPaddingTextField(
     val spell = rememberSpellCheckFieldState(state, spellCheckable && enabled && !readOnly, outputTransformation as? VisualOffsetMapping)
     val scrollState = rememberScrollState()
 
+    var overlayLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val spellOnTextLayout = spell?.onTextLayout
+    val onTextLayout: (Density.(getResult: () -> TextLayoutResult?) -> Unit)? =
+        if (textOverlay == null) {
+            spellOnTextLayout
+        } else {
+            { getResult ->
+                overlayLayout = getResult()
+                spellOnTextLayout?.invoke(this, getResult)
+            }
+        }
+
     CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
         SpellCheckContextMenu(spellCheckable, spell) {
             TransformedTextInputGuard(active = outputTransformation != null) {
@@ -165,25 +187,35 @@ fun OutlinedThinPaddingTextField(
                     enabled = enabled,
                     readOnly = readOnly,
                     textStyle = mergedTextStyle,
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    cursorBrush = cursorBrush ?: SolidColor(MaterialTheme.colorScheme.primary),
                     keyboardOptions = keyboardOptions,
                     lineLimits = lineLimits,
                     interactionSource = interactionSource,
                     inputTransformation = inputTransformation,
                     outputTransformation = outputTransformation,
                     onKeyboardAction = onKeyboardAction,
-                    onTextLayout = spell?.onTextLayout,
+                    onTextLayout = onTextLayout,
                     scrollState = scrollState,
                     decorator = { innerTextField ->
                         OutlinedTextFieldDefaults.DecorationBox(
                             value = state.text.toString(),
                             visualTransformation = VisualTransformation.None,
-                            innerTextField =
-                                if (spellCheckable) {
-                                    { SpellCheckedInnerTextField(spell, scrollState, singleLine, innerTextField) }
+                            innerTextField = {
+                                val text: @Composable () -> Unit =
+                                    if (spellCheckable) {
+                                        { SpellCheckedInnerTextField(spell, scrollState, singleLine, innerTextField) }
+                                    } else {
+                                        innerTextField
+                                    }
+                                if (textOverlay == null) {
+                                    text()
                                 } else {
-                                    innerTextField
-                                },
+                                    Box {
+                                        text()
+                                        overlayLayout?.let { textOverlay(it) }
+                                    }
+                                }
+                            },
                             placeholder = placeholder,
                             label = label,
                             leadingIcon = leadingIcon,

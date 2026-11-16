@@ -103,7 +103,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.pow.PowOverrideButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.DisplayPreviews
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
-import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaFailureBanner
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaStudioDialogs
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.rememberAttachedMediaBlocks
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
@@ -212,8 +214,8 @@ fun GenericCommentPostScreen(
         // uses the accountViewModel scope to avoid cancelling this
         // function when the postViewModel is released
         accountViewModel.launchSigner {
-            postViewModel.sendPostSync()
-            nav.popBack()
+            // False when an attached file failed to upload: nothing was posted, so stay.
+            if (postViewModel.sendPostSync()) nav.popBack()
         }
     }
 
@@ -397,6 +399,8 @@ private fun GenericCommentPostBody(
                                 ),
                             )
                         },
+                        mediaBlocks = rememberAttachedMediaBlocks(postViewModel.media) { postViewModel.mediaUploadTracker.isUploading },
+                        refocusKey = postViewModel.media.attachCount.takeIf { it > 0 },
                     )
                 }
 
@@ -441,25 +445,12 @@ private fun GenericCommentPostBody(
                     }
                 }
 
-                postViewModel.multiOrchestrator?.let {
-                    Row(
-                        verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
-                    ) {
-                        ImageVideoDescription(
-                            it,
-                            accountViewModel.account.settings.defaultFileServer,
-                            isUploading = postViewModel.mediaUploadTracker.isUploading,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata, convertGifToMp4 ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.mediaUploader, useH265, stripMetadata, convertGifToMp4)
-                                accountViewModel.account.settings.changeDefaultFileServer(server)
-                            },
-                            onDelete = postViewModel::deleteMediaToUpload,
-                            onCancel = { postViewModel.multiOrchestrator = null },
-                            accountViewModel = accountViewModel,
-                        )
-                    }
-                }
+                AttachedMediaFailureBanner(
+                    items = postViewModel.media.inOrder(),
+                    modifier = Modifier.padding(horizontal = Size10dp),
+                )
+
+                AttachedMediaStudioDialogs(postViewModel.media, postViewModel.mediaUploadTracker.isUploading, accountViewModel)
 
                 if (postViewModel.wantsInvoice) {
                     postViewModel.lnAddress()?.let { lud16 ->

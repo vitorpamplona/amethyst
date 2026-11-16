@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield
 
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -31,69 +29,26 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.service.uploads.MediaMarkers
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
-import com.vitorpamplona.amethyst.commons.ui.actions.MediaMarkerBlocks
 import com.vitorpamplona.amethyst.commons.ui.actions.MediaMarkerChips
-import com.vitorpamplona.amethyst.commons.ui.actions.MediaMarkerRendering
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
-import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
-import com.vitorpamplona.amethyst.commons.ui.spellcheck.toVisual
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
-import kotlin.math.roundToInt
-
-/**
- * The media a composer draws inside its text: one [card] per media marker, in the gap the marker
- * leaves where it sits in the text. Each card takes the field's width and its media's shape
- * ([aspectRatio], width over height, null until known: [defaultHeight]), between [minHeight] and
- * [maxHeight] so a panorama stays tappable and a tall portrait doesn't fill the screen. [card]
- * gets the marker's id and whether the cursor sits against it (Backspace would remove it).
- */
-class MediaBlocks(
-    val aspectRatio: (id: Int) -> Float?,
-    val defaultHeight: Dp = 220.dp,
-    val minHeight: Dp = 120.dp,
-    val maxHeight: Dp = 420.dp,
-    val card: @Composable (id: Int, selected: Boolean, modifier: Modifier) -> Unit,
-) {
-    /** The card's height in a field [widthDp] wide. */
-    fun heightOf(
-        id: Int,
-        widthDp: Float,
-    ): Dp {
-        val ratio = aspectRatio(id)?.takeIf { it > 0f }
-        if (ratio == null || widthDp <= 0f) return defaultHeight
-        return (widthDp / ratio).dp.coerceIn(minHeight, maxHeight)
-    }
-}
-
-/** Space above and below a media card, inside its gap. */
-private val MediaBlockGap = 8.dp
 
 @Composable
 fun MessageField(
@@ -110,13 +65,7 @@ fun MessageField(
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    if (refocusKey != null) {
-        LaunchedEffect(refocusKey) {
-            // After the dialog's window is gone, or it takes the focus back with it.
-            delay(200)
-            focusRequester.requestFocus()
-        }
-    }
+    RefocusOn(refocusKey, focusRequester)
 
     if (requestFocus) {
         LaunchedEffect(Unit) {
@@ -127,25 +76,7 @@ fun MessageField(
         }
     }
 
-    val density = LocalDensity.current
-    // The text's width, from the last layout: a card's height follows it and its media's shape.
-    val textWidth = remember { mutableFloatStateOf(0f) }
-    val rendering: MediaMarkerRendering? =
-        if (mediaBlocks != null) {
-            remember(mediaBlocks, density) {
-                MediaMarkerBlocks { id ->
-                    with(density) { (mediaBlocks.heightOf(id, textWidth.floatValue / density.density) + MediaBlockGap * 2).toSp() }
-                }
-            }
-        } else {
-            mediaChips
-        }
-    val transformation = rememberUrlUserTagOutputTransformation(mediaMarkers = rendering)
-
-    // The cursor against a media card selects the card: its line is as tall as the card, so the
-    // caret would be too.
-    val selection = viewModel.message.selection
-    val selectedBlock = if (mediaBlocks != null && selection.collapsed) MediaMarkers.markerAt(viewModel.message.text, selection.start) else null
+    val markers = rememberMediaMarkerField(viewModel.message, mediaBlocks, mediaChips)
 
     ThinPaddingTextField(
         state = viewModel.message,
@@ -178,16 +109,9 @@ fun MessageField(
                 unfocusedBorderColor = Color.Transparent,
             ),
         spellCheck = true,
-        outputTransformation = transformation,
-        cursorBrush = if (selectedBlock != null) SolidColor(Color.Transparent) else null,
-        textOverlay =
-            mediaBlocks?.let { blocks ->
-                { layout ->
-                    val width = layout.fieldWidth().toFloat()
-                    if (width != textWidth.floatValue) SideEffect { textWidth.floatValue = width }
-                    MediaBlockCards(viewModel.message.text, transformation, layout, blocks, selectedBlock)
-                }
-            },
+        outputTransformation = markers.outputTransformation,
+        cursorBrush = markers.cursorBrush,
+        textOverlay = markers.textOverlay,
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
         contentPadding =
             TextFieldDefaults.contentPaddingWithoutLabel(
@@ -198,39 +122,3 @@ fun MessageField(
             ),
     )
 }
-
-/** One card per media marker, over the gap the marker leaves in the laid-out text. */
-@Composable
-private fun MediaBlockCards(
-    raw: CharSequence,
-    transformation: UrlUserTagOutputTransformation,
-    layout: TextLayoutResult,
-    blocks: MediaBlocks,
-    selected: Int?,
-) {
-    val rawText = raw.toString()
-    val replacements = transformation.replacements(rawText)
-    val density = LocalDensity.current
-    val widthDp = layout.fieldWidth() / density.density
-    val drawn = layout.layoutInput.text.length
-    replacements.forEach { replacement ->
-        if (!replacement.isMediaMarker) return@forEach
-        val id = MediaMarkers.idAt(rawText, replacement.rawStart) ?: return@forEach
-        val offset = replacements.toVisual(replacement.rawStart) ?: return@forEach
-        // The layout can trail the text by a frame: skip a marker it hasn't laid out yet.
-        if (offset >= drawn) return@forEach
-        // Centred between the text above (the previous line's bottom, which can sit higher than this
-        // line's top) and the end of the gap, so the space above and below the card matches.
-        val cardHeight = blocks.heightOf(id, widthDp)
-        val cardHeightPx = with(density) { cardHeight.toPx() }
-        val line = layout.getLineForOffset(offset)
-        val above = if (line > 0) layout.getLineBottom(line - 1) else layout.getLineTop(line)
-        val top = ((above + layout.getLineBottom(line) - cardHeightPx) / 2).roundToInt()
-        key(id) {
-            blocks.card(id, id == selected, Modifier.offset { IntOffset(0, top) }.fillMaxWidth().height(cardHeight))
-        }
-    }
-}
-
-/** The width the text may take: the field's, not the laid-out text's own (one short line is narrow). */
-private fun TextLayoutResult.fieldWidth(): Int = layoutInput.constraints.let { if (it.hasBoundedWidth) it.maxWidth else size.width }

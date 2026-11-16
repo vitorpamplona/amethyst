@@ -45,22 +45,16 @@ import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
-import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
-import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
-import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.AttachedMediaState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
@@ -69,7 +63,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
-import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawingIntoText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -95,18 +88,8 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
-import com.vitorpamplona.quartz.nip94FileMetadata.blurhash
-import com.vitorpamplona.quartz.nip94FileMetadata.dims
-import com.vitorpamplona.quartz.nip94FileMetadata.hash
-import com.vitorpamplona.quartz.nip94FileMetadata.magnet
-import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
-import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
-import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
-import com.vitorpamplona.quartz.nip94FileMetadata.size
-import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.tags.ReceiverTag
 import com.vitorpamplona.quartz.utils.Hex
@@ -171,7 +154,16 @@ class NewPublicMessageViewModel :
     val toUsers = TextFieldState()
 
     // Images and Videos
-    var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
+
+    /** The media attached to [message]: picked, in the text as markers, uploaded on Post. */
+    val media = AttachedMediaState(message)
+
+    /** The files just picked, open in the media studio. */
+    var multiOrchestrator: MultiOrchestrator?
+        get() = media.picking
+        set(value) {
+            media.picking = value
+        }
 
     // Stripping failure dialog
     val strippingFailureConfirmation = SuspendableConfirmation()
@@ -238,7 +230,7 @@ class NewPublicMessageViewModel :
 
     fun quote(quote: Note) {
         message.setTextAndPlaceCursorAtEnd(message.text.toString() + "\nnostr:${quote.toNEvent()}")
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(AttachedMediaState.stripMarkers(message.text.toString()))
 
         // creates a split with that author.
         val quotedAuthor = quote.author ?: return
@@ -321,7 +313,7 @@ class NewPublicMessageViewModel :
         )
 
         message.setTextAndPlaceCursorAtEnd(draftEvent.content)
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(AttachedMediaState.stripMarkers(message.text.toString()))
 
         iMetaAttachments.addAll(draftEvent.imetas())
     }
@@ -334,7 +326,29 @@ class NewPublicMessageViewModel :
         return location!!
     }
 
-    suspend fun sendPostSync() {
+    /**
+     * Uploads the attached files, then publishes. False when an upload failed: nothing was posted,
+     * the text and files are as they were, and the failed file says why; Post tries again.
+     */
+    suspend fun sendPostSync(): Boolean {
+        val uploaded =
+            media.uploadAll(
+                defaultServer = account.settings.defaultFileServer,
+                account = account,
+                uploader = accountViewModel.mediaUploader,
+                tracker = mediaUploadTracker,
+                onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                forcedSigner = null,
+            ) { result, options ->
+                iMetaAttachments.add(result, options.altOrNull, options.contentWarningReason)
+                result.url
+            }
+        if (!uploaded) return false
+        publishPostSync()
+        return true
+    }
+
+    private suspend fun publishPostSync() {
         val template = createTemplate()
 
         val draftToDelete = draftNote
@@ -347,7 +361,7 @@ class NewPublicMessageViewModel :
     }
 
     suspend fun sendDraftSync() {
-        if (message.text.toString().isBlank()) {
+        if (AttachedMediaState.stripMarkers(message.text.toString()).isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val template = createTemplate()
@@ -359,7 +373,7 @@ class NewPublicMessageViewModel :
         val toUsersTagger = NewMessageTagger(this@NewPublicMessageViewModel.toUsers.text.toString(), null, null, accountViewModel)
         toUsersTagger.run()
 
-        val messageText = message.text.toString()
+        val messageText = AttachedMediaState.stripMarkers(message.text.toString())
         val msg =
             replyingTo?.let {
                 it.toNostrUri() + "\n" + messageText
@@ -414,102 +428,12 @@ class NewPublicMessageViewModel :
         }
     }
 
-    fun upload(
-        alt: String?,
-        contentWarningReason: String?,
-        mediaQuality: Int,
-        server: ServerName,
-        onError: (title: String, message: String) -> Unit,
-        uploader: MediaUploader,
-        useH265: Boolean,
-        stripMetadata: Boolean,
-        convertGifToMp4: Boolean,
-    ) {
-        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
-    }
-
-    fun uploadUnsafe(
-        alt: String?,
-        contentWarningReason: String?,
-        mediaQuality: Int,
-        server: ServerName,
-        onError: (title: String, message: String) -> Unit,
-        uploader: MediaUploader,
-        useH265: Boolean,
-        stripMetadata: Boolean,
-        convertGifToMp4: Boolean,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val myMultiOrchestrator = multiOrchestrator ?: return@launch
-
-            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
-
-            val results =
-                myMultiOrchestrator.upload(
-                    alt,
-                    contentWarningReason,
-                    CompressorQuality.fromSlider(mediaQuality),
-                    server,
-                    account,
-                    uploader,
-                    useH265 = useH265,
-                    stripMetadata = stripMetadata,
-                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
-                    convertGifToMp4 = convertGifToMp4,
-                )
-
-            if (results.allGood) {
-                val urls =
-                    results.successful.mapNotNull { state ->
-                        val uploaded = state.result
-                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                            val iMeta =
-                                IMetaTagBuilder(uploaded.url)
-                                    .apply {
-                                        hash(uploaded.fileHeader.hash)
-                                        size(uploaded.fileHeader.size)
-                                        uploaded.fileHeader.mimeType
-                                            ?.let { mimeType(it) }
-                                        uploaded.fileHeader.dim
-                                            ?.let { dims(it) }
-                                        uploaded.fileHeader.blurHash
-                                            ?.let { blurhash(it.blurhash) }
-                                        uploaded.fileHeader.thumbHash
-                                            ?.let { thumbhash(it.thumbhash) }
-                                        uploaded.magnet?.let { magnet(it) }
-                                        uploaded.uploadedHash?.let { originalHash(it) }
-
-                                        alt?.let { alt(it) }
-                                        contentWarningReason?.let { sensitiveContent(contentWarningReason) }
-                                    }.build()
-
-                            iMetaAttachments.replace(iMeta.url, iMeta)
-
-                            uploaded.url
-                        } else {
-                            null
-                        }
-                    }
-
-                onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
-                urlPreviews.update(message.text.toString())
-
-                multiOrchestrator = null
-            } else {
-                val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
-                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
-            }
-
-            mediaUploadTracker.finishUpload()
-        }
-    }
-
     fun cancel() {
         draftTag.rotate()
 
         toUsers.setTextAndPlaceCursorAtEnd("")
         message.setTextAndPlaceCursorAtEnd("")
-        multiOrchestrator = null
+        media.clear()
 
         wantsInvoice = false
         wantsZapraiser = false
@@ -537,15 +461,8 @@ class NewPublicMessageViewModel :
         emojiSuggestions?.reset()
     }
 
-    fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
-        val orchestrator = multiOrchestrator ?: return
-        orchestrator.remove(selected)
-        // An empty orchestrator still renders the gallery, which reads its first item.
-        if (orchestrator.size() == 0) multiOrchestrator = null
-    }
-
     override fun onMessageChanged() {
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(AttachedMediaState.stripMarkers(message.text.toString()))
 
         if (message.selection.collapsed) {
             val lastWord = message.currentWord()
@@ -587,7 +504,7 @@ class NewPublicMessageViewModel :
                 UserSuggestionAnchor.MAIN_MESSAGE -> {
                     val lastWord = message.currentWord()
                     userSuggestions.replaceCurrentWord(message, lastWord, item)
-                    urlPreviews.update(message.text.toString())
+                    urlPreviews.update(AttachedMediaState.stripMarkers(message.text.toString()))
                 }
 
                 UserSuggestionAnchor.FORWARD_ZAPS -> {
@@ -612,7 +529,7 @@ class NewPublicMessageViewModel :
 
     fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
         emojiSuggestions?.autocompleteInto(message, item)
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(AttachedMediaState.stripMarkers(message.text.toString()))
 
         draftTag.newVersion()
     }
@@ -625,7 +542,7 @@ class NewPublicMessageViewModel :
         }
 
         message.replaceCurrentWord(wordToInsert)
-        urlPreviews.update(message.text.toString())
+        urlPreviews.update(AttachedMediaState.stripMarkers(message.text.toString()))
 
         emojiSuggestions?.reset()
 
@@ -644,9 +561,9 @@ class NewPublicMessageViewModel :
         message.insertUrlAtCursor(newElement)
     }
 
-    fun selectImage(uris: ImmutableList<SelectedMedia>) {
-        multiOrchestrator = MultiOrchestrator(uris)
-    }
+    fun deleteMediaToUpload(selected: SelectedMediaProcessing) = media.removePicked(selected)
+
+    fun selectImage(uris: ImmutableList<SelectedMedia>) = media.pick(uris, stripMetadata = account.settings.stripLocationOnUpload)
 
     override fun onCleared() {
         Log.d("Init") { "OnCleared: ${this::class.simpleName}" }
@@ -663,7 +580,7 @@ class NewPublicMessageViewModel :
 
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.IO) {
-            val tagger = NewMessageTagger(message.text.toString(), emptyList(), emptyList(), accountViewModel)
+            val tagger = NewMessageTagger(AttachedMediaState.stripMarkers(message.text.toString()), emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {

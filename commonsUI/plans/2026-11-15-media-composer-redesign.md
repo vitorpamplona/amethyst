@@ -9,7 +9,15 @@ Chat, Profile, Failure; the add buttons open the Studio), or render them all wit
 
 ## Status
 
-**Implemented in the note composer (`ShortNotePostScreen`):**
+**Where it runs.** The flow below is one shared piece, `AttachedMediaState` (pick, markers,
+reopen, upload on Post, draft stripping), with `AttachedMediaStudioDialogs`,
+`rememberAttachedMediaBlocks` and `rememberMediaMarkerField` for any text field. It runs in the
+note composer, comments (NIP-22), public messages, long-form (Markdown body), edit post and git
+issues. Classifieds use the Studio with Add uploading at once, since their photos are listing
+images rather than links in the text. Chats (including the new group DM screen), picture and
+video posts, and avatar/banner/icon uploads still use their old flows.
+
+**Implemented (described for the note composer, `ShortNotePostScreen`):**
 
 1. **Studio after every pick.** Picking files opens `MediaStudioDialog`
    (`commonsUI/.../note/creators/uploads/studio/`) instead of the `ImageVideoDescription` card.
@@ -58,7 +66,8 @@ real files in `DesktopUploadMetadataTest`. SVG and HEIC (no decoder) still get n
 
 Not yet:
 - crop and trim (step 3)
-- the other composers, which still use `ImageVideoDescription`
+- chats, picture/video posts and avatar/banner/icon uploads
+- the long-form preview shows the text without the attached media until it is posted
 - keeping attached files in a draft across app restarts
 
 ## 1. What we have today

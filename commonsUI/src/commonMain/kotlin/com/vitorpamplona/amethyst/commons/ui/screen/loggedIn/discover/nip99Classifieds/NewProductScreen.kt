@@ -75,7 +75,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.MessageF
 import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.DisplayPreviews
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
-import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.studio.MediaStudioDialog
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
@@ -274,23 +274,18 @@ private fun NewProductBody(
             }
 
             postViewModel.multiOrchestrator?.let {
-                Row(
-                    verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
-                ) {
-                    ImageVideoDescription(
-                        uris = it,
-                        defaultServer = accountViewModel.account.settings.defaultFileServer,
-                        isUploading = postViewModel.mediaUploadTracker.isUploading,
-                        onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata, convertGifToMp4 ->
-                            postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.mediaUploader, useH265, stripMetadata, convertGifToMp4)
-                            accountViewModel.account.settings.changeDefaultFileServer(server)
-                        },
-                        onDelete = postViewModel::deleteMediaToUpload,
-                        onCancel = { postViewModel.multiOrchestrator = null },
-                        accountViewModel = accountViewModel,
-                    )
-                }
+                MediaStudioDialog(
+                    media = it,
+                    defaultServer = accountViewModel.account.settings.defaultFileServer,
+                    isUploading = postViewModel.mediaUploadTracker.isUploading,
+                    onAdd = { server ->
+                        postViewModel.uploadFromStudio(server)
+                        accountViewModel.account.settings.changeDefaultFileServer(server)
+                    },
+                    onRemove = postViewModel::deleteMediaToUpload,
+                    onCancel = { postViewModel.multiOrchestrator = null },
+                    accountViewModel = accountViewModel,
+                )
             }
 
             if (postViewModel.wantsInvoice) {
