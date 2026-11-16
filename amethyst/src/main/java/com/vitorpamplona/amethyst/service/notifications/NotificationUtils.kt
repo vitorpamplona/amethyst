@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.notifications.NotificationAccountLabel
 import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
 import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_conversation_for_account
 import com.vitorpamplona.amethyst.commons.resources.app_notification_mark_read_label
 import com.vitorpamplona.amethyst.commons.resources.app_notification_me
 import com.vitorpamplona.amethyst.commons.resources.app_notification_private_message
@@ -239,6 +240,12 @@ object NotificationUtils {
             label = NotificationAccountLabel.of(account, Amethyst.instance.accountsCache.accounts.value.size),
         )
 
+    /** A conversation's title naming the account it reached, for when several accounts are notified. */
+    suspend fun conversationTitleFor(
+        chatName: String,
+        accountLabel: String,
+    ): String = loadStringRes(Res.string.app_notification_conversation_for_account, chatName, accountLabel)
+
     /** Names the account in the sub text (when several are loaded) and records it for [cancelNotificationsFor]. */
     private fun NotificationCompat.Builder.stampAccount(forAccount: NotificationAccount?) {
         if (forAccount == null) return
@@ -400,6 +407,14 @@ object NotificationUtils {
                 .build()
 
         val messagingStyle = NotificationCompat.MessagingStyle(me)
+        messagingStyle.setGroupConversation(conversation?.isGroup == true)
+
+        // The conversation template does not show the sub text, so with several accounts the one
+        // this is for goes in the title the shade does show: "Alice · Bob" reads as "Alice, to Bob".
+        forAccount?.label?.let { accountLabel ->
+            val chatName = conversation?.takeIf { it.isGroup }?.label ?: senderName
+            messagingStyle.setConversationTitle(conversationTitleFor(chatName, accountLabel))
+        }
 
         if (parent != null) {
             val parentSender =
@@ -429,7 +444,11 @@ object NotificationUtils {
                     it.iconUrl?.let { url -> loadBitmap(url, applicationContext)?.let { bmp -> circleCrop(bmp) } }
                         ?: avatar.takeUnless { _ -> it.isGroup }
 
-                ConversationShortcuts.push(applicationContext, it, uri, sender, conversationIcon)
+                // A conversation notification takes its title from the shortcut, not the style, so
+                // with several accounts the shortcut is the one that has to name the account. Its id
+                // is already per account, so this also tells the share sheet's targets apart.
+                val labeled = forAccount?.label?.let { account -> it.copy(label = conversationTitleFor(it.label, account)) } ?: it
+                ConversationShortcuts.push(applicationContext, labeled, uri, sender, conversationIcon)
             }
 
         val builderPublic =

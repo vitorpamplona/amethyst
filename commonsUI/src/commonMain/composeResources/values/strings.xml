@@ -3936,6 +3936,8 @@
     <string name="app_notification_group_social">Social</string>
     <string name="app_notification_mark_read_label">Mark Read</string>
     <string name="app_notification_me">Me</string>
+    <!-- A notification's conversation title when several accounts are logged in: the chat (%1$s) and the account it reached (%2$s). -->
+    <string name="app_notification_conversation_for_account">%1$s · %2$s</string>
     <string name="app_notification_media_channel_description">Notifies you when somebody mentions you in a photo or video</string>
     <string name="app_notification_media_channel_id" translatable="false">MediaID</string>
     <string name="app_notification_media_channel_message_photo">%1$s shared a photo</string>
